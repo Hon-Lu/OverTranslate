@@ -18,6 +18,9 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 if (args.Length > 0 && args[0] == "--panel-layout") return PanelLayoutProbe.Run(args[1..]);
 
+if (args.Length > 0 && args[0] == "--session-equivalence")
+    return SessionEquivalenceProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--dialogue-probe")
     return await DialogueProbe.Run(args.Skip(1).ToArray());
 
