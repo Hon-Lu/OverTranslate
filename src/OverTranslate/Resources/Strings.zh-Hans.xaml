@@ -346,7 +346,7 @@
 
     <!-- Block mode picker -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 对话</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / UI</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / 界面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整条字幕、对话框——文字大，读取时会缩小</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">游戏面板、物品说明——文字小，读取时不缩小</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">适合影音字幕、游戏对话等文字位置较集中且固定的场景。
