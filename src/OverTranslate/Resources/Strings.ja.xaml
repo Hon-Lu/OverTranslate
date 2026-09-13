@@ -270,6 +270,12 @@
     <sys:String x:Key="S.Realtime.TextColor">文字色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">背景色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimOpacity">背景の不透明度</sys:String>
+    <sys:String x:Key="S.Realtime.Border">枠線</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">枠線の色の選び方</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">ランダム</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">枠線の色</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">枠線を既定に戻す</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">既定値に戻す</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">表示スタイルを既定に戻す</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">詳細オプション</sys:String>

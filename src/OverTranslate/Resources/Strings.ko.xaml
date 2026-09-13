@@ -270,6 +270,12 @@
     <sys:String x:Key="S.Realtime.TextColor">글자 색</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">배경 색</sys:String>
     <sys:String x:Key="S.Realtime.ScrimOpacity">배경 불투명도</sys:String>
+    <sys:String x:Key="S.Realtime.Border">테두리</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">테두리 색 방식</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">무작위</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">고정</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">테두리 색</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">테두리 기본값으로 되돌리기</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">기본값으로 되돌리기</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">표시 모양 기본값으로</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">고급 옵션</sys:String>

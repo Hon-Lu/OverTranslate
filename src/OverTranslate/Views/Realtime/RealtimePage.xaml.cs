@@ -162,6 +162,15 @@ public partial class RealtimePage : UserControl
         SampleTextColorToggle.Checked += SampleTextColorToggle_Toggled;
         SampleTextColorToggle.Unchecked += SampleTextColorToggle_Toggled;
 
+        BorderToggle.IsChecked = appearance.Realtime.BorderEnabled;
+        (appearance.Realtime.BorderColorMode == RealtimeBorderColorMode.Fixed
+            ? BorderFixedRadio
+            : BorderRandomRadio).IsChecked = true;
+        BorderToggle.Checked += BorderToggle_Toggled;
+        BorderToggle.Unchecked += BorderToggle_Toggled;
+        BorderRandomRadio.Checked += BorderMode_Changed;
+        BorderFixedRadio.Checked += BorderMode_Changed;
+
         SyncScrimOpacity();
         RenderColours();
         RenderPauseHint();
@@ -720,7 +729,11 @@ public partial class RealtimePage : UserControl
             settings.Realtime.NaturalBackgroundEnabled,
             settings.Realtime.SampleSourceTextColor,
             WindowMode ? RealtimeCaptureMode.Window : RealtimeCaptureMode.Screen,
-            sourceWindow);
+            sourceWindow,
+            settings.Realtime.BorderEnabled,
+            settings.Realtime.BorderColorMode == RealtimeBorderColorMode.Fixed
+                ? settings.Realtime.BorderColor
+                : null);
 
         // The shell is handed over to be hidden: it is almost certainly sitting on the screen the
         // user is about to frame blocks on, and it comes back when the session ends.
@@ -764,6 +777,65 @@ public partial class RealtimePage : UserControl
     /// <inheritdoc cref="NaturalBackgroundToggle_Toggled"/>
     private void SampleTextColorToggle_Toggled(object sender, RoutedEventArgs e) =>
         Persist(s => s.Realtime.SampleSourceTextColor = SampleTextColorToggle.IsChecked == true);
+
+    /// <summary>顯示外觀 → 邊框. Written on the flip, like the 進階選項 switches.</summary>
+    private void BorderToggle_Toggled(object sender, RoutedEventArgs e) =>
+        Persist(s => s.Realtime.BorderEnabled = BorderToggle.IsChecked == true);
+
+    private void BorderMode_Changed(object sender, RoutedEventArgs e)
+    {
+        Persist(s => s.Realtime.BorderColorMode = ReferenceEquals(sender, BorderFixedRadio)
+            ? RealtimeBorderColorMode.Fixed
+            : RealtimeBorderColorMode.Random);
+        MoveBorderModeThumb(animate: true);
+    }
+
+    /// <summary>Back to 隨機 and the accent blue. The switch itself is left as the user set it.</summary>
+    private void ResetBorderBtn_Click(object sender, RoutedEventArgs e)
+    {
+        // Checking the half runs BorderMode_Changed, which slides the marker and stores the mode.
+        BorderRandomRadio.IsChecked = true;
+        Persist(s =>
+        {
+            s.Realtime.BorderColorMode = RealtimeBorderColorMode.Random;
+            s.Realtime.BorderColor = RealtimeSubtitleColors.DefaultBorder;
+        });
+    }
+
+    private void BorderColorBtn_Click(object sender, RoutedEventArgs e) =>
+        PickColour(
+            SettingsService.Instance.Current.Realtime.BorderColor,
+            picked => Persist(s => s.Realtime.BorderColor = picked));
+
+    /// <summary>
+    /// The half's width is not known until the tray is shown and laid out, so the marker is placed
+    /// again whenever it gets one.
+    /// </summary>
+    private void BorderModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        MoveBorderModeThumb(animate: false);
+
+    /// <summary>Slides the marker under the chosen half — the same tray as 設定 → 偵錯工具.</summary>
+    private void MoveBorderModeThumb(bool animate)
+    {
+        var target = BorderFixedRadio.IsChecked == true ? BorderModeThumb.ActualWidth : 0;
+
+        if (!animate || BorderModeThumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
+        {
+            BorderModeThumbShift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
+            BorderModeThumbShift.X = target;
+            return;
+        }
+
+        BorderModeThumbShift.BeginAnimation(
+            System.Windows.Media.TranslateTransform.XProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(target, TimeSpan.FromMilliseconds(220))
+            {
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                {
+                    EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut,
+                },
+            });
+    }
 
     /// <summary>
     /// Follows the thumb: the label and the preview on every step, the settings file at the end of a
@@ -861,6 +933,31 @@ public partial class RealtimePage : UserControl
 
         PreviewText.Foreground = new SolidColorBrush(text);
         PreviewScrim.Background = new SolidColorBrush(scrim);
+
+        // The border follows the same stored values the session will be started with. 隨機 has no
+        // one colour to show, so the preview draws it in the theme's accent, which sits with the page.
+        var realtime = settings.Realtime;
+        var fixedBorder = RealtimeSubtitleColors.Border(realtime.BorderColor);
+        var fixedBorderMode = realtime.BorderColorMode == RealtimeBorderColorMode.Fixed;
+        var fixedVisibility = fixedBorderMode ? Visibility.Visible : Visibility.Collapsed;
+        BorderOptions.Visibility = realtime.BorderEnabled ? Visibility.Visible : Visibility.Collapsed;
+        // On the header line, so unlike the button it is not hidden with the options.
+        BorderColorLabel.Visibility = realtime.BorderEnabled ? fixedVisibility : Visibility.Collapsed;
+        BorderColorBtn.Visibility = fixedVisibility;
+        BorderColorSwatch.Background = new SolidColorBrush(fixedBorder);
+        BorderColorValue.Text = RealtimeSubtitleColors.Format(fixedBorder);
+        if (!realtime.BorderEnabled)
+            PreviewScrim.BorderBrush = null;
+        else if (fixedBorderMode)
+            PreviewScrim.BorderBrush = new SolidColorBrush(fixedBorder);
+        else
+            PreviewScrim.SetResourceReference(Border.BorderBrushProperty, "AppAccent");
+        PreviewScrim.BorderThickness = new Thickness(
+            realtime.BorderEnabled ? RealtimeSubtitleColors.BorderThickness : 0);
+
+        ResetBorderBtn.IsEnabled =
+            fixedBorderMode ||
+            !string.Equals(realtime.BorderColor, RealtimeSubtitleColors.DefaultBorder, StringComparison.OrdinalIgnoreCase);
 
         ResetColorsBtn.IsEnabled =
             settings.Realtime.TextColor != RealtimeSubtitleColors.DefaultText ||

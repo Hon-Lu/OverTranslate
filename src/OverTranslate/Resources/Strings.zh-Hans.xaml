@@ -269,6 +269,12 @@
     <sys:String x:Key="S.Realtime.TextColor">文字颜色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">底色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimOpacity">底色不透明度</sys:String>
+    <sys:String x:Key="S.Realtime.Border">边框</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">边框颜色模式</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">随机</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">边框颜色</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">恢复边框默认值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">恢复默认值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">恢复默认外观</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">高级选项</sys:String>

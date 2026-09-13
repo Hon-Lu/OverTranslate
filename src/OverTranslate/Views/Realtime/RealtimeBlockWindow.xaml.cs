@@ -103,6 +103,11 @@ public partial class RealtimeBlockWindow : Window
     private readonly bool _sampleTextColor;
     private readonly RealtimeBlockMode _mode;
 
+    // 顯示外觀 → 邊框, held per session like the colours. No fixed brush with the switch on means
+    // each group picks its own colour — see ApplyBorder.
+    private readonly bool _border;
+    private readonly SolidColorBrush? _fixedBorderBrush;
+
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
     private bool _isLoaded;
@@ -138,10 +143,16 @@ public partial class RealtimeBlockWindow : Window
         int scrimOpacity,
         bool naturalBackground = false,
         bool sampleTextColor = false,
-        RealtimeBlockMode mode = RealtimeBlockMode.Subtitle)
+        RealtimeBlockMode mode = RealtimeBlockMode.Subtitle,
+        bool border = false,
+        string? borderColor = null)
     {
         InitializeComponent();
         _mode = mode;
+        _border = border;
+        _fixedBorderBrush = border && borderColor is not null
+            ? Freeze(new SolidColorBrush(RealtimeSubtitleColors.Border(borderColor)))
+            : null;
 
         RegionId = regionId;
         _physBounds = physBounds;
@@ -274,6 +285,19 @@ public partial class RealtimeBlockWindow : Window
 
     private readonly record struct NaturalPatchVisual(
         Border Surface, System.Drawing.Rectangle PatchBounds);
+
+    /// <summary>Outlines a background patch when 顯示外觀 → 邊框 is on.</summary>
+    /// <remarks>
+    /// A random colour is keyed on the source text, so a line does not change colour when it is
+    /// rebuilt and a panel group's shared patch gets one colour however many rows it holds.
+    /// </remarks>
+    private void ApplyBorder(Border background, TranslatedBlock line)
+    {
+        if (!_border) return;
+        background.BorderBrush = _fixedBorderBrush ??
+            Freeze(new SolidColorBrush(RealtimeSubtitleColors.RandomBorder(line.OriginalText)));
+        background.BorderThickness = new Thickness(RealtimeSubtitleColors.BorderThickness);
+    }
 
     private LineVisual? BuildLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
@@ -443,6 +467,7 @@ public partial class RealtimeBlockWindow : Window
             // radius belongs to the kind of background being drawn rather than to the window.
             CornerRadius = new CornerRadius(naturalBrush is null ? BandCornerRadius : 0),
         };
+        ApplyBorder(background, line);
 
         // Sampling is its own switch: with it off the reader's chosen colour is what gets drawn, and
         // with it on that colour is still what an unconvincing sample falls back to.
@@ -576,6 +601,7 @@ public partial class RealtimeBlockWindow : Window
                 Width = patchWidth, Height = patchHeight,
                 Background = (System.Windows.Media.Brush?)naturalBrush ?? _scrimBrush,
             };
+            ApplyBorder(background, line);
             Canvas.SetLeft(background, patchLeft);
             Canvas.SetTop(background, patchTop);
         }

@@ -576,6 +576,134 @@
                             </Grid>
                         </Border>
 
+                        <!-- 邊框: off by default. When on, 隨機 gives each translated group a colour of
+                             its own, which also tells joined rows from their neighbours, and 固定
+                             draws every band in one colour picked beside the tray. The tray is the
+                             same sliding either/or as 設定 → 偵錯工具. Spaced like the colour row
+                             above: label, then its controls six pixels under it. -->
+                        <Border Style="{StaticResource InnerGroupBorder}">
+                            <!-- The header and the controls are two grids sharing their first column,
+                                 so 邊框顏色 sits on the 邊框 line straight above the button it names. -->
+                            <StackPanel Grid.IsSharedSizeScope="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeBorderTrayColumn"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="{DynamicResource S.Realtime.Border}"
+                                               Style="{StaticResource FieldLabel}"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,16,0"/>
+                                    <!-- Shown with the button it names, only in 固定. -->
+                                    <TextBlock Grid.Column="1"
+                                               x:Name="BorderColorLabel"
+                                               Text="{DynamicResource S.Realtime.BorderColor}"
+                                               Style="{StaticResource FieldLabel}"
+                                               VerticalAlignment="Center"
+                                               Margin="14,0,0,0"
+                                               Visibility="Collapsed"/>
+                                    <CheckBox Grid.Column="3"
+                                              x:Name="BorderToggle"
+                                              Style="{StaticResource ToggleSwitch}"
+                                              Margin="14,0,2,0"
+                                              AutomationProperties.Name="{DynamicResource S.Realtime.Border}"/>
+                                </Grid>
+                                <Grid x:Name="BorderOptions"
+                                      Margin="0,6,0,0"
+                                      Visibility="Collapsed">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeBorderTrayColumn"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="{DynamicResource AppButtonBg}"
+                                            BorderBrush="{DynamicResource AppButtonBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="3"
+                                            VerticalAlignment="Center"
+                                            Grid.IsSharedSizeScope="True"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.BorderMode}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeBorderModeSegment"/>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeBorderModeSegment"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="BorderModeThumb"
+                                                    Grid.Column="0"
+                                                    Background="{DynamicResource AppAccent}"
+                                                    CornerRadius="6"
+                                                    SizeChanged="BorderModeThumb_SizeChanged">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="BorderModeThumbShift"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                            <RadioButton x:Name="BorderRandomRadio" Grid.Column="0" GroupName="RealtimeBorderMode"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Realtime.BorderRandom}"/>
+                                            <RadioButton x:Name="BorderFixedRadio" Grid.Column="1" GroupName="RealtimeBorderMode"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Realtime.BorderFixed}"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <Button Grid.Column="1"
+                                            x:Name="BorderColorBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="34"
+                                            Padding="6,0"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Visibility="Collapsed"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.BorderColor}"
+                                            Click="BorderColorBtn_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border x:Name="BorderColorSwatch"
+                                                    Width="20" Height="20"
+                                                    CornerRadius="3"
+                                                    BorderThickness="1"
+                                                    BorderBrush="{DynamicResource AppBorder}"
+                                                    VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="BorderColorValue"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0,6,0"/>
+                                            <TextBlock Text="&#xE70D;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource AppTextSecondary}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,2,0"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Its own reset, bottom right like the colours': back to 隨機 and the
+                                         accent blue, leaving the switch where the user put it. -->
+                                    <Button Grid.Column="3"
+                                            x:Name="ResetBorderBtn"
+                                            Style="{StaticResource IconTextButton}"
+                                            VerticalAlignment="Center"
+                                            ToolTip="{DynamicResource S.Realtime.ResetBorder}"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.ResetBorder}"
+                                            Click="ResetBorderBtn_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE72C;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,1,6,0"/>
+                                            <TextBlock Text="{DynamicResource S.Common.Reset}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Off until asked for, both of them, which is why they are a group of
                              their own rather than two more controls above: everything above this
                              describes a band the user chose the colours of, and everything in here

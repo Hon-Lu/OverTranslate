@@ -277,6 +277,12 @@
     <sys:String x:Key="S.Realtime.ScrimColor">底色</sys:String>
     <!-- 「不透明度」而非「透明度」：滑桿往右是底色越厚，用「透明度」會讓數字與方向相反。 -->
     <sys:String x:Key="S.Realtime.ScrimOpacity">底色不透明度</sys:String>
+    <sys:String x:Key="S.Realtime.Border">邊框</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">邊框顏色模式</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">隨機</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">邊框顏色</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">還原邊框預設值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">還原預設值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">還原預設外觀</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">進階選項</sys:String>

@@ -43,6 +43,10 @@ namespace OverTranslate.Views.Realtime;
 /// <see cref="IntPtr.Zero"/> otherwise. A handle, so it dies with the window — which is the point:
 /// the session ends with it rather than quietly reading something else.
 /// </param>
+/// <param name="Border">Whether a border is drawn around the band — 顯示外觀 → 邊框.</param>
+/// <param name="FixedBorderColor">
+/// The border's colour as "#RRGGBB", or null for a colour per group chosen from its source text.
+/// </param>
 public sealed record RealtimeStartRequest(
     System.Drawing.Rectangle ScreenBounds,
     int MaxBlocks,
@@ -55,7 +59,9 @@ public sealed record RealtimeStartRequest(
     bool NaturalBackground,
     bool SampleSourceTextColor,
     Models.RealtimeCaptureMode CaptureMode = Models.RealtimeCaptureMode.Screen,
-    IntPtr SourceWindow = default);
+    IntPtr SourceWindow = default,
+    bool Border = false,
+    string? FixedBorderColor = null);
 
 /// <summary>
 /// Owns a realtime session end to end: the edit layer, the per-block overlays, the floating control
@@ -421,7 +427,8 @@ internal sealed class RealtimeSessionController
             var window = new RealtimeBlockWindow(
                 region.Id, region.Bounds, GrabUnderlying, request.SourceLanguage, request.TargetLanguage,
                 request.TextColor, request.ScrimColor, request.ScrimOpacity,
-                request.NaturalBackground, request.SampleSourceTextColor, region.Mode);
+                request.NaturalBackground, request.SampleSourceTextColor, region.Mode,
+                request.Border, request.FixedBorderColor);
             _blockWindows[region.Id] = window;
             window.Show();
         }
