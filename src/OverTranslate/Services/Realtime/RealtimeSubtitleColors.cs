@@ -71,6 +71,35 @@ public static class RealtimeSubtitleColors
     public static int ClampOpacity(int opacity) =>
         Math.Clamp(opacity, MinScrimOpacity, MaxScrimOpacity);
 
+    /// <summary>The theme's accent blue, which a fixed border starts at.</summary>
+    public const string DefaultBorder = "#52C4FA";
+
+    /// <summary>How thick the border around the band is drawn. Not a setting.</summary>
+    public const double BorderThickness = 2;
+
+    // Bright enough to stay visible against a dark band, and far enough apart to tell neighbours apart.
+    private static readonly Color[] RandomBorders =
+    [
+        Color.FromRgb(0x52, 0xC4, 0xFA), Color.FromRgb(0xFF, 0x6B, 0x6B), Color.FromRgb(0x7B, 0xE0, 0x7B),
+        Color.FromRgb(0xFF, 0xC2, 0x4B), Color.FromRgb(0xC9, 0x8B, 0xFF), Color.FromRgb(0xFF, 0x8F, 0xD1),
+        Color.FromRgb(0x4F, 0xE3, 0xC1), Color.FromRgb(0xFF, 0x9F, 0x55),
+    ];
+
+    /// <summary>The fixed border colour, always fully opaque.</summary>
+    public static Color Border(string? hex) => Parse(hex) ?? Parse(DefaultBorder)!.Value;
+
+    /// <summary>
+    /// The colour 隨機 gives a line. Chosen from its source text rather than drawn fresh, so a line
+    /// keeps its colour however often it is rebuilt, and every row of one group shares it.
+    /// </summary>
+    public static Color RandomBorder(string? key)
+    {
+        uint hash = 2166136261;
+        foreach (var character in key ?? "")
+            hash = (hash ^ character) * 16777619;
+        return RandomBorders[hash % (uint)RandomBorders.Length];
+    }
+
     /// <summary>Back to the form stored in the settings file.</summary>
     public static string Format(Color color) =>
         $"#{color.R:X2}{color.G:X2}{color.B:X2}";

@@ -269,6 +269,12 @@
     <sys:String x:Key="S.Realtime.TextColor">文字颜色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">底色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimOpacity">底色不透明度</sys:String>
+    <sys:String x:Key="S.Realtime.Border">边框</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">边框颜色模式</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">随机</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">边框颜色</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">恢复边框默认值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">恢复默认值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">恢复默认外观</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">高级选项</sys:String>
@@ -346,7 +352,7 @@
 
     <!-- Block mode picker -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 对话</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / UI</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / 界面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整条字幕、对话框——文字大，读取时会缩小</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">游戏面板、物品说明——文字小，读取时不缩小</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">适合影音字幕、游戏对话等文字位置较集中且固定的场景。

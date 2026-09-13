@@ -933,6 +933,13 @@ internal static class OcrTextBlockGrouper
         if (StartsWithListBullet(currentText))
             return (false, "list bullet");
 
+        // The same argument as the bullet, for a chat log — see GroupingProfile.RefuseSpeakerLineStarts.
+        if (profile.RefuseSpeakerLineStarts && SpeakerLineStart.Opens(currentText))
+            return (false, "speaker line start");
+
+        if (profile.RefuseSpeakerLineStarts && SpeakerLineStart.IsBareLabel(previousText))
+            return (false, "speaker label");
+
         if (IsNumericRow(currentText))
             return (false, "numeric row");
 

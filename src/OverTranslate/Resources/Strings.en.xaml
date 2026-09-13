@@ -269,6 +269,12 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.TextColor">Text</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">Background</sys:String>
     <sys:String x:Key="S.Realtime.ScrimOpacity">Background opacity</sys:String>
+    <sys:String x:Key="S.Realtime.Border">Border</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">Border colour mode</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">Random</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">Fixed</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">Border colour</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">Reset border</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">Reset to defaults</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">Reset appearance</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">Advanced options</sys:String>

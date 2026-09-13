@@ -277,6 +277,12 @@
     <sys:String x:Key="S.Realtime.ScrimColor">底色</sys:String>
     <!-- 「不透明度」而非「透明度」：滑桿往右是底色越厚，用「透明度」會讓數字與方向相反。 -->
     <sys:String x:Key="S.Realtime.ScrimOpacity">底色不透明度</sys:String>
+    <sys:String x:Key="S.Realtime.Border">邊框</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">邊框顏色模式</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">隨機</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">邊框顏色</sys:String>
+    <sys:String x:Key="S.Realtime.ResetBorder">還原邊框預設值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColors">還原預設值</sys:String>
     <sys:String x:Key="S.Realtime.ResetColorsName">還原預設外觀</sys:String>
     <sys:String x:Key="S.Realtime.AdvancedOptions">進階選項</sys:String>
@@ -362,7 +368,7 @@
     <!-- Block mode picker. The em dash in the summaries separates what the mode is for from what
          it does to the text; en-dash-with-spaces reads better in English. -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 對話</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / UI</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / 介面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整條字幕、對話框——文字大，讀取時會縮小</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">遊戲面板、物品說明——文字小，讀取時不縮小</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">適合影音字幕、遊戲對話等文字位置較集中且固定的場景。

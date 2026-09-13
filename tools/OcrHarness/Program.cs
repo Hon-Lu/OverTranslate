@@ -16,6 +16,8 @@ using OverTranslate.Services.Realtime;
 // the text it belongs to, which is the half that says whether a verdict was right.
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+if (args.Length > 0 && args[0] == "--panel-layout") return PanelLayoutProbe.Run(args[1..]);
+
 if (args.Length > 0 && args[0] == "--dialogue-probe")
     return await DialogueProbe.Run(args.Skip(1).ToArray());
 
@@ -153,7 +155,8 @@ args = [.. args.Where(argument => argument != "--trace")];
 var harnessGroupingBaseline = new GroupingProfile(
     TightlySetMinTextSizeRatio: 0.88,
     WaiveLengthTestWhenSetSolid: false,
-    SolidLineAdvanceWhenWrapped: 1.20);
+    SolidLineAdvanceWhenWrapped: 1.20,
+    RefuseSpeakerLineStarts: false);
 
 // Which language to read as. It picks the recognition model, and that is not a detail on a Korean
 // dump: the general model carries no Hangul at all, so a Korean frame read as EN comes back as

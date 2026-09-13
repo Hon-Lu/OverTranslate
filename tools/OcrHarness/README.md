@@ -24,6 +24,24 @@ $h = 'tools/OcrHarness/bin/Release/net8.0-windows10.0.26100.0/win-x64/OcrHarness
 重播不取代實際 ROI／尺度變動或翻譯疊圖驗證；realtime 使用 Subtitle 偵測尺寸，不代表直排流程。
 產物建議放在 `.test-artifacts/`，不要把圖片加入測試 Fixtures。
 
+## Panel 分組與譯文疊圖
+
+固定輸入清單可用「圖片路徑<Tab>panel<Tab>語言」（EN／JA／KO／ZH-HANT）。
+capture 依正式 Panel 偵測尺寸辨識一次；replay 以 realtime 門檻重播，輸出原始成員 ID 和來源行框。
+
+    & $h --group-prototype capture .test-artifacts/panel-inputs.json '@.test-artifacts/panel-list.txt'
+    & $h --group-prototype replay .test-artifacts/panel-inputs.json .test-artifacts/panel-groups.json
+    & $h --panel-layout .test-artifacts/panel-inputs.json .test-artifacts/panel-translations.json .test-artifacts/panel-rendered
+
+panel-translations.json 是 { "完整分組原文": "完整譯文" }，可填人工核對或先前保存的供應商結果。
+疊圖工具不呼叫翻譯服務，未提供的字串沿用原文。每張圖都輸出：
+
+- `<圖>-Groups.png`：原圖加分組標註，不需要譯文。
+- `<圖>-Overlay.png`／`-Overlay-Debug.png`／`.json`：至少命中一筆譯文時才輸出，使用正式 RealtimeBlockWindow。
+
+標註方式：白色虛線是 OCR 原始框；同色實線框與 `#n` 是同一個翻譯單位，`#n xk` 表示由 k 行組成。
+工具不顯示視窗，也不擷取正在執行的遊戲；自然背景與取色另需實際回歸。
+
 ### 外部 OCR 圖片測試
 
 測試專案不再附帶截圖。舊的真實像素回歸保留；需要執行時，將六張原始素材放在外部資料夾，

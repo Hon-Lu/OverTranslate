@@ -101,6 +101,12 @@ public partial class RealtimeBlockWindow : Window
     // cannot bake its own translation into what it draws either.
     private readonly bool _naturalBackground;
     private readonly bool _sampleTextColor;
+    private readonly RealtimeBlockMode _mode;
+
+    // 顯示外觀 → 邊框, held per session like the colours. No fixed brush with the switch on means
+    // each group picks its own colour — see ApplyBorder.
+    private readonly bool _border;
+    private readonly SolidColorBrush? _fixedBorderBrush;
 
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
@@ -136,9 +142,17 @@ public partial class RealtimeBlockWindow : Window
         string scrimColor,
         int scrimOpacity,
         bool naturalBackground = false,
-        bool sampleTextColor = false)
+        bool sampleTextColor = false,
+        RealtimeBlockMode mode = RealtimeBlockMode.Subtitle,
+        bool border = false,
+        string? borderColor = null)
     {
         InitializeComponent();
+        _mode = mode;
+        _border = border;
+        _fixedBorderBrush = border && borderColor is not null
+            ? Freeze(new SolidColorBrush(RealtimeSubtitleColors.Border(borderColor)))
+            : null;
 
         RegionId = regionId;
         _physBounds = physBounds;
@@ -243,19 +257,17 @@ public partial class RealtimeBlockWindow : Window
             ? CaptureUnderlyingRegion()
             : null;
 
-        foreach (var line in _lines)
+        foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame))
         {
-            if (string.IsNullOrWhiteSpace(line.TranslatedText)) continue;
-            if (BuildLine(line, canvasWidth, canvasHeight, frame) is not { } visual) continue;
-
-            ScrimCanvas.Children.Add(visual.Background);
             TextCanvas.Children.Add(visual.Text);
+            if (visual.Background is not { } background) continue;
+            ScrimCanvas.Children.Add(background);
 
             // Only the repaired backgrounds are worth revisiting: a band drawn in a fixed colour has
             // nothing to follow, and recording one here would have the refresh below replace it with
             // a patch the user never asked for.
             if (_naturalBackground)
-                patches.Add(new NaturalPatchVisual(visual.Background, visual.PatchBounds));
+                patches.Add(new NaturalPatchVisual(background, visual.PatchBounds));
         }
 
         Volatile.Write(ref _naturalPatches, [.. patches]);
@@ -264,12 +276,28 @@ public partial class RealtimeBlockWindow : Window
         Volatile.Write(ref _lastRefreshPrint, null);
     }
 
-    /// <summary>One line's background patch and translated text, kept in separate layers.</summary>
+    /// <summary>
+    /// One line's background patch and translated text, kept in separate layers. A panel row after
+    /// the first carries no background: its group's first row draws one patch for all of them.
+    /// </summary>
     private readonly record struct LineVisual(
-        Border Background, Border Text, System.Drawing.Rectangle PatchBounds);
+        Border? Background, Border Text, System.Drawing.Rectangle PatchBounds);
 
     private readonly record struct NaturalPatchVisual(
         Border Surface, System.Drawing.Rectangle PatchBounds);
+
+    /// <summary>Outlines a background patch when 顯示外觀 → 邊框 is on.</summary>
+    /// <remarks>
+    /// A random colour is keyed on the source text, so a line does not change colour when it is
+    /// rebuilt and a panel group's shared patch gets one colour however many rows it holds.
+    /// </remarks>
+    private void ApplyBorder(Border background, TranslatedBlock line)
+    {
+        if (!_border) return;
+        background.BorderBrush = _fixedBorderBrush ??
+            Freeze(new SolidColorBrush(RealtimeSubtitleColors.RandomBorder(line.OriginalText)));
+        background.BorderThickness = new Thickness(RealtimeSubtitleColors.BorderThickness);
+    }
 
     private LineVisual? BuildLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
@@ -439,6 +467,7 @@ public partial class RealtimeBlockWindow : Window
             // radius belongs to the kind of background being drawn rather than to the window.
             CornerRadius = new CornerRadius(naturalBrush is null ? BandCornerRadius : 0),
         };
+        ApplyBorder(background, line);
 
         // Sampling is its own switch: with it off the reader's chosen colour is what gets drawn, and
         // with it on that colour is still what an unconvincing sample falls back to.
@@ -493,6 +522,110 @@ public partial class RealtimeBlockWindow : Window
         Canvas.SetLeft(text, scrimLeft);
         Canvas.SetTop(text, scrimTop);
 
+        return new LineVisual(background, text, patchBounds);
+    }
+
+    private IEnumerable<LineVisual> BuildVisuals(
+        double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
+    {
+        var typeface = new Typeface(TextFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        foreach (var block in _lines)
+        {
+            if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+            if (_mode == RealtimeBlockMode.Panel)
+            {
+                double fontSize = Math.Max(1, Math.Min(
+                    SourceFontScale.Calculate(GetGlyphHeight(block, block.Bounds.Height / _dpiY),
+                        _latinSourceToCjkTarget),
+                    (block.SourceLineBounds ?? [block.Bounds]).Min(r => r.Height) / _dpiY / LineHeightRatio));
+                var rows = RealtimePanelLines.Split(block,
+                    text => new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                        typeface, fontSize, Brushes.Black, _dpiY).WidthIncludingTrailingWhitespace * _dpiX,
+                    RealtimePanelLines.AvailableWidths(block, _lines));
+                if (rows.Count == 1 && rows[0].SourceLineBounds is { Count: > 1 })
+                {
+                    if (BuildLine(block, canvasWidth, canvasHeight, frame) is { } fallback) yield return fallback;
+                    continue;
+                }
+                // Keep one font size across the paragraph, including uneven row widths.
+                foreach (var row in rows)
+                {
+                    var measured = Measure(row.TranslatedText, typeface, fontSize, null);
+                    double scale = Math.Min(1, Math.Min(
+                        row.Bounds.Width / _dpiX / Math.Max(1, measured.Width),
+                        row.Bounds.Height / _dpiY / Math.Max(1, measured.Height)));
+                    fontSize *= scale;
+                }
+                // One patch over the whole group, as the wrapped block drew before rows were split:
+                // per-row patches left the gaps between OCR boxes and their ragged widths showing,
+                // so a joined group no longer read as one unit.
+                var scrim = rows.Select(row => row.Bounds).Aggregate(Rect.Union);
+                for (int index = 0; index < rows.Count; index++)
+                {
+                    var row = rows[index];
+                    // Invalid source geometry keeps the original whole-block fallback.
+                    var visual = row.SourceLineBounds is { Count: > 1 }
+                        ? BuildLine(row, canvasWidth, canvasHeight, frame)
+                        : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null);
+                    if (visual is { } drawn) yield return drawn;
+                }
+            }
+            else if (BuildLine(block, canvasWidth, canvasHeight, frame) is { } visual)
+                yield return visual;
+        }
+    }
+
+    private LineVisual? BuildPanelLine(
+        TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
+        double fontSize, Rect? scrim)
+    {
+        var canvas = new Rect(0, 0, canvasWidth * _dpiX, canvasHeight * _dpiY);
+        var cell = Rect.Intersect(line.Bounds, canvas);
+        if (cell.IsEmpty || cell.Width <= 0 || cell.Height <= 0) return null;
+        double left = cell.X / _dpiX, top = cell.Y / _dpiY;
+        double width = cell.Width / _dpiX, height = cell.Height / _dpiY;
+        var foreground = _textBrush;
+        if (_sampleTextColor && frame is not null)
+            foreground = Freeze(new SolidColorBrush(
+                RealtimeNaturalBackground.SampleTextColor(frame, line.Bounds, _textBrush.Color)));
+        Border? background = null;
+        var patchBounds = default(System.Drawing.Rectangle);
+        if (scrim is { } scrimBounds && Rect.Intersect(scrimBounds, canvas) is { IsEmpty: false } patch)
+        {
+            double patchLeft = patch.X / _dpiX, patchTop = patch.Y / _dpiY;
+            double patchWidth = patch.Width / _dpiX, patchHeight = patch.Height / _dpiY;
+            patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
+            var naturalBrush = _naturalBackground ? BuildNaturalBrush(frame, patchBounds, _lines) : null;
+            background = new Border
+            {
+                Width = patchWidth, Height = patchHeight,
+                Background = (System.Windows.Media.Brush?)naturalBrush ?? _scrimBrush,
+            };
+            ApplyBorder(background, line);
+            Canvas.SetLeft(background, patchLeft);
+            Canvas.SetTop(background, patchTop);
+        }
+        // A segment already owns a source row. Do not wrap it a second time, expand
+        // into neighbouring columns, or truncate a long word that could not be split.
+        var text = new Border
+        {
+            Width = width, Height = height, ClipToBounds = true,
+            Child = new Viewbox
+            {
+                Stretch = Stretch.Uniform,
+                StretchDirection = StretchDirection.DownOnly,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = line.TranslatedText, FontFamily = TextFont, FontSize = fontSize,
+                    FontWeight = FontWeights.SemiBold, Foreground = foreground,
+                    TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.None,
+                },
+            },
+        };
+        Canvas.SetLeft(text, left);
+        Canvas.SetTop(text, top);
         return new LineVisual(background, text, patchBounds);
     }
 

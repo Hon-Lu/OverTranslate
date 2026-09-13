@@ -12,13 +12,13 @@ internal static class GroupingPrototype
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
     internal record Block(string Text, double[] Bounds, double[] LayoutBounds,
-        OcrLayoutScript Script, double? Glyph, double? Render, double? Confidence, double? Ink = null)
+        OcrLayoutScript Script, double? Glyph, double? Render, double? Confidence, double? Ink = null, double[][]? Lines = null)
     {
-        public OcrTextBlock Restore() => new(Text, RectOf(Bounds), RenderGlyphHeight: Render,
+        public OcrTextBlock Restore() => new(Text, RectOf(Bounds), SourceLineBounds: Lines?.Select(RectOf).ToArray(), RenderGlyphHeight: Render,
             Confidence: Confidence, LayoutScript: Script, LayoutBounds: RectOf(LayoutBounds),
             LayoutGlyphHeight: Glyph) { LayoutInkHeight = Ink };
         public static Block From(OcrTextBlock b) => new(b.Text, Box(b.Bounds), Box(b.LayoutBounds),
-            b.LayoutScript, b.LayoutGlyphHeight, b.RenderGlyphHeight, b.Confidence, b.LayoutInkHeight);
+            b.LayoutScript, b.LayoutGlyphHeight, b.RenderGlyphHeight, b.Confidence, b.LayoutInkHeight, b.SourceLineBounds?.Select(Box).ToArray());
     }
     internal record Capture(string Image, string Flow, string Language, Block[] Blocks);
     internal record Result(string Image, string Profile, string[][] Groups, Block[] Output,
@@ -42,12 +42,12 @@ internal static class GroupingPrototype
                 var flow = fields.Length > 1 ? fields[1] : "screenshot";
                 var language = fields.Length > 2 ? fields[2] : "EN";
                 using var bitmap = new Bitmap(path);
-                var raw = flow == "realtime"
+                var raw = flow is "realtime" or "panel"
                     ? await engine.TryRecognizeAsync(bitmap, language,
-                        RealtimeDetectorSize.For(bitmap.Width, bitmap.Height, RealtimeBlockMode.Subtitle).Primary)
+                        RealtimeDetectorSize.For(bitmap.Width, bitmap.Height, (flow == "panel" ? RealtimeBlockMode.Panel : RealtimeBlockMode.Subtitle)).Primary)
                     : await engine.RecognizeAsync(bitmap, language);
                 if (raw is null) throw new InvalidOperationException($"OCR unavailable: {path}");
-                if (flow == "realtime") raw = OcrService.RejectUnconvincingBlocks(raw);
+                if (flow is "realtime" or "panel") raw = OcrService.RejectUnconvincingBlocks(raw);
                 captures.Add(new(path, flow, language, raw.Select(Block.From).ToArray()));
                 Console.WriteLine($"CAPTURE {path}: {raw.Count}");
             }
@@ -59,7 +59,7 @@ internal static class GroupingPrototype
             var captured = JsonSerializer.Deserialize<Capture[]>(File.ReadAllText(args[1]))!;
             Save(args[2], captured.Select(input =>
             {
-                if (input.Flow == "realtime") return input;
+                if (input.Flow is "realtime" or "panel") return input;
                 using var bitmap = new Bitmap(input.Image);
                 var blocks = TextInkMetrics.Annotate(bitmap, input.Blocks.Select(b => b.Restore()).ToArray());
                 return input with { Blocks = blocks.Select(Block.From).ToArray() };
@@ -86,7 +86,8 @@ internal static class GroupingPrototype
         var results = new List<Result>();
         foreach (var input in inputs)
         {
-            var modes = input.Flow == "realtime" ? new[] { "realtime" } : ["general", "interface"];
+            var modes = input.Flow == "panel" ? new[] { "panel" } :
+                input.Flow == "realtime" ? ["realtime"] : ["general", "interface"];
             foreach (var mode in modes)
             {
                 var profile = mode switch { "general" => GroupingProfile.General,

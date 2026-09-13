@@ -20,6 +20,17 @@ public enum RealtimeCaptureMode
     Window,
 }
 
+/// <summary>How the border around a realtime subtitle band picks its colour — 顯示外觀 → 邊框.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum RealtimeBorderColorMode
+{
+    /// <summary>Each translated group gets its own colour, chosen from its source text.</summary>
+    Random,
+
+    /// <summary>Every band uses <see cref="RealtimeSettings.BorderColor"/>.</summary>
+    Fixed,
+}
+
 /// <summary>
 /// Everything 即時翻譯 keeps between sittings, under one key.
 /// </summary>
@@ -93,6 +104,18 @@ public class RealtimeSettings
     /// </remarks>
     public int ScrimOpacity { get; set; } =
         Services.Realtime.RealtimeSubtitleColors.DefaultScrimOpacity;
+
+    /// <summary>
+    /// Whether a solid border is drawn around the band. Off by default; its thickness is not a
+    /// setting.
+    /// </summary>
+    public bool BorderEnabled { get; set; } = false;
+
+    /// <summary>Random until the user asks for one colour — see <see cref="RealtimeBorderColorMode"/>.</summary>
+    public RealtimeBorderColorMode BorderColorMode { get; set; } = RealtimeBorderColorMode.Random;
+
+    /// <summary>The colour used in <see cref="RealtimeBorderColorMode.Fixed"/>, "#RRGGBB".</summary>
+    public string BorderColor { get; set; } = Services.Realtime.RealtimeSubtitleColors.DefaultBorder;
 
     /// <summary>Which of the two capture sources the user last chose. Step 1 on the page.</summary>
     public RealtimeCaptureMode CaptureMode { get; set; } = RealtimeCaptureMode.Screen;
