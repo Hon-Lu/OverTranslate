@@ -59,10 +59,23 @@ namespace OverTranslate.Services.Ocr;
 /// the paragraphs. Raising this number buys strung-together headlines, not paragraphs. It is why
 /// only one mode takes the relaxation at all.</para>
 /// </param>
+/// <param name="RefuseSpeakerLineStarts">
+/// <para>Whether a line opening like a chat entry — timestamp, channel tag, @handle, name and colon —
+/// refuses to continue the line above, and whether a line holding only such a speaker refuses to be
+/// continued. See <see cref="SpeakerLineStart"/>.</para>
+///
+/// <para>MEASURED CASE: the 22 chat-room captures under <c>.ai/test-images/chat-room</c>, five of
+/// them hand-marked. Chat entries sit at 0.62 to 1.16 line heights, one edge, one size — inside every
+/// set-solid limit — so the live panel path joined 11 pairs of separate messages across the five, all
+/// nine rows of one English log into a single string. Only the live panel path takes it: the
+/// screenshot modes have no chat corpus behind them and the interface mode's figures are its v1
+/// behaviour.</para>
+/// </param>
 internal sealed record GroupingProfile(
     double TightlySetMinTextSizeRatio,
     bool WaiveLengthTestWhenSetSolid,
-    double SolidLineAdvanceWhenWrapped)
+    double SolidLineAdvanceWhenWrapped,
+    bool RefuseSpeakerLineStarts)
 {
     /// <summary>
     /// Interfaces: game UI, menus, multi-column panels. The conservative half of the pair, and what
@@ -77,7 +90,8 @@ internal sealed record GroupingProfile(
     public static GroupingProfile Interface { get; } = new(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,
-        SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance);
+        SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
+        RefuseSpeakerLineStarts: false);
 
     /// <summary>
     /// The default: articles, comics, dialogue, and most of what anyone frames. Relaxed only where a
@@ -121,7 +135,8 @@ internal sealed record GroupingProfile(
     public static GroupingProfile General { get; } = new(
         TightlySetMinTextSizeRatio: 0.80,
         WaiveLengthTestWhenSetSolid: true,
-        SolidLineAdvanceWhenWrapped: 1.45);
+        SolidLineAdvanceWhenWrapped: 1.45,
+        RefuseSpeakerLineStarts: false);
 
     /// <summary>
     /// The live-screen path's own profile. It is not <see cref="Interface"/>, it merely holds the
@@ -143,7 +158,8 @@ internal sealed record GroupingProfile(
     public static GroupingProfile Realtime { get; } = new(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,
-        SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance);
+        SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
+        RefuseSpeakerLineStarts: true);
 
     /// <summary>
     /// The vertical pipeline's own profile. Like <see cref="Realtime"/>, it is not
@@ -171,7 +187,8 @@ internal sealed record GroupingProfile(
     public static GroupingProfile Vertical { get; } = new(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,
-        SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance);
+        SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
+        RefuseSpeakerLineStarts: false);
 
     /// <summary>The thresholds for a capture the user has declared the kind of.</summary>
     /// <remarks>

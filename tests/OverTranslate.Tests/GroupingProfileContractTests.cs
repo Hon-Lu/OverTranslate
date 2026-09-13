@@ -123,8 +123,12 @@ public class GroupingProfileContractTests
     /// that a user meeting them can switch modes — so a version where switching does not help was
     /// the argument failing, not a threshold needing a nudge.</para>
     /// </remarks>
+    /// <para>The fourth arrived the same way: <see cref="GroupingProfile.RefuseSpeakerLineStarts"/>,
+    /// measured on the chat-room captures, where the live panel path joined 11 pairs of separate
+    /// messages across five hand-marked images. It is content evidence rather than a threshold, and
+    /// only the live panel profile takes it.</para>
     [Fact]
-    public void TheProfile_CarriesThreeThresholds_AndAFourthIsADesignChange()
+    public void TheProfile_CarriesFourFields_AndAFifthIsADesignChange()
     {
         var fields = typeof(GroupingProfile)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -134,8 +138,18 @@ public class GroupingProfileContractTests
         Assert.Equal(
             [nameof(GroupingProfile.TightlySetMinTextSizeRatio),
              nameof(GroupingProfile.WaiveLengthTestWhenSetSolid),
-             nameof(GroupingProfile.SolidLineAdvanceWhenWrapped)],
+             nameof(GroupingProfile.SolidLineAdvanceWhenWrapped),
+             nameof(GroupingProfile.RefuseSpeakerLineStarts)],
             fields);
+    }
+
+    [Fact]
+    public void OnlyTheRealtimeProfile_RefusesSpeakerLineStarts()
+    {
+        Assert.True(GroupingProfile.Realtime.RefuseSpeakerLineStarts);
+        Assert.False(GroupingProfile.General.RefuseSpeakerLineStarts);
+        Assert.False(GroupingProfile.Interface.RefuseSpeakerLineStarts);
+        Assert.False(GroupingProfile.Vertical.RefuseSpeakerLineStarts);
     }
 
     /// <summary>

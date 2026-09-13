@@ -155,7 +155,8 @@ args = [.. args.Where(argument => argument != "--trace")];
 var harnessGroupingBaseline = new GroupingProfile(
     TightlySetMinTextSizeRatio: 0.88,
     WaiveLengthTestWhenSetSolid: false,
-    SolidLineAdvanceWhenWrapped: 1.20);
+    SolidLineAdvanceWhenWrapped: 1.20,
+    RefuseSpeakerLineStarts: false);
 
 // Which language to read as. It picks the recognition model, and that is not a detail on a Korean
 // dump: the general model carries no Hangul at all, so a Korean frame read as EN comes back as
