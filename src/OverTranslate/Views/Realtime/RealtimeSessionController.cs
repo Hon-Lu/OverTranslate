@@ -421,7 +421,7 @@ internal sealed class RealtimeSessionController
             var window = new RealtimeBlockWindow(
                 region.Id, region.Bounds, GrabUnderlying, request.SourceLanguage, request.TargetLanguage,
                 request.TextColor, request.ScrimColor, request.ScrimOpacity,
-                request.NaturalBackground, request.SampleSourceTextColor);
+                request.NaturalBackground, request.SampleSourceTextColor, region.Mode);
             _blockWindows[region.Id] = window;
             window.Show();
         }

@@ -52,7 +52,7 @@ internal static class PanelLayoutProbe
                         var window = new RealtimeBlockWindow(0,
                             new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height), _ => null,
                             capture.Language, capture.Language.StartsWith("ZH") ? "EN" : "ZH-HANT",
-                            "#FFFFFF", "#000000", 85);
+                            "#FFFFFF", "#000000", 85, mode: RealtimeBlockMode.Panel);
                         try
                         {
                             var type = typeof(RealtimeBlockWindow);
