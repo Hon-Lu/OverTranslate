@@ -56,10 +56,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="GTranslate">
-      <HintPath>lib\GTranslate\GTranslate.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
+    <PackageReference Include="GTranslate" Version="2.4.0" />
     <PackageReference Include="NLog" Version="5.0.4" />
     <PackageReference Include="OpenccNetLib" Version="1.6.2" />
     <PackageReference Include="RapidOcrNet" Version="3.0.0" ExcludeAssets="build" />
