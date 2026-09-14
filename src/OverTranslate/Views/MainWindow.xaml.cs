@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
@@ -928,11 +927,6 @@ public partial class MainWindow : Window
             // group box of a wrapped paragraph spans whatever the page put between its lines.
             var placed = OverlayPlacement.Place(translated, CaptureLayoutPolicy.ForApplication(req.LayoutMode), req.IsVerticalText);
 
-            var croppedBitmap = workBitmap;
-            var bmpData = croppedBitmap.LockBits(
-                new Rectangle(0, 0, croppedBitmap.Width, croppedBitmap.Height),
-                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-
             // Re-use sampled colours from the previous overlay, but only where the block at that
             // index is recognisably the same block. Re-translating after switching capture mode,
             // re-drawing the selection, or simply letting the detector wobble all change how many
@@ -941,37 +935,23 @@ public partial class MainWindow : Window
             // to say the picture underneath was never looked at. Re-sampling costs a pass over the
             // crop, next to nothing beside the OCR and the translation that just ran.
             var previousVerticalText = _lastVerticalText;
-            List<TranslatedBlock> coloredTranslated;
-            try
-            {
-                coloredTranslated = placed
-                    .Select((b, i) =>
+            var coloredTranslated = placed
+                .Select((b, i) =>
+                {
+                    if (SampledColorReuse.CanReuse(
+                            _lastColoredBlocks, i, b, req.IsVerticalText, previousVerticalText))
                     {
-                        if (SampledColorReuse.CanReuse(
-                                _lastColoredBlocks, i, b, req.IsVerticalText, previousVerticalText))
+                        return b with
                         {
-                            return b with
-                            {
-                                BackgroundColor = _lastColoredBlocks[i].BackgroundColor,
-                                TextColor       = _lastColoredBlocks[i].TextColor
-                            };
-                        }
+                            BackgroundColor = _lastColoredBlocks[i].BackgroundColor,
+                            TextColor       = _lastColoredBlocks[i].TextColor
+                        };
+                    }
 
-                        var bg = SampleAverageColor(
-                            bmpData,
-                            croppedBitmap.Width,
-                            croppedBitmap.Height,
-                            b.Bounds,
-                            req.SourceLang);
-                        var fg = SampleTextColor(bmpData, croppedBitmap.Width, croppedBitmap.Height, b.Bounds, bg);
-                        return b with { BackgroundColor = bg, TextColor = fg };
-                    })
-                    .ToList();
-            }
-            finally
-            {
-                croppedBitmap.UnlockBits(bmpData);
-            }
+                    var (bg, fg) = SourceTextColorSampler.ForCaptureOverlay(workBitmap, b.Bounds);
+                    return b with { BackgroundColor = bg, TextColor = fg };
+                })
+                .ToList();
 
             _lastColoredBlocks = coloredTranslated;
             _lastVerticalText = req.IsVerticalText;
@@ -1668,116 +1648,6 @@ public partial class MainWindow : Window
     private static void ShowBalloon(
         string title, string message, System.Windows.Rect? sel = null, ToastKind kind = ToastKind.Error) =>
         ToastWindow.Show(title, message, sel, kind);
-
-    private static System.Windows.Media.Color SampleAverageColor(
-        BitmapData data, int bmpW, int bmpH, System.Windows.Rect bounds, string sourceLanguage)
-    {
-        // All scripts use the outer dominant-color sampler. It pads outward from the text box
-        // and picks the most common surrounding color, so it stays correct even when the
-        // (tightened) box no longer fully encloses the glyphs. The earlier English-only
-        // strip-average sampled thin bands directly above/below the box; once the box height
-        // was reduced those bands grazed the light glyphs and produced a washed-out grey that
-        // no longer blended with the dark page background.
-        _ = sourceLanguage;
-        return SampleOuterDominantBackgroundColor(data, bmpW, bmpH, bounds);
-    }
-
-    private static System.Windows.Media.Color SampleOuterDominantBackgroundColor(
-        BitmapData data, int bmpW, int bmpH, System.Windows.Rect bounds)
-    {
-        int padX = Math.Max(4, (int)Math.Round(bounds.Height * 0.35));
-        int padY = Math.Max(3, (int)Math.Round(bounds.Height * 0.28));
-        int x1 = Math.Clamp((int)bounds.X - padX, 0, bmpW);
-        int y1 = Math.Clamp((int)bounds.Y - padY, 0, bmpH);
-        int x2 = Math.Clamp((int)(bounds.X + bounds.Width) + padX, 0, bmpW);
-        int y2 = Math.Clamp((int)(bounds.Y + bounds.Height) + padY, 0, bmpH);
-        int innerX1 = Math.Clamp((int)bounds.X, 0, bmpW);
-        int innerY1 = Math.Clamp((int)bounds.Y, 0, bmpH);
-        int innerX2 = Math.Clamp((int)(bounds.X + bounds.Width), 0, bmpW);
-        int innerY2 = Math.Clamp((int)(bounds.Y + bounds.Height), 0, bmpH);
-
-        var buckets = new Dictionary<int, (long R, long G, long B, int Count)>();
-
-        void AddPixel(int px, int py)
-        {
-            int v = Marshal.ReadInt32(data.Scan0, py * data.Stride + px * 4);
-            byte b = (byte)(v & 0xFF);
-            byte g = (byte)((v >> 8) & 0xFF);
-            byte r = (byte)((v >> 16) & 0xFF);
-            int key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-            var bucket = buckets.GetValueOrDefault(key);
-            buckets[key] = (bucket.R + r, bucket.G + g, bucket.B + b, bucket.Count + 1);
-        }
-
-        for (int py = y1; py < y2; py++)
-        {
-            for (int px = x1; px < x2; px += 2)
-            {
-                bool insideTextRect = px >= innerX1 && px < innerX2 && py >= innerY1 && py < innerY2;
-                if (!insideTextRect)
-                    AddPixel(px, py);
-            }
-        }
-
-        if (buckets.Count == 0)
-            return System.Windows.Media.Colors.White;
-
-        var dominant = buckets.Values
-            .OrderByDescending(bucket => bucket.Count)
-            .First();
-
-        return System.Windows.Media.Color.FromRgb(
-            (byte)(dominant.R / dominant.Count),
-            (byte)(dominant.G / dominant.Count),
-            (byte)(dominant.B / dominant.Count));
-    }
-
-    private static System.Windows.Media.Color SampleTextColor(
-        BitmapData data, int bmpW, int bmpH, System.Windows.Rect bounds,
-        System.Windows.Media.Color bg)
-    {
-        int x1 = Math.Clamp((int)bounds.X, 0, bmpW);
-        int y1 = Math.Clamp((int)bounds.Y, 0, bmpH);
-        int x2 = Math.Clamp((int)(bounds.X + bounds.Width),  0, bmpW);
-        int y2 = Math.Clamp((int)(bounds.Y + bounds.Height), 0, bmpH);
-
-        int maxDiff = 0;
-        for (int py = y1; py < y2; py++)
-            for (int px = x1; px < x2; px += 2)
-            {
-                int v  = Marshal.ReadInt32(data.Scan0, py * data.Stride + px * 4);
-                byte vB = (byte)(v & 0xFF);
-                byte vG = (byte)((v >> 8) & 0xFF);
-                byte vR = (byte)((v >> 16) & 0xFF);
-                int diff = Math.Abs(vR - bg.R) + Math.Abs(vG - bg.G) + Math.Abs(vB - bg.B);
-                if (diff > maxDiff)
-                    maxDiff = diff;
-            }
-
-        int diffThreshold = Math.Max(60, (int)(maxDiff * 0.6));
-        var vote = new DominantColorVote();
-        for (int py = y1; py < y2; py++)
-            for (int px = x1; px < x2; px += 2)
-            {
-                int v  = Marshal.ReadInt32(data.Scan0, py * data.Stride + px * 4);
-                byte vB = (byte)(v & 0xFF);
-                byte vG = (byte)((v >> 8) & 0xFF);
-                byte vR = (byte)((v >> 16) & 0xFF);
-                int diff = Math.Abs(vR - bg.R) + Math.Abs(vG - bg.G) + Math.Abs(vB - bg.B);
-                if (diff >= diffThreshold) vote.Add(vR, vG, vB);
-            }
-
-        if (vote.Dominant() is not { } sampled)
-        {
-            double lum = OverlayTextColor.PerceivedLuminance(bg);
-            return lum > 0.5
-                ? System.Windows.Media.Color.FromRgb(0, 0, 0)
-                : System.Windows.Media.Color.FromRgb(255, 255, 255);
-        }
-
-        return OverlayTextColor.EnsureContrast(
-            OverlayTextColor.Tune(sampled, bg), bg, OverlayTextColor.MinimumContrast);
-    }
 
     protected override void OnClosed(EventArgs e)
     {
