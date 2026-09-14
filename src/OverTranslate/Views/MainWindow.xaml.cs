@@ -1755,7 +1755,7 @@ public partial class MainWindow : Window
             }
 
         int diffThreshold = Math.Max(60, (int)(maxDiff * 0.6));
-        long r = 0, g = 0, b = 0, n = 0;
+        var vote = new DominantColorVote();
         for (int py = y1; py < y2; py++)
             for (int px = x1; px < x2; px += 2)
             {
@@ -1764,10 +1764,10 @@ public partial class MainWindow : Window
                 byte vG = (byte)((v >> 8) & 0xFF);
                 byte vR = (byte)((v >> 16) & 0xFF);
                 int diff = Math.Abs(vR - bg.R) + Math.Abs(vG - bg.G) + Math.Abs(vB - bg.B);
-                if (diff >= diffThreshold) { r += vR; g += vG; b += vB; n++; }
+                if (diff >= diffThreshold) vote.Add(vR, vG, vB);
             }
 
-        if (n == 0)
+        if (vote.Dominant() is not { } sampled)
         {
             double lum = OverlayTextColor.PerceivedLuminance(bg);
             return lum > 0.5
@@ -1775,8 +1775,8 @@ public partial class MainWindow : Window
                 : System.Windows.Media.Color.FromRgb(255, 255, 255);
         }
 
-        var sampled = System.Windows.Media.Color.FromRgb((byte)(r / n), (byte)(g / n), (byte)(b / n));
-        return OverlayTextColor.Tune(sampled, bg);
+        return OverlayTextColor.EnsureContrast(
+            OverlayTextColor.Tune(sampled, bg), bg, OverlayTextColor.MinimumContrast);
     }
 
     protected override void OnClosed(EventArgs e)

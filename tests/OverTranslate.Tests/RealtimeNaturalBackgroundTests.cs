@@ -194,4 +194,27 @@ public class RealtimeNaturalBackgroundTests
         Assert.True(sampled.G > 220);
         Assert.True(sampled.B > 220);
     }
+
+    [Fact]
+    public void SampleTextColor_KeepsMajorityColourWhenAFewWordsAreHighlighted()
+    {
+        using var frame = new Bitmap(80, 40);
+        using (var g = Graphics.FromImage(frame))
+        {
+            g.Clear(Color.FromArgb(255, 24, 28, 34));
+            g.FillRectangle(Brushes.White, 20, 12, 30, 12);
+            using var highlight = new SolidBrush(Color.FromArgb(255, 255, 220, 0));
+            g.FillRectangle(highlight, 50, 12, 10, 12);
+        }
+
+        var sampled = RealtimeNaturalBackground.SampleTextColor(
+            frame,
+            new System.Windows.Rect(20, 12, 40, 12),
+            System.Windows.Media.Colors.Lime);
+
+        // Averaged, the yellow pulled blue down to about 190 and the line came back cream.
+        Assert.True(sampled.R > 220);
+        Assert.True(sampled.G > 220);
+        Assert.True(sampled.B > 220);
+    }
 }
