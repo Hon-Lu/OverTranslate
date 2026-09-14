@@ -8,6 +8,43 @@ namespace OverTranslate.Tests;
 public class RealtimeNaturalBackgroundTests
 {
     [Fact]
+    public void CreatePatch_DistantCleanRowsPreserveTheirActualInterpolationDistance()
+    {
+        using var frame = new Bitmap(120, 90);
+        for (int y = 0; y < 90; y++)
+        for (int x = 0; x < 120; x++) frame.SetPixel(x, y, Color.FromArgb(10 + y * 2, 30, 48));
+        using (var g = Graphics.FromImage(frame))
+        {
+            g.FillRectangle(Brushes.White, 30, 20, 45, 10);
+            g.FillRectangle(Brushes.White, 30, 34, 45, 12);
+        }
+        using var patch = RealtimeNaturalBackground.CreatePatch(frame, new Rectangle(0, 0, 120, 90),
+            [new(30, 20, 45, 10), new(30, 34, 45, 12)]);
+        Assert.NotNull(patch);
+        for (int y = 12; y < 50; y++)
+            Assert.InRange(patch!.GetPixel(49, y).R, 10 + y * 2 - 1, 10 + y * 2 + 1);
+    }
+    [Fact]
+    public void CreatePatch_DenseLinesDoNotStretchNeighbourGlyphsIntoColumns()
+    {
+        using var frame = new Bitmap(120, 90);
+        using (var g = Graphics.FromImage(frame))
+        {
+            g.Clear(Color.FromArgb(18, 35, 48));
+            // The next line crosses all three sampling rows below the first line.
+            g.FillRectangle(Brushes.White, 30, 20, 45, 10);
+            g.FillRectangle(Brushes.White, 48, 34, 3, 12);
+        }
+        System.Windows.Rect[] lines = [new(30, 20, 45, 10), new(30, 34, 45, 12)];
+        using var patch = RealtimeNaturalBackground.CreatePatch(frame, new Rectangle(0, 0, 120, 90), lines);
+        Assert.NotNull(patch);
+        Assert.True(patch!.GetPixel(49, 25).R < 40, "Neighbouring text was stretched into a bright column.");
+        using var reversed = RealtimeNaturalBackground.CreatePatch(frame, new Rectangle(0, 0, 120, 90), lines.Reverse().ToArray());
+        for (int y = 10; y < 52; y++)
+        for (int x = 24; x < 81; x++)
+            Assert.Equal(patch.GetPixel(x, y), reversed!.GetPixel(x, y));
+    }
+    [Fact]
     public void CreatePatch_ReplacesSourceRectButKeepsSurroundingPixels()
     {
         using var frame = new Bitmap(48, 24);
