@@ -18,6 +18,13 @@ namespace OverTranslate.Services;
 /// </remarks>
 internal static class OverlayTextColor
 {
+    /// <summary>
+    /// The least contrast the capture overlay draws text at. Below WCAG's 4.5 for body text on
+    /// purpose: that bar pushes most coloured text toward black or white, and keeping the source's
+    /// colour is the reason for sampling at all. 3 is where a short line still reads comfortably.
+    /// </summary>
+    public const double MinimumContrast = 3.0;
+
     /// <param name="text">The colour averaged out of the glyph pixels.</param>
     /// <param name="background">What that text sat on, which decides which way it has to move.</param>
     public static MediaColor Tune(MediaColor text, MediaColor background)
@@ -64,6 +71,68 @@ internal static class OverlayTextColor
         double colorLum = Math.Max(minAllowedColorLum, textLum + 0.01);
         double colorLightness = Math.Max(l, Math.Min(0.8, l + 0.01));
         return HslToRgb(h, targetSaturation, Math.Max(colorLightness, colorLum));
+    }
+
+    /// <summary>
+    /// Moves a text colour just far enough from its background to meet a WCAG contrast ratio.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Tune"/> keeps lightness apart by HSL lightness and a luminance estimate, which is not
+    /// contrast: a saturated red or blue at a high lightness is still dark, and on a light background
+    /// it pulls white text down to a grey the same as the card behind it. This measures the pair the
+    /// overlay will actually draw. Hue and saturation are kept and only lightness moves — first in the
+    /// direction the text already sits relative to the background, and the other way only when that
+    /// side cannot get there (white text on a pale card is drawn dark rather than illegible).
+    /// </remarks>
+    public static MediaColor EnsureContrast(MediaColor text, MediaColor background, double minRatio)
+    {
+        if (ContrastRatio(text, background) >= minRatio)
+            return text;
+
+        var (h, s, l) = RgbToHsl(text);
+        bool lighterFirst = RelativeLuminance(text) >= RelativeLuminance(background);
+
+        foreach (var lighter in new[] { lighterFirst, !lighterFirst })
+        {
+            double limit = lighter ? 1.0 : 0.0;
+            if (ContrastRatio(HslToRgb(h, s, limit), background) < minRatio)
+                continue;
+
+            // Contrast only grows as lightness moves away from the background on this side, so the
+            // nearest lightness that meets the ratio is found by bisection.
+            double near = l, far = limit;
+            for (int i = 0; i < 16; i++)
+            {
+                double mid = (near + far) / 2;
+                if (ContrastRatio(HslToRgb(h, s, mid), background) >= minRatio) far = mid;
+                else near = mid;
+            }
+
+            return HslToRgb(h, s, far);
+        }
+
+        var black = MediaColor.FromRgb(0, 0, 0);
+        var white = MediaColor.FromRgb(255, 255, 255);
+        return ContrastRatio(black, background) >= ContrastRatio(white, background) ? black : white;
+    }
+
+    /// <summary>WCAG 2 contrast ratio between two colours, from 1 to 21.</summary>
+    public static double ContrastRatio(MediaColor a, MediaColor b)
+    {
+        double x = RelativeLuminance(a);
+        double y = RelativeLuminance(b);
+        return (Math.Max(x, y) + 0.05) / (Math.Min(x, y) + 0.05);
+    }
+
+    private static double RelativeLuminance(MediaColor color)
+    {
+        static double Linear(byte channel)
+        {
+            double c = channel / 255.0;
+            return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        return 0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
     }
 
     public static double PerceivedLuminance(MediaColor color) =>

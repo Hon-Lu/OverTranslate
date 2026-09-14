@@ -263,7 +263,7 @@ internal static class RealtimeNaturalBackground
             return fallback;
 
         int threshold = Math.Max(54, (int)Math.Round(maxDiff * 0.58));
-        long r = 0, g = 0, b = 0, count = 0;
+        var vote = new DominantColorVote();
         for (int y = inner.Top; y < inner.Bottom; y += 2)
         {
             for (int x = inner.Left; x < inner.Right; x += 2)
@@ -271,17 +271,13 @@ internal static class RealtimeNaturalBackground
                 var c = window.At(x, y);
                 int diff = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
                 if (diff < threshold) continue;
-                r += c.R;
-                g += c.G;
-                b += c.B;
-                count++;
+                vote.Add(c.R, c.G, c.B);
             }
         }
 
-        if (count == 0)
+        if (vote.Dominant() is not { } sampled)
             return fallback;
 
-        var sampled = MediaColor.FromRgb((byte)(r / count), (byte)(g / count), (byte)(b / count));
         var background = MediaColor.FromRgb(bg.R, bg.G, bg.B);
 
         // Nothing is corrected until it is known to be worth keeping: the fallback is the colour the
