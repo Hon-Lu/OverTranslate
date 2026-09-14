@@ -223,62 +223,10 @@ internal static class RealtimeNaturalBackground
     /// </summary>
     public static MediaColor SampleTextColor(Bitmap frame, WpfRect bounds, MediaColor fallback)
     {
-        if (frame.Width <= 0 || frame.Height <= 0 || bounds.Width <= 0 || bounds.Height <= 0)
+        if (SourceTextColorSampler.Sample(frame, bounds) is not { Text: { } sampled } sample)
             return fallback;
 
-        var inner = Clamp(bounds, frame.Width, frame.Height);
-        if (inner.Width <= 0 || inner.Height <= 0)
-            return fallback;
-
-        // The ring the background is read from and the box the glyphs are read from, in one window:
-        // the two passes below and the dominant-background pass all sample inside it, so the bitmap
-        // is locked once for the whole decision.
-        int padX = Math.Max(4, (int)Math.Round(bounds.Height * 0.35));
-        int padY = Math.Max(3, (int)Math.Round(bounds.Height * 0.28));
-        var outer = Rectangle.FromLTRB(
-            Math.Clamp(inner.Left - padX, 0, frame.Width),
-            Math.Clamp(inner.Top - padY, 0, frame.Height),
-            Math.Clamp(inner.Right + padX, 0, frame.Width),
-            Math.Clamp(inner.Bottom + padY, 0, frame.Height));
-        if (outer.Width <= 0 || outer.Height <= 0)
-            return fallback;
-
-        if (PixelWindow.Read(frame, outer) is not { } window)
-            return fallback;
-
-        var bg = SampleDominantBackground(window, outer, inner);
-
-        int maxDiff = 0;
-        for (int y = inner.Top; y < inner.Bottom; y += 2)
-        {
-            for (int x = inner.Left; x < inner.Right; x += 2)
-            {
-                var c = window.At(x, y);
-                int diff = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
-                if (diff > maxDiff) maxDiff = diff;
-            }
-        }
-
-        if (maxDiff < 36)
-            return fallback;
-
-        int threshold = Math.Max(54, (int)Math.Round(maxDiff * 0.58));
-        var vote = new DominantColorVote();
-        for (int y = inner.Top; y < inner.Bottom; y += 2)
-        {
-            for (int x = inner.Left; x < inner.Right; x += 2)
-            {
-                var c = window.At(x, y);
-                int diff = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
-                if (diff < threshold) continue;
-                vote.Add(c.R, c.G, c.B);
-            }
-        }
-
-        if (vote.Dominant() is not { } sampled)
-            return fallback;
-
-        var background = MediaColor.FromRgb(bg.R, bg.G, bg.B);
+        var background = sample.Background;
 
         // Nothing is corrected until it is known to be worth keeping: the fallback is the colour the
         // user chose, and tuning that would be overruling them rather than repairing a measurement.
@@ -526,35 +474,6 @@ internal static class RealtimeNaturalBackground
             : GdiColor.FromArgb(255, (int)(r / n), (int)(g / n), (int)(b / n));
     }
 
-    private static GdiColor SampleDominantBackground(
-        PixelWindow window, Rectangle outer, Rectangle inner)
-    {
-        var buckets = new Dictionary<int, (long R, long G, long B, int Count)>();
-        for (int y = outer.Top; y < outer.Bottom; y += 2)
-        {
-            for (int x = outer.Left; x < outer.Right; x += 2)
-            {
-                bool insideText = x >= inner.Left && x < inner.Right && y >= inner.Top && y < inner.Bottom;
-                if (insideText) continue;
-
-                var c = window.At(x, y);
-                int key = ((c.R >> 4) << 8) | ((c.G >> 4) << 4) | (c.B >> 4);
-                var bucket = buckets.GetValueOrDefault(key);
-                buckets[key] = (bucket.R + c.R, bucket.G + c.G, bucket.B + c.B, bucket.Count + 1);
-            }
-        }
-
-        if (buckets.Count == 0)
-            return GdiColor.White;
-
-        var dominant = buckets.Values.OrderByDescending(x => x.Count).First();
-        return GdiColor.FromArgb(
-            255,
-            (int)(dominant.R / dominant.Count),
-            (int)(dominant.G / dominant.Count),
-            (int)(dominant.B / dominant.Count));
-    }
-
     /// <summary>
     /// Whether what was sampled stands far enough from its background to be worth drawing.
     /// </summary>
@@ -576,47 +495,4 @@ internal static class RealtimeNaturalBackground
 
     private static byte Lerp(byte a, byte b, double t) =>
         (byte)Math.Clamp((int)Math.Round(a + (b - a) * t), 0, 255);
-
-    /// <summary>
-    /// One rectangle of a bitmap's pixels, read out once so a sampler can index it in the bitmap's
-    /// own coordinates.
-    /// </summary>
-    /// <remarks>
-    /// The alternative is <c>Bitmap.GetPixel</c>, which locks the bitmap, reads four bytes and
-    /// unlocks it again on every call. Sampling one subtitle line asks for around fifteen thousand
-    /// pixels, so this is the difference between one lock and fifteen thousand.
-    /// </remarks>
-    private readonly struct PixelWindow(byte[] pixels, int stride, Rectangle area)
-    {
-        public static PixelWindow? Read(Bitmap frame, Rectangle area)
-        {
-            BitmapData? data = null;
-            try
-            {
-                data = frame.LockBits(area, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-
-                int stride = area.Width * 4;
-                var pixels = new byte[stride * area.Height];
-                for (int y = 0; y < area.Height; y++)
-                    Marshal.Copy(IntPtr.Add(data.Scan0, y * data.Stride), pixels, y * stride, stride);
-
-                return new PixelWindow(pixels, stride, area);
-            }
-            catch
-            {
-                return null;
-            }
-            finally
-            {
-                if (data is not null) frame.UnlockBits(data);
-            }
-        }
-
-        /// <param name="x">In the source bitmap's coordinates, not the window's.</param>
-        public GdiColor At(int x, int y)
-        {
-            int i = (y - area.Top) * stride + (x - area.Left) * 4;
-            return GdiColor.FromArgb(255, pixels[i + 2], pixels[i + 1], pixels[i]);
-        }
-    }
 }
