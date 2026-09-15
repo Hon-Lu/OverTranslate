@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 
 [assembly: InternalsVisibleTo("OverTranslate.Tests")]
+[assembly: InternalsVisibleTo("SceneBackgroundProbe")]
 // The offline OCR harness, so a measurement can ask the real RealtimeDetectorSize what the app
 // would pick rather than keeping a second copy of that rule that could drift out of step with it.
 [assembly: InternalsVisibleTo("OcrHarness")]

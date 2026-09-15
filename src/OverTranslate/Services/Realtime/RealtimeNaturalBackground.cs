@@ -9,18 +9,11 @@ namespace OverTranslate.Services.Realtime;
 
 /// <summary>
 /// Builds a live-looking background patch for realtime translation. The source glyph rectangle is
-/// replaced with colour interpolated from the pixels immediately around it, while every pixel
+/// replaced with colour interpolated from the clean pixels around it, while every pixel
 /// outside the OCR rectangle stays exactly as it was on screen. This is intentionally lightweight:
 /// it runs several times per second next to OCR and avoids adding another native/AI dependency.
 /// </summary>
-/// <remarks>
-/// Both halves of this file read a bitmap through one lock and a managed buffer rather than through
-/// GDI+'s per-pixel accessors, because "lightweight" was not true of the first version: erasing a
-/// line locked the whole patch and copied it three times over, and sampling a colour called GetPixel
-/// — which locks and unlocks the bitmap on every call — some fifteen thousand times for one line.
-/// Both ran on the thread drawing the interface. Neither the output nor the algorithm changed with
-/// the buffers; only what it costs to arrive at them.
-/// </remarks>
+/// <remarks>Donors come from an immutable frame with every padded source line excluded.</remarks>
 internal static class RealtimeNaturalBackground
 {
     // OCR rectangles are often tight around the main glyph body. Japanese dakuten/handakuten,
@@ -136,10 +129,7 @@ internal static class RealtimeNaturalBackground
         if (sources.Length == 0)
             return patch;
 
-        // One lock and one copy each way for the whole patch, however many lines are erased into it.
-        // Every line reads only pixels outside the area it writes — see EraseSourceText — so they can
-        // all work in this one buffer, and each still sees the lines erased before it exactly as it
-        // did when every line locked the bitmap for itself.
+        // One lock per patch. Keep donor pixels immutable and exclude all padded source lines.
         var data = patch.LockBits(
             new Rectangle(0, 0, patch.Width, patch.Height),
             ImageLockMode.ReadWrite,
@@ -152,11 +142,19 @@ internal static class RealtimeNaturalBackground
             for (int y = 0; y < patch.Height; y++)
                 Marshal.Copy(IntPtr.Add(data.Scan0, y * data.Stride), pixels, y * stride, stride);
 
-            foreach (var source in sources)
+            var original = (byte[])pixels.Clone();
+            var excluded = new bool[patch.Width * patch.Height];
+            var locals = sources.Select(source => source with { X = source.X - work.X, Y = source.Y - work.Y })
+                .OrderBy(source => source.Top).ThenBy(source => source.Left)
+                .ThenBy(source => source.Height).ThenBy(source => source.Width).ToArray();
+            foreach (var local in locals)
             {
-                var local = source with { X = source.X - work.X, Y = source.Y - work.Y };
-                EraseSourceText(pixels, stride, patch.Width, patch.Height, local);
+                var area = Rectangle.Intersect(new Rectangle(0, 0, patch.Width, patch.Height), ErasedArea(local));
+                for (int y = area.Top; y < area.Bottom; y++)
+                    Array.Fill(excluded, true, y * patch.Width + area.Left, area.Width);
             }
+            foreach (var local in locals)
+                EraseSourceText(pixels, original, excluded, stride, patch.Width, patch.Height, local);
 
             for (int y = 0; y < patch.Height; y++)
                 Marshal.Copy(pixels, y * stride, IntPtr.Add(data.Scan0, y * data.Stride), stride);
@@ -254,18 +252,13 @@ internal static class RealtimeNaturalBackground
     /// <summary>
     /// Fills one source line's rectangle with colour interpolated from its surroundings.
     /// </summary>
-    /// <remarks>
-    /// Reads only outside the rectangle it writes, and reads all of it before writing any of it.
-    /// That is what lets several lines share one buffer — there is no order in which one line's
-    /// fill can be read as though it were the picture underneath.
-    /// </remarks>
-    private static void EraseSourceText(byte[] pixels, int stride, int width, int height, Rectangle source)
+    private static void EraseSourceText(byte[] pixels, byte[] original, bool[] excluded, int stride, int width, int height, Rectangle source)
     {
         var rect = Rectangle.Intersect(new Rectangle(0, 0, width, height), ErasedArea(source));
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
-        var above = rect.Top > 0 ? RowBand(pixels, stride, height, rect, above: true) : null;
-        var below = rect.Bottom < height ? RowBand(pixels, stride, height, rect, above: false) : null;
+        var above = rect.Top > 0 ? RowBand(original, excluded, stride, width, height, rect, above: true) : null;
+        var below = rect.Bottom < height ? RowBand(original, excluded, stride, width, height, rect, above: false) : null;
 
         // Interpolating between two real edges beats extending one of them, whichever axis it is on,
         // so both two-sided cases are tried before either one-sided one. A line rect is wide and
@@ -277,8 +270,8 @@ internal static class RealtimeNaturalBackground
             return;
         }
 
-        var left = rect.Left > 0 ? ColumnBand(pixels, stride, width, rect, left: true) : null;
-        var right = rect.Right < width ? ColumnBand(pixels, stride, width, rect, left: false) : null;
+        var left = rect.Left > 0 ? ColumnBand(original, excluded, stride, width, height, rect, left: true) : null;
+        var right = rect.Right < width ? ColumnBand(original, excluded, stride, width, height, rect, left: false) : null;
 
         if (left is not null && right is not null)
         {
@@ -298,10 +291,8 @@ internal static class RealtimeNaturalBackground
             return;
         }
 
-        // Nothing outside the rectangle is left to read from, so there is nothing to interpolate.
-        // Taken before anything is written, which is also why it can read the same buffer: every
-        // pixel it averages lies outside the rectangle about to be filled.
-        var fill = BorderAverage(pixels, stride, width, height, rect);
+        // No usable band remains. Exclude source text from the fallback as well.
+        var fill = BorderAverage(original, excluded, stride, width, height, rect);
 
         for (int y = rect.Top; y < rect.Bottom; y++)
         {
@@ -318,90 +309,100 @@ internal static class RealtimeNaturalBackground
     }
 
     /// <summary>How deep, in rows or columns, one edge of the rectangle is read.</summary>
-    /// <remarks>
-    /// Three, reduced to their median rather than averaged. The padding around a line is sized for
-    /// the glyph body, so an outline, a shadow or a Japanese mark can still reach the first row
-    /// outside it — and one lit pixel there, carried the whole height of the fill, is a bright line
-    /// down the middle of the repair. A median discards that row's value as long as the other two
-    /// agree, so the line is never drawn in the first place. An average would not: it would let the
-    /// stray pixel through at a third of its strength, which is a fainter line, not no line.
-    ///
-    /// It costs nothing in sharpness, which is what separates it from spreading the band sideways —
-    /// the other half of the attempt this came from, and the half that made repairs visibly blurry.
-    ///
-    /// Three exactly: <see cref="Median"/> is written for three and nothing else.
-    /// </remarks>
+    // Three clean samples suppress isolated antialiasing without smoothing the band sideways.
     private const int BandDepth = 3;
 
-    /// <summary>The rows above or below the rectangle, reduced to one B,G,R per column of it.</summary>
-    private static byte[] RowBand(byte[] pixels, int stride, int height, Rectangle rect, bool above)
+    // Each ray skips every padded source rectangle, including neighbouring lines. Sampling the
+    // immutable frame also prevents a repaired line from becoming a donor for another line.
+    private sealed record SampleBand(byte[] Colors, double[] Positions);
+
+    private static SampleBand? RowBand(byte[] pixels, bool[] excluded, int stride, int width, int height,
+        Rectangle rect, bool above) => CleanBand(pixels, excluded, stride, width, height, rect, true, above);
+
+    private static SampleBand? ColumnBand(byte[] pixels, bool[] excluded, int stride, int width, int height,
+        Rectangle rect, bool left) => CleanBand(pixels, excluded, stride, width, height, rect, false, left);
+
+    private static SampleBand? CleanBand(byte[] pixels, bool[] excluded, int stride, int width, int height,
+        Rectangle rect, bool rows, bool before)
     {
-        var band = new byte[rect.Width * 3];
-        var samples = new byte[BandDepth];
-
-        for (int i = 0; i < rect.Width; i++)
+        int length = rows ? rect.Width : rect.Height;
+        var band = new byte[length * 3];
+        var positions = new double[length];
+        var valid = new bool[length];
+        var samples = new byte[BandDepth * 3];
+        int validCount = 0;
+        for (int i = 0; i < length; i++)
         {
-            int x = rect.Left + i;
-            for (int channel = 0; channel < 3; channel++)
+            int count = 0;
+            int edge = rows ? (before ? rect.Top - 1 : rect.Bottom) : (before ? rect.Left - 1 : rect.Right);
+            int limit = rows ? height : width;
+            for (int at = edge; at >= 0 && at < limit && count < BandDepth; at += before ? -1 : 1)
             {
-                for (int depth = 0; depth < BandDepth; depth++)
-                {
-                    int y = Math.Clamp(above ? rect.Top - 1 - depth : rect.Bottom + depth, 0, height - 1);
-                    samples[depth] = pixels[y * stride + x * 4 + channel];
-                }
-
-                band[i * 3 + channel] = Median(samples);
+                int x = rows ? rect.Left + i : at, y = rows ? at : rect.Top + i;
+                if (excluded[y * width + x]) continue;
+                for (int c = 0; c < 3; c++) samples[c * BandDepth + count] = pixels[y * stride + x * 4 + c];
+                positions[i] += at;
+                count++;
+            }
+            if (count == 0) continue;
+            positions[i] /= count;
+            valid[i] = true;
+            validCount++;
+            for (int c = 0; c < 3; c++)
+            {
+                int offset = c * BandDepth;
+                for (int n = count; n < BandDepth; n++) samples[offset + n] = samples[offset + count - 1];
+                byte a = samples[offset], b = samples[offset + 1], d = samples[offset + 2];
+                band[i * 3 + c] = (byte)(a + b + d - Math.Min(a, Math.Min(b, d)) - Math.Max(a, Math.Max(b, d)));
             }
         }
-
-        return band;
-    }
-
-    /// <summary>The columns left or right of the rectangle, reduced to one B,G,R per row of it.</summary>
-    private static byte[] ColumnBand(byte[] pixels, int stride, int width, Rectangle rect, bool left)
-    {
-        var band = new byte[rect.Height * 3];
-        var samples = new byte[BandDepth];
-
-        for (int i = 0; i < rect.Height; i++)
+        if (validCount == 0) return null;
+        // A ray may be completely covered up to the image edge. Borrow only a known clean band
+        // sample, never fall back to the excluded text at that edge.
+        int previous = -1;
+        for (int i = 0; i < length; i++)
         {
-            int row = (rect.Top + i) * stride;
-            for (int channel = 0; channel < 3; channel++)
+            if (valid[i]) { previous = i; continue; }
+            int next = i + 1;
+            while (next < length && !valid[next]) next++;
+            int end = next;
+            for (; i < end; i++)
             {
-                for (int depth = 0; depth < BandDepth; depth++)
-                {
-                    int x = Math.Clamp(left ? rect.Left - 1 - depth : rect.Right + depth, 0, width - 1);
-                    samples[depth] = pixels[row + x * 4 + channel];
-                }
-
-                band[i * 3 + channel] = Median(samples);
+                positions[i] = previous < 0 ? positions[next] : next == length ? positions[previous]
+                    : positions[previous] + (positions[next] - positions[previous]) * (i - previous) / (next - previous);
+                for (int c = 0; c < 3; c++)
+                    band[i * 3 + c] = previous < 0 ? band[next * 3 + c]
+                        : next == length ? band[previous * 3 + c]
+                        : Lerp(band[previous * 3 + c], band[next * 3 + c], (double)(i - previous) / (next - previous));
             }
+            i--;
         }
-
-        return band;
+        return new SampleBand(band, positions);
     }
 
-    private static void FillFromRows(byte[] pixels, int stride, Rectangle rect, byte[]? above, byte[]? below)
+    private static void FillFromRows(byte[] pixels, int stride, Rectangle rect, SampleBand? above, SampleBand? below)
     {
         for (int y = rect.Top; y < rect.Bottom; y++)
         {
-            double t = (y - rect.Top + 1.0) / (rect.Height + 1.0);
+            // Sampling can cross neighbouring lines, so use the actual donor coordinates.
             int row = y * stride;
 
             for (int i = 0; i < rect.Width; i++)
             {
                 int dst = row + (rect.Left + i) * 4;
                 int at = i * 3;
+                double t = above is null || below is null ? 0 : Math.Clamp(
+                    (y - above.Positions[i]) / (below.Positions[i] - above.Positions[i]), 0, 1);
 
                 for (int channel = 0; channel < 3; channel++)
-                    pixels[dst + channel] = Blend(above, below, at + channel, t);
+                    pixels[dst + channel] = Blend(above?.Colors, below?.Colors, at + channel, t);
 
                 pixels[dst + 3] = 255;
             }
         }
     }
 
-    private static void FillFromColumns(byte[] pixels, int stride, Rectangle rect, byte[]? left, byte[]? right)
+    private static void FillFromColumns(byte[] pixels, int stride, Rectangle rect, SampleBand? left, SampleBand? right)
     {
         for (int y = rect.Top; y < rect.Bottom; y++)
         {
@@ -410,11 +411,13 @@ internal static class RealtimeNaturalBackground
 
             for (int x = rect.Left; x < rect.Right; x++)
             {
-                double t = (x - rect.Left + 1.0) / (rect.Width + 1.0);
+                int i = y - rect.Top;
+                double t = left is null || right is null ? 0 : Math.Clamp(
+                    (x - left.Positions[i]) / (right.Positions[i] - left.Positions[i]), 0, 1);
                 int dst = row + x * 4;
 
                 for (int channel = 0; channel < 3; channel++)
-                    pixels[dst + channel] = Blend(left, right, at + channel, t);
+                    pixels[dst + channel] = Blend(left?.Colors, right?.Colors, at + channel, t);
 
                 pixels[dst + 3] = 255;
             }
@@ -430,17 +433,9 @@ internal static class RealtimeNaturalBackground
         : end is null ? start[at]
         : Lerp(start[at], end[at], t);
 
-    /// <summary>The middle of three, which is <see cref="BandDepth"/> and only that.</summary>
-    private static byte Median(byte[] samples)
-    {
-        byte a = samples[0], b = samples[1], c = samples[2];
-        return a > b
-            ? (b > c ? b : a > c ? c : a)
-            : (a > c ? a : b > c ? c : b);
-    }
-
     private static GdiColor BorderAverage(
         byte[] pixels,
+        bool[] excluded,
         int stride,
         int width,
         int height,
@@ -450,7 +445,7 @@ internal static class RealtimeNaturalBackground
 
         void Add(int x, int y)
         {
-            if (x < 0 || x >= width || y < 0 || y >= height) return;
+            if (x < 0 || x >= width || y < 0 || y >= height || excluded[y * width + x]) return;
             int i = y * stride + x * 4;
             b += pixels[i];
             g += pixels[i + 1];
