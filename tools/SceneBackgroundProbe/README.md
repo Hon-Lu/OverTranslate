@@ -1,81 +1,50 @@
-# 即時翻譯紋理修補 Probe
+# 即時翻譯 CPU 背景修補驗證
 
-目前位於 `feat/realtime-scene-background`。這是可執行的實驗，尚未接入正式即時翻譯流程。先前的純色／漸層方案已撤回；紋理 probe 尚未整合。後續另修正正式背景修補的鄰行取樣污染，詳見下方 chat-room 回歸。
+此工具直接呼叫主程式的 `CpuTextMask`、`CpuHoleRepair`，用於檢查字形遮罩、描邊殘留、複雜背景和效能。只保留 CPU 流程；沒有 GPU 修補模型或歷史背景快取。
 
 ## 執行
 
-在儲存庫根目錄、Windows 與 .NET 8 環境執行：
+在儲存庫根目錄執行：
 
 ```powershell
-# 產生三種場景、共 48 幀的比較頁與量測
-dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c Release -- artifacts/texture-background
-
-# 自動檢查取消、歷史資料、切場景、尺寸與遮罩邊界
 dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c Release -- --verify
-
-# 先產生比較圖，再跑 10 秒實際 WGC 擷取與 WPF 覆蓋測試
-dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c Release -- --live artifacts/texture-background 10
+dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c Release
 ```
 
-`--live` 會開啟自己的移動場景與透明覆蓋視窗，時間到自動關閉；只擷取測試視窗。需要 Windows 10 1903 以上。沒有啟動 OCR 或翻譯服務，也不改使用者設定。
+`--verify` 不需外部圖片，檢查原／半解析度分流、分區邊界、遮罩外像素、空遮罩、取消與 1px 輸入。
 
-輸出在 `artifacts/texture-background/`：
+完整比較需要本機 `.ai/test-images/chat-room/*.png` 和 `docs/images/originals` 的遊戲／影片示範圖片。缺少 OCR 座標時會先使用主程式 OCR 產生；沿用 `artifacts/inpaint-research/*-ocr.json` 與語言標記，只保存文字框，沒有乾淨背景。此批私人素材不包含在工具中；一般 CI 使用單元測試與 `--verify`。
 
-- `index.html`：可離線播放、切換場景、拖曳逐幀比較的頁面；圖片內嵌。三欄依序為原文、去字修補、加上譯文。
-- `metrics.json`：每幀修補耗時、配置量、遮罩涵蓋率、原文字像素位置的 RGB 平均絕對誤差，以及時序／空間／預算降級修補數量。
-- `live-metrics.json`：實際擷取、處理、提交耗時與程序資源量測。
-- 各場景 PNG：包含第一幀乾淨背景與透明修補層，可檢查沒有譯文遮擋時的缺陷。
+輸出 `artifacts/cpu-adaptive-background/index.html`、各方法 PNG 和 `metrics.json`。可切換：
 
-## 設計
+- 正式版字形遮罩＋自適應解析度修補。
+- 相同遮罩＋半解析度，分辨遮罩與解析度選擇各自的影響。
+- 舊研究遮罩＋半解析度基準。
+- 舊版矩形修補，只供品質對照，與上一項不同。
+- 文字本體、描邊遮罩及合成案例的乾淨底圖。
 
-1. 在原文行範圍內，以字色與局部對比估計字形遮罩，擴張涵蓋描邊與反鋸齒。只修補字形附近，其他位置的覆蓋層完全透明，原場景可繼續更新。
-2. 以稀疏像素比對估計相鄰畫面平移，再檢查局部一致性。優先從之前真正看過的背景像素補回文字後方的圖案；觀測值與合成值分開保存，避免將猜測誤當成真實背景。
-3. 沒有可靠歷史時，從鄰近乾淨區域搜尋相似小塊，由邊界向內填補，保留局部紋理。候選區域不可包含原文字。
-4. 空間搜尋採 55ms 工作預算；不足時以鄰近已知像素填補，並明確記錄降級數量。這不是整條管線的硬性時間上限。
-5. 實際擷取 probe 用 WGC 最新畫面，至少相隔 50ms 才接受下一次工作；處理或提交尚未完成時丟棄新幀，不累積工作佇列。重用像素與遮罩緩衝區，降低 GC 壓力。
+22 張聊天素材沒有乾淨真值；另在晶體、植物、動畫角色背景上合成明／暗描邊文字，共 6 組案例，乾淨背景僅用於評分，不提供給修補器。不要把合成 MAE 當作真實聊天背景還原率。
 
-這套設計仍需要畫面像素，但不等待原有 250ms 背景輪詢，也不覆蓋整塊過期的背景矩形。若正式整合，還需要處理選定視窗／螢幕擷取、排除覆蓋層、OCR 座標更新、暫停與 session 生命週期；目前的獨立 probe 尚未驗證這些整合。
+## 正式功能
 
-空間修補思路參考 [Criminisi 等人的 exemplar-based inpainting](https://www.microsoft.com/en-us/research/publication/object-removal-by-exemplar-based-inpainting-2/)，此處為受時間預算限制的簡化實作，沒有新增神經網路模型或 OpenCV 相依套件。
+`RealtimeCpuBackground` 每個視窗的一次更新只修補一張來源圖，所有翻譯區塊從這張結果裁切；文字取色仍用原圖。核心分開偵測文字本體與相反極性的描邊，最後沿字形擴張邊緣以涵蓋抗鋸齒外圈。以 96px 分區與 24px 周邊觀察範圍處理：薄洞使用原解析度 Navier–Stokes，厚洞共用一次半解析度運算，只寫回遮罩內。
 
-## 實測與品質
+更新目標為每 100ms 一輪，扣除本輪耗時再等待；超時就完成後讀取最新畫面，不排隊補跑。靜止畫面跳過修補；持續變動且超時的場景可能持續占用 CPU，沒有強制負載上限。首次視覺建構仍同步執行，後續更新在背景工作執行；取消可在分區間生效，單次 OpenCV 呼叫不能中途取消。
 
-本機 2026-09-15 Release，單一 640 × 220 區域；擷取使用 NVIDIA GeForce RTX 3070，程序可用 16 個邏輯處理器。10 秒測試收到 214 幀，處理 132 幀、跳過 82 幀，沒有擷取錯誤：
+## 已知限制與量測
 
-| 指標 | 結果 |
-| --- | --- |
-| 場景更新至 WPF 提交 | 中位數 30.1ms；P95 39.4ms；最大 68.2ms |
-| 開始讀回至 WPF 提交 | 中位數 15.5ms；P95 25.4ms |
-| 平均 CPU | 約 0.31 個核心；以 16 邏輯處理器計約 1.94% |
-| 程序記憶體 | 結束時 working set 162MiB；峰值 210MiB |
-| 穩定階段每幀 managed 配置 | 修補加 WPF 位圖轉換約 151KiB |
+密集文字下的重複斜紋、眼睛、植物等細節仍可能模糊；低對比描邊與漏掉的 OCR 字仍可能殘留。文字遮罩是啟發式分割，可能把背景邊緣誤認為字。沒有已知像素可觀察的區域保留原值。
 
-CPU 與記憶體包含產生移動場景的測試視窗與擷取，不能解讀成正式程式的額外用量。配置數字不包含所有執行緒、原生與 GPU 配置。背景修補本身離線穩定幀約配置 114KiB；初始幀需要配置緩衝區。
+計時先暖機再測 7 次，包含遮罩、補洞及暫存釋放，不含 OCR、擷取、PNG I/O 或 UI；OpenCV 設定 2 執行緒。程序 working set 是取樣而非峰值，managed allocation 不包含原生配置。不能用 probe 耗時直接承諾端到端延遲。
 
-主要延遲由測試畫面上的幀編號對應同一 Stopwatch 時鐘計算。第一個無編號畫面不列入場景延遲百分位。WGC 系統時間戳另列作診斷，不能與來源更新時間混用。所有提交數字均不包含最終螢幕掃描顯示、OCR、網路翻譯，也不是整體翻譯延遲。僅 10 秒測試，不代表長時間、多區域或遊戲高負載結果。
+2026-09-15，在相同額外 1px 字形擴張版本比較完整 runtime 與官方 Slim：28 組素材的 230 張既有 PNG 雜湊完全一致。兩輪 adaptive 中位耗時範圍為 4.0–87.9ms 與 4.3–91.7ms；各案例中位數總和差約 2.9%，非交錯受控效能測試，不能歸因於套件。這 230 張不含工具整併後新增的舊版矩形對照。
 
-素材來自儲存庫既有的即時翻譯展示圖片。背景是真實複雜圖像，文字及每幀 4px 的平移由 probe 合成，並非實際遊戲／影片錄影。正常比較與 live 測試只提供文字行矩形，由引擎自行偵測遮罩；乾淨底圖與精確字形遮罩只用於品質量測。部分自動檢查使用已知遮罩，隔離驗證時序修補。
+完整套件的 OpenCV 相關 DLL 合計 98,171,392 bytes（93.6MiB），目前直接引用 `OpenCvSharp4` 與 `OpenCvSharp4.runtime.win.slim` 4.13.0.20260627：包裝 DLL 1,003,008 bytes＋原生 DLL 55,547,904 bytes，合計 53.9MiB，減少約 42.4%。Debug、Release 和獨立 publish 都不含 FFmpeg 或 WPF adapter DLL。這是磁碟體積，不是記憶體降幅。
 
-三個場景第一幀 → 第 15 幀的原文字像素 RGB 平均絕對誤差（0–255，越低越好）：
+## 方法選擇與清理
 
-| 場景 | 第一幀 | 第 15 幀 |
-| --- | --- | --- |
-| 遊戲晶體與粒子 | 13.28 | 3.42 |
-| 遊戲植被 | 19.36 | 3.71 |
-| 人物輪廓 | 22.88 | 16.15 |
+參考 [OpenCV inpainting 官方說明](https://docs.opencv.org/4.x/df/d3d/tutorial_py_inpainting.html)，採用 Navier–Stokes CPU 實作。使用[官方 Slim 套件](https://www.nuget.org/packages/OpenCvSharp4.runtime.win.slim)，保留 imgproc 與 photo，無須自行維護原生編譯。
 
-遊戲紋理在歷史畫面揭露背景後改善明顯。人物眼睛、淺色背景與文字相接的輪廓仍有白點、斷線與塗抹；數值不能代替觀看比較圖。初次出現、切場景、獨立移動物件、縮放旋轉與長時間被字遮住的細節，也不能保證自然還原。顏色遮罩仍可能漏字或誤選背景，空間搜尋預算耗盡時的降級會產生拖抹。這些是目前尚未直接接入正式功能的原因。
+先前研究過 [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) 和 [LaMa](https://github.com/advimman/lama)：MI-GAN 在大片聊天遮罩中生成不屬於場景的物件；LaMa 的部分重複紋理效果較好，但本機 CPU 約 3.2 秒，測試的 ONNX 匯出亦無法在 DirectML 正常初始化。兩者不符合目前輕量 CPU 方向，執行器與下載腳本已移除。
 
-`--verify` 的九項自動檢查已通過，涵蓋透明區域、已知平移精確復原、切場景、尺寸變更、無可用背景、取消、不合法遮罩、重設歷史，以及文字行範圍隔離；不代表所有視覺品質情境都通過。
-
-## chat-room 垂直條紋回歸
-
-正式 `RealtimeNaturalBackground` 原本直接讀取文字矩形上下的三列，密集聊天行的鄰行筆畫也會被當成背景，拉成亮直線。現在統一排除所有原文行的擴張區域，從未修改的像素尋找乾淨取樣，並依實際取樣座標插值；修補順序固定，避免傳遞污染及交疊結果依輸入順序變動。這是現行功能的針對性修正，並非新紋理引擎的整合。
-
-```powershell
-dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c Release -- --chat-room after
-```
-
-輸出 `artifacts/chat-room-background/after.png`。若該目錄保留修正前產生的 `before.png`，另輸出 `comparison.png`，左至右為原圖、修正前、修正後。`before` 參數只代表輸出檔名，必須在舊程式碼版本執行才能取得真正基準；在修正後執行會覆蓋基準。
-
-使用 `.ai/test-images/chat-room/en-10.png` 與固定手工標註的文字矩形，不執行 OCR／翻譯；沒有完整覆蓋其他 chat-room 圖片或實際 OCR 框的差異。原圖沒有無文字版本，這裡只比較條紋與視覺缺陷，不能計算真實背景還原率。手工矩形在第三段末端仍漏掉少量字尾，兩版都可見；不應將其當成這次修正的品質改善。現有矩形填補仍會拉長背景紋理，無法還原被遮住的所有細節。
+舊版歷史背景／紋理搜尋原型也已移除。舊矩形修補保留在主程式來源中供此工具及回歸測試比較；實際即時視窗已改走 CPU 字形修補。產圖、OCR 座標、模型與建置輸出皆不進版控。
