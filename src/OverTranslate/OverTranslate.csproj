@@ -58,6 +58,9 @@
   <ItemGroup>
     <PackageReference Include="GTranslate" Version="2.4.0" />
     <PackageReference Include="NLog" Version="5.0.4" />
+    <!-- CPU morphology/inpainting only; omit full video/DNN runtime and unused WPF adapters. -->
+    <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />
+    <PackageReference Include="OpenCvSharp4.runtime.win.slim" Version="4.13.0.20260627" />
     <PackageReference Include="OpenccNetLib" Version="1.6.2" />
     <PackageReference Include="RapidOcrNet" Version="3.0.0" ExcludeAssets="build" />
     <PackageReference Include="Velopack" Version="1.2.0" />

@@ -79,7 +79,7 @@ public class RealtimeGroupedBackgroundTests
             type.GetField("_dpiY", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, dpi);
             type.GetField("_dpiX", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, dpi);
             var visual = type.GetMethod("BuildLine", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .Invoke(window, [line, 1770 / dpi, 210 / dpi, null])!;
+                .Invoke(window, [line, 1770 / dpi, 210 / dpi, null, null])!;
             return ((Border)visual.GetType().GetProperty("Background")!.GetValue(visual)!,
                 (Border)visual.GetType().GetProperty("Text")!.GetValue(visual)!);
         }

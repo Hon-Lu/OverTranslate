@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -72,11 +73,6 @@ public partial class RealtimeBlockWindow : Window
     // by not making them: see RealtimeBlockWindow.SetLines and TextSimilarity.
     private static readonly FontFamily TextFont =
         new("Microsoft JhengHei, Segoe UI Variable Text, Segoe UI, Sans-Serif");
-
-    // Natural mode uses a real patch of the application under the source text. Refreshing at the
-    // same cadence as the screen watcher keeps that patch moving with video without adding another
-    // high-frequency rendering loop. No OCR or translation happens here.
-    private static readonly TimeSpan NaturalRefreshInterval = TimeSpan.FromMilliseconds(250);
 
     private readonly System.Drawing.Rectangle _physBounds;
     private readonly bool _latinSourceToCjkTarget;
@@ -300,7 +296,7 @@ public partial class RealtimeBlockWindow : Window
     }
 
     private LineVisual? BuildLine(
-        TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
+        TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
     {
         double left = line.Bounds.X / _dpiX;
         double sourceWidth = line.Bounds.Width / _dpiX;
@@ -441,7 +437,7 @@ public partial class RealtimeBlockWindow : Window
             double guardHeight = Math.Max(0, guardBottom - guardTop);
 
             naturalBrush = BuildNaturalBrush(
-                frame, ToPhysicalPatchBounds(guardLeft, guardTop, guardWidth, guardHeight), _lines);
+                repairedFrame, ToPhysicalPatchBounds(guardLeft, guardTop, guardWidth, guardHeight));
 
             // Capture can fail on protected/UAC surfaces. Keep the compact band in that case rather
             // than painting the much larger guard with a flat colour.
@@ -528,6 +524,7 @@ public partial class RealtimeBlockWindow : Window
     private IEnumerable<LineVisual> BuildVisuals(
         double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
     {
+        using var repairedFrame = _naturalBackground ? RepairNaturalFrame(frame, _lines) : null;
         var typeface = new Typeface(TextFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         foreach (var block in _lines)
         {
@@ -544,7 +541,7 @@ public partial class RealtimeBlockWindow : Window
                     RealtimePanelLines.AvailableWidths(block, _lines));
                 if (rows.Count == 1 && rows[0].SourceLineBounds is { Count: > 1 })
                 {
-                    if (BuildLine(block, canvasWidth, canvasHeight, frame) is { } fallback) yield return fallback;
+                    if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
                     continue;
                 }
                 // Keep one font size across the paragraph, including uneven row widths.
@@ -565,19 +562,19 @@ public partial class RealtimeBlockWindow : Window
                     var row = rows[index];
                     // Invalid source geometry keeps the original whole-block fallback.
                     var visual = row.SourceLineBounds is { Count: > 1 }
-                        ? BuildLine(row, canvasWidth, canvasHeight, frame)
-                        : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null);
+                        ? BuildLine(row, canvasWidth, canvasHeight, frame, repairedFrame)
+                        : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null, repairedFrame);
                     if (visual is { } drawn) yield return drawn;
                 }
             }
-            else if (BuildLine(block, canvasWidth, canvasHeight, frame) is { } visual)
+            else if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } visual)
                 yield return visual;
         }
     }
 
     private LineVisual? BuildPanelLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
-        double fontSize, Rect? scrim)
+        double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame)
     {
         var canvas = new Rect(0, 0, canvasWidth * _dpiX, canvasHeight * _dpiY);
         var cell = Rect.Intersect(line.Bounds, canvas);
@@ -595,7 +592,7 @@ public partial class RealtimeBlockWindow : Window
             double patchLeft = patch.X / _dpiX, patchTop = patch.Y / _dpiY;
             double patchWidth = patch.Width / _dpiX, patchHeight = patch.Height / _dpiY;
             patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
-            var naturalBrush = _naturalBackground ? BuildNaturalBrush(frame, patchBounds, _lines) : null;
+            var naturalBrush = _naturalBackground ? BuildNaturalBrush(repairedFrame, patchBounds) : null;
             background = new Border
             {
                 Width = patchWidth, Height = patchHeight,
@@ -672,44 +669,55 @@ public partial class RealtimeBlockWindow : Window
     {
         try
         {
-            using var timer = new PeriodicTimer(NaturalRefreshInterval);
-
-            while (await timer.WaitForNextTickAsync(token))
+            var rest = RealtimeBackgroundCadence.TargetInterval;
+            while (true)
             {
-                var generation = Volatile.Read(ref _patchGeneration);
-                var patches = Volatile.Read(ref _naturalPatches);
-                var blocks = _lines;
-                if (patches.Length == 0) continue;
-
-                using var frame = CaptureUnderlyingRegion();
-                if (frame is null) continue;
-
-                // Summarised over the patch rectangles rather than the whole block: a change in a
-                // corner of the region the band does not cover is not a reason to repaint it.
-                var print = FrameFingerprint.Capture(
-                    frame, [.. patches.Select(patch => patch.PatchBounds)]);
-                if (print.StillLooksLike(Volatile.Read(ref _lastRefreshPrint))) continue;
-
-                var repainted = new List<(Border Surface, ImageBrush Brush)>(patches.Length);
-                foreach (var patch in patches)
+                await Task.Delay(rest, token);
+                var started = Stopwatch.GetTimestamp();
+                try
                 {
-                    token.ThrowIfCancellationRequested();
-                    if (BuildNaturalBrush(frame, patch.PatchBounds, blocks) is { } brush)
-                        repainted.Add((patch.Surface, brush));
+                    var generation = Volatile.Read(ref _patchGeneration);
+                    var patches = Volatile.Read(ref _naturalPatches);
+                    var blocks = _lines;
+                    if (patches.Length == 0) continue;
+
+                    using var frame = CaptureUnderlyingRegion();
+                    if (frame is null) continue;
+
+                    // Summarised over the patch rectangles rather than the whole block: a change in a
+                    // corner of the region the band does not cover is not a reason to repaint it.
+                    var print = FrameFingerprint.Capture(
+                        frame, [.. patches.Select(patch => patch.PatchBounds)]);
+                    if (print.StillLooksLike(Volatile.Read(ref _lastRefreshPrint))) continue;
+
+                    using var repairedFrame = RepairNaturalFrame(frame, blocks, token);
+                    if (repairedFrame is null) continue;
+                    var repainted = new List<(Border Surface, ImageBrush Brush)>(patches.Length);
+                    foreach (var patch in patches)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (BuildNaturalBrush(repairedFrame, patch.PatchBounds) is { } brush)
+                            repainted.Add((patch.Surface, brush));
+                    }
+
+                    if (repainted.Count == 0) continue;
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        // A rebuild while this batch was being painted means these surfaces are no longer
+                        // the ones on the canvas.
+                        if (token.IsCancellationRequested || Volatile.Read(ref _patchGeneration) != generation) return;
+
+                        foreach (var (surface, brush) in repainted)
+                            surface.Background = brush;
+                        Volatile.Write(ref _lastRefreshPrint, print);
+                    });
                 }
-
-                Volatile.Write(ref _lastRefreshPrint, print);
-                if (repainted.Count == 0) continue;
-
-                await Dispatcher.InvokeAsync(() =>
+                finally
                 {
-                    // A rebuild while this batch was being painted means these surfaces are no longer
-                    // the ones on the canvas.
-                    if (Volatile.Read(ref _patchGeneration) != generation) return;
-
-                    foreach (var (surface, brush) in repainted)
-                        surface.Background = brush;
-                });
+                    // Rest after completion, including skipped/failed captures; never queue timer ticks.
+                    rest = RealtimeBackgroundCadence.RestAfter(Stopwatch.GetElapsedTime(started));
+                }
             }
         }
         catch (OperationCanceledException)
@@ -777,17 +785,29 @@ public partial class RealtimeBlockWindow : Window
         return System.Drawing.Rectangle.FromLTRB(x1, y1, x2, y2);
     }
 
-    /// <param name="blocks">Every block this window draws — see RealtimeNaturalBackground.EraseTargets.</param>
+    private static System.Drawing.Bitmap? RepairNaturalFrame(
+        System.Drawing.Bitmap? frame, IReadOnlyList<TranslatedBlock> blocks, CancellationToken token = default)
+    {
+        if (frame is null) return null;
+        try { return RealtimeCpuBackground.Repair(frame, blocks, token); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Could not repair realtime CPU background");
+            return null;
+        }
+    }
+
+    /// <summary>Crops a shared CPU-repaired frame into a frozen overlay brush.</summary>
     private static ImageBrush? BuildNaturalBrush(
         System.Drawing.Bitmap? frame,
-        System.Drawing.Rectangle patchBounds,
-        IReadOnlyList<TranslatedBlock> blocks)
+        System.Drawing.Rectangle patchBounds)
     {
         if (frame is null || patchBounds.Width <= 0 || patchBounds.Height <= 0) return null;
 
-        using var patch = RealtimeNaturalBackground.CreatePatch(
-            frame, patchBounds, RealtimeNaturalBackground.EraseTargets(blocks));
-        if (patch is null) return null;
+        var clipped = System.Drawing.Rectangle.Intersect(new(0, 0, frame.Width, frame.Height), patchBounds);
+        if (clipped.Width <= 0 || clipped.Height <= 0) return null;
+        using var patch = frame.Clone(clipped, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
 
         var image = BitmapInterop.ToBitmapSource(patch);
         var brush = new ImageBrush(image)
