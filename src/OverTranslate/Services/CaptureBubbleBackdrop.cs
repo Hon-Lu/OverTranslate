@@ -273,7 +273,14 @@ internal sealed class CaptureBubbleBackdrop
     /// comes back may be lighter or darker, because it was chosen against the ring around the
     /// source line and this plate is a different surface.
     /// </param>
-    public CaptureBubblePlate? Plate(WpfRect area, MediaColor wash, MediaColor text, double glyphHeight)
+    /// <param name="writtenHeight">
+    /// How tall the translation itself will be inside the bubble, in captured pixels. A bubble is
+    /// taller than its text, and what sits in the empty part has no say in whether the text can be
+    /// read: a subtitle line over a dark scrim used to be darkened further because the bright
+    /// scenery above and below the line was being counted as background for it.
+    /// </param>
+    public CaptureBubblePlate? Plate(
+        WpfRect area, MediaColor wash, MediaColor text, double glyphHeight, double writtenHeight)
     {
         var requested = Round(area);
         if (requested.Width < 2 || requested.Height < 2) return null;
@@ -314,7 +321,9 @@ internal sealed class CaptureBubbleBackdrop
             // Move the text before moving the plate. Lightening or darkening one colour costs
             // the picture nothing; washing the whole plate toward black or white costs exactly
             // what this class exists to preserve, so it is the fallback and not the first answer.
-            var palette = Palette(plate, (int)Math.Round(Feather(glyphHeight)));
+            int ring = (int)Math.Round(Feather(glyphHeight));
+            var palette = Palette(plate, ring,
+                Math.Max(ring, (int)Math.Round((plate.Height - writtenHeight) / 2)));
             var legible = Legible(palette, text);
             double lift = Clears(palette, legible, Colors.Black, 0) ? 0 : Lift(palette, legible);
             if (lift > 0)
@@ -340,16 +349,19 @@ internal sealed class CaptureBubbleBackdrop
     /// carries no detail for the shrink to lose, and reading every pixel of every bubble — several
     /// times over, for the searches below — costs far more than the answer is worth.
     /// </summary>
-    /// <param name="inset">
+    /// <param name="insetX">
     /// The feather ring, left out. Nothing is written on it — the text element keeps the bubble's
     /// own size while the plate is grown by exactly this much — so a dark corner out there has no
     /// business darkening the whole plate to stay legible under text that is not on it.
     /// </param>
-    private static MediaColor[] Palette(Mat plate, int inset)
+    /// <param name="insetY">The same, plus the empty part of a bubble above and below its text.</param>
+    private static MediaColor[] Palette(Mat plate, int insetX, int insetY)
     {
-        int margin = Math.Max(0, Math.Min(inset, Math.Min(plate.Width, plate.Height) / 2 - 1));
-        using var written = margin > 0
-            ? new Mat(plate, new CvRect(margin, margin, plate.Width - margin * 2, plate.Height - margin * 2))
+        int marginX = Math.Max(0, Math.Min(insetX, plate.Width / 2 - 1));
+        int marginY = Math.Max(0, Math.Min(insetY, plate.Height / 2 - 1));
+        using var written = marginX > 0 || marginY > 0
+            ? new Mat(plate, new CvRect(marginX, marginY,
+                plate.Width - marginX * 2, plate.Height - marginY * 2))
             : plate.Clone();
         using var sample = new Mat();
         Cv2.Resize(written, sample, new CvSize(

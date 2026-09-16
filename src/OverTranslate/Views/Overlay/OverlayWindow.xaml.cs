@@ -570,10 +570,12 @@ public partial class OverlayWindow : Window
             if (!wrap && HasLineBreak(block.TranslatedText)) wrap = true;
 
             double actualBorderH = Math.Max(borderH, fontSize + BubbleVerticalPadding);
+            double writtenH = fontSize;
             if (wrap)
             {
                 innerW = Math.Max(1, targetBorderW - BubbleHorizontalPadding);
                 var wrapMeasured = MeasureText(block.TranslatedText, typeface, fontSize, innerW);
+                writtenH = wrapMeasured.Height;
                 actualBorderH = OverlayBubbleHeight.ForWrapped(
                     borderH,
                     actualBorderH,
@@ -589,7 +591,7 @@ public partial class OverlayWindow : Window
 
             var (backgroundBorder, plateText) = BubbleBackground(
                 left, top, targetBorderW, actualBorderH, bg, textColor,
-                sourceFontReferenceHeight * _dpiY, selScreenX, selScreenY);
+                sourceFontReferenceHeight * _dpiY, writtenH * _dpiY, selScreenX, selScreenY);
             var textBrush = new SolidColorBrush(plateText);
 
             var textContainer = new Border
@@ -701,9 +703,10 @@ public partial class OverlayWindow : Window
                     (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255.0;
                 textColor = luminance > 0.5 ? Colors.Black : Colors.White;
             }
+            // Vertical text fills its grid, so the written part is the whole bubble.
             var (backgroundBorder, plateText) = BubbleBackground(
                 left, top, borderW, borderH, background, textColor,
-                sourceGlyphSize * _dpiY, selScreenX, selScreenY);
+                sourceGlyphSize * _dpiY, borderH * _dpiY, selScreenX, selScreenY);
             BubbleBackgroundCanvas.Children.Add(backgroundBorder);
             System.Windows.Media.Brush foreground = new SolidColorBrush(plateText);
 
@@ -887,6 +890,7 @@ public partial class OverlayWindow : Window
     /// </remarks>
     /// <param name="glyphHeightPixels">Source glyph height in captured pixels, not WPF units: the
     /// backdrop works in the frame's own coordinates because that is where its pixels are.</param>
+    /// <param name="writtenHeightPixels">How tall the translation itself is, in the same pixels.</param>
     /// <returns>
     /// The element, and the colour to draw the translation in. The second is not always the colour
     /// that went in: a plate is the surface the bubble really covers, and the sampled colour was
@@ -901,6 +905,7 @@ public partial class OverlayWindow : Window
         System.Windows.Media.Color background,
         System.Windows.Media.Color text,
         double glyphHeightPixels,
+        double writtenHeightPixels,
         double selScreenX,
         double selScreenY)
     {
@@ -919,7 +924,7 @@ public partial class OverlayWindow : Window
                 bubble.X - feather, bubble.Y - feather,
                 bubble.Width + feather * 2, bubble.Height + feather * 2);
 
-            if (backdrop.Plate(area, background, text, glyphHeightPixels) is { } plate)
+            if (backdrop.Plate(area, background, text, glyphHeightPixels, writtenHeightPixels) is { } plate)
             {
                 var plated = new Border
                 {

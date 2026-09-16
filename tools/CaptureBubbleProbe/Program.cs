@@ -147,7 +147,7 @@ internal static class Program
             (int)Math.Ceiling(rect.Bottom + feather) - (int)Math.Floor(rect.Y - feather));
         byte[]? plate = null;
         var area = new WpfRect(rect.X - feather, rect.Y - feather, rect.Width + feather * 2, rect.Height + feather * 2);
-        if (backdrop?.Plate(area, wash, text, glyph) is { } built)
+        if (backdrop?.Plate(area, wash, text, glyph, font) is { } built)
         {
             text = built.Text;
             var image = (System.Windows.Media.Imaging.BitmapSource)built.Brush.ImageSource;

@@ -67,7 +67,7 @@ public class CaptureBubbleBackdropTests
         double feather = CaptureBubbleBackdrop.Feather(Line.Height);
         var area = new WpfRect(
             Line.X - feather, Line.Y - feather, Line.Width + feather * 2, Line.Height + feather * 2);
-        if (backdrop!.Plate(area, wash ?? MediaColor.FromRgb(0x80, 0x90, 0x70), text, Line.Height) is not { } plate)
+        if (backdrop!.Plate(area, wash ?? MediaColor.FromRgb(0x80, 0x90, 0x70), text, Line.Height, Line.Height) is not { } plate)
             return null;
 
         var image = (BitmapSource)plate.Brush.ImageSource;
@@ -232,7 +232,7 @@ public class CaptureBubbleBackdropTests
         var backdrop = CaptureBubbleBackdrop.Create(frame, [Block()]);
 
         var plate = backdrop!.Plate(new WpfRect(-12, -9, 120, 40),
-            MediaColor.FromRgb(0x80, 0x90, 0x70), System.Windows.Media.Colors.Black, 20);
+            MediaColor.FromRgb(0x80, 0x90, 0x70), System.Windows.Media.Colors.Black, 20, 20);
 
         Assert.NotNull(plate);
         var image = (BitmapSource)plate!.Value.Brush.ImageSource;
@@ -291,6 +291,6 @@ public class CaptureBubbleBackdropTests
 
         Assert.Null(backdrop!.Plate(
             new WpfRect(900, 900, 80, 30), System.Windows.Media.Colors.White,
-            System.Windows.Media.Colors.Black, 20));
+            System.Windows.Media.Colors.Black, 20, 20));
     }
 }
