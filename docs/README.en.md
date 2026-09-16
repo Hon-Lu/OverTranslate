@@ -21,7 +21,7 @@
 
   <p>
     <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
-    <img src="https://img.shields.io/badge/license-GPL--3.0-22C55E?style=for-the-badge" alt="License GPL-3.0" />
+    <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
   </p>
 
   <p>
@@ -248,6 +248,6 @@ If this project helps you, feel free to buy me a coffee on [Buy Me a Coffee](htt
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0 (GPL-3.0)](https://www.gnu.org/licenses/gpl-3.0.html).
-You may freely use, modify, and distribute this software; if you distribute a modified version, you must release the corresponding source code under the GPL-3.0 terms.
+This project is licensed under the [MIT License](https://opensource.org/license/mit).
+You may freely use, modify, and distribute this software, including for commercial purposes; the main requirement is that the original copyright notice and the MIT License text be retained in all copies or distributions.
 See [LICENSE](../LICENSE) for the full license text.

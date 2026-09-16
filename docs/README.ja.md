@@ -21,7 +21,7 @@
 
   <p>
     <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
-    <img src="https://img.shields.io/badge/license-GPL--3.0-22C55E?style=for-the-badge" alt="License GPL-3.0" />
+    <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
   </p>
 
   <p>
@@ -251,6 +251,6 @@ OverTranslate は無料で公開している Windows 向けの翻訳ツールで
 
 ## ライセンス
 
-本プロジェクトは [GNU General Public License v3.0（GPL-3.0）](https://www.gnu.org/licenses/gpl-3.0.html) の下で公開しています。  
-自由に使用・改変・配布できますが、改変した版を配布する場合は GPL-3.0 に従って対応するソースコードを公開する必要があります。  
+本プロジェクトは [MIT License](https://opensource.org/license/mit) の下で公開しています。  
+自由に使用・改変・配布でき、商用利用も可能です。主な条件は、複製・配布する際に元の著作権表示と MIT ライセンスの条文を保持することです。  
 全文は [LICENSE](../LICENSE) をご覧ください。
