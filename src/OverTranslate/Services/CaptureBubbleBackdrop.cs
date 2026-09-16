@@ -90,6 +90,13 @@ internal sealed class CaptureBubbleBackdrop
     private const double ComfortableContrast = 7.0;
 
     /// <summary>
+    /// How far past <see cref="PlateContrast"/> the plate is moved, to cover what the sampled
+    /// palette missed. The palette is a shrunk copy — cheap enough to search against several times
+    /// per bubble — and a pixel it skipped can sit a little closer to the text than any it kept.
+    /// </summary>
+    private const double LiftMargin = 1.15;
+
+    /// <summary>
     /// Above this share of neighbouring pixels being near-equal, the neighbourhood a bubble lands
     /// in was drawn rather than photographed, and a soft patch there is conspicuous in a way it
     /// never is on a photograph. Over 78 labelled bubbles on seven real captures, application UI,
@@ -352,19 +359,23 @@ internal sealed class CaptureBubbleBackdrop
             var palette = Palette(plate, ring,
                 Math.Max(ring, (int)Math.Round((plate.Height - writtenHeight) / 2)));
 
-            var strong = Legible(palette, text, ComfortableContrast);
-            var legible = Clears(palette, strong, Colors.Black, 0, PlateContrast)
-                ? strong
-                : Legible(palette, text, PlateContrast);
-            double lift = Clears(palette, legible, Colors.Black, 0, PlateContrast)
-                ? 0
-                : Lift(palette, legible);
-            if (lift > 0)
+            var legible = Legible(palette, text, ComfortableContrast);
+            if (!Clears(palette, legible, Colors.Black, 0, PlateContrast))
             {
-                var target = OverlayTextColor.ContrastRatio(legible, Colors.White) >=
-                    OverlayTextColor.ContrastRatio(legible, Colors.Black) ? Colors.White : Colors.Black;
+                // No one colour reads everywhere on this plate — a subtitle crossing a white shirt
+                // and the dark scene behind it has no such colour. Move the plate, in the direction
+                // that suits the colour the capture was written in, and then choose the text again
+                // on what the plate has become. Choosing once, before the move, is what left white
+                // subtitles rewritten in the grey that was the best compromise on the old plate and
+                // is merely legible on the new one.
+                var target = OverlayTextColor.ContrastRatio(text, Colors.White) >=
+                    OverlayTextColor.ContrastRatio(text, Colors.Black) ? Colors.White : Colors.Black;
+                double lift = Lift(palette, text, target);
+
                 using var solid = new Mat(plate.Size(), MatType.CV_8UC3, new Scalar(target.B, target.G, target.R));
                 Cv2.AddWeighted(plate, 1 - lift, solid, lift, 0, plate);
+                legible = Legible([.. palette.Select(colour => Mix(colour, target, lift))],
+                    text, ComfortableContrast);
             }
 
             var brush = new ImageBrush(Fade(plate, Feather(glyphHeight))) { Stretch = Stretch.Fill };
@@ -397,9 +408,11 @@ internal sealed class CaptureBubbleBackdrop
                 plate.Width - marginX * 2, plate.Height - marginY * 2))
             : plate.Clone();
         using var sample = new Mat();
+        // Nearest, not area: this palette exists to find the part of the plate the text reads
+        // worst on, and averaging neighbours together is precisely how an extreme goes missing.
         Cv2.Resize(written, sample, new CvSize(
-            Math.Clamp(written.Width / 8, 8, 48), Math.Clamp(written.Height / 8, 4, 16)),
-            interpolation: InterpolationFlags.Area);
+            Math.Clamp(written.Width / 6, 12, 64), Math.Clamp(written.Height / 4, 6, 24)),
+            interpolation: InterpolationFlags.Nearest);
 
         var colours = new MediaColor[sample.Rows * sample.Cols];
         var row = new byte[sample.Cols * 3];
@@ -437,19 +450,17 @@ internal sealed class CaptureBubbleBackdrop
     }
 
     /// <summary>
-    /// How far the plate has to move toward black or white before every part of it clears the
-    /// minimum contrast against the text. Only reached when no text colour could.
+    /// How far the plate has to move toward <paramref name="target"/> before every part of it
+    /// clears <see cref="PlateContrast"/> against the text. Only reached when no text colour could.
     /// </summary>
-    private static double Lift(MediaColor[] palette, MediaColor text)
+    private static double Lift(MediaColor[] palette, MediaColor text, MediaColor target)
     {
-        var target = OverlayTextColor.ContrastRatio(text, Colors.White) >=
-            OverlayTextColor.ContrastRatio(text, Colors.Black) ? Colors.White : Colors.Black;
-
         double low = 0, high = 1;
         for (int i = 0; i < 10; i++)
         {
             double middle = (low + high) / 2;
-            if (Clears(palette, text, target, middle, PlateContrast)) high = middle; else low = middle;
+            if (Clears(palette, text, target, middle, PlateContrast * LiftMargin)) high = middle;
+            else low = middle;
         }
         return high;
     }

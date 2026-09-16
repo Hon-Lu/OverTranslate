@@ -254,6 +254,51 @@ public class CaptureBubbleBackdropTests
         Assert.True(worst >= 4.5, $"worst contrast was {worst:F2}");
     }
 
+    /// <summary>
+    /// A burned-in subtitle crossing a white shirt and the dark scene behind it. No one colour
+    /// reads on both, so the plate is darkened — and the answer then has to be the white the
+    /// subtitle was written in, not the grey that was the best compromise before it was darkened.
+    /// </summary>
+    [Fact]
+    public void Plate_KeepsWhiteTextWhiteByDarkeningWhatItCrosses()
+    {
+        var frame = new Bitmap(320, 160);
+        for (int y = 0; y < frame.Height; y++)
+        {
+            for (int x = 0; x < frame.Width; x++)
+            {
+                int noise = (x * 911 + y * 104729) % 17 - 8;
+                int level = Math.Clamp(238 - x * 204 / frame.Width + noise, 0, 255);
+                frame.SetPixel(x, y, Color.FromArgb(255, level, level, Math.Clamp(level + 6, 0, 255)));
+            }
+        }
+        using (var g = Graphics.FromImage(frame))
+            Glyphs(g);
+
+        using (frame)
+        {
+            var white = MediaColor.FromRgb(0xFF, 0xFF, 0xFF);
+            var plate = Plate(frame, white, MediaColor.FromRgb(0x88, 0x88, 0x88));
+            Assert.NotNull(plate);
+
+            var (image, pixels, stride, answered) = plate!.Value;
+            Assert.True(OverlayTextColor.RelativeLuminance(answered) > 0.6,
+                $"the subtitle came back as {answered}, not a white");
+
+            for (int y = image.PixelHeight / 3; y < image.PixelHeight * 2 / 3; y++)
+            {
+                for (int x = image.PixelWidth / 4; x < image.PixelWidth * 3 / 4; x++)
+                {
+                    var colour = At(pixels, stride, x, y);
+                    Assert.True(
+                        OverlayTextColor.ContrastRatio(answered,
+                            MediaColor.FromRgb(colour.R, colour.G, colour.B)) >= 4.5,
+                        $"({x},{y}) is {colour}");
+                }
+            }
+        }
+    }
+
     [Fact]
     public void Plate_IsTheFullSizeAskedForEvenWhereTheCaptureDoesNotReach()
     {
