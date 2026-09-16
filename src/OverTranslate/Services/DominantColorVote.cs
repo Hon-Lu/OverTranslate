@@ -35,11 +35,19 @@ internal sealed class DominantColorVote
     }
 
     /// <summary>The mean colour of the most-voted bucket, or null when nothing was added.</summary>
-    public MediaColor? Dominant()
+    public MediaColor? Dominant() => DominantWithShare()?.Color;
+
+    /// <summary>
+    /// The same colour, with the share of all votes its bucket holds. For callers that have to
+    /// know whether one colour actually describes what was sampled or merely came first.
+    /// </summary>
+    public (MediaColor Color, double Share)? DominantWithShare()
     {
         int best = -1;
+        long total = 0;
         for (int key = 0; key < _count.Length; key++)
         {
+            total += _count[key];
             if (_count[key] > 0 && (best < 0 || _count[key] > _count[best]))
                 best = key;
         }
@@ -48,6 +56,7 @@ internal sealed class DominantColorVote
             return null;
 
         int n = _count[best];
-        return MediaColor.FromRgb((byte)(_r[best] / n), (byte)(_g[best] / n), (byte)(_b[best] / n));
+        return (MediaColor.FromRgb((byte)(_r[best] / n), (byte)(_g[best] / n), (byte)(_b[best] / n)),
+            n / (double)total);
     }
 }
