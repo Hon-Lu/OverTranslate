@@ -44,7 +44,7 @@ public class CaptureBubbleBackdropTests
             for (int x = 0; x < frame.Width; x++)
             {
                 int ramp = from + (to - from) * x / frame.Width;
-                int noise = (x * 7919 + y * 104729) % 13 - 6;
+                int noise = (x * 911 + y * 104729) % 17 - 8;
                 byte level = (byte)Math.Clamp(ramp + noise, 0, 255);
                 frame.SetPixel(x, y, Color.FromArgb(255,
                     level,

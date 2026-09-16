@@ -65,12 +65,22 @@ internal sealed class CaptureBubbleBackdrop
     private const double WashOpacity = 0.25;
 
     /// <summary>
-    /// Above this share of neighbouring pixels being exactly equal, the capture is an interface
-    /// rather than a picture, and a soft patch on it is conspicuous in a way it never is on a
-    /// photograph. Measured over 20 real captures: rendered pages and application UI land at
-    /// 0.89–0.96, game scenes at 0.19–0.52, video frames at 0.43–0.62, flat comic art at 0.60–0.84.
+    /// Above this share of neighbouring pixels being exactly equal, the neighbourhood a bubble
+    /// lands in is an interface rather than a picture, and a soft patch there is conspicuous in a
+    /// way it never is on a photograph. Over 148 bubbles on seven real captures, application UI,
+    /// rendered pages and flat comic art measured 0.67–1.00 and game scenes 0.12–0.72.
     /// </summary>
-    private const double InterfaceCrispness = 0.75;
+    private const double InterfaceCrispness = 0.82;
+
+    /// <summary>
+    /// How far past the bubble that question is asked, in source glyph heights. Not the bubble
+    /// alone: whether a blurred patch will look out of place is decided by what surrounds it, and
+    /// a crisp button read on its own is as smooth as a photograph is.
+    /// </summary>
+    private const double NeighbourhoodGlyphs = 2;
+
+    /// <summary>Per-channel difference two neighbours may have and still count as one run.</summary>
+    private const int Smooth = 2;
 
     /// <summary>
     /// How nearly one colour the surface under a bubble has to be before the flat card is used
@@ -82,8 +92,7 @@ internal sealed class CaptureBubbleBackdrop
     /// so the plate has to earn its place: only where the surface is genuinely pictorial — a photo
     /// in an article — which measured below 0.45 on the pages tried. On a picture the flat card is
     /// the conspicuous thing, so the plate is the default and the card is kept only where the
-    /// surface is so nearly uniform that the two are hard to tell apart; game scenes measured at
-    /// most 0.81 under a bubble, and there the card is plainly wrong.
+    /// surface is so nearly uniform that the two are hard to tell apart.
     /// </remarks>
     private const double InterfaceFlatShare = 0.45;
     private const double PictureFlatShare = 0.85;
@@ -91,14 +100,12 @@ internal sealed class CaptureBubbleBackdrop
     private readonly byte[] _bgr;
     private readonly int _width;
     private readonly int _height;
-    private readonly double _crispness;
 
-    private CaptureBubbleBackdrop(byte[] bgr, int width, int height, double crispness)
+    private CaptureBubbleBackdrop(byte[] bgr, int width, int height)
     {
         _bgr = bgr;
         _width = width;
         _height = height;
-        _crispness = crispness;
     }
 
     /// <summary>
@@ -133,7 +140,7 @@ internal sealed class CaptureBubbleBackdrop
             }
             finally { repaired.UnlockBits(data); }
 
-            return new CaptureBubbleBackdrop(bgr, repaired.Width, repaired.Height, Crispness(frame));
+            return new CaptureBubbleBackdrop(bgr, repaired.Width, repaired.Height);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception)
@@ -144,38 +151,43 @@ internal sealed class CaptureBubbleBackdrop
     }
 
     /// <summary>
-    /// The share of neighbouring pixels that are exactly equal, over the capture as it arrived.
+    /// The share of horizontally neighbouring pixels around a bubble that are exactly equal.
     /// Rendered interfaces are built from runs of identical pixels; cameras and 3D renderers do
     /// not produce two identical neighbours by accident.
     /// </summary>
-    /// <remarks>On the original, not the repair: the repair fills text with smooth interpolation,
-    /// which is neither what the user is looking at nor evidence of what drew it.</remarks>
-    private static double Crispness(Bitmap frame)
+    /// <remarks>
+    /// <para>On the repair, and only where the bubble goes. On the repair because that is what the
+    /// plate would be made of, and because the source glyphs are gone from it: antialiased text
+    /// breaks up runs wherever it is drawn, which drags a flat button and a photograph toward the
+    /// same number and was measured doing exactly that.</para>
+    ///
+    /// <para>Local because a page is not all one thing. A magazine-style web page is mostly crisp
+    /// chrome with photographs set into it, and one number for the whole capture calls the page a
+    /// photograph and then blurs its buttons — that is how a small pink tag came back as a pink
+    /// glow.</para>
+    /// </remarks>
+    internal double Crispness(WpfRect area, double glyphHeight)
     {
-        const int stride = 3;
-        var area = new Rectangle(0, 0, frame.Width, frame.Height);
-        if (area.Width < 2 || area.Height < 2) return 1;
+        double reach = Math.Max(4, glyphHeight * NeighbourhoodGlyphs);
+        var rect = Clip(Round(new WpfRect(
+            area.X - reach, area.Y - reach, area.Width + reach * 2, area.Height + reach * 2)));
+        if (rect.Width < 2 || rect.Height < 2) return 1;
 
-        var data = frame.LockBits(area, System.Drawing.Imaging.ImageLockMode.ReadOnly,
-            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-        try
+        long same = 0, total = 0;
+        for (int y = rect.Y; y < rect.Bottom; y++)
         {
-            var row = new byte[area.Width * 3];
-            long same = 0, total = 0;
-            for (int y = 0; y < area.Height; y += stride)
+            int row = y * _width * 3;
+            for (int x = rect.X + 1; x < rect.Right; x++)
             {
-                Marshal.Copy(IntPtr.Add(data.Scan0, y * data.Stride), row, 0, row.Length);
-                for (int x = stride; x < area.Width; x += stride)
-                {
-                    int a = x * 3, b = (x - stride) * 3;
-                    if (row[a] == row[b] && row[a + 1] == row[b + 1] && row[a + 2] == row[b + 2]) same++;
-                    total++;
-                }
+                int a = row + x * 3, b = a - 3;
+                if (Math.Abs(_bgr[a] - _bgr[b]) <= Smooth && Math.Abs(_bgr[a + 1] - _bgr[b + 1]) <= Smooth
+                    && Math.Abs(_bgr[a + 2] - _bgr[b + 2]) <= Smooth) same++;
+                total++;
             }
-            return total == 0 ? 1 : same / (double)total;
         }
-        finally { frame.UnlockBits(data); }
+        return total == 0 ? 1 : same / (double)total;
     }
+
 
     /// <summary>
     /// How much of the surface under a bubble is one or two flat colours, from 0 to 1. Measured
@@ -225,7 +237,8 @@ internal sealed class CaptureBubbleBackdrop
 
         // Nothing beats a flat card on a surface that really is flat, and on a sharp interface a
         // plate is worse than nothing. Null hands the caller back to the card it drew before.
-        double flat = _crispness >= InterfaceCrispness ? InterfaceFlatShare : PictureFlatShare;
+        double flat = Crispness(area, glyphHeight) >= InterfaceCrispness
+            ? InterfaceFlatShare : PictureFlatShare;
         if (Uniformity(area, glyphHeight) >= flat) return null;
 
         double sigma = Math.Clamp(glyphHeight * BlurFactor, 1, 16);
