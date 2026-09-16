@@ -3,13 +3,14 @@ using SkiaSharp;
 namespace OverTranslate.Services.Ocr;
 
 /// <summary>
-/// Rejoins a row of coloured text that the detector returned in pieces, before anything crops from
-/// those pieces.
+/// Rejoins a row of text that the detector returned in pieces, before anything crops from those
+/// pieces.
 /// </summary>
 /// <remarks>
-/// <para>The case this exists for is a Japanese page title set in colour on a flat dark background.
-/// The detector's probability map fades across the thin coloured strokes, so the row comes back as
-/// several boxes with gaps between them, and the glyphs in the gaps are never recognised at all —
+/// <para>The case this exists for is Japanese text on a flat dark background — a page title set in
+/// colour, or the grey body text under it. The detector's probability map fades across the thin
+/// strokes, so the row comes back as several boxes with gaps between them, and the glyphs in the
+/// gaps are never recognised at all —
 /// <c>BanG Dream!</c> / <c>（バンドリ</c> / <c>J!)</c> / <c>）公式サイ</c> where the page reads
 /// <c>BanG Dream!（バンドリ！）公式サイト</c>. Widening the recognition crop does not help: the
 /// trailing <c>ト</c> peaks at about .015 on the probability map, far below the .2 box threshold,
@@ -25,9 +26,11 @@ namespace OverTranslate.Services.Ocr;
 ///
 /// <para>So the decision is local. The whole-image test below is only a cheap pre-filter — passing
 /// it does nothing on its own — and every condition after it is measured on one row of ink: the row
-/// must be mostly coloured, wide, continuous, already carry a substantial detector box, and hold
-/// coloured ink that no box covers. Across 413 captures exactly two rows satisfy all of them, and
-/// both were broken titles.</para>
+/// must be wide, continuous, already carry a substantial detector box whose owners all sit on the
+/// same line as each other, and hold coloured ink that no box covers. Across 497 captures that
+/// changes two of them: one frame of noise a subtitle dump should not have read at all, and one
+/// chat line whose colon comes back full-width, as the page has it, at the cost of no longer being
+/// grouped with its second line.</para>
 ///
 /// <para>Screenshot captures only. The realtime path passes an explicit detector size and never
 /// reaches here: a frame missed there is repaired by the next one 250ms later, and none of this has
@@ -60,7 +63,13 @@ internal static class ChromaticBoxRepair
         var bgHigh = Math.Max(bg.Red, Math.Max(bg.Green, bg.Blue));
         if (histogram[mode] < samples * .6 || bgHigh > 96 || bgHigh - Math.Min(bg.Red, Math.Min(bg.Green, bg.Blue)) > 32) return [];
         bool Ink(SKColor c) => Math.Max(Math.Abs(c.Red - bg.Red), Math.Max(Math.Abs(c.Green - bg.Green), Math.Abs(c.Blue - bg.Blue))) > 40;
-        // Coloured, but not a saturated graphic: an icon or a logo is kept out by the second half.
+        // Ink with a hue in it, but not a saturated graphic — the second half keeps an icon or a
+        // logo out. This used to gate the whole row, which is why the rule only ever reached
+        // coloured titles; it now gates the evidence alone, where it costs a real capture nothing.
+        // Subpixel rendering leaves a hue on every stroke edge, so on the two captures a user sent
+        // 40% of the ink reads as coloured, against 8-18% for the same pages rendered headless.
+        // What it still excludes is flat theme furniture drawn in the neutral palette: bullets,
+        // chevrons, panel borders, a hamburger. Those are what a row-agnostic version swallowed.
         bool Color(SKColor c)
         {
             var high = Math.Max(c.Red, Math.Max(c.Green, c.Blue));
@@ -79,24 +88,35 @@ internal static class ChromaticBoxRepair
             var bottom = y;
             var height = bottom - top;
             if (height < 18) continue;
-            var ink = 0; var color = 0; var left = source.Width; var right = 0;
+            var ink = 0; var left = source.Width; var right = 0;
             var occupied = new bool[source.Width];
             for (var yy = top; yy < bottom; yy++)
             for (var x = 0; x < source.Width; x++)
             {
                 var c = source.GetPixel(x, yy);
                 if (!Ink(c)) continue;
-                ink++; if (Color(c)) color++;
+                ink++;
                 occupied[x] = true;
                 left = Math.Min(left, x); right = Math.Max(right, x + 1);
             }
-            // A line of text, mostly coloured, and not a filled panel: the last term rejects a row
-            // whose ink covers most of its own area.
-            if (right - left < height * 6 || color < ink * .6 || ink > (right - left) * height * .65) continue;
+            // A line of text, wide and not a filled panel: the last term rejects a row whose ink
+            // covers most of its own area.
+            if (right - left < height * 6 || ink > (right - left) * height * .65) continue;
             var owners = Enumerable.Range(0, boxes.Count).Where(i =>
                 Math.Min(boxes[i].Bottom, bottom) - Math.Max(boxes[i].Top, top) >= Math.Min(boxes[i].Height, height) * .6 &&
                 boxes[i].Right > left && boxes[i].Left < right).OrderBy(i => boxes[i].Left).ToArray();
             if (owners.Length == 0 || owners.Any(i => repairs.Any(r => r.Owners.Contains(i)))) continue;
+            // Every owner has to be on the same line as every other one, measured as the slice of
+            // height they all share. This is what the chroma test bought by accident while it gated
+            // the whole row: on a search results page a site icon runs down the left of the site
+            // name and the URL under it, which joins both rows into one connected band of ink, and
+            // gluing the two into a single box loses the pair — the row came back as a garbled run
+            // or as nothing. Those rows failed the "mostly coloured" test, so the rule never
+            // reached them; measured directly they fail this one, and grey body text no longer does.
+            // Taking this line out costs 12 captures of the 497: seven dark-mode search results
+            // lose a title and its URL outright, and web-v3 and web-v4 lose lines the same way.
+            if (owners.Min(i => boxes[i].Bottom) - owners.Max(i => boxes[i].Top)
+                < owners.Min(i => boxes[i].Height) * .6f) continue;
             // Something real was detected on this row. Without it, a row of ink the detector refused
             // outright — scenery, a logo, a progress bar — would be handed to recognition as text.
             if (owners.Max(i => boxes[i].Width) < height * 2.5) continue;
