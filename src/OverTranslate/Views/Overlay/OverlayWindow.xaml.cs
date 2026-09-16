@@ -50,7 +50,14 @@ public partial class OverlayWindow : Window
     private string _currentTargetLanguage;
     private bool _currentVerticalText;
 
-    public OverlayWindow(
+    /// <summary>
+    /// The repaired capture each bubble is painted from, when there is one. Null leaves every
+    /// bubble on the flat sampled colour, which is what this overlay drew before and what it still
+    /// draws whenever the repair could not be built.
+    /// </summary>
+    private CaptureBubbleBackdrop? _backdrop;
+
+    internal OverlayWindow(
         List<TranslatedBlock> blocks,
         IReadOnlyList<OcrTextBlock> ocrBlocks,
         double selectionScreenX,
@@ -59,10 +66,12 @@ public partial class OverlayWindow : Window
         double selectionScreenHeight,
         string sourceLanguage,
         string targetLanguage,
-        bool verticalText)
+        bool verticalText,
+        CaptureBubbleBackdrop? backdrop = null)
     {
         InitializeComponent();
         _currentBlocks = blocks;
+        _backdrop = backdrop;
         _translationVisible = blocks.Count > 0;
         _currentOcrBlocks = ocrBlocks;
         _currentSelectionScreenX = selectionScreenX;
@@ -192,7 +201,7 @@ public partial class OverlayWindow : Window
             BuildDebugBoxes(selScreenX, selScreenY);
     }
 
-    public void UpdateBlocks(
+    internal void UpdateBlocks(
         List<TranslatedBlock> blocks,
         IReadOnlyList<OcrTextBlock> ocrBlocks,
         double selScreenX,
@@ -201,9 +210,11 @@ public partial class OverlayWindow : Window
         double selScreenHeight,
         string sourceLanguage,
         string targetLanguage,
-        bool verticalText)
+        bool verticalText,
+        CaptureBubbleBackdrop? backdrop = null)
     {
         _currentBlocks = blocks;
+        _backdrop = backdrop;
         _currentOcrBlocks = ocrBlocks;
         _currentSelectionScreenX = selScreenX;
         _currentSelectionScreenY = selScreenY;
@@ -353,13 +364,13 @@ public partial class OverlayWindow : Window
                 ? Colors.White
                 : block.BackgroundColor;
 
-            System.Windows.Media.Brush textBrush;
+            System.Windows.Media.Color textColor;
             if (block.TextColor.A != 0)
-                textBrush = new SolidColorBrush(block.TextColor);
+                textColor = block.TextColor;
             else
             {
                 double lum = (0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B) / 255.0;
-                textBrush = lum > 0.5 ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
+                textColor = lum > 0.5 ? Colors.Black : Colors.White;
             }
 
             bool isSingleLineSource = IsSingleLineSource(block.OriginalText, sourceFontReferenceHeight);
@@ -559,10 +570,12 @@ public partial class OverlayWindow : Window
             if (!wrap && HasLineBreak(block.TranslatedText)) wrap = true;
 
             double actualBorderH = Math.Max(borderH, fontSize + BubbleVerticalPadding);
+            double writtenH = fontSize;
             if (wrap)
             {
                 innerW = Math.Max(1, targetBorderW - BubbleHorizontalPadding);
                 var wrapMeasured = MeasureText(block.TranslatedText, typeface, fontSize, innerW);
+                writtenH = wrapMeasured.Height;
                 actualBorderH = OverlayBubbleHeight.ForWrapped(
                     borderH,
                     actualBorderH,
@@ -570,14 +583,16 @@ public partial class OverlayWindow : Window
                     maxWrapBorderHeight);
             }
 
-            var backgroundBorder = new Border
-            {
-                Background = new SolidColorBrush(bg),
-                Padding = new Thickness(3, 2, 3, 2),
-                Width  = targetBorderW,
-                Height = actualBorderH,
-                ClipToBounds = true,
-            };
+            double expandedOffsetX = (targetBorderW - borderW) / 2;
+            double left = preferRightExpansion
+                ? Math.Clamp(canvasX - BubbleExpand, OverlayPadding, Math.Max(OverlayPadding, canvasWidth - targetBorderW - OverlayPadding))
+                : Math.Clamp(canvasX - BubbleExpand - expandedOffsetX, OverlayPadding, Math.Max(OverlayPadding, canvasWidth - targetBorderW - OverlayPadding));
+            double top = Math.Clamp(canvasY - BubbleExpand, OverlayPadding, Math.Max(OverlayPadding, canvasHeight - actualBorderH - OverlayPadding));
+
+            var (backgroundBorder, plateText) = BubbleBackground(
+                left, top, targetBorderW, actualBorderH, bg, textColor,
+                sourceFontReferenceHeight * _dpiY, writtenH * _dpiY, selScreenX, selScreenY);
+            var textBrush = new SolidColorBrush(plateText);
 
             var textContainer = new Border
             {
@@ -617,13 +632,6 @@ public partial class OverlayWindow : Window
                 }
             };
 
-            double expandedOffsetX = (targetBorderW - borderW) / 2;
-            double left = preferRightExpansion
-                ? Math.Clamp(canvasX - BubbleExpand, OverlayPadding, Math.Max(OverlayPadding, canvasWidth - targetBorderW - OverlayPadding))
-                : Math.Clamp(canvasX - BubbleExpand - expandedOffsetX, OverlayPadding, Math.Max(OverlayPadding, canvasWidth - targetBorderW - OverlayPadding));
-            double top = Math.Clamp(canvasY - BubbleExpand, OverlayPadding, Math.Max(OverlayPadding, canvasHeight - actualBorderH - OverlayPadding));
-            Canvas.SetLeft(backgroundBorder, left);
-            Canvas.SetTop(backgroundBorder, top);
             Canvas.SetLeft(textContainer, left);
             Canvas.SetTop(textContainer, top);
             BubbleBackgroundCanvas.Children.Add(backgroundBorder);
@@ -684,30 +692,23 @@ public partial class OverlayWindow : Window
                 Math.Max(Math.Max(OverlayPadding, selectionTop), maxTop));
 
             var background = block.BackgroundColor.A == 0 ? Colors.White : block.BackgroundColor;
-            System.Windows.Media.Brush foreground;
+            System.Windows.Media.Color textColor;
             if (block.TextColor.A != 0)
             {
-                foreground = new SolidColorBrush(block.TextColor);
+                textColor = block.TextColor;
             }
             else
             {
                 double luminance =
                     (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255.0;
-                foreground = luminance > 0.5
-                    ? System.Windows.Media.Brushes.Black
-                    : System.Windows.Media.Brushes.White;
+                textColor = luminance > 0.5 ? Colors.Black : Colors.White;
             }
-
-            var backgroundBorder = new Border
-            {
-                Background = new SolidColorBrush(background),
-                Width = borderW,
-                Height = borderH,
-                ClipToBounds = true,
-            };
-            Canvas.SetLeft(backgroundBorder, left);
-            Canvas.SetTop(backgroundBorder, top);
+            // Vertical text fills its grid, so the written part is the whole bubble.
+            var (backgroundBorder, plateText) = BubbleBackground(
+                left, top, borderW, borderH, background, textColor,
+                sourceGlyphSize * _dpiY, borderH * _dpiY, selScreenX, selScreenY);
             BubbleBackgroundCanvas.Children.Add(backgroundBorder);
+            System.Windows.Media.Brush foreground = new SolidColorBrush(plateText);
 
             var bubbleBounds = new Rect(left, top, borderW, borderH);
             double fontSize = cellSize * 0.92;
@@ -876,6 +877,88 @@ public partial class OverlayWindow : Window
         !originalText.Contains('\n') &&
         !originalText.Contains('\r') &&
         sourceHeight <= 28;
+
+    /// <summary>
+    /// The element painted behind one bubble, positioned on the background canvas: the repaired
+    /// capture where there is a backdrop, and the flat sampled colour where there is not.
+    /// </summary>
+    /// <remarks>
+    /// A plate is deliberately larger than the bubble it backs. Its edges fade out, and the fade
+    /// has to fall outside the text rather than across it — see
+    /// <see cref="CaptureBubbleBackdrop.Feather"/>. Only this element grows; the text element keeps
+    /// the bubble's own size and position, so nothing about the layout moves.
+    /// </remarks>
+    /// <param name="glyphHeightPixels">Source glyph height in captured pixels, not WPF units: the
+    /// backdrop works in the frame's own coordinates because that is where its pixels are.</param>
+    /// <param name="writtenHeightPixels">How tall the translation itself is, in the same pixels.</param>
+    /// <returns>
+    /// The element, and the colour to draw the translation in. The second is not always the colour
+    /// that went in: a plate is the surface the bubble really covers, and the sampled colour was
+    /// chosen against the ring around the source line, which over a wide bubble on a busy picture
+    /// is somewhere else entirely.
+    /// </returns>
+    private (Border Element, System.Windows.Media.Color Text) BubbleBackground(
+        double left,
+        double top,
+        double width,
+        double height,
+        System.Windows.Media.Color background,
+        System.Windows.Media.Color text,
+        double glyphHeightPixels,
+        double writtenHeightPixels,
+        double selScreenX,
+        double selScreenY)
+    {
+        if (_backdrop is { } backdrop)
+        {
+            // Where the bubble lands on the capture, which is not where the source line was: the
+            // bubble is grown to fit a translation that is routinely longer than what it replaces.
+            var bubble = new Rect(
+                left * _dpiX + _physBounds.Left - selScreenX,
+                top * _dpiY + _physBounds.Top - selScreenY,
+                width * _dpiX,
+                height * _dpiY);
+
+            double feather = CaptureBubbleBackdrop.Feather(glyphHeightPixels);
+            var area = new Rect(
+                bubble.X - feather, bubble.Y - feather,
+                bubble.Width + feather * 2, bubble.Height + feather * 2);
+
+            if (backdrop.Plate(area, background, text, glyphHeightPixels, writtenHeightPixels) is { } plate)
+            {
+                var plated = new Border
+                {
+                    Background = plate.Brush,
+                    Width = width + feather * 2 / _dpiX,
+                    Height = height + feather * 2 / _dpiY,
+                    ClipToBounds = true,
+                };
+                Canvas.SetLeft(plated, left - feather / _dpiX);
+                Canvas.SetTop(plated, top - feather / _dpiY);
+                return (plated, plate.Text);
+            }
+
+            // No plate: a flat card is right here, but not necessarily in the colour sampled when
+            // the capture was read — see CaptureBubbleBackdrop.Card.
+            if (backdrop.Card(bubble, text) is { } card)
+            {
+                background = card.Background;
+                text = card.Text;
+            }
+        }
+
+        var flat = new Border
+        {
+            Background = new SolidColorBrush(background),
+            Padding = new Thickness(3, 2, 3, 2),
+            Width = width,
+            Height = height,
+            ClipToBounds = true,
+        };
+        Canvas.SetLeft(flat, left);
+        Canvas.SetTop(flat, top);
+        return (flat, text);
+    }
 
     private double GetSourceFontReferenceHeight(TranslatedBlock block, double fallbackHeight)
     {

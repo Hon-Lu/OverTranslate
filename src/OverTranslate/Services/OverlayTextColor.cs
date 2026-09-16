@@ -124,7 +124,9 @@ internal static class OverlayTextColor
         return (Math.Max(x, y) + 0.05) / (Math.Min(x, y) + 0.05);
     }
 
-    private static double RelativeLuminance(MediaColor color)
+    /// <summary>WCAG relative luminance, 0 to 1. Public for callers that compare one text colour
+    /// against many backgrounds and want the luminance rather than the whole ratio each time.</summary>
+    public static double RelativeLuminance(MediaColor color)
     {
         static double Linear(byte channel)
         {

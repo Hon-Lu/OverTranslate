@@ -25,7 +25,17 @@ internal static class SourceTextColorSampler
     /// Samples the background around <paramref name="bounds"/> and the dominant glyph colour inside it.
     /// Null when the box has no pixels in the frame.
     /// </summary>
-    public static SourceTextColor? Sample(Bitmap frame, WpfRect bounds)
+    /// <param name="backgroundOverride">
+    /// A background the caller has already established by a better route than the ring — see
+    /// <see cref="CaptureBackgroundColor"/>. The glyph colour is still read against it, because
+    /// what counts as a glyph is "far from the background" and that question needs an answer here.
+    /// </param>
+    /// <param name="ringReference">
+    /// The height the ring around the box is sized from, for callers whose box is a whole paragraph
+    /// rather than one line. Defaults to the box's own height, which is what a single line wants.
+    /// </param>
+    public static SourceTextColor? Sample(
+        Bitmap frame, WpfRect bounds, MediaColor? backgroundOverride = null, double? ringReference = null)
     {
         if (frame.Width <= 0 || frame.Height <= 0 || bounds.Width <= 0 || bounds.Height <= 0)
             return null;
@@ -44,8 +54,13 @@ internal static class SourceTextColorSampler
 
         // The ring the background is read from and the box the glyphs are read from, in one window,
         // so the bitmap is locked once for the whole decision.
-        int padX = Math.Max(4, (int)Math.Round(bounds.Height * 0.35));
-        int padY = Math.Max(3, (int)Math.Round(bounds.Height * 0.28));
+        // Sized from one line, not from the box. They are the same number for a single line, which
+        // is what these ratios were chosen against; for a grouped paragraph the box is the whole
+        // paragraph, and a ring 28% of *that* clears the panel the paragraph is printed on and
+        // reads the page behind it instead.
+        double reference = ringReference is { } given && given > 0 ? given : bounds.Height;
+        int padX = Math.Max(4, (int)Math.Round(reference * 0.35));
+        int padY = Math.Max(3, (int)Math.Round(reference * 0.28));
         var outer = Rectangle.FromLTRB(
             Math.Clamp((int)bounds.X - padX, 0, frame.Width),
             Math.Clamp((int)bounds.Y - padY, 0, frame.Height),
@@ -55,7 +70,7 @@ internal static class SourceTextColorSampler
         if (PixelWindow.Read(frame, outer) is not { } window)
             return null;
 
-        var background = DominantBackground(window, outer, inner);
+        var background = backgroundOverride ?? DominantBackground(window, outer, inner);
         return new SourceTextColor(background, DominantGlyphColor(window, inner, background));
     }
 
@@ -63,12 +78,25 @@ internal static class SourceTextColorSampler
     /// The colours the capture overlay draws a block in: the sampled background, and a text colour
     /// that is tuned toward the source and guaranteed legible on it.
     /// </summary>
-    public static (MediaColor Background, MediaColor Text) ForCaptureOverlay(Bitmap frame, WpfRect bounds)
+    /// <param name="sourceLines">
+    /// The block's own lines, when it has more than one. A paragraph is read from the paper between
+    /// its lines rather than from the ring around it, and the ring — still the fallback when the
+    /// gaps hold no single colour — is sized from a line rather than from the paragraph.
+    /// </param>
+    public static (MediaColor Background, MediaColor Text) ForCaptureOverlay(
+        Bitmap frame, WpfRect bounds, IReadOnlyList<WpfRect>? sourceLines = null, bool vertical = false)
     {
         var black = MediaColor.FromRgb(0, 0, 0);
         var white = MediaColor.FromRgb(255, 255, 255);
 
-        if (Sample(frame, bounds) is not { } sample)
+        var paper = sourceLines is { Count: > 1 }
+            ? CaptureBackgroundColor.BetweenLines(frame, sourceLines, vertical)
+            : null;
+        double? ring = sourceLines is { Count: > 0 }
+            ? sourceLines.Min(line => vertical ? line.Width : line.Height)
+            : null;
+
+        if (Sample(frame, bounds, paper, ring) is not { } sample)
             return (white, black);
 
         var background = sample.Background;

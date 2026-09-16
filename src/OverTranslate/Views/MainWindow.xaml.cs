@@ -68,6 +68,10 @@ public partial class MainWindow : Window
     // The same translation after placement, with the colours sampled from underneath each of these
     // boxes. This is what the overlay draws, and the only list whose indices line up with it.
     private List<TranslatedBlock> _lastColoredBlocks = [];
+
+    // Built alongside those colours and kept with them, so the overlay restored after a failed
+    // re-translation is the overlay that was there — bubble backgrounds included.
+    private CaptureBubbleBackdrop? _lastBackdrop;
     private double _lastSelPhysLeft;
     private double _lastSelPhysTop;
     private double _lastSelPhysWidth;
@@ -760,7 +764,8 @@ public partial class MainWindow : Window
         double selPhysHeight,
         string sourceLang,
         string targetLang,
-        bool verticalText)
+        bool verticalText,
+        CaptureBubbleBackdrop? backdrop = null)
     {
         if (_overlayWindow != null)
         {
@@ -773,7 +778,8 @@ public partial class MainWindow : Window
                 selPhysHeight,
                 sourceLang,
                 targetLang,
-                verticalText);
+                verticalText,
+                backdrop);
             return;
         }
 
@@ -786,7 +792,8 @@ public partial class MainWindow : Window
             selPhysHeight,
             sourceLang,
             targetLang,
-            verticalText);
+            verticalText,
+            backdrop);
         if (_captureWindow != null)
             _overlayWindow.Owner = _captureWindow;
         // This runs when the overlay closes on its own (Esc via the keyboard hook). Same fault
@@ -948,13 +955,23 @@ public partial class MainWindow : Window
                         };
                     }
 
-                    var (bg, fg) = SourceTextColorSampler.ForCaptureOverlay(workBitmap, b.Bounds);
+                    var (bg, fg) = SourceTextColorSampler.ForCaptureOverlay(
+                        workBitmap, b.Bounds, b.SourceLineBounds, req.IsVerticalText);
                     return b with { BackgroundColor = bg, TextColor = fg };
                 })
                 .ToList();
 
+            // Off the UI thread: this repairs the whole capture once, for every bubble that is
+            // about to be drawn over it. Null on failure, and the overlay then paints flat colour.
+            var backdrop = await Task.Run(
+                () => CaptureBubbleBackdrop.Create(workBitmap, coloredTranslated, cancellationToken),
+                cancellationToken);
+            if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
+                return;
+
             _lastColoredBlocks = coloredTranslated;
             _lastVerticalText = req.IsVerticalText;
+            _lastBackdrop = backdrop;
             ShowOverlay(
                 coloredTranslated,
                 _lastOcrBlocks,
@@ -964,7 +981,8 @@ public partial class MainWindow : Window
                 _lastSelPhysHeight,
                 req.SourceLang,
                 req.TargetLang,
-                req.IsVerticalText);
+                req.IsVerticalText,
+                backdrop);
             requestToolbar?.SetTranslationState(true);
             requestToolbar?.SetToggleEnabled(coloredTranslated.Count > 0);
             requestToolbar?.SetEngineBadge(AppServices.Translation.LastEngineUsage);
@@ -1004,7 +1022,8 @@ public partial class MainWindow : Window
                 _lastSelPhysHeight,
                 req.SourceLang,
                 req.TargetLang,
-                _lastVerticalText);
+                _lastVerticalText,
+                _lastBackdrop);
             requestToolbar?.SetTranslationState(_lastColoredBlocks.Count > 0);
             requestToolbar?.SetToggleEnabled(_lastColoredBlocks.Count > 0);
             ShowBalloon(
