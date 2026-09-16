@@ -240,6 +240,49 @@ public class CaptureBubbleBackdropTests
         Assert.Equal(40, image.PixelHeight);
     }
 
+    /// <summary>
+    /// The flat card takes the colour of what the bubble covers, not of the ring the capture was
+    /// sampled from — so a translation that outgrows a coloured tag stops dragging the tag's
+    /// colour across the page behind it.
+    /// </summary>
+    [Fact]
+    public void Card_FollowsWhatTheBubbleCoversRatherThanWhatTheSourceLineSatOn()
+    {
+        using var frame = new Bitmap(320, 160);
+        var tag = Color.FromArgb(255, 0xE8, 0x18, 0x5F);
+        var page = Color.FromArgb(255, 0xF7, 0xF5, 0xF8);
+        using (var g = Graphics.FromImage(frame))
+        {
+            g.Clear(page);
+            g.FillRectangle(new SolidBrush(tag), 36, 36, 90, 32);
+            Glyphs(g);
+        }
+
+        var backdrop = CaptureBubbleBackdrop.Create(frame, [Block()]);
+        var onTag = backdrop!.Card(new WpfRect(38, 38, 86, 28), MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+        var outgrown = backdrop.Card(new WpfRect(38, 38, 250, 28), MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+
+        Assert.NotNull(onTag);
+        Assert.NotNull(outgrown);
+        Assert.InRange(onTag!.Value.Background.R, 0xD8, 0xF8);
+        Assert.InRange(onTag.Value.Background.G, 0x08, 0x38);
+        // Grown well past the tag, the page is most of what is covered and the card follows it.
+        Assert.InRange(outgrown!.Value.Background.G, 0xE0, 0xFF);
+    }
+
+    [Fact]
+    public void Card_AnswersATextColourThatCanBeReadOnIt()
+    {
+        using var frame = Interface();
+        var backdrop = CaptureBubbleBackdrop.Create(frame, [Block()]);
+
+        var card = backdrop!.Card(Line, MediaColor.FromRgb(0xE4, 0xE4, 0xE4));
+
+        Assert.NotNull(card);
+        Assert.True(OverlayTextColor.ContrastRatio(card!.Value.Text, card.Value.Background)
+            >= OverlayTextColor.MinimumContrast);
+    }
+
     [Fact]
     public void Plate_IsNullForAnAreaOutsideTheCapture()
     {

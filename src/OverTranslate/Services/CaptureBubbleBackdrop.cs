@@ -65,12 +65,17 @@ internal sealed class CaptureBubbleBackdrop
     private const double WashOpacity = 0.25;
 
     /// <summary>
-    /// Above this share of neighbouring pixels being exactly equal, the neighbourhood a bubble
-    /// lands in is an interface rather than a picture, and a soft patch there is conspicuous in a
-    /// way it never is on a photograph. Over 148 bubbles on seven real captures, application UI,
-    /// rendered pages and flat comic art measured 0.67–1.00 and game scenes 0.12–0.72.
+    /// Above this share of neighbouring pixels being near-equal, the neighbourhood a bubble lands
+    /// in was drawn rather than photographed, and a soft patch there is conspicuous in a way it
+    /// never is on a photograph. Over 78 labelled bubbles on seven real captures, application UI,
+    /// rendered pages and flat comic art measured 0.82–1.00 and game scenes 0.45–0.98.
     /// </summary>
-    private const double InterfaceCrispness = 0.82;
+    /// <remarks>
+    /// "Sharp" and "soft", deliberately not "interface" and "picture": this file's question is what
+    /// the pixels under one bubble look like, and <see cref="Ocr.CaptureLayoutMode.Interface"/> is
+    /// an unrelated, user-facing reading mode that happens to share the word.
+    /// </remarks>
+    private const double SharpNeighbourhood = 0.82;
 
     /// <summary>
     /// How far past the bubble that question is asked, in source glyph heights. Not the bubble
@@ -84,18 +89,18 @@ internal sealed class CaptureBubbleBackdrop
 
     /// <summary>
     /// How nearly one colour the surface under a bubble has to be before the flat card is used
-    /// instead of a plate — on an interface, and on a picture.
+    /// instead of a plate — on a sharp neighbourhood, and on a soft one.
     /// </summary>
     /// <remarks>
-    /// Two numbers rather than one because the mistakes are not symmetric. On a sharp interface a
+    /// Two numbers rather than one because the mistakes are not symmetric. Among sharp pixels a
     /// blurred patch smears the button edges and pill outlines around the text and reads as damage,
     /// so the plate has to earn its place: only where the surface is genuinely pictorial — a photo
-    /// in an article — which measured below 0.45 on the pages tried. On a picture the flat card is
-    /// the conspicuous thing, so the plate is the default and the card is kept only where the
-    /// surface is so nearly uniform that the two are hard to tell apart.
+    /// set into an article — which measured below 0.45 on the pages tried. Among soft pixels the
+    /// flat card is the conspicuous thing, so the plate is the default and the card is kept only
+    /// where the surface is so nearly uniform that the two are hard to tell apart.
     /// </remarks>
-    private const double InterfaceFlatShare = 0.45;
-    private const double PictureFlatShare = 0.85;
+    private const double SharpFlatShare = 0.45;
+    private const double SoftFlatShare = 0.85;
 
     private readonly byte[] _bgr;
     private readonly int _width;
@@ -148,6 +153,46 @@ internal sealed class CaptureBubbleBackdrop
             // Never the reason a translation fails to appear: the flat colour is still a bubble.
             return null;
         }
+    }
+
+    /// <summary>
+    /// The colour to paint a flat card in, and the colour to write on it, for a bubble this
+    /// backdrop decided not to build a plate for.
+    /// </summary>
+    /// <remarks>
+    /// Read from what the bubble actually covers, which is not where the capture's sampled colour
+    /// came from. That one was read from a ring around the source line, and a translation is
+    /// routinely longer than the source it replaces: a tag two words wide, translated, reaches well
+    /// past the tag, and the card went on painting the tag's colour across ground the tag never
+    /// occupied. Taking the majority under the bubble keeps the tag's colour while the tag is still
+    /// most of what is covered, and hands the card back to the page once it is not.
+    ///
+    /// <para>From the repair rather than the capture, so the source glyphs do not get a vote in
+    /// what colour the surface behind them was.</para>
+    /// </remarks>
+    public (MediaColor Background, MediaColor Text)? Card(WpfRect bubble, MediaColor text)
+    {
+        var rect = Clip(Round(bubble));
+        if (rect.Width < 2 || rect.Height < 2) return null;
+        if (Dominant(rect) is not { } background) return null;
+
+        return (background, Legible([background], text));
+    }
+
+    /// <summary>The most common colour in an area of the repair.</summary>
+    private MediaColor? Dominant(CvRect area)
+    {
+        var vote = new DominantColorVote();
+        int step = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((double)area.Width * area.Height / 4096)));
+        for (int y = area.Y; y < area.Bottom; y += step)
+        {
+            for (int x = area.X; x < area.Right; x += step)
+            {
+                int i = (y * _width + x) * 3;
+                vote.Add(_bgr[i + 2], _bgr[i + 1], _bgr[i]);
+            }
+        }
+        return vote.Dominant();
     }
 
     /// <summary>
@@ -235,10 +280,9 @@ internal sealed class CaptureBubbleBackdrop
         var rect = Clip(requested);
         if (rect.Width < 2 || rect.Height < 2) return null;
 
-        // Nothing beats a flat card on a surface that really is flat, and on a sharp interface a
-        // plate is worse than nothing. Null hands the caller back to the card it drew before.
-        double flat = Crispness(area, glyphHeight) >= InterfaceCrispness
-            ? InterfaceFlatShare : PictureFlatShare;
+        // Nothing beats a flat card on a surface that really is flat, and on a sharp one a plate
+        // is worse than nothing. Null hands the caller back to the card it drew before.
+        double flat = Crispness(area, glyphHeight) >= SharpNeighbourhood ? SharpFlatShare : SoftFlatShare;
         if (Uniformity(area, glyphHeight) >= flat) return null;
 
         double sigma = Math.Clamp(glyphHeight * BlurFactor, 1, 16);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -22,6 +23,15 @@ internal static class Program
     private const double BubbleExpand = 2;
     private const string Placeholder = "這是一段用來檢查可讀性的譯文範例文字";
 
+    /// <summary>
+    /// How much wider than the source the translation is pretended to be, from --overflow[=n].
+    /// The question it exists for: a translation is routinely longer than what it replaces, so the
+    /// bubble grows past the thing the source was printed on, and what the background does out
+    /// there is not visible on a capture where every bubble happens to fit.
+    /// </summary>
+    private const double DefaultOverflow = 1.45;
+    private static double _overflow = 1;
+
     private sealed record Variant(string Name, string Mode);
 
     // What the application will actually draw, against what it drew before. The parameter sweep
@@ -36,8 +46,10 @@ internal static class Program
 
     private sealed record ProbeBlock(string Text, WpfRect Bounds, IReadOnlyList<WpfRect> Lines, double? GlyphHeight);
     private sealed record CachedBlock(string Text, double[] Bounds, double[][] Lines, double? GlyphHeight);
+    /// <param name="Wash">What the capture sampled: the old flat card, and the tint on a plate.</param>
+    /// <param name="Flat">What the overlay paints when no plate was built — see CaptureBubbleBackdrop.Card.</param>
     private sealed record Card(CvRect Rect, MediaColor Wash, MediaColor Text, double GlyphHeight,
-        double FontSize, string Content, CvRect PlateRect, byte[]? Plate);
+        double FontSize, string Content, CvRect PlateRect, byte[]? Plate, MediaColor Flat, MediaColor FlatText);
 
     private static OcrService? _ocr;
 
@@ -50,7 +62,13 @@ internal static class Program
         Directory.CreateDirectory(output);
         try
         {
-            foreach (string image in args.Length > 0 ? args : DefaultImages(root))
+            _overflow = args.FirstOrDefault(argument => argument.StartsWith("--overflow")) is { } flag
+                ? (flag.Contains('=')
+                    ? double.Parse(flag.Split('=')[1], CultureInfo.InvariantCulture)
+                    : DefaultOverflow)
+                : 1;
+            var images = args.Where(argument => !argument.StartsWith("--")).ToArray();
+            foreach (string image in images.Length > 0 ? images : DefaultImages(root))
             {
                 Console.WriteLine(Path.GetFileName(image));
                 Process(output, image);
@@ -72,7 +90,8 @@ internal static class Program
     private static void Process(string output, string path)
     {
         string folder = Path.Combine(output,
-            Path.GetFileName(Path.GetDirectoryName(path)!) + "-" + Path.GetFileNameWithoutExtension(path));
+            Path.GetFileName(Path.GetDirectoryName(path)!) + "-" + Path.GetFileNameWithoutExtension(path)
+            + (_overflow > 1 ? $"-overflow{_overflow:0.##}" : ""));
         Directory.CreateDirectory(folder);
 
         using var loaded = new Sd.Bitmap(path);
@@ -102,7 +121,7 @@ internal static class Program
             if (variant.Mode != "original")
                 foreach (var card in cards) Paint(canvas, card, variant);
             using var image = ToBitmap(canvas);
-            if (variant.Mode != "original") DrawText(image, cards);
+            if (variant.Mode != "original") DrawText(image, cards, variant);
             image.Save(Path.Combine(folder, variant.Name + ".png"), Sd.Imaging.ImageFormat.Png);
         }
     }
@@ -112,7 +131,8 @@ internal static class Program
     {
         var b = block.Bounds;
         var size = new CvSize(width, height);
-        var rect = Clip(b.X - BubbleExpand, b.Y - BubbleExpand, b.Right + BubbleExpand, b.Bottom + BubbleExpand, size);
+        var rect = Clip(b.X - BubbleExpand, b.Y - BubbleExpand,
+            b.X + b.Width * _overflow + BubbleExpand, b.Bottom + BubbleExpand, size);
         var (wash, text) = SourceTextColorSampler.ForCaptureOverlay(frame, b, block.Lines, false);
         double glyph = block.GlyphHeight ?? (block.Lines.Count > 0 ? block.Lines.Min(l => l.Height) : b.Height);
         double font = SourceFontScale.Calculate(glyph, true);
@@ -135,8 +155,11 @@ internal static class Program
             image.CopyPixels(plate, image.PixelWidth * 4, 0);
             plateRect = new CvRect(plateRect.X, plateRect.Y, image.PixelWidth, image.PixelHeight);
         }
+        var flat = backdrop?.Card(new WpfRect(rect.X, rect.Y, rect.Width, rect.Height), text);
 
-        return new(rect, wash, text, glyph, font, Fill(b.Width, font), plateRect, plate);
+        return new(rect, wash, text, glyph, font,
+            Fill(b.Width * _overflow, font), plateRect, plate,
+            flat?.Background ?? wash, flat?.Text ?? text);
     }
 
     private static string Fill(double width, double fontSize)
@@ -162,7 +185,8 @@ internal static class Program
         // draws exactly the card it drew before this existed.
         if (card.Plate is not { } plate)
         {
-            Cv2.Rectangle(canvas, card.Rect, new Scalar(card.Wash.B, card.Wash.G, card.Wash.R), -1);
+            var flat = variant.Mode == "solid" ? card.Wash : card.Flat;
+            Cv2.Rectangle(canvas, card.Rect, new Scalar(flat.B, flat.G, flat.R), -1);
             return;
         }
         var rect = card.PlateRect;
@@ -182,7 +206,7 @@ internal static class Program
         }
     }
 
-    private static void DrawText(Sd.Bitmap image, IReadOnlyList<Card> cards)
+    private static void DrawText(Sd.Bitmap image, IReadOnlyList<Card> cards, Variant variant)
     {
         using var graphics = Sd.Graphics.FromImage(image);
         graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
@@ -196,7 +220,9 @@ internal static class Program
         foreach (var card in cards)
         {
             using var font = new Sd.Font("Microsoft JhengHei", (float)card.FontSize, Sd.FontStyle.Bold, Sd.GraphicsUnit.Pixel);
-            using var brush = new Sd.SolidBrush(Sd.Color.FromArgb(card.Text.R, card.Text.G, card.Text.B));
+            // The old card kept the sampled colour; the shipping one answers its own.
+            var colour = card.Plate is not null || variant.Mode == "solid" ? card.Text : card.FlatText;
+            using var brush = new Sd.SolidBrush(Sd.Color.FromArgb(colour.R, colour.G, colour.B));
             graphics.DrawString(card.Content, font, brush,
                 new Sd.RectangleF(card.Rect.X + 3, card.Rect.Y, card.Rect.Width - 6, card.Rect.Height), format);
         }

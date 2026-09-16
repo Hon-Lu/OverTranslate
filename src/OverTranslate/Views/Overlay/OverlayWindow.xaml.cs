@@ -906,12 +906,18 @@ public partial class OverlayWindow : Window
     {
         if (_backdrop is { } backdrop)
         {
+            // Where the bubble lands on the capture, which is not where the source line was: the
+            // bubble is grown to fit a translation that is routinely longer than what it replaces.
+            var bubble = new Rect(
+                left * _dpiX + _physBounds.Left - selScreenX,
+                top * _dpiY + _physBounds.Top - selScreenY,
+                width * _dpiX,
+                height * _dpiY);
+
             double feather = CaptureBubbleBackdrop.Feather(glyphHeightPixels);
             var area = new Rect(
-                left * _dpiX + _physBounds.Left - selScreenX - feather,
-                top * _dpiY + _physBounds.Top - selScreenY - feather,
-                width * _dpiX + feather * 2,
-                height * _dpiY + feather * 2);
+                bubble.X - feather, bubble.Y - feather,
+                bubble.Width + feather * 2, bubble.Height + feather * 2);
 
             if (backdrop.Plate(area, background, text, glyphHeightPixels) is { } plate)
             {
@@ -925,6 +931,14 @@ public partial class OverlayWindow : Window
                 Canvas.SetLeft(plated, left - feather / _dpiX);
                 Canvas.SetTop(plated, top - feather / _dpiY);
                 return (plated, plate.Text);
+            }
+
+            // No plate: a flat card is right here, but not necessarily in the colour sampled when
+            // the capture was read — see CaptureBubbleBackdrop.Card.
+            if (backdrop.Card(bubble, text) is { } card)
+            {
+                background = card.Background;
+                text = card.Text;
             }
         }
 
