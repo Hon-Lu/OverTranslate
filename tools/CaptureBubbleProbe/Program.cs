@@ -32,6 +32,9 @@ internal static class Program
     private const double DefaultOverflow = 1.45;
     private static double _overflow = 1;
 
+    /// <summary>--vertical: read the capture as vertical Japanese, as the toolbar's toggle does.</summary>
+    private static bool _vertical;
+
     private sealed record Variant(string Name, string Mode);
 
     // What the application will actually draw, against what it drew before. The parameter sweep
@@ -62,6 +65,7 @@ internal static class Program
         Directory.CreateDirectory(output);
         try
         {
+            _vertical = args.Contains("--vertical");
             _overflow = args.FirstOrDefault(argument => argument.StartsWith("--overflow")) is { } flag
                 ? (flag.Contains('=')
                     ? double.Parse(flag.Split('=')[1], CultureInfo.InvariantCulture)
@@ -91,7 +95,7 @@ internal static class Program
     {
         string folder = Path.Combine(output,
             Path.GetFileName(Path.GetDirectoryName(path)!) + "-" + Path.GetFileNameWithoutExtension(path)
-            + (_overflow > 1 ? $"-overflow{_overflow:0.##}" : ""));
+            + (_overflow > 1 ? $"-overflow{_overflow:0.##}" : "") + (_vertical ? "-vertical" : ""));
         Directory.CreateDirectory(folder);
 
         using var loaded = new Sd.Bitmap(path);
@@ -235,7 +239,8 @@ internal static class Program
             return JsonSerializer.Deserialize<List<CachedBlock>>(File.ReadAllText(cache))!.Select(Restore).ToList();
 
         _ocr ??= new OcrService();
-        var blocks = _ocr.RecognizeAsync(frame, "AUTO").GetAwaiter().GetResult();
+        var blocks = _ocr.RecognizeAsync(frame, _vertical ? "JA" : "AUTO", verticalText: _vertical)
+            .GetAwaiter().GetResult();
         var cached = blocks.Select(b => new CachedBlock(b.Text,
             [b.Bounds.X, b.Bounds.Y, b.Bounds.Width, b.Bounds.Height],
             [.. b.Lines.Select(l => new[] { l.X, l.Y, l.Width, l.Height })],
