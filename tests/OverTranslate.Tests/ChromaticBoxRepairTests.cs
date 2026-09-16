@@ -9,9 +9,9 @@ namespace OverTranslate.Tests;
 /// </summary>
 /// <remarks>
 /// Written against synthetic pixels rather than captures, because what has to hold is the shape of
-/// the conditions, not one page's luck: a corpus run says this changed five captures out of 500,
-/// but not which condition kept it quiet on the other 495. Each case below removes exactly one. The
-/// two at the end read real captures instead, one for each half of the symptom.
+/// the conditions, not one page's luck: a corpus run says this changed six captures out of 500, but
+/// not which condition kept it quiet on the other 494. Each case below removes exactly one. The two
+/// at the end read real captures instead, one for each half of the symptom.
 /// </remarks>
 public class ChromaticBoxRepairTests
 {
@@ -77,13 +77,18 @@ public class ChromaticBoxRepairTests
     }
 
     [Fact]
-    public void SeparateItemsWithRealSpaceBetweenThemAreNotOneRow()
+    public void SeparateItemsWithRealSpaceBetweenThemAreNotJoined()
     {
         // A nav bar or a row of labels: the same colour, the same line, genuinely separate. The ink
-        // stops for longer than a line height, and that is what tells it apart from a broken word.
+        // stops for longer than a line height, and that is what tells them apart from a broken
+        // word. The line is cut there and each item is then judged alone, so no repair can reach
+        // across — which is the property, rather than the stronger "nothing happens at all" this
+        // asked for while a gap like that made the whole row ineligible.
         using var page = Page(gapFrom: 150, gapTo: 150 + Height * 2);
 
-        Assert.Empty(ChromaticBoxRepair.Find(page, [Box(20, 120), Box(200, 120)]));
+        Assert.All(
+            ChromaticBoxRepair.Find(page, [Box(20, 120), Box(200, 120)]),
+            repair => Assert.Single(repair.Owners));
     }
 
     [Fact]
