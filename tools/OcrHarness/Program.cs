@@ -21,6 +21,9 @@ if (args.Length > 0 && args[0] == "--panel-layout") return PanelLayoutProbe.Run(
 if (args.Length > 0 && args[0] == "--session-equivalence")
     return SessionEquivalenceProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--box-repair-rows")
+    return BoxRepairRowProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--dialogue-probe")
     return await DialogueProbe.Run(args.Skip(1).ToArray());
 
@@ -75,6 +78,8 @@ if (args.Length == 0)
     Console.Error.WriteLine("                  (the vertical pipeline's columns and their text, which --group-explain never runs)");
     Console.Error.WriteLine("       OcrHarness --reject-audit <image.png> [more.png ...]");
     Console.Error.WriteLine("                  (what the confidence filter drops, and what a line would have reclaimed)");
+    Console.Error.WriteLine("       OcrHarness --box-repair-rows <lang> <image.png> [more.png ...]");
+    Console.Error.WriteLine("                  (what ChromaticBoxRepair measures on each row, and what it repaired)");
     Console.Error.WriteLine("       OcrHarness --xlate-test   (network translation/resilience check, no OCR)");
     Console.Error.WriteLine("       (add --panel / --lang KO / --size N / --det model.onnx:half to any sweep)");
     return 1;

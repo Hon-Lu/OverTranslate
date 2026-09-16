@@ -9,9 +9,9 @@ namespace OverTranslate.Tests;
 /// </summary>
 /// <remarks>
 /// Written against synthetic pixels rather than captures, because what has to hold is the shape of
-/// the conditions, not one page's luck: a corpus run says this changed two captures out of 497, but
-/// not which condition kept it quiet on the other 495. Each case below removes exactly one. The two
-/// at the end read real captures instead, one for each half of the symptom.
+/// the conditions, not one page's luck: a corpus run says this changed five captures out of 500,
+/// but not which condition kept it quiet on the other 495. Each case below removes exactly one. The
+/// two at the end read real captures instead, one for each half of the symptom.
 /// </remarks>
 public class ChromaticBoxRepairTests
 {
@@ -48,17 +48,22 @@ public class ChromaticBoxRepairTests
     }
 
     [Fact]
-    public void TwoRowsBridgedByAnIconAreNotOneRow()
+    public void AnIconBridgingTwoRowsNeverJoinsThem()
     {
-        // What the row-wide chroma test was really buying. A search result puts a site icon down
-        // the left of the site name and the URL beneath it; the icon joins both rows into one
-        // connected band of ink, and a repair spanning the band hands recognition a box holding two
-        // lines, which came back garbled or empty. The owners here are on different lines and share
-        // no height, which is the thing that says so without asking what colour anything is — worth
-        // 12 captures of the corpus's 497, all of them a title and its URL going missing.
+        // A search result puts a site icon down the left of the site name and the URL beneath it.
+        // The icon joins both rows into one connected band of ink, and a repair spanning that band
+        // hands recognition a box holding two lines, which comes back garbled or empty — measured
+        // at 12 captures of a 497-capture corpus, every one a title and its URL going missing.
+        // Rows are built from the height boxes share, so the two here cannot meet however the ink
+        // between them runs. Each still repairs on its own, which is the point: the icon changes
+        // nothing about either line.
         using var page = TwoRowsBridgedByAnIcon();
 
-        Assert.Empty(ChromaticBoxRepair.Find(page, [Row(Top), Row(SecondRow)]));
+        var repairs = ChromaticBoxRepair.Find(page, [Row(Top), Row(SecondRow)]);
+
+        Assert.Equal(2, repairs.Count);
+        Assert.All(repairs, repair => Assert.Single(repair.Owners));
+        Assert.Equal(new[] { 0, 1 }, repairs.SelectMany(repair => repair.Owners).Order().AsEnumerable());
     }
 
     [Fact]
