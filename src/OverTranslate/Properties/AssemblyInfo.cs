@@ -10,6 +10,9 @@ using System.Windows;
 // Windows.Graphics.Capture will do, whether an exclusion list actually took — are only worth asking
 // against the interop the application itself runs on.
 [assembly: InternalsVisibleTo("WgcProbe")]
+// The capture-bubble background probe: it composes candidate bubble backgrounds out of the
+// same glyph repair the realtime path runs, so it has to see those internals.
+[assembly: InternalsVisibleTo("CaptureBubbleProbe")]
 [assembly: ThemeInfo(
     ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
                                                 //(used if a resource is not found in the page,
