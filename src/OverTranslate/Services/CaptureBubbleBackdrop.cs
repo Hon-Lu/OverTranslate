@@ -363,13 +363,22 @@ internal sealed class CaptureBubbleBackdrop
             if (!Clears(palette, legible, Colors.Black, 0, PlateContrast))
             {
                 // No one colour reads everywhere on this plate — a subtitle crossing a white shirt
-                // and the dark scene behind it has no such colour. Move the plate, in the direction
-                // that suits the colour the capture was written in, and then choose the text again
-                // on what the plate has become. Choosing once, before the move, is what left white
-                // subtitles rewritten in the grey that was the best compromise on the old plate and
-                // is merely legible on the new one.
-                var target = OverlayTextColor.ContrastRatio(text, Colors.White) >=
-                    OverlayTextColor.ContrastRatio(text, Colors.Black) ? Colors.White : Colors.Black;
+                // and the dark scene behind it has no such colour. Narrow what the plate spans,
+                // then choose the text again on what the plate has become. Choosing once, before
+                // the move, is what left white subtitles rewritten in the grey that was the best
+                // compromise on the old plate and is merely legible on the new one.
+                //
+                // Toward the plate's own dominant colour rather than toward black or white: any
+                // single target narrows the span equally well — that is all the move is for — and
+                // this one is a colour the picture already holds, so a scene keeps its cast instead
+                // of growing a grey scrim.
+                //
+                // Its lightness, though, is moved clear of the text first. A dominant colour that
+                // sits at the text's own lightness narrows the plate onto the one place the text
+                // cannot be read, and the answer then is to flip the text — which is how a white
+                // subtitle came back black. Hue and saturation are what carry the scene; lightness
+                // is what carries the reading.
+                var target = OverlayTextColor.EnsureContrast(Dominant(palette), text, ComfortableContrast);
                 double lift = Lift(palette, text, target);
 
                 using var solid = new Mat(plate.Size(), MatType.CV_8UC3, new Scalar(target.B, target.G, target.R));
@@ -411,7 +420,7 @@ internal sealed class CaptureBubbleBackdrop
         // Nearest, not area: this palette exists to find the part of the plate the text reads
         // worst on, and averaging neighbours together is precisely how an extreme goes missing.
         Cv2.Resize(written, sample, new CvSize(
-            Math.Clamp(written.Width / 6, 12, 64), Math.Clamp(written.Height / 4, 6, 24)),
+            Math.Clamp(written.Width / 6, 12, 48), Math.Clamp(written.Height / 4, 6, 16)),
             interpolation: InterpolationFlags.Nearest);
 
         var colours = new MediaColor[sample.Rows * sample.Cols];
@@ -453,16 +462,30 @@ internal sealed class CaptureBubbleBackdrop
     /// How far the plate has to move toward <paramref name="target"/> before every part of it
     /// clears <see cref="PlateContrast"/> against the text. Only reached when no text colour could.
     /// </summary>
+    /// <remarks>
+    /// Stepped rather than bisected. Moving toward black or white only ever helps, so the smallest
+    /// amount that works could be found by halving; moving toward a colour out of the middle of the
+    /// plate does not, because a part of the plate can pass the text on the way. The full move
+    /// always works — it leaves one colour, and one colour always has a legible text — so the scan
+    /// ends there.
+    /// </remarks>
     private static double Lift(MediaColor[] palette, MediaColor text, MediaColor target)
     {
-        double low = 0, high = 1;
-        for (int i = 0; i < 10; i++)
+        const int steps = 16;
+        for (int i = 1; i < steps; i++)
         {
-            double middle = (low + high) / 2;
-            if (Clears(palette, text, target, middle, PlateContrast * LiftMargin)) high = middle;
-            else low = middle;
+            double amount = i / (double)steps;
+            if (Clears(palette, text, target, amount, PlateContrast * LiftMargin)) return amount;
         }
-        return high;
+        return 1;
+    }
+
+    /// <summary>The most common colour among a plate's sampled colours.</summary>
+    private static MediaColor Dominant(MediaColor[] palette)
+    {
+        var vote = new DominantColorVote();
+        foreach (var colour in palette) vote.Add(colour.R, colour.G, colour.B);
+        return vote.Dominant() ?? Colors.Black;
     }
 
     private static bool Clears(
