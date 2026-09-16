@@ -158,7 +158,13 @@ internal static class Program
         // Source-over, which is all WPF does with the same brush. Everything that decides how this
         // looks - the repair, the blur, the wash, the contrast lift, the edge ramp - happened
         // inside CaptureBubbleBackdrop, so what comes out here is what the overlay will show.
-        if (card.Plate is not { } plate) return;
+        // No plate means the backdrop judged a flat card the better answer, and the overlay then
+        // draws exactly the card it drew before this existed.
+        if (card.Plate is not { } plate)
+        {
+            Cv2.Rectangle(canvas, card.Rect, new Scalar(card.Wash.B, card.Wash.G, card.Wash.R), -1);
+            return;
+        }
         var rect = card.PlateRect;
         for (int y = Math.Max(0, -rect.Y); y < rect.Height && rect.Y + y < canvas.Height; y++)
         {

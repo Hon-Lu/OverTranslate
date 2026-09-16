@@ -15,20 +15,49 @@ public class CaptureBubbleBackdropTests
         new("source", "譯文", Line, [Line], null,
             MediaColor.FromRgb(0xFF, 0xFF, 0xFF), MediaColor.FromRgb(0, 0, 0));
 
-    /// <summary>A line of black bars — stand-ins for glyphs — on whatever the caller paints.</summary>
-    private static Bitmap Frame(Action<Graphics> paint)
+    /// <summary>Black bars where the source glyphs would be, over whatever the caller painted.</summary>
+    private static void Glyphs(Graphics g)
+    {
+        for (int x = 44; x < 236; x += 16)
+            g.FillRectangle(Brushes.Black, x, 44, 9, 16);
+    }
+
+    /// <summary>A rendered surface: one flat colour, every neighbour identical.</summary>
+    private static Bitmap Interface()
     {
         var frame = new Bitmap(320, 160);
         using var g = Graphics.FromImage(frame);
-        paint(g);
-        for (int x = 44; x < 236; x += 16)
-            g.FillRectangle(Brushes.Black, x, 44, 9, 16);
+        g.Clear(Color.FromArgb(255, 0xE8, 0xE8, 0xE8));
+        Glyphs(g);
         return frame;
     }
 
-    /// <summary>The plate for the block above, read back as pixels.</summary>
-    /// <param name="wash">The colour sampled for this block, which in the app is the surface the
-    /// plate is cut from — so unless a test is about disagreement, it matches what was painted.</param>
+    /// <summary>
+    /// A photographed surface: a colour ramp carrying sensor noise, so no two neighbours agree and
+    /// no two colours account for the area. Both halves matter — the backdrop asks each in turn.
+    /// </summary>
+    private static Bitmap Photograph(int from = 60, int to = 200)
+    {
+        var frame = new Bitmap(320, 160);
+        for (int y = 0; y < frame.Height; y++)
+        {
+            for (int x = 0; x < frame.Width; x++)
+            {
+                int ramp = from + (to - from) * x / frame.Width;
+                int noise = (x * 7919 + y * 104729) % 13 - 6;
+                byte level = (byte)Math.Clamp(ramp + noise, 0, 255);
+                frame.SetPixel(x, y, Color.FromArgb(255,
+                    level,
+                    (byte)Math.Clamp(level + 12, 0, 255),
+                    (byte)Math.Clamp(level - 18, 0, 255)));
+            }
+        }
+        using var g = Graphics.FromImage(frame);
+        Glyphs(g);
+        return frame;
+    }
+
+    /// <summary>The plate for the block above, read back as pixels. Null when none was built.</summary>
     private static (BitmapSource Image, byte[] Pixels, int Stride, MediaColor Text)? Plate(
         Bitmap frame, MediaColor text, MediaColor? wash = null)
     {
@@ -38,7 +67,7 @@ public class CaptureBubbleBackdropTests
         double feather = CaptureBubbleBackdrop.Feather(Line.Height);
         var area = new WpfRect(
             Line.X - feather, Line.Y - feather, Line.Width + feather * 2, Line.Height + feather * 2);
-        if (backdrop!.Plate(area, wash ?? MediaColor.FromRgb(0xE8, 0xE8, 0xE8), text, Line.Height) is not { } plate)
+        if (backdrop!.Plate(area, wash ?? MediaColor.FromRgb(0x80, 0x90, 0x70), text, Line.Height) is not { } plate)
             return null;
 
         var image = (BitmapSource)plate.Brush.ImageSource;
@@ -70,15 +99,54 @@ public class CaptureBubbleBackdropTests
     }
 
     /// <summary>
+    /// Nothing beats a flat card on a surface that really is flat, so no plate is offered for one.
+    /// </summary>
+    [Fact]
+    public void Plate_IsNullOnAFlatSurfaceSoTheCallerKeepsItsCard()
+    {
+        using var frame = Interface();
+
+        Assert.Null(Plate(frame, MediaColor.FromRgb(0x20, 0x20, 0x20)));
+    }
+
+    /// <summary>
+    /// The case that sent this back for a second attempt: a dark application page whose text sits
+    /// among crisp buttons and pills. Blurring there smears the chrome around the bubble, and the
+    /// flat card — which merges into the page — is the better answer.
+    /// </summary>
+    [Fact]
+    public void Plate_IsNullOnASharpInterfaceEvenWhereTheBubbleCoversMoreThanOneColour()
+    {
+        using var frame = new Bitmap(320, 160);
+        using (var g = Graphics.FromImage(frame))
+        {
+            g.Clear(Color.FromArgb(255, 0x1F, 0x22, 0x28));
+            g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0x33, 0x38, 0x42)), 150, 38, 70, 28);
+            g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0x2A, 0x6E, 0x3F)), 32, 36, 26, 32);
+            Glyphs(g);
+        }
+
+        Assert.Null(Plate(frame, MediaColor.FromRgb(0xE0, 0xE0, 0xE0)));
+    }
+
+    [Fact]
+    public void Plate_IsBuiltForAPhotographedSurface()
+    {
+        using var frame = Photograph();
+
+        Assert.NotNull(Plate(frame, MediaColor.FromRgb(0x10, 0x10, 0x10)));
+    }
+
+    /// <summary>
     /// The point of the whole thing: the source text is gone from the plate, so what remains can be
     /// blurred without leaving a legible smear.
     /// </summary>
     [Fact]
-    public void Plate_HasNoTraceOfTheSourceTextOnAFlatSurface()
+    public void Plate_HasNoTraceOfTheSourceText()
     {
-        using var frame = Frame(g => g.Clear(Color.FromArgb(255, 0xE8, 0xE8, 0xE8)));
+        using var frame = Photograph();
 
-        var plate = Plate(frame, MediaColor.FromRgb(0x20, 0x20, 0x20));
+        var plate = Plate(frame, MediaColor.FromRgb(0x10, 0x10, 0x10));
         Assert.NotNull(plate);
 
         var (image, pixels, stride, _) = plate!.Value;
@@ -86,9 +154,9 @@ public class CaptureBubbleBackdropTests
         {
             for (int x = image.PixelWidth / 4; x < image.PixelWidth * 3 / 4; x++)
             {
-                var colour = At(pixels, stride, x, y);
                 // The bars were pure black; nothing anywhere near that may survive.
-                Assert.True(colour.R > 0xB0, $"({x},{y}) is {colour}");
+                var colour = At(pixels, stride, x, y);
+                Assert.True(colour.R > 0x30, $"({x},{y}) is {colour}");
             }
         }
     }
@@ -96,11 +164,7 @@ public class CaptureBubbleBackdropTests
     [Fact]
     public void Plate_KeepsTheGradientItWasCutFromRatherThanFlatteningIt()
     {
-        using var frame = Frame(g =>
-        {
-            for (int x = 0; x < 320; x++)
-                g.FillRectangle(new SolidBrush(Color.FromArgb(255, 255 - x / 2, 200, 120 + x / 4)), x, 0, 1, 160);
-        });
+        using var frame = Photograph();
 
         var plate = Plate(frame, MediaColor.FromRgb(0x10, 0x10, 0x10));
         Assert.NotNull(plate);
@@ -116,9 +180,9 @@ public class CaptureBubbleBackdropTests
     [Fact]
     public void Plate_IsOpaqueInTheMiddleAndFadedAtTheEdge()
     {
-        using var frame = Frame(g => g.Clear(Color.FromArgb(255, 0xE8, 0xE8, 0xE8)));
+        using var frame = Photograph();
 
-        var plate = Plate(frame, MediaColor.FromRgb(0x20, 0x20, 0x20));
+        var plate = Plate(frame, MediaColor.FromRgb(0x10, 0x10, 0x10));
         Assert.NotNull(plate);
 
         var (image, pixels, stride, _) = plate!.Value;
@@ -134,10 +198,10 @@ public class CaptureBubbleBackdropTests
     [Fact]
     public void Plate_MovesTheTextRatherThanThePictureWhenItCannotBeRead()
     {
-        using var frame = Frame(g => g.Clear(Color.FromArgb(255, 0x88, 0x88, 0x88)));
-        var text = MediaColor.FromRgb(0x77, 0x77, 0x77);
+        using var frame = Photograph(from: 100, to: 150);
+        var text = MediaColor.FromRgb(0x7A, 0x86, 0x68);
 
-        var plate = Plate(frame, text, MediaColor.FromRgb(0x88, 0x88, 0x88));
+        var plate = Plate(frame, text, MediaColor.FromRgb(0x7D, 0x89, 0x6B));
         Assert.NotNull(plate);
 
         var (image, pixels, stride, answered) = plate!.Value;
@@ -151,8 +215,8 @@ public class CaptureBubbleBackdropTests
                 Assert.True(
                     OverlayTextColor.ContrastRatio(answered, surface) >= OverlayTextColor.MinimumContrast,
                     $"({x},{y}) is {colour}");
-                // The grey it was painted on is still the grey it was painted on.
-                Assert.InRange(colour.R, 0x80, 0x90);
+                // Still the range it was cut from, not washed away toward black or white.
+                Assert.InRange(colour.R, 0x58, 0xA8);
             }
         }
     }
@@ -164,11 +228,11 @@ public class CaptureBubbleBackdropTests
     [Fact]
     public void Plate_IsTheFullSizeAskedForEvenWhereTheCaptureDoesNotReach()
     {
-        using var frame = Frame(g => g.Clear(Color.FromArgb(255, 0xE8, 0xE8, 0xE8)));
+        using var frame = Photograph();
         var backdrop = CaptureBubbleBackdrop.Create(frame, [Block()]);
 
         var plate = backdrop!.Plate(new WpfRect(-12, -9, 120, 40),
-            System.Windows.Media.Colors.White, System.Windows.Media.Colors.Black, 20);
+            MediaColor.FromRgb(0x80, 0x90, 0x70), System.Windows.Media.Colors.Black, 20);
 
         Assert.NotNull(plate);
         var image = (BitmapSource)plate!.Value.Brush.ImageSource;
@@ -179,7 +243,7 @@ public class CaptureBubbleBackdropTests
     [Fact]
     public void Plate_IsNullForAnAreaOutsideTheCapture()
     {
-        using var frame = Frame(g => g.Clear(Color.White));
+        using var frame = Photograph();
         var backdrop = CaptureBubbleBackdrop.Create(frame, [Block()]);
 
         Assert.Null(backdrop!.Plate(
