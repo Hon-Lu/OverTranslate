@@ -212,8 +212,9 @@ public class CaptureBubbleBackdropTests
             {
                 var colour = At(pixels, stride, x, y);
                 var surface = MediaColor.FromRgb(colour.R, colour.G, colour.B);
-                Assert.True(
-                    OverlayTextColor.ContrastRatio(answered, surface) >= OverlayTextColor.MinimumContrast,
+                // The plate's own target, above the flat card's: text on a picture crosses light
+                // and dark parts of it, and scraping the card's minimum reads as washed out.
+                Assert.True(OverlayTextColor.ContrastRatio(answered, surface) >= 4.5,
                     $"({x},{y}) is {colour}");
                 // Still the range it was cut from, not washed away toward black or white.
                 Assert.InRange(colour.R, 0x58, 0xA8);
@@ -225,6 +226,34 @@ public class CaptureBubbleBackdropTests
     /// A bubble at the edge of the selection reaches past the capture. The brush is stretched onto
     /// the element it fills, so a plate returned short would pull its opaque middle off the text.
     /// </summary>
+    /// <summary>
+    /// A plate pushed dark to carry light text used to stop at the ratio a flat card is held to,
+    /// which leaves grey letters on a dark ground: legible by the number, hard to actually read.
+    /// </summary>
+    [Fact]
+    public void Plate_TakesTheTextWellPastTheMinimumWhenMovingItIsFree()
+    {
+        using var frame = Photograph(from: 30, to: 90);
+        var text = MediaColor.FromRgb(0x9A, 0xA2, 0x8E);
+
+        var plate = Plate(frame, text, MediaColor.FromRgb(0x3C, 0x48, 0x2A));
+        Assert.NotNull(plate);
+
+        var (image, pixels, stride, answered) = plate!.Value;
+        double worst = 21;
+        for (int y = image.PixelHeight / 3; y < image.PixelHeight * 2 / 3; y++)
+        {
+            for (int x = image.PixelWidth / 4; x < image.PixelWidth * 3 / 4; x++)
+            {
+                var colour = At(pixels, stride, x, y);
+                worst = Math.Min(worst, OverlayTextColor.ContrastRatio(
+                    answered, MediaColor.FromRgb(colour.R, colour.G, colour.B)));
+            }
+        }
+
+        Assert.True(worst >= 4.5, $"worst contrast was {worst:F2}");
+    }
+
     [Fact]
     public void Plate_IsTheFullSizeAskedForEvenWhereTheCaptureDoesNotReach()
     {

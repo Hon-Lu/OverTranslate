@@ -65,6 +65,31 @@ internal sealed class CaptureBubbleBackdrop
     private const double WashOpacity = 0.25;
 
     /// <summary>
+    /// How far the translation has to stand from its plate, as a WCAG contrast ratio.
+    /// </summary>
+    /// <remarks>
+    /// Higher than <see cref="OverlayTextColor.MinimumContrast"/>, which is what the flat card has
+    /// always been held to. A card is one colour and the text was chosen against that one colour,
+    /// so scraping past the minimum still reads. A plate is a picture: the text crosses light and
+    /// dark parts of it, and a ratio that only just clears at the worst point looks washed out
+    /// everywhere else. 4.5 is the ratio normal-size body text is expected to meet.
+    /// </remarks>
+    private const double PlateContrast = 4.5;
+
+    /// <summary>
+    /// What the text is asked for before the plate is asked for anything, and settled for only
+    /// when the text alone can reach it.
+    /// </summary>
+    /// <remarks>
+    /// Two targets because the two moves do not cost the same. Moving the text costs the picture
+    /// nothing, so it is asked for far more than it strictly needs; moving the plate costs exactly
+    /// what this class exists to preserve, so it is only ever asked for the minimum. The case this
+    /// exists for: a plate pushed dark to carry light text, where stopping at the lower ratio
+    /// leaves grey letters on a dark ground that are technically legible and hard to read.
+    /// </remarks>
+    private const double ComfortableContrast = 7.0;
+
+    /// <summary>
     /// Above this share of neighbouring pixels being near-equal, the neighbourhood a bubble lands
     /// in was drawn rather than photographed, and a soft patch there is conspicuous in a way it
     /// never is on a photograph. Over 78 labelled bubbles on seven real captures, application UI,
@@ -176,7 +201,9 @@ internal sealed class CaptureBubbleBackdrop
         if (rect.Width < 2 || rect.Height < 2) return null;
         if (Dominant(rect) is not { } background) return null;
 
-        return (background, Legible([background], text));
+        // One colour, so the text has nothing to straddle: the ratio the rest of the overlay has
+        // always held a flat card to is the right one here.
+        return (background, Legible([background], text, OverlayTextColor.MinimumContrast));
     }
 
     /// <summary>The most common colour in an area of the repair.</summary>
@@ -324,8 +351,14 @@ internal sealed class CaptureBubbleBackdrop
             int ring = (int)Math.Round(Feather(glyphHeight));
             var palette = Palette(plate, ring,
                 Math.Max(ring, (int)Math.Round((plate.Height - writtenHeight) / 2)));
-            var legible = Legible(palette, text);
-            double lift = Clears(palette, legible, Colors.Black, 0) ? 0 : Lift(palette, legible);
+
+            var strong = Legible(palette, text, ComfortableContrast);
+            var legible = Clears(palette, strong, Colors.Black, 0, PlateContrast)
+                ? strong
+                : Legible(palette, text, PlateContrast);
+            double lift = Clears(palette, legible, Colors.Black, 0, PlateContrast)
+                ? 0
+                : Lift(palette, legible);
             if (lift > 0)
             {
                 var target = OverlayTextColor.ContrastRatio(legible, Colors.White) >=
@@ -389,14 +422,14 @@ internal sealed class CaptureBubbleBackdrop
     /// again if fixing that one broke another; a plate holding both very dark and very light areas
     /// has no answer at all, and then the plate itself has to give way.
     /// </remarks>
-    private static MediaColor Legible(MediaColor[] palette, MediaColor text)
+    private static MediaColor Legible(MediaColor[] palette, MediaColor text, double target)
     {
         var best = text;
         for (int round = 0; round < 4; round++)
         {
-            if (Clears(palette, best, Colors.Black, 0)) return best;
+            if (Clears(palette, best, Colors.Black, 0, target)) return best;
             var worst = palette.MinBy(colour => OverlayTextColor.ContrastRatio(best, colour));
-            var next = OverlayTextColor.EnsureContrast(best, worst, OverlayTextColor.MinimumContrast);
+            var next = OverlayTextColor.EnsureContrast(best, worst, target);
             if (next == best) break;
             best = next;
         }
@@ -416,14 +449,14 @@ internal sealed class CaptureBubbleBackdrop
         for (int i = 0; i < 10; i++)
         {
             double middle = (low + high) / 2;
-            if (Clears(palette, text, target, middle)) high = middle; else low = middle;
+            if (Clears(palette, text, target, middle, PlateContrast)) high = middle; else low = middle;
         }
         return high;
     }
 
-    private static bool Clears(MediaColor[] palette, MediaColor text, MediaColor target, double amount) =>
-        palette.All(colour => OverlayTextColor.ContrastRatio(text, Mix(colour, target, amount))
-            >= OverlayTextColor.MinimumContrast);
+    private static bool Clears(
+        MediaColor[] palette, MediaColor text, MediaColor target, double amount, double ratio) =>
+        palette.All(colour => OverlayTextColor.ContrastRatio(text, Mix(colour, target, amount)) >= ratio);
 
     private static MediaColor Mix(MediaColor from, MediaColor to, double amount) => MediaColor.FromRgb(
         (byte)Math.Round(from.R + (to.R - from.R) * amount),
