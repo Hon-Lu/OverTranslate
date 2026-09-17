@@ -142,6 +142,49 @@ public class ChromaticBoxRepairTests
         Assert.Contains("は「バンドリ", text);
     }
 
+    [Fact]
+    public void ARowDoesNotReachIntoThePictureBesideIt()
+    {
+        // A thumbnail next to the text, which is what a search result, a video listing and a chat
+        // room with avatars all look like. Ink runs solid across it, so "keep going while the ink
+        // keeps going at the spacing of a line" walks the whole way in — measured on a real
+        // YouTube search page, 513px on a 27px line — and hands recognition a photograph with a
+        // caption stuck to it, which reads as nothing and loses the caption.
+        using var page = PageWithAPictureOnTheRight();
+
+        var repairs = ChromaticBoxRepair.Find(page, [Box(20, 120), Box(200, 120)]);
+
+        // The row is repaired either way; where it stops is the assertion. The cap allows 1.5 line
+        // heights past the last box, so a repair may take the first 30px of the picture and must
+        // not take the other 46 — uncapped it runs to the far edge at 396.
+        Assert.NotEmpty(repairs);
+        Assert.All(repairs, repair => Assert.True(
+            repair.Bounds.Right < 360,
+            $"reached {repair.Bounds.Right}, so the picture from 335 to 396 was swallowed"));
+    }
+
+    [ScreenshotFact("region-web-ja-dark/gsearch-block-norm-u.png")]
+    public void TheLiveScreenPathRepairsTheSameRow()
+    {
+        // The realtime flow, which reads at a fraction of native rather than at 2048 and used to
+        // skip the repair entirely. Same symptom, same capture family as the screenshot tests
+        // above: the title's last two glyphs sit in the gap between two boxes, and without the
+        // repair the reading stops at パーテ.
+        //
+        // Goes through TryRecognizeAsync at the size RealtimeDetectorSize would ask for, because
+        // the size is half of what is being asserted — the repair is measured at one size and the
+        // detector's boxes are not stable across sizes.
+        using var engine = new OnnxOcrEngine();
+        using var capture = ExternalScreenshot.Load("region-web-ja-dark/gsearch-block-norm-u.png");
+        var (primary, _) = OverTranslate.Services.Realtime.RealtimeDetectorSize.For(
+            capture.Width, capture.Height, OverTranslate.Services.Realtime.RealtimeBlockMode.Panel);
+
+        var blocks = engine.TryRecognizeAsync(capture, "JA", primary).GetAwaiter().GetResult();
+
+        Assert.NotNull(blocks);
+        Assert.Contains("ガールズバンドパーティ！", string.Concat(blocks.Select(block => block.Text)));
+    }
+
     // A dark page carrying one row of thin coloured strokes: ink enough to be a line of text, gaps
     // narrow enough to be the spaces inside one, and nowhere near solid enough to be a filled panel.
     private static SKBitmap Page(SKColor? background = null, int gapFrom = 0, int gapTo = 0)
@@ -183,6 +226,19 @@ public class ChromaticBoxRepairTests
             for (var y = row; y < row + 20; y++)
                 page.SetPixel(x + stroke, y, ink);
         }
+        return page;
+    }
+
+    // The broken row of the first test, with a solid block of picture starting 15px past the last
+    // box — near enough that the reach walks into it (a blank run only ends the row past one line
+    // height, which is 20 here) and wide enough that it never comes back out.
+    private static SKBitmap PageWithAPictureOnTheRight()
+    {
+        var page = Page();
+        var picture = new SKColor(150, 120, 90);
+        for (var x = 335; x < 396; x++)
+        for (var y = Top - 6; y < Top + Height + 6; y++)
+            page.SetPixel(x, y, picture);
         return page;
     }
 

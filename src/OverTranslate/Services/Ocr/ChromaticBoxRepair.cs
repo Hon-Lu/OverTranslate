@@ -37,12 +37,36 @@ namespace OverTranslate.Services.Ocr;
 /// time. Over 144 framings of one dark-mode search result the title came back whole in 13% of them
 /// before any of this and 89% after, with nothing that read whole before reading worse.</para>
 ///
-/// <para>Screenshot captures only. The realtime path passes an explicit detector size and never
-/// reaches here: a frame missed there is repaired by the next one 250ms later, and none of this has
-/// been measured against a realtime corpus.</para>
+/// <para>Both flows run this. The realtime path was left out of it at first, on the grounds that a
+/// frame missed there is repaired by the next one 250ms later — an argument about the picture
+/// changing, which the captures this repairs do not: a dark page, a game's chat panel and a paused
+/// video hand the next frame the same pixels and break the same row in the same place. Re-measured
+/// with the detector size held at what <c>RealtimeDetectorSize</c> asks for, 7 of 48 dark Japanese
+/// page regions come back with the glyphs they were dropping and nothing reads worse, while 313
+/// subtitle, game, comic, panel and chat frames do not move at all — subtitle strokes are thick and
+/// their backgrounds are not flat, so the pre-filter turns those away.</para>
+///
+/// <para>What it costs on the live path, fastest of twenty runs per capture: about 4ms on a
+/// 1825x223 subtitle strip and 20ms on a full screen, both turned away by the pre-filter, against a
+/// frame every 250ms and a detection pass of 80-160ms. A capture the pre-filter lets in costs 12ms
+/// at region size and 46-55ms for a whole dark page. That is memory latency and the size of the
+/// walk, not the per-pixel API: reading the buffer directly through a span instead of
+/// <c>SKBitmap.GetPixel</c> was measured at 6-17% and is not worth its complexity.</para>
 /// </remarks>
 internal static class ChromaticBoxRepair
 {
+    /// <summary>
+    /// How far past the outermost box a row may reach for glyphs the detector stopped short of, in
+    /// line heights.
+    /// </summary>
+    /// <remarks>
+    /// The glyphs this rescues sit just outside the box — the widest measured is an exclamation mark
+    /// 0.68 of a line past it — so the budget is for a glyph or two and not for whatever else the
+    /// row happens to run into. Without one, a row beside a video thumbnail walked 513px into the
+    /// picture on a 27px line.
+    /// </remarks>
+    private const double ReachLimit = 1.5;
+
     /// <param name="Owners">Indices into the box list that the repaired rectangle replaces.</param>
     internal record Repair(int[] Owners, SKRect Bounds);
 
@@ -118,18 +142,17 @@ internal static class ChromaticBoxRepair
                 var boxRight = Math.Min(source.Width, (int)Math.Ceiling(line.Max(i => boxes[i].Right)));
                 if (bottom - top < 8 || boxRight - boxLeft < 8) continue;
 
-                // Which columns of the row carry ink. Over the row's own scanlines rather than the
-                // whole capture, though the cost of either disappears into the inference beside it:
-                // 28 captures read in 67.9s with this and 68.7s without, which is noise.
+                // Which columns of the row carry ink, in two passes over the row's own scanlines.
+                // Between the box edges first, because that is what the line's scale comes from and
+                // the scale is what says how far outside the boxes anything is allowed to matter.
                 var width = source.Width;
                 var inked = new bool[width];
                 var inkTop = bottom; var inkBottom = top; var ink = 0;
                 for (var yy = top; yy < bottom; yy++)
-                for (var x = 0; x < width; x++)
+                for (var x = boxLeft; x < boxRight; x++)
                 {
                     if (!Ink(source.GetPixel(x, yy))) continue;
                     inked[x] = true;
-                    if (x < boxLeft || x >= boxRight) continue;
                     ink++;
                     inkTop = Math.Min(inkTop, yy); inkBottom = Math.Max(inkBottom, yy + 1);
                 }
@@ -144,13 +167,79 @@ internal static class ChromaticBoxRepair
                 // is the same rule the continuity test below applies between the boxes. Three quarters
                 // of that was not enough: the exclamation mark ending バンドリ！ガールズバンドパーティ！
                 // sits 17px past the box on a 25px line, and stopping short of it dropped it.
+                //
+                // How far it may reach is capped, because "ink continues at the spacing of a line"
+                // describes a picture as readily as a sentence. A YouTube search result put a video
+                // thumbnail to the left of a caption, and with no cap the row walked 513px across it
+                // — a 27px line — and handed recognition a box holding a photograph and a caption,
+                // which read as nothing at all and lost the caption that was being read correctly
+                // before. What a real missing glyph needs is small: the exclamation mark above is
+                // 17px past its box, or 0.68 of a line.
                 var reach = Math.Max(2, height);
+                var span = Math.Max(reach, (int)(height * ReachLimit));
+                var floor = Math.Max(0, boxLeft - span);
+                var ceiling = Math.Min(width, boxRight + span);
+
+                // The second pass, and only now that the reach is bounded is there one: the columns
+                // outside the boxes that the row could possibly claim. Everything downstream — the
+                // walk outwards, the gap test, the off-the-line test — reads `inked` inside
+                // [floor, ceiling) and nowhere else, so the rest of the capture's width was being
+                // scanned for nothing. Measured on a dark page region it is about a third of the
+                // repair's whole cost.
+                for (var yy = top; yy < bottom; yy++)
+                {
+                    for (var x = floor; x < boxLeft; x++)
+                        if (Ink(source.GetPixel(x, yy))) inked[x] = true;
+                    for (var x = boxRight; x < ceiling; x++)
+                        if (Ink(source.GetPixel(x, yy))) inked[x] = true;
+                }
+
                 var left = boxLeft;
-                for (var blank = 0; left > 0 && blank < reach; left--) blank = inked[left - 1] ? 0 : blank + 1;
+                for (var blank = 0; left > floor && blank < reach; left--) blank = inked[left - 1] ? 0 : blank + 1;
                 while (left < boxLeft && !inked[left]) left++;
                 var right = boxRight;
-                for (var blank = 0; right < width && blank < reach; right++) blank = inked[right] ? 0 : blank + 1;
+                for (var blank = 0; right < ceiling && blank < reach; right++) blank = inked[right] ? 0 : blank + 1;
                 while (right > boxRight && !inked[right - 1]) right--;
+
+                // What the row reached into has to be the same line of text. The gap between a
+                // caption and the video thumbnail beside it is a few pixels, so the reach crosses
+                // it, and from there the picture is unbroken ink — no blank run ever ends the row.
+                // Recognition is then handed a photograph with a caption attached and reads nothing
+                // at all, losing a line that read correctly before: measured on a dark YouTube
+                // search page, the reach walked 513px into the thumbnail on a 27px line.
+                //
+                // A glyph the detector missed sits on this line and nowhere else, so ink that also
+                // runs above or below the line's own band belongs to something else. Deliberately
+                // not a density test: a column of picture and a column carrying a vertical stroke
+                // are both ink from the top of the line to the bottom of it, and only where the ink
+                // STOPS tells them apart.
+                if (OffTheLine(left, boxLeft)) left = boxLeft;
+                if (OffTheLine(boxRight, right)) right = boxRight;
+
+                bool OffTheLine(int from, int to)
+                {
+                    if (to - from < 2) return false;
+                    // Half a line above and below. Enough that a thumbnail, which is several times
+                    // the height of the caption beside it, cannot help but show; not so much that
+                    // the line above or below this one is what gets found.
+                    var margin = Math.Max(2, height / 2);
+                    var above = Math.Max(0, inkTop - margin);
+                    var below = Math.Min(source.Height, inkBottom + margin);
+                    var inkedColumns = 0; var stray = 0;
+                    for (var x = from; x < to; x++)
+                    {
+                        if (!inked[x]) continue;
+                        inkedColumns++;
+                        for (var yy = above; yy < below; yy++)
+                        {
+                            if (yy >= inkTop && yy < inkBottom) continue;
+                            if (!Ink(source.GetPixel(x, yy))) continue;
+                            stray++;
+                            break;
+                        }
+                    }
+                    return inkedColumns > 0 && stray * 2 > inkedColumns;
+                }
 
                 // A line of text, wide and not a filled panel: the last term rejects a row whose ink
                 // covers most of its own area.

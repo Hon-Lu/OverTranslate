@@ -24,6 +24,15 @@ if (args.Length > 0 && args[0] == "--session-equivalence")
 if (args.Length > 0 && args[0] == "--box-repair-rows")
     return BoxRepairRowProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--repair-cost")
+    return RepairCostProbe.Run(args.Skip(1).ToArray());
+
+if (args.Length > 0 && args[0] == "--realtime-repair")
+    return RealtimeRepairProbe.Run(args.Skip(1).ToArray());
+
+if (args.Length > 0 && args[0] == "--realtime-row-gaps")
+    return await RealtimeRowGapProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--dialogue-probe")
     return await DialogueProbe.Run(args.Skip(1).ToArray());
 
@@ -78,6 +87,12 @@ if (args.Length == 0)
     Console.Error.WriteLine("                  (the vertical pipeline's columns and their text, which --group-explain never runs)");
     Console.Error.WriteLine("       OcrHarness --reject-audit <image.png> [more.png ...]");
     Console.Error.WriteLine("                  (what the confidence filter drops, and what a line would have reclaimed)");
+    Console.Error.WriteLine("       OcrHarness --repair-cost [--panel] <lang> <image.png> [...]");
+    Console.Error.WriteLine("                  (what the row repair costs per frame, split by whether the pre-filter let it in)");
+    Console.Error.WriteLine("       OcrHarness --realtime-repair [--panel] <lang> <image.png> [...]");
+    Console.Error.WriteLine("                  (realtime detector size, read with and without the screenshot flow's row repair)");
+    Console.Error.WriteLine("       OcrHarness --realtime-row-gaps [--panel] <lang> <image.png> [...]");
+    Console.Error.WriteLine("                  (realtime-sized rows: the pieces, the gaps, and what the whole row reads as)");
     Console.Error.WriteLine("       OcrHarness --box-repair-rows <lang> <image.png> [more.png ...]");
     Console.Error.WriteLine("                  (what ChromaticBoxRepair measures on each row, and what it repaired)");
     Console.Error.WriteLine("       OcrHarness --xlate-test   (network translation/resilience check, no OCR)");

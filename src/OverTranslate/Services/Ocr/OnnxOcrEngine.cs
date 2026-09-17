@@ -218,8 +218,6 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null)
     {
         var normalizedLanguage = OcrLanguageRouter.Normalize(sourceLanguage);
-        var useCjkRenderMetrics = OcrLanguageRouter.UsesCjkOnnx(normalizedLanguage);
-        var usesAutomaticLayout = OcrLanguageRouter.UsesAutomaticLayout(normalizedLanguage);
 
         // Select the runtime and register an in-use reference atomically under _sync, so the
         // idle timer cannot dispose it between selection and Detect. The matching release
@@ -236,31 +234,26 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 runtime.ModelName,
                 ThreadCount);
 
-            TextBlock[] recognised;
-            List<OcrTextBlock> blocks;
-            if (maxDetectSize is null)
-            {
-                // The screenshot path runs through the detect/recognise seam so ChromaticBoxRepair
-                // can rejoin a broken row of coloured text before anything crops from it. The seam
-                // is not a second implementation of recognition: across all 413 corpus captures it
-                // returns the same text, in boxes at the same coordinates, as the library's one-shot
-                // Detect — so what this path adds is that one repair and nothing else.
-                using var session = new DetectionSession(
-                    this, runtime, bitmap, normalizedLanguage, null, releasesRuntime: false);
-                blocks = session
-                    .Recognize(Enumerable.Range(0, session.Boxes.Count).ToArray(), out recognised)
-                    .ToList();
-            }
-            else
-            {
-                using var skBitmap = ConvertToSkBitmap(bitmap);
-                using var frame = CreateDetectorFrame(skBitmap, maxDetectSize);
-                var result = runtime.Engine.Detect(frame.Bitmap, frame.Options);
-                frame.MapToSource(result.TextBlocks);
-                recognised = result.TextBlocks;
-                blocks = ApplyBlockFilters(
-                    recognised, normalizedLanguage, useCjkRenderMetrics, usesAutomaticLayout);
-            }
+            // Both flows go through the detect/recognise seam, so ChromaticBoxRepair can rejoin a
+            // row the detector returned in pieces before anything crops from those pieces. The seam
+            // is not a second implementation of recognition: on 413 screenshot captures and on 361
+            // captures read at the realtime sizes it returns the same text, in boxes at the same
+            // coordinates, as the library's one-shot Detect — so what it adds is that one repair
+            // and nothing else.
+            //
+            // The realtime path used to take the one-shot call and no repair, on the grounds that a
+            // frame missed there is repaired by the next one 250ms later. That is an argument about
+            // the picture changing, and what this repairs does not change: a dark page, a game's
+            // chat panel, a paused video all hand the next frame the same pixels, which break the
+            // same row in the same place. Measured with the detector size held at what
+            // RealtimeDetectorSize asks for, 7 of 48 dark Japanese page regions come back with the
+            // glyphs they were dropping, and 313 subtitle, game, comic, panel and chat frames do
+            // not move at all.
+            using var session = new DetectionSession(
+                this, runtime, bitmap, normalizedLanguage, maxDetectSize, releasesRuntime: false);
+            var blocks = session
+                .Recognize(Enumerable.Range(0, session.Boxes.Count).ToArray(), out var recognised)
+                .ToList();
 
             // Counts and lengths only — enough to tell "found nothing" from "found the wrong thing"
             // without the recognised text itself, which LogBlocks keeps at Debug.
@@ -364,14 +357,19 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     /// Verified rather than argued — see the harness's <c>--roi-fullframe</c>, which begins by
     /// recognising every box through here and checking the text against <see cref="RecognizeAsync"/>.
     /// </remarks>
+    /// <param name="repairRows">
+    /// Off measures the repair against its own absence and is for OcrHarness only; every shipped
+    /// caller leaves it on.
+    /// </param>
     internal DetectionSession BeginDetection(
-        Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null)
+        Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null, bool repairRows = true)
     {
         var normalizedLanguage = OcrLanguageRouter.Normalize(sourceLanguage);
         var runtime = AcquireRuntime(normalizedLanguage);
         try
         {
-            return new DetectionSession(this, runtime, bitmap, normalizedLanguage, maxDetectSize);
+            return new DetectionSession(
+                this, runtime, bitmap, normalizedLanguage, maxDetectSize, repairRows: repairRows);
         }
         catch
         {
@@ -404,7 +402,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             Bitmap bitmap,
             string normalizedLanguage,
             int? maxDetectSize,
-            bool releasesRuntime = true)
+            bool releasesRuntime = true,
+            bool repairRows = true)
         {
             _owner = owner;
             _releasesRuntime = releasesRuntime;
@@ -427,12 +426,11 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             // kept beside them, because mapping is not reversible once the resize is not 1.0.
             var mapped = ToSourceSpace(_detectorSpaceBoxes);
 
-            // Screenshot captures only, which is what a null detector size means here — the
-            // realtime path always names a size. Run before anything crops, because the whole point
-            // is that the pieces are never cropped: the glyphs in the gaps between them have no box
-            // of their own to read. Apply hands back the same list when nothing qualifies, which is
-            // all but two captures in the corpus.
-            if (maxDetectSize is null)
+            // Run before anything crops, because the whole point is that the pieces are never
+            // cropped: the glyphs in the gaps between them have no box of their own to read. Apply
+            // hands back the same list when nothing qualifies, which is all but two captures in the
+            // screenshot corpus and all but seven of the realtime-sized ones.
+            if (repairRows)
             {
                 var repaired = ChromaticBoxRepair.Apply(
                     _skBitmap,
