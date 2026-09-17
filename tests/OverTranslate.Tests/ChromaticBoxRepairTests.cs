@@ -163,6 +163,28 @@ public class ChromaticBoxRepairTests
             $"reached {repair.Bounds.Right}, so the picture from 335 to 396 was swallowed"));
     }
 
+    [ScreenshotFact("region-web-ja-dark/gsearch-block-norm-u.png")]
+    public void TheLiveScreenPathRepairsTheSameRow()
+    {
+        // The realtime flow, which reads at a fraction of native rather than at 2048 and used to
+        // skip the repair entirely. Same symptom, same capture family as the screenshot tests
+        // above: the title's last two glyphs sit in the gap between two boxes, and without the
+        // repair the reading stops at パーテ.
+        //
+        // Goes through TryRecognizeAsync at the size RealtimeDetectorSize would ask for, because
+        // the size is half of what is being asserted — the repair is measured at one size and the
+        // detector's boxes are not stable across sizes.
+        using var engine = new OnnxOcrEngine();
+        using var capture = ExternalScreenshot.Load("region-web-ja-dark/gsearch-block-norm-u.png");
+        var (primary, _) = OverTranslate.Services.Realtime.RealtimeDetectorSize.For(
+            capture.Width, capture.Height, OverTranslate.Services.Realtime.RealtimeBlockMode.Panel);
+
+        var blocks = engine.TryRecognizeAsync(capture, "JA", primary).GetAwaiter().GetResult();
+
+        Assert.NotNull(blocks);
+        Assert.Contains("ガールズバンドパーティ！", string.Concat(blocks.Select(block => block.Text)));
+    }
+
     // A dark page carrying one row of thin coloured strokes: ink enough to be a line of text, gaps
     // narrow enough to be the spaces inside one, and nowhere near solid enough to be a filled panel.
     private static SKBitmap Page(SKColor? background = null, int gapFrom = 0, int gapTo = 0)

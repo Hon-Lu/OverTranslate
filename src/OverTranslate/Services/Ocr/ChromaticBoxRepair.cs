@@ -37,9 +37,21 @@ namespace OverTranslate.Services.Ocr;
 /// time. Over 144 framings of one dark-mode search result the title came back whole in 13% of them
 /// before any of this and 89% after, with nothing that read whole before reading worse.</para>
 ///
-/// <para>Screenshot captures only. The realtime path passes an explicit detector size and never
-/// reaches here: a frame missed there is repaired by the next one 250ms later, and none of this has
-/// been measured against a realtime corpus.</para>
+/// <para>Both flows run this. The realtime path was left out of it at first, on the grounds that a
+/// frame missed there is repaired by the next one 250ms later — an argument about the picture
+/// changing, which the captures this repairs do not: a dark page, a game's chat panel and a paused
+/// video hand the next frame the same pixels and break the same row in the same place. Re-measured
+/// with the detector size held at what <c>RealtimeDetectorSize</c> asks for, 7 of 48 dark Japanese
+/// page regions come back with the glyphs they were dropping and nothing reads worse, while 313
+/// subtitle, game, comic, panel and chat frames do not move at all — subtitle strokes are thick and
+/// their backgrounds are not flat, so the pre-filter turns those away.</para>
+///
+/// <para>What it costs on the live path, fastest of twenty runs per capture: about 4ms on a
+/// 1825x223 subtitle strip and 20ms on a full screen, both turned away by the pre-filter, against a
+/// frame every 250ms and a detection pass of 80-160ms. A capture the pre-filter lets in costs 12ms
+/// at region size and 46-55ms for a whole dark page. That is memory latency and the size of the
+/// walk, not the per-pixel API: reading the buffer directly through a span instead of
+/// <c>SKBitmap.GetPixel</c> was measured at 6-17% and is not worth its complexity.</para>
 /// </remarks>
 internal static class ChromaticBoxRepair
 {
