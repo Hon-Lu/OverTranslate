@@ -142,10 +142,22 @@ public partial class RealtimeControlWindow : Window
         };
 
         // The bar is sized to its content, so every change of text changes its width — a status
-        // message replacing another, a block count going from one digit to two. Left where it is,
-        // the left edge stays put and the right edge walks in and out, which is the movement the eye
-        // notices. Growing from the middle instead keeps the bar where it was and makes the change
-        // read as the text changing rather than the bar moving.
+        // message replacing another, the language pair giving way to 已暫停, a block count going from
+        // one digit to two. The right edge is what stays put through all of it.
+        //
+        // Not the middle, which is what this did first, and not the left edge either. Everything on
+        // this bar that changes width — the status text, the language pair, the block count — sits to
+        // the left of the buttons, and the buttons are what the pointer is on. Pinning the left edge
+        // hands the whole change to the buttons; pinning the middle hands them half of it. Pausing
+        // swaps a language pair for one short word, so either way the button under the pointer walks
+        // out from under it, and the user cannot press the same spot again to resume — which is the
+        // one thing somebody who just pressed pause is most likely to do next.
+        //
+        // Pinning the right edge costs the left edge instead, where the dot and the status text live.
+        // Those are read, not aimed at.
+        //
+        // Centring is still how the bar is first placed — see PlaceInitially. That is a starting
+        // position, not a rule about how it grows.
         SizeChanged += (_, e) =>
         {
             // Not while the scale is being re-applied: that changes the width in DIP without the text
@@ -155,7 +167,7 @@ public partial class RealtimeControlWindow : Window
             var grown = (int)Math.Round((e.NewSize.Width - e.PreviousSize.Width) * _windowScale);
             if (grown == 0) return;
 
-            _position = _position with { X = _position.X - grown / 2 };
+            _position = _position with { X = _position.X - grown };
             ClampIntoScreen();
         };
     }
