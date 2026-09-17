@@ -13,6 +13,55 @@ internal sealed record CpuMask(Mat Core, Mat Outline, Mat Combined) : IDisposabl
 /// <summary>Stateless CPU segmentation. A text core and its nearby outline are separate masks.</summary>
 internal static class CpuTextMask
 {
+    /// <summary>How far past the glyph body an outline is looked for, as a share of glyph height.</summary>
+    /// <remarks>
+    /// This is the reach of the whole outline search: nothing further from the body than this can be
+    /// recognised as belonging to the text, whatever its contrast. It was .09 clamped to four pixels,
+    /// which is under the outline a burnt-in subtitle is actually drawn with at the size realtime
+    /// reads one — an English anime subtitle measured 44px of glyph carrying an outline plus its
+    /// antialiasing well past four — so the outermost ring of every letter was outside the search
+    /// before any threshold had a say.
+    /// </remarks>
+    private const double OutlineReach = .12;
+
+    /// <summary>Contrast a pixel needs to be taken for outline on its own.</summary>
+    /// <inheritdoc cref="OutlineTail"/>
+    private const double OutlineSeed = 12;
+
+    /// <summary>Contrast a pixel needs to be taken for outline when it continues one.</summary>
+    /// <remarks>
+    /// The two thresholds are a hysteresis, and the reason for it is what the leftover actually looks
+    /// like: not a missed letter but a dotted dark contour tracing where the text was, which is the
+    /// outline's antialiased tail. That tail is a ramp from the outline down to the picture, so no
+    /// single threshold separates it — high enough not to eat the picture is high enough to leave the
+    /// last pixel or two of every stroke behind, and that is exactly the row of dashes a reader sees
+    /// under an erased subtitle.
+    ///
+    /// So the seed says what is certainly outline and the tail says what may continue one, and only
+    /// pixels reachable from a seed are taken. Growth is bounded by <see cref="OutlineGrowth"/>, which
+    /// is what keeps a dark scene edge that happens to touch a letter from being followed across the
+    /// frame. It also carries the outline past <see cref="OutlineReach"/>, which the seed alone cannot:
+    /// the seed is only looked for within reach of the body, and a stroke's outline is not.
+    ///
+    /// How far it gets is bounded by the recognition box as well, because everything here is computed
+    /// inside one. That is why this is worth most on a Latin line, whose box stands well clear of its
+    /// glyphs, and least on a CJK one, whose box sits on them. Padding the box to give the growth room
+    /// was tried and is wrong: the box is also what the two hats and the Otsu threshold are measured
+    /// over, so widening it changes which polarity is taken for the text — over the ja-card corpus,
+    /// where the band behind the subtitle is already dark, that alone left half again as much behind
+    /// as shipping did.
+    ///
+    /// Swept at 6, 10, 14 and 18 over the three subtitle corpora, what is erased hardly moves — under
+    /// a fifth of a point between the extremes — while how much of the frame is masked falls steadily
+    /// as it rises. So it is set by the other end: low enough to be a genuine second threshold, high
+    /// enough that film grain and compression noise are not a path for the growth to walk along.
+    /// </remarks>
+    private const double OutlineTail = 10;
+
+    /// <summary>How many pixels the tail may be followed away from a seed.</summary>
+    /// <inheritdoc cref="OutlineTail"/>
+    private const int OutlineGrowth = 6;
+
     public static CpuMask Build(Mat source, IReadOnlyList<CpuTextRegion> lines)
     {
         var core = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
@@ -26,7 +75,7 @@ internal static class CpuTextMask
             {
                 if (!double.IsFinite(line.X + line.Y + line.Width + line.Height) || line.Width <= 0 || line.Height <= 0) continue;
                 double height = Math.Max(1, Math.Min(line.GlyphHeight ?? line.Height, line.Height));
-                int reach = Math.Clamp((int)Math.Ceiling(height * .09), 2, 4);
+                int reach = Math.Clamp((int)Math.Ceiling(height * OutlineReach), 2, 6);
                 var box = Clip(line.X - reach, line.Y - reach, line.X + line.Width + reach,
                     line.Y + line.Height + reach, source.Size());
                 if (box.Width == 0 || box.Height == 0) continue;
@@ -51,8 +100,9 @@ internal static class CpuTextMask
                 using var one = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
                 using var expansion = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(reach * 2 + 1, reach * 2 + 1));
                 Cv2.Dilate(binary, near, expansion);
-                Cv2.Threshold(opposite, fringeContrast, 12, 255, ThresholdTypes.Binary);
+                Cv2.Threshold(opposite, fringeContrast, OutlineSeed, 255, ThresholdTypes.Binary);
                 Cv2.BitwiseAnd(near, fringeContrast, fringe);
+                GrowAlongTail(fringe, opposite, one);
                 Cv2.Dilate(fringe, fringe, one); // Include the antialiased edge of a detected outline.
                 Cv2.Dilate(binary, binary, one); // One pixel for anti-aliasing, not a whole line band.
                 using var coreTarget = new Mat(core, box);
@@ -64,10 +114,38 @@ internal static class CpuTextMask
             using var antialias = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
             // Expand the detected glyph/outline by one additional pixel to cover faint halos.
             // Apply after merging ROIs so the expansion is not clipped at an OCR box edge.
-            Cv2.Dilate(combined, combined, antialias, iterations: 2);
+            //
+            // One pixel, not two: the second one used to stand in for the outline's faint tail, and
+            // it paid for every glyph everywhere to reach a tail that only exists where the outline
+            // does. GrowAlongTail follows that tail where it is instead, which both erases more of it
+            // and leaves the mask smaller — and a smaller hole is a repair with more picture left to
+            // interpolate from. Measured over the three subtitle corpora, dropping this to one and
+            // adding the growth erases 26–50% more of the leftover while masking less of the frame
+            // than two blind pixels did.
+            Cv2.Dilate(combined, combined, antialias, iterations: 1);
             return new(core, outline, combined);
         }
         catch { core.Dispose(); outline.Dispose(); combined.Dispose(); throw; }
+    }
+
+    /// <summary>Extends a seeded outline along its own antialiased tail — see <see cref="OutlineTail"/>.</summary>
+    /// <remarks>
+    /// A geodesic dilation: grow by a pixel, keep only what the tail threshold allows, put the seed
+    /// back so a step can never lose ground. Both mats are the recognition box, not the frame, and the
+    /// loop runs a fixed number of times rather than to stability — the point is a bounded reach, and
+    /// a run to stability would follow a scene edge for as far as that edge happens to be dark.
+    /// </remarks>
+    private static void GrowAlongTail(Mat fringe, Mat opposite, Mat one)
+    {
+        using var tail = new Mat();
+        Cv2.Threshold(opposite, tail, OutlineTail, 255, ThresholdTypes.Binary);
+        using var grown = new Mat();
+        for (int step = 0; step < OutlineGrowth; step++)
+        {
+            Cv2.Dilate(fringe, grown, one);
+            Cv2.BitwiseAnd(grown, tail, grown);
+            Cv2.BitwiseOr(grown, fringe, fringe);
+        }
     }
 
     private static Rect Clip(double left, double top, double right, double bottom, Size size)
