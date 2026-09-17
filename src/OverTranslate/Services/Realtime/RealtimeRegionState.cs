@@ -28,6 +28,21 @@ namespace OverTranslate.Services.Realtime;
 internal sealed class RealtimeRegionState
 {
     /// <summary>
+    /// How often a watched region is looked at. Every threshold below is expressed against it.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is a sampling rate and nothing more — how quickly a change can be NOTICED. What is
+    /// then done about it is set by the intervals below, in milliseconds, so that moving this number
+    /// changes latency and not how much recognition a session pays for. It used to be the other way
+    /// round: the thresholds were poll counts, so halving the interval silently doubled the rate the
+    /// region was scanned at and the rate it was re-examined at.</para>
+    ///
+    /// <para>Fast enough that a subtitle appears to update as it changes, slow enough that the grab
+    /// and fingerprint of a few small regions stay invisible in Task Manager.</para>
+    /// </remarks>
+    public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
     /// How long a region with no known text may keep changing before it is scanned anyway. This is
     /// the path a session starts on, and the one it returns to whenever the text goes away.
     /// </summary>
@@ -35,21 +50,35 @@ internal sealed class RealtimeRegionState
     /// Short, and deliberately so. There is no way to tell "a line just appeared" from "the picture
     /// moved" without recognising, so over live content this is simply the rate at which the region
     /// is searched for text — and a line that shows for a second and a half has to be caught inside
-    /// its own lifetime or it is missed entirely. One poll means a scan every 500ms.
+    /// its own lifetime or it is missed entirely.
     ///
     /// This rate is held whether or not the region has been fruitless for a while. Easing off after
     /// a quiet spell would save real work, but it buys that saving with exactly the thing the
     /// feature exists to provide: the moment it eases off is the moment a line can slip through
     /// between scans, and the user cannot tell that from the feature simply not working. The regions
     /// people draw for this are subtitle-sized, so the work being saved was small to begin with.
+    ///
+    /// It is also the most expensive path there is — every scan is a recognition over the whole
+    /// region, found text or not — which is why it is held at a time rather than at a poll count.
+    /// Sampling faster must not search faster.
     /// </remarks>
-    public const int MaxUnsettledPolls = 1;
+    public static readonly TimeSpan SearchInterval = TimeSpan.FromMilliseconds(500);
+
+    /// <inheritdoc cref="SearchInterval"/>
+    public static readonly int MaxUnsettledPolls = PollsIn(SearchInterval) - 1;
 
     /// <summary>
     /// The same wait once the text strips are being watched. Far shorter, because a change here is
     /// the text itself changing rather than the picture behind it — one poll is enough to let a line
     /// that fades in arrive, and any longer is latency the reader pays for every subtitle.
     /// </summary>
+    /// <remarks>
+    /// The one threshold deliberately left in polls rather than moved to a time. It is not rationing
+    /// anything — the work it gates happens once per line of dialogue either way, set by how often
+    /// the words change and not by how often they are looked at — so all it does is wait. Sampling
+    /// faster should therefore confirm faster, and this is where the poll interval is allowed to
+    /// show up as latency saved.
+    /// </remarks>
     public const int MaxTextUnsettledPolls = 1;
 
     /// <summary>
@@ -57,13 +86,19 @@ internal sealed class RealtimeRegionState
     /// that appeared somewhere the last pass found none.
     /// </summary>
     /// <remarks>
-    /// Every poll spent below this number is a poll in which a line appearing outside the strips is
+    /// Every poll spent below this is a poll in which a line appearing outside the strips is
     /// invisible, and a line that comes and goes inside one such window is not late — it is missed.
-    /// At 12 polls that blind spot was three seconds, which is longer than plenty of subtitles are
-    /// on screen. One second costs more recognition over still content and buys back the case the
-    /// strips cannot see by design: the second speaker's line appearing well away from the first.
+    /// At three seconds that blind spot was longer than plenty of subtitles are on screen. One
+    /// second costs more recognition over still content and buys back the case the strips cannot see
+    /// by design: the second speaker's line appearing well away from the first.
+    ///
+    /// In time rather than in polls for the same reason as <see cref="SearchInterval"/>: a rescan is
+    /// a recognition, and how often the region is sampled must not decide how often it is paid for.
     /// </remarks>
-    public const int FullRescanPolls = 4;
+    public static readonly TimeSpan FullRescanInterval = TimeSpan.FromMilliseconds(1000);
+
+    /// <inheritdoc cref="FullRescanInterval"/>
+    public static readonly int FullRescanPolls = PollsIn(FullRescanInterval);
 
     /// <summary>
     /// How many passes in a row must find nothing before the overlay is cleared. Recognition drops a
@@ -72,6 +107,11 @@ internal sealed class RealtimeRegionState
     /// reads far worse than a stale line lingering for one more poll.
     /// </summary>
     public const int EmptyPassesBeforeClearing = 2;
+
+    // Rounded to the nearest whole poll and never below one, because these are counted in polls
+    // wherever they are used and a threshold of zero would mean "every poll".
+    private static int PollsIn(TimeSpan interval) =>
+        Math.Max(1, (int)Math.Round(interval / PollInterval));
 
     private static readonly IReadOnlyList<Rectangle> NoBands = [];
     private static readonly IReadOnlyList<RenderedLine> NoLines = [];

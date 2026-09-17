@@ -7,6 +7,21 @@ namespace OverTranslate.Tests;
 public class RealtimeRegionStateTests
 {
     [Fact]
+    public void SamplingFasterDoesNotSearchOrRescanFaster()
+    {
+        // The thresholds are counted in polls and derived from times, so that the poll interval
+        // decides only how quickly a change is NOTICED. Whoever moves the interval next will move
+        // these counts with it; this checks that what the counts are worth in milliseconds stays
+        // where it was argued for — a scan of a region with no known text every ~500ms, and a full
+        // re-examination of a watched region every ~1s.
+        var search = (RealtimeRegionState.MaxUnsettledPolls + 1) * RealtimeRegionState.PollInterval;
+        var rescan = RealtimeRegionState.FullRescanPolls * RealtimeRegionState.PollInterval;
+
+        Assert.InRange(search, TimeSpan.FromMilliseconds(400), TimeSpan.FromMilliseconds(600));
+        Assert.InRange(rescan, TimeSpan.FromMilliseconds(850), TimeSpan.FromMilliseconds(1150));
+    }
+
+    [Fact]
     public void AlternatingFalseTailsCannotForceOcrForever()
     {
         var state = new RealtimeRegionState();

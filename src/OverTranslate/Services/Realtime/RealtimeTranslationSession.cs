@@ -42,9 +42,10 @@ public sealed class RealtimeTranslationSession
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    // Fast enough that a subtitle appears to update as it changes, slow enough that the grab+hash
-    // of a few small regions stays invisible in Task Manager.
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+    // Owned by RealtimeRegionState, which expresses every threshold that decides RECOGNITION
+    // against it — so this number sets how quickly a change is noticed and nothing else. Defined
+    // there rather than here so the two cannot drift apart; see the note on PollInterval.
+    private static readonly TimeSpan PollInterval = RealtimeRegionState.PollInterval;
 
     // Bounded so a long session on scrolling content cannot grow the cache without limit. Cleared
     // wholesale rather than evicted one by one: at this size the loss is one extra translation for
