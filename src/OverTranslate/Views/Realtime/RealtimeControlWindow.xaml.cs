@@ -1,5 +1,7 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -110,6 +112,11 @@ public partial class RealtimeControlWindow : Window
     private bool _scaleFixupQueued;
 
     private System.Drawing.Point _position;
+
+    // False until PlaceInitially has run. The bar is shown before it is placed, so the sizing passes
+    // before that have no resting position to hold the right edge of.
+    private bool _placed;
+
     private bool _isDragging;
     private System.Drawing.Point _dragStartMouse;
     private System.Drawing.Point _dragStartPosition;
@@ -141,35 +148,6 @@ public partial class RealtimeControlWindow : Window
             QueueScaleFixup();
         };
 
-        // The bar is sized to its content, so every change of text changes its width — a status
-        // message replacing another, the language pair giving way to 已暫停, a block count going from
-        // one digit to two. The right edge is what stays put through all of it.
-        //
-        // Not the middle, which is what this did first, and not the left edge either. Everything on
-        // this bar that changes width — the status text, the language pair, the block count — sits to
-        // the left of the buttons, and the buttons are what the pointer is on. Pinning the left edge
-        // hands the whole change to the buttons; pinning the middle hands them half of it. Pausing
-        // swaps a language pair for one short word, so either way the button under the pointer walks
-        // out from under it, and the user cannot press the same spot again to resume — which is the
-        // one thing somebody who just pressed pause is most likely to do next.
-        //
-        // Pinning the right edge costs the left edge instead, where the dot and the status text live.
-        // Those are read, not aimed at.
-        //
-        // Centring is still how the bar is first placed — see PlaceInitially. That is a starting
-        // position, not a rule about how it grows.
-        SizeChanged += (_, e) =>
-        {
-            // Not while the scale is being re-applied: that changes the width in DIP without the text
-            // having changed at all, and treating it as growth would walk the bar sideways.
-            if (!IsLoaded || !e.WidthChanged || _isDragging || _adjustingForScale) return;
-
-            var grown = (int)Math.Round((e.NewSize.Width - e.PreviousSize.Width) * _windowScale);
-            if (grown == 0) return;
-
-            _position = _position with { X = _position.X - grown };
-            ClampIntoScreen();
-        };
     }
 
     public event EventHandler? StartRequested;
@@ -190,6 +168,89 @@ public partial class RealtimeControlWindow : Window
         // No WDA_EXCLUDEFROMCAPTURE here any more: this bar stays out of what the loop reads because
         // the capture backend leaves it out, not because the bar asked to be invisible (#105).
         WindowStyles.ApplyNoActivate(this);
+
+        if (PresentationSource.FromVisual(this) is HwndSource source)
+            source.AddHook(OnWindowPosChanging);
+    }
+
+    /// <summary>
+    /// Holds the right edge of the bar still while its width changes.
+    /// </summary>
+    /// <remarks>
+    /// <para>The bar is sized to its content, so every change of text changes its width — a status
+    /// message replacing another, the language pair giving way to 已暫停, a block count going from one
+    /// digit to two. Everything that changes width sits to the left of the buttons, and the buttons
+    /// are what the pointer is on: pinning the left edge hands the whole change to them, pinning the
+    /// middle hands them half of it. Pausing swaps a language pair for one short word, so either way
+    /// the button under the pointer walks out from under it and the user cannot press the same spot
+    /// again to resume — which is the one thing somebody who has just pressed pause is most likely to
+    /// want. Pinning the right edge spends the movement on the left end instead, where the dot and
+    /// the status text live. Those are read, not aimed at.</para>
+    ///
+    /// <para>Caught here rather than in <c>SizeChanged</c>, which is where this started and is what
+    /// made it flicker. WPF resizes the HWND first and raises SizeChanged after, so a correction from
+    /// there is a second SetWindowPos behind the first: for one frame the bar is drawn already grown
+    /// and not yet moved, and the wider the change the further it visibly jumps before snapping back.
+    /// Editing the rectangle Windows is about to use makes the move and the resize one operation, so
+    /// there is no such frame. Same reason and same shape as QuickLookupWindow, which pins its top
+    /// edge this way.</para>
+    ///
+    /// <para>Centring is still how the bar is first placed — see <see cref="PlaceInitially"/>. That
+    /// is a starting position, not a rule about how it grows.</para>
+    /// </remarks>
+    private IntPtr OnWindowPosChanging(
+        IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != WmWindowPosChanging) return IntPtr.Zero;
+
+        // A drag is the user placing the bar, and a scale fix-up changes the width in DIP without the
+        // text having changed at all — holding an edge through either would walk the bar sideways.
+        if (!_placed || _isDragging || _adjustingForScale) return IntPtr.Zero;
+
+        var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
+
+        // Pure moves come through here too — our own clamps and placements are exactly that — and
+        // answering them would be a loop.
+        if ((pos.flags & SwpNoSize) != 0) return IntPtr.Zero;
+
+        var bounds = ScreenGeometry.PhysicalBounds(this);
+        if (bounds.IsEmpty || pos.cx == bounds.Width) return IntPtr.Zero;
+
+        // x and y are undefined when the caller said not to move, so where the window is now is what
+        // the new width has to be measured against.
+        var top = (pos.flags & SwpNoMove) == 0 ? pos.y : bounds.Top;
+
+        // The same clamp ClampIntoScreen applies, done here because doing it afterwards would be the
+        // second SetWindowPos this exists to avoid.
+        var left = Math.Clamp(
+            bounds.Right - pos.cx,
+            _screenBounds.Left,
+            Math.Max(_screenBounds.Left, _screenBounds.Right - pos.cx));
+
+        pos.x = left;
+        pos.y = top;
+        pos.flags &= ~SwpNoMove;
+        Marshal.StructureToPtr(pos, lParam, fDeleteOld: false);
+
+        // Dragging reads this back as where the bar is, so it has to follow what was just applied.
+        _position = new System.Drawing.Point(left, top);
+        return IntPtr.Zero;
+    }
+
+    private const int WmWindowPosChanging = 0x0046;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPOS
+    {
+        public IntPtr hwnd;
+        public IntPtr hwndInsertAfter;
+        public int x;
+        public int y;
+        public int cx;
+        public int cy;
+        public uint flags;
     }
 
     /// <summary>
@@ -475,6 +536,7 @@ public partial class RealtimeControlWindow : Window
             _screenBounds.Bottom - PhysicalHeight - (int)Math.Round(48 * targetScale));
 
         ClampIntoScreen();
+        _placed = true;
     }
 
     private void ClampIntoScreen()
