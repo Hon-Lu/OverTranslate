@@ -92,6 +92,22 @@
     </Style>
 
     <!-- ═══════════════════════════════════════════ -->
+    <!--  TOGGLE ROW GLYPH                           -->
+    <!--  The picture in front of the name on such   -->
+    <!--  a row. Secondary rather than accented, so  -->
+    <!--  a column of them reads as a way of telling -->
+    <!--  the rows apart at a glance and not as the  -->
+    <!--  thing on the row worth looking at.         -->
+    <!-- ═══════════════════════════════════════════ -->
+    <Style x:Key="ToggleRowGlyph" TargetType="TextBlock">
+        <Setter Property="FontFamily"        Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+        <Setter Property="FontSize"          Value="18"/>
+        <Setter Property="Foreground"        Value="{DynamicResource AppTextSecondary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin"            Value="2,0,14,0"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════ -->
     <!--  INFO CARD BORDER                           -->
     <!--  A note the reader is not being asked to    -->
     <!--  act on. Tinted with the accent rather than -->
@@ -3072,6 +3088,19 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- The well a sliding two-way switch sits in: the pair of halves, the marker behind them and
+         nothing else. Deliberately not a shared-size scope of its own — every tray on a page names
+         the same group for its two halves, so that 自動／固定 and 隨機／固定 come out the same width
+         and the trays line up in one column down the card rather than each fitting its own words. -->
+    <Style x:Key="SegmentedTray" TargetType="Border">
+        <Setter Property="Background"        Value="{DynamicResource AppButtonBg}"/>
+        <Setter Property="BorderBrush"       Value="{DynamicResource AppButtonBorder}"/>
+        <Setter Property="BorderThickness"   Value="1"/>
+        <Setter Property="CornerRadius"      Value="8"/>
+        <Setter Property="Padding"           Value="3"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <!-- One half of the sliding two-way switch in 偵錯工具. It paints no background of its own,

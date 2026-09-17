@@ -274,25 +274,27 @@
     <sys:String x:Key="S.Realtime.Preview">預覽</sys:String>
     <sys:String x:Key="S.Realtime.PreviewText">文字會像這樣顯示在畫面上</sys:String>
     <sys:String x:Key="S.Realtime.TextColor">文字顏色</sys:String>
+    <sys:String x:Key="S.Realtime.TextColorHint">設定翻譯文字的顏色。選擇「自動」會沿用畫面上原文字的顏色。</sys:String>
+    <sys:String x:Key="S.Realtime.TextColorMode">文字顏色模式</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">底色</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimColorHint">設定翻譯框的背景顏色。選擇「自動」會以周圍畫面補出背景，讓譯文更融入畫面。</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimColorMode">底色模式</sys:String>
     <!-- 「不透明度」而非「透明度」：滑桿往右是底色越厚，用「透明度」會讓數字與方向相反。 -->
     <sys:String x:Key="S.Realtime.ScrimOpacity">底色不透明度</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimOpacityHint">數值越高，翻譯框的底色越不透明。</sys:String>
+    <!-- 兩個色彩選擇列共用這一組，因為問的是同一件事：這個顏色是讀畫面決定，還是你自己指定。 -->
+    <sys:String x:Key="S.Realtime.ColorAuto">自動</sys:String>
+    <sys:String x:Key="S.Realtime.ColorFixed">固定</sys:String>
     <sys:String x:Key="S.Realtime.Border">邊框</sys:String>
+    <sys:String x:Key="S.Realtime.BorderHint">為翻譯框加上邊框，讓譯文與畫面更容易分辨。</sys:String>
     <sys:String x:Key="S.Realtime.BorderMode">邊框顏色模式</sys:String>
     <sys:String x:Key="S.Realtime.BorderRandom">隨機</sys:String>
     <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">邊框顏色</sys:String>
-    <sys:String x:Key="S.Realtime.ResetBorder">還原邊框預設值</sys:String>
-    <sys:String x:Key="S.Realtime.ResetColors">還原預設值</sys:String>
-    <sys:String x:Key="S.Realtime.ResetColorsName">還原預設外觀</sys:String>
-    <sys:String x:Key="S.Realtime.AdvancedOptions">進階選項</sys:String>
-    <sys:String x:Key="S.Realtime.NaturalBackground">更符合原背景</sys:String>
-    <sys:String x:Key="S.Realtime.NaturalBackgroundHint">嘗試移除原文並以周圍畫面補背景，讓譯文更自然融入畫面。</sys:String>
-    <sys:String x:Key="S.Realtime.SampleTextColor">沿用原文字顏色</sys:String>
-    <sys:String x:Key="S.Realtime.SampleTextColorHint">優先取樣原文字顏色，若辨識不穩定則改用你設定的文字顏色。</sys:String>
-    <!-- 不是效能警語。這兩個選項都靠讀取畫面上原本的像素來運作，畫面靜止時讀到的就是對的，
+    <sys:String x:Key="S.Realtime.ResetAppearance">還原顯示外觀預設值</sys:String>
+    <!-- 不是效能警語。兩個「自動」都靠讀取畫面上原本的像素來運作，畫面靜止時讀到的就是對的，
          畫面快速變動時讀到的是上一瞬間的樣子——這是合不合適的問題，不是快不快的問題。 -->
-    <sys:String x:Key="S.Realtime.AdvancedOptionsBestFor">進階選項適合較為穩定的情境，例如對話框、選單或靜態畫面等。畫面快速變動時，背景與文字顏色可能無法即時貼合。</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">「自動」適合較為穩定的情境，例如對話框、選單或靜態畫面等。畫面快速變動時，底色與文字顏色可能無法即時貼合。</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">運作方式</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1. 點擊「選取翻譯區塊」，在畫面上框選要翻譯的區域。</sys:String>
