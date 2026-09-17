@@ -172,9 +172,21 @@ internal sealed class RealtimeRegionState
     /// policy with fingerprints it builds by hand.
     /// </param>
     /// <returns>Whether the frame should be recognised now.</returns>
-    public bool Observe(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
+    public bool Observe(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false) =>
+        Examine(capture, dialogue) != RealtimeReadReason.Nothing;
+
+    /// <summary>The same decision, and what made it — see <see cref="RealtimeReadReason"/>.</summary>
+    /// <remarks>
+    /// The caller needs the reason because the three are not worth the same. A change inside the
+    /// watched strips is known text changing, and there is nothing cheaper than recognition that
+    /// could confirm it. The other two are asking "is there anything here at all", on a timer, and
+    /// the answer is usually no — which is a question a much smaller detection can be asked first.
+    /// </remarks>
+    /// <inheritdoc cref="Observe" path="/param"/>
+    public RealtimeReadReason Examine(
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
     {
-        if (dialogue && Dialogue.TryTakeConfirmation()) return true;
+        if (dialogue && Dialogue.TryTakeConfirmation()) return RealtimeReadReason.TextChanged;
         var current = capture(IsWatchingText ? _watchBands : null);
 
         if (current.Differs(_rendered))
@@ -188,12 +200,15 @@ internal sealed class RealtimeRegionState
             {
                 _pending = current;
                 _unsettledPolls++;
-                return false;
+                return RealtimeReadReason.Nothing;
             }
 
             _pending = current;
             _unsettledPolls = 0;
-            return true;
+            // With strips to compare against, a change in them is the text itself changing. Without
+            // any, this is the search: the region is changing because the picture is, and whether
+            // that includes a line of text is exactly what is not known.
+            return IsWatchingText ? RealtimeReadReason.TextChanged : RealtimeReadReason.Search;
         }
 
         _pending = current;
@@ -201,16 +216,45 @@ internal sealed class RealtimeRegionState
 
         // Nothing known is being watched, and nothing changed — the idle path, and the one that has
         // to stay free: an untouched region costs a grab and a fingerprint, and nothing else.
-        if (!IsWatchingText) return false;
+        if (!IsWatchingText) return RealtimeReadReason.Nothing;
 
         // The text we know about is unchanged, but something may have appeared outside it, which no
         // view of the old lines can see.
-        if (++_pollsSinceFullScan < FullRescanPolls) return false;
+        if (++_pollsSinceFullScan < FullRescanPolls) return RealtimeReadReason.Nothing;
 
         _pollsSinceFullScan = 0;
         bool changed = capture(null).Differs(_renderedFull);
         if (dialogue && changed) Dialogue.ObservePixelChange();
-        return changed;
+        return changed ? RealtimeReadReason.Rescan : RealtimeReadReason.Nothing;
+    }
+
+    /// <summary>
+    /// Whether a box the gate found sits inside text this region is already watching.
+    /// </summary>
+    /// <remarks>
+    /// Used by the rescan, whose whole question is whether something appeared where the strips
+    /// cannot see. A box over the line already on screen answers "no" — that text is known, it has
+    /// not changed (or the strip comparison would have said so), and recognising the region again
+    /// for it would be the timer doing exactly what the strips exist to avoid.
+    ///
+    /// By majority overlap rather than containment: the gate detects at a third of the size, so its
+    /// boxes land a few pixels off the ones a full pass would produce, and a box that is mostly over
+    /// a known line is that line.
+    /// </remarks>
+    public bool IsInsideWatchedText(System.Windows.Rect box)
+    {
+        var area = box.Width * box.Height;
+        if (area <= 0) return false;
+
+        foreach (var band in _watchBands)
+        {
+            var overlapWidth = Math.Min(box.Right, band.Right) - Math.Max(box.Left, band.Left);
+            var overlapHeight = Math.Min(box.Bottom, band.Bottom) - Math.Max(box.Top, band.Top);
+            if (overlapWidth <= 0 || overlapHeight <= 0) continue;
+            if (overlapWidth * overlapHeight * 2 >= area) return true;
+        }
+
+        return false;
     }
 
     /// <summary>
