@@ -122,7 +122,7 @@ public class OcrService : IDisposable
     }
 
     // Scenery the recogniser was not sure about. Only on this path: it is the realtime one, where
-    // the floor was measured, and where a frame arrives every 250ms so losing a doubtful reading
+    // the floor was measured, and where the next frame is a poll away so losing a doubtful reading
     // costs nothing. The screenshot path keeps everything — its user framed that capture once and
     // is waiting for it.
     //

@@ -37,10 +37,19 @@ internal sealed class RealtimeRegionState
     /// round: the thresholds were poll counts, so halving the interval silently doubled the rate the
     /// region was scanned at and the rate it was re-examined at.</para>
     ///
-    /// <para>Fast enough that a subtitle appears to update as it changes, slow enough that the grab
-    /// and fingerprint of a few small regions stay invisible in Task Manager.</para>
+    /// <para>150ms, down from 250ms. The floor is the capture backend's own readback throttle
+    /// (<c>MaxFrameAge</c>, 120ms): polling faster than frames are read back means two polls in a
+    /// row see the same pixels, which reads as "the picture has settled" and quietly disables the
+    /// wait below. What the change buys is the one thing that was pure latency — a line that changes
+    /// inside the watched strips is noticed up to 100ms sooner and confirmed 100ms sooner after
+    /// that, so the worst case for a subtitle changing goes from 500ms to 300ms.</para>
+    ///
+    /// <para>What it costs is a grab and a fingerprint 1.67x as often. The grab is a crop out of the
+    /// frame the backend already read back, not a capture; the fingerprint is measured at 0.2ms over
+    /// a subtitle strip's text bands and 0.46ms over the whole strip. Recognition, which is the
+    /// expensive thing, is unaffected — that is what expressing the thresholds in time buys.</para>
     /// </remarks>
-    public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+    public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(150);
 
     /// <summary>
     /// How long a region with no known text may keep changing before it is scanned anyway. This is
@@ -77,7 +86,7 @@ internal sealed class RealtimeRegionState
     /// anything — the work it gates happens once per line of dialogue either way, set by how often
     /// the words change and not by how often they are looked at — so all it does is wait. Sampling
     /// faster should therefore confirm faster, and this is where the poll interval is allowed to
-    /// show up as latency saved.
+    /// show up as latency saved: at 150ms it is a 150ms wait where it used to be 250ms.
     /// </remarks>
     public const int MaxTextUnsettledPolls = 1;
 

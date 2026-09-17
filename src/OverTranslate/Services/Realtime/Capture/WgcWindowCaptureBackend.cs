@@ -44,12 +44,22 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // full copy of the captured window into main memory — so it is throttled here, well away from
     // the rate frames arrive at, which over a game is 144 a second.
     //
-    // Set against the 250ms poll so a region always finds a frame less than half a poll old, and no
+    // Set under the poll interval so a region always finds a frame it has not seen before, and no
     // tighter: at this window size a readback measured 20ms, which is 16% of a core spent whether
     // anything changed or not. The first thing to try if that ever matters is reading back only the
     // rectangles being watched rather than the whole window — which needs a crop on the GPU, and so
     // the D3D interop this deliberately does without for now.
-    private static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(120);
+    //
+    // It used to be half the poll, which the poll dropping to 150ms gave up: a frame can now be up
+    // to 120ms old when a poll finds it, where it used to be 125ms at worst out of a 250ms poll.
+    // That is the same staleness in absolute terms and a bigger share of a shorter poll, and it is
+    // deliberate — this is the expensive half of the path and the poll is the cheap half, so the
+    // cheap half is what was spent. RealtimeRegionState.PollingIsNeverFasterThanFramesAreReadBack
+    // is what stops the poll going under this number, where the settle wait would break silently.
+    // Internal rather than private so the realtime poll interval can be checked against it:
+    // polling faster than frames are read back means two polls in a row see the same pixels,
+    // which reads as "the picture has settled" and disables the settle wait without saying so.
+    internal static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(120);
 
     // Reading stops this long after the last region asked for anything. Nothing in a running session
     // goes quiet for that long, so in practice this only covers a session being torn down: the

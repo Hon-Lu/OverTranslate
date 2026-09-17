@@ -48,7 +48,8 @@ namespace OverTranslate.Services.Ocr;
 ///
 /// <para>What it costs on the live path, fastest of twenty runs per capture: about 4ms on a
 /// 1825x223 subtitle strip and 20ms on a full screen, both turned away by the pre-filter, against a
-/// frame every 250ms and a detection pass of 80-160ms. A capture the pre-filter lets in costs 12ms
+/// frame every poll interval and a detection pass of 80-160ms. A capture the pre-filter lets in
+/// costs 12ms
 /// at region size and 46-55ms for a whole dark page. That is memory latency and the size of the
 /// walk, not the per-pixel API: reading the buffer directly through a span instead of
 /// <c>SKBitmap.GetPixel</c> was measured at 6-17% and is not worth its complexity.</para>

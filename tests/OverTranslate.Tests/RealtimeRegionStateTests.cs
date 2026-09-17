@@ -1,5 +1,6 @@
 using System.Drawing;
 using OverTranslate.Services.Realtime;
+using OverTranslate.Services.Realtime.Capture;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -19,6 +20,24 @@ public class RealtimeRegionStateTests
 
         Assert.InRange(search, TimeSpan.FromMilliseconds(400), TimeSpan.FromMilliseconds(600));
         Assert.InRange(rescan, TimeSpan.FromMilliseconds(850), TimeSpan.FromMilliseconds(1150));
+    }
+
+    [Fact]
+    public void PollingIsNeverFasterThanFramesAreReadBack()
+    {
+        // Both capture backends throttle the one expensive step — the GPU-to-CPU readback — so a
+        // poll taken sooner than that sees pixels it has already seen. Two identical samples read as
+        // "the picture has settled", which silently skips the wait in MaxTextUnsettledPolls: the
+        // loop would still look settled and would simply have stopped waiting for anything. Nothing
+        // about that failure is visible from the outside, so it is asserted here instead.
+        Assert.True(
+            RealtimeRegionState.PollInterval >= WgcMonitorCaptureBackend.MaxFrameAge,
+            $"poll {RealtimeRegionState.PollInterval.TotalMilliseconds}ms is faster than the monitor " +
+            $"backend's {WgcMonitorCaptureBackend.MaxFrameAge.TotalMilliseconds}ms readback");
+        Assert.True(
+            RealtimeRegionState.PollInterval >= WgcWindowCaptureBackend.MaxFrameAge,
+            $"poll {RealtimeRegionState.PollInterval.TotalMilliseconds}ms is faster than the window " +
+            $"backend's {WgcWindowCaptureBackend.MaxFrameAge.TotalMilliseconds}ms readback");
     }
 
     [Fact]

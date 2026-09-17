@@ -46,7 +46,10 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
     // The same throttles as the window backend, set for the same reasons: a readback is the one
     // expensive step and frames arrive far faster than a session polls. See
     // WgcWindowCaptureBackend, where each number is argued.
-    private static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(120);
+    // Internal rather than private so the realtime poll interval can be checked against it:
+    // polling faster than frames are read back means two polls in a row see the same pixels,
+    // which reads as "the picture has settled" and disables the settle wait without saying so.
+    internal static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(120);
     private static readonly TimeSpan IdleAfter = TimeSpan.FromSeconds(1);
     private const int FrameBuffers = 2;
 
@@ -222,7 +225,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             if (visible.Width <= 0 || visible.Height <= 0)
             {
                 // The region is not on this monitor any more — the screen changed resolution under
-                // it, or the layout moved. Nothing to read, and nothing to say four times a second.
+                // it, or the layout moved. Nothing to read, and nothing to say on every poll.
                 if (Interlocked.Exchange(ref _outsideReported, 1) == 0)
                     Log.Warn(
                         "Realtime region {Bounds} lies outside the captured monitor at {Origin}; " +

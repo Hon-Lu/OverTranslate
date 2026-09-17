@@ -42,9 +42,10 @@ public sealed class RealtimeTranslationSession
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    // Owned by RealtimeRegionState, which expresses every threshold that decides RECOGNITION
-    // against it — so this number sets how quickly a change is noticed and nothing else. Defined
-    // there rather than here so the two cannot drift apart; see the note on PollInterval.
+    // Fast enough that a subtitle appears to update as it changes, slow enough that the grab+hash
+    // of a few small regions stays invisible in Task Manager. Owned by RealtimeRegionState, which
+    // expresses every threshold that decides RECOGNITION against it — so this number sets how
+    // quickly a change is noticed and nothing else. See the note on PollInterval there.
     private static readonly TimeSpan PollInterval = RealtimeRegionState.PollInterval;
 
     // Bounded so a long session on scrolling content cannot grow the cache without limit. Cleared
@@ -381,9 +382,10 @@ public sealed class RealtimeTranslationSession
                     // Debug, where LogBlocks keeps them.
                     //
                     // Debug rather than Info because this fires once per poll that saw the pixels
-                    // move: 4/s per region, three regions, ~6MB an hour against a 12MB archive
-                    // budget. A session over a video used to evict every other line in the log —
-                    // including the startup snapshot and whatever the user actually opened the log
+                    // move: at a 150ms poll that is under 7/s per region, three regions, ~10MB an
+                    // hour against a 12MB archive budget. A session over a video used to evict every
+                    // other line in the log — including the startup snapshot and whatever the user
+                    // actually opened the log
                     // for. It sat at Info because Debug needed an environment variable nobody was
                     // going to be talked through; 設定 → 進階設定 → 記錄詳細資訊 is now a checkbox,
                     // so the detail is still one click away when this is the thing being diagnosed.
@@ -414,7 +416,7 @@ public sealed class RealtimeTranslationSession
                 catch (Exception ex)
                 {
                     // One failed pass must not end the region — the engine may be briefly
-                    // unavailable, and the next poll is only 250ms away.
+                    // unavailable, and the next poll is one interval away.
                     Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
                     pump.Report(DescribeFailure(ex));
                 }
@@ -496,7 +498,7 @@ public sealed class RealtimeTranslationSession
         {
             state.Dialogue.RecognitionUnavailable();
             // Once per session at Warn, the rest at Debug — the same rule the grab and translation
-            // sides use. Skipping is the whole recovery and the next poll is 250ms away, so this is
+            // sides use. Skipping is the whole recovery and the next poll is one interval away, so this is
             // not an error; it is the one thing that would explain a region updating far less often
             // than its neighbours, and it is invisible without saying so.
             if (Interlocked.Exchange(ref _noSlotReported, 1) == 0)

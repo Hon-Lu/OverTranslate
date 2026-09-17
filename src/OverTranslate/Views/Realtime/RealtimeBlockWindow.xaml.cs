@@ -742,7 +742,7 @@ public partial class RealtimeBlockWindow : Window
     /// screen, this overlay included. What kept the overlay out of it was
     /// <c>WDA_EXCLUDEFROMCAPTURE</c> on this window, which fails on every Windows before 11 24H2 —
     /// so there the repair photographed the translation it had drawn a moment earlier and baked it
-    /// into the "restored" background, every 250ms, on top of itself (#99). Asking the backend
+    /// into the "restored" background, on every poll, on top of itself (#99). Asking the backend
     /// instead makes that impossible rather than unlikely: the frame comes from a source that either
     /// never contained this window (a captured application window) or was composed without it (a
     /// monitor capture with the session's exclusion list), and there is no arrangement of Windows
