@@ -125,6 +125,11 @@ public partial class RealtimePage : UserControl
     // would otherwise be a hundred writes.
     private bool _draggingOpacity;
 
+    // True while this page is putting the stored 顯示外觀 modes on their trays rather than the user
+    // choosing one. Same failure as the two flags above, one control further on: checking a half
+    // raises Checked, which would write back the value being restored.
+    private bool _syncingAppearance;
+
     public RealtimePage()
     {
         InitializeComponent();
@@ -154,18 +159,11 @@ public partial class RealtimePage : UserControl
 
         // Set before the handlers go on, for the reason the boxes above give: restoring a stored
         // value must not read as the user reaching for the switch and write it straight back.
-        var appearance = SettingsService.Instance.Current;
-        NaturalBackgroundToggle.IsChecked = appearance.Realtime.NaturalBackgroundEnabled;
-        SampleTextColorToggle.IsChecked = appearance.Realtime.SampleSourceTextColor;
-        NaturalBackgroundToggle.Checked += NaturalBackgroundToggle_Toggled;
-        NaturalBackgroundToggle.Unchecked += NaturalBackgroundToggle_Toggled;
-        SampleTextColorToggle.Checked += SampleTextColorToggle_Toggled;
-        SampleTextColorToggle.Unchecked += SampleTextColorToggle_Toggled;
-
-        BorderToggle.IsChecked = appearance.Realtime.BorderEnabled;
-        (appearance.Realtime.BorderColorMode == RealtimeBorderColorMode.Fixed
-            ? BorderFixedRadio
-            : BorderRandomRadio).IsChecked = true;
+        ShowAppearanceModes(SettingsService.Instance.Current.Realtime);
+        TextColorAutoRadio.Checked += TextColorMode_Changed;
+        TextColorFixedRadio.Checked += TextColorMode_Changed;
+        ScrimColorAutoRadio.Checked += ScrimColorMode_Changed;
+        ScrimColorFixedRadio.Checked += ScrimColorMode_Changed;
         BorderToggle.Checked += BorderToggle_Toggled;
         BorderToggle.Unchecked += BorderToggle_Toggled;
         BorderRandomRadio.Checked += BorderMode_Changed;
@@ -752,54 +750,102 @@ public partial class RealtimePage : UserControl
             SettingsService.Instance.Current.Realtime.ScrimColor,
             picked => Persist(s => s.Realtime.ScrimColor = picked));
 
-    private void ResetColorsBtn_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Everything on the card, back to what it ships as: both colours and the mode each is in, the
+    /// weight of the band, and the border with its own two values.
+    /// </summary>
+    /// <remarks>
+    /// One button for the card rather than one per group. There were three before, each sitting
+    /// inside a group and undoing only that group, which left the reader to work out how much a
+    /// reset covered from where the button happened to be — and it split 底色 from 底色不透明度 across
+    /// two of them, although nobody wants one put back without the other.
+    ///
+    /// The defaults are read off a fresh <see cref="RealtimeSettings"/> rather than written out
+    /// again here, so that a default changed in one place does not leave this button restoring the
+    /// old one.
+    /// </remarks>
+    private void ResetAppearanceBtn_Click(object sender, RoutedEventArgs e)
     {
+        var defaults = new RealtimeSettings();
         Persist(s =>
         {
-            s.Realtime.TextColor = RealtimeSubtitleColors.DefaultText;
-            s.Realtime.ScrimColor = RealtimeSubtitleColors.DefaultScrim;
-            s.Realtime.ScrimOpacity = RealtimeSubtitleColors.DefaultScrimOpacity;
+            var realtime = s.Realtime;
+            realtime.SampleSourceTextColor = defaults.SampleSourceTextColor;
+            realtime.TextColor = defaults.TextColor;
+            realtime.NaturalBackgroundEnabled = defaults.NaturalBackgroundEnabled;
+            realtime.ScrimColor = defaults.ScrimColor;
+            realtime.ScrimOpacity = defaults.ScrimOpacity;
+            realtime.BorderEnabled = defaults.BorderEnabled;
+            realtime.BorderColorMode = defaults.BorderColorMode;
+            realtime.BorderColor = defaults.BorderColor;
         });
 
-        // The slider is the one control here that holds its own value rather than reading it back
-        // from the settings on every render, so it has to be told.
+        // The trays and the slider are the controls here that hold their own value rather than
+        // reading it back from the settings on every render, so they have to be told.
+        ShowAppearanceModes(SettingsService.Instance.Current.Realtime);
         SyncScrimOpacity();
         RenderColours();
     }
 
     /// <summary>
-    /// The two 進階選項 switches. Written the moment they are flipped — one press is one decision, so
-    /// there is nothing to hold back the way a drag across the opacity track has.
+    /// Puts the stored modes on the three trays and the 邊框 switch without that reading as the user
+    /// setting them.
     /// </summary>
-    private void NaturalBackgroundToggle_Toggled(object sender, RoutedEventArgs e) =>
-        Persist(s => s.Realtime.NaturalBackgroundEnabled = NaturalBackgroundToggle.IsChecked == true);
+    /// <remarks>
+    /// Guarded rather than attached-later, because the reset needs the same thing once the handlers
+    /// are already on: checking a half raises Checked, which would write the value being restored
+    /// straight back, one control at a time.
+    /// </remarks>
+    private void ShowAppearanceModes(RealtimeSettings stored)
+    {
+        _syncingAppearance = true;
+        (stored.SampleSourceTextColor ? TextColorAutoRadio : TextColorFixedRadio).IsChecked = true;
+        (stored.NaturalBackgroundEnabled ? ScrimColorAutoRadio : ScrimColorFixedRadio).IsChecked = true;
+        (stored.BorderColorMode == RealtimeBorderColorMode.Fixed
+            ? BorderFixedRadio
+            : BorderRandomRadio).IsChecked = true;
+        BorderToggle.IsChecked = stored.BorderEnabled;
+        _syncingAppearance = false;
+    }
 
-    /// <inheritdoc cref="NaturalBackgroundToggle_Toggled"/>
-    private void SampleTextColorToggle_Toggled(object sender, RoutedEventArgs e) =>
-        Persist(s => s.Realtime.SampleSourceTextColor = SampleTextColorToggle.IsChecked == true);
+    /// <summary>
+    /// 文字顏色 → 自動／固定, which is the same value the 進階選項 switch used to hold.
+    /// </summary>
+    /// <remarks>
+    /// Written the moment the half is chosen — one press is one decision, so there is nothing to
+    /// hold back the way a drag across the opacity track has. The marker moves either way, restored
+    /// or chosen: the guard is about what gets written, not about where the tray is drawn.
+    /// </remarks>
+    private void TextColorMode_Changed(object sender, RoutedEventArgs e)
+    {
+        MoveTextColorModeThumb(animate: true);
+        if (_syncingAppearance) return;
+        Persist(s => s.Realtime.SampleSourceTextColor = TextColorAutoRadio.IsChecked == true);
+    }
 
-    /// <summary>顯示外觀 → 邊框. Written on the flip, like the 進階選項 switches.</summary>
-    private void BorderToggle_Toggled(object sender, RoutedEventArgs e) =>
+    /// <inheritdoc cref="TextColorMode_Changed"/>
+    private void ScrimColorMode_Changed(object sender, RoutedEventArgs e)
+    {
+        MoveScrimColorModeThumb(animate: true);
+        if (_syncingAppearance) return;
+        Persist(s => s.Realtime.NaturalBackgroundEnabled = ScrimColorAutoRadio.IsChecked == true);
+    }
+
+    /// <summary>顯示外觀 → 邊框. Written on the flip, like the two trays above.</summary>
+    private void BorderToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_syncingAppearance) return;
         Persist(s => s.Realtime.BorderEnabled = BorderToggle.IsChecked == true);
+    }
 
+    /// <inheritdoc cref="TextColorMode_Changed"/>
     private void BorderMode_Changed(object sender, RoutedEventArgs e)
     {
+        MoveBorderModeThumb(animate: true);
+        if (_syncingAppearance) return;
         Persist(s => s.Realtime.BorderColorMode = ReferenceEquals(sender, BorderFixedRadio)
             ? RealtimeBorderColorMode.Fixed
             : RealtimeBorderColorMode.Random);
-        MoveBorderModeThumb(animate: true);
-    }
-
-    /// <summary>Back to 隨機 and the accent blue. The switch itself is left as the user set it.</summary>
-    private void ResetBorderBtn_Click(object sender, RoutedEventArgs e)
-    {
-        // Checking the half runs BorderMode_Changed, which slides the marker and stores the mode.
-        BorderRandomRadio.IsChecked = true;
-        Persist(s =>
-        {
-            s.Realtime.BorderColorMode = RealtimeBorderColorMode.Random;
-            s.Realtime.BorderColor = RealtimeSubtitleColors.DefaultBorder;
-        });
     }
 
     private void BorderColorBtn_Click(object sender, RoutedEventArgs e) =>
@@ -808,25 +854,51 @@ public partial class RealtimePage : UserControl
             picked => Persist(s => s.Realtime.BorderColor = picked));
 
     /// <summary>
-    /// The half's width is not known until the tray is shown and laid out, so the marker is placed
-    /// again whenever it gets one.
+    /// The half's width is not known until the tray is laid out, so the marker is placed again
+    /// whenever it gets one — which for 邊框 is the first time the switch is turned on.
     /// </summary>
+    private void TextColorModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        MoveTextColorModeThumb(animate: false);
+
+    /// <inheritdoc cref="TextColorModeThumb_SizeChanged"/>
+    private void ScrimColorModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        MoveScrimColorModeThumb(animate: false);
+
+    /// <inheritdoc cref="TextColorModeThumb_SizeChanged"/>
     private void BorderModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
         MoveBorderModeThumb(animate: false);
 
-    /// <summary>Slides the marker under the chosen half — the same tray as 設定 → 偵錯工具.</summary>
-    private void MoveBorderModeThumb(bool animate)
-    {
-        var target = BorderFixedRadio.IsChecked == true ? BorderModeThumb.ActualWidth : 0;
+    private void MoveTextColorModeThumb(bool animate) =>
+        MoveModeThumb(
+            TextColorModeThumb, TextColorModeThumbShift, TextColorFixedRadio.IsChecked == true, animate);
 
-        if (!animate || BorderModeThumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
+    private void MoveScrimColorModeThumb(bool animate) =>
+        MoveModeThumb(
+            ScrimColorModeThumb, ScrimColorModeThumbShift, ScrimColorFixedRadio.IsChecked == true, animate);
+
+    private void MoveBorderModeThumb(bool animate) =>
+        MoveModeThumb(
+            BorderModeThumb, BorderModeThumbShift, BorderFixedRadio.IsChecked == true, animate);
+
+    /// <summary>Slides the marker under the chosen half — the same tray as 設定 → 偵錯工具.</summary>
+    /// <remarks>
+    /// The marker is the width of one half and starts under the first, so the second is exactly one
+    /// of its own widths to the right. Three trays share this rather than one each: they are the
+    /// same control asked three times, and a copy per tray is three places for the easing to drift.
+    /// </remarks>
+    private static void MoveModeThumb(
+        Border thumb, System.Windows.Media.TranslateTransform shift, bool toSecond, bool animate)
+    {
+        var target = toSecond ? thumb.ActualWidth : 0;
+
+        if (!animate || thumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
         {
-            BorderModeThumbShift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
-            BorderModeThumbShift.X = target;
+            shift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
+            shift.X = target;
             return;
         }
 
-        BorderModeThumbShift.BeginAnimation(
+        shift.BeginAnimation(
             System.Windows.Media.TranslateTransform.XProperty,
             new System.Windows.Media.Animation.DoubleAnimation(target, TimeSpan.FromMilliseconds(220))
             {
@@ -916,9 +988,10 @@ public partial class RealtimePage : UserControl
     private void RenderColours()
     {
         var settings = SettingsService.Instance.Current;
+        var realtime = settings.Realtime;
         var opacity = CurrentScrimOpacity;
-        var text = RealtimeSubtitleColors.Text(settings.Realtime.TextColor);
-        var scrim = RealtimeSubtitleColors.Scrim(settings.Realtime.ScrimColor, opacity);
+        var text = RealtimeSubtitleColors.Text(realtime.TextColor);
+        var scrim = RealtimeSubtitleColors.Scrim(realtime.ScrimColor, opacity);
 
         ScrimOpacityValue.Text = $"{opacity}%";
 
@@ -932,18 +1005,48 @@ public partial class RealtimePage : UserControl
         ScrimColorValue.Text = RealtimeSubtitleColors.Format(scrim);
 
         PreviewText.Foreground = new SolidColorBrush(text);
-        PreviewScrim.Background = new SolidColorBrush(scrim);
+
+        // The backdrop changes with the mode — see the preview markup for why one cannot serve both.
+        PreviewChecker.Visibility = realtime.NaturalBackgroundEnabled
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        PreviewScene.Visibility = realtime.NaturalBackgroundEnabled
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        // No band at all in 自動, because that is what a session draws: the source line is erased and
+        // the picture is repaired where it was, and the translation goes back on top of the repair.
+        // Painting the stored colour here instead would promise a strip that never appears.
+        PreviewScrim.Background = realtime.NaturalBackgroundEnabled
+            ? null
+            : new SolidColorBrush(scrim);
+
+        // Greyed rather than hidden in 自動: the row would change shape with the mode, and the colour
+        // is still what a sampled line falls back to when the sample comes back unusable.
+        TextColorBtn.IsEnabled = !realtime.SampleSourceTextColor;
+        ScrimColorBtn.IsEnabled = !realtime.NaturalBackgroundEnabled;
+
+        // The slider says how much of the colour above it reaches the screen, so in 自動 it has
+        // nothing to weigh. Dimmed by hand as well as disabled: a TextBlock inside a switched-off
+        // panel is still drawn at full strength, which would leave the label looking live over a
+        // greyed track.
+        ScrimOpacityRow.IsEnabled = !realtime.NaturalBackgroundEnabled;
+        ScrimOpacityRow.Opacity = realtime.NaturalBackgroundEnabled ? 0.45 : 1.0;
+
+        // Only while it is about something on screen — see the note itself for what it is for.
+        AutoModeNotice.Visibility =
+            realtime.SampleSourceTextColor || realtime.NaturalBackgroundEnabled
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         // The border follows the same stored values the session will be started with. 隨機 has no
         // one colour to show, so the preview draws it in the theme's accent, which sits with the page.
-        var realtime = settings.Realtime;
         var fixedBorder = RealtimeSubtitleColors.Border(realtime.BorderColor);
         var fixedBorderMode = realtime.BorderColorMode == RealtimeBorderColorMode.Fixed;
-        var fixedVisibility = fixedBorderMode ? Visibility.Visible : Visibility.Collapsed;
-        BorderOptions.Visibility = realtime.BorderEnabled ? Visibility.Visible : Visibility.Collapsed;
-        // On the header line, so unlike the button it is not hidden with the options.
-        BorderColorLabel.Visibility = realtime.BorderEnabled ? fixedVisibility : Visibility.Collapsed;
-        BorderColorBtn.Visibility = fixedVisibility;
+        BorderModeTray.Visibility = realtime.BorderEnabled ? Visibility.Visible : Visibility.Collapsed;
+        BorderColorBtn.Visibility = realtime.BorderEnabled && fixedBorderMode
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         BorderColorSwatch.Background = new SolidColorBrush(fixedBorder);
         BorderColorValue.Text = RealtimeSubtitleColors.Format(fixedBorder);
         if (!realtime.BorderEnabled)
@@ -955,14 +1058,30 @@ public partial class RealtimePage : UserControl
         PreviewScrim.BorderThickness = new Thickness(
             realtime.BorderEnabled ? RealtimeSubtitleColors.BorderThickness : 0);
 
-        ResetBorderBtn.IsEnabled =
-            fixedBorderMode ||
-            !string.Equals(realtime.BorderColor, RealtimeSubtitleColors.DefaultBorder, StringComparison.OrdinalIgnoreCase);
+        ResetAppearanceBtn.IsEnabled = !IsDefaultAppearance(realtime, opacity);
+    }
 
-        ResetColorsBtn.IsEnabled =
-            settings.Realtime.TextColor != RealtimeSubtitleColors.DefaultText ||
-            settings.Realtime.ScrimColor != RealtimeSubtitleColors.DefaultScrim ||
-            opacity != RealtimeSubtitleColors.DefaultScrimOpacity;
+    /// <summary>
+    /// Whether every value on the card is still what it ships as, which is what decides the reset.
+    /// </summary>
+    /// <remarks>
+    /// A reset that would do nothing still looks like it might, and the user has to press it to find
+    /// out. The opacity is passed in rather than read from the settings: mid-drag the slider is
+    /// deliberately ahead of what is stored, and a button that comes back to life a beat late reads
+    /// as having missed the drag.
+    /// </remarks>
+    private static bool IsDefaultAppearance(RealtimeSettings realtime, int opacity)
+    {
+        var defaults = new RealtimeSettings();
+
+        return realtime.SampleSourceTextColor == defaults.SampleSourceTextColor
+            && realtime.NaturalBackgroundEnabled == defaults.NaturalBackgroundEnabled
+            && realtime.BorderEnabled == defaults.BorderEnabled
+            && realtime.BorderColorMode == defaults.BorderColorMode
+            && opacity == defaults.ScrimOpacity
+            && string.Equals(realtime.TextColor, defaults.TextColor, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(realtime.ScrimColor, defaults.ScrimColor, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(realtime.BorderColor, defaults.BorderColor, StringComparison.OrdinalIgnoreCase);
     }
 
     private void BlockCountDown_Click(object sender, RoutedEventArgs e) => StepBlockCount(-1);
