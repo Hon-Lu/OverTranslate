@@ -130,18 +130,17 @@ internal static class ChromaticBoxRepair
                 var boxRight = Math.Min(source.Width, (int)Math.Ceiling(line.Max(i => boxes[i].Right)));
                 if (bottom - top < 8 || boxRight - boxLeft < 8) continue;
 
-                // Which columns of the row carry ink. Over the row's own scanlines rather than the
-                // whole capture, though the cost of either disappears into the inference beside it:
-                // 28 captures read in 67.9s with this and 68.7s without, which is noise.
+                // Which columns of the row carry ink, in two passes over the row's own scanlines.
+                // Between the box edges first, because that is what the line's scale comes from and
+                // the scale is what says how far outside the boxes anything is allowed to matter.
                 var width = source.Width;
                 var inked = new bool[width];
                 var inkTop = bottom; var inkBottom = top; var ink = 0;
                 for (var yy = top; yy < bottom; yy++)
-                for (var x = 0; x < width; x++)
+                for (var x = boxLeft; x < boxRight; x++)
                 {
                     if (!Ink(source.GetPixel(x, yy))) continue;
                     inked[x] = true;
-                    if (x < boxLeft || x >= boxRight) continue;
                     ink++;
                     inkTop = Math.Min(inkTop, yy); inkBottom = Math.Max(inkBottom, yy + 1);
                 }
@@ -166,12 +165,27 @@ internal static class ChromaticBoxRepair
                 // 17px past its box, or 0.68 of a line.
                 var reach = Math.Max(2, height);
                 var span = Math.Max(reach, (int)(height * ReachLimit));
-                var left = boxLeft;
                 var floor = Math.Max(0, boxLeft - span);
+                var ceiling = Math.Min(width, boxRight + span);
+
+                // The second pass, and only now that the reach is bounded is there one: the columns
+                // outside the boxes that the row could possibly claim. Everything downstream — the
+                // walk outwards, the gap test, the off-the-line test — reads `inked` inside
+                // [floor, ceiling) and nowhere else, so the rest of the capture's width was being
+                // scanned for nothing. Measured on a dark page region it is about a third of the
+                // repair's whole cost.
+                for (var yy = top; yy < bottom; yy++)
+                {
+                    for (var x = floor; x < boxLeft; x++)
+                        if (Ink(source.GetPixel(x, yy))) inked[x] = true;
+                    for (var x = boxRight; x < ceiling; x++)
+                        if (Ink(source.GetPixel(x, yy))) inked[x] = true;
+                }
+
+                var left = boxLeft;
                 for (var blank = 0; left > floor && blank < reach; left--) blank = inked[left - 1] ? 0 : blank + 1;
                 while (left < boxLeft && !inked[left]) left++;
                 var right = boxRight;
-                var ceiling = Math.Min(width, boxRight + span);
                 for (var blank = 0; right < ceiling && blank < reach; right++) blank = inked[right] ? 0 : blank + 1;
                 while (right > boxRight && !inked[right - 1]) right--;
 
