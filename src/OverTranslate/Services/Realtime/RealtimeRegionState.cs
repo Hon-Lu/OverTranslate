@@ -28,6 +28,30 @@ namespace OverTranslate.Services.Realtime;
 internal sealed class RealtimeRegionState
 {
     /// <summary>
+    /// How often a watched region is looked at. Every threshold below is expressed against it.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is a sampling rate and nothing more — how quickly a change can be NOTICED. What is
+    /// then done about it is set by the intervals below, in milliseconds, so that moving this number
+    /// changes latency and not how much recognition a session pays for. It used to be the other way
+    /// round: the thresholds were poll counts, so halving the interval silently doubled the rate the
+    /// region was scanned at and the rate it was re-examined at.</para>
+    ///
+    /// <para>150ms, down from 250ms. The floor is the capture backend's own readback throttle
+    /// (<c>MaxFrameAge</c>, 120ms): polling faster than frames are read back means two polls in a
+    /// row see the same pixels, which reads as "the picture has settled" and quietly disables the
+    /// wait below. What the change buys is the one thing that was pure latency — a line that changes
+    /// inside the watched strips is noticed up to 100ms sooner and confirmed 100ms sooner after
+    /// that, so the worst case for a subtitle changing goes from 500ms to 300ms.</para>
+    ///
+    /// <para>What it costs is a grab and a fingerprint 1.67x as often. The grab is a crop out of the
+    /// frame the backend already read back, not a capture; the fingerprint is measured at 0.2ms over
+    /// a subtitle strip's text bands and 0.46ms over the whole strip. Recognition, which is the
+    /// expensive thing, is unaffected — that is what expressing the thresholds in time buys.</para>
+    /// </remarks>
+    public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(150);
+
+    /// <summary>
     /// How long a region with no known text may keep changing before it is scanned anyway. This is
     /// the path a session starts on, and the one it returns to whenever the text goes away.
     /// </summary>
@@ -35,21 +59,43 @@ internal sealed class RealtimeRegionState
     /// Short, and deliberately so. There is no way to tell "a line just appeared" from "the picture
     /// moved" without recognising, so over live content this is simply the rate at which the region
     /// is searched for text — and a line that shows for a second and a half has to be caught inside
-    /// its own lifetime or it is missed entirely. One poll means a scan every 500ms.
+    /// its own lifetime or it is missed entirely.
     ///
     /// This rate is held whether or not the region has been fruitless for a while. Easing off after
     /// a quiet spell would save real work, but it buys that saving with exactly the thing the
     /// feature exists to provide: the moment it eases off is the moment a line can slip through
     /// between scans, and the user cannot tell that from the feature simply not working. The regions
     /// people draw for this are subtitle-sized, so the work being saved was small to begin with.
+    ///
+    /// It used to be the most expensive path there is — every scan a full recognition over the whole
+    /// region, found text or not — which is why it is held at a time rather than at a poll count:
+    /// sampling faster must not search faster. <see cref="RealtimeGate"/> is what changed the price.
+    /// A scan is now a detection at a third of the size, and only the quarter of them that find
+    /// something go on to recognise, so 500ms became 300ms and still costs less than it used to:
+    /// roughly 44ms of work every 300ms against 93ms every 500ms.
+    ///
+    /// 300 rather than 200 because the poll interval is the grid these land on. At 150ms polls,
+    /// 200ms rounds to a single poll, and a single poll means <see cref="MaxUnsettledPolls"/> is
+    /// zero — no settle wait at all on the search path, and a scan on every poll rather than the
+    /// rate asked for here. The next step down is a real one, not a tuning nudge.
     /// </remarks>
-    public const int MaxUnsettledPolls = 1;
+    public static readonly TimeSpan SearchInterval = TimeSpan.FromMilliseconds(300);
+
+    /// <inheritdoc cref="SearchInterval"/>
+    public static readonly int MaxUnsettledPolls = PollsIn(SearchInterval) - 1;
 
     /// <summary>
     /// The same wait once the text strips are being watched. Far shorter, because a change here is
     /// the text itself changing rather than the picture behind it — one poll is enough to let a line
     /// that fades in arrive, and any longer is latency the reader pays for every subtitle.
     /// </summary>
+    /// <remarks>
+    /// The one threshold deliberately left in polls rather than moved to a time. It is not rationing
+    /// anything — the work it gates happens once per line of dialogue either way, set by how often
+    /// the words change and not by how often they are looked at — so all it does is wait. Sampling
+    /// faster should therefore confirm faster, and this is where the poll interval is allowed to
+    /// show up as latency saved: at 150ms it is a 150ms wait where it used to be 250ms.
+    /// </remarks>
     public const int MaxTextUnsettledPolls = 1;
 
     /// <summary>
@@ -57,13 +103,25 @@ internal sealed class RealtimeRegionState
     /// that appeared somewhere the last pass found none.
     /// </summary>
     /// <remarks>
-    /// Every poll spent below this number is a poll in which a line appearing outside the strips is
+    /// Every poll spent below this is a poll in which a line appearing outside the strips is
     /// invisible, and a line that comes and goes inside one such window is not late — it is missed.
-    /// At 12 polls that blind spot was three seconds, which is longer than plenty of subtitles are
-    /// on screen. One second costs more recognition over still content and buys back the case the
-    /// strips cannot see by design: the second speaker's line appearing well away from the first.
+    /// At three seconds that blind spot was longer than plenty of subtitles are on screen. One
+    /// second costs more recognition over still content and buys back the case the strips cannot see
+    /// by design: the second speaker's line appearing well away from the first.
+    ///
+    /// In time rather than in polls for the same reason as <see cref="SearchInterval"/>: how often
+    /// the region is sampled must not decide how often it is paid for.
+    ///
+    /// One second became 300ms when <see cref="RealtimeGate"/> made the question cheap to ask, and
+    /// this is the one the gate serves best: the rescan only cares about boxes OUTSIDE the watched
+    /// strips, so a frame whose only text is the line already on screen is turned away without any
+    /// recognition at all. A second speaker's line now shows up in a third of a second rather than
+    /// in up to a second, which is the blind spot this interval has always been trading against.
     /// </remarks>
-    public const int FullRescanPolls = 4;
+    public static readonly TimeSpan FullRescanInterval = TimeSpan.FromMilliseconds(300);
+
+    /// <inheritdoc cref="FullRescanInterval"/>
+    public static readonly int FullRescanPolls = PollsIn(FullRescanInterval);
 
     /// <summary>
     /// How many passes in a row must find nothing before the overlay is cleared. Recognition drops a
@@ -72,6 +130,11 @@ internal sealed class RealtimeRegionState
     /// reads far worse than a stale line lingering for one more poll.
     /// </summary>
     public const int EmptyPassesBeforeClearing = 2;
+
+    // Rounded to the nearest whole poll and never below one, because these are counted in polls
+    // wherever they are used and a threshold of zero would mean "every poll".
+    private static int PollsIn(TimeSpan interval) =>
+        Math.Max(1, (int)Math.Round(interval / PollInterval));
 
     private static readonly IReadOnlyList<Rectangle> NoBands = [];
     private static readonly IReadOnlyList<RenderedLine> NoLines = [];
@@ -123,9 +186,21 @@ internal sealed class RealtimeRegionState
     /// policy with fingerprints it builds by hand.
     /// </param>
     /// <returns>Whether the frame should be recognised now.</returns>
-    public bool Observe(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
+    public bool Observe(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false) =>
+        Examine(capture, dialogue) != RealtimeReadReason.Nothing;
+
+    /// <summary>The same decision, and what made it — see <see cref="RealtimeReadReason"/>.</summary>
+    /// <remarks>
+    /// The caller needs the reason because the three are not worth the same. A change inside the
+    /// watched strips is known text changing, and there is nothing cheaper than recognition that
+    /// could confirm it. The other two are asking "is there anything here at all", on a timer, and
+    /// the answer is usually no — which is a question a much smaller detection can be asked first.
+    /// </remarks>
+    /// <inheritdoc cref="Observe" path="/param"/>
+    public RealtimeReadReason Examine(
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
     {
-        if (dialogue && Dialogue.TryTakeConfirmation()) return true;
+        if (dialogue && Dialogue.TryTakeConfirmation()) return RealtimeReadReason.TextChanged;
         var current = capture(IsWatchingText ? _watchBands : null);
 
         if (current.Differs(_rendered))
@@ -139,12 +214,15 @@ internal sealed class RealtimeRegionState
             {
                 _pending = current;
                 _unsettledPolls++;
-                return false;
+                return RealtimeReadReason.Nothing;
             }
 
             _pending = current;
             _unsettledPolls = 0;
-            return true;
+            // With strips to compare against, a change in them is the text itself changing. Without
+            // any, this is the search: the region is changing because the picture is, and whether
+            // that includes a line of text is exactly what is not known.
+            return IsWatchingText ? RealtimeReadReason.TextChanged : RealtimeReadReason.Search;
         }
 
         _pending = current;
@@ -152,16 +230,45 @@ internal sealed class RealtimeRegionState
 
         // Nothing known is being watched, and nothing changed — the idle path, and the one that has
         // to stay free: an untouched region costs a grab and a fingerprint, and nothing else.
-        if (!IsWatchingText) return false;
+        if (!IsWatchingText) return RealtimeReadReason.Nothing;
 
         // The text we know about is unchanged, but something may have appeared outside it, which no
         // view of the old lines can see.
-        if (++_pollsSinceFullScan < FullRescanPolls) return false;
+        if (++_pollsSinceFullScan < FullRescanPolls) return RealtimeReadReason.Nothing;
 
         _pollsSinceFullScan = 0;
         bool changed = capture(null).Differs(_renderedFull);
         if (dialogue && changed) Dialogue.ObservePixelChange();
-        return changed;
+        return changed ? RealtimeReadReason.Rescan : RealtimeReadReason.Nothing;
+    }
+
+    /// <summary>
+    /// Whether a box the gate found sits inside text this region is already watching.
+    /// </summary>
+    /// <remarks>
+    /// Used by the rescan, whose whole question is whether something appeared where the strips
+    /// cannot see. A box over the line already on screen answers "no" — that text is known, it has
+    /// not changed (or the strip comparison would have said so), and recognising the region again
+    /// for it would be the timer doing exactly what the strips exist to avoid.
+    ///
+    /// By majority overlap rather than containment: the gate detects at a third of the size, so its
+    /// boxes land a few pixels off the ones a full pass would produce, and a box that is mostly over
+    /// a known line is that line.
+    /// </remarks>
+    public bool IsInsideWatchedText(System.Windows.Rect box)
+    {
+        var area = box.Width * box.Height;
+        if (area <= 0) return false;
+
+        foreach (var band in _watchBands)
+        {
+            var overlapWidth = Math.Min(box.Right, band.Right) - Math.Max(box.Left, band.Left);
+            var overlapHeight = Math.Min(box.Bottom, band.Bottom) - Math.Max(box.Top, band.Top);
+            if (overlapWidth <= 0 || overlapHeight <= 0) continue;
+            if (overlapWidth * overlapHeight * 2 >= area) return true;
+        }
+
+        return false;
     }
 
     /// <summary>

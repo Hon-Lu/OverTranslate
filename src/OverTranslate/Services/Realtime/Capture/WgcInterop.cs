@@ -171,7 +171,7 @@ internal static class WgcInterop
         }
 
         // A machine with no usable hardware device is rare but real — a remote session, a stripped
-        // VM. WARP is slower and entirely good enough to read a window at four frames a second.
+        // VM. WARP is slower and entirely good enough to read a window at a handful of frames a second.
         if (hr < 0)
         {
             hr = D3D11CreateDevice(

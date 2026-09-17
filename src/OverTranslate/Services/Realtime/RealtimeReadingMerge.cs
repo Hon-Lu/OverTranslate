@@ -54,7 +54,7 @@ internal readonly record struct ReadingMerge(
 /// <see cref="TextSimilarity.IsContinuationOf"/>.
 ///
 /// Lines are paired across passes by what they say, not where they are. Position sorts the
-/// candidates — the same sentence rarely jumps up the frame between two polls 250ms apart — but the
+/// candidates — the same sentence rarely jumps up the frame between two consecutive polls — but the
 /// text decides, because a line appearing above the current one shifts every box below it while the
 /// words stay put. A read line that pairs with nothing is new, and a shown line nothing pairs with
 /// has gone; both are real changes and neither is held back.

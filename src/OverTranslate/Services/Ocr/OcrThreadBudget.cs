@@ -22,7 +22,7 @@ namespace OverTranslate.Services.Ocr;
 /// behind this were taken on a sixteen-core machine, where four threads is a quarter of it, and they
 /// do not transfer to a four-core machine where four threads is all of it — and this application's
 /// premise is a game running behind it. A small machine keeps the shipped numbers and lets its
-/// blocks queue, which is a graceful thing to do: a refused poll is skipped and retried 250ms later,
+/// blocks queue, which is a graceful thing to do: a refused poll is skipped and retried a poll later,
 /// so the block updates less often rather than failing.
 ///
 /// Four threads is the ceiling because the model stops scaling there rather than because of the

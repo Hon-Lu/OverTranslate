@@ -337,6 +337,56 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     }
 
     /// <summary>
+    /// Detection alone, at whatever size is asked for, only if a slot is free right now.
+    /// </summary>
+    /// <remarks>
+    /// <para>For the live path's two timed reads — the search over a region with no known text, and
+    /// the rescan that catches text appearing outside the watched strips. Both are asking whether
+    /// there is anything here at all, and the answer is usually no; this is what asks it for a fifth
+    /// of what the pass behind it costs.</para>
+    ///
+    /// <para>It is only an answer at a SMALL size. At the size the mode reads with, detection finds
+    /// boxes on every empty frame in the corpus — 120 of 120 — so anything built on "did it find
+    /// boxes" has to say which size it asked at. See <see cref="Realtime.RealtimeReadReason"/> for
+    /// the measurement and the operating point.</para>
+    ///
+    /// <para>Takes a slot rather than queueing, as <see cref="TryRecognizeAsync"/> does and for the
+    /// same reason: this runs several times a second, and a gate that waited would be holding up the
+    /// recognition it is supposed to be saving.</para>
+    /// </remarks>
+    /// <param name="minimumScore">Boxes scoring at or below this are not returned.</param>
+    /// <returns>The qualifying boxes in the bitmap's own coordinates, or null if no slot was free.</returns>
+    internal Task<IReadOnlyList<System.Windows.Rect>?> TryDetectTextAsync(
+        Bitmap bitmap,
+        string sourceLanguage,
+        int maxDetectSize,
+        float minimumScore,
+        CancellationToken cancellationToken = default)
+    {
+        if (!OcrLanguageRouter.IsSupported(sourceLanguage))
+            throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
+
+        return Task.Run<IReadOnlyList<System.Windows.Rect>?>(() =>
+        {
+            if (!_inferenceGate.Wait(0, cancellationToken))
+                return null;
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return DetectBoxesOnly(bitmap, sourceLanguage, maxDetectSize)
+                    .Where(box => box.Score > minimumScore)
+                    .Select(box => box.Bounds)
+                    .ToList();
+            }
+            finally
+            {
+                _inferenceGate.Release();
+            }
+        }, cancellationToken);
+    }
+
+    /// <summary>
     /// Detection held open, so recognition can be asked for a chosen subset of the boxes instead of
     /// all of them. Everything after recognition is the shipped path.
     /// </summary>

@@ -61,7 +61,7 @@ internal sealed unsafe class WgcSurfaceReader : IDisposable
     private readonly IntPtr _context;
 
     // Kept between frames: every frame of a session is the same size until the window is resized,
-    // and allocating a full-frame staging texture four times a second is the one cost this path does
+    // and allocating a full-frame staging texture several times a second is the one cost this path does
     // not have to pay. Also what makes the whole read one lock: the staging texture is shared state.
     private readonly object _sync = new();
     private IntPtr _staging;

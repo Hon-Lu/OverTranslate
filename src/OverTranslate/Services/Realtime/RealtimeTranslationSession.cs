@@ -43,8 +43,10 @@ public sealed class RealtimeTranslationSession
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     // Fast enough that a subtitle appears to update as it changes, slow enough that the grab+hash
-    // of a few small regions stays invisible in Task Manager.
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+    // of a few small regions stays invisible in Task Manager. Owned by RealtimeRegionState, which
+    // expresses every threshold that decides RECOGNITION against it — so this number sets how
+    // quickly a change is noticed and nothing else. See the note on PollInterval there.
+    private static readonly TimeSpan PollInterval = RealtimeRegionState.PollInterval;
 
     // Bounded so a long session on scrolling content cannot grow the cache without limit. Cleared
     // wholesale rather than evicted one by one: at this size the loss is one extra translation for
@@ -334,6 +336,10 @@ public sealed class RealtimeTranslationSession
             var lastScan = Stopwatch.GetTimestamp();
             var skippedPolls = 0;
             var asked = readAtOnce;
+            // Which of the gate's two detector sizes the next timed read uses. Alternating is what
+            // makes it lossless — see RealtimeGate — and it lives here because it is a property of
+            // this region's loop, not of the policy.
+            var gateAlternate = false;
 
             while (asked || await timer.WaitForNextTickAsync(token))
             {
@@ -361,10 +367,52 @@ public sealed class RealtimeTranslationSession
                 // consulting a policy whose whole job is deciding which polls are worth paying for.
                 // A reading caught mid-change is not lost either — the next pass keeps the better of
                 // the two, see RealtimeReadingMerge.
-                if (!demanded && !state.Observe(Capture, region.Mode == RealtimeBlockMode.Subtitle))
+                var reason = demanded
+                    ? RealtimeReadReason.TextChanged
+                    : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle);
+                if (reason == RealtimeReadReason.Nothing)
                 {
                     skippedPolls++;
                     continue;
+                }
+
+                // The two timed reads are asking whether there is anything here, not following a
+                // change, and the answer is usually no — so they are asked the cheap way first. See
+                // RealtimeGate: detection alone at a third of the size, which turns away three
+                // quarters of the empty frames for a fifth of what the pass behind it costs, and is
+                // what lets those timers run several times as often as they used to.
+                if (reason != RealtimeReadReason.TextChanged
+                    && RealtimeGate.WorthGating(frame.Width, frame.Height))
+                {
+                    var gateSize = RealtimeGate.SizeFor(frame.Width, frame.Height, gateAlternate);
+                    gateAlternate = !gateAlternate;
+                    var found = await _ocr.TryDetectTextAsync(
+                        frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
+
+                    // Null is "no slot", which is not an answer — treated as this poll not having
+                    // happened rather than as an empty region, or a busy moment would read as the
+                    // text having gone away.
+                    if (found is null)
+                    {
+                        skippedPolls++;
+                        continue;
+                    }
+
+                    // On a rescan the strips are already accounted for: only a box outside them can
+                    // be text this region does not know about.
+                    var interesting = reason == RealtimeReadReason.Rescan
+                        ? found.Count(box => !state.IsInsideWatchedText(box))
+                        : found.Count;
+
+                    if (interesting == 0)
+                    {
+                        Log.Debug(
+                            "Realtime gate region={Region} reason={Reason} size={Size} boxes={Boxes} " +
+                            "-> nothing worth reading",
+                            region.Id, reason, gateSize, found.Count);
+                        skippedPolls++;
+                        continue;
+                    }
                 }
 
                 try
@@ -380,9 +428,10 @@ public sealed class RealtimeTranslationSession
                     // Debug, where LogBlocks keeps them.
                     //
                     // Debug rather than Info because this fires once per poll that saw the pixels
-                    // move: 4/s per region, three regions, ~6MB an hour against a 12MB archive
-                    // budget. A session over a video used to evict every other line in the log —
-                    // including the startup snapshot and whatever the user actually opened the log
+                    // move: at a 150ms poll that is under 7/s per region, three regions, ~10MB an
+                    // hour against a 12MB archive budget. A session over a video used to evict every
+                    // other line in the log — including the startup snapshot and whatever the user
+                    // actually opened the log
                     // for. It sat at Info because Debug needed an environment variable nobody was
                     // going to be talked through; 設定 → 進階設定 → 記錄詳細資訊 is now a checkbox,
                     // so the detail is still one click away when this is the thing being diagnosed.
@@ -413,7 +462,7 @@ public sealed class RealtimeTranslationSession
                 catch (Exception ex)
                 {
                     // One failed pass must not end the region — the engine may be briefly
-                    // unavailable, and the next poll is only 250ms away.
+                    // unavailable, and the next poll is one interval away.
                     Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
                     pump.Report(DescribeFailure(ex));
                 }
@@ -495,7 +544,7 @@ public sealed class RealtimeTranslationSession
         {
             state.Dialogue.RecognitionUnavailable();
             // Once per session at Warn, the rest at Debug — the same rule the grab and translation
-            // sides use. Skipping is the whole recovery and the next poll is 250ms away, so this is
+            // sides use. Skipping is the whole recovery and the next poll is one interval away, so this is
             // not an error; it is the one thing that would explain a region updating far less often
             // than its neighbours, and it is invisible without saying so.
             if (Interlocked.Exchange(ref _noSlotReported, 1) == 0)

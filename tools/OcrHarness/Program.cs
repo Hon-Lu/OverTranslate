@@ -24,6 +24,12 @@ if (args.Length > 0 && args[0] == "--session-equivalence")
 if (args.Length > 0 && args[0] == "--box-repair-rows")
     return BoxRepairRowProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--text-presence")
+    return TextPresenceProbe.Run(args.Skip(1).ToArray());
+
+if (args.Length > 0 && args[0] == "--poll-cost")
+    return PollCostProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--repair-cost")
     return RepairCostProbe.Run(args.Skip(1).ToArray());
 
@@ -87,6 +93,10 @@ if (args.Length == 0)
     Console.Error.WriteLine("                  (the vertical pipeline's columns and their text, which --group-explain never runs)");
     Console.Error.WriteLine("       OcrHarness --reject-audit <image.png> [more.png ...]");
     Console.Error.WriteLine("                  (what the confidence filter drops, and what a line would have reclaimed)");
+    Console.Error.WriteLine("       OcrHarness --text-presence [--panel] <lang> <image.png> [...]");
+    Console.Error.WriteLine("                  (can detection alone, at a fraction of the size, tell a frame with text from one without)");
+    Console.Error.WriteLine("       OcrHarness --poll-cost <image.png> [more.png ...]");
+    Console.Error.WriteLine("                  (what one realtime poll costs when it stops at the fingerprint)");
     Console.Error.WriteLine("       OcrHarness --repair-cost [--panel] <lang> <image.png> [...]");
     Console.Error.WriteLine("                  (what the row repair costs per frame, split by whether the pre-filter let it in)");
     Console.Error.WriteLine("       OcrHarness --realtime-repair [--panel] <lang> <image.png> [...]");

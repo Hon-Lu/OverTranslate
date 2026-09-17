@@ -48,7 +48,7 @@ public interface IRealtimeCaptureBackend : IDisposable
     /// </remarks>
     /// <returns>
     /// Null when this poll produced nothing — a locked screen, a source that has gone away, a
-    /// transient failure. The caller skips the poll; the next one is 250ms behind it.
+    /// transient failure. The caller skips the poll; the next one is one poll interval behind it.
     /// </returns>
     Bitmap? GrabRegion(Rectangle screenBounds);
 
