@@ -236,20 +236,42 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 runtime.ModelName,
                 ThreadCount);
 
-            using var skBitmap = ConvertToSkBitmap(bitmap);
-            using var frame = CreateDetectorFrame(skBitmap, maxDetectSize);
-            var result = runtime.Engine.Detect(frame.Bitmap, frame.Options);
-            frame.MapToSource(result.TextBlocks);
-            var blocks = ApplyBlockFilters(result.TextBlocks, normalizedLanguage, useCjkRenderMetrics, usesAutomaticLayout);
+            TextBlock[] recognised;
+            List<OcrTextBlock> blocks;
+            if (maxDetectSize is null)
+            {
+                // The screenshot path runs through the detect/recognise seam so ChromaticBoxRepair
+                // can rejoin a broken row of coloured text before anything crops from it. The seam
+                // is not a second implementation of recognition: across all 413 corpus captures it
+                // returns the same text, in boxes at the same coordinates, as the library's one-shot
+                // Detect — so what this path adds is that one repair and nothing else.
+                using var session = new DetectionSession(
+                    this, runtime, bitmap, normalizedLanguage, null, releasesRuntime: false);
+                blocks = session
+                    .Recognize(Enumerable.Range(0, session.Boxes.Count).ToArray(), out recognised)
+                    .ToList();
+            }
+            else
+            {
+                using var skBitmap = ConvertToSkBitmap(bitmap);
+                using var frame = CreateDetectorFrame(skBitmap, maxDetectSize);
+                var result = runtime.Engine.Detect(frame.Bitmap, frame.Options);
+                frame.MapToSource(result.TextBlocks);
+                recognised = result.TextBlocks;
+                blocks = ApplyBlockFilters(
+                    recognised, normalizedLanguage, useCjkRenderMetrics, usesAutomaticLayout);
+            }
 
             // Counts and lengths only — enough to tell "found nothing" from "found the wrong thing"
             // without the recognised text itself, which LogBlocks keeps at Debug.
             Log.Info(
                 "ONNX OCR lang={Lang} rawBlocks={RawBlocks} blocks={Blocks} strLen={StrLen}",
                 normalizedLanguage,
-                result.TextBlocks.Length,
+                recognised.Length,
                 blocks.Count,
-                result.StrRes?.Length ?? 0);
+                // Summed here rather than taken from the library's own concatenation, which the
+                // seam does not produce. The same quantity: how much text came back at all.
+                recognised.Sum(block => block.Text?.Length ?? 0));
 
             // Before the filters rather than after, and only when they took everything: a region
             // that reads as empty has nothing left to log, which is exactly the case anyone is
@@ -257,8 +279,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             // line framed outside the block (a box against an edge, a couple of clipped glyphs)
             // from one the confidence floor threw away (a box over the text, plausible words, a
             // score just under the bar).
-            if (blocks.Count == 0 && result.TextBlocks.Length > 0)
-                LogRejectedBlocks(normalizedLanguage, result.TextBlocks);
+            if (blocks.Count == 0 && recognised.Length > 0)
+                LogRejectedBlocks(normalizedLanguage, recognised);
 
             LogBlocks(normalizedLanguage, blocks);
             return blocks;
@@ -372,16 +394,20 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         private readonly object _detectorInput;
         private readonly SKBitmap _detectorBitmap;
         private readonly RapidOcrOptions _options;
-        private readonly IReadOnlyList<RapidOcrNet.TextBox> _detectorSpaceBoxes;
+        private IReadOnlyList<RapidOcrNet.TextBox> _detectorSpaceBoxes;
+        // False when the caller acquired the runtime itself and releases it in its own finally.
+        private readonly bool _releasesRuntime;
 
         internal DetectionSession(
             OnnxOcrEngine owner,
             RapidOcrRuntime runtime,
             Bitmap bitmap,
             string normalizedLanguage,
-            int? maxDetectSize)
+            int? maxDetectSize,
+            bool releasesRuntime = true)
         {
             _owner = owner;
+            _releasesRuntime = releasesRuntime;
             _engine = runtime.Engine;
             _language = normalizedLanguage;
             _skBitmap = ConvertToSkBitmap(bitmap);
@@ -399,14 +425,46 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             // The caller works in the coordinates of the bitmap it handed in, so every box is
             // reported there. The detector-space originals are what recognition crops with and are
             // kept beside them, because mapping is not reversible once the resize is not 1.0.
-            Boxes = _detectorSpaceBoxes
-                .Select(box =>
+            var mapped = ToSourceSpace(_detectorSpaceBoxes);
+
+            // Screenshot captures only, which is what a null detector size means here — the
+            // realtime path always names a size. Run before anything crops, because the whole point
+            // is that the pieces are never cropped: the glyphs in the gaps between them have no box
+            // of their own to read. Apply hands back the same list when nothing qualifies, which is
+            // all but two captures in the corpus.
+            if (maxDetectSize is null)
+            {
+                var repaired = ChromaticBoxRepair.Apply(
+                    _skBitmap,
+                    mapped.Select(box => new SKRect(
+                        (float)box.Bounds.Left,
+                        (float)box.Bounds.Top,
+                        (float)box.Bounds.Right,
+                        (float)box.Bounds.Bottom)).ToList(),
+                    _detectorSpaceBoxes,
+                    _frame.RatioX,
+                    _frame.RatioY,
+                    _options.Padding);
+
+                if (!ReferenceEquals(repaired, _detectorSpaceBoxes))
                 {
-                    var points = (SKPointI[])box.BoxPoints.Clone();
-                    MapToOriginalMethod.Invoke(_detectorInput, new object[] { points });
-                    return (Bounds: _frame.ToSourceBounds(points), box.Score);
-                })
-                .ToList();
+                    _detectorSpaceBoxes = repaired;
+                    mapped = ToSourceSpace(repaired);
+                }
+            }
+
+            Boxes = mapped;
+
+            List<(System.Windows.Rect Bounds, float Score)> ToSourceSpace(
+                IReadOnlyList<RapidOcrNet.TextBox> boxes) =>
+                boxes
+                    .Select(box =>
+                    {
+                        var points = (SKPointI[])box.BoxPoints.Clone();
+                        MapToOriginalMethod.Invoke(_detectorInput, new object[] { points });
+                        return (Bounds: _frame.ToSourceBounds(points), box.Score);
+                    })
+                    .ToList();
         }
 
         /// <summary>Every box the detector found, in the handed-in bitmap's own coordinates.</summary>
@@ -415,8 +473,18 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         /// <summary>
         /// Recognises the boxes at the given indices into <see cref="Boxes"/> and nothing else.
         /// </summary>
-        internal IReadOnlyList<OcrTextBlock> Recognize(IReadOnlyList<int> boxIndices)
+        internal IReadOnlyList<OcrTextBlock> Recognize(IReadOnlyList<int> boxIndices) =>
+            Recognize(boxIndices, out _);
+
+        /// <param name="recognised">
+        /// What recognition produced before <see cref="ApplyBlockFilters"/> ran, which is the only
+        /// thing that can tell a box the filters threw away from one the detector never found.
+        /// </param>
+        /// <inheritdoc cref="Recognize(IReadOnlyList{int})"/>
+        internal IReadOnlyList<OcrTextBlock> Recognize(
+            IReadOnlyList<int> boxIndices, out TextBlock[] recognised)
         {
+            recognised = Array.Empty<TextBlock>();
             if (boxIndices.Count == 0) return Array.Empty<OcrTextBlock>();
 
             var chosen = boxIndices.Select(index => _detectorSpaceBoxes[index]).ToList();
@@ -454,8 +522,9 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                     });
                 }
 
+                recognised = textBlocks.ToArray();
                 return ApplyBlockFilters(
-                    textBlocks.ToArray(),
+                    recognised,
                     _language,
                     OcrLanguageRouter.UsesCjkOnnx(_language),
                     OcrLanguageRouter.UsesAutomaticLayout(_language));
@@ -471,7 +540,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             ((IDisposable)_detectorInput).Dispose();
             _frame.Dispose();
             _skBitmap.Dispose();
-            _owner.ReleaseRuntime();
+            if (_releasesRuntime)
+                _owner.ReleaseRuntime();
         }
     }
 
