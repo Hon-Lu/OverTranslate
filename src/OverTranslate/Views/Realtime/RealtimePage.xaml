@@ -825,8 +825,13 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- Hidden in 隨機 rather than greyed like the two above: 隨機 has no one
-                                     border colour for a dimmed swatch to be showing. -->
+                                <!-- Greyed in 隨機 rather than hidden, the same as the two colour rows
+                                     above. Hiding it was defensible on its own — 隨機 has no single
+                                     border colour for the swatch to be showing — but it left a hole
+                                     in the one column the three rows share, and a row that loses a
+                                     control when a mode is picked reads as something having gone
+                                     wrong. The swatch keeps showing the stored 固定 colour, which is
+                                     what switching back to 固定 would use. -->
                                 <Button Grid.Column="3" Grid.Row="1"
                                         x:Name="BorderColorBtn"
                                         Style="{StaticResource FlatButton}"

@@ -1044,9 +1044,10 @@ public partial class RealtimePage : UserControl
         var fixedBorder = RealtimeSubtitleColors.Border(realtime.BorderColor);
         var fixedBorderMode = realtime.BorderColorMode == RealtimeBorderColorMode.Fixed;
         BorderModeTray.Visibility = realtime.BorderEnabled ? Visibility.Visible : Visibility.Collapsed;
-        BorderColorBtn.Visibility = realtime.BorderEnabled && fixedBorderMode
+        BorderColorBtn.Visibility = realtime.BorderEnabled
             ? Visibility.Visible
             : Visibility.Collapsed;
+        BorderColorBtn.IsEnabled = fixedBorderMode;
         BorderColorSwatch.Background = new SolidColorBrush(fixedBorder);
         BorderColorValue.Text = RealtimeSubtitleColors.Format(fixedBorder);
         if (!realtime.BorderEnabled)
