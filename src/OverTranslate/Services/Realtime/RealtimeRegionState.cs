@@ -67,11 +67,19 @@ internal sealed class RealtimeRegionState
     /// between scans, and the user cannot tell that from the feature simply not working. The regions
     /// people draw for this are subtitle-sized, so the work being saved was small to begin with.
     ///
-    /// It is also the most expensive path there is — every scan is a recognition over the whole
-    /// region, found text or not — which is why it is held at a time rather than at a poll count.
-    /// Sampling faster must not search faster.
+    /// It used to be the most expensive path there is — every scan a full recognition over the whole
+    /// region, found text or not — which is why it is held at a time rather than at a poll count:
+    /// sampling faster must not search faster. <see cref="RealtimeGate"/> is what changed the price.
+    /// A scan is now a detection at a third of the size, and only the quarter of them that find
+    /// something go on to recognise, so 500ms became 300ms and still costs less than it used to:
+    /// roughly 44ms of work every 300ms against 93ms every 500ms.
+    ///
+    /// 300 rather than 200 because the poll interval is the grid these land on. At 150ms polls,
+    /// 200ms rounds to a single poll, and a single poll means <see cref="MaxUnsettledPolls"/> is
+    /// zero — no settle wait at all on the search path, and a scan on every poll rather than the
+    /// rate asked for here. The next step down is a real one, not a tuning nudge.
     /// </remarks>
-    public static readonly TimeSpan SearchInterval = TimeSpan.FromMilliseconds(500);
+    public static readonly TimeSpan SearchInterval = TimeSpan.FromMilliseconds(300);
 
     /// <inheritdoc cref="SearchInterval"/>
     public static readonly int MaxUnsettledPolls = PollsIn(SearchInterval) - 1;
@@ -101,10 +109,16 @@ internal sealed class RealtimeRegionState
     /// second costs more recognition over still content and buys back the case the strips cannot see
     /// by design: the second speaker's line appearing well away from the first.
     ///
-    /// In time rather than in polls for the same reason as <see cref="SearchInterval"/>: a rescan is
-    /// a recognition, and how often the region is sampled must not decide how often it is paid for.
+    /// In time rather than in polls for the same reason as <see cref="SearchInterval"/>: how often
+    /// the region is sampled must not decide how often it is paid for.
+    ///
+    /// One second became 300ms when <see cref="RealtimeGate"/> made the question cheap to ask, and
+    /// this is the one the gate serves best: the rescan only cares about boxes OUTSIDE the watched
+    /// strips, so a frame whose only text is the line already on screen is turned away without any
+    /// recognition at all. A second speaker's line now shows up in a third of a second rather than
+    /// in up to a second, which is the blind spot this interval has always been trading against.
     /// </remarks>
-    public static readonly TimeSpan FullRescanInterval = TimeSpan.FromMilliseconds(1000);
+    public static readonly TimeSpan FullRescanInterval = TimeSpan.FromMilliseconds(300);
 
     /// <inheritdoc cref="FullRescanInterval"/>
     public static readonly int FullRescanPolls = PollsIn(FullRescanInterval);

@@ -336,5 +336,5 @@ internal static class RealtimeDetectorSize
 
     // The detector works on a grid; sizes off it are rounded up internally anyway, and rounding
     // here keeps the number in the log the same as the one the model actually used.
-    private static int RoundToStride(int size) => Math.Max(320, (size + 31) / 32 * 32);
+    internal static int RoundToStride(int size) => Math.Max(320, (size + 31) / 32 * 32);
 }

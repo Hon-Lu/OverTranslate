@@ -336,6 +336,10 @@ public sealed class RealtimeTranslationSession
             var lastScan = Stopwatch.GetTimestamp();
             var skippedPolls = 0;
             var asked = readAtOnce;
+            // Which of the gate's two detector sizes the next timed read uses. Alternating is what
+            // makes it lossless — see RealtimeGate — and it lives here because it is a property of
+            // this region's loop, not of the policy.
+            var gateAlternate = false;
 
             while (asked || await timer.WaitForNextTickAsync(token))
             {
@@ -363,10 +367,52 @@ public sealed class RealtimeTranslationSession
                 // consulting a policy whose whole job is deciding which polls are worth paying for.
                 // A reading caught mid-change is not lost either — the next pass keeps the better of
                 // the two, see RealtimeReadingMerge.
-                if (!demanded && !state.Observe(Capture, region.Mode == RealtimeBlockMode.Subtitle))
+                var reason = demanded
+                    ? RealtimeReadReason.TextChanged
+                    : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle);
+                if (reason == RealtimeReadReason.Nothing)
                 {
                     skippedPolls++;
                     continue;
+                }
+
+                // The two timed reads are asking whether there is anything here, not following a
+                // change, and the answer is usually no — so they are asked the cheap way first. See
+                // RealtimeGate: detection alone at a third of the size, which turns away three
+                // quarters of the empty frames for a fifth of what the pass behind it costs, and is
+                // what lets those timers run several times as often as they used to.
+                if (reason != RealtimeReadReason.TextChanged
+                    && RealtimeGate.WorthGating(frame.Width, frame.Height))
+                {
+                    var gateSize = RealtimeGate.SizeFor(frame.Width, frame.Height, gateAlternate);
+                    gateAlternate = !gateAlternate;
+                    var found = await _ocr.TryDetectTextAsync(
+                        frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
+
+                    // Null is "no slot", which is not an answer — treated as this poll not having
+                    // happened rather than as an empty region, or a busy moment would read as the
+                    // text having gone away.
+                    if (found is null)
+                    {
+                        skippedPolls++;
+                        continue;
+                    }
+
+                    // On a rescan the strips are already accounted for: only a box outside them can
+                    // be text this region does not know about.
+                    var interesting = reason == RealtimeReadReason.Rescan
+                        ? found.Count(box => !state.IsInsideWatchedText(box))
+                        : found.Count;
+
+                    if (interesting == 0)
+                    {
+                        Log.Debug(
+                            "Realtime gate region={Region} reason={Reason} size={Size} boxes={Boxes} " +
+                            "-> nothing worth reading",
+                            region.Id, reason, gateSize, found.Count);
+                        skippedPolls++;
+                        continue;
+                    }
                 }
 
                 try

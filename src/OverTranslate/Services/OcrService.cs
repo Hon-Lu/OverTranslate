@@ -102,6 +102,24 @@ public class OcrService : IDisposable
         return GroupRealtime(blocks, bitmap.Height, mode);
     }
 
+    /// <summary>
+    /// Whether this frame holds anything worth recognising, asked with detection alone at a
+    /// fraction of the usual size — see <see cref="Realtime.RealtimeGate"/>.
+    /// </summary>
+    /// <returns>
+    /// The boxes that cleared the score bar, in the bitmap's own coordinates; an empty list when the
+    /// frame looks empty; null when no inference slot was free, which is not an answer either way.
+    /// </returns>
+    public Task<IReadOnlyList<System.Windows.Rect>?> TryDetectTextAsync(
+        Bitmap bitmap,
+        string sourceLanguage,
+        int maxDetectSize,
+        float minimumScore,
+        CancellationToken cancellationToken = default) =>
+        _engine.TryDetectTextAsync(
+            bitmap, OcrLanguageRouter.Normalize(sourceLanguage), maxDetectSize, minimumScore,
+            cancellationToken);
+
     /// <param name="decisions">
     /// Diagnostic only, and null everywhere but OcrHarness. Passed to whichever grouper this mode
     /// really uses, so <c>--group-explain --realtime</c> reports the branch that ran rather than

@@ -8,18 +8,30 @@ namespace OverTranslate.Tests;
 public class RealtimeRegionStateTests
 {
     [Fact]
-    public void SamplingFasterDoesNotSearchOrRescanFaster()
+    public void TheTimedScansLandWhereTheyWereArguedFor()
     {
-        // The thresholds are counted in polls and derived from times, so that the poll interval
-        // decides only how quickly a change is NOTICED. Whoever moves the interval next will move
-        // these counts with it; this checks that what the counts are worth in milliseconds stays
-        // where it was argued for — a scan of a region with no known text every ~500ms, and a full
-        // re-examination of a watched region every ~1s.
+        // The thresholds are counted in polls and derived from times, so the poll interval decides
+        // only how quickly a change is NOTICED. Whoever moves the interval next moves these counts
+        // with it; this checks what they are worth in milliseconds, which is the number the
+        // argument was actually about. Both are 300ms since RealtimeGate made asking cheap.
         var search = (RealtimeRegionState.MaxUnsettledPolls + 1) * RealtimeRegionState.PollInterval;
         var rescan = RealtimeRegionState.FullRescanPolls * RealtimeRegionState.PollInterval;
 
-        Assert.InRange(search, TimeSpan.FromMilliseconds(400), TimeSpan.FromMilliseconds(600));
-        Assert.InRange(rescan, TimeSpan.FromMilliseconds(850), TimeSpan.FromMilliseconds(1150));
+        Assert.InRange(search, TimeSpan.FromMilliseconds(225), TimeSpan.FromMilliseconds(375));
+        Assert.InRange(rescan, TimeSpan.FromMilliseconds(225), TimeSpan.FromMilliseconds(375));
+    }
+
+    [Fact]
+    public void TheSearchPathStillWaitsOnePollBeforeScanning()
+    {
+        // MaxUnsettledPolls falling to zero would not look like a broken threshold — it would look
+        // like the search simply running on every poll, which is the most expensive path there is
+        // doing three times the work nobody asked for. It reaches zero as soon as SearchInterval
+        // rounds down to a single poll, so the two numbers cannot be chosen independently.
+        Assert.True(
+            RealtimeRegionState.MaxUnsettledPolls >= 1,
+            $"SearchInterval {RealtimeRegionState.SearchInterval.TotalMilliseconds}ms rounds to one " +
+            $"poll at {RealtimeRegionState.PollInterval.TotalMilliseconds}ms, so nothing throttles the search");
     }
 
     [Fact]
@@ -38,6 +50,47 @@ public class RealtimeRegionStateTests
             RealtimeRegionState.PollInterval >= WgcWindowCaptureBackend.MaxFrameAge,
             $"poll {RealtimeRegionState.PollInterval.TotalMilliseconds}ms is faster than the window " +
             $"backend's {WgcWindowCaptureBackend.MaxFrameAge.TotalMilliseconds}ms readback");
+    }
+
+    [Fact]
+    public void TheGateAlternatesBetweenItsTwoSizes()
+    {
+        // Alternating is what makes the gate lossless: the two frames the smaller size lets through
+        // the score floor are both found by the larger one. A gate that settled on one size would
+        // miss them for as long as they were on screen, because the frame does not change and so
+        // neither does the answer.
+        var first = RealtimeGate.SizeFor(1825, 223, alternate: false);
+        var second = RealtimeGate.SizeFor(1825, 223, alternate: true);
+
+        Assert.True(second > first, $"both sizes came out at {first}");
+        Assert.True(first >= 320, "the detector's input has a floor of 320");
+        Assert.Equal(0, second % 32);
+    }
+
+    [Fact]
+    public void SmallRegionsAreNotWorthGating()
+    {
+        // Under the downscale floor the recognition being avoided is already cheap and the gate's
+        // own detection cannot shrink below 320, so the two costs converge and the gate is pure
+        // overhead — an extra inference in front of every timed read, buying nothing.
+        Assert.False(RealtimeGate.WorthGating(400, 200));
+        Assert.True(RealtimeGate.WorthGating(1825, 223));
+    }
+
+    [Fact]
+    public void ABoxOverTheLineAlreadyOnScreenIsNotNewText()
+    {
+        // What the rescan asks is whether something appeared where the strips cannot see. The gate
+        // detects at a third of the size, so its boxes land a few pixels off a full pass's — hence
+        // majority overlap rather than containment.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered([new Rectangle(10, 40, 300, 20)], frame.Capture, "hello");
+
+        Assert.True(state.IsInsideWatchedText(new System.Windows.Rect(14, 42, 290, 18)));
+        Assert.True(state.IsInsideWatchedText(new System.Windows.Rect(6, 36, 300, 22)));
+        Assert.False(state.IsInsideWatchedText(new System.Windows.Rect(10, 200, 300, 20)));
+        Assert.False(state.IsInsideWatchedText(new System.Windows.Rect(400, 40, 300, 20)));
     }
 
     [Fact]
