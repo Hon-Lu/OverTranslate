@@ -410,8 +410,7 @@ public class OcrService : IDisposable
         // overlay draws, and stays on Bounds.
         var ordered = group.OrderByDescending(column => column.LayoutBounds.X).ToList();
         var bounds = ordered.Select(column => column.Bounds).Aggregate(Rect.Union);
-        var widths = ordered.Select(column => column.Bounds.Width).OrderBy(width => width).ToList();
-        var glyphSize = widths[widths.Count / 2];
+        var glyphSize = VerticalGlyphSize(ordered);
         var lines = ordered.Count > 1
             ? ordered.Select(column => column.Bounds).ToList()
             : SplitIntoVerticalCharacterCells(bounds, glyphSize);
@@ -436,6 +435,62 @@ public class OcrService : IDisposable
             layoutScript,
             ordered.Select(column => column.LayoutBounds).Aggregate(Rect.Union),
             CombineVerticalGlyphSize(layoutScript, ordered));
+    }
+
+    /// <summary>
+    /// How big one cell of vertical writing is, taken from the area each character occupies rather
+    /// than from how wide the detector drew the column.
+    /// </summary>
+    /// <remarks>
+    /// <para>MEASURED. This used to be the median of the column widths, which is right whenever a
+    /// detection box holds exactly one column — and silently doubles when one holds two. On the
+    /// comic page at <c>.ai/test-images/vertical-image-ja/genshin-4koma-column-merge.png</c>,
+    /// fourteen of the fifteen columns came back 22–26px wide with 21px of length per character,
+    /// and the fifteenth was a single box thrown across two of them: 46px wide, 252px long, 22
+    /// characters, 11.5px of length per character. The median of that group's two widths is the 46, so the balloon was drawn at twice
+    /// the size of the text it replaced — the complaint this fixes, and it is on the screenshot path
+    /// as much as the live one.</para>
+    ///
+    /// <para>Neither figure alone survives that box: its width is twice the truth and its length per
+    /// character is half of it. Their product is not, and that is the whole of the rule. Vertical CJK
+    /// sets on a square grid, so a column of <c>n</c> characters covers <c>width × length = n × g²</c>
+    /// whatever the box did, and <c>g = sqrt(width × length / n)</c> falls out. Over the fifteen
+    /// columns above it returns 22.6, 23.1, 24.6, 23.7 … for the good ones and <b>23.0</b> for the
+    /// doubled one — the same answer, from a box that was wrong in both directions.</para>
+    ///
+    /// <para>The width is still consulted, as a ceiling. The area rule has its own failure — a box
+    /// far longer than the few characters read out of it, which is what a stray mark or a dropped
+    /// reading looks like — and there the width is the sober number. Taking the smaller of the two
+    /// means each covers the other's failure, and it costs nothing on real columns: over those
+    /// fifteen the area figure was already below the width every time, because a detection box
+    /// carries a pixel or two of air on each side. The median across columns sits on top of both,
+    /// so one badly read column cannot carry the group.</para>
+    ///
+    /// <para>Latin down the spine of a book is not on a square grid, and this returns something too
+    /// small for it. That is already the assumption everywhere else: both overlays lay vertical text
+    /// out in square cells (<see cref="Layout.VerticalTextGrid"/>), so a Latin column was never going
+    /// to be drawn as one anyway — what changes here is only which of two wrong numbers it gets, and
+    /// this one at least cannot double.</para>
+    /// </remarks>
+    private static double VerticalGlyphSize(List<OcrTextBlock> columns)
+    {
+        var sizes = columns
+            .Select(column =>
+            {
+                var characters = column.Text.Count(character => !char.IsWhiteSpace(character));
+
+                // Nothing read out of it: the box is all there is to go on.
+                return characters > 0
+                    ? Math.Min(
+                        column.Bounds.Width,
+                        Math.Sqrt(column.Bounds.Width * column.Bounds.Height / characters))
+                    : column.Bounds.Width;
+            })
+            .Where(size => size > 0)
+            .OrderBy(size => size)
+            .ToList();
+
+        return sizes.Count > 0 ? sizes[sizes.Count / 2] : 1;
     }
 
     /// <summary>
