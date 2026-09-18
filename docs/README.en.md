@@ -81,7 +81,7 @@ Once the selection is done, the toolbar offers:
 
 ## Real-time Translation
 
-Ideal for **video subtitles, game screens**, and other situations that need continuous translation. After selecting the area, the screen content is recognized continuously, and the translation updates automatically in the original position whenever the text changes.
+Ideal for **video subtitles, game screens and comics**, and other situations that need continuous translation. After selecting the area, the screen content is recognized continuously, and the translation updates automatically in the original position whenever the text changes.
 
 There are two capture modes, **screen capture** and **window capture**:  
 screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1903 or later.
@@ -94,7 +94,7 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 > When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
 
 Translation blocks come in two modes:
-**Subtitles / Dialogue**: for video subtitles, game story dialogue and similar scenes (1 block recommended)
+**Subtitles / Dialogue**: for video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
 
 | Selection | Translation result |
 |-----------|--------------------|
@@ -102,7 +102,7 @@ Translation blocks come in two modes:
 | ![Real-time translation1 - dialogue game selection](images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
-**Game / UI**: for game screens, menus and interface text; if it is not a subtitle or story dialogue, this is the mode to use (1 – 2 blocks recommended)
+**Game / UI**: for game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.
 
 | Selection | Translation result |
 |-----------|--------------------|
