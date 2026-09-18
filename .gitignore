@@ -8,6 +8,7 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+*.Backup.tmp
 
 # .Net
 .dotnet
