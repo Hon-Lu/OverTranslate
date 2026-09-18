@@ -283,7 +283,7 @@
     <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">边框颜色</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">恢复显示外观默认值</sys:String>
-    <sys:String x:Key="S.Realtime.AutoModeBestFor">“自动”适合较为稳定的场景，例如对话框、菜单或静态画面等。画面快速变化时，底色与文字颜色可能无法实时贴合。</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">“自动”的文字颜色与底色不一定适合所有画面；部分影音或复杂背景可能出现文字不易阅读、擦色较突兀的情况，可根据实际画面改用“固定”。</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">工作方式</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1. 点击“选取翻译区块”，在画面上框选要翻译的区域。</sys:String>

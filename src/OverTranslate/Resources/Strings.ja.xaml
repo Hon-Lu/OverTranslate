@@ -284,7 +284,7 @@
     <sys:String x:Key="S.Realtime.BorderFixed">固定</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">枠線の色</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">表示スタイルを既定に戻す</sys:String>
-    <sys:String x:Key="S.Realtime.AutoModeBestFor">「自動」は、ダイアログやメニュー、静止した画面のように動きの少ない場面に向いています。画面が速く変わる場面では、背景と文字色が追いつかないことがあります。</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">「自動」が選ぶ文字色と背景は、すべての画面に合うわけではありません。一部の映像や複雑な背景では、文字が読みにくくなったり、消した部分が目立つことがあります。画面に応じて「固定」に切り替えてください。</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">使い方</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1.「ブロックを選択」を押し、画面上で翻訳したい範囲をドラッグします。</sys:String>

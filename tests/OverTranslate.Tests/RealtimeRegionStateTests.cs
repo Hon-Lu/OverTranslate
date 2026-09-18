@@ -253,8 +253,11 @@ public class RealtimeRegionStateTests
         var frame = new FakeFrame();
         state.MarkRendered(OneLine, frame.Capture, "hello");
 
-        // The idle path: nothing moved anywhere, so not even the full rescan may trigger a pass.
-        for (int i = 0; i < RealtimeRegionState.FullRescanPolls * 3; i++)
+        // The idle path: nothing moved anywhere, so neither the full rescan nor the idle scan may
+        // trigger a pass. Run well past the idle interval, because that is the one that could turn
+        // a region nobody is touching into a recognition every couple of seconds for hours — the
+        // idle scan is allowed to doubt a picture that moved a little, not one that did not move.
+        for (int i = 0; i < RealtimeRegionState.IdleScanPolls * 3; i++)
             Assert.False(state.Observe(frame.Capture));
     }
 
@@ -351,6 +354,128 @@ public class RealtimeRegionStateTests
     }
 
     [Fact]
+    public void AShortLineAppearingInABigBlockIsNoticed()
+    {
+        // The reported bug. A line of text is a small share of the block someone draws around a
+        // dialogue box — measured at 0.8–2.3% of the cells against a 5% bar — so the share over the
+        // whole area called it nothing, and over a still picture nothing is what it stayed: the
+        // frame never changes again, so the answer never changes either. Pausing and resuming was
+        // the only way out, which is exactly how it was reported.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered([], frame.Capture, "");
+
+        frame.ShowShortLine();
+
+        Assert.False(state.Observe(frame.Capture));   // one poll to settle, as ever
+        Assert.True(state.Observe(frame.Capture));
+    }
+
+    [Fact]
+    public void AChangeUnderEveryBarIsStillReadEventually()
+    {
+        // Nothing can be made sensitive enough to promise this away: "はい。" becoming "いいえ。"
+        // moves 3.1% of even the rows it lands in. So the floor is time rather than sensitivity — a
+        // region whose picture is not the one it was read from is read again, however little of it
+        // moved, and the user is never left with a line that will not arrive.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered(OneLine, frame.Capture, "hello");
+
+        frame.Flicker();
+
+        var polls = 1;
+        while (!state.Observe(frame.Capture))
+        {
+            polls++;
+            Assert.True(polls <= RealtimeRegionState.IdleScanPolls,
+                $"a sub-threshold change was still unread after {polls} polls");
+        }
+
+        Assert.Equal(RealtimeRegionState.IdleScanPolls, polls);
+    }
+
+    [Fact]
+    public void TheIdleScanIsNotWorthItsOwnLatency()
+    {
+        // The number the argument is about: what a reader waits, worst case, for a change nothing
+        // else could see. Two seconds is a pause; it is not a feature that does not work.
+        var idle = RealtimeRegionState.IdleScanPolls * RealtimeRegionState.PollInterval;
+
+        Assert.InRange(idle, TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(2500));
+    }
+
+    [Fact]
+    public void AnIdleScanThatFoundNothingDoesNotRunAgainOnTheNextPoll()
+    {
+        // Otherwise the scan stops being an interval and becomes every poll for as long as the
+        // region keeps flickering — which is most of what a game window does.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered(OneLine, frame.Capture, "hello");
+
+        frame.Flicker();
+        for (var poll = 1; poll < RealtimeRegionState.IdleScanPolls; poll++)
+            Assert.False(state.Observe(frame.Capture));
+        Assert.True(state.Observe(frame.Capture));
+
+        // Read, and the reading found nothing new — the gate's own answer, recorded as looked at.
+        state.MarkScanned(frame.Capture);
+
+        for (var poll = 1; poll < RealtimeRegionState.IdleScanPolls; poll++)
+            Assert.False(state.Observe(frame.Capture));
+    }
+
+    [Fact]
+    public void AFrameTheGateTurnedAwayIsStillReadProperly()
+    {
+        // The gate is a detection at a third of the region's size, and it is wrong in the direction
+        // that matters: measured over a panel corpus scaled the way a user's block scales it, its
+        // smaller size misses 11 of 23 frames that hold text and one frame is missed by both sizes.
+        // A shipped session showed what that costs when its answer is taken as final — nine lines
+        // of 19px Korean on a still screen, turned away at the gate and then never looked at again
+        // until the user pressed 暫停 and 繼續. So a frame the gate turned away is recorded as
+        // looked at, to stop the region asking at every poll, and deliberately not as read.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered([], frame.Capture, "");
+
+        frame.MoveBackground();
+        Assert.False(state.Observe(frame.Capture));
+        Assert.True(state.Observe(frame.Capture));
+        state.MarkScanned(frame.Capture);
+
+        var polls = 0;
+        while (!state.Observe(frame.Capture))
+        {
+            polls++;
+            Assert.True(polls <= RealtimeRegionState.IdleScanPolls,
+                $"a frame the gate turned away was still unread after {polls} polls");
+        }
+    }
+
+    [Fact]
+    public void AFrameTheGateTurnedAwayIsNotExaminedAgainForever()
+    {
+        // The picture changed once and holds still. Nothing records that frame — the words on screen
+        // have not changed, so nothing was rendered — and without MarkScanned every later poll
+        // compares the region against a print of the older frame, calls it a change, and asks the
+        // gate again at every single poll.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered([], frame.Capture, "");
+
+        frame.MoveBackground();
+        Assert.False(state.Observe(frame.Capture));
+        Assert.True(state.Observe(frame.Capture));
+
+        state.MarkScanned(frame.Capture);
+
+        for (var poll = 1; poll < RealtimeRegionState.IdleScanPolls; poll++)
+            Assert.False(state.Observe(frame.Capture));
+    }
+
+    [Fact]
     public void RenderedTextIsWhatWasLastMarked()
     {
         var state = new RealtimeRegionState();
@@ -425,14 +550,34 @@ public class RealtimeRegionStateTests
     {
         private byte _background = 20;
         private byte _text = 200;
+        private int _lit;
+        private bool _speck;
 
         public void MoveBackground() => _background += 40;
         public void ChangeText() => _text -= 40;
+
+        /// <summary>
+        /// A line of text appearing in a region far bigger than the line: five cells of a hundred,
+        /// which is under the share of the whole area that counts as a change and over the share of
+        /// the rows it lands in. What a short line in a dialogue box measures at.
+        /// </summary>
+        public void ShowShortLine() => _lit = 5;
+
+        /// <summary>
+        /// A caret blinking, or an animated prompt: one cell, under every bar there is — and still
+        /// not the frame that was read.
+        /// </summary>
+        public void Flicker() => _speck = !_speck;
 
         public FrameFingerprint Capture(IReadOnlyList<Rectangle>? bands)
         {
             var cells = new byte[100];
             Array.Fill(cells, bands is null ? _background : _text);
+            if (bands is null)
+            {
+                for (var i = 0; i < _lit; i++) cells[i] = 255;
+                if (_speck) cells[60] = 255;
+            }
             return new FrameFingerprint(cells);
         }
     }

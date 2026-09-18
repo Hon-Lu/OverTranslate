@@ -111,6 +111,12 @@ internal sealed class FrameFingerprint
     /// differently shaped counterpart counts as changed — there is nothing to compare against, and
     /// treating that as "unchanged" would strand the region.
     /// </summary>
+    /// <remarks>
+    /// The share is taken over everything compared, so this only means what it says when the area
+    /// compared is the area the change is expected to fill — the text strips. Over a whole watched
+    /// region it understates a line of text by the ratio of the block to the line; see
+    /// <see cref="DiffersLocally"/>, which is what the two whole-region comparisons use.
+    /// </remarks>
     public bool Differs(FrameFingerprint? other)
     {
         if (other is null || other._cells.Length != _cells.Length) return true;
@@ -123,6 +129,116 @@ internal sealed class FrameFingerprint
 
         return changed * 100 > _cells.Length * ChangedCellPercent;
     }
+
+    /// <summary>
+    /// The same question as <see cref="Differs"/>, asked of an area whose size has nothing to do
+    /// with the size of the thing being looked for: the share is taken over the busiest
+    /// <see cref="LocalWindowRows"/> rows of the grid rather than over every cell compared.
+    /// </summary>
+    /// <remarks>
+    /// <para><see cref="Differs"/> divides by everything it compared, which is right for the text
+    /// strips — those <em>are</em> the text, so a line changing moves a good fraction of them
+    /// (measured at 16–20%, against a 5% bar). It is wrong for a whole watched region, because the
+    /// denominator there is whatever rectangle the user happened to draw: the same subtitle-sized
+    /// change is divided by a whole dialogue box, and the bigger the box the smaller it looks.</para>
+    ///
+    /// <para>Measured over rendered dialogue boxes, comparing the whole region — which is what the
+    /// search path and the full rescan both do:</para>
+    ///
+    /// <code>
+    ///                                                    whole region   busiest 2 rows
+    ///   10 characters appearing in an empty 1200x300 box         2.3%            18.8%
+    ///    3 characters appearing in an empty 1200x300 box         0.8%             6.3%
+    ///   20 characters appearing in an empty 1200x300 box         5.9%            46.9%
+    ///   "そうだね、行こうか。" -> "うん、わかった。"              1.0%             7.8%
+    ///   "ずっと前から言おうと…" -> "やっぱり何でもない。"         3.3%            26.6%
+    /// </code>
+    ///
+    /// <para>Every one of those but the twenty-character line is under the 5% bar as a share of the
+    /// whole region, which is to say invisible — and invisible here is not "late", it is never: the
+    /// picture does not change again on its own, so neither does the answer. That is the reported
+    /// bug, a dialogue game whose next line never arrived until the user paused and resumed.
+    /// Measured against the rows it actually falls in, the same change clears the bar three to nine
+    /// times over.</para>
+    ///
+    /// <para>What it costs is sensitivity to things that are not text — a health bar moving, an
+    /// animated arrow — which now report a change the whole-region share used to swallow. That is
+    /// bearable precisely here and nowhere else: both callers answer this question with
+    /// <see cref="RealtimeGate"/>, a detection at a third of the size, and a frame the gate turns
+    /// away is recorded as looked at. The strips keep <see cref="Differs"/>, where a false positive
+    /// is a full recognition and the denominator is already the right one.</para>
+    /// </remarks>
+    public bool DiffersLocally(FrameFingerprint? other)
+    {
+        if (other is null || other._cells.Length != _cells.Length) return true;
+        if (_cells.Length == 0) return false;
+
+        return MaxLocalChangedShare(other, CellTolerance) * 100 > ChangedCellPercent;
+    }
+
+    /// <summary>
+    /// How many rows of the grid the busiest window spans. A line of text is a horizontal thing, so
+    /// what it moves is a band of rows rather than a share of the picture.
+    /// </summary>
+    /// <remarks>
+    /// Two rows out of the sixteen a whole area is summarised at, so an eighth of the region's
+    /// height — about a line of text in a block drawn a few lines tall, and by the table above the
+    /// difference between one row and two is nothing these cases care about. Two rather than one so
+    /// a single flickering cell cannot carry a window on its own: 2 cells of 64 is under the bar
+    /// where 2 of 32 would be over it.
+    /// </remarks>
+    internal const int LocalWindowRows = 2;
+
+    /// <summary>
+    /// The largest share of changed cells in any window of <see cref="LocalWindowRows"/> consecutive
+    /// grid rows. Exposed for the same reason as <see cref="ChangedShare"/>: so the bar can be
+    /// chosen against measured margins rather than argued about.
+    /// </summary>
+    internal double MaxLocalChangedShare(FrameFingerprint? other, int tolerance)
+    {
+        if (other is null || other._cells.Length != _cells.Length || _cells.Length == 0) return 1;
+
+        var rows = (_cells.Length + CellsX - 1) / CellsX;
+        if (rows <= LocalWindowRows) return ChangedShare(other, tolerance);
+
+        var changedInRow = new int[rows];
+        var cellsInRow = new int[rows];
+        for (var i = 0; i < _cells.Length; i++)
+        {
+            cellsInRow[i / CellsX]++;
+            if (Math.Abs(_cells[i] - other._cells[i]) > tolerance) changedInRow[i / CellsX]++;
+        }
+
+        double best = 0;
+        for (var start = 0; start + LocalWindowRows <= rows; start++)
+        {
+            int changed = 0, cells = 0;
+            for (var row = start; row < start + LocalWindowRows; row++)
+            {
+                changed += changedInRow[row];
+                cells += cellsInRow[row];
+            }
+
+            if (cells > 0) best = Math.Max(best, (double)changed / cells);
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Whether this is, cell for cell, the picture <paramref name="other"/> summarises — nothing
+    /// moved anywhere, not even by less than the bar the comparisons above have to clear.
+    /// </summary>
+    /// <remarks>
+    /// Asked by the idle scan in <see cref="RealtimeRegionState"/>, which reads a region again when
+    /// too long has passed without one. What it separates is "nothing I can see changed" from
+    /// "nothing changed": the first deserves another look, because a change under the bar is still a
+    /// change, and the second cannot possibly hold anything new.
+    /// </remarks>
+    public bool IsIdenticalTo(FrameFingerprint? other) =>
+        other is not null &&
+        _cells.Length == other._cells.Length &&
+        ChangedShare(other, CellTolerance) == 0;
 
     /// <summary>
     /// Whether a picture drawn from <paramref name="other"/> would still look right, as opposed to

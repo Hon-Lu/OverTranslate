@@ -294,7 +294,7 @@
     <sys:String x:Key="S.Realtime.ResetAppearance">還原顯示外觀預設值</sys:String>
     <!-- 不是效能警語。兩個「自動」都靠讀取畫面上原本的像素來運作，畫面靜止時讀到的就是對的，
          畫面快速變動時讀到的是上一瞬間的樣子——這是合不合適的問題，不是快不快的問題。 -->
-    <sys:String x:Key="S.Realtime.AutoModeBestFor">「自動」適合較為穩定的情境，例如對話框、選單或靜態畫面等。畫面快速變動時，底色與文字顏色可能無法即時貼合。</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">「自動」的文字顏色與底色不一定適合所有畫面；部分影音或複雜背景可能出現文字不易閱讀、擦色較突兀的情況，可依實際畫面改用「固定」。</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">運作方式</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1. 點擊「選取翻譯區塊」，在畫面上框選要翻譯的區域。</sys:String>

@@ -340,6 +340,9 @@ public sealed class RealtimeTranslationSession
             // makes it lossless — see RealtimeGate — and it lives here because it is a property of
             // this region's loop, not of the policy.
             var gateAlternate = false;
+            // How many gated polls in a row the gate has turned away. Both of its sizes have to
+            // have had their turn before the frame counts as answered: see the turn-away below.
+            var gateTurnedAway = 0;
 
             while (asked || await timer.WaitForNextTickAsync(token))
             {
@@ -410,10 +413,25 @@ public sealed class RealtimeTranslationSession
                             "Realtime gate region={Region} reason={Reason} size={Size} boxes={Boxes} " +
                             "-> nothing worth reading",
                             region.Id, reason, gateSize, found.Count);
+
+                        // Answered — but by one of the gate's two sizes, and the other one has not
+                        // been asked. Recording the frame here is what stops it ever being asked,
+                        // because a still picture then reports no change: measured over a panel
+                        // corpus scaled the way a user's block scales it, the smaller size misses
+                        // 11 frames of 23 that hold text and the larger one misses 1, so the second
+                        // opinion is most of the gate's accuracy rather than a refinement of it.
+                        // Two in a row is both sizes having had their turn; then the frame is
+                        // recorded, and the region stops asking until something changes or the idle
+                        // scan comes back for a proper read — see RealtimeRegionState.IdleScan for
+                        // the 1 frame in 23 that neither size can see.
+                        if (++gateTurnedAway >= 2) state.MarkScanned(Capture);
                         skippedPolls++;
                         continue;
                     }
                 }
+
+                // Past the gate, so the next turn-away starts a fresh pair.
+                gateTurnedAway = 0;
 
                 try
                 {
