@@ -206,7 +206,7 @@
                     Padding="16,10"
                     CornerRadius="8"
                     Background="{DynamicResource AppWarningSubtle}"
-                    BorderBrush="{DynamicResource AppWarning}"
+                    BorderBrush="{DynamicResource AppWarningBorder}"
                     BorderThickness="1"
                     Visibility="Collapsed">
                 <Grid>

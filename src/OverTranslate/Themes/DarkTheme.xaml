@@ -69,6 +69,14 @@
          so it must not be painted the colour a failure is. -->
     <SolidColorBrush x:Key="AppWarning"        Color="#E8A33D"/>
     <SolidColorBrush x:Key="AppWarningSubtle"  Color="#3A2E1C"/>
+    <!-- The outline of a warning panel, which is not AppWarning here the way it is in Light. Drawn
+         at full strength on this ground the hairline reaches 7.6:1 against the window, where the
+         cards standing beside it draw their own edges at 1.5:1 — so a note the reader is only being
+         offered came out as the loudest line in the window, ahead of both the card above it and the
+         accent button below. Dimmed to 2.6:1 it is still the warmest edge there and still plainly a
+         line; the tint it encloses and the glyph inside are what say "warning", and the edge only
+         has to say where the panel stops. -->
+    <SolidColorBrush x:Key="AppWarningBorder"  Color="#7A5C2E"/>
 
     <!-- Translation service marks: white on this ground, black on the light theme's.
          See DeepLMarkGeometry in SharedStyles. -->

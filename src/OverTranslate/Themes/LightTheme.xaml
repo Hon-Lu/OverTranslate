@@ -59,6 +59,10 @@
     <!-- The light half of AppWarning — see DarkTheme.xaml. -->
     <SolidColorBrush x:Key="AppWarning"        Color="#9A6206"/>
     <SolidColorBrush x:Key="AppWarningSubtle"  Color="#FCF1DD"/>
+    <!-- AppWarning unchanged for the panel outline: a dark warm hairline on a near-white window
+         reads as an edge rather than as a light on it, so it needs none of the dimming its dark
+         half does. See DarkTheme.xaml. -->
+    <SolidColorBrush x:Key="AppWarningBorder"  Color="#9A6206"/>
 
     <!-- Translation service marks — see DarkTheme.xaml. -->
     <SolidColorBrush x:Key="AppDeepLMark"      Color="#000000"/>
