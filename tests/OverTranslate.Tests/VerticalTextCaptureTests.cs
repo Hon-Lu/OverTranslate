@@ -65,6 +65,45 @@ public class VerticalTextCaptureTests
         Assert.Equal(["右", "左"], result.Select(block => block.Text));
     }
 
+    /// <summary>
+    /// A detection box that swallowed two columns must not double the cell the translation is set
+    /// in.
+    /// </summary>
+    /// <remarks>
+    /// The numbers are one real group off <c>.ai/test-images/vertical-realtime-ja</c>: fourteen of
+    /// the page's fifteen columns came back 22–26px wide, and the fifteenth was a single 46px box
+    /// across two of them holding both columns' 22 characters. Sized on the box widths, the median
+    /// of this group's two is that 46 and the balloon is drawn at twice the size of the text it
+    /// replaces.
+    /// </remarks>
+    [Fact]
+    public void MergeVerticalColumns_SizesTheCellFromTheAreaWhenOneBoxHoldsTwoColumns()
+    {
+        var columns = new List<OcrTextBlock>
+        {
+            new(new string('あ', 22), new System.Windows.Rect(57, 452, 46, 252)),
+            new(new string('い', 8), new System.Windows.Rect(32, 453, 24, 170)),
+        };
+
+        var merged = Assert.Single(OcrService.MergeVerticalColumns(columns.AsDetected()));
+
+        Assert.InRange(merged.RenderGlyphHeight!.Value, 20, 26);
+    }
+
+    /// <summary>
+    /// The other way a box can lie: far longer than the little that was read out of it. There the
+    /// area rule is the one that overshoots, and the box's own width is what holds it down.
+    /// </summary>
+    [Fact]
+    public void MergeVerticalColumns_KeepsTheBoxWidthWhenTheAreaWouldOvershoot()
+    {
+        var column = new OcrTextBlock("！", new System.Windows.Rect(10, 20, 8, 90));
+
+        var merged = Assert.Single(OcrService.MergeVerticalColumns([column.AsDetected()]));
+
+        Assert.Equal(8, merged.RenderGlyphHeight!.Value, precision: 10);
+    }
+
     [Fact]
     public void MergeVerticalColumns_KeepsAOneCharacterWideDetection()
     {
