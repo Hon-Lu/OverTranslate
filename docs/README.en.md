@@ -104,6 +104,8 @@ For video subtitles, game story dialogue and comic lettering; use this mode when
 | ![Real-time translation1 - dialogue game selection](images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
+> The comic pages in the comparison come from the official *Genshin Impact* manga, [Episode 5 －「危険地帯」](https://genshin.hoyoverse.com/ja/manga/detail/104872?mute=1).
+
 #### Game / UI
 For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.
 
