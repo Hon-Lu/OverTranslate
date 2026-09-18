@@ -67,6 +67,8 @@
     <sys:String x:Key="S.Update.Skip">このバージョンをスキップして通知しない</sys:String>
     <sys:String x:Key="S.Update.Downloading">ダウンロード中 {0}</sys:String>
     <sys:String x:Key="S.Update.Applying">適用中…</sys:String>
+    <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">ダウンロードが遅い？</sys:String>
+    <sys:String x:Key="S.Update.SlowLink">GitHub から手動で入手</sys:String>
     <sys:String x:Key="S.Update.Retry">再試行</sys:String>
     <sys:String x:Key="S.Update.Failed">アップデートをダウンロードできませんでした：{0}</sys:String>
     <sys:String x:Key="S.Update.CloseBlocked">アップデート中です。完了すると自動で再起動します</sys:String>

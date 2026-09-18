@@ -66,6 +66,8 @@
     <sys:String x:Key="S.Update.Skip">Skip this version and stop reminding me</sys:String>
     <sys:String x:Key="S.Update.Downloading">Downloading {0}</sys:String>
     <sys:String x:Key="S.Update.Applying">Applying...</sys:String>
+    <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">Downloading slowly? </sys:String>
+    <sys:String x:Key="S.Update.SlowLink">Get it manually from GitHub</sys:String>
     <sys:String x:Key="S.Update.Retry">Retry</sys:String>
     <sys:String x:Key="S.Update.Failed">Could not download the update: {0}</sys:String>
     <sys:String x:Key="S.Update.CloseBlocked">The update is running — the app restarts itself when it finishes</sys:String>

@@ -67,6 +67,8 @@
     <sys:String x:Key="S.Update.Skip">이 버전 건너뛰고 다시 알리지 않기</sys:String>
     <sys:String x:Key="S.Update.Downloading">내려받는 중 {0}</sys:String>
     <sys:String x:Key="S.Update.Applying">적용 중…</sys:String>
+    <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">내려받기가 느린가요? </sys:String>
+    <sys:String x:Key="S.Update.SlowLink">GitHub에서 직접 내려받기</sys:String>
     <sys:String x:Key="S.Update.Retry">다시 시도</sys:String>
     <sys:String x:Key="S.Update.Failed">업데이트를 내려받지 못했습니다: {0}</sys:String>
     <sys:String x:Key="S.Update.CloseBlocked">업데이트 중입니다. 완료되면 자동으로 다시 시작합니다</sys:String>

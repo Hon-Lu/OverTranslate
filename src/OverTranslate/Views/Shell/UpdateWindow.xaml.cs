@@ -16,6 +16,9 @@ public partial class UpdateWindow : Window
     private readonly UpdateInfo _updateInfo;
     private bool _isUpdating;
 
+    // Runs once per download attempt; see StartSlowHintTimer.
+    private DispatcherTimer? _slowHintTimer;
+
     /// <summary>
     /// Opens the update window, or brings the open one forward.
     /// </summary>
@@ -74,12 +77,14 @@ public partial class UpdateWindow : Window
             DownloadProgress.Value = 0;
             DownloadProgress.Visibility = Visibility.Visible;
             SetDownloadStatus(0);
+            StartSlowHintTimer();
 
             await UpdateService.DownloadAndApplyAsync(_updateInfo, OnDownloadProgress, OnApplyingAsync);
         }
         catch (Exception ex)
         {
             SetUpdating(false);
+            StopSlowHintTimer();
             // The button is the way to try again, so it says so — this is the one thing about it
             // that changes, now that the progress no longer lives on its label.
             DownloadBtnText.Text = LocalizationService.Get("S.Update.Retry");
@@ -114,6 +119,44 @@ public partial class UpdateWindow : Window
         if (updating) CloseBtn.SetResourceReference(ToolTipProperty, "S.Update.CloseBlocked");
         else CloseBtn.ToolTip = null;
     }
+
+    /// <summary>
+    /// Puts up the "this is taking too long" line, once, after <see cref="SlowHintDelay"/>.
+    /// </summary>
+    /// <remarks>
+    /// A download that is merely slow never fails, so <see cref="ErrorText"/> never appears and the
+    /// window goes on saying 下載中 for as long as it takes — which, when GitHub's release-asset
+    /// path is having a bad day, is tens of minutes for a delta that normally lands in seconds.
+    /// Nothing else on screen distinguishes that from a wait the user should simply sit through.
+    ///
+    /// Delayed rather than always on: on a healthy connection the whole thing is over well inside
+    /// the delay, and a standing offer to go and do it by hand would be noise in front of every
+    /// update. The link is not touched by <see cref="SetUpdating"/>, so it stays live while the
+    /// buttons around it are disabled — fetching the installer by hand is the one thing left that
+    /// the user can usefully do, and this window cannot be closed until the update finishes anyway.
+    /// </remarks>
+    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromSeconds(60);
+
+    private void StartSlowHintTimer()
+    {
+        StopSlowHintTimer();
+        SlowHintText.Visibility = Visibility.Collapsed;
+
+        _slowHintTimer = new DispatcherTimer { Interval = SlowHintDelay };
+        _slowHintTimer.Tick += (_, _) =>
+        {
+            StopSlowHintTimer();
+            SlowHintText.Visibility = Visibility.Visible;
+        };
+        _slowHintTimer.Start();
+    }
+
+    private void StopSlowHintTimer()
+    {
+        _slowHintTimer?.Stop();
+        _slowHintTimer = null;
+    }
+
 
     /// <summary>Puts a line under the progress bar, or takes it away.</summary>
     private void SetStatus(string? text)
@@ -181,6 +224,9 @@ public partial class UpdateWindow : Window
     // remaining percent look like it vanished.
     private async Task OnApplyingAsync()
     {
+        StopSlowHintTimer();
+        SlowHintText.Visibility = Visibility.Collapsed;
+
         await AnimateProgressToFullAsync();
 
         // The apply step exposes no progress at all, so an indeterminate bar is the honest signal:

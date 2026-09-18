@@ -65,6 +65,8 @@
     <sys:String x:Key="S.Update.Skip">跳過此版本，不要再提醒我</sys:String>
     <sys:String x:Key="S.Update.Downloading">下載中 {0}</sys:String>
     <sys:String x:Key="S.Update.Applying">套用中…</sys:String>
+    <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">下載速度較慢？</sys:String>
+    <sys:String x:Key="S.Update.SlowLink">前往 GitHub 手動下載</sys:String>
     <sys:String x:Key="S.Update.Retry">重試</sys:String>
     <sys:String x:Key="S.Update.Failed">下載更新失敗：{0}</sys:String>
     <sys:String x:Key="S.Update.CloseBlocked">更新進行中，完成後會自動重新啟動</sys:String>
