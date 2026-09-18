@@ -93,16 +93,23 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 > While real-time translation is running, use the hotkey (default Ctrl + Alt + S) to pause / resume translation,  
 > When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
 
-Translation blocks come in two modes:
-**Subtitles / Comics**: for video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
+Translation blocks come with several modes and layouts:
+#### Subtitles / Comics
+For video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
 
 | Selection | Translation result |
 |-----------|--------------------|
+| ![Real-time translation - comic source](images/即時翻譯-漫畫翻譯前.png) | ![Real-time translation - comic result](images/即時翻譯-漫畫翻譯後.png) |
 | ![Real-time translation - video selection](images/即時翻譯-影片框.png) | ![Real-time translation - video result](images/即時翻譯-影片翻譯.png) |
 | ![Real-time translation1 - dialogue game selection](images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
-**Game / UI**: for game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.
+> The comic pages in the comparison come from the official *Genshin Impact* manga, [Episode 5 －「危険地帯」](https://genshin.hoyoverse.com/ja/manga/detail/104872?mute=1).
+
+#### Game / UI
+For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.
+
+![Real-time translation - chat comparison](images/即時翻譯-聊天室比對圖.png)
 
 | Selection | Translation result |
 |-----------|--------------------|
