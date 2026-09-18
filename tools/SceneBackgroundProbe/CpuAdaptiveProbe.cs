@@ -50,7 +50,7 @@ internal static class CpuAdaptiveProbe
 <!doctype html><meta charset="utf-8"><title>CPU 分區背景修補</title>
 <style>body{font:16px system-ui;background:#17191d;color:#eee;margin:24px}select{padding:8px;font:inherit}main{display:flex;gap:20px;overflow:auto}figure{margin:0}figcaption{margin:10px 0}p{max-width:1100px;line-height:1.6}</style>
 <h1>CPU 字形遮罩與分區修補</h1><p>無 GPU、無神經模型、無背景歷史。22 張 chat-room 原圖，加上遊戲／影片複雜底圖上的 6 組合成文字。合成案例有乾淨背景真值；chat-room 沒有。去字結果不覆蓋譯文，以便檢查缺陷。</p>
-<select id="scene"></select> <select id="method"><option value="adaptive">新遮罩＋分區修補</option><option value="new-half">新遮罩＋半解析度</option><option value="baseline">舊遮罩＋半解析度基準</option><option value="legacy">舊版矩形修補（僅品質對照）</option><option value="mask-preview">新遮罩</option><option value="old-mask-preview">舊遮罩</option><option value="core">文字本體</option><option value="outline">描邊／陰影</option><option value="truth">乾淨底圖（僅合成案例）</option></select>
+<select id="scene"></select> <select id="method"><option value="adaptive">新遮罩＋分區修補</option><option value="new-half">新遮罩＋半解析度</option><option value="baseline">舊遮罩＋半解析度基準</option><option value="legacy">舊版矩形修補（僅品質對照）</option><option value="mask-preview">新遮罩</option><option value="old-mask-preview">舊遮罩</option><option value="truth">乾淨底圖（僅合成案例）</option></select>
 <main><figure><figcaption>來源</figcaption><img id="source"></figure><figure><figcaption id="label"></figcaption><img id="result"></figure></main>
 <script>const names=NAMES;const scene=document.querySelector('#scene'),method=document.querySelector('#method'),source=document.querySelector('#source'),result=document.querySelector('#result'),label=document.querySelector('#label');names.forEach(n=>scene.add(new Option(n,n)));scene.value='en-10';function update(){source.src=scene.value+'-source.png';result.src=scene.value+'-'+method.value+'.png';label.textContent=method.selectedOptions[0].text;}scene.onchange=method.onchange=update;result.onerror=()=>label.textContent='此案例沒有乾淨底圖';update();</script>
 """.Replace("NAMES", JsonSerializer.Serialize(names)));
@@ -71,14 +71,12 @@ internal static class CpuAdaptiveProbe
                 legacy?.Save(prefix + "-legacy.png");
             using var oldMask = GlyphMask.Build(source, regions);
             using var mask = CpuTextMask.Build(source, regions);
-            Cv2.ImWrite(prefix + "-core.png", mask.Core);
-            Cv2.ImWrite(prefix + "-outline.png", mask.Outline);
-            Preview(mask.Combined, "mask-preview"); Preview(oldMask, "old-mask-preview");
+            Preview(mask, "mask-preview"); Preview(oldMask, "old-mask-preview");
             foreach (string method in new[] { "baseline", "new-half", "adaptive" })
             {
-                using var first = Repair(method, source, mask.Combined, oldMask);
+                using var first = Repair(method, source, mask, oldMask);
                 Cv2.ImWrite(prefix + "-" + method + ".png", first.Image);
-                var usedMask = method == "baseline" ? oldMask : mask.Combined;
+                var usedMask = method == "baseline" ? oldMask : mask;
                 int changedOutside = Program.ChangedOutside(source, first.Image, usedMask);
                 if (changedOutside != 0) throw new InvalidOperationException("Pixels outside mask changed.");
                 var timings = new List<double>();
@@ -97,7 +95,7 @@ internal static class CpuAdaptiveProbe
                     else
                     {
                         using var rebuilt = CpuTextMask.Build(source, regions);
-                        using var repaired = Repair(method, source, rebuilt.Combined, oldMask);
+                        using var repaired = Repair(method, source, rebuilt, oldMask);
                     }
                     timings.Add(clock.Elapsed.TotalMilliseconds);
                     allocations += GC.GetAllocatedBytesForCurrentThread() - before;
@@ -169,7 +167,7 @@ internal static class CpuAdaptiveProbe
         catch (OperationCanceledException) { }
         using var tiny = new Mat(1, 1, MatType.CV_8UC3, Scalar.White);
         using var tinyMask = CpuTextMask.Build(tiny, [new(0, 0, 1, 1, null)]);
-        using var tinyRepair = CpuHoleRepair.Repair(tiny, tinyMask.Combined);
+        using var tinyRepair = CpuHoleRepair.Repair(tiny, tinyMask);
         Console.WriteLine("PASS full/reduced routing, mixed resolution boundary, outside-mask isolation, empty mask, cancellation, 1px input.");
     }
 }
