@@ -54,10 +54,20 @@ public static class UpdateService
     /// the UI reading "downloading" while the update is already being applied. Awaited, so the
     /// caller can repaint before ApplyUpdatesAndRestart takes over the thread and closes the app.
     /// </param>
+    /// <param name="cancelToken">
+    /// Abandons the download. Safe for the whole of it, the delta merge included: Velopack writes
+    /// to "&lt;package&gt;.partial" and renames it only once the package is complete, so what a
+    /// cancelled attempt leaves behind is a partial file the next attempt deletes. It is not passed
+    /// to the apply step, which does not take one and must not be interrupted — that step replaces
+    /// the application's own files and then restarts the process.
+    /// </param>
     public static async Task DownloadAndApplyAsync(
-        UpdateInfo info, Action<int>? onProgress = null, Func<Task>? onApplying = null)
+        UpdateInfo info, Action<int>? onProgress = null, Func<Task>? onApplying = null,
+        CancellationToken cancelToken = default)
     {
-        await info.Manager.DownloadUpdatesAsync(info.VelopackInfo, onProgress);
+        await info.Manager.DownloadUpdatesAsync(info.VelopackInfo, onProgress, cancelToken);
+
+        cancelToken.ThrowIfCancellationRequested();
 
         if (onApplying is not null)
             await onApplying();
