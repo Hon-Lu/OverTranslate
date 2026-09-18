@@ -43,7 +43,9 @@ dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c R
 
 ## 方法選擇與清理
 
-參考 [OpenCV inpainting 官方說明](https://docs.opencv.org/4.x/df/d3d/tutorial_py_inpainting.html)，採用 Navier–Stokes CPU 實作。使用[官方 Slim 套件](https://www.nuget.org/packages/OpenCvSharp4.runtime.win.slim)，保留 imgproc 與 photo，無須自行維護原生編譯。
+參考 [OpenCV inpainting 官方說明](https://docs.opencv.org/4.x/df/d3d/tutorial_py_inpainting.html)，採用 Navier–Stokes CPU 實作。方法與半徑後來都以乾淨底圖真值掃過，維持 NS 與半徑 3，理由寫在 `CpuHoleRepair.Fill` 的註解裡；半徑那一軸的關鍵是平均誤差看不出來，要看色度。
+
+使用[官方 Slim 套件](https://www.nuget.org/packages/OpenCvSharp4.runtime.win.slim)，無須自行維護原生編譯。自建更小的版本已評估並否決：Slim 的 53.0MB 幾乎都是 core 與 imgproc（含 IPP kernels），只留 core／imgproc／photo 自建仍有 47.4MB，而 `OpenCvSharpExtern` 的 CMake 是 `find_package(OpenCV REQUIRED)` 連結全部模組、沒有子集選項，要縮就得 fork。
 
 先前研究過 [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) 和 [LaMa](https://github.com/advimman/lama)：MI-GAN 在大片聊天遮罩中生成不屬於場景的物件；LaMa 的部分重複紋理效果較好，但本機 CPU 約 3.2 秒，測試的 ONNX 匯出亦無法在 DirectML 正常初始化。兩者不符合目前輕量 CPU 方向，執行器與下載腳本已移除。
 
