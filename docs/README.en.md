@@ -44,7 +44,7 @@
 OverTranslate currently offers five translation features, so you can pick the one that suits what you are doing:
 
 - **[Screenshot Translation](#screenshot-translation)** — select an area of the screen; the text is recognised and the translation is shown right on it
-- **[Real-time Translation](#real-time-translation)** — continuously translates a chosen area of a video or a game, with the translation shown in place
+- **[Real-time Translation](#real-time-translation)** — select an area of a video, a game or a comic; the text is recognised continuously and the translation is shown right on it
 - **[Quick Lookup](#quick-lookup)** — select some text and a compact translation popup opens; it can be pinned to stay on screen
 - **[Quick Translate](#quick-translate)** — select some text and press the hotkey to translate it and replace it in place
 - **[Text Translation](#text-translation)** — the full translation window, with text input, swapping languages and reading aloud
