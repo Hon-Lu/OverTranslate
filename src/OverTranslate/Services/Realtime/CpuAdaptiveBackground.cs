@@ -116,17 +116,37 @@ internal static class CpuTextMask
             }
             Cv2.BitwiseOr(core, outline, combined);
             using var antialias = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
-            // Expand the detected glyph/outline by one additional pixel to cover faint halos.
+            // Expand the detected glyph/outline by two further pixels to cover faint halos.
             // Apply after merging ROIs so the expansion is not clipped at an OCR box edge.
             //
-            // One pixel, not two: the second one used to stand in for the outline's faint tail, and
-            // it paid for every glyph everywhere to reach a tail that only exists where the outline
-            // does. GrowAlongTail follows that tail where it is instead, which both erases more of it
-            // and leaves the mask smaller — and a smaller hole is a repair with more picture left to
-            // interpolate from. Measured over the three subtitle corpora, dropping this to one and
-            // adding the growth erases 26–50% more of the leftover while masking less of the frame
-            // than two blind pixels did.
-            Cv2.Dilate(combined, combined, antialias, iterations: 1);
+            // Two, and GrowAlongTail as well. It was cut to one when the growth was added, on the
+            // reasoning that the growth follows the outline's tail where it actually is instead of
+            // paying for every glyph everywhere to reach one — and that reasoning still holds, the
+            // growth is worth most of what is erased here. What was wrong was the measurement that
+            // said the second pixel could then go: it counted what is left in the ring just outside
+            // the MASK, and a smaller mask puts that ring further from the glyph, where there is
+            // nothing left to find either way. It favours the smaller mask by construction.
+            //
+            // Measured again over a band fixed by the text rather than by the mask — of the pixels
+            // around a glyph that the source has darker than the scene, which is what an outline is,
+            // the share still darker than the scene after the repair:
+            //
+            //   corpus                  before the growth   growth + 1px   growth + 2px
+            //   chat-room (panel)                  37.8%          39.8%          36.8%
+            //   ja-game (dialogue)                 46.5%          53.5%          40.1%
+            //   ja-card                            74.9%          75.2%          68.8%
+            //   ja-video                           17.3%          11.0%           9.7%
+            //   en                                 30.7%          13.5%          12.3%
+            //
+            // One pixel is worse than what it replaced on the two corpora of game text — a reader
+            // reported exactly that, as colour left along the edge of erased words — while two
+            // pixels and the growth together are the best of the three everywhere. The cost is the
+            // masked share of the frame: 28.0% to 30.7% on chat-room, 1.76% to 1.92% on ja-game,
+            // 5.77% to 6.23% on ja-card, and a third of ja-card's tiles moving from the
+            // full-resolution repair to the shared half-resolution one, because a thicker hole is
+            // what decides that. That is the trade being made: slightly more picture interpolated,
+            // and no contour tracing where the words were.
+            Cv2.Dilate(combined, combined, antialias, iterations: 2);
             return new(core, outline, combined);
         }
         catch { core.Dispose(); outline.Dispose(); combined.Dispose(); throw; }
