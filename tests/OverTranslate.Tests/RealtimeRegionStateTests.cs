@@ -427,6 +427,34 @@ public class RealtimeRegionStateTests
     }
 
     [Fact]
+    public void AFrameTheGateTurnedAwayIsStillReadProperly()
+    {
+        // The gate is a detection at a third of the region's size, and it is wrong in the direction
+        // that matters: measured over a panel corpus scaled the way a user's block scales it, its
+        // smaller size misses 11 of 23 frames that hold text and one frame is missed by both sizes.
+        // A shipped session showed what that costs when its answer is taken as final — nine lines
+        // of 19px Korean on a still screen, turned away at the gate and then never looked at again
+        // until the user pressed 暫停 and 繼續. So a frame the gate turned away is recorded as
+        // looked at, to stop the region asking at every poll, and deliberately not as read.
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        state.MarkRendered([], frame.Capture, "");
+
+        frame.MoveBackground();
+        Assert.False(state.Observe(frame.Capture));
+        Assert.True(state.Observe(frame.Capture));
+        state.MarkScanned(frame.Capture);
+
+        var polls = 0;
+        while (!state.Observe(frame.Capture))
+        {
+            polls++;
+            Assert.True(polls <= RealtimeRegionState.IdleScanPolls,
+                $"a frame the gate turned away was still unread after {polls} polls");
+        }
+    }
+
+    [Fact]
     public void AFrameTheGateTurnedAwayIsNotExaminedAgainForever()
     {
         // The picture changed once and holds still. Nothing records that frame — the words on screen

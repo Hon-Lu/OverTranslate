@@ -148,11 +148,12 @@ internal sealed class RealtimeRegionState
     /// this exists. Whatever the comparisons make of it, a region is read again this often.</para>
     ///
     /// <para>Two seconds, and it costs nothing while a region is genuinely still: the frame has to
-    /// have moved somewhere (<see cref="FrameFingerprint.IsIdenticalTo"/>) before the idle scan
-    /// fires at all, so an untouched region is as free as it was. What pays is a region whose
-    /// picture flickers under the bar — a blinking caret, an animated prompt — and it pays one look
-    /// every two seconds for it. A reader waits out two seconds; they do not wait out a line that
-    /// never arrives.</para>
+    /// differ from the one recognition last read (<see cref="FrameFingerprint.IsIdenticalTo"/>)
+    /// before the idle scan fires at all, so a region whose picture has not moved since it was read
+    /// is as free as it was. What pays is a region whose picture flickers under the bar — a blinking
+    /// caret, an animated prompt — and a region whose frames <see cref="RealtimeGate"/> keeps
+    /// turning away, which is the case this was reported from; both pay one read every two seconds.
+    /// A reader waits out two seconds; they do not wait out a line that never arrives.</para>
     /// </remarks>
     public static readonly TimeSpan IdleScanInterval = TimeSpan.FromMilliseconds(2000);
 
@@ -178,6 +179,7 @@ internal sealed class RealtimeRegionState
     private IReadOnlyList<Rectangle> _watchBands = NoBands;
     private FrameFingerprint? _rendered;
     private FrameFingerprint? _renderedFull;
+    private FrameFingerprint? _recognised;
     private FrameFingerprint? _pending;
     private int _unsettledPolls;
     private int _pollsSinceFullScan;
@@ -304,11 +306,29 @@ internal sealed class RealtimeRegionState
     /// The last resort: read the region anyway, because too long has passed since anything did.
     /// </summary>
     /// <remarks>
-    /// See <see cref="IdleScanInterval"/> for why a region that looks unchanged cannot be trusted
-    /// indefinitely. A region with no known text goes back on the search — the cheap detection can
-    /// answer "is there anything here" as well as anything can. One that is watching text does not:
-    /// the gate in front of the rescan discards boxes over the line already on screen, which is
-    /// exactly the line this doubts, so the only answer worth having is a full read.
+    /// <para>See <see cref="IdleScanInterval"/> for why a region that looks unchanged cannot be
+    /// trusted indefinitely.</para>
+    ///
+    /// <para>What it compares against is the frame <b>recognition</b> last read, not the last frame
+    /// anything looked at, and that distinction is the whole of it. <see cref="RealtimeGate"/>
+    /// answers the two timed reads on its own by detecting at a third of the size, and a frame it
+    /// turns away is recorded by <see cref="MarkScanned"/> so the same question is not asked again
+    /// at every poll — but the gate is a heuristic sized for subtitles, and over a panel of small
+    /// text it says no to frames that are full of words. Measured from a shipped session: a
+    /// 1350x777 game chat panel holding nine lines of 19px Korean was turned away at the gate's
+    /// 416px, and the read forced a moment later by 繼續 found all nine at 928px. Nineteen pixels
+    /// of glyph is six at that scale, which is under anything a detector can find.</para>
+    ///
+    /// <para>Which makes a turned-away frame the one thing this must not accept as read: the picture
+    /// is still, so the gate will give the same answer for as long as it is asked, and nothing else
+    /// ever asks. A frame recognition has actually read is different — there the region really does
+    /// know what is in it, and an identical frame cannot be hiding anything.</para>
+    ///
+    /// <para>So the scan is a full read rather than another trip through the gate, whether or not
+    /// the region is watching text. Nothing cheaper answers the question it is asking: for a
+    /// watching region the gate discards boxes over the line already on screen, which is exactly
+    /// the line being doubted, and for a searching one the gate has already answered and is the
+    /// reason this is here.</para>
     /// </remarks>
     /// <param name="full">
     /// The whole region's print if the caller has already taken it this poll, so an idle region does
@@ -320,11 +340,10 @@ internal sealed class RealtimeRegionState
         if (_pollsSinceLook < IdleScanPolls) return RealtimeReadReason.Nothing;
 
         full ??= capture(null);
-        if (!full.IsIdenticalTo(_renderedFull))
-            return IsWatchingText ? RealtimeReadReason.TextChanged : RealtimeReadReason.Search;
+        if (!full.IsIdenticalTo(_recognised)) return RealtimeReadReason.TextChanged;
 
-        // Cell for cell the picture that was read: there is nothing here to find, and asking again
-        // on the next poll would pay for the same answer at every poll from now on.
+        // Cell for cell the picture that recognition last read: there is nothing here to find, and
+        // asking again on the next poll would pay for the same answer at every poll from now on.
         _pollsSinceLook = 0;
         return RealtimeReadReason.Nothing;
     }
@@ -395,6 +414,7 @@ internal sealed class RealtimeRegionState
         }
 
         _renderedFull = capture(null);
+        _recognised = _renderedFull;
         _rendered = IsWatchingText ? capture(_watchBands) : _renderedFull;
         _pending = _rendered;
         _unsettledPolls = 0;
@@ -415,6 +435,10 @@ internal sealed class RealtimeRegionState
     /// the region against a print of a frame two changes ago and asks the gate again, at every poll,
     /// for as long as the picture holds still. That is the leak that makes a more sensitive
     /// comparison expensive, so the two go together.
+    ///
+    /// Deliberately not recorded as recognised: this frame was looked at by a detection at a third
+    /// of the size, which is not the same claim, and the idle scan in <see cref="IdleScan"/> exists
+    /// to come back and read it properly.
     /// </remarks>
     public void MarkScanned(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture)
     {
@@ -467,6 +491,7 @@ internal sealed class RealtimeRegionState
         Dialogue.Reset();
         _rendered = null;
         _renderedFull = null;
+        _recognised = null;
         _pending = null;
         _unsettledPolls = 0;
         RenderedLines = NoLines;
