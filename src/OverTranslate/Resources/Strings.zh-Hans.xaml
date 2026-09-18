@@ -352,13 +352,13 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">移除此区块</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 对话</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫画</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / 界面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整条字幕、对话框——文字大，读取时会缩小</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">游戏面板、物品说明——文字小，读取时不缩小</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">适合影音字幕、游戏对话等文字位置较集中且固定的场景。
+    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">适合影音字幕、游戏剧情对话、漫画文字等情境；若内容以连续阅读的文字为主，建议使用此模式。
 框选时，文字上下请保留适量空间，避免贴紧文字；左右可适度放宽，但不要框入过多空白范围。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance" xml:space="preserve">适合游戏中的界面、提示，或文字位置较分散、不固定的场景。
+    <sys:String x:Key="S.Realtime.ModeGameUiGuidance" xml:space="preserve">适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。
 框选时，整体请保留一些空间；若画面有多个需要翻译的区域，建议分开框选，避免一次框入过大范围。</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">收起模式说明</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">展开模式说明</sys:String>

@@ -352,13 +352,13 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.RemoveBlock">Remove this block</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeSubtitle">Subtitles / Dialogue</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitle">Subtitles / Comics</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">Game / UI</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">Subtitle lines, dialogue boxes — large text, scaled down to read</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">Game panels, item text — small text, read at full size</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">For scenes where the text stays in one place, such as video subtitles and game dialogue.
+    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">For video subtitles, game story dialogue and comic lettering — text that is read straight through.
 Leave room above and below the text rather than hugging it; the sides can be wider, but avoid empty areas.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance" xml:space="preserve">For game menus and prompts, or scenes where the text is spread out and moves around.
+    <sys:String x:Key="S.Realtime.ModeGameUiGuidance" xml:space="preserve">For game screens, chat windows, menus and UI text — anything that is not subtitles, dialogue or comics.
 Leave a little room around the whole area; box several areas separately rather than taking one large one.</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">Hide mode details</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">Show mode details</sys:String>
