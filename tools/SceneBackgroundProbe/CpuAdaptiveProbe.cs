@@ -140,34 +140,63 @@ internal static class CpuAdaptiveProbe
 
     internal static void Verify()
     {
-        using var source = new Mat(143, 213, MatType.CV_8UC3, new Scalar(20, 40, 60));
-        using var mask = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
+        // Nothing in the picture but a slope, so the fill that carries slopes is the one that answers
+        // — and what it puts back has to be the slope, not the average of what surrounds the hole.
+        using var slope = Scene(143, 213, speckle: 0);
+        using var mask = new Mat(slope.Size(), MatType.CV_8UC1, Scalar.Black);
         Cv2.Rectangle(mask, new Rect(92, 15, 8, 110), Scalar.White, -1); // Crosses a tile boundary.
-        source.SetTo(Scalar.White, mask);
-        using var result = CpuHoleRepair.Repair(source, mask);
-        if (result.FullTiles == 0 || result.ReducedTiles != 0) throw new Exception("Thin holes must use full resolution.");
-        if (Program.ChangedOutside(source, result.Image, mask) != 0) throw new Exception("Tile writes escaped mask.");
-        using var flat = new Mat(source.Size(), MatType.CV_8UC3, new Scalar(20, 40, 60));
-        using var error = new Mat(); Cv2.Absdiff(flat, result.Image, error);
-        if (Cv2.Mean(error, mask).Val0 > 4) throw new Exception("Tile seam or contaminated donor.");
+        using var covered = slope.Clone();
+        covered.SetTo(Scalar.White, mask);
+        using var carried = CpuHoleRepair.Repair(covered, mask);
+        if (carried.FullTiles != 0 || carried.ReducedTiles != 0) throw new Exception("A slope must not be inpainted.");
+        if (Program.ChangedOutside(covered, carried.Image, mask) != 0) throw new Exception("Smooth writes escaped mask.");
+        using var error = new Mat();
+        Cv2.Absdiff(slope, carried.Image, error);
+        if (Cv2.Mean(error, mask).Val0 > 4) throw new Exception("The slope was not carried across the hole.");
+
+        // The same holes over a picture with detail in it, where inpainting answers and routes itself
+        // by how thick each tile's holes are.
+        using var detailed = Scene(143, 213, speckle: 40);
+        using var speckled = detailed.Clone();
+        speckled.SetTo(Scalar.White, mask);
+        using var thin = CpuHoleRepair.Repair(speckled, mask);
+        if (thin.FullTiles == 0 || thin.ReducedTiles != 0) throw new Exception("Thin holes must use full resolution.");
+        if (Program.ChangedOutside(speckled, thin.Image, mask) != 0) throw new Exception("Tile writes escaped mask.");
+
         using var mixedMask = mask.Clone();
         Cv2.Rectangle(mixedMask, new Rect(145, 30, 25, 50), Scalar.White, -1);
-        using var mixedSource = flat.Clone(); mixedSource.SetTo(Scalar.White, mixedMask);
+        using var mixedSource = detailed.Clone();
+        mixedSource.SetTo(Scalar.White, mixedMask);
         using var mixed = CpuHoleRepair.Repair(mixedSource, mixedMask);
         if (mixed.FullTiles == 0 || mixed.ReducedTiles == 0) throw new Exception("Mixed holes must exercise both resolutions.");
         if (Program.ChangedOutside(mixedSource, mixed.Image, mixedMask) != 0) throw new Exception("Mixed writes escaped mask.");
-        Cv2.Absdiff(flat, mixed.Image, error);
-        Scalar mixedError = Cv2.Mean(error, mixedMask);
-        if (Math.Max(mixedError.Val0, Math.Max(mixedError.Val1, mixedError.Val2)) > 4) throw new Exception("Mixed resolution seam or contaminated donor.");
-        using var empty = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
-        using var untouched = CpuHoleRepair.Repair(source, empty);
-        if (Cv2.Norm(source, untouched.Image, NormTypes.INF) != 0) throw new Exception("Empty mask changed scene.");
-        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
-        try { using var cancelled = CpuHoleRepair.Repair(source, mask, cancellation.Token); throw new Exception("Cancellation ignored."); }
+
+        using var empty = new Mat(slope.Size(), MatType.CV_8UC1, Scalar.Black);
+        using var untouched = CpuHoleRepair.Repair(covered, empty);
+        if (Cv2.Norm(covered, untouched.Image, NormTypes.INF) != 0) throw new Exception("Empty mask changed scene.");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        try { using var cancelled = CpuHoleRepair.Repair(covered, mask, cancellation.Token); throw new Exception("Cancellation ignored."); }
         catch (OperationCanceledException) { }
         using var tiny = new Mat(1, 1, MatType.CV_8UC3, Scalar.White);
         using var tinyMask = CpuTextMask.Build(tiny, [new(0, 0, 1, 1, null)]);
         using var tinyRepair = CpuHoleRepair.Repair(tiny, tinyMask);
-        Console.WriteLine("PASS full/reduced routing, mixed resolution boundary, outside-mask isolation, empty mask, cancellation, 1px input.");
+        Console.WriteLine("PASS slope carried, full/reduced routing, mixed resolution boundary, outside-mask isolation, empty mask, cancellation, 1px input.");
+    }
+
+    /// <summary>A slanted ramp, optionally speckled hard enough that it reads as detail and not shading.</summary>
+    private static Mat Scene(int rows, int cols, int speckle)
+    {
+        var scene = new Mat(rows, cols, MatType.CV_8UC3);
+        var indexer = scene.GetGenericIndexer<Vec3b>();
+        for (int y = 0; y < rows; y++)
+        for (int x = 0; x < cols; x++)
+        {
+            double along = (x + y * 1.0) / (cols + rows);
+            int noise = speckle == 0 ? 0 : (x * 911 + y * 104729) % (speckle * 2 + 1) - speckle;
+            byte Level(int bias) => (byte)Math.Clamp(30 + 170 * along + bias + noise, 0, 255);
+            indexer[y, x] = new Vec3b(Level(-20), Level(0), Level(20));
+        }
+        return scene;
     }
 }

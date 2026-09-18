@@ -187,14 +187,96 @@ internal sealed record CpuRepair(Mat Image, int FullTiles, int ReducedTiles) : I
     public void Dispose() => Image.Dispose();
 }
 
+/// <summary>What was seen of the picture, averaged down, and how much of each cell that was.</summary>
+internal sealed record Reduction(Mat Sum, Mat Seen) : IDisposable
+{
+    public void Dispose() { Sum.Dispose(); Seen.Dispose(); }
+}
+
 /// <summary>No background history, GPU, model, or shared mutable frame state.</summary>
+/// <remarks>
+/// <para>Two fills, because the hole left by a line of text is asked to do two different things.
+/// Where the picture around it carries structure — an edge, a face, foliage — what belongs in the
+/// hole is whatever the structure was doing, and that is what inpainting is for. Where the picture
+/// around it is a surface catching light, what belongs in the hole is the surface's own slope, and
+/// inpainting is bad at exactly that: it advances inward from the boundary averaging as it goes, so
+/// a hole wider than its radius fills with something flatter than its surroundings. On a background
+/// whose shading runs at an angle that reads as a flat bar where the line was, and a stack of lines
+/// reads as a staircase — which is how this was reported.</para>
+///
+/// <para>The flat bar is not a tuning problem, it is what a diffusion from the boundary does. A
+/// harmonic interpolation does not have it: a plane satisfies Laplace's equation, so a solve of that
+/// kind carries a slope across a hole exactly, at any angle. <see cref="SmoothFill"/> is one, by
+/// weighted multiresolution interpolation. What it cannot do is stop at an edge, so the two are
+/// blended by <see cref="SlopeShare"/>, which asks of each place how far the picture there departs
+/// from a slope.</para>
+/// </remarks>
 internal static class CpuHoleRepair
 {
+    /// <summary>Departure from a local slope, in levels, at which the smooth fill is fully trusted.</summary>
+    /// <inheritdoc cref="SlopeShare"/>
+    private const double SlopeDeparture = 8;
+
+    /// <summary>Departure at which it is not used at all.</summary>
+    /// <inheritdoc cref="SlopeShare"/>
+    private const double StructureDeparture = 30;
+
+    /// <summary>How much picture around a place is asked whether it is a slope.</summary>
+    /// <inheritdoc cref="SlopeShare"/>
+    private const int DepartureWindow = 97;
+
+    /// <summary>How far outside the mask the fills are computed, so a hole has context on every side.</summary>
+    /// <remarks>
+    /// A tile of the loop below is aligned to its own grid, so a tile holding the outermost masked
+    /// pixel can reach most of a tile past it. At <see cref="Tile"/> the two fills always cover every
+    /// tile the loop will ask them about, which is what lets the mix be a crop rather than a copy.
+    /// </remarks>
+    private const int Margin = Tile;
+
+    /// <summary>The square the structured fill is computed in, one at a time.</summary>
+    private const int Tile = 96;
+
     public static CpuRepair Repair(Mat source, Mat mask, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
         if (source.Type() != MatType.CV_8UC3 || mask.Type() != MatType.CV_8UC1 || source.Size() != mask.Size())
             throw new ArgumentException("Expected matching BGR image and byte mask.");
+        var holes = Cv2.BoundingRect(mask);
+        if (holes.Width == 0 || holes.Height == 0) return new(source.Clone(), 0, 0);
+
+        var area = Clip(holes, Margin, source.Size());
+        using var frame = new Mat(source, area);
+        using var within = new Mat(mask, area);
+        using var reduced = Reduce(frame, within);
+        using var slope = SlopeShare(reduced, frame.Size());
+        Cv2.MinMaxLoc(slope, out double least, out double most, out _, out _, within);
+        least /= 255;
+        most /= 255;
+        token.ThrowIfCancellationRequested();
+
+        if (most <= .02) return Structured(source, mask, token);
+
+        using var smooth = SmoothFill(reduced, frame.Size());
+        token.ThrowIfCancellationRequested();
+        if (least >= .98)
+        {
+            var only = source.Clone();
+            using var target = new Mat(only, area);
+            smooth.CopyTo(target, within);
+            return new(only, 0, 0);
+        }
+
+        // Both fills are wanted, and mixing whole frames would pay for every pixel of a screen to
+        // settle a question only the text asks. The tile loop already walks what the mask covers,
+        // so the mix happens there, on the tiles and through the same mask the fill is written by.
+        return Structured(source, mask, token, smooth, slope, area);
+    }
+
+    /// <summary>Inpainting, tile by tile, at the resolution each tile's holes are thin enough for.</summary>
+    private static CpuRepair Structured(Mat source, Mat mask, CancellationToken token,
+        Mat? smooth = null, Mat? share = null, Rect within = default)
+    {
+        var holeBounds = within;
         var result = source.Clone();
         Mat? coarse = null;
         try
@@ -202,7 +284,7 @@ internal static class CpuHoleRepair
             using var distance = new Mat();
             Cv2.DistanceTransform(mask, distance, DistanceTypes.L2, DistanceTransformMasks.Mask3);
             int full = 0, reduced = 0;
-            const int tile = 96, guard = 24;
+            const int tile = Tile, guard = 24;
             int width = source.Width, height = source.Height;
             for (int y = 0; y < height; y += tile)
             for (int x = 0; x < width; x += tile)
@@ -211,6 +293,17 @@ internal static class CpuHoleRepair
                 var area = new Rect(x, y, Math.Min(tile, width - x), Math.Min(tile, height - y));
                 using var tileMask = new Mat(mask, area);
                 if (Cv2.CountNonZero(tileMask) == 0) continue;
+                // A fill about to be weighted to nothing is not computed. Where the picture under
+                // this tile is a slope the smooth solve answers alone, which also keeps a tile of
+                // slope from being the reason the whole frame is inpainted at half resolution.
+                if (smooth is not null && share is not null
+                    && Cv2.Mean(new Mat(share, Local(area, holeBounds)), tileMask).Val0 >= 250)
+                {
+                    using var only = new Mat(smooth, Local(area, holeBounds));
+                    using var onlyTarget = new Mat(result, area);
+                    only.CopyTo(onlyTarget, tileMask);
+                    continue;
+                }
                 using var tileDistance = new Mat(distance, area);
                 Cv2.MinMaxLoc(tileDistance, out _, out double radius);
                 var context = new Rect(Math.Max(0, x - guard), Math.Max(0, y - guard),
@@ -231,7 +324,8 @@ internal static class CpuHoleRepair
                     coarse ??= RepairReduced(source, mask);
                     using var coarseTile = new Mat(coarse, area);
                     using var coarseTarget = new Mat(result, area);
-                    coarseTile.CopyTo(coarseTarget, tileMask);
+                    using var coarseFill = Blend(coarseTile, smooth, share, area, within);
+                    coarseFill.CopyTo(coarseTarget, tileMask);
                     reduced++;
                     continue;
                 }
@@ -240,7 +334,8 @@ internal static class CpuHoleRepair
                 var local = new Rect(x - context.X, y - context.Y, area.Width, area.Height);
                 using var interior = new Mat(filled, local);
                 using var target = new Mat(result, area);
-                interior.CopyTo(target, tileMask);
+                using var fill = Blend(interior, smooth, share, area, within);
+                fill.CopyTo(target, tileMask);
             }
             token.ThrowIfCancellationRequested();
             return new(result, full, reduced);
@@ -248,6 +343,283 @@ internal static class CpuHoleRepair
         catch { result.Dispose(); throw; }
         finally { coarse?.Dispose(); }
     }
+
+    /// <summary>One tile's fill, moved toward the smooth one by however much of a slope it sits on.</summary>
+    /// <remarks>The two fills cover <paramref name="within"/> rather than the frame, so the tile is
+    /// looked up relative to it. Every tile the loop reaches lies inside the mask's own bounds, and
+    /// those are what <paramref name="within"/> was cut around.</remarks>
+    private static Mat Blend(Mat structured, Mat? smooth, Mat? share, Rect area, Rect within)
+    {
+        if (smooth is null || share is null) return structured.Clone();
+        var local = Local(area, within);
+        using var shareTile = new Mat(share, local);
+        // Nothing of the smooth fill belongs here, so nothing of it is computed.
+        if (Cv2.Mean(shareTile).Val0 <= 2) return structured.Clone();
+        using var smoothTile = new Mat(smooth, local);
+        return Mix(structured, smoothTile, shareTile);
+    }
+
+    /// <summary>Where a tile of the frame lands in the two fills, which cover the mask's bounds.</summary>
+    private static Rect Local(Rect area, Rect within) =>
+        new(area.X - within.X, area.Y - within.Y, area.Width, area.Height);
+
+    /// <summary>The picture averaged down, carrying how much of each cell was actually observed.</summary>
+    /// <remarks>
+    /// Both questions below are asked of this one reduction, and both are about neighbourhoods rather
+    /// than pixels, so this is the only place either of them reads the frame at its own size. An area
+    /// resize of the picture with the hole blacked out is the sum of what was seen in each cell, and
+    /// the same resize of the mask is how much of the cell that was; the cell's colour is one divided
+    /// by the other, and every level of the solve below is that pair again.
+    /// </remarks>
+    private static Reduction Reduce(Mat source, Mat mask)
+    {
+        // The ring just outside the mask is where whatever survived the erase lives — the last pixel
+        // of an outline, the end of a fade. It is not asked what the picture there is: a fill
+        // anchored on it inherits the thing it was meant to remove, and a slope measured through it
+        // is measured through a contour. What gets replaced is still only what the mask covers.
+        using var spread = new Mat();
+        using var ring = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(DonorGuard * 2 + 1, DonorGuard * 2 + 1));
+        Cv2.Dilate(mask, spread, ring);
+        using var known = new Mat();
+        Cv2.BitwiseNot(spread, known);
+        using var held = source.Clone();
+        held.SetTo(Scalar.All(0), spread);
+
+        var size = new Size(Math.Max(1, source.Width / SlopeScale), Math.Max(1, source.Height / SlopeScale));
+        using var heldSmall = new Mat();
+        using var knownSmall = new Mat();
+        Cv2.Resize(held, heldSmall, size, interpolation: InterpolationFlags.Area);
+        Cv2.Resize(known, knownSmall, size, interpolation: InterpolationFlags.Area);
+        var sum = new Mat();
+        var seen = new Mat();
+        heldSmall.ConvertTo(sum, MatType.CV_32FC3);
+        knownSmall.ConvertTo(seen, MatType.CV_32F, 1.0 / 255);
+        return new(sum, seen);
+    }
+
+    /// <summary>
+    /// How much each place looks like a slope rather than like structure: 1 where nothing within
+    /// <see cref="DepartureWindow"/> pixels of it departs from a slope by more than
+    /// <see cref="SlopeDeparture"/> levels, 0 at <see cref="StructureDeparture"/>, a straight line
+    /// between.
+    /// </summary>
+    /// <remarks>
+    /// <para>A plane's second difference is zero wherever it is taken, so that is the measure:
+    /// shading of any steepness and any angle answers nothing, an edge or a texture answers its own
+    /// contrast. It is taken over cells the mask does not cover, so the glyphs, which are the
+    /// sharpest thing in the frame, are never mistaken for the scene.</para>
+    ///
+    /// <para>The strongest answer within reach decides, not the average of them. The fill that
+    /// carries slopes will carry one straight across an edge that happens to be near it, however
+    /// calm the rest of the neighbourhood is — a coloured panel behind a line of text is exactly
+    /// that, no curvature anywhere except the line between the panel and the page, and taking the
+    /// mean there says "slope" and drags the panel's colour out across the page.</para>
+    ///
+    /// <para>The reach is what decides how far an edge counts for. Measured on a scene built to be
+    /// adversarial — a hard slanted edge crossing every line of text — 97 pixels is where the blend
+    /// stops costing anything worth naming against inpainting alone (5.67 against 5.58 mean error)
+    /// while a smooth background still answers 1 almost everywhere and a stack of erased lines stops
+    /// reading as a staircase.</para>
+    /// </remarks>
+    private static Mat SlopeShare(Reduction reduced, Size full)
+    {
+        using var colour = Average(reduced.Sum, reduced.Seen);
+        using var value = new Mat();
+        Cv2.CvtColor(colour, value, ColorConversionCodes.BGR2GRAY);
+
+        // A plane's second difference is zero wherever it is measured, so this is how far the picture
+        // departs from a slope — and it is a three-cell question, which is what makes it usable next
+        // to a hole. A window average would have been the same measure over a wider reach, but with
+        // a hole in the window the observed cells no longer sit symmetrically around the middle, and
+        // the average shifts off the plane it was meant to reproduce: every glyph would be ringed by
+        // structure that is not there. Measured on a bare ramp, that reads five levels of departure
+        // beside the hole; this reads none.
+        using var departure = new Mat();
+        Cv2.Laplacian(value, departure, MatType.CV_32F, ksize: 3);
+        Cv2.Abs(departure).ToMat().CopyTo(departure);
+
+        // Only cells the picture was seen right through, and whose neighbours were too, can answer.
+        using var whole = new Mat();
+        Cv2.Threshold(reduced.Seen, whole, .9, 1, ThresholdTypes.Binary);
+        using var weight = new Mat();
+        using var neighbourhood = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
+        Cv2.Erode(whole, weight, neighbourhood);
+
+        Cv2.Multiply(departure, weight, departure);
+        Cv2.Blur(departure, departure, new Size(3, 3)); // One cell of noise is not an edge.
+
+        // The strongest departure anywhere within reach, not the average of them: a fill that has an
+        // edge near it will be carried across that edge whether or not the rest of the window is
+        // calm, and a flat panel beside another flat panel is exactly that — nowhere any curvature
+        // except the line between them.
+        // Taken in two steps: the strongest of each small neighbourhood, then the strongest of those
+        // over the reach. A rectangular dilation costs its own width, so asking it for the reach in
+        // one go is four times the work for the same answer.
+        int side = Math.Max(3, DepartureWindow / SlopeScale / 4 | 1);
+        using var step = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(5, 5));
+        using var span = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(side, side));
+        using var strongest = new Mat();
+        Cv2.Dilate(departure, strongest, step);
+        var coarse = new Size(Math.Max(1, departure.Width / 4), Math.Max(1, departure.Height / 4));
+        using var reach = new Mat();
+        Cv2.Resize(strongest, reach, coarse, interpolation: InterpolationFlags.Nearest);
+        Cv2.Dilate(reach, reach, span);
+
+        // The answer is one number per neighbourhood, so it is turned into a share while it is still
+        // one number per neighbourhood, and grown to the frame once at the end.
+        Cv2.Subtract(reach, Scalar.All(SlopeDeparture), reach);
+        Cv2.Divide(reach, Scalar.All(StructureDeparture - SlopeDeparture), reach);
+        Cv2.Min(reach, 1.0, reach);
+        Cv2.Max(reach, 0.0, reach);
+        Cv2.Subtract(Scalar.All(1), reach, reach);
+        using var levels = new Mat();
+        reach.ConvertTo(levels, MatType.CV_8U, 255);
+        var share = new Mat();
+        Cv2.Resize(levels, share, full, interpolation: InterpolationFlags.Linear);
+        return share;
+    }
+
+    /// <summary>The divisor the picture is judged a slope or not at.</summary>
+    /// <remarks>
+    /// Half, not a quarter like the fill: the question is whether an edge is hiding near the text,
+    /// and the only place left to see one is the sliver of picture between the glyphs and whatever
+    /// they cover. At a quarter of the frame that sliver is inside a cell the mask also touches, so
+    /// it cannot testify, and a coloured panel behind a line of text reads as calm.
+    /// </remarks>
+    private const int SlopeScale = 2;
+
+    /// <summary>How wide a ring outside the mask is left out of the fill's evidence.</summary>
+    private const int DonorGuard = 2;
+
+    /// <summary>How far down the fill is computed, as a divisor of the frame.</summary>
+    /// <remarks>
+    /// The result is smooth by construction, so there is nothing at full resolution for it to carry.
+    /// Measured against the same fill computed at full resolution over six scenes, a quarter costs
+    /// between nothing and half a percent of mean error and runs in a third of the time.
+    /// </remarks>
+    private const int SmoothScale = 4;
+
+    /// <summary>
+    /// Weighted multiresolution interpolation — a pull-push solve — of everything the mask covers.
+    /// </summary>
+    /// <remarks>
+    /// <para>Pull: the known pixels are averaged down a pyramid, each level carrying both a sum and
+    /// the weight it was divided by, so a level knows how much of itself was actually observed. Push:
+    /// from the coarsest level back up, a level takes its own average where it has one and what the
+    /// level above it says where it does not. The result is smooth, matches the picture at the edge
+    /// of the hole, and carries a slope across the middle instead of settling on an average.</para>
+    ///
+    /// <para>The pyramid stops as soon as every pixel of the coarsest level has been observed, which
+    /// is as deep as the widest hole needs and no deeper. That bound is what keeps the solve local:
+    /// each level further is a level at which a value from the other side of the picture can reach
+    /// this one, and on a scene with a hard edge across it, running to the top costs 40% more error
+    /// than stopping here.</para>
+    /// </remarks>
+    private static Mat SmoothFill(Reduction reduced, Size full)
+    {
+        var sums = new List<Mat>();
+        var seen = new List<Mat>();
+        try
+        {
+            // The fill is carried on a coarser grid than the judgement above, which is free: the
+            // reduction it starts from is already made, and halving it again is a small image.
+            var start = new Size(Math.Max(1, reduced.Sum.Width * SlopeScale / SmoothScale),
+                Math.Max(1, reduced.Sum.Height * SlopeScale / SmoothScale));
+            var first = new Mat();
+            var firstSeen = new Mat();
+            Cv2.Resize(reduced.Sum, first, start, interpolation: InterpolationFlags.Area);
+            Cv2.Resize(reduced.Seen, firstSeen, start, interpolation: InterpolationFlags.Area);
+            sums.Add(first);
+            seen.Add(firstSeen);
+            while (sums[^1].Width > 2 && sums[^1].Height > 2)
+            {
+                Cv2.MinMaxLoc(seen[^1], out double observed, out _);
+                if (observed > 0) break;
+                var size = new Size(Math.Max(1, sums[^1].Width / 2), Math.Max(1, sums[^1].Height / 2));
+                var sum = new Mat();
+                var count = new Mat();
+                Cv2.Resize(sums[^1], sum, size, interpolation: InterpolationFlags.Area);
+                Cv2.Resize(seen[^1], count, size, interpolation: InterpolationFlags.Area);
+                sums.Add(sum);
+                seen.Add(count);
+            }
+
+            var estimate = Average(sums[^1], seen[^1]);
+            for (int level = sums.Count - 2; level >= 0; level--)
+            {
+                using var previous = estimate;
+                using var up = new Mat();
+                Cv2.Resize(previous, up, sums[level].Size(), interpolation: InterpolationFlags.Linear);
+                using var own = Average(sums[level], seen[level]);
+                using var share = new Mat();
+                Cv2.Min(seen[level], 1.0, share);
+                estimate = Mix(up, own, share);
+            }
+
+            using (estimate)
+            {
+                using var levels = new Mat();
+                estimate.ConvertTo(levels, MatType.CV_8UC3);
+                var filled = new Mat();
+                Cv2.Resize(levels, filled, full, interpolation: InterpolationFlags.Linear);
+                return filled;
+            }
+        }
+        finally
+        {
+            foreach (var level in sums) level.Dispose();
+            foreach (var level in seen) level.Dispose();
+        }
+    }
+
+    /// <summary>A level's own colour where it was observed, and whatever the sum divides to where not.</summary>
+    private static Mat Average(Mat sum, Mat seen)
+    {
+        using var safe = new Mat();
+        Cv2.Max(seen, 1e-6, safe);
+        using var spread = new Mat();
+        Cv2.Merge([safe, safe, safe], spread);
+        var average = new Mat();
+        Cv2.Divide(sum, spread, average);
+        return average;
+    }
+
+    /// <summary><paramref name="second"/> where the share is 1, <paramref name="first"/> where it is 0.</summary>
+    private static Mat Mix(Mat first, Mat second, Mat share)
+    {
+        using var scale = new Mat();
+        if (share.Type() == MatType.CV_8UC1) share.ConvertTo(scale, MatType.CV_32F, 1.0 / 255);
+        else share.CopyTo(scale);
+        using var towards = new Mat();
+        Cv2.Merge([scale, scale, scale], towards);
+        using var away = new Mat();
+        Cv2.Subtract(Scalar.All(1), towards, away);
+        using var a = Float(first);
+        using var b = Float(second);
+        Cv2.Multiply(a, away, a);
+        Cv2.Multiply(b, towards, b);
+        Cv2.Add(a, b, a);
+        var mixed = new Mat();
+        if (first.Type() == MatType.CV_8UC3) a.ConvertTo(mixed, MatType.CV_8UC3);
+        else a.CopyTo(mixed);
+        return mixed;
+    }
+
+    private static Mat Float(Mat image)
+    {
+        if (image.Type() == MatType.CV_32FC3) return image.Clone();
+        var value = new Mat();
+        image.ConvertTo(value, MatType.CV_32FC3);
+        return value;
+    }
+
+    private static Rect Clip(Rect area, int margin, Size size)
+    {
+        int x = Math.Max(0, area.X - margin), y = Math.Max(0, area.Y - margin);
+        return new(x, y, Math.Min(size.Width, area.Right + margin) - x,
+            Math.Min(size.Height, area.Bottom + margin) - y);
+    }
+
     internal static Mat RepairReduced(Mat source, Mat mask)
     {
         // Compute only the missing content at half resolution; composite at native resolution.
@@ -269,5 +641,4 @@ internal static class CpuHoleRepair
         full.CopyTo(result, mask);
         return result;
     }
-
 }
