@@ -23,15 +23,53 @@ internal static class CpuTextMask
     /// <inheritdoc cref="Build"/>
     private const double OutlineTail = 10;
 
-    /// <summary>How far that fade may be followed away from the text.</summary>
+    /// <summary>How far past the glyphs the mask may reach, as a share of glyph height.</summary>
     /// <remarks>
-    /// Swept over five corpora. Each pixel buys less than the one before it and costs more picture:
-    /// from three to four, what is left along the game corpus's glyphs falls 22.3% to 17.6% for two
-    /// hundredths of a point of disturbed picture, and from four to five it falls 17.6% to 15.1% for
-    /// two more — while on the video and Latin corpora the fifth pixel erases nothing further and
-    /// disturbs a twentieth of a point more. Four is where the two curves cross.
+    /// <para>How far the mask reaches used to be a count — four pixels of growth, one of
+    /// antialiasing, two of margin — and a count is two different things at two sizes. At the
+    /// 44-pixel glyphs of a burnt-in subtitle seven pixels is a sixth of the letter; at the 14-pixel
+    /// text of a chat panel it is half of it, and it is also the whole gap to the line below. The
+    /// mask for a paragraph of small text became one slab: measured over the panel corpus, only 54%
+    /// of the picture lying between two lines of text survived it. That is the worst place to lose,
+    /// because it is the only observation the fill has when it is asked to carry the scene across the
+    /// line. It was reported as a hump — the fill's own outline showing, there being nothing left
+    /// under the words for it to agree with.</para>
+    ///
+    /// <para>So the reach is the smallest of three things: this share of the glyph, half the clear
+    /// space to the nearest line over or under it (<see cref="Room"/>), and
+    /// <see cref="Furthest"/>. Over the panel corpus that takes the surviving picture between lines
+    /// from 54% to 68% and the share of the frame the repair disturbs where no text was from 1.16%
+    /// to 0.68%, and it leaves the three subtitle corpora, whose lines have room, where they
+    /// were.</para>
+    ///
+    /// <para>What it costs is the outline: on the panel corpus what is left along a glyph goes from
+    /// 28.9% to 42.1%. That is the trade, and it is the one that was asked for — the erase reads as
+    /// wrong when it flattens the picture, and merely imperfect when a stroke's last pixel
+    /// survives.</para>
     /// </remarks>
-    private const int OutlineGrowth = 4;
+    private const double Reach = .20;
+
+    /// <summary>The most it may reach in any case, which is what a subtitle's outline asked for.</summary>
+    /// <remarks>
+    /// Swept over the subtitle corpora as a count, before it became a cap. Each pixel buys less than
+    /// the one before it and costs more picture: from three to four, what is left along the game
+    /// corpus's glyphs falls 22.3% to 17.6% for two hundredths of a point of disturbed picture, and
+    /// from four to five it falls 17.6% to 15.1% for two more — while on the video and Latin corpora
+    /// the fifth pixel erases nothing further and disturbs a twentieth of a point more. Four of
+    /// growth, one for the antialiasing the growth stopped on, and two of margin.
+    /// </remarks>
+    private const int Furthest = 7;
+
+    /// <summary>The most of that reach that may be spent on the blind margin rather than the fade.</summary>
+    /// <remarks>
+    /// The margin is applied to each line inside its own box, widened by it first so a glyph at the
+    /// edge still gets one, rather than to the whole frame at the end — which is what lets it differ
+    /// from line to line at all. Two pixels where there is room for seven and one where there is not:
+    /// it was tried at one everywhere when the growth was new, on the reasoning that the growth
+    /// reaches the fade where it actually is while a margin pays for every glyph everywhere, and a
+    /// reader reported that version as colour left along the edge of erased words.
+    /// </remarks>
+    private const int FurthestHalo = 2;
 
     /// <summary>Both hats' bodies, followed outward along the text's own fade.</summary>
     /// <remarks>
@@ -54,9 +92,9 @@ internal static class CpuTextMask
     /// bottom of the ramp from the picture itself. High enough not to eat the scene is high enough to
     /// leave the last pixel or two of every stroke, which is the dotted contour a reader sees tracing
     /// erased words. So the body is the seed of a hysteresis: it is followed outward while the
-    /// response stays above <see cref="OutlineTail"/> and no further than
-    /// <see cref="OutlineGrowth"/>, which is the text's own fade wherever it happens to be, rather
-    /// than a band of fixed width around every glyph. <see cref="OutlineTail"/> is low enough to be a
+    /// response stays above <see cref="OutlineTail"/> and no further than <see cref="Reach"/>
+    /// allows, which is the text's own fade wherever it happens to be, rather than a band of fixed
+    /// width around every glyph. <see cref="OutlineTail"/> is low enough to be a
     /// genuine second threshold and high enough that film grain is not a path to walk along; swept at
     /// 6, 10, 14 and 18 it barely moves what is erased while the masked share of the frame falls
     /// steadily as it rises.</para>
@@ -98,6 +136,11 @@ internal static class CpuTextMask
                 if (!double.IsFinite(line.X + line.Y + line.Width + line.Height) || line.Width <= 0 || line.Height <= 0) continue;
                 double height = Math.Max(1, Math.Min(line.GlyphHeight ?? line.Height, line.Height));
                 int padding = Math.Clamp((int)Math.Ceiling(height * BoxPadding), 2, 4);
+                int allowance = Math.Min(Furthest, Math.Min(
+                    Math.Max(2, (int)Math.Round(height * Reach) + 1),
+                    Math.Max(2, Room(line, lines))));
+                int halo = Math.Clamp((int)Math.Round(allowance * .3), 1, FurthestHalo);
+                int growth = Math.Max(0, allowance - 1 - halo);
                 var box = Clip(line.X - padding, line.Y - padding, line.X + line.Width + padding,
                     line.Y + line.Height + padding, source.Size());
                 if (box.Width == 0 || box.Height == 0) continue;
@@ -115,23 +158,24 @@ internal static class CpuTextMask
                 Cv2.BitwiseOr(seed, darker, seed);
                 using var strongest = new Mat();
                 Cv2.Max(light, dark, strongest);
-                GrowAlongTail(seed, strongest, one);
+                if (growth > 0) GrowAlongTail(seed, strongest, one, growth);
                 Cv2.Dilate(seed, seed, one); // The antialiased end of whatever the growth stopped on.
-                using var target = new Mat(mask, box);
-                Cv2.BitwiseOr(target, seed, target);
+
+                // The blind margin, in a box widened to hold it. Two pixels at a subtitle's size:
+                // one was tried when the growth was new, on the reasoning that the growth reaches the
+                // fade where it actually is while a margin pays for every glyph everywhere, and a
+                // reader reported that version as colour left along the edge of erased words. It
+                // measures the same way — dropping it leaves more behind on every corpus, 32.6%
+                // against 28.9% on the panel corpus and 22.3% against 17.6% on the game corpus, to
+                // disturb between a tenth and a quarter of a point less of the picture.
+                var wide = Clip(box.X - halo, box.Y - halo, box.Right + halo, box.Bottom + halo, source.Size());
+                using var spread = new Mat(wide.Height, wide.Width, MatType.CV_8UC1, Scalar.Black);
+                using (var inner = new Mat(spread, new Rect(box.X - wide.X, box.Y - wide.Y, box.Width, box.Height)))
+                    seed.CopyTo(inner);
+                Cv2.Dilate(spread, spread, one, iterations: halo);
+                using var target = new Mat(mask, wide);
+                Cv2.BitwiseOr(target, spread, target);
             }
-            // Expand by two further pixels to cover faint halos. Applied after merging the boxes so
-            // the expansion is not clipped at the edge of one.
-            //
-            // Two rather than one. One was tried when the growth was new, on the reasoning that the
-            // growth reaches the fade where it actually is while a blind margin pays for every glyph
-            // everywhere, and a reader reported that version as colour left along the edge of erased
-            // words. It measures the same way here: dropping the second pixel leaves more behind on
-            // every corpus — 32.6% against 28.9% on the panel corpus, 22.3% against 17.6% on the
-            // game corpus, 78.4% against 70.8% on the card corpus — to disturb between a tenth and a
-            // quarter of a point less of the picture.
-            using var antialias = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
-            Cv2.Dilate(mask, mask, antialias, iterations: 2);
             return mask;
         }
         catch { mask.Dispose(); throw; }
@@ -159,17 +203,39 @@ internal static class CpuTextMask
     /// the loop runs a fixed number of times rather than to stability — the point is a bounded reach,
     /// and a run to stability would follow a scene edge for as far as that edge happens to be dark.
     /// </remarks>
-    private static void GrowAlongTail(Mat seed, Mat response, Mat one)
+    private static void GrowAlongTail(Mat seed, Mat response, Mat one, int steps)
     {
         using var tail = new Mat();
         Cv2.Threshold(response, tail, OutlineTail, 255, ThresholdTypes.Binary);
         using var grown = new Mat();
-        for (int step = 0; step < OutlineGrowth; step++)
+        for (int step = 0; step < steps; step++)
         {
             Cv2.Dilate(seed, grown, one);
             Cv2.BitwiseAnd(grown, tail, grown);
             Cv2.BitwiseOr(grown, seed, seed);
         }
+    }
+
+    /// <summary>Half the clear space between this line and the nearest one over or under it.</summary>
+    /// <remarks>
+    /// Half, so that two neighbours reaching toward each other still leave the picture between them
+    /// alone. Only lines that stand over one another count: a caption at the other end of the frame
+    /// is not what limits this one.
+    /// </remarks>
+    private static int Room(CpuTextRegion line, IReadOnlyList<CpuTextRegion> lines)
+    {
+        double nearest = double.MaxValue;
+        foreach (var other in lines)
+        {
+            if (ReferenceEquals(other, line) || other.Width <= 0 || other.Height <= 0) continue;
+            double shared = Math.Min(line.X + line.Width, other.X + other.Width) - Math.Max(line.X, other.X);
+            if (shared < Math.Min(line.Width, other.Width) * .2) continue;
+            double apart = other.Y >= line.Y + line.Height ? other.Y - (line.Y + line.Height)
+                : line.Y >= other.Y + other.Height ? line.Y - (other.Y + other.Height)
+                : 0;
+            nearest = Math.Min(nearest, apart);
+        }
+        return nearest == double.MaxValue ? int.MaxValue : (int)Math.Floor(nearest / 2);
     }
 
     private static Rect Clip(double left, double top, double right, double bottom, Size size)
