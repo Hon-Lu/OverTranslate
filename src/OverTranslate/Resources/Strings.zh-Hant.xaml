@@ -373,10 +373,8 @@
     <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / 介面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整條字幕、對話框——文字大，讀取時會縮小</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">遊戲面板、物品說明——文字小，讀取時不縮小</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。
-框選時，文字上下請保留適量空間，避免貼齊文字；左右可適度放寬，但不要框入過多空白範圍。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance" xml:space="preserve">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。
-框選時，整體請保留一些空間；若畫面有多個需要翻譯的區域，建議分開框選，避免一次框入過大範圍。</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">收合模式說明</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">展開模式說明</sys:String>
 

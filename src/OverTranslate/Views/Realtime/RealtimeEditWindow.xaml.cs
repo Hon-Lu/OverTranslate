@@ -95,17 +95,19 @@ public partial class RealtimeEditWindow : Window
     /// different length, and a plate that resized as the selection moved would make choosing a mode
     /// look like it had rearranged the screen.
     ///
-    /// The number keeps every explicit line on a single visual line at
-    /// <see cref="BaseHintFontSize"/> — measured, not chosen: the longest instructions lay out at
-    /// 640 points, so this is that plus the padding and a little slack for a machine whose font
-    /// metrics differ. Each mode deliberately uses two lines: the first says when to use it and the
-    /// second says how to frame it. Worth re-measuring if either sentence is ever edited — the text
-    /// still wraps rather than clips if it outgrows this, so the failure is a taller plate and not a
-    /// lost half-sentence.
+    /// The number keeps each mode's guidance on a single visual line at
+    /// <see cref="BaseHintFontSize"/> — measured, not chosen. Worth re-measuring whenever either
+    /// sentence is edited; the text still wraps rather than clips if it outgrows this, so the
+    /// failure is a taller plate and not a lost half-sentence, and the Japanese and Korean strings
+    /// are already over it and take two visual lines.
     ///
-    /// The break between those two lines comes from the resource string, which only keeps it because
-    /// the entry carries xml:space="preserve" — without it XAML folds the newline into a space and
-    /// the pair runs together as one wrapped paragraph.
+    /// ONE SENTENCE PER MODE, saying when to use it. There used to be a second, saying how to frame
+    /// a block of that kind — where to leave room, when to draw two blocks instead of one — and it
+    /// was dropped deliberately: it was teaching the user to operate the tool rather than telling
+    /// them what the control in front of them does, and the reader is holding a block over a running
+    /// game while they read it. What the framing advice was worth (issue #35 measured a subtitle
+    /// framed against its own text losing 20 of 39 frames) is now the recogniser's problem to
+    /// absorb, not the reader's to pre-empt.
     /// </remarks>
     private const double BaseHintWidth = 680;
 
@@ -716,7 +718,7 @@ public partial class RealtimeEditWindow : Window
 
     /// <summary>
     /// The per-block control: both choices of each question always on screen, the selected one
-    /// filled in, and under them the guidance for drawing a block of that kind.
+    /// filled in, and under them a line saying what that kind of block is.
     /// </summary>
     /// <remarks>
     /// A two-state chip that flips when clicked would be smaller, and it was tried first. It reads
@@ -736,12 +738,9 @@ public partial class RealtimeEditWindow : Window
     /// do.
     ///
     /// The guidance sits under the control rather than beside it, both hard against the same left
-    /// edge, so the pair reads as one column starting at the block's corner. It lives here rather
-    /// than in the settings screen or a first-run tip because this is the one moment it can be acted
-    /// on: the user is holding the block. Issue #35 measured what its two halves are worth — a
-    /// subtitle framed against its own text lost 20 of 39 frames to the collapse filter, and one
-    /// framed too narrowly reads "bury steak!" for "Salisbury steak!" — and neither is something the
-    /// program can correct afterwards or the user can guess at.
+    /// edge, so the pair reads as one column starting at the block's corner. It answers "which of
+    /// these two is the thing in front of me?" and nothing else — see <see cref="BaseHintWidth"/>
+    /// for the second sentence that used to be there and why it went.
     ///
     /// Everything here is built in code rather than as a template because the whole edit layer is —
     /// see <see cref="BlockVisual"/> — and because the pill has to be animated by hand: the control
