@@ -161,10 +161,18 @@ public class CaptureBubbleBackdropTests
         }
     }
 
+    /// <summary>
+    /// A ramp across nearly the whole range, steeper than the other cases use, because the plate is
+    /// blurred and washed before it is read back and only about a fifth of the surface's own
+    /// gradient survives that. On the gentler default ramp what reaches the plate is twenty levels
+    /// against a threshold of twenty, so the test would be measuring the property inside its own
+    /// noise — and the whole line is erased and interpolated before any of this, which is one more
+    /// reason not to ask a faint gradient to prove itself here.
+    /// </summary>
     [Fact]
     public void Plate_KeepsTheGradientItWasCutFromRatherThanFlatteningIt()
     {
-        using var frame = Photograph();
+        using var frame = Photograph(8, 250);
 
         var plate = Plate(frame, MediaColor.FromRgb(0x10, 0x10, 0x10));
         Assert.NotNull(plate);

@@ -19,7 +19,7 @@ internal static class RealtimeCpuBackground
         using var source = new Mat(frame.Height, frame.Width, MatType.CV_8UC3);
         Transfer(bitmap, source, toMat: true);
         using var mask = CpuTextMask.Build(source, regions);
-        using var repaired = CpuHoleRepair.Repair(source, mask.Combined, token);
+        using var repaired = CpuHoleRepair.Repair(source, mask, token);
         Transfer(bitmap, repaired.Image, toMat: false);
         token.ThrowIfCancellationRequested();
         return (Bitmap)bitmap.Clone();

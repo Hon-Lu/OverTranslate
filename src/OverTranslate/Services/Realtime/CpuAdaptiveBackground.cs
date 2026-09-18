@@ -5,198 +5,146 @@ namespace OverTranslate.Services.Realtime;
 
 internal record CpuTextRegion(double X, double Y, double Width, double Height, double? GlyphHeight);
 
-internal sealed record CpuMask(Mat Core, Mat Outline, Mat Combined) : IDisposable
-{
-    public void Dispose() { Core.Dispose(); Outline.Dispose(); Combined.Dispose(); }
-}
-
-/// <summary>Stateless CPU segmentation. A text core and its nearby outline are separate masks.</summary>
+/// <summary>Stateless CPU segmentation: the text, and the outline and antialiasing drawn with it.</summary>
 internal static class CpuTextMask
 {
-    /// <summary>How far past the glyph body an outline is looked for, as a share of glyph height.</summary>
+    /// <summary>How much picture is taken in around a recognition box, as a share of glyph height.</summary>
     /// <remarks>
-    /// This is the reach of the whole outline search: nothing further from the body than this can be
-    /// recognised as belonging to the text, whatever its contrast. It was .09 clamped to four pixels,
-    /// which is under the outline a burnt-in subtitle is actually drawn with at the size realtime
-    /// reads one — an English anime subtitle measured 44px of glyph carrying an outline plus its
-    /// antialiasing well past four — so the outermost ring of every letter was outside the search
-    /// before any threshold had a say.
+    /// Everything here is measured inside one box, so this is two things at once: the context the two
+    /// hats and their Otsu thresholds are computed over, and the room the mask has to grow past the
+    /// box. It is not an allowance the mask is entitled to fill. Widening it feeds more picture into
+    /// the thresholds, and at .12 clamped to six — what it was while the mask was a band of fixed
+    /// width around the body — the card corpus put a third of its tiles onto the half-resolution
+    /// repair and the game corpus tripled the mask islands that hold no text at all.
     /// </remarks>
-    private const double OutlineReach = .12;
+    private const double BoxPadding = .09;
 
-    /// <summary>Contrast a pixel needs to be taken for outline on its own.</summary>
-    /// <inheritdoc cref="OutlineTail"/>
-    private const double OutlineSeed = 12;
-
-    /// <summary>Contrast a pixel needs to be taken for outline when it continues one.</summary>
-    /// <remarks>
-    /// The two thresholds are a hysteresis, and the reason for it is what the leftover actually looks
-    /// like: not a missed letter but a dotted dark contour tracing where the text was, which is the
-    /// outline's antialiased tail. That tail is a ramp from the outline down to the picture, so no
-    /// single threshold separates it — high enough not to eat the picture is high enough to leave the
-    /// last pixel or two of every stroke behind, and that is exactly the row of dashes a reader sees
-    /// under an erased subtitle.
-    ///
-    /// So the seed says what is certainly outline and the tail says what may continue one, and only
-    /// pixels reachable from a seed are taken. Growth is bounded by <see cref="OutlineGrowth"/>, which
-    /// is what keeps a dark scene edge that happens to touch a letter from being followed across the
-    /// frame. It also carries the outline past <see cref="OutlineReach"/>, which the seed alone cannot:
-    /// the seed is only looked for within reach of the body, and a stroke's outline is not.
-    ///
-    /// How far it gets is bounded by the recognition box as well, because everything here is computed
-    /// inside one. That is why this is worth most on a Latin line, whose box stands well clear of its
-    /// glyphs, and least on a CJK one, whose box sits on them. Padding the box to give the growth room
-    /// was tried and is wrong: the box is also what the two hats and the Otsu threshold are measured
-    /// over, so widening it changes which polarity is taken for the text — over the ja-card corpus,
-    /// where the band behind the subtitle is already dark, that alone left half again as much behind
-    /// as shipping did.
-    ///
-    /// Swept at 6, 10, 14 and 18 over the three subtitle corpora, what is erased hardly moves — under
-    /// a fifth of a point between the extremes — while how much of the frame is masked falls steadily
-    /// as it rises. So it is set by the other end: low enough to be a genuine second threshold, high
-    /// enough that film grain and compression noise are not a path for the growth to walk along.
-    /// </remarks>
+    /// <summary>Contrast a pixel needs to continue the text's fade outward.</summary>
+    /// <inheritdoc cref="Build"/>
     private const double OutlineTail = 10;
 
-    /// <summary>How many pixels the tail may be followed away from a seed.</summary>
-    /// <inheritdoc cref="OutlineTail"/>
-    private const int OutlineGrowth = 6;
+    /// <summary>How far that fade may be followed away from the text.</summary>
+    /// <remarks>
+    /// Swept over five corpora. Each pixel buys less than the one before it and costs more picture:
+    /// from three to four, what is left along the game corpus's glyphs falls 22.3% to 17.6% for two
+    /// hundredths of a point of disturbed picture, and from four to five it falls 17.6% to 15.1% for
+    /// two more — while on the video and Latin corpora the fifth pixel erases nothing further and
+    /// disturbs a twentieth of a point more. Four is where the two curves cross.
+    /// </remarks>
+    private const int OutlineGrowth = 4;
 
-    public static CpuMask Build(Mat source, IReadOnlyList<CpuTextRegion> lines)
+    /// <summary>Both hats' bodies, followed outward along the text's own fade.</summary>
+    /// <remarks>
+    /// <para>Text is whatever stands out from its surroundings inside a recognition box, in either
+    /// direction, so both hats get a body mask and the union is taken. Nothing votes on which
+    /// direction the text is. That vote existed — the louder hat over the box was taken for the text
+    /// and the other one searched for its outline — and it is wrong exactly where it costs most: a
+    /// line of bright text on a dark scene has gaps between its glyphs narrower than the kernel, so
+    /// the closing behind the black hat fills them and the dark response answers for the whole band
+    /// of picture <em>between</em> the words, which is more area than the strokes are. The box voted
+    /// dark, the body mask became the background between the glyphs, and the glyphs survived as
+    /// whatever the outline search could reach from one of those filled gaps — a stroke with
+    /// neighbours was found, a stroke standing on its own was not. In Japanese the lone strokes are
+    /// the punctuation, which is why a line could come back with every exclamation mark still on it.
+    /// Deciding the polarity by each hat's peak instead of its mean was tried and is worse: a single
+    /// bright speck then decides the line. Taking both bodies makes the question moot.</para>
+    ///
+    /// <para>What the body leaves is the fade — an outline, a shadow, or plain antialiasing, all of
+    /// them a ramp from the text down to the picture, with no single threshold that separates the
+    /// bottom of the ramp from the picture itself. High enough not to eat the scene is high enough to
+    /// leave the last pixel or two of every stroke, which is the dotted contour a reader sees tracing
+    /// erased words. So the body is the seed of a hysteresis: it is followed outward while the
+    /// response stays above <see cref="OutlineTail"/> and no further than
+    /// <see cref="OutlineGrowth"/>, which is the text's own fade wherever it happens to be, rather
+    /// than a band of fixed width around every glyph. <see cref="OutlineTail"/> is low enough to be a
+    /// genuine second threshold and high enough that film grain is not a path to walk along; swept at
+    /// 6, 10, 14 and 18 it barely moves what is erased while the masked share of the frame falls
+    /// steadily as it rises.</para>
+    ///
+    /// <para>The band is what this replaced, and that is the difference a reader sees. Of the pixels
+    /// around a glyph that the source has darker than the scene — which is what an outline is — the
+    /// share still darker after the repair, against the share of the frame the repair visibly changes
+    /// where no text or outline ever was:</para>
+    ///
+    /// <code>
+    ///   corpus                left behind, band -> fade    picture disturbed, band -> fade
+    ///   chat-room (panel)            36.5%      28.9%            1.11%      1.14%
+    ///   ja-game (dialogue)           38.2%      17.6%            0.12%      0.05%
+    ///   ja-card                      68.6%      70.8%            0.22%      0.08%
+    ///   ja-video                      9.9%       8.2%            0.63%      0.38%
+    ///   en                           14.2%      18.0%            0.52%      0.39%
+    /// </code>
+    ///
+    /// <para>Mask islands holding no text at all — a smudge over clean picture, which is what a band
+    /// around a Latin box produces, since the box stands well clear of its glyphs and the band fills
+    /// with whatever was in there — fall from 1.0 to 0.2 per frame on the Latin corpus and from 1.4
+    /// to 0.5 on the game corpus. The card corpus moves a quarter of its tiles back from the
+    /// half-resolution repair to the full-resolution one, because it is a thick hole that routes a
+    /// tile there. What it costs is the two corpora above where more is left behind: the card corpus,
+    /// whose subtitles already sit on a dark band, and Latin text, whose outline is thicker than the
+    /// fade this follows. Both were judged the better trade against a picture the erase leaves
+    /// alone.</para>
+    /// </remarks>
+    public static Mat Build(Mat source, IReadOnlyList<CpuTextRegion> lines)
     {
-        var core = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
-        var outline = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
-        var combined = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
+        var mask = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
         try
         {
             using var gray = new Mat();
             Cv2.CvtColor(source, gray, ColorConversionCodes.BGR2GRAY);
+            using var one = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
             foreach (var line in lines)
             {
                 if (!double.IsFinite(line.X + line.Y + line.Width + line.Height) || line.Width <= 0 || line.Height <= 0) continue;
                 double height = Math.Max(1, Math.Min(line.GlyphHeight ?? line.Height, line.Height));
-                int reach = Math.Clamp((int)Math.Ceiling(height * OutlineReach), 2, 6);
-                var box = Clip(line.X - reach, line.Y - reach, line.X + line.Width + reach,
-                    line.Y + line.Height + reach, source.Size());
+                int padding = Math.Clamp((int)Math.Ceiling(height * BoxPadding), 2, 4);
+                var box = Clip(line.X - padding, line.Y - padding, line.X + line.Width + padding,
+                    line.Y + line.Height + padding, source.Size());
                 if (box.Width == 0 || box.Height == 0) continue;
                 using var roi = new Mat(gray, box);
                 using var light = new Mat();
                 using var dark = new Mat();
-                using var binary = new Mat();
                 int size = Math.Clamp((int)Math.Round(height * .55) | 1, 5, 25);
                 using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(size, size));
                 Cv2.MorphologyEx(roi, light, MorphTypes.TopHat, kernel);
                 Cv2.MorphologyEx(roi, dark, MorphTypes.BlackHat, kernel);
-                // Which polarity the outline search runs against. Not which one the text is — that
-                // is what this used to be taken for, and it is wrong often enough to matter; see
-                // Body. All it decides now is which way round the body/outline pair is tried.
-                bool brightText = Cv2.Mean(light).Val0 >= Cv2.Mean(dark).Val0;
-                var body = brightText ? light : dark;
-                var opposite = brightText ? dark : light;
-                Body(body, binary);
-                using var reverse = new Mat();
-                Body(opposite, reverse);
-                using var fringe = new Mat();
-                using var near = new Mat();
-                using var fringeContrast = new Mat();
-                using var one = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
-                using var expansion = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(reach * 2 + 1, reach * 2 + 1));
-                Cv2.Dilate(binary, near, expansion);
-                Cv2.Threshold(opposite, fringeContrast, OutlineSeed, 255, ThresholdTypes.Binary);
-                Cv2.BitwiseAnd(near, fringeContrast, fringe);
-                GrowAlongTail(fringe, opposite, one);
-                Cv2.Dilate(fringe, fringe, one); // Include the antialiased edge of a detected outline.
-                Cv2.Dilate(binary, binary, one); // One pixel for anti-aliasing, not a whole line band.
-                Cv2.Dilate(reverse, reverse, one);
-                Cv2.BitwiseOr(binary, reverse, binary);
-                using var coreTarget = new Mat(core, box);
-                using var outlineTarget = new Mat(outline, box);
-                Cv2.BitwiseOr(coreTarget, binary, coreTarget);
-                Cv2.BitwiseOr(outlineTarget, fringe, outlineTarget);
+                using var seed = new Mat();
+                using var darker = new Mat();
+                Body(light, seed);   // What stands out brighter than its surroundings,
+                Body(dark, darker);  // and what stands out darker. Either one can be the text.
+                Cv2.BitwiseOr(seed, darker, seed);
+                using var strongest = new Mat();
+                Cv2.Max(light, dark, strongest);
+                GrowAlongTail(seed, strongest, one);
+                Cv2.Dilate(seed, seed, one); // The antialiased end of whatever the growth stopped on.
+                using var target = new Mat(mask, box);
+                Cv2.BitwiseOr(target, seed, target);
             }
-            Cv2.BitwiseOr(core, outline, combined);
+            // Expand by two further pixels to cover faint halos. Applied after merging the boxes so
+            // the expansion is not clipped at the edge of one.
+            //
+            // Two rather than one. One was tried when the growth was new, on the reasoning that the
+            // growth reaches the fade where it actually is while a blind margin pays for every glyph
+            // everywhere, and a reader reported that version as colour left along the edge of erased
+            // words. It measures the same way here: dropping the second pixel leaves more behind on
+            // every corpus — 32.6% against 28.9% on the panel corpus, 22.3% against 17.6% on the
+            // game corpus, 78.4% against 70.8% on the card corpus — to disturb between a tenth and a
+            // quarter of a point less of the picture.
             using var antialias = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
-            // Expand the detected glyph/outline by two further pixels to cover faint halos.
-            // Apply after merging ROIs so the expansion is not clipped at an OCR box edge.
-            //
-            // Two, and GrowAlongTail as well. It was cut to one when the growth was added, on the
-            // reasoning that the growth follows the outline's tail where it actually is instead of
-            // paying for every glyph everywhere to reach one — and that reasoning still holds, the
-            // growth is worth most of what is erased here. What was wrong was the measurement that
-            // said the second pixel could then go: it counted what is left in the ring just outside
-            // the MASK, and a smaller mask puts that ring further from the glyph, where there is
-            // nothing left to find either way. It favours the smaller mask by construction.
-            //
-            // Measured again over a band fixed by the text rather than by the mask — of the pixels
-            // around a glyph that the source has darker than the scene, which is what an outline is,
-            // the share still darker than the scene after the repair:
-            //
-            //   corpus                  before the growth   growth + 1px   growth + 2px
-            //   chat-room (panel)                  37.8%          39.8%          36.8%
-            //   ja-game (dialogue)                 46.5%          53.5%          40.1%
-            //   ja-card                            74.9%          75.2%          68.8%
-            //   ja-video                           17.3%          11.0%           9.7%
-            //   en                                 30.7%          13.5%          12.3%
-            //
-            // One pixel is worse than what it replaced on the two corpora of game text — a reader
-            // reported exactly that, as colour left along the edge of erased words — while two
-            // pixels and the growth together are the best of the three everywhere. The cost is the
-            // masked share of the frame: 28.0% to 30.7% on chat-room, 1.76% to 1.92% on ja-game,
-            // 5.77% to 6.23% on ja-card, and a third of ja-card's tiles moving from the
-            // full-resolution repair to the shared half-resolution one, because a thicker hole is
-            // what decides that. That is the trade being made: slightly more picture interpolated,
-            // and no contour tracing where the words were.
-            Cv2.Dilate(combined, combined, antialias, iterations: 2);
-            return new(core, outline, combined);
+            Cv2.Dilate(mask, mask, antialias, iterations: 2);
+            return mask;
         }
-        catch { core.Dispose(); outline.Dispose(); combined.Dispose(); throw; }
+        catch { mask.Dispose(); throw; }
     }
 
     /// <summary>
-    /// One response's body mask: Otsu, then the same threshold again with a floor under it so a
-    /// response with nothing in it cannot be split into one anyway.
+    /// One response's body: Otsu, then the same threshold again with a floor under it, so a response
+    /// with nothing in it cannot be split into one anyway.
     /// </summary>
     /// <remarks>
-    /// <para>Run over both hats rather than only the one the vote picked, which is why it is a
-    /// method: the two have to be thresholded the same way by construction, not by two copies of it
-    /// staying in step.</para>
-    ///
-    /// <para>The vote compares the mean of the two hats over the box and takes the louder one for
-    /// the text, on the reasoning that a glyph carries more contrast energy than its background. A
-    /// line of bright text on a dark scene breaks that, and the kernel is why: the gaps between
-    /// glyphs are narrower than it is, so the closing behind the black hat fills them, and the black
-    /// hat then answers for the whole band of picture <em>between</em> the glyphs — which is more
-    /// area than the strokes themselves. Measured on the frame this was reported from (white text,
-    /// grey 254, on a dark prison scene): over the line, mean black hat 65.1 against mean top hat
-    /// 47.6, so the vote said dark, and the body mask became the background between the words.</para>
-    ///
-    /// <para>The glyphs are not lost when that happens, because the outline search picks them up
-    /// from the other side: they are the "outline" around that body. But it only reaches
-    /// <see cref="OutlineReach"/> from a seed and then follows a tail, and the seeds are exactly the
-    /// filled gaps — so a stroke with other strokes beside it is found and a stroke standing on its
-    /// own is not, because closing fills nothing around it and the response there is flat. In the
-    /// same frame the black hat inside the kanji cluster's gaps averages 118 while beside the
-    /// exclamation mark's bar it averages 5.3 and peaks at 9, against a seed of
-    /// <see cref="OutlineSeed"/> and a body threshold of 80. In Japanese those lone strokes are the
-    /// punctuation, which is why what stayed on screen was every exclamation mark in the line while
-    /// the kanji beside them all went. Measured over four subtitle corpora, the leftover blobs of
-    /// 20px or more are 11 on the game corpus (five of them one frame's five exclamation marks), 4
-    /// on the card corpus and 2 on the video corpus.</para>
-    ///
-    /// <para>So both hats get a body mask and the union is taken. It costs nothing measurable,
-    /// because in practice the second one lands almost entirely inside what the outline search had
-    /// already covered — over the same four corpora the masked share of the frame moves by at most
-    /// 0.01 of a point (1.77% to 1.77%, 5.76% to 5.77%, 8.88% to 8.89%, 8.25% to 8.25%) and the
-    /// mask costs 6.8ms against 7.0ms — and the leftovers above go to zero.</para>
-    ///
-    /// <para>Running the whole outline search both ways as well was measured and rejected. It is the
-    /// only variant that also empties the Latin corpus's leftovers, and reading those frames is what
-    /// settles it: they are not text. They are the picture inside a Latin recognition box, which
-    /// stands well clear of its glyphs — a shoe, a floorboard, a drum stand. The masked share rises
-    /// by a tenth to a fifth of itself (1.77% to 2.12%, 5.76% to 6.79%) to rub those out, which is
-    /// more of the picture interpolated away for no text erased. Deciding the polarity by each hat's
-    /// peak instead of its mean was also tried: it is worse on the card corpus (38 leftover blobs
-    /// against 4) because a single bright speck decides the whole line.</para>
+    /// A method rather than two copies of four lines, because the two hats have to be thresholded
+    /// identically by construction: the union of the two is the mask's seed, and a difference between
+    /// them would be read as a difference in the picture.
     /// </remarks>
     private static void Body(Mat response, Mat into)
     {
@@ -204,23 +152,23 @@ internal static class CpuTextMask
         Cv2.Threshold(response, into, Math.Max(18, otsu * .8), 255, ThresholdTypes.Binary);
     }
 
-    /// <summary>Extends a seeded outline along its own antialiased tail — see <see cref="OutlineTail"/>.</summary>
+    /// <summary>Extends the seed along the text's own fade — see <see cref="Build"/>.</summary>
     /// <remarks>
     /// A geodesic dilation: grow by a pixel, keep only what the tail threshold allows, put the seed
-    /// back so a step can never lose ground. Both mats are the recognition box, not the frame, and the
-    /// loop runs a fixed number of times rather than to stability — the point is a bounded reach, and
-    /// a run to stability would follow a scene edge for as far as that edge happens to be dark.
+    /// back so a step can never lose ground. Both mats are the recognition box, not the frame, and
+    /// the loop runs a fixed number of times rather than to stability — the point is a bounded reach,
+    /// and a run to stability would follow a scene edge for as far as that edge happens to be dark.
     /// </remarks>
-    private static void GrowAlongTail(Mat fringe, Mat opposite, Mat one)
+    private static void GrowAlongTail(Mat seed, Mat response, Mat one)
     {
         using var tail = new Mat();
-        Cv2.Threshold(opposite, tail, OutlineTail, 255, ThresholdTypes.Binary);
+        Cv2.Threshold(response, tail, OutlineTail, 255, ThresholdTypes.Binary);
         using var grown = new Mat();
         for (int step = 0; step < OutlineGrowth; step++)
         {
-            Cv2.Dilate(fringe, grown, one);
+            Cv2.Dilate(seed, grown, one);
             Cv2.BitwiseAnd(grown, tail, grown);
-            Cv2.BitwiseOr(grown, fringe, fringe);
+            Cv2.BitwiseOr(grown, seed, seed);
         }
     }
 
