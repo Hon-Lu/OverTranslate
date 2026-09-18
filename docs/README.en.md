@@ -94,7 +94,7 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 > When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
 
 Translation blocks come in two modes:
-**Subtitles / Dialogue**: for video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
+**Subtitles / Comics**: for video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
 
 | Selection | Translation result |
 |-----------|--------------------|
