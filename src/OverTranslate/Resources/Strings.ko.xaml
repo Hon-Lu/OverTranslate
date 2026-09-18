@@ -284,7 +284,7 @@
     <sys:String x:Key="S.Realtime.BorderFixed">고정</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">테두리 색</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">표시 모양 기본값으로 되돌리기</sys:String>
-    <sys:String x:Key="S.Realtime.AutoModeBestFor">'자동'은 대화 상자, 메뉴, 정지 화면처럼 변화가 적은 장면에 적합합니다. 화면이 빠르게 바뀌면 배경과 글자 색이 제때 따라가지 못할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">'자동'이 고르는 글자 색과 배경이 모든 화면에 맞는 것은 아닙니다. 일부 영상이나 복잡한 배경에서는 글자가 읽기 어려워지거나 지운 부분이 도드라질 수 있습니다. 화면에 따라 '고정'으로 바꿔 사용하세요.</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">사용 방법</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1. ‘블록 선택’을 누르고 화면에서 번역할 영역을 드래그합니다.</sys:String>

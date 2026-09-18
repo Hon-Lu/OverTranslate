@@ -872,9 +872,11 @@
                              sampler reads once, when a line is rebuilt after the text changed, and the
                              background repair runs on its own thread at 4Hz over the strip belonging to
                              the block and stops at a fingerprint when the picture has not moved. What
-                             actually decides whether they are worth having is the content: a picture
-                             that holds still is one they can read correctly, and a picture that does
-                             not is one they are always a moment behind. -->
+                             it warns about is what the reader can see instead: a colour sampled from a
+                             busy picture can come back hard to read against it, and a repair
+                             interpolated over one is where the erase looks obviously erased. Neither
+                             is a fault to be waited out, which is why the way out it offers is 固定
+                             rather than patience. -->
                         <Grid x:Name="AutoModeNotice" Margin="4,0,0,0" Visibility="Collapsed">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>

@@ -283,7 +283,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.BorderFixed">Fixed</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">Border colour</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">Reset appearance to defaults</sys:String>
-    <sys:String x:Key="S.Realtime.AutoModeBestFor">Automatic suits steadier scenes — a dialogue box, a menu, a static picture. When the picture changes quickly, the background and the text colour may not keep up with it.</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">The text colour and background Automatic picks do not suit every picture: over some video or a busy background the text can be hard to read and the erased area can look out of place. Switch to Fixed for those scenes.</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">How it works</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1. Click "Select blocks" and drag over the areas you want translated.</sys:String>
