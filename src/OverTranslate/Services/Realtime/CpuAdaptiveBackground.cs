@@ -186,9 +186,20 @@ internal static class CpuTextMask
     /// with nothing in it cannot be split into one anyway.
     /// </summary>
     /// <remarks>
-    /// A method rather than two copies of four lines, because the two hats have to be thresholded
-    /// identically by construction: the union of the two is the mask's seed, and a difference between
-    /// them would be read as a difference in the picture.
+    /// <para>A method rather than two copies of four lines, because the two hats have to be
+    /// thresholded identically by construction: the union of the two is the mask's seed, and a
+    /// difference between them would be read as a difference in the picture.</para>
+    ///
+    /// <para>The four-fifths is worth knowing about, because Otsu assumes two populations and a busy
+    /// picture has no such thing: on the panel corpus a discounted threshold takes in the scene's own
+    /// texture until the body fills a third to a half of every line box, and what is erased there is
+    /// not text but the picture. Taking the discount off was swept and does what it should — a
+    /// twenty-fifth less mask, four more points of the picture surviving between two lines, a third
+    /// of a level less error against a known background. It also leaves four times as much of a
+    /// glyph's own antialiasing standing, and a fill anchored on that inherits it; the backdrop
+    /// plate's guard test reads the result as a gradient going four levels flatter. Both sides of
+    /// that are real, and the trade belongs to a round that can weigh the residue it costs against
+    /// the picture it saves rather than to this one.</para>
     /// </remarks>
     private static void Body(Mat response, Mat into)
     {
@@ -320,22 +331,185 @@ internal static class CpuHoleRepair
         most /= 255;
         token.ThrowIfCancellationRequested();
 
-        if (most <= .02) return Structured(source, mask, token);
+        if (most <= .02) return Grained(Structured(source, mask, token), source, mask, area);
 
         using var smooth = SmoothFill(reduced, frame.Size());
         token.ThrowIfCancellationRequested();
         if (least >= .98)
         {
             var only = source.Clone();
-            using var target = new Mat(only, area);
-            smooth.CopyTo(target, within);
-            return new(only, 0, 0);
+            using (var target = new Mat(only, area)) smooth.CopyTo(target, within);
+            return Grained(new(only, 0, 0), source, mask, area);
         }
 
         // Both fills are wanted, and mixing whole frames would pay for every pixel of a screen to
         // settle a question only the text asks. The tile loop already walks what the mask covers,
         // so the mix happens there, on the tiles and through the same mask the fill is written by.
-        return Structured(source, mask, token, smooth, slope, area);
+        return Grained(Structured(source, mask, token, smooth, slope, area), source, mask, area);
+    }
+
+    /// <summary>The window the surrounding grain is measured over, in full-resolution pixels.</summary>
+    /// <remarks>
+    /// Wide enough that a panel's worth of picture answers rather than the few pixels pressed against
+    /// a glyph, narrow enough that a smooth sky next to a rough wall is still told apart.
+    /// </remarks>
+    private const int GrainWindow = 33;
+
+    /// <summary>The most any one pixel may contribute to that reading, in levels.</summary>
+    /// <remarks>
+    /// An average of raw departures is an average of whatever strong thing happens to lie nearby,
+    /// and a line of text usually has one: the line above it, a panel edge, a face's eyes. Read
+    /// straight, the smooth cheek beside a pair of eyelashes asks to be grained as hard as the
+    /// eyelashes, and the result is a visibly speckled cheek — measurably closer in texture,
+    /// obviously wrong to look at. Bounding each pixel's contribution keeps an edge from speaking
+    /// for a surface while leaving surfaces that really are this busy — foliage, gravel, a tiled
+    /// floor — to answer at their full strength, since none of their pixels needed the allowance.
+    /// </remarks>
+    private const double GrainQuiet = 12;
+
+    /// <summary>The most grain that may be invented, in levels of standard deviation.</summary>
+    /// <remarks>
+    /// A ceiling, not a target. Where the surroundings are genuinely violent — a specular highlight,
+    /// a hard panel edge — matching them exactly would mean inventing that much contrast out of
+    /// nothing, and being wrong by that much is worse than being smooth by that much.
+    /// </remarks>
+    private const double GrainCeiling = 9;
+
+    /// <summary>Mean absolute value of a standard normal, which is what the window above measures.</summary>
+    private const double GrainExpectation = .7979;
+
+    /// <summary>Restores the grain the fill could not invent, matched to what surrounds it.</summary>
+    /// <remarks>
+    /// <para>Every fill available without a model is some form of diffusion, and diffusion is smooth
+    /// by construction. Measured over the corpora, what the repair writes carries between a seventh
+    /// and two fifths of the detail of the picture around it — so what is left behind is not text but
+    /// a patch of unnatural calm in the shape of the words, and that shape is what a reader sees. It
+    /// is the complaint: not that the erase left something, that the erase is visible.</para>
+    ///
+    /// <para>What is missing is high-frequency energy, and high-frequency energy is the one thing that
+    /// can be put back without knowing what was there — because at that scale nobody can tell the
+    /// difference between the grain that belongs and grain that merely has the same strength. So the
+    /// strength is measured from the picture that surrounds each hole, the strength already present in
+    /// the fill is subtracted, and the difference is made up from a fixed noise field.</para>
+    ///
+    /// <para>Fixed, and that is the whole reason it is not simply drawn each time: the same frame must
+    /// grain the same way twice, or a still picture would boil ten times a second. It is also
+    /// self-limiting — where the surroundings are smooth the measurement is near zero and nothing is
+    /// added, so a clear sky stays a clear sky.</para>
+    /// </remarks>
+    private static CpuRepair Grained(CpuRepair repair, Mat source, Mat mask, Rect area)
+    {
+        try
+        {
+            using var outside = new Mat();
+            Cv2.BitwiseNot(mask, outside);
+            // What the fill wrote, before any of it is grained. A tile reads its neighbours for
+            // context, and a neighbour that has already been grained would report the grain as
+            // detail it already had and be shortchanged for it — a seam along every tile edge.
+            using var smoothed = repair.Image.Clone();
+
+            // The window never reaches past this, so a tile computed with this much context around
+            // it gets the same answer it would have got from the whole frame at once, and only the
+            // tiles the mask actually touches are paid for. On a subtitle that is a twentieth of them.
+            const int guard = GrainWindow / 2 + 1;
+            const int span = Tile * 2;
+            for (int y = area.Y; y < area.Bottom; y += span)
+            for (int x = area.X; x < area.Right; x += span)
+            {
+                var block = new Rect(x, y, Math.Min(span, area.Right - x), Math.Min(span, area.Bottom - y));
+                using var covered = new Mat(mask, block);
+                if (Cv2.CountNonZero(covered) == 0) continue;
+
+                var crop = Clip(block, guard, source.Size());
+                using var frame = new Mat(source, crop);
+                using var filled = new Mat(smoothed, crop);
+                using var beyond = new Mat(outside, crop);
+                using var within = new Mat(mask, crop);
+                using var ambient = Energy(frame, beyond);
+                using var present = Energy(filled, within);
+
+                using var strength = new Mat();
+                Cv2.Subtract(ambient, present, strength);
+                Cv2.Max(strength, 0.0, strength);
+                Cv2.Min(strength, GrainCeiling * GrainExpectation, strength);
+                Cv2.Divide(strength, Scalar.All(GrainExpectation), strength);
+
+                using var noise = Noise(crop);
+                Cv2.Multiply(noise, strength, noise);
+                using var grain = new Mat();
+                Cv2.Merge([noise, noise, noise], grain);
+                using var grained = new Mat();
+                Cv2.Add(filled, grain, grained, dtype: MatType.CV_8UC3.Value);
+
+                using var interior = new Mat(grained, new Rect(block.X - crop.X, block.Y - crop.Y, block.Width, block.Height));
+                using var target = new Mat(repair.Image, block);
+                interior.CopyTo(target, covered);
+            }
+            return repair;
+        }
+        catch { repair.Dispose(); throw; }
+    }
+
+    /// <summary>How far the picture departs from its own local average, where it was seen.</summary>
+    private static Mat Energy(Mat image, Mat where)
+    {
+        // Whole levels throughout: the reading is an average of departures already bounded at
+        // twelve, so carrying it in floating point would be carrying precision that was thrown
+        // away two lines earlier, at four times the memory traffic on the largest images.
+        using var gray = new Mat();
+        Cv2.CvtColor(image, gray, ColorConversionCodes.BGR2GRAY);
+        using var average = new Mat();
+        Cv2.Blur(gray, average, new Size(5, 5));
+        using var detail = new Mat();
+        Cv2.Absdiff(gray, average, detail);
+        Cv2.Min(detail, GrainQuiet, detail);
+
+        // A plain average would read the calm of the hole as the calm of the scene, so only the
+        // pixels that answered are counted — the same weighted reduction the fill itself is built on.
+        using var answered = new Mat(detail.Size(), MatType.CV_8UC1, Scalar.Black);
+        detail.CopyTo(answered, where);
+        var span = new Size(GrainWindow, GrainWindow);
+        using var carried = new Mat();
+        using var seen = new Mat();
+        Cv2.BoxFilter(answered, carried, MatType.CV_32F, span, normalize: false, borderType: BorderTypes.Constant);
+        Cv2.BoxFilter(where, seen, MatType.CV_32F, span, normalize: false, borderType: BorderTypes.Constant);
+        Cv2.Max(seen, 1e-3, seen);
+        var energy = new Mat();
+        Cv2.Divide(carried, seen, energy, 255); // The weights arrived as bytes, so undo their scale.
+        return energy;
+    }
+
+    /// <summary>A fixed field of unit noise, so the same picture grains the same way every frame.</summary>
+    private static readonly Lazy<Mat> Speckle = new(() =>
+    {
+        const int side = 256;
+        var values = new float[side * side];
+        ulong state = 0x9E3779B97F4A7C15UL;
+        for (int i = 0; i < values.Length; i += 2)
+        {
+            state = state * 6364136223846793005UL + 1442695040888963407UL;
+            double first = ((state >> 11) + 1) / (double)(1UL << 53);
+            state = state * 6364136223846793005UL + 1442695040888963407UL;
+            double second = (state >> 11) / (double)(1UL << 53);
+            double radius = Math.Sqrt(-2 * Math.Log(first));
+            values[i] = (float)(radius * Math.Cos(2 * Math.PI * second));
+            if (i + 1 < values.Length) values[i + 1] = (float)(radius * Math.Sin(2 * Math.PI * second));
+        }
+        var field = new Mat(side, side, MatType.CV_32F);
+        field.SetArray(values);
+        return field;
+    });
+
+    /// <remarks>Taken at the crop's own place in the field, so neighbouring crops agree.</remarks>
+    private static Mat Noise(Rect crop)
+    {
+        var field = Speckle.Value;
+        int left = ((crop.X % field.Cols) + field.Cols) % field.Cols;
+        int top = ((crop.Y % field.Rows) + field.Rows) % field.Rows;
+        using var tiled = new Mat();
+        Cv2.Repeat(field, (top + crop.Height + field.Rows - 1) / field.Rows,
+            (left + crop.Width + field.Cols - 1) / field.Cols, tiled);
+        return new Mat(tiled, new Rect(left, top, crop.Width, crop.Height)).Clone();
     }
 
     /// <summary>Inpainting, tile by tile, at the resolution each tile's holes are thin enough for.</summary>
@@ -690,6 +864,13 @@ internal static class CpuHoleRepair
     {
         // Compute only the missing content at half resolution; composite at native resolution.
         // Expanding before area resampling prevents a thin masked stroke from disappearing.
+        //
+        // It is also a donor guard, which is the reason it survived being questioned. Dropping it
+        // starts the fill a pixel closer to the evidence and scores better for it — 19.0 levels of
+        // error against a known background rather than 20.0 — but the pixel it moves onto is the
+        // antialiased edge of the glyph, and a fill anchored there inherits the thing it was meant
+        // to remove. The backdrop plate's guard test reads that directly, as a gradient it cut from
+        // the repaired frame going four levels flatter. One level of error is not worth it.
         using var expanded = new Mat();
         using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
         Cv2.Dilate(mask, expanded, kernel);
