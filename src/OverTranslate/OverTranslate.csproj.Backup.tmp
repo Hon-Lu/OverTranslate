@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Two separate questions, and they have had the same answer only by accident. The first half
+         is which Windows APIs may be named at all: realtime capture needs Windows.Graphics.Capture
+         from 1903 (Direct3D11CaptureFramePool.CreateFreeThreaded, GraphicsCaptureSession.
+         IsSupported) and has to be able to *ask about* things newer than that — whether the capture
+         indicator can be turned off, whether this system has the window exclusion list — so the
+         compile-time surface is the newest SDK projection available. It is backward compatible and
+         nothing here is bound at load time.
+
+         SupportedOSPlatformVersion is the half that decides who may run this, and it stays where it
+         was: OverTranslate still starts and still translates on Windows 10 1809. Raising it because
+         one feature wanted a newer API would take the whole application away from those users to
+         pay for something only realtime capture uses. The price is that every call newer than 1809
+         must be guarded — CA1416 will say so — which is the right conversation to be forced into. -->
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Two places, both at the capture ABI. Reading a captured frame back off the GPU hands over a
+         raw pointer and a length, and copying it row by row is what that memory is for (see
+         WgcInterop.ReadBack); the window exclusion list is called through the interface's vtable,
+         because the projection this builds against does not have it (see WgcWindowExclusion). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>icons\app.ico</ApplicationIcon>
+    <StartupObject>OverTranslate.App</StartupObject>
+    <Version>2.4.0</Version>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- WFAC010 tells WinForms apps to declare DPI awareness through Application.SetHighDpiMode.
+         This is a WPF app that only references WinForms types; ApplicationConfiguration.Initialize
+         is never called, so the manifest is the only mechanism that takes effect. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+    <None Update="ocrmodels\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <EmbeddedResource Include="icons\app.ico" />
+    <EmbeddedResource Include="icons\app-compact.ico" />
+    <Resource Include="Resources\Cursors\capture_crosshair.cur" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GTranslate" Version="2.4.0" />
+    <PackageReference Include="NLog" Version="5.0.4" />
+    <!-- CPU morphology/inpainting only; omit full video/DNN runtime and unused WPF adapters. -->
+    <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />
+    <PackageReference Include="OpenCvSharp4.runtime.win.slim" Version="4.13.0.20260627" />
+    <PackageReference Include="OpenccNetLib" Version="1.6.2" />
+    <PackageReference Include="RapidOcrNet" Version="3.0.0" ExcludeAssets="build" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
+  </ItemGroup>
+
+</Project>
