@@ -113,9 +113,9 @@ git show <to-tag>:<檔案> | grep -n 'Visibility="Collapsed"'
 （正文，形狀照 example.md）
 
 ## ↓ 安裝 / 更新
-- 現有使用者會自動更新，不需要至 GitHub 手動下載。
-- 新使用者請下載 `OverTranslate-win-Setup.exe` 進行安裝
-- 不想安裝的使用者可下載 `OverTranslate-win-Portable.zip`，解壓後直接執行，同樣支援自動更新
+- **現有使用者**：支援自動更新，無需手動下載新版；若自動更新較慢，可重新下載新版手動更新（免安裝版本直接覆蓋原檔即可）
+- **新使用者**：下載 `OverTranslate-win-Setup.exe` 進行安裝
+- **免安裝版本**：下載 `OverTranslate-win-Portable.zip`，解壓後直接執行，同樣支援自動更新
 ```
 
 安裝章節照抄不改。到這裡停下來，等使用者回應。
