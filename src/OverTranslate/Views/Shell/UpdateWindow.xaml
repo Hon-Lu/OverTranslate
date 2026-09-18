@@ -203,8 +203,7 @@
                  The link is not touched by SetPhase, so it stays live while the buttons around it
                  are disabled. -->
             <Border x:Name="SlowHint" Grid.Row="2"
-                    Margin="0,12,0,0"
-                    Padding="12,10"
+                    Padding="16,10"
                     CornerRadius="8"
                     Background="{DynamicResource AppWarningSubtle}"
                     BorderBrush="{DynamicResource AppWarning}"
