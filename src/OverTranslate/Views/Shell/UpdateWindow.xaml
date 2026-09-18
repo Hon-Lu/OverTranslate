@@ -78,6 +78,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- ══════════ Heading ══════════ -->
@@ -162,41 +163,6 @@
                                Margin="0,8,0,0"
                                Visibility="Collapsed"/>
 
-                    <!-- A download that is only slow never fails, so ErrorText never speaks up and the
-                         line above goes on saying 下載中 for as long as it takes. This appears on its
-                         own once the wait has stopped looking normal.
-
-                         Built as 設定 builds AutoModeNotice — the ⓘ glyph beside wrapping secondary
-                         text — because it is the same kind of thing: a note about what is happening
-                         on screen right now. The row at the foot of this card is a different kind of
-                         thing (a standing link, always there), and giving the two the same shape
-                         would have made a message that only appears when something is wrong look
-                         like furniture. Its link is not touched by SetUpdating, so it stays live
-                         while the buttons around it are disabled — fetching the installer by hand is
-                         the one useful thing left to do during the wait. -->
-                    <Grid x:Name="SlowHintText" Margin="0,12,0,6" Visibility="Collapsed">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
-                                   Text="&#xE946;"
-                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource AppTextSecondary}"
-                                   Margin="0,2,7,0"
-                                   VerticalAlignment="Top"/>
-                        <TextBlock Grid.Column="1"
-                                   FontFamily="{DynamicResource AppFont}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource AppTextSecondary}"
-                                   TextWrapping="Wrap"><Run Text="{DynamicResource S.Update.SlowBefore}"/><Hyperlink x:Name="SlowHintLink"
-                                      Foreground="{DynamicResource AppAccent}"
-                                      TextDecorations="None"
-                                      RequestNavigate="ReleaseNotesLink_RequestNavigate"
-                                      NavigateUri="https://github.com/asd880921/OverTranslate/releases/latest"><Run Text="{DynamicResource S.Update.SlowLink}"/></Hyperlink></TextBlock>
-                    </Grid>
-
                     <!-- Failures are reported here rather than through a system MessageBox, which was
                          the only OS-styled dialog left in the app and matched nothing around it. -->
                     <TextBlock x:Name="ErrorText"
@@ -221,8 +187,54 @@
                 </StackPanel>
             </Border>
 
+
+            <!-- ══════════ Taking too long ══════════ -->
+            <!-- A download that is only slow never fails, so ErrorText never speaks up and the card
+                 goes on saying 下載中 for as long as it takes. This appears on its own once the wait
+                 has stopped looking normal, and goes away again the moment the update moves on to
+                 applying, where fetching the installer by hand would no longer help.
+
+                 Outside the card rather than inside it, and in the warning colours rather than the
+                 card's own: everything in the card describes the update being offered, and this
+                 describes a problem with the machinery delivering it. It is also the only thing in
+                 this window that can appear while the user is looking at it, so it arrives as its
+                 own object instead of growing the card a line.
+
+                 The link is not touched by SetPhase, so it stays live while the buttons around it
+                 are disabled. -->
+            <Border x:Name="SlowHint" Grid.Row="2"
+                    Margin="0,12,0,0"
+                    Padding="12,10"
+                    CornerRadius="8"
+                    Background="{DynamicResource AppWarningSubtle}"
+                    BorderBrush="{DynamicResource AppWarning}"
+                    BorderThickness="1"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="&#xE823;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="14"
+                               Foreground="{DynamicResource AppWarning}"
+                               Margin="0,1,9,0"
+                               VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1"
+                               FontFamily="{DynamicResource AppFont}"
+                               FontSize="12"
+                               Foreground="{DynamicResource AppTextPrimary}"
+                               TextWrapping="Wrap"><Run Text="{DynamicResource S.Update.SlowBefore}"/><Hyperlink x:Name="SlowHintLink"
+                                  Foreground="{DynamicResource AppAccent}"
+                                  RequestNavigate="ReleaseNotesLink_RequestNavigate"
+                                  NavigateUri="https://github.com/asd880921/OverTranslate/releases/latest"><Run Text="{DynamicResource S.Update.SlowLink}"/><Run Text=" &#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" TextDecorations="None"/></Hyperlink></TextBlock>
+                </Grid>
+            </Border>
+
             <!-- ══════════ Answers ══════════ -->
-            <StackPanel Grid.Row="2" Margin="0,12,0,0">
+            <StackPanel Grid.Row="3" Margin="0,12,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -238,7 +250,8 @@
                             Height="36"
                             Click="DownloadBtn_Click">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            <TextBlock x:Name="DownloadBtnGlyph"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                        FontSize="13" Text="&#xE896;"
                                        VerticalAlignment="Center"
                                        Margin="0,0,6,0"/>

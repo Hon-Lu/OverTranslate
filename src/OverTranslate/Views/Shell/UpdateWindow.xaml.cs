@@ -14,7 +14,10 @@ public partial class UpdateWindow : Window
     private static UpdateWindow? _instance;
 
     private readonly UpdateInfo _updateInfo;
-    private bool _isUpdating;
+    private Phase _phase = Phase.Offering;
+
+    // Alive only for the length of one download attempt.
+    private CancellationTokenSource? _cancel;
 
     // Runs once per download attempt; see StartSlowHintTimer.
     private DispatcherTimer? _slowHintTimer;
@@ -67,11 +70,29 @@ public partial class UpdateWindow : Window
 
     private void OnThemeChanged(object? sender, EventArgs e) => WindowFrame.ApplyAppearance(this);
 
+    /// <summary>
+    /// Starts the update, or — while one is downloading — abandons it.
+    /// </summary>
+    /// <remarks>
+    /// One button for both because they are the same answer to the same question, asked twice: this
+    /// is the control for the update, and pressing it does the thing the update is not currently
+    /// doing. A separate cancel button would have to appear from nowhere when the download starts,
+    /// which is a row of two buttons becoming three under the user's hand.
+    /// </remarks>
     private async void DownloadBtn_Click(object sender, RoutedEventArgs e)
     {
+        if (_phase == Phase.Downloading)
+        {
+            _cancel?.Cancel();
+            return;
+        }
+
+        using var cancel = new CancellationTokenSource();
+        _cancel = cancel;
+
         try
         {
-            SetUpdating(true);
+            SetPhase(Phase.Downloading);
             ErrorText.Visibility = Visibility.Collapsed;
             DownloadProgress.IsIndeterminate = false;
             DownloadProgress.Value = 0;
@@ -79,12 +100,20 @@ public partial class UpdateWindow : Window
             SetDownloadStatus(0);
             StartSlowHintTimer();
 
-            await UpdateService.DownloadAndApplyAsync(_updateInfo, OnDownloadProgress, OnApplyingAsync);
+            await UpdateService.DownloadAndApplyAsync(
+                _updateInfo, OnDownloadProgress, OnApplyingAsync, cancel.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The user's own decision, so the window simply goes back to offering: no error line,
+            // and the button says 立即更新 again rather than 重試, which would imply something failed.
+            ResetToOffer();
         }
         catch (Exception ex)
         {
-            SetUpdating(false);
+            SetPhase(Phase.Offering);
             StopSlowHintTimer();
+            SlowHint.Visibility = Visibility.Collapsed;
             // The button is the way to try again, so it says so — this is the one thing about it
             // that changes, now that the progress no longer lives on its label.
             DownloadBtnText.Text = LocalizationService.Get("S.Update.Retry");
@@ -95,29 +124,65 @@ public partial class UpdateWindow : Window
             ErrorText.Text = LocalizationService.Format("S.Update.Failed", ex.Message);
             ErrorText.Visibility = Visibility.Visible;
         }
+        finally
+        {
+            _cancel = null;
+        }
+    }
+
+    /// <summary>Puts the window back the way it opened, after a cancelled download.</summary>
+    private void ResetToOffer()
+    {
+        SetPhase(Phase.Offering);
+        StopSlowHintTimer();
+        SlowHint.Visibility = Visibility.Collapsed;
+        DownloadProgress.BeginAnimation(System.Windows.Controls.ProgressBar.ValueProperty, null);
+        DownloadProgress.IsIndeterminate = false;
+        DownloadProgress.Value = 0;
+        DownloadProgress.Visibility = Visibility.Collapsed;
+        SetStatus(null);
+    }
+
+    private enum Phase
+    {
+        /// <summary>Nothing is running; the update is being offered.</summary>
+        Offering,
+
+        /// <summary>Fetching the package, and merging the delta into it. Abandonable.</summary>
+        Downloading,
+
+        /// <summary>Handing over to Velopack. Not abandonable, and nearly over.</summary>
+        Applying,
     }
 
     /// <summary>
-    /// Switches the window between offering the update and running it.
+    /// Moves the window between offering the update, running it, and handing over.
     /// </summary>
     /// <remarks>
-    /// Every way out of this window goes dead together, the title bar's close included: Velopack
-    /// replaces the application's own files and then restarts the process, and a download abandoned
-    /// half way through is the one state this has no way to clean up after. The close button says
+    /// Downloading and applying are not the same kind of wait, and treating them as one is what
+    /// used to leave a user stranded in front of a window they could not dismiss. The download —
+    /// the long half, and the half that stalls when the release CDN is slow — writes to a ".partial"
+    /// file and is abandoned safely at any point, so the way out stays open for all of it. Applying
+    /// replaces the application's own files and restarts the process; there is no way back from
+    /// half of that, so everything goes dead, the title bar's close included. The close button says
     /// why rather than simply refusing — SetResourceReference rather than a fetched string, so the
     /// reason follows a language changed in 設定 while this window is still on screen.
     /// </remarks>
-    private void SetUpdating(bool updating)
+    private void SetPhase(Phase phase)
     {
-        _isUpdating = updating;
+        _phase = phase;
 
-        DismissBtn.IsEnabled = !updating;
-        DownloadBtn.IsEnabled = !updating;
-        SkipVersionLink.IsEnabled = !updating;
-        CloseBtn.IsEnabled = !updating;
+        DismissBtn.IsEnabled = phase == Phase.Offering;
+        SkipVersionLink.IsEnabled = phase == Phase.Offering;
+        CloseBtn.IsEnabled = phase == Phase.Offering;
+        DownloadBtn.IsEnabled = phase != Phase.Applying;
 
-        if (updating) CloseBtn.SetResourceReference(ToolTipProperty, "S.Update.CloseBlocked");
-        else CloseBtn.ToolTip = null;
+        var cancelling = phase == Phase.Downloading;
+        DownloadBtnText.Text = LocalizationService.Get(cancelling ? "S.Update.Cancel" : "S.Update.Now");
+        DownloadBtnGlyph.Text = cancelling ? "" : "";
+
+        if (phase == Phase.Offering) CloseBtn.ToolTip = null;
+        else CloseBtn.SetResourceReference(ToolTipProperty, "S.Update.CloseBlocked");
     }
 
     /// <summary>
@@ -131,22 +196,22 @@ public partial class UpdateWindow : Window
     ///
     /// Delayed rather than always on: on a healthy connection the whole thing is over well inside
     /// the delay, and a standing offer to go and do it by hand would be noise in front of every
-    /// update. The link is not touched by <see cref="SetUpdating"/>, so it stays live while the
+    /// update. The link is not touched by <see cref="SetPhase"/>, so it stays live while the
     /// buttons around it are disabled — fetching the installer by hand is the one thing left that
-    /// the user can usefully do, and this window cannot be closed until the update finishes anyway.
+    /// the user can usefully do — and if they take it, 取消更新 is right there to let go of this.
     /// </remarks>
     private static readonly TimeSpan SlowHintDelay = TimeSpan.FromSeconds(60);
 
     private void StartSlowHintTimer()
     {
         StopSlowHintTimer();
-        SlowHintText.Visibility = Visibility.Collapsed;
+        SlowHint.Visibility = Visibility.Collapsed;
 
         _slowHintTimer = new DispatcherTimer { Interval = SlowHintDelay };
         _slowHintTimer.Tick += (_, _) =>
         {
             StopSlowHintTimer();
-            SlowHintText.Visibility = Visibility.Visible;
+            SlowHint.Visibility = Visibility.Visible;
         };
         _slowHintTimer.Start();
     }
@@ -156,7 +221,6 @@ public partial class UpdateWindow : Window
         _slowHintTimer?.Stop();
         _slowHintTimer = null;
     }
-
 
     /// <summary>Puts a line under the progress bar, or takes it away.</summary>
     private void SetStatus(string? text)
@@ -224,8 +288,11 @@ public partial class UpdateWindow : Window
     // remaining percent look like it vanished.
     private async Task OnApplyingAsync()
     {
+        // Past the point of no return: the hint's offer to fetch the installer by hand is no longer
+        // worth anything, and the button that was 取消更新 a moment ago goes dead.
+        SetPhase(Phase.Applying);
         StopSlowHintTimer();
-        SlowHintText.Visibility = Visibility.Collapsed;
+        SlowHint.Visibility = Visibility.Collapsed;
 
         await AnimateProgressToFullAsync();
 
@@ -269,7 +336,7 @@ public partial class UpdateWindow : Window
     /// </remarks>
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (_isUpdating)
+        if (_phase != Phase.Offering)
             e.Cancel = true;
     }
 
