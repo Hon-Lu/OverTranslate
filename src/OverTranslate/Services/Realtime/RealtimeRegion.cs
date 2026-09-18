@@ -16,8 +16,16 @@ namespace OverTranslate.Services.Realtime;
 /// once, and the answer is different for each. Defaults to <see cref="RealtimeBlockMode.Subtitle"/>,
 /// which is what the great majority of blocks are.
 /// </param>
+/// <param name="Orientation">
+/// Which way this block's text is written. Lives here for the same reason the mode does — see
+/// <see cref="RealtimeTextOrientation"/> — and is independent of it: either kind of block can hold
+/// either kind of writing.
+/// </param>
 public sealed record RealtimeRegion(
-    int Id, Rectangle Bounds, RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle);
+    int Id,
+    Rectangle Bounds,
+    RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
+    RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal);
 
 /// <summary>
 /// One block as the user has it arranged, before a session gives it an id — what edit mode hands
@@ -32,7 +40,8 @@ public sealed record RealtimeRegion(
 /// </remarks>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
-    RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle);
+    RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
+    RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal);
 
 /// <summary>
 /// The translated lines currently showing for one region. An empty list is a real result — it means

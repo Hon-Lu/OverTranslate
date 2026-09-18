@@ -54,6 +54,24 @@ public partial class RealtimeEditWindow : Window
     private const double BaseModeLabelPadding = 14;
 
     /// <summary>
+    /// Smallest width of one segment of the direction control — the second, narrower capsule beside
+    /// the mode one.
+    /// </summary>
+    /// <remarks>
+    /// Smaller than the mode segments because its words are shorter, not because it is a lesser
+    /// control: it carries the same glyph and the same word 截圖翻譯's direction switch does, so the
+    /// two features ask this question in one voice. A locale whose words are longer widens both
+    /// segments together, exactly as the mode control's do — see <see cref="BaseModeLabelPadding"/>.
+    ///
+    /// It was built glyph-only first, on the reasoning that direction is the rarer question and the
+    /// words could live on a tooltip. What that missed is who is reading it: a tooltip is found by
+    /// someone already wondering what a control does, and the reader this is for has not wondered
+    /// yet — they are framing a page of vertical Japanese and have no reason to hover over two small
+    /// marks. A word that has to be uncovered is a word most people never see.
+    /// </remarks>
+    private const double BaseDirectionSegmentWidth = 68;
+
+    /// <summary>
     /// Height of the mode control, deliberately larger than the remove button beside it.
     /// </summary>
     /// <remarks>
@@ -128,6 +146,7 @@ public partial class RealtimeEditWindow : Window
     private double _removeSize = BaseRemoveSize;
     private double _removeGap = BaseRemoveGap;
     private double _modeSegmentWidth = BaseModeSegmentWidth;
+    private double _directionSegmentWidth = BaseDirectionSegmentWidth;
     private double _modeHeight = BaseModeHeight;
     private double _modeInset = BaseModeInset;
     private double _hintWidth = BaseHintWidth;
@@ -166,7 +185,9 @@ public partial class RealtimeEditWindow : Window
             // Every block opens the way the user last left a chevron, wherever they left it: the
             // guidance answers "how do I frame this?", and that answer does not differ block by block.
             foreach (var block in _initialBlocks)
-                AddBlock(ToCanvas(block.Bounds), block.Mode, _guidanceExpanded, notify: false);
+                AddBlock(
+                    ToCanvas(block.Bounds), block.Mode, block.Orientation, _guidanceExpanded,
+                    notify: false);
 
             RaiseBlocksChanged();
         };
@@ -223,8 +244,8 @@ public partial class RealtimeEditWindow : Window
 
     /// <summary>The current blocks in physical screen pixels, ready to be watched.</summary>
     public IReadOnlyList<RealtimeBlockPlacement> GetPhysicalBlocks() =>
-        [.. _blocks.Select(block =>
-            new RealtimeBlockPlacement(ToPhysical(block.Bounds), block.ModeControl.Value))];
+        [.. _blocks.Select(block => new RealtimeBlockPlacement(
+            ToPhysical(block.Bounds), block.ModeControl.Value, block.ModeControl.TextOrientation))];
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -254,6 +275,7 @@ public partial class RealtimeEditWindow : Window
         _removeSize = BaseRemoveSize * _uiScale;
         _removeGap = BaseRemoveGap * _uiScale;
         _modeSegmentWidth = BaseModeSegmentWidth * _uiScale;
+        _directionSegmentWidth = BaseDirectionSegmentWidth * _uiScale;
         _modeHeight = BaseModeHeight * _uiScale;
         _modeInset = BaseModeInset * _uiScale;
         _hintWidth = BaseHintWidth * _uiScale;
@@ -327,7 +349,12 @@ public partial class RealtimeEditWindow : Window
         // Subtitle is the default because it is what nearly every block is, and because it is the
         // cheaper mistake: the other mode's fraction is the first fallback either way, so a panel
         // left on 字幕 costs one extra inference rather than a block that reads nothing.
-        AddBlock(box, RealtimeBlockMode.Subtitle, _guidanceExpanded, notify: true);
+        // Horizontal for the same kind of reason: it is what all but a handful of blocks are, and a
+        // vertical block left on it reads as a stack of one-character lines, which is visibly wrong
+        // rather than quietly wrong.
+        AddBlock(
+            box, RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Horizontal, _guidanceExpanded,
+            notify: true);
     }
 
     // Capture lost to something else entirely (an Alt+Tab, another window taking it). The drag is
@@ -359,11 +386,17 @@ public partial class RealtimeEditWindow : Window
 
     // ── Blocks ───────────────────────────────────────────────────────────────────────────────────
 
-    private void AddBlock(Rect bounds, RealtimeBlockMode mode, bool guidanceExpanded, bool notify)
+    private void AddBlock(
+        Rect bounds,
+        RealtimeBlockMode mode,
+        RealtimeTextOrientation orientation,
+        bool guidanceExpanded,
+        bool notify)
     {
         var visual = new BlockVisual(
-            bounds, mode, guidanceExpanded, _handleSize, _removeSize,
-            _modeSegmentWidth, _modeHeight, _modeInset, _hintWidth, _removeGap, _uiScale);
+            bounds, mode, orientation, guidanceExpanded, _handleSize, _removeSize,
+            _modeSegmentWidth, _directionSegmentWidth, _modeHeight, _modeInset, _hintWidth,
+            _removeGap, _uiScale);
 
         visual.Body.DragDelta += (_, e) => Move(visual, e.HorizontalChange, e.VerticalChange);
         visual.Remove.Click += (_, e) =>
@@ -582,10 +615,12 @@ public partial class RealtimeEditWindow : Window
         public BlockVisual(
             Rect bounds,
             RealtimeBlockMode mode,
+            RealtimeTextOrientation orientation,
             bool guidanceExpanded,
             double handleSize,
             double removeSize,
             double modeSegmentWidth,
+            double directionSegmentWidth,
             double modeHeight,
             double modeInset,
             double hintWidth,
@@ -618,7 +653,8 @@ public partial class RealtimeEditWindow : Window
             };
 
             ModeControl = new ModeSegments(
-                mode, guidanceExpanded, modeHeight, modeSegmentWidth, modeInset, hintWidth, gap, uiScale);
+                mode, orientation, guidanceExpanded, modeHeight, modeSegmentWidth,
+                directionSegmentWidth, modeInset, hintWidth, gap, uiScale);
         }
 
         public Rect Bounds { get; set; }
@@ -679,8 +715,8 @@ public partial class RealtimeEditWindow : Window
 
 
     /// <summary>
-    /// The per-block mode control: both choices always on screen, the selected one filled in, and
-    /// under it the guidance for drawing a block of that kind.
+    /// The per-block control: both choices of each question always on screen, the selected one
+    /// filled in, and under them the guidance for drawing a block of that kind.
     /// </summary>
     /// <remarks>
     /// A two-state chip that flips when clicked would be smaller, and it was tried first. It reads
@@ -689,6 +725,15 @@ public partial class RealtimeEditWindow : Window
     /// there is no way to see that a choice exists at all, let alone what the other option is. Both
     /// segments being visible answers "what is this block?" and "what else could it be?" at a glance,
     /// and switching is one click rather than read-then-flip.
+    ///
+    /// THE SECOND CAPSULE. Direction is a separate question from what the block holds — either kind
+    /// of block can hold either kind of writing — so it is a separate control rather than four
+    /// segments on one track, which would read as one four-way choice until the reader noticed two
+    /// pills on it. It is built out of the same parts as the first (same plate, same height, same
+    /// pill, same press) so the row reads as one piece of furniture, and its segments carry the same
+    /// glyph and word pairing 截圖翻譯's direction switch does. It sits after the mode control
+    /// because the mode is the question every block has to answer and this one is the question few
+    /// do.
     ///
     /// The guidance sits under the control rather than beside it, both hard against the same left
     /// edge, so the pair reads as one column starting at the block's corner. It lives here rather
@@ -778,8 +823,13 @@ public partial class RealtimeEditWindow : Window
             LocalizationService.Get("S.Realtime.ModeGameUiGuidance");
 
         private readonly TranslateTransform _pillOffset = new();
+        private readonly TranslateTransform _directionPillOffset = new();
         private readonly Border[] _segments;
+        private readonly Border[] _directionSegments;
         private readonly Border[] _highlights;
+        private readonly Border[] _directionHighlights;
+        private readonly System.Windows.Shapes.Path[] _directionGlyphs;
+        private readonly TextBlock[] _directionLabels;
         private readonly TextBlock[] _labels;
         private readonly TextBlock[] _hints;
         private readonly Grid _hintHost;
@@ -788,6 +838,7 @@ public partial class RealtimeEditWindow : Window
         private readonly Border _guidanceToggleHighlight;
         private readonly RotateTransform _guidanceChevronRotation = new();
         private readonly double _segmentWidth;
+        private readonly double _directionSegmentWidth;
         private readonly double _expandedWidth;
         private readonly double _expandedHeight;
         private readonly double _collapsedWidth;
@@ -798,21 +849,25 @@ public partial class RealtimeEditWindow : Window
         // if the pointer is still over that segment, so a press the user thought better of can be
         // taken back by sliding off it — the same forgiveness every other button on the desktop has.
         private int _pressedSegment = -1;
+        private int _pressedDirection = -1;
         private bool _guidanceTogglePressed;
         private bool _guidanceExpanded;
         private int _guidanceTransition;
 
         public ModeSegments(
             RealtimeBlockMode mode,
+            RealtimeTextOrientation orientation,
             bool guidanceExpanded,
             double height,
             double segmentWidth,
+            double directionSegmentWidth,
             double inset,
             double hintWidth,
             double gap,
             double uiScale)
         {
             Value = mode;
+            TextOrientation = orientation;
             _guidanceExpanded = guidanceExpanded;
 
             Orientation = System.Windows.Controls.Orientation.Vertical;
@@ -885,6 +940,90 @@ public partial class RealtimeEditWindow : Window
             track.HorizontalAlignment = HorizontalAlignment.Left;
             track.Height = height;
 
+            // Same parts, narrower: one capsule, two segments, one pill that slides between them.
+            _directionGlyphs =
+            [
+                BuildDirectionGlyph("M2,3.5 H12 M2,7 H12 M2,10.5 H8", uiScale),
+                BuildDirectionGlyph("M10.5,2 V12 M7,2 V12 M3.5,2 V8", uiScale),
+            ];
+
+            _directionLabels =
+            [
+                BuildLabel(LocalizationService.Get("S.Toolbar.DirectionHorizontal"), uiScale),
+                BuildLabel(LocalizationService.Get("S.Toolbar.DirectionVertical"), uiScale),
+            ];
+
+            var directionContents = new[]
+            {
+                BuildDirectionContent(_directionGlyphs[0], _directionLabels[0], uiScale),
+                BuildDirectionContent(_directionGlyphs[1], _directionLabels[1], uiScale),
+            };
+
+            // Measured and widened the way the mode segments are: the pair has to stay equal halves
+            // for the pill to travel one fixed distance, and "橫排" and "Horizontal" are nothing like
+            // each other in width.
+            foreach (var content in directionContents)
+                content.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            directionSegmentWidth = Math.Max(
+                directionSegmentWidth,
+                directionContents.Max(content => content.DesiredSize.Width) +
+                    BaseModeLabelPadding * 2 * uiScale);
+            _directionSegmentWidth = directionSegmentWidth;
+
+            var directionPill = new Border
+            {
+                Width = directionSegmentWidth,
+                Height = height - inset * 2,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(inset, 0, 0, 0),
+                CornerRadius = new CornerRadius((height - inset * 2) / 2),
+                Background = FrameStroke,
+                RenderTransform = _directionPillOffset,
+            };
+
+            _directionHighlights =
+            [
+                BuildHighlight(new CornerRadius(radius, 0, 0, radius), inset),
+                BuildHighlight(new CornerRadius(0, radius, radius, 0), inset),
+            ];
+
+            // The tooltip says what each answer MEANS, which is the half the label cannot carry —
+            // the same division, and the same sentences, the screenshot side's switch uses.
+            _directionSegments =
+            [
+                BuildSegment(directionContents[0], _directionHighlights[0], directionSegmentWidth,
+                    LocalizationService.Get("S.Toolbar.DirectionHorizontalHint")),
+                BuildSegment(directionContents[1], _directionHighlights[1], directionSegmentWidth,
+                    LocalizationService.Get("S.Toolbar.DirectionVerticalHint")),
+            ];
+
+            var directionRow = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(inset, 0, inset, 0),
+            };
+            foreach (var segment in _directionSegments) directionRow.Children.Add(segment);
+
+            var directionContent = new Grid();
+            directionContent.Children.Add(directionPill);
+            directionContent.Children.Add(directionRow);
+
+            var directionTrack = Plate(
+                directionSegmentWidth * 2 + inset * 2,
+                new CornerRadius(radius),
+                directionContent,
+                uiScale);
+            directionTrack.HorizontalAlignment = HorizontalAlignment.Left;
+            directionTrack.Height = height;
+            directionTrack.Margin = new Thickness(gap, 0, 0, 0);
+
+            // Named for the question, not for either answer: with no words on it this is all a
+            // screen reader has to go on.
+            System.Windows.Automation.AutomationProperties.SetName(
+                directionTrack, LocalizationService.Get("S.Toolbar.Direction"));
+
             var chevron = new System.Windows.Shapes.Path
             {
                 Data = Geometry.Parse("M 1,7 L 6,2 L 11,7"),
@@ -930,6 +1069,7 @@ public partial class RealtimeEditWindow : Window
                 HorizontalAlignment = HorizontalAlignment.Left,
             };
             header.Children.Add(track);
+            header.Children.Add(directionTrack);
             header.Children.Add(_guidanceToggle);
 
             _hints = [BuildHint(SubtitleHint, uiScale), BuildHint(PanelHint, uiScale)];
@@ -985,6 +1125,35 @@ public partial class RealtimeEditWindow : Window
                 segment.MouseLeave += (_, _) => { if (_pressedSegment == picked) SetPressed(picked, false); };
             }
 
+            for (var index = 0; index < _directionSegments.Length; index++)
+            {
+                var segment = _directionSegments[index];
+                var picked = index;
+
+                segment.MouseLeftButtonDown += (_, e) =>
+                {
+                    e.Handled = true;
+                    _pressedDirection = picked;
+                    segment.CaptureMouse();
+                    SetDirectionPressed(picked, true);
+                };
+                segment.MouseLeftButtonUp += (_, e) =>
+                {
+                    e.Handled = true;
+                    var commit = _pressedDirection == picked && segment.IsMouseOver;
+                    _pressedDirection = -1;
+                    segment.ReleaseMouseCapture();
+                    SetDirectionPressed(picked, false);
+                    if (commit)
+                        Select(picked == 0
+                            ? RealtimeTextOrientation.Horizontal
+                            : RealtimeTextOrientation.Vertical);
+                };
+
+                segment.MouseEnter += (_, _) => { if (_pressedDirection == picked) SetDirectionPressed(picked, true); };
+                segment.MouseLeave += (_, _) => { if (_pressedDirection == picked) SetDirectionPressed(picked, false); };
+            }
+
             _guidanceToggle.MouseLeftButtonDown += (_, e) =>
             {
                 e.Handled = true;
@@ -1011,6 +1180,7 @@ public partial class RealtimeEditWindow : Window
             };
 
             ApplySelection(animate: false);
+            ApplyDirection(animate: false);
 
             // Both resting sizes are measured up front because the canvas positions this by hand
             // before layout has run. Toggling then only chooses between known expanded and collapsed
@@ -1035,6 +1205,12 @@ public partial class RealtimeEditWindow : Window
         public event EventHandler<bool>? ExpansionChanged;
 
         public RealtimeBlockMode Value { get; private set; }
+
+        /// <summary>
+        /// Which way this block's text runs. Not called Orientation: this is a StackPanel, and that
+        /// name is taken by the one that says which way its own children stack.
+        /// </summary>
+        public RealtimeTextOrientation TextOrientation { get; private set; }
 
         /// <summary>Current size, so the caller can keep the visible surface on screen.</summary>
         public double TotalWidth => _guidanceExpanded ? _expandedWidth : _collapsedWidth;
@@ -1063,8 +1239,39 @@ public partial class RealtimeEditWindow : Window
                 Fade(_hints[index], index == selected ? 1.0 : 0.0, HintFadeDuration, animate);
         }
 
+        private void Select(RealtimeTextOrientation orientation)
+        {
+            if (orientation == TextOrientation) return;
+
+            TextOrientation = orientation;
+            ApplyDirection(animate: true);
+
+            // The same event the mode raises. What the caller does with either answer is identical —
+            // take the blocks back — and two events would only mean two subscriptions doing it.
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void ApplyDirection(bool animate)
+        {
+            var selected = TextOrientation == RealtimeTextOrientation.Horizontal ? 0 : 1;
+
+            for (var index = 0; index < _directionGlyphs.Length; index++)
+            {
+                var foreground = index == selected ? RemoveForeground : ModeIdleForeground;
+                _directionGlyphs[index].Stroke = foreground;
+                _directionLabels[index].Foreground = foreground;
+            }
+
+            Move(
+                _directionPillOffset, TranslateTransform.XProperty,
+                selected * _directionSegmentWidth, SlideDuration, animate);
+        }
+
         private void SetPressed(int segment, bool pressed) =>
             Fade(_highlights[segment], pressed ? 1.0 : 0.0, PressDuration, animate: true);
+
+        private void SetDirectionPressed(int segment, bool pressed) =>
+            Fade(_directionHighlights[segment], pressed ? 1.0 : 0.0, PressDuration, animate: true);
 
         private void SetGuidanceTogglePressed(bool pressed) =>
             Fade(_guidanceToggleHighlight, pressed ? 1.0 : 0.0, PressDuration, animate: true);
@@ -1257,9 +1464,56 @@ public partial class RealtimeEditWindow : Window
             IsHitTestVisible = false,
         };
 
+        /// <summary>
+        /// One direction glyph, drawn rather than set in type: three rules running the way the text
+        /// does, the last of them short so the pair reads as writing and not as a table.
+        /// </summary>
+        /// <remarks>
+        /// Stretched into a square box so the horizontal and vertical marks are each other turned,
+        /// which is the whole of what they have to say. The stroke is not stretched with them — a
+        /// Shape draws its pen after the stretch — so both keep the hairline weight the chevron
+        /// beside them has.
+        /// </remarks>
+        private static System.Windows.Shapes.Path BuildDirectionGlyph(string data, double uiScale) => new()
+        {
+            Data = Geometry.Parse(data),
+            Width = 13 * uiScale,
+            Height = 13 * uiScale,
+            Stretch = Stretch.Uniform,
+            StrokeThickness = 1.5 * uiScale,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+        };
+
+        /// <summary>
+        /// One direction segment's contents: the mark, then the word for it.
+        /// </summary>
+        /// <remarks>
+        /// The gap is the one the screenshot toolbar leaves between the same two things, so a reader
+        /// who knows that switch meets the same object here rather than a near-copy of it.
+        /// </remarks>
+        private static StackPanel BuildDirectionContent(
+            System.Windows.Shapes.Path glyph, TextBlock label, double uiScale)
+        {
+            glyph.Margin = new Thickness(0, 0, 6 * uiScale, 0);
+
+            var content = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            content.Children.Add(glyph);
+            content.Children.Add(label);
+            return content;
+        }
+
         // Transparent rather than unset: a null background is not hit-testable, and the segment is
         // the thing being clicked.
-        private static Border BuildSegment(TextBlock label, Border highlight, double width, string tip)
+        private static Border BuildSegment(UIElement label, Border highlight, double width, string tip)
         {
             var content = new Grid();
             content.Children.Add(highlight);

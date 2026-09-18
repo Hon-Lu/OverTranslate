@@ -185,7 +185,20 @@ internal sealed class RealtimeRegionState
     private int _pollsSinceFullScan;
     private int _pollsSinceLook;
     private int _emptyPasses;
+
+    // Which way this region's text runs, for the one decision in this type that turns with it.
+    private readonly RealtimeTextOrientation _orientation;
+
     internal DialogueReadingTracker Dialogue { get; } = new();
+
+    /// <param name="orientation">
+    /// Which way this region's text runs. The only thing it decides here is which way the watch
+    /// bands are grown — see <see cref="BuildBands"/>. Horizontal by default so the many tests that
+    /// exercise the timing rules do not each have to answer a question they are not about.
+    /// </param>
+    public RealtimeRegionState(
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal) =>
+        _orientation = orientation;
 
     /// <summary>
     /// What the region shows, one entry per line, each with the score it was read at — so a later
@@ -500,20 +513,33 @@ internal sealed class RealtimeRegionState
     }
 
     /// <summary>
-    /// Grows each recognised line into the strip to watch. The vertical padding is the generous one:
-    /// the change most likely to be missed is a second line arriving directly under the first — a
-    /// dialogue box filling in, a subtitle going from one line to two — and covering the gap either
-    /// side means that shows up immediately instead of waiting for the next full rescan.
+    /// Grows each recognised line into the strip to watch. The padding across the writing is the
+    /// generous one: the change most likely to be missed is a second line arriving directly beside
+    /// the first — a dialogue box filling in, a subtitle going from one line to two — and covering
+    /// the gap either side means that shows up immediately instead of waiting for the next full
+    /// rescan.
     /// </summary>
-    private static IReadOnlyList<Rectangle> BuildBands(IReadOnlyList<Rectangle> textBounds)
+    /// <remarks>
+    /// Which axis that is turns with the text. In vertical writing a line is a column and the next
+    /// one arrives to its left, so the generous figure moves to X and the tight one to Y. Applying
+    /// the horizontal arrangement to a column would instead pay 0.75 of the column's whole LENGTH
+    /// above and below it — over a 300px column, a band several times the area of the text in it —
+    /// and the fingerprint that decides whether anything changed is an average over the band: the
+    /// more untouched picture it covers, the smaller a real change looks against it. That dilution
+    /// is what stops a changed line being noticed at all.
+    /// </remarks>
+    private IReadOnlyList<Rectangle> BuildBands(IReadOnlyList<Rectangle> textBounds)
     {
+        var vertical = _orientation == RealtimeTextOrientation.Vertical;
         var bands = new List<Rectangle>(textBounds.Count);
         foreach (var bounds in textBounds)
         {
             if (bounds.Width <= 0 || bounds.Height <= 0) continue;
 
-            int padX = 6;
-            int padY = Math.Max(4, (int)Math.Round(bounds.Height * 0.75));
+            int across = Math.Max(
+                4, (int)Math.Round((vertical ? bounds.Width : bounds.Height) * 0.75));
+            int padX = vertical ? across : 6;
+            int padY = vertical ? 6 : across;
             bands.Add(Rectangle.FromLTRB(
                 bounds.Left - padX, bounds.Top - padY, bounds.Right + padX, bounds.Bottom + padY));
         }

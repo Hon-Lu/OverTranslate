@@ -72,15 +72,27 @@ public class OcrService : IDisposable
     /// </summary>
     /// <param name="mode">The live region's mode. Panel preserves the historical path for callers
     /// that do not specify one; the application always passes its region's explicit mode.</param>
+    /// <param name="orientation">
+    /// Which way the region's text is written. Vertical turns the frame 270° and reads it with the
+    /// vertical pipeline — see <see cref="TryRecognizeVerticalAsync"/>; the mode does not reach that
+    /// path, for the reason <see cref="GroupingProfile.Vertical"/> gives.
+    /// </param>
     public async Task<List<OcrTextBlock>?> TryRecognizeAsync(
         Bitmap bitmap,
         string sourceLanguage,
         int? maxDetectSize = null,
         CancellationToken cancellationToken = default,
-        Realtime.RealtimeBlockMode mode = Realtime.RealtimeBlockMode.Panel)
+        Realtime.RealtimeBlockMode mode = Realtime.RealtimeBlockMode.Panel,
+        Realtime.RealtimeTextOrientation orientation = Realtime.RealtimeTextOrientation.Horizontal)
     {
         if (!OcrLanguageRouter.IsSupported(sourceLanguage))
             throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
+
+        if (orientation == Realtime.RealtimeTextOrientation.Vertical)
+        {
+            return await TryRecognizeVerticalAsync(
+                bitmap, OcrLanguageRouter.Normalize(sourceLanguage), maxDetectSize, cancellationToken);
+        }
 
         var blocks = await _engine.TryRecognizeAsync(
             bitmap, OcrLanguageRouter.Normalize(sourceLanguage), maxDetectSize, cancellationToken);
@@ -100,6 +112,47 @@ public class OcrService : IDisposable
         // honour here; taking one would mean a mode the user chose for a still capture silently
         // steering frames it was never asked about.
         return GroupRealtime(blocks, bitmap.Height, mode);
+    }
+
+    /// <summary>
+    /// The live-screen half of the vertical pipeline: the same 270° turn and the same grouping the
+    /// screenshot path uses, asked for a free inference slot rather than queued for one.
+    /// </summary>
+    /// <remarks>
+    /// <para>It shares <see cref="RecognizeVerticalAsync"/>'s procedure and deliberately not the
+    /// live path's <see cref="GroupRealtime"/>. Both of that method's branches judge rows against
+    /// rows of the original picture — the dialogue grouper asks which reading completes a line,
+    /// the panel grouper which line continues a paragraph — and here a "row" is a whole column, so
+    /// neither question is the one in front of it. <see cref="GroupingProfile.Vertical"/> is what
+    /// the turned picture is measured on, and it is the only profile that has been.</para>
+    ///
+    /// <para>The two live-path filters that are not about rows do run. The scenery filter is text
+    /// and confidence only, and the collapse filter is applied here rather than by the caller
+    /// because here the picture is still turned: a collapse is one box thrown across the block
+    /// perpendicular to the writing, which in the turned frame is the same box height test the
+    /// horizontal path makes, and after the mapping back it would be a test of something else.</para>
+    /// </remarks>
+    private async Task<List<OcrTextBlock>?> TryRecognizeVerticalAsync(
+        Bitmap bitmap,
+        string language,
+        int? maxDetectSize,
+        CancellationToken cancellationToken)
+    {
+        using var rotated = new Bitmap(bitmap);
+        rotated.RotateFlip(RotateFlipType.Rotate270FlipNone);
+
+        var blocks = await _engine.TryRecognizeAsync(
+            rotated, language, maxDetectSize, cancellationToken);
+        if (blocks is null)
+            return null;
+
+        var filtered = RejectUnconvincingBlocks(blocks)
+            .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
+                block.Bounds.Height, rotated.Height, block.Text))
+            .ToList();
+
+        return MapVerticalColumnsBack(
+            OcrTextBlockGrouper.Group(filtered, GroupingProfile.Vertical), bitmap.Width);
     }
 
     /// <summary>
@@ -254,12 +307,28 @@ public class OcrService : IDisposable
 
         var blocks = await RecognizeAndGroupAsync(
             engine, rotated, sourceLanguage, GroupingProfile.Vertical, cancellationToken);
+
+        return MapVerticalColumnsBack(blocks, bitmap.Width);
+    }
+
+    /// <summary>
+    /// Turns grouped rows of the rotated picture back into columns of the original, then reassembles
+    /// the ones belonging to the same piece of writing.
+    /// </summary>
+    /// <remarks>
+    /// Shared by the screenshot and live-screen entry points so there is one description of what a
+    /// vertical reading is. What differs between them is how the recognition was asked for, which is
+    /// settled before this runs.
+    /// </remarks>
+    internal static List<OcrTextBlock> MapVerticalColumnsBack(
+        List<OcrTextBlock> blocks, int originalWidth)
+    {
         var columns = blocks.Select(block => block with
         {
-            Bounds = MapVerticalBoundsBack(block.Bounds, bitmap.Width),
+            Bounds = MapVerticalBoundsBack(block.Bounds, originalWidth),
             // The layout box turns with the picture. Without it the second pass below would be
             // reading a rectangle still in the rotated frame beside one that is not.
-            LayoutBounds = MapVerticalBoundsBack(block.LayoutBounds, bitmap.Width),
+            LayoutBounds = MapVerticalBoundsBack(block.LayoutBounds, originalWidth),
             SourceLineBounds = null,
             // After mapping back, a column is tall and narrow. The rotated row height is the
             // original glyph width and is the useful reference for a square vertical cell. Only the

@@ -61,6 +61,17 @@ public partial class RealtimeBlockWindow : Window
     private const double LineHeightRatio = 1.22;
 
     /// <summary>
+    /// How much of its square cell one glyph of vertical text is set at.
+    /// </summary>
+    /// <remarks>
+    /// The same figure the screenshot overlay uses, and for the same reason: a cell sized exactly to
+    /// the type leaves adjacent characters touching, and vertical writing has no word spaces to
+    /// break that up. The remaining sliver is the leading, spent on all four sides at once because
+    /// the cell is square.
+    /// </remarks>
+    private const double VerticalGlyphFill = 0.92;
+
+    /// <summary>
     /// How much taller than the line it replaces a single-line translation may be drawn. The scrim
     /// is sized to whichever is larger, so this is really a cap on the band's height.
     /// </summary>
@@ -98,6 +109,10 @@ public partial class RealtimeBlockWindow : Window
     private readonly bool _naturalBackground;
     private readonly bool _sampleTextColor;
     private readonly RealtimeBlockMode _mode;
+
+    // Which way this block's source runs, as the user said in edit mode. It decides how the
+    // translation is set here and how the frame was read upstream — see RealtimeTextOrientation.
+    private readonly RealtimeTextOrientation _orientation;
 
     // 顯示外觀 → 邊框, held per session like the colours. No fixed brush with the switch on means
     // each group picks its own colour — see ApplyBorder.
@@ -141,10 +156,12 @@ public partial class RealtimeBlockWindow : Window
         bool sampleTextColor = false,
         RealtimeBlockMode mode = RealtimeBlockMode.Subtitle,
         bool border = false,
-        string? borderColor = null)
+        string? borderColor = null,
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal)
     {
         InitializeComponent();
         _mode = mode;
+        _orientation = orientation;
         _border = border;
         _fixedBorderBrush = border && borderColor is not null
             ? Freeze(new SolidColorBrush(RealtimeSubtitleColors.Border(borderColor)))
@@ -529,7 +546,16 @@ public partial class RealtimeBlockWindow : Window
         foreach (var block in _lines)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
-            if (_mode == RealtimeBlockMode.Panel)
+            if (_orientation == RealtimeTextOrientation.Vertical)
+            {
+                // Before the mode, and instead of it. Both of the horizontal branches below are
+                // about lines that run across — one wraps a paragraph into rows, the other fits a
+                // band to the row it replaces — and neither question exists for a column. What the
+                // mode still decides for a vertical block is upstream, in how the frame was read.
+                if (BuildVerticalLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } column)
+                    yield return column;
+            }
+            else if (_mode == RealtimeBlockMode.Panel)
             {
                 double fontSize = Math.Max(1, Math.Min(
                     SourceFontScale.Calculate(GetGlyphHeight(block, block.Bounds.Height / _dpiY),
@@ -570,6 +596,176 @@ public partial class RealtimeBlockWindow : Window
             else if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } visual)
                 yield return visual;
         }
+    }
+
+    /// <summary>
+    /// One vertical column group: the translation set downwards in square cells, anchored where the
+    /// source's first character was, over a background that covers the source it replaces.
+    /// </summary>
+    /// <remarks>
+    /// The horizontal band spends a mismatch of length evenly on both sides — see
+    /// <see cref="RealtimeBandPlacement"/> — and this deliberately does not. Vertical writing has a
+    /// corner the reader is already looking at: the top of the rightmost column, which is where the
+    /// sentence starts. Anchoring there means a translation shorter than its source starts in
+    /// exactly the place the source did and simply runs out early, while a centred grid would move
+    /// the first character away from where the eye last saw one, on every line, by a different
+    /// amount each time.
+    ///
+    /// The grid never grows past the block. This window is exactly the rectangle the user drew, so
+    /// anything outside it is not rendered — and a sentence ending early with nothing to say so is
+    /// the failure the wrapped fallback in <see cref="BuildLine"/> exists to avoid. The cell shrinks
+    /// instead; see <see cref="VerticalTextGrid.FitWithin"/>.
+    /// </remarks>
+    private LineVisual? BuildVerticalLine(
+        TranslatedBlock line, double canvasWidth, double canvasHeight,
+        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
+    {
+        double left = line.Bounds.X / _dpiX;
+        double top = line.Bounds.Y / _dpiY;
+        double sourceWidth = line.Bounds.Width / _dpiX;
+        double sourceHeight = line.Bounds.Height / _dpiY;
+        if (sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+        // Spaces are dropped rather than given a cell of their own. A blank square in the middle of
+        // a column does not read as a word break in vertical writing, it reads as the end of the
+        // line — and a translation into Chinese or Japanese has no word spaces to lose anyway.
+        string glyphs = new([.. line.TranslatedText.Where(character => !char.IsWhiteSpace(character))]);
+        if (glyphs.Length == 0) return null;
+
+        // The cell is square and sized on the source's own column: for a vertical reading the width
+        // of the column is the glyph size, and that is what RenderGlyphHeight carries back from the
+        // turned frame — see OcrService.MapVerticalColumnsBack.
+        double cellPreferred = Math.Max(MinFontSize, GetGlyphHeight(line, sourceWidth));
+
+        // THE COLUMN IS AS LONG AS THE ONE IT REPLACES, not as long as the block. This is the
+        // vertical half of what the band does when it sizes a line to the row underneath it rather
+        // than to the whole block — and getting it wrong is not untidy here, it is unreadable: over
+        // a comic page the block IS the page, so a grid given the block's height fits every sentence
+        // into a single column and runs it from the top of the picture to the bottom, straight
+        // across the panels either side of the balloon it came from.
+        //
+        // What the block still bounds is how far left the grid may reach. A translation too long for
+        // the source's own column takes another column beside it — which is what wrapping is in
+        // vertical writing — and only when that runs out of room does the cell shrink.
+        double columnLength = Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2);
+        double maxWidth = Math.Max(cellPreferred, canvasWidth - ScrimPaddingX * 2);
+        double maxHeight = Math.Max(cellPreferred, columnLength);
+
+        var (cellSize, gridWidth, gridHeight) = VerticalTextGrid.FitWithin(
+            maxWidth, maxHeight, cellPreferred, MinFontSize, glyphs.Length);
+
+        // Top-right of the source, kept inside the block. Columns are filled right to left, so the
+        // grid's right edge is where reading starts.
+        double gridLeft = Math.Clamp(
+            left + sourceWidth - gridWidth, 0, Math.Max(0, canvasWidth - gridWidth));
+        double gridTop = Math.Clamp(top, 0, Math.Max(0, canvasHeight - gridHeight));
+
+        // The background has to cover both: the source, which is the thing being hidden, and the
+        // grid, which may reach further left when the translation needs more columns than the
+        // original had.
+        double scrimLeft = Math.Max(0, Math.Min(gridLeft, left) - ScrimPaddingX);
+        double scrimTop = Math.Max(0, Math.Min(gridTop, top) - ScrimPaddingY);
+        double scrimRight = Math.Min(
+            canvasWidth, Math.Max(gridLeft + gridWidth, left + sourceWidth) + ScrimPaddingX);
+        double scrimBottom = Math.Min(
+            canvasHeight, Math.Max(gridTop + gridHeight, top + sourceHeight) + ScrimPaddingY);
+        double scrimWidth = Math.Max(0, scrimRight - scrimLeft);
+        double scrimHeight = Math.Max(0, scrimBottom - scrimTop);
+
+        double patchLeft = scrimLeft;
+        double patchTop = scrimTop;
+        double patchWidth = scrimWidth;
+        double patchHeight = scrimHeight;
+        ImageBrush? naturalBrush = null;
+
+        if (_naturalBackground)
+        {
+            // The guard is the horizontal one turned with the writing. What it is there for is the
+            // detached marks the detection box leaves out, and in vertical Japanese the dakuten sits
+            // to the right of its glyph rather than above it — so the generous side is X here, and
+            // both are measured from the column's width instead of a line's height.
+            double naturalGuardX = Math.Clamp(sourceWidth * 0.40, MinNaturalGuardY, 26);
+            double naturalGuardY = Math.Clamp(sourceWidth * 0.20, MinNaturalGuardX, 20);
+            double guardLeft = Math.Max(0, scrimLeft - naturalGuardX);
+            double guardTop = Math.Max(0, scrimTop - naturalGuardY);
+            double guardRight = Math.Min(canvasWidth, scrimLeft + scrimWidth + naturalGuardX);
+            double guardBottom = Math.Min(canvasHeight, scrimTop + scrimHeight + naturalGuardY);
+            double guardWidth = Math.Max(0, guardRight - guardLeft);
+            double guardHeight = Math.Max(0, guardBottom - guardTop);
+
+            naturalBrush = BuildNaturalBrush(
+                repairedFrame, ToPhysicalPatchBounds(guardLeft, guardTop, guardWidth, guardHeight));
+
+            if (naturalBrush is not null)
+            {
+                patchLeft = guardLeft;
+                patchTop = guardTop;
+                patchWidth = guardWidth;
+                patchHeight = guardHeight;
+            }
+        }
+
+        var patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
+
+        var background = new Border
+        {
+            Width = patchWidth,
+            Height = patchHeight,
+            Background = (System.Windows.Media.Brush?)naturalBrush ?? _scrimBrush,
+            CornerRadius = new CornerRadius(naturalBrush is null ? BandCornerRadius : 0),
+        };
+        ApplyBorder(background, line);
+
+        var foreground = _textBrush;
+        if (_sampleTextColor && frame is not null)
+        {
+            var sampled = RealtimeNaturalBackground.SampleTextColor(frame, line.Bounds, _textBrush.Color);
+            foreground = Freeze(new SolidColorBrush(sampled));
+        }
+
+        // One element per glyph, positioned by hand. A TextBlock cannot set type downwards, and the
+        // alternatives — a rotated horizontal line, or a font feature — either turn every character
+        // on its side or are unavailable on the fallback faces this has to survive on.
+        var cells = new Canvas { Width = gridWidth, Height = gridHeight };
+        foreach (var (glyph, cellBounds) in
+                 VerticalTextGrid.Cells(glyphs, new Rect(0, 0, gridWidth, gridHeight), cellSize))
+        {
+            var cell = new TextBlock
+            {
+                Text = glyph.ToString(),
+                FontFamily = TextFont,
+                FontSize = cellSize * VerticalGlyphFill,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = foreground,
+                TextAlignment = TextAlignment.Center,
+            };
+
+            // Brackets and dashes are drawn lying down in horizontal text and standing up in
+            // vertical: the glyph is the same, the orientation is not.
+            if (VerticalTextGrid.RotatesGlyph(glyph))
+            {
+                cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+                cell.RenderTransform = new RotateTransform(90);
+            }
+
+            VerticalTextGrid.PositionGlyph(cell, cellBounds);
+            cells.Children.Add(cell);
+        }
+
+        var textLayer = new Border
+        {
+            Width = gridWidth,
+            Height = gridHeight,
+            ClipToBounds = true,
+            Child = cells,
+        };
+
+        Canvas.SetLeft(background, patchLeft);
+        Canvas.SetTop(background, patchTop);
+        Canvas.SetLeft(textLayer, gridLeft);
+        Canvas.SetTop(textLayer, gridTop);
+
+        return new LineVisual(background, textLayer, patchBounds);
     }
 
     private LineVisual? BuildPanelLine(

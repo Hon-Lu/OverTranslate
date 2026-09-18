@@ -108,7 +108,7 @@ internal sealed class RealtimeSessionController
     /// language, the engine or a colour, all of which live on a page a running session has hidden.
     /// Redrawing three blocks by hand every time they touch one of those is the tax that made this
     /// worth keeping, and the modes go with the rectangles because re-answering 字幕 / 對話 vs 遊戲 / UI for
-    /// each block is the same tax again.
+    /// each block is the same tax again. The writing direction rides along for the same reason.
     ///
     /// Held here and not written to the settings file, which is the line RealtimePage draws for
     /// everything else about a sitting: this survives 結束即時翻譯 and nothing more. The screen it
@@ -418,7 +418,8 @@ internal sealed class RealtimeSessionController
         CloseEditWindow();
 
         var regions = _blocks
-            .Select((block, index) => new RealtimeRegion(index, block.Bounds, block.Mode))
+            .Select((block, index) =>
+                new RealtimeRegion(index, block.Bounds, block.Mode, block.Orientation))
             .ToList();
 
         // Resolved before the overlays are shown. They are click-through and belong to this process,
@@ -428,7 +429,7 @@ internal sealed class RealtimeSessionController
                 region.Id, region.Bounds, GrabUnderlying, request.SourceLanguage, request.TargetLanguage,
                 request.TextColor, request.ScrimColor, request.ScrimOpacity,
                 request.NaturalBackground, request.SampleSourceTextColor, region.Mode,
-                request.Border, request.FixedBorderColor);
+                request.Border, request.FixedBorderColor, region.Orientation);
             _blockWindows[region.Id] = window;
             window.Show();
         }
