@@ -59,6 +59,89 @@ public class FrameFingerprintSensitivityTests(ITestOutputHelper output)
         Assert.True(after.ChangedShare(before, 16) > FrameFingerprint.ChangedCellPercent / 100.0 * 2);
     }
 
+    /// <summary>
+    /// The same two thresholds asked about a whole dialogue box rather than a subtitle band, which
+    /// is the comparison the search path and the full rescan make — and the one the share over
+    /// everything compared is wrong for.
+    /// </summary>
+    public class OverAWholeDialogueBox(ITestOutputHelper output)
+    {
+        private const int Width = 1200;
+        private const int Height = 300;
+
+        [Theory]
+        [InlineData("はい。", "3 characters")]
+        [InlineData("そうだね、行こうか。", "10 characters")]
+        [InlineData("ずっと前から言おうと思っていたんだけど、", "20 characters")]
+        public void ALineAppearingInAnEmptyBoxIsSeen(string line, string what)
+        {
+            // The reported bug: a dialogue game whose next line simply never appeared until the user
+            // paused and resumed. The box is static, so nothing but this comparison was ever going
+            // to notice, and a line of text is a small share of a box drawn around a whole
+            // conversation — 0.8% of the cells for three characters, against a 5% bar.
+            using var empty = Box("");
+            using var shown = Box(line);
+            var before = FrameFingerprint.Capture(empty, null);
+            var after = FrameFingerprint.Capture(shown, null);
+
+            output.WriteLine(
+                $"{what}: whole={after.ChangedShare(before, 16):0.0%} " +
+                $"local={after.MaxLocalChangedShare(before, 16):0.0%}");
+
+            Assert.True(after.DiffersLocally(before));
+        }
+
+        [Theory]
+        [InlineData("そうだね、行こうか。", "うん、わかった。")]
+        [InlineData("ずっと前から言おうと思っていたんだけど、", "やっぱり何でもない。")]
+        public void OneMessageReplacedByAnotherIsSeen(string first, string second)
+        {
+            using var before = Box(first);
+            using var after = Box(second);
+            var a = FrameFingerprint.Capture(before, null);
+            var b = FrameFingerprint.Capture(after, null);
+
+            output.WriteLine(
+                $"'{first}' -> '{second}': whole={b.ChangedShare(a, 16):0.0%} " +
+                $"local={b.MaxLocalChangedShare(a, 16):0.0%}");
+
+            Assert.True(b.DiffersLocally(a));
+        }
+
+        [Fact]
+        public void TheBoxGettingBrighterUnderAnUnchangedLineIsNot()
+        {
+            // The other half of the trade, and the reason the tolerance is where it is: being more
+            // sensitive to where a change lands must not make the loop sensitive to a scene
+            // brightening behind text it has already read.
+            using var still = Box("そうだね、行こうか。");
+            using var brighter = Box("そうだね、行こうか。", shift: 16);
+
+            var before = FrameFingerprint.Capture(still, null);
+            var after = FrameFingerprint.Capture(brighter, null);
+
+            output.WriteLine($"+16 levels: local={after.MaxLocalChangedShare(before, 16):0.0%}");
+            Assert.False(after.DiffersLocally(before));
+        }
+
+        private static Bitmap Box(string line, int shift = 0)
+        {
+            var bitmap = new Bitmap(Width, Height);
+            using var graphics = Graphics.FromImage(bitmap);
+            graphics.Clear(Color.FromArgb(22 + shift, 24 + shift, 30 + shift));
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+
+            if (line.Length > 0)
+            {
+                using var font = new Font("Yu Gothic UI", 36, FontStyle.Regular, GraphicsUnit.Pixel);
+                graphics.DrawString(line, font, Brushes.White, 40, 30);
+            }
+
+            return bitmap;
+        }
+    }
+
     private static (FrameFingerprint Before, FrameFingerprint After) Fingerprints(string a, string b)
     {
         using var first = Frame(a);

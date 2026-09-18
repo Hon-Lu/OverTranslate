@@ -56,6 +56,50 @@ public class FrameFingerprintTests
     }
 
     [Fact]
+    public void ASmallShareOfTheWholeAreaIsStillAChangeWhereItLands()
+    {
+        // Five cells of a hundred is 5% of the area and under the bar, which is the right answer for
+        // a strip of text — but the same five cells are a third of the two grid rows they sit in, and
+        // over a whole watched region that is what a line of text looks like: small against the box
+        // the user drew, unmistakable against the rows it falls in.
+        var before = new byte[100];
+        Array.Fill(before, (byte)100);
+        var after = (byte[])before.Clone();
+        for (int i = 0; i < 5; i++) after[i] = 255;
+
+        Assert.False(new FrameFingerprint(after).Differs(new FrameFingerprint(before)));
+        Assert.True(new FrameFingerprint(after).DiffersLocally(new FrameFingerprint(before)));
+    }
+
+    [Fact]
+    public void OneCellChangingIsNotEnoughLocallyEither()
+    {
+        // The window is two rows rather than one precisely so a lone flickering cell cannot carry
+        // it: a caret blinking in a dialogue box must not read as the next line arriving.
+        var before = new byte[100];
+        Array.Fill(before, (byte)100);
+        var after = (byte[])before.Clone();
+        after[42] = 255;
+
+        Assert.False(new FrameFingerprint(after).DiffersLocally(new FrameFingerprint(before)));
+    }
+
+    [Fact]
+    public void AFrameIsOnlyIdenticalWhenNothingMovedAnywhere()
+    {
+        // What the idle scan asks. A change under every bar above is still a change, and the only
+        // picture that cannot be hiding one is the picture that did not move at all.
+        var before = new byte[100];
+        Array.Fill(before, (byte)100);
+        var after = (byte[])before.Clone();
+        after[42] = 255;
+
+        Assert.True(new FrameFingerprint(before).IsIdenticalTo(new FrameFingerprint((byte[])before.Clone())));
+        Assert.False(new FrameFingerprint(after).IsIdenticalTo(new FrameFingerprint(before)));
+        Assert.False(new FrameFingerprint(before).IsIdenticalTo(null));
+    }
+
+    [Fact]
     public void NothingToCompareAgainstCountsAsChanged()
     {
         Assert.True(Cells(100).Differs(null));

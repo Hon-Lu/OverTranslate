@@ -19,6 +19,14 @@ namespace OverTranslate.Services.Realtime;
 /// outside those strips is then invisible, a subtitle changing shows up on the very next poll, and
 /// the region falls quiet in between instead of being recognised on a timer.
 ///
+/// Two things bound how far a comparison can be trusted. One is the denominator: a fingerprint
+/// reports the share of the area it compared that moved, so a line of text measured against a whole
+/// watched region is divided by however much empty box the user drew around it — which is why the
+/// two whole-region comparisons ask <see cref="FrameFingerprint.DiffersLocally"/> and only the
+/// strips ask <see cref="FrameFingerprint.Differs"/>. The other is that a change missed here is
+/// missed for good rather than merely late, because a still picture never asks again — hence
+/// <see cref="IdleScanInterval"/>, which is the floor under all of it.
+///
 /// The comparison itself is <see cref="FrameFingerprint"/> rather than an exact hash, because the
 /// pixels inside those strips are not stable either — that difference alone took one measured region
 /// from recognising continuously to recognising when its words changed. Text appearing somewhere
@@ -124,6 +132,34 @@ internal sealed class RealtimeRegionState
     public static readonly int FullRescanPolls = PollsIn(FullRescanInterval);
 
     /// <summary>
+    /// How long a region may look unchanged before it is read anyway.
+    /// </summary>
+    /// <remarks>
+    /// <para>Every path above waits for a fingerprint to report a change, and a fingerprint reports
+    /// a share of the area it compared. <see cref="FrameFingerprint.DiffersLocally"/> fixes the
+    /// worst of that — a line of text is now measured against the rows it falls in rather than
+    /// against the whole block — but it cannot make the bar disappear: "はい。" becoming "いいえ。"
+    /// in a 1200x300 box moves 3.1% of even the busiest rows, against a 5% bar.</para>
+    ///
+    /// <para>What makes a missed change unrecoverable rather than merely late is that nothing ever
+    /// asks again. The picture does not change on its own, so every later poll compares the region
+    /// against a record of the very frame it is looking at and concludes, correctly, that nothing
+    /// has happened — which is why the only way out was for the user to pause and resume, and why
+    /// this exists. Whatever the comparisons make of it, a region is read again this often.</para>
+    ///
+    /// <para>Two seconds, and it costs nothing while a region is genuinely still: the frame has to
+    /// have moved somewhere (<see cref="FrameFingerprint.IsIdenticalTo"/>) before the idle scan
+    /// fires at all, so an untouched region is as free as it was. What pays is a region whose
+    /// picture flickers under the bar — a blinking caret, an animated prompt — and it pays one look
+    /// every two seconds for it. A reader waits out two seconds; they do not wait out a line that
+    /// never arrives.</para>
+    /// </remarks>
+    public static readonly TimeSpan IdleScanInterval = TimeSpan.FromMilliseconds(2000);
+
+    /// <inheritdoc cref="IdleScanInterval"/>
+    public static readonly int IdleScanPolls = PollsIn(IdleScanInterval);
+
+    /// <summary>
     /// How many passes in a row must find nothing before the overlay is cleared. Recognition drops a
     /// line it had a moment ago often enough — a frame caught mid-repaint, a compression artefact —
     /// and acting on the first one makes the translation blink out and come straight back, which
@@ -145,6 +181,7 @@ internal sealed class RealtimeRegionState
     private FrameFingerprint? _pending;
     private int _unsettledPolls;
     private int _pollsSinceFullScan;
+    private int _pollsSinceLook;
     private int _emptyPasses;
     internal DialogueReadingTracker Dialogue { get; } = new();
 
@@ -200,17 +237,36 @@ internal sealed class RealtimeRegionState
     public RealtimeReadReason Examine(
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
     {
+        _pollsSinceLook++;
+        var reason = Decide(capture, dialogue);
+        // Whatever the pass then makes of it, the region has been handed to the reader — which is
+        // all the idle scan counts, so that the poll it forces cannot be forced again by the next.
+        if (reason != RealtimeReadReason.Nothing) _pollsSinceLook = 0;
+        return reason;
+    }
+
+    /// <inheritdoc cref="Examine"/>
+    private RealtimeReadReason Decide(
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue)
+    {
         if (dialogue && Dialogue.TryTakeConfirmation()) return RealtimeReadReason.TextChanged;
         var current = capture(IsWatchingText ? _watchBands : null);
 
-        if (current.Differs(_rendered))
+        // The strips are the text, so the share of them a change moves means what it says. A whole
+        // region is whatever rectangle the user drew around the text, so the same share of it does
+        // not — see FrameFingerprint.DiffersLocally, which is the difference between noticing the
+        // next line of dialogue and never noticing it.
+        bool Changed(FrameFingerprint? previous) =>
+            IsWatchingText ? current.Differs(previous) : current.DiffersLocally(previous);
+
+        if (Changed(_rendered))
         {
             if (dialogue) Dialogue.ObservePixelChange();
             // Changed, and not yet the same twice running. Give it a poll to settle so a line that
             // is still fading in is read once it has arrived — but only up to the cap, or content
             // that never holds still would never be read at all.
             var cap = IsWatchingText ? (dialogue ? 0 : MaxTextUnsettledPolls) : MaxUnsettledPolls;
-            if (current.Differs(_pending) && _unsettledPolls < cap)
+            if (Changed(_pending) && _unsettledPolls < cap)
             {
                 _pending = current;
                 _unsettledPolls++;
@@ -229,17 +285,48 @@ internal sealed class RealtimeRegionState
         _unsettledPolls = 0;
 
         // Nothing known is being watched, and nothing changed — the idle path, and the one that has
-        // to stay free: an untouched region costs a grab and a fingerprint, and nothing else.
-        if (!IsWatchingText) return RealtimeReadReason.Nothing;
+        // to stay free: an untouched region costs a grab and a fingerprint, and nothing else. The
+        // print just taken is the whole region, so the idle scan needs nothing further.
+        if (!IsWatchingText) return IdleScan(capture, current);
 
         // The text we know about is unchanged, but something may have appeared outside it, which no
         // view of the old lines can see.
-        if (++_pollsSinceFullScan < FullRescanPolls) return RealtimeReadReason.Nothing;
+        if (++_pollsSinceFullScan < FullRescanPolls) return IdleScan(capture, null);
 
         _pollsSinceFullScan = 0;
-        bool changed = capture(null).Differs(_renderedFull);
+        var full = capture(null);
+        bool changed = full.DiffersLocally(_renderedFull);
         if (dialogue && changed) Dialogue.ObservePixelChange();
-        return changed ? RealtimeReadReason.Rescan : RealtimeReadReason.Nothing;
+        return changed ? RealtimeReadReason.Rescan : IdleScan(capture, full);
+    }
+
+    /// <summary>
+    /// The last resort: read the region anyway, because too long has passed since anything did.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="IdleScanInterval"/> for why a region that looks unchanged cannot be trusted
+    /// indefinitely. A region with no known text goes back on the search — the cheap detection can
+    /// answer "is there anything here" as well as anything can. One that is watching text does not:
+    /// the gate in front of the rescan discards boxes over the line already on screen, which is
+    /// exactly the line this doubts, so the only answer worth having is a full read.
+    /// </remarks>
+    /// <param name="full">
+    /// The whole region's print if the caller has already taken it this poll, so an idle region does
+    /// not pay for a second one; null to take it here, and only when the scan is actually due.
+    /// </param>
+    private RealtimeReadReason IdleScan(
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, FrameFingerprint? full)
+    {
+        if (_pollsSinceLook < IdleScanPolls) return RealtimeReadReason.Nothing;
+
+        full ??= capture(null);
+        if (!full.IsIdenticalTo(_renderedFull))
+            return IsWatchingText ? RealtimeReadReason.TextChanged : RealtimeReadReason.Search;
+
+        // Cell for cell the picture that was read: there is nothing here to find, and asking again
+        // on the next poll would pay for the same answer at every poll from now on.
+        _pollsSinceLook = 0;
+        return RealtimeReadReason.Nothing;
     }
 
     /// <summary>
@@ -315,6 +402,27 @@ internal sealed class RealtimeRegionState
         RenderedLines = lines;
         RenderedText = string.Join('\n', lines.Select(line => line.Text));
         RenderedConfidence = WeightedConfidence(lines);
+    }
+
+    /// <summary>
+    /// Records that this frame has been looked at and holds nothing worth reading, without touching
+    /// what the region is showing.
+    /// </summary>
+    /// <remarks>
+    /// For the poll where <see cref="RealtimeGate"/> answered the question on its own. Nothing else
+    /// records it: the words on screen have not changed, so <see cref="MarkRendered"/> would be a
+    /// lie about the reading — and yet leaving the frame unrecorded means every later poll compares
+    /// the region against a print of a frame two changes ago and asks the gate again, at every poll,
+    /// for as long as the picture holds still. That is the leak that makes a more sensitive
+    /// comparison expensive, so the two go together.
+    /// </remarks>
+    public void MarkScanned(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture)
+    {
+        _renderedFull = capture(null);
+        _rendered = IsWatchingText ? capture(_watchBands) : _renderedFull;
+        _pending = _rendered;
+        _unsettledPolls = 0;
+        _pollsSinceFullScan = 0;
     }
 
     /// <summary>

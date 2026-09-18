@@ -410,6 +410,11 @@ public sealed class RealtimeTranslationSession
                             "Realtime gate region={Region} reason={Reason} size={Size} boxes={Boxes} " +
                             "-> nothing worth reading",
                             region.Id, reason, gateSize, found.Count);
+                        // The question has been answered, so the frame has been accounted for.
+                        // Without this the region keeps comparing itself against the print of an
+                        // older frame, reports a change on every poll, and asks the gate again on
+                        // every poll for as long as the picture holds still.
+                        state.MarkScanned(Capture);
                         skippedPolls++;
                         continue;
                     }
