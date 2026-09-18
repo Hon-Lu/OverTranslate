@@ -104,6 +104,55 @@ public class RealtimeCpuBackgroundTests
         }
     }
 
+    /// <summary>
+    /// The punctuation left on screen after everything around it was erased. A line of bright text
+    /// on a dark scene votes itself dark — the closing behind the black hat fills the gaps between
+    /// glyphs, so the dark response answers for the band of picture between the words and out-shouts
+    /// the strokes — and the glyphs are then only picked up as the "outline" around that body,
+    /// within reach of one of those filled gaps. A stroke standing on its own has no filled gap
+    /// beside it, so nothing finds it: in Japanese that is the exclamation mark.
+    /// </summary>
+    /// <remarks>
+    /// The lone stroke is what is asserted, not the group: the group was always erased, which is
+    /// exactly why the leftover reads as a bug rather than as the repair not having run.
+    /// </remarks>
+    [Fact]
+    public void Repair_ErasesALoneStrokeTheDarkResponseCannotSee()
+    {
+        // A dark scene with bright text on it, which is the shape that decides the polarity vote.
+        // The gaps between the strokes are narrower than the kernel, so closing fills them and the
+        // dark response answers for the whole band between the glyphs — louder, over the box, than
+        // the bright response answers for the glyphs themselves. The box votes "dark text" although
+        // every stroke in it is white, and the body mask is then the background between them.
+        var background = Color.FromArgb(18, 18, 26);
+        const int top = 40, height = 40, stroke = 3, gap = 14;
+        int[] columns = [.. Enumerable.Range(0, 8).Select(index => 40 + index * (stroke + gap))];
+        // Far enough from the group that closing fills nothing around it, so the dark response has
+        // nothing to say here and the outline search has no seed to start from: a reach of five, a
+        // tail of six, and sixty pixels of flat picture. This is the exclamation mark.
+        const int alone = 260;
+
+        using var frame = new Bitmap(360, 120);
+        using (var graphics = Graphics.FromImage(frame))
+        {
+            graphics.Clear(background);
+            foreach (int x in columns) graphics.FillRectangle(Brushes.White, x, top, stroke, height);
+            graphics.FillRectangle(Brushes.White, alone, top, stroke, height);
+        }
+
+        using var result = RealtimeCpuBackground.Repair(frame,
+            [new TranslatedBlock("!", "！", new(30, top - 4, 240, height + 8), RenderGlyphHeight: height)]);
+
+        for (int y = top; y < top + height; y++)
+        {
+            var pixel = result.GetPixel(alone + 1, y);
+            int apart = Math.Abs(pixel.R - background.R)
+                + Math.Abs(pixel.G - background.G)
+                + Math.Abs(pixel.B - background.B);
+            Assert.True(apart <= 24, $"({alone + 1},{y}) is {pixel} against a background of {background}");
+        }
+    }
+
     [Fact]
     public void Repair_EmptyTranslationReturnsIndependentUnchangedFrame()
     {

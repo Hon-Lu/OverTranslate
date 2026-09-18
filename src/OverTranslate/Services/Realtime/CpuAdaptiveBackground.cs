@@ -87,13 +87,15 @@ internal static class CpuTextMask
                 using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(size, size));
                 Cv2.MorphologyEx(roi, light, MorphTypes.TopHat, kernel);
                 Cv2.MorphologyEx(roi, dark, MorphTypes.BlackHat, kernel);
-                // The text body generally carries more contrast energy than its outline. Choosing
-                // one polarity avoids treating both every bright edge and every dark edge as text.
+                // Which polarity the outline search runs against. Not which one the text is — that
+                // is what this used to be taken for, and it is wrong often enough to matter; see
+                // Body. All it decides now is which way round the body/outline pair is tried.
                 bool brightText = Cv2.Mean(light).Val0 >= Cv2.Mean(dark).Val0;
                 var body = brightText ? light : dark;
                 var opposite = brightText ? dark : light;
-                double threshold = Cv2.Threshold(body, binary, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-                Cv2.Threshold(body, binary, Math.Max(18, threshold * .8), 255, ThresholdTypes.Binary);
+                Body(body, binary);
+                using var reverse = new Mat();
+                Body(opposite, reverse);
                 using var fringe = new Mat();
                 using var near = new Mat();
                 using var fringeContrast = new Mat();
@@ -105,6 +107,8 @@ internal static class CpuTextMask
                 GrowAlongTail(fringe, opposite, one);
                 Cv2.Dilate(fringe, fringe, one); // Include the antialiased edge of a detected outline.
                 Cv2.Dilate(binary, binary, one); // One pixel for anti-aliasing, not a whole line band.
+                Cv2.Dilate(reverse, reverse, one);
+                Cv2.BitwiseOr(binary, reverse, binary);
                 using var coreTarget = new Mat(core, box);
                 using var outlineTarget = new Mat(outline, box);
                 Cv2.BitwiseOr(coreTarget, binary, coreTarget);
@@ -126,6 +130,58 @@ internal static class CpuTextMask
             return new(core, outline, combined);
         }
         catch { core.Dispose(); outline.Dispose(); combined.Dispose(); throw; }
+    }
+
+    /// <summary>
+    /// One response's body mask: Otsu, then the same threshold again with a floor under it so a
+    /// response with nothing in it cannot be split into one anyway.
+    /// </summary>
+    /// <remarks>
+    /// <para>Run over both hats rather than only the one the vote picked, which is why it is a
+    /// method: the two have to be thresholded the same way by construction, not by two copies of it
+    /// staying in step.</para>
+    ///
+    /// <para>The vote compares the mean of the two hats over the box and takes the louder one for
+    /// the text, on the reasoning that a glyph carries more contrast energy than its background. A
+    /// line of bright text on a dark scene breaks that, and the kernel is why: the gaps between
+    /// glyphs are narrower than it is, so the closing behind the black hat fills them, and the black
+    /// hat then answers for the whole band of picture <em>between</em> the glyphs — which is more
+    /// area than the strokes themselves. Measured on the frame this was reported from (white text,
+    /// grey 254, on a dark prison scene): over the line, mean black hat 65.1 against mean top hat
+    /// 47.6, so the vote said dark, and the body mask became the background between the words.</para>
+    ///
+    /// <para>The glyphs are not lost when that happens, because the outline search picks them up
+    /// from the other side: they are the "outline" around that body. But it only reaches
+    /// <see cref="OutlineReach"/> from a seed and then follows a tail, and the seeds are exactly the
+    /// filled gaps — so a stroke with other strokes beside it is found and a stroke standing on its
+    /// own is not, because closing fills nothing around it and the response there is flat. In the
+    /// same frame the black hat inside the kanji cluster's gaps averages 118 while beside the
+    /// exclamation mark's bar it averages 5.3 and peaks at 9, against a seed of
+    /// <see cref="OutlineSeed"/> and a body threshold of 80. In Japanese those lone strokes are the
+    /// punctuation, which is why what stayed on screen was every exclamation mark in the line while
+    /// the kanji beside them all went. Measured over four subtitle corpora, the leftover blobs of
+    /// 20px or more are 11 on the game corpus (five of them one frame's five exclamation marks), 4
+    /// on the card corpus and 2 on the video corpus.</para>
+    ///
+    /// <para>So both hats get a body mask and the union is taken. It costs nothing measurable,
+    /// because in practice the second one lands almost entirely inside what the outline search had
+    /// already covered — over the same four corpora the masked share of the frame moves by at most
+    /// 0.01 of a point (1.77% to 1.77%, 5.76% to 5.77%, 8.88% to 8.89%, 8.25% to 8.25%) and the
+    /// mask costs 6.8ms against 7.0ms — and the leftovers above go to zero.</para>
+    ///
+    /// <para>Running the whole outline search both ways as well was measured and rejected. It is the
+    /// only variant that also empties the Latin corpus's leftovers, and reading those frames is what
+    /// settles it: they are not text. They are the picture inside a Latin recognition box, which
+    /// stands well clear of its glyphs — a shoe, a floorboard, a drum stand. The masked share rises
+    /// by a tenth to a fifth of itself (1.77% to 2.12%, 5.76% to 6.79%) to rub those out, which is
+    /// more of the picture interpolated away for no text erased. Deciding the polarity by each hat's
+    /// peak instead of its mean was also tried: it is worse on the card corpus (38 leftover blobs
+    /// against 4) because a single bright speck decides the whole line.</para>
+    /// </remarks>
+    private static void Body(Mat response, Mat into)
+    {
+        double otsu = Cv2.Threshold(response, into, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+        Cv2.Threshold(response, into, Math.Max(18, otsu * .8), 255, ThresholdTypes.Binary);
     }
 
     /// <summary>Extends a seeded outline along its own antialiased tail — see <see cref="OutlineTail"/>.</summary>
