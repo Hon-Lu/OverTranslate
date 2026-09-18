@@ -44,7 +44,7 @@
 OverTranslate currently offers five translation features, so you can pick the one that suits what you are doing:
 
 - **[Screenshot Translation](#screenshot-translation)** — select an area of the screen; the text is recognised and the translation is shown right on it
-- **[Real-time Translation](#real-time-translation)** — continuously translates a chosen area of a video or a game, with the translation shown in place
+- **[Real-time Translation](#real-time-translation)** — select an area of a video, a game or a comic; the text is recognised continuously and the translation is shown right on it
 - **[Quick Lookup](#quick-lookup)** — select some text and a compact translation popup opens; it can be pinned to stay on screen
 - **[Quick Translate](#quick-translate)** — select some text and press the hotkey to translate it and replace it in place
 - **[Text Translation](#text-translation)** — the full translation window, with text input, swapping languages and reading aloud
@@ -81,7 +81,7 @@ Once the selection is done, the toolbar offers:
 
 ## Real-time Translation
 
-Ideal for **video subtitles, game screens**, and other situations that need continuous translation. After selecting the area, the screen content is recognized continuously, and the translation updates automatically in the original position whenever the text changes.
+Ideal for **video subtitles, game screens and comics**, and other situations that need continuous translation. After selecting the area, the screen content is recognized continuously, and the translation updates automatically in the original position whenever the text changes.
 
 There are two capture modes, **screen capture** and **window capture**:  
 screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1903 or later.
@@ -94,7 +94,7 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 > When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
 
 Translation blocks come in two modes:
-**Subtitles / Dialogue**: for video subtitles, game story dialogue and similar scenes (1 block recommended)
+**Subtitles / Comics**: for video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
 
 | Selection | Translation result |
 |-----------|--------------------|
@@ -102,7 +102,7 @@ Translation blocks come in two modes:
 | ![Real-time translation1 - dialogue game selection](images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
-**Game / UI**: for game screens, menus and interface text; if it is not a subtitle or story dialogue, this is the mode to use (1 – 2 blocks recommended)
+**Game / UI**: for game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.
 
 | Selection | Translation result |
 |-----------|--------------------|

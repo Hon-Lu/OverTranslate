@@ -327,7 +327,7 @@ public sealed class RealtimeTranslationSession
         bool readAtOnce,
         CancellationToken token)
     {
-        var state = new RealtimeRegionState();
+        var state = new RealtimeRegionState(region.Orientation);
         var pump = new RegionTranslationPump(this, region, sourceLanguage, targetLanguage, token);
 
         try
@@ -557,7 +557,8 @@ public sealed class RealtimeTranslationSession
         // would hold this region's loop shut while it did. Skipping costs one poll.
         var (primarySize, fallbackSizes) =
             RealtimeDetectorSize.For(frame.Width, frame.Height, region.Mode);
-        var recognized = await _ocr.TryRecognizeAsync(frame, sourceLanguage, primarySize, token, region.Mode);
+        var recognized = await _ocr.TryRecognizeAsync(
+            frame, sourceLanguage, primarySize, token, region.Mode, region.Orientation);
         if (recognized is null)
         {
             state.Dialogue.RecognitionUnavailable();
@@ -582,7 +583,14 @@ public sealed class RealtimeTranslationSession
         // same evidence by a quieter route. Judging emptiness first left the one case that most
         // needed a second look as the one case that never got it — measured on a line that
         // collapsed on nearly every appearance and was simply lost each time.
-        recognized = RejectCollapsedBlocks(recognized, frame.Height, region.Id);
+        // Only for a block written across. A vertical one has had the same test made already, in
+        // the turned frame the recogniser actually saw — see OcrService.TryRecognizeVerticalAsync.
+        // Repeating it here would measure a column's length down the block against the block's own
+        // height, and a full-height column is what vertical writing looks like when it is working.
+        var rejectsCollapsed = region.Orientation == RealtimeTextOrientation.Horizontal;
+
+        if (rejectsCollapsed)
+            recognized = RejectCollapsedBlocks(recognized, frame.Height, region.Id);
         recognized = RejectShortReadings(recognized, region.Id);
 
         // Sampled here, before the fallbacks can run, because "the primary size was enough" is
@@ -608,10 +616,12 @@ public sealed class RealtimeTranslationSession
         {
             if (recognized.Count > 0) break;
 
-            var retried = await _ocr.TryRecognizeAsync(frame, sourceLanguage, retrySize, token, region.Mode);
+            var retried = await _ocr.TryRecognizeAsync(
+                frame, sourceLanguage, retrySize, token, region.Mode, region.Orientation);
             if (retried is null) break;   // no free slot; the next poll can try again
 
-            retried = RejectCollapsedBlocks(retried, frame.Height, region.Id);
+            if (rejectsCollapsed)
+                retried = RejectCollapsedBlocks(retried, frame.Height, region.Id);
             retried = RejectShortReadings(retried, region.Id);
             if (retried.Count == 0) continue;
 

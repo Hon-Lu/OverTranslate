@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -736,70 +735,35 @@ public partial class OverlayWindow : Window
         }
     }
 
-    internal static void PositionVerticalGlyph(TextBlock glyph, Rect bounds)
-    {
-        glyph.Width = bounds.Width;
-        glyph.Height = bounds.Height;
-        glyph.LineHeight = bounds.Height;
-        glyph.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
-        Canvas.SetLeft(glyph, bounds.X);
-        Canvas.SetTop(glyph, bounds.Y);
-    }
-
-    private static int VerticalCapacity(double width, double height, double cellSize) =>
-        (int)Math.Max(0, Math.Floor(width / cellSize)) *
-        (int)Math.Max(0, Math.Floor(height / cellSize));
+    // The vertical setting rules live in Layout/VerticalTextGrid now, because the live overlay lays
+    // its columns out with the same ones — see that type for why they are shared and what is not.
+    // These four stay under their old names here: they are this window's way in, and they are what
+    // the vertical tests are written against.
+    internal static void PositionVerticalGlyph(TextBlock glyph, Rect bounds) =>
+        VerticalTextGrid.PositionGlyph(glyph, bounds);
 
     internal static (double CellSize, double Height) FitVerticalGrid(
         double width,
         double height,
         double preferredCellSize,
-        int characterCount)
-    {
-        int needed = Math.Max(1, characterCount);
-        double cellSize = Math.Max(SingleLineAbsoluteMinFontSize, preferredCellSize);
-        while (cellSize > SingleLineEmergencyMinFontSize &&
-               VerticalCapacity(width, height, cellSize) < needed)
-        {
-            cellSize = Math.Max(SingleLineEmergencyMinFontSize, cellSize - 0.5);
-        }
-
-        int columns = Math.Max(1, (int)Math.Floor(width / cellSize));
-        int rows = Math.Max(1, (int)Math.Ceiling((double)needed / columns));
-        return (cellSize, Math.Max(height, rows * cellSize));
-    }
-
-    private static readonly SearchValues<char> RotatedVerticalGlyphs = SearchValues.Create(
-        "「」『』（）〔〕［］｛｝〈〉《》【】〖〗〘〙〚〛⦅⦆｟｠()[]{}<>" +
-        "—–―─━‐‑‒-－〜～ーｰ＿_＝=" +
-        "…⋯‥");
+        int characterCount) =>
+        VerticalTextGrid.Fit(
+            width,
+            height,
+            preferredCellSize,
+            SingleLineAbsoluteMinFontSize,
+            SingleLineEmergencyMinFontSize,
+            characterCount);
 
     internal static bool RotatesInVerticalText(char glyph) =>
-        RotatedVerticalGlyphs.Contains(glyph);
+        VerticalTextGrid.RotatesGlyph(glyph);
 
     /// <summary>Returns cells in vertical reading order: downwards, then one column left.</summary>
     internal static IEnumerable<(char Glyph, Rect Cell)> VerticalCells(
         string text,
         Rect bounds,
-        double cellSize)
-    {
-        int columns = Math.Max(1, (int)Math.Floor(bounds.Width / cellSize));
-        int rows = Math.Max(1, (int)Math.Floor((bounds.Height + 0.01) / cellSize));
-
-        for (int i = 0; i < text.Length; i++)
-        {
-            int column = i / rows;
-            int row = i % rows;
-            if (column >= columns)
-                yield break;
-
-            yield return (text[i], new Rect(
-                bounds.Left + bounds.Width - (column + 1) * cellSize,
-                bounds.Top + row * cellSize,
-                cellSize,
-                cellSize));
-        }
-    }
+        double cellSize) =>
+        VerticalTextGrid.Cells(text, bounds, cellSize);
 
     private void SetTranslationLayersVisible(bool visible)
     {

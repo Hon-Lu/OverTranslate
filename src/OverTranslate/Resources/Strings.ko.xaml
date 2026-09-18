@@ -353,14 +353,12 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">이 블록 삭제</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeSubtitle">자막 / 대사</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitle">자막 / 만화</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">게임 / UI</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">자막이나 대사 창 — 글자가 커서 읽을 때 축소합니다</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiSummary">게임 패널이나 아이템 설명 — 글자가 작아 그대로 읽습니다</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance" xml:space="preserve">영상 자막이나 게임 대사처럼 글자 위치가 일정한 장면에 적합합니다.
-영역을 잡을 때 글자 위아래에 여백을 조금 남기고 딱 붙이지 마세요. 좌우는 넓어도 되지만 빈 공간을 너무 많이 넣지 않도록 합니다.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance" xml:space="preserve">게임의 메뉴나 안내처럼 글자가 흩어져 있고 위치가 일정하지 않은 장면에 적합합니다.
-전체적으로 여백을 조금 남겨 두세요. 번역할 곳이 여러 군데라면 한 번에 크게 잡지 말고 따로 나눠 잡는 것을 권장합니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">영상 자막, 게임 스토리 대사, 만화 글자처럼 이어서 읽는 글에 적합합니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">게임 화면, 채팅창, 메뉴와 인터페이스 글자처럼 이어서 읽는 글이 아닌 것에 적합합니다.</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">모드 설명 접기</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">모드 설명 펼치기</sys:String>
 
