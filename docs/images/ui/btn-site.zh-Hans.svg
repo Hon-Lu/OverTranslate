@@ -1,15 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="146" height="44" viewBox="0 0 146 44" role="img" aria-label="前往官方网站">
+<svg xmlns="http://www.w3.org/2000/svg" width="242" height="58" viewBox="0 0 242 58" role="img" aria-label="前往官方网站">
   <style>
-    svg { --bg:#ffffff; --line:#b6d9f2; --fg:#0a58a6; }
-    @media (prefers-color-scheme: dark) { svg { --bg:#0d1117; --line:#2a4a63; --fg:#58c4fa; } }
+    svg { --bg:#f2f8fd; --line:#a6d0ed; --fg:#0a58a6; --sub:#3d6f97; }
+    @media (prefers-color-scheme: dark) { svg { --bg:#10202e; --line:#2f5674; --fg:#58c4fa; --sub:#9cbdd2; } }
     .box { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
     .icon { fill: none; stroke: var(--fg); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .out { fill: none; stroke: var(--fg); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
-             font-size: 14px; font-weight: 600; fill: var(--fg); }
+    .title, .sub { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif; }
+    .title { font-size: 14.5px; font-weight: 650; fill: var(--fg); }
+    .sub { font-size: 12px; fill: var(--sub); }
   </style>
-  <rect x="0.75" y="0.75" width="144.5" height="42.5" rx="10" class="box"/>
-  <g transform="translate(18 13) scale(0.75)" class="icon"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c2.5 2.6 2.5 14.6 0 17.2M12 3.4c-2.5 2.6-2.5 14.6 0 17.2"/></g>
-  <text x="46" y="27" class="label">官方网站</text>
-  <g transform="translate(115 15) scale(0.75)" class="out"><path d="M6 18 18 6M9 6h9v9"/></g>
+  <rect x="0.75" y="0.75" width="240.5" height="56.5" rx="12" class="box"/>
+  <g transform="translate(20 17)" class="icon"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c2.5 2.6 2.5 14.6 0 17.2M12 3.4c-2.5 2.6-2.5 14.6 0 17.2"/></g>
+  <text x="58" y="25" class="title">官方网站</text>
+  <text x="58" y="41" class="sub">查看功能展示与实际效果</text>
+  <g transform="translate(206 21) scale(0.6667)" class="out"><path d="M6 18 18 6M9 6h9v9"/></g>
 </svg>

@@ -20,13 +20,15 @@
   <p>一款適合日常使用、漫畫、影音與遊戲的 Windows 螢幕翻譯工具，支援截圖翻譯、即時翻譯等多種翻譯功能，翻譯結果可直接顯示在原畫面上。</p>
 
   <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.svg" alt="前往官方網站" /></a>
+  </p>
+
+  <p>
     <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
   </p>
 
   <p>
-    <a href="https://asd880921.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.svg" alt="前往官方網站" /></a>
-    &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.svg" alt="下載 Windows 安裝版（推薦）" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.svg" alt="下載免安裝版（Portable）" /></a>
