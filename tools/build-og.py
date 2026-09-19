@@ -9,13 +9,13 @@
 左半取未翻譯的那張、右半取翻譯後的那張，中間一條白線。
 兩張是同一個畫面的前後，中間那條線才有意義。
 
-原始畫面：用瀏覽器開 tools/og-source.html，縮放 100%，
-截一張原文、再用 OverTranslate 翻譯後截一張，存成
+原始畫面：截一張原文、再用 OverTranslate 翻譯後截一張，
+兩張裁成一樣的範圍後存成
 
     docs/images/og/og-src-before.png
     docs/images/og/og-src-after.png
 
-整個視窗截沒關係，這支會靠畫面裡那圈桃紅色的框自己定位並裁掉框本身。
+寬度會縮到 1104，高度照比例走，超過 368 就從底部切掉。
 
     python tools/build-og.py
 
@@ -63,10 +63,8 @@ LEDE = {
     'ko':      u'만화·영상·게임에 쓸 수 있는 Windows 화면 번역 도구.',
 }
 
-# og-source.html 裡那塊畫布的尺寸
-CANVAS_W, CANVAS_H = 1104, 384
-# 縮圖上實際露出多少。底部那截是畫布的留白，切掉不會少看到東西
-SHOT_W, SHOT_H = 1104, 368
+# 對照區在縮圖上的可用範圍。寬度一定用滿，高度是上限，超過就從底部切掉
+SHOT_W, SHOT_MAX_H = 1104, 368
 
 TEMPLATE = u'''<!doctype html>
 <meta charset="utf-8">
@@ -147,60 +145,42 @@ def find_edge():
     raise SystemExit('找不到 Edge，這支只在本機產圖時會用到')
 
 
-def canvas_of(path):
-    """裁出畫面裡那圈桃紅色定位框的內側，並還原成 1104x384。
-
-    螢幕縮放不是 100% 的話截出來會比較大，所以最後統一縮回去；
-    從比較大的圖縮下來反而更銳利，不用特別要求使用者去調縮放。
-    """
-    im = Image.open(path).convert('RGB')
-    w, h = im.size
-    px = im.load()
-    xs, ys = [], []
-    for y in range(h):
-        for x in range(w):
-            r, g, b = px[x, y]
-            if r > 200 and g < 80 and b > 200:
-                xs.append(x)
-                ys.append(y)
-    if len(xs) < 500:
-        raise SystemExit('%s 裡找不到桃紅色的定位框，是不是截到別的畫面了？'
-                         % os.path.basename(path))
-
-    scale = (max(xs) - min(xs) + 1) / float(CANVAS_W + 4)   # 框本身左右各 2px
-    edge = int(round(2 * scale))
-    box = (min(xs) + edge, min(ys) + edge,
-           max(xs) + 1 - edge, max(ys) + 1 - edge)
-    out = im.crop(box)
-    if out.size != (CANVAS_W, CANVAS_H):
-        out = out.resize((CANVAS_W, CANVAS_H), Image.LANCZOS)
-    return out
-
-
 def compose_shot():
-    """左半原文、右半譯文，中間一條白線 —— 就是首頁那個比較滑桿的定格。"""
+    """左半原文、右半譯文，中間一條白線 —— 就是首頁那個比較滑桿的定格。
+
+    兩張圖要是同一塊畫面、同樣的裁切範圍，中間那條線才對得起來。
+    """
     for path in (BEFORE, AFTER):
         if not os.path.exists(path):
-            raise SystemExit('缺少 %s，請先照 tools/og-source.html 的說明截圖'
-                             % os.path.relpath(path, ROOT))
+            raise SystemExit('缺少 %s' % os.path.relpath(path, ROOT))
 
-    before = canvas_of(BEFORE)
-    after = canvas_of(AFTER)
+    before = Image.open(BEFORE).convert('RGB')
+    after = Image.open(AFTER).convert('RGB')
+    if before.size != after.size:
+        raise SystemExit('兩張圖尺寸不一樣（%dx%d 與 %dx%d），請裁成一樣的範圍'
+                         % (before.size + after.size))
 
-    mid = CANVAS_W // 2
+    w, h = before.size
+    mid = w // 2
     shot = before.copy()
-    shot.paste(after.crop((mid, 0, CANVAS_W, CANVAS_H)), (mid, 0))
+    shot.paste(after.crop((mid, 0, w, h)), (mid, 0))
+
+    # 先縮到縮圖上的寬度，分割線最後才畫，才會是乾淨的 2px
+    height = int(round(h * SHOT_W / float(w)))
+    shot = shot.resize((SHOT_W, height), Image.LANCZOS)
+    if height > SHOT_MAX_H:
+        shot = shot.crop((0, 0, SHOT_W, SHOT_MAX_H))
 
     px = shot.load()
-    for x in range(mid - 1, mid + 1):
-        for y in range(CANVAS_H):
+    centre = SHOT_W // 2
+    for x in range(centre - 1, centre + 1):
+        for y in range(shot.size[1]):
             px[x, y] = (255, 255, 255)
-    shot = shot.crop((0, 0, SHOT_W, SHOT_H))
 
     fd, tmp = tempfile.mkstemp(suffix='.png')
     os.close(fd)
     shot.save(tmp)
-    return tmp
+    return tmp, shot.size[1]
 
 
 def strings(page):
@@ -220,7 +200,7 @@ def main():
     edge = find_edge()
     if not os.path.isdir(OUT_DIR):
         os.makedirs(OUT_DIR)
-    shot = compose_shot()
+    shot, shot_h = compose_shot()
 
     try:
         for lang, name, page, font in LANGS:
@@ -228,7 +208,7 @@ def main():
             html = TEMPLATE.format(
                 font=font, free=s['hero.free'], claim=s['hero.claim'],
                 lede=LEDE[lang],
-                shot=shot.replace('\\', '/'), shot_w=SHOT_W, shot_h=SHOT_H)
+                shot=shot.replace('\\', '/'), shot_w=SHOT_W, shot_h=shot_h)
 
             fd, tmp = tempfile.mkstemp(suffix='.html')
             os.close(fd)

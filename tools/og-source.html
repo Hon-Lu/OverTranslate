@@ -5,13 +5,10 @@
 <!--
   社群縮圖用的原始畫面。
 
-  流程：
-  1. 瀏覽器開這個檔案，縮放保持 100%
-  2. 截一張（原文）
-  3. 用 OverTranslate 翻譯這塊畫面，再截一張（譯文）
-  4. 兩張都給 build-og.py，它會取左半原文、右半譯文，中間畫一條分割線
+  流程：截一張原文、再用 OverTranslate 翻譯後截一張，兩張裁成一樣的範圍，
+  存成 docs/images/og/og-src-before.png 與 og-src-after.png，
+  再跑 build-og.py —— 它會取左半原文、右半譯文，中間畫一條分割線。
 
-  桃紅色的框是給程式定位用的，裁切時會被切掉，不會出現在縮圖上。
   內容橫跨整個寬度、分割線正好切過中間那張卡片，中間那條線才有意義。
 -->
 <style>
@@ -24,12 +21,10 @@
     padding: 40px 20px 60px;
   }
 
-  /* 桃紅色只是定位標記，裁切取的是框內側 */
-  .frame { padding: 2px; background: #ff00ff; border-radius: 16px; }
-
   .canvas {
     width: 1104px; height: 384px; overflow: hidden;
     border-radius: 14px; padding: 26px;
+    border: 1px solid #262c36;
     background: #0f1318;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
@@ -52,15 +47,9 @@
   }
   .card p { margin-top: 8px; font-size: 14px; line-height: 1.5; color: #a9b7c6; }
 
-  .how {
-    max-width: 1104px; margin-top: 28px; color: #93a1b2; font-size: 14px; line-height: 1.8;
-  }
-  .how strong { color: #e9eef6; }
-  .how code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: #8fd4f5; }
 </style>
 
-<div class="frame">
-  <div class="canvas">
+<div class="canvas">
     <div class="bar">
       <h2>Latest posts</h2>
       <span>Issue 42 &middot; June 2026</span>
@@ -128,12 +117,7 @@
         <p>A platformer, two puzzle games, and a tool that turns a spreadsheet into playable levels.</p>
       </article>
     </div>
-  </div>
 </div>
 
-<div class="how">
-  <p><strong>怎麼用</strong>：瀏覽器縮放保持 100%，先截一張原文，再用 OverTranslate 翻譯這塊畫面截第二張。</p>
-  <p>兩張都整個視窗截沒關係，<code>build-og.py</code> 會靠桃紅色的框自己定位，框本身不會進到縮圖裡。</p>
-  <p>中間那張卡片會被分割線切過去，所以它的標題左半是英文、右半是譯文——跟網站首頁的比較滑桿一樣。</p>
-</div>
+
 </html>
