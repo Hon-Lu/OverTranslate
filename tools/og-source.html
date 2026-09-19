@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>OG source — capture me</title>
+<!--
+  社群縮圖用的原始畫面。
+
+  流程：截一張原文、再用 OverTranslate 翻譯後截一張，兩張裁成一樣的範圍，
+  存成 docs/images/og/og-src-before.png 與 og-src-after.png，
+  再跑 build-og.py —— 它會取左半原文、右半譯文，中間畫一條分割線。
+
+  內容橫跨整個寬度、分割線正好切過中間那張卡片，中間那條線才有意義。
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1b1f26;
+    color: #e9eef6;
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px 60px;
+  }
+
+  .canvas {
+    width: 1104px; height: 384px; overflow: hidden;
+    border-radius: 14px; padding: 26px;
+    border: 1px solid #262c36;
+    background: #0f1318;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .bar { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+  .bar h2 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; color: #f2f6fb; }
+  .bar span { font-size: 13px; color: #7d8b9c; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 340px); gap: 16px; }
+
+  .card { width: 340px; }
+  .thumb { width: 340px; height: 170px; border-radius: 10px; display: block; }
+  .thumb .cap { font: 600 13px/1 system-ui, "Segoe UI", sans-serif; }
+  .thumb .tiny { font: 500 10.5px/1 system-ui, "Segoe UI", sans-serif; letter-spacing: 0.06em; }
+  .thumb .badge { font: 700 11px/1 system-ui, "Segoe UI", sans-serif; letter-spacing: 0.08em; }
+  .meta { margin-top: 12px; font-size: 12.5px; color: #7d8b9c; letter-spacing: 0.01em; }
+  .card h3 {
+    margin-top: 7px; font-size: 22px; line-height: 1.28; font-weight: 680;
+    letter-spacing: -0.018em; color: #f2f6fb;
+  }
+  .card p { margin-top: 8px; font-size: 14px; line-height: 1.5; color: #a9b7c6; }
+
+</style>
+
+<div class="canvas">
+    <div class="bar">
+      <h2>Latest posts</h2>
+      <span>Issue 42 &middot; June 2026</span>
+    </div>
+
+    <div class="grid">
+      <article class="card">
+        <svg class="thumb" viewBox="0 0 340 170" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1b4a7a"/><stop offset="1" stop-color="#2f8fb8"/>
+            </linearGradient>
+          </defs>
+          <rect width="340" height="170" fill="url(#g1)"/>
+          <circle cx="258" cy="46" r="25" fill="#ffd98a" opacity="0.92"/>
+          <path d="M0 170 L72 90 L132 143 L198 76 L268 136 L340 83 L340 170 Z" fill="#0d2740" opacity="0.88"/>
+          <path d="M0 170 L58 126 L118 160 L186 117 L252 163 L340 121 L340 170 Z" fill="#071a2c"/>
+          <text x="14" y="24" class="tiny" fill="#cfe6f7" opacity="0.85">SAMPLE SCENE</text>
+          <rect x="10" y="136" width="188" height="24" rx="6" fill="#020a12" opacity="0.62"/>
+          <text x="20" y="152" class="cap" fill="#ffffff">Indirect light, no setup</text>
+        </svg>
+        <p class="meta">Engine &middot; 12 June 2026</p>
+        <h3>Ambient lighting in the editor</h3>
+        <p>Interiors now pick up indirect light from nearby surfaces, with nothing extra to set up.</p>
+      </article>
+
+      <article class="card">
+        <svg class="thumb" viewBox="0 0 340 170" preserveAspectRatio="none" aria-hidden="true">
+          <rect width="340" height="170" fill="#12161d"/>
+          <g stroke="#2b3947" stroke-width="1">
+            <path d="M0 42h340M0 85h340M0 128h340M68 0v170M136 0v170M204 0v170M272 0v170"/>
+          </g>
+          <g fill="none" stroke="#5ad1f0" stroke-width="2.4" stroke-linecap="round">
+            <path d="M34 128 L68 85 L136 85 L170 42 L272 42"/>
+            <path d="M68 128 L204 128 L238 85 L306 85"/>
+          </g>
+          <g fill="#7ce4ff">
+            <circle cx="68" cy="85" r="5"/><circle cx="170" cy="42" r="5"/>
+            <circle cx="238" cy="85" r="5"/><circle cx="204" cy="128" r="5"/>
+          </g>
+          <text x="14" y="22" class="cap" fill="#dbe7f2">Build time</text>
+          <text x="14" y="40" class="tiny" fill="#7fd9f5">Before 42s</text>
+          <text x="14" y="56" class="tiny" fill="#7fd9f5">After 3.1s</text>
+          <text x="256" y="160" class="tiny" fill="#6d8091">per project</text>
+        </svg>
+        <p class="meta">Tooling &middot; 9 June 2026</p>
+        <h3>A much faster asset pipeline</h3>
+        <p>Imports that used to take minutes finish in seconds, and the cache survives a restart.</p>
+      </article>
+
+      <article class="card">
+        <svg class="thumb" viewBox="0 0 340 170" preserveAspectRatio="none" aria-hidden="true">
+          <rect width="340" height="170" fill="#241a33"/>
+          <circle cx="86" cy="64" r="54" fill="#ff7a6b" opacity="0.85"/>
+          <rect x="128" y="26" width="110" height="110" rx="20" fill="#f2b441" opacity="0.85"/>
+          <path d="M248 132 L292 32 L336 132 Z" fill="#6ee7c8" opacity="0.85"/>
+          <rect x="46" y="120" width="248" height="11" rx="5.5" fill="#ffffff" opacity="0.22"/>
+          <rect x="12" y="12" width="104" height="22" rx="11" fill="#120b1c" opacity="0.72"/>
+          <text x="24" y="27" class="badge" fill="#ffd9a8">SHOWCASE</text>
+          <text x="14" y="158" class="cap" fill="#f0e6ff">Picked by the team</text>
+          <text x="276" y="158" class="tiny" fill="#c9b6e6">10 entries</text>
+        </svg>
+        <p class="meta">Community &middot; 5 June 2026</p>
+        <h3>Ten projects worth a look</h3>
+        <p>A platformer, two puzzle games, and a tool that turns a spreadsheet into playable levels.</p>
+      </article>
+    </div>
+</div>
+
+
+</html>
