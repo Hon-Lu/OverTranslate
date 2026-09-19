@@ -12,8 +12,8 @@
 原始畫面：用瀏覽器開 tools/og-source.html，縮放 100%，
 截一張原文、再用 OverTranslate 翻譯後截一張，存成
 
-    docs/images/og-src-before.png
-    docs/images/og-src-after.png
+    docs/images/og/og-src-before.png
+    docs/images/og/og-src-after.png
 
 整個視窗截沒關係，這支會靠畫面裡那圈桃紅色的框自己定位並裁掉框本身。
 
@@ -32,8 +32,8 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, 'docs', 'images', 'og')
-BEFORE = os.path.join(ROOT, 'docs', 'images', 'og-src-before.png')
-AFTER = os.path.join(ROOT, 'docs', 'images', 'og-src-after.png')
+BEFORE = os.path.join(OUT_DIR, 'og-src-before.png')
+AFTER = os.path.join(OUT_DIR, 'og-src-after.png')
 
 EDGE = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -54,8 +54,19 @@ LANGS = [
     ('ko',      'og_ko.png',      'docs/ko/index.html',      KR),
 ]
 
-# og-source.html 裡那塊畫布的尺寸，也就是縮圖上對照區的尺寸
-SHOT_W, SHOT_H = 1104, 384
+# 縮圖只放得下一行，所以取 hero.lede 的第一句。改了首頁那句記得一起改。
+LEDE = {
+    'zh-TW':   u'適用於漫畫、影音與遊戲的 Windows 螢幕翻譯工具。',
+    'en':      u'A Windows screen translator for comics, video and games.',
+    'zh-Hans': u'适用于漫画、影音与游戏的 Windows 屏幕翻译工具。',
+    'ja':      u'漫画・動画・ゲームで使える Windows 用の画面翻訳ツール。',
+    'ko':      u'만화·영상·게임에 쓸 수 있는 Windows 화면 번역 도구.',
+}
+
+# og-source.html 裡那塊畫布的尺寸
+CANVAS_W, CANVAS_H = 1104, 384
+# 縮圖上實際露出多少。底部那截是畫布的留白，切掉不會少看到東西
+SHOT_W, SHOT_H = 1104, 368
 
 TEMPLATE = u'''<!doctype html>
 <meta charset="utf-8">
@@ -74,7 +85,7 @@ TEMPLATE = u'''<!doctype html>
       radial-gradient(48% 50% at 50% 50%, rgba(82, 196, 250, 0.22), transparent 70%),
       radial-gradient(38% 42% at 72% 42%, rgba(98, 239, 246, 0.16), transparent 70%);
   }}
-  .stack {{ position: relative; padding-top: 40px; text-align: center; }}
+  .stack {{ position: relative; padding-top: 28px; text-align: center; }}
   .eyebrow {{
     display: inline-flex; align-items: center; gap: 9px;
     padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.10);
@@ -86,7 +97,7 @@ TEMPLATE = u'''<!doctype html>
   .eyebrow .dot {{ color: #6d7f95; }}
   .name {{
     /* 網站 .hero__name 在 1200px 寬時的實際值，不要自己再調 */
-    margin-top: 22px; font-size: 73.6px; line-height: 1.04; font-weight: 700;
+    margin-top: 18px; font-size: 73.6px; line-height: 1.04; font-weight: 700;
     letter-spacing: -0.035em;
     background: linear-gradient(140deg, #e9eef6 30%, #7fe4f4);
     -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -96,6 +107,10 @@ TEMPLATE = u'''<!doctype html>
     margin-top: 14px; font-size: 27.52px; line-height: 1.32; font-weight: 600;
     letter-spacing: -0.018em; color: #e9eef6;
   }}
+  .lede {{
+    /* 網站 .hero__lede 在 1200px 寬時的實際值 */
+    margin-top: 12px; font-size: 17.28px; line-height: 1.75; color: #9aabc0;
+  }}
   .shot {{
     position: absolute; left: 50%; translate: -50% 0; bottom: 0;
     width: {shot_w}px; height: {shot_h}px;
@@ -104,13 +119,6 @@ TEMPLATE = u'''<!doctype html>
     box-shadow: 0 -20px 60px -30px rgba(0, 0, 0, 0.9);
   }}
   .shot img {{ display: block; width: {shot_w}px; height: {shot_h}px; }}
-  .tag {{
-    position: absolute; top: 12px; padding: 6px 14px; border-radius: 999px;
-    background: rgba(8, 13, 22, 0.72); color: #fff;
-    font-size: 16px; font-weight: 620; letter-spacing: 0.02em;
-  }}
-  .tag--before {{ left: 12px; }}
-  .tag--after {{ right: 12px; }}
 </style>
 <div class="glow"></div>
 <div class="stack">
@@ -124,11 +132,10 @@ TEMPLATE = u'''<!doctype html>
   </p>
   <h1 class="name">OverTranslate</h1>
   <p class="claim">{claim}</p>
+  <p class="lede">{lede}</p>
 </div>
 <div class="shot">
   <img src="file:///{shot}" alt="">
-  <span class="tag tag--before">{tag_before}</span>
-  <span class="tag tag--after">{tag_after}</span>
 </div>
 '''
 
@@ -160,13 +167,13 @@ def canvas_of(path):
         raise SystemExit('%s 裡找不到桃紅色的定位框，是不是截到別的畫面了？'
                          % os.path.basename(path))
 
-    scale = (max(xs) - min(xs) + 1) / float(SHOT_W + 4)   # 框本身左右各 2px
+    scale = (max(xs) - min(xs) + 1) / float(CANVAS_W + 4)   # 框本身左右各 2px
     edge = int(round(2 * scale))
     box = (min(xs) + edge, min(ys) + edge,
            max(xs) + 1 - edge, max(ys) + 1 - edge)
     out = im.crop(box)
-    if out.size != (SHOT_W, SHOT_H):
-        out = out.resize((SHOT_W, SHOT_H), Image.LANCZOS)
+    if out.size != (CANVAS_W, CANVAS_H):
+        out = out.resize((CANVAS_W, CANVAS_H), Image.LANCZOS)
     return out
 
 
@@ -180,14 +187,15 @@ def compose_shot():
     before = canvas_of(BEFORE)
     after = canvas_of(AFTER)
 
-    mid = SHOT_W // 2
+    mid = CANVAS_W // 2
     shot = before.copy()
-    shot.paste(after.crop((mid, 0, SHOT_W, SHOT_H)), (mid, 0))
+    shot.paste(after.crop((mid, 0, CANVAS_W, CANVAS_H)), (mid, 0))
 
     px = shot.load()
     for x in range(mid - 1, mid + 1):
-        for y in range(SHOT_H):
+        for y in range(CANVAS_H):
             px[x, y] = (255, 255, 255)
+    shot = shot.crop((0, 0, SHOT_W, SHOT_H))
 
     fd, tmp = tempfile.mkstemp(suffix='.png')
     os.close(fd)
@@ -198,7 +206,7 @@ def compose_shot():
 def strings(page):
     """把首頁已經翻譯好的字撈出來，不要在這裡再維護一份。"""
     html = io.open(os.path.join(ROOT, page), encoding='utf-8').read()
-    want = ('hero.free', 'hero.claim', 'compare.before', 'compare.after')
+    want = ('hero.free', 'hero.claim')
     out = {}
     for key in want:
         m = re.search(r'data-i18n="%s">([^<]*)<' % re.escape(key), html)
@@ -219,7 +227,7 @@ def main():
             s = strings(page)
             html = TEMPLATE.format(
                 font=font, free=s['hero.free'], claim=s['hero.claim'],
-                tag_before=s['compare.before'], tag_after=s['compare.after'],
+                lede=LEDE[lang],
                 shot=shot.replace('\\', '/'), shot_w=SHOT_W, shot_h=SHOT_H)
 
             fd, tmp = tempfile.mkstemp(suffix='.html')

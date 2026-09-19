@@ -32,27 +32,33 @@ python tools/build-site.py
 python tools/build-og.py
 ```
 
-`docs/images/og/og*.png`（1200x630）是分享連結時各平台抓的那張圖，由 `tools/build-og.py`
-用 Edge 無頭渲染出來。版面為 1.91:1 重排，但標題與標語的字級是直接抄 `styles.css`
-在 1200px 寬時的實際值，跟首頁看起來才是同一套。標語和「原文／譯文」的字是從各語言的
-`index.html` 撈的，不另外維護一份。
+`docs/images/og/og*.png`（1200x630）是分享連結時各平台抓的那張圖。版面為 1.91:1 重排，
+但標題、標語、簡介三行的字級是直接抄 `styles.css` 在 1200px 寬時的實際值，
+跟首頁看起來才是同一套 —— **不要在 `build-og.py` 裡自己調字級**。
 
-下半部的對照是**一張畫面切一半**：左半未翻譯、右半翻譯後，中間一條白線，
-跟首頁的比較滑桿定格在中間是一樣的意思。原始畫面是 `tools/og-source.html`：
+下半部是**一張畫面切一半**：左半未翻譯、右半翻譯後，中間一條白線，
+等於把首頁的比較滑桿定格在正中間。原始畫面是 `tools/og-source.html`，
+刻意排成三欄讓分割線正好切過中間那張卡片，圖片裡也放了嵌入式小字 ——
+那才是 OCR 真正要處理的東西。
 
-1. 瀏覽器開它，縮放 100%
-2. 截一張存成 `docs/images/og-src-before.png`
-3. 用 OverTranslate 翻譯那塊畫面，再截一張存成 `docs/images/og-src-after.png`
+要重拍那張對照時：
+
+1. 瀏覽器開 `tools/og-source.html`
+2. 截一張存成 `docs/images/og/og-src-before.png`
+3. 用 OverTranslate 翻譯那塊畫面，再截一張存成 `docs/images/og/og-src-after.png`
 4. 跑 `python tools/build-og.py`
 
 整個視窗截就好，產生器會靠畫面上那圈桃紅色的框自己定位、裁掉框本身，
 螢幕縮放不是 100% 也沒關係，它會縮回 1104x384。
 
-那個頁面刻意排成三欄、分割線正好切過中間那張卡片，中間那條線才有意義；
-縮圖裡也故意放了嵌在圖片中的小字，那才是 OCR 真正要處理的東西。
+| 縮圖上的字 | 來源 |
+|------------|------|
+| 標語 `hero.claim`、`hero.free` | 各語言的 `index.html`，自動撈 |
+| 簡介那一行 | `build-og.py` 的 `LEDE`，是 `hero.lede` 的第一句 |
 
-**改了 `hero.claim`、`hero.free` 或 `compare.before/after` 之後要重跑**，否則縮圖上的字
-會停在舊版。這支需要本機有 Edge 與 Pillow，CI 不會跑它，圖是 commit 進版控的。
+**改了 `hero.claim`、`hero.free` 或 `hero.lede` 之後要重跑**，其中 `hero.lede`
+還要順手改 `LEDE`，否則縮圖上的字會停在舊版。這支需要本機有 Edge 與 Pillow，
+CI 不會跑它，圖是 commit 進版控的。
 
 ## 翻譯放哪裡
 
