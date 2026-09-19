@@ -25,11 +25,11 @@
   </p>
 
   <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.ko.svg" alt="공식 사이트로 이동" /></a>
+    &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.ko.svg" alt="Windows 설치 버전 다운로드(권장)" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.ko.svg" alt="포터블 버전 다운로드" /></a>
-    &nbsp;
-    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.ko.svg" alt="공식 사이트로 이동" /></a>
   </p>
 
   <p>
