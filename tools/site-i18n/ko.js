@@ -102,7 +102,7 @@ otLocale('ko', {
   'download.cta.portable': '무설치 버전 다운로드',
   'download.note': '두 버전 모두 자동 업데이트를 지원합니다',
   'star.title': 'OverTranslate가 마음에 드셨나요?',
-  'star.body': 'GitHub에서 ⭐ Star를 눌러 응원해 주세요. 더 많은 사람이 이 프로젝트를 발견하는 데 도움이 됩니다.',
+  'star.body': 'GitHub에서 ⭐ Star를 눌러 주세요. 더 많은 사람이 이 프로젝트를 발견하는 데에도 도움이 됩니다.',
   'star.cta': 'Star 누르기',
   'download.req.title': '시스템 요구 사항',
   'download.req.1.title': '운영체제',
@@ -158,7 +158,7 @@ otLocale('ko', {
   'shot.text': '전체 텍스트 번역 창',
   'shot.settings': 'OverTranslate 설정 페이지',
   'hero.stat': '누적 다운로드 수와 일별 증가',
-  'a11y.star': 'GitHub에서 OverTranslate에 Star 누르기',
+  'a11y.star': 'GitHub에서 Star 누르기',
   'a11y.close': '닫기',
   'meta.title': 'OverTranslate — Windows 실시간 화면 번역 도구',
   'meta.description': 'OverTranslate는 Windows 화면 번역 도구입니다. 캡처 번역과 실시간 번역을 지원하며 번역 결과를 원래 화면 위에 그대로 보여 줍니다. 웹 페이지, 만화, 영상, 게임에 쓸 수 있고 무료 오픈 소스이며 글자 인식은 전부 내 PC에서 실행됩니다.'

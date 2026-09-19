@@ -102,7 +102,7 @@ otLocale('en', {
   'download.cta.portable': 'Download portable version',
   'download.note': 'Both versions support automatic updates',
   'star.title': 'Enjoying OverTranslate?',
-  'star.body': 'Star it on GitHub ⭐ to support the project and help more people find it.',
+  'star.body': 'Give it a ⭐ Star on GitHub. It also helps more people find the project.',
   'star.cta': 'Star',
   'download.req.title': 'System requirements',
   'download.req.1.title': 'Operating system',
@@ -158,7 +158,7 @@ otLocale('en', {
   'shot.text': 'The full text translation window',
   'shot.settings': 'The OverTranslate settings page',
   'hero.stat': 'Total downloads and daily growth',
-  'a11y.star': 'Star OverTranslate on GitHub',
+  'a11y.star': 'Star it on GitHub',
   'a11y.close': 'Close',
   'meta.title': 'OverTranslate — Real-time Screen Translator for Windows',
   'meta.description': 'OverTranslate is a Windows screen translator with screenshot translation and real-time translation. The translation is shown right on the original screen — for web pages, comics, video and games. Free, open source, and the recognition runs entirely on your own machine.'
