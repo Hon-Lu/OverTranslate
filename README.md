@@ -12,6 +12,12 @@
     <strong><a href="docs/README.ko.md">한국어</a></strong>
   </p>
 
+  <br/>
+
+  <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.svg" alt="前往官方網站" /></a>
+  </p>
+
   <h1>
     <img src="docs/images/icon.svg" width="180" alt="OverTranslate Icon"/>
     <br/>
@@ -32,10 +38,6 @@
 
   <p>
     <a href="https://github.com/asd880921/github-statcards"><img src="https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/overtranslate-downloads-history.zh-TW.svg" alt="累積下載次數與每日新增" /></a>
-  </p>
-
-  <p>
-    <a href="https://asd880921.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.svg" alt="前往官方網站" /></a>
   </p>
 
 </div>
