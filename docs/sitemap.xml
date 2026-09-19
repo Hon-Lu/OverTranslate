@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://asd880921.github.io/OverTranslate/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://asd880921.github.io/OverTranslate/?lang=zh-TW"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://asd880921.github.io/OverTranslate/?lang=zh-Hans"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://asd880921.github.io/OverTranslate/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://asd880921.github.io/OverTranslate/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://asd880921.github.io/OverTranslate/?lang=ko"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://asd880921.github.io/OverTranslate/"/>
+  </url>
+</urlset>
