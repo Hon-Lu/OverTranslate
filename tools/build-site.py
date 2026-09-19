@@ -137,7 +137,7 @@ def apply_assets(html, suffix, statcard, readme, ollama):
 
 # ---------------------------------------------------------------- 頁面層級
 
-def apply_head(html, lang, html_lang, canonical, og_url, is_root=False):
+def apply_head(html, lang, html_lang, canonical, og_url, og_image, is_root=False):
     # data-site-root 只留給根目錄那一份，語言頁不轉址
     root_attr = ' data-site-root' if is_root else ''
     html = re.sub(r'<html lang="[^"]*" data-lang="[^"]*"[^>]*>',
@@ -147,6 +147,8 @@ def apply_head(html, lang, html_lang, canonical, og_url, is_root=False):
                   '<link rel="canonical" href="%s" />' % canonical, html, count=1)
     html = re.sub(r'<meta property="og:url" content="[^"]*" />',
                   '<meta property="og:url" content="%s" />' % og_url, html, count=1)
+    html = re.sub(r'<meta property="og:image" content="[^"]*" />',
+                  '<meta property="og:image" content="%s" />' % og_image, html, count=1)
 
     alternates = ''.join(
         '<link rel="alternate" hreflang="%s" href="%s%s/" />\n' % (hl, BASE_URL, code)
@@ -214,7 +216,8 @@ def build():
         page = apply_text(src, strings)
         page = apply_assets(page, suffix, statcard, readme, ollama)
         page = apply_head(page, lang, html_lang,
-                          '%s%s/' % (BASE_URL, folder), '%s%s/' % (BASE_URL, folder))
+                          '%s%s/' % (BASE_URL, folder), '%s%s/' % (BASE_URL, folder),
+                          '%simages/og/og%s.png' % (BASE_URL, suffix))
         page = apply_lang_links(page, 1, lang)
         page = apply_prefix(page, 1)
         page = re.sub(r'<title>[^<]*</title>',
@@ -228,7 +231,8 @@ def build():
         pages[os.path.join(DOCS, folder, 'index.html')] = page
 
     # 根目錄仍是繁中內容，但 canonical 指向 /zh-TW/，避免兩個網址互搶
-    root = apply_head(src, 'zh-TW', 'zh-Hant', BASE_URL + 'zh-TW/', BASE_URL, is_root=True)
+    root = apply_head(src, 'zh-TW', 'zh-Hant', BASE_URL + 'zh-TW/', BASE_URL,
+                      BASE_URL + 'images/og/og.png', is_root=True)
     root = apply_lang_links(root, 0, 'zh-TW')
     pages[SOURCE] = root
     return pages

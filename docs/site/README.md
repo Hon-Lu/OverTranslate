@@ -26,6 +26,19 @@ python tools/build-site.py
 
 以前是載入後才用 JS 把文字換成對應語言，但這樣每個網址的**原始碼都是繁中**。搜尋引擎不保證會等 JS 跑完，結果各語言在搜尋結果裡都顯示中文標題。現在每個語言都有實體 HTML，原始碼就是該語言，任何爬蟲都不必執行 JS。
 
+## 社群分享縮圖
+
+```bash
+python tools/build-og.py
+```
+
+`docs/images/og/og*.png`（1200x630）是分享連結時各平台抓的那張圖，由 `tools/build-og.py`
+用 Edge 無頭渲染出來，版面沿用首頁但為 1.91:1 重排過。標語和「原文／譯文」的字是直接從
+各語言的 `index.html` 撈的，不另外維護一份。
+
+**改了 `hero.claim`、`hero.free` 或 `compare.before/after` 之後要重跑**，否則縮圖上的字
+會停在舊版。這支需要本機有 Edge，CI 不會跑它，圖是 commit 進版控的。
+
 ## 翻譯放哪裡
 
 | 內容 | 位置 |
@@ -62,4 +75,5 @@ python tools/build-site.py
 2. 在 `tools/build-site.py` 的 `LANGS` 與 `LANG_LABEL`、`MENU_ORDER` 各加一筆
 3. `docs/sitemap.xml` 補上新的 `<url>` 與所有 `hreflang`
 4. 若需要不同字型，在 `docs/site/styles.css` 補 `html[data-lang="..."]`
-5. 執行 `python tools/build-site.py`
+5. 在 `tools/build-og.py` 的 `LANGS` 加一筆，縮圖才會有那個語言的版本
+6. 執行 `python tools/build-site.py` 與 `python tools/build-og.py`
