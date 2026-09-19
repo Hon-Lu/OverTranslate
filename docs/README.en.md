@@ -29,7 +29,7 @@
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.en.svg" alt="Download the portable version" /></a>
     &nbsp;
-    <a href="https://asd880921.github.io/OverTranslate/en/"><img src="images/ui/btn-site.en.svg" alt="Visit the website" /></a>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.en.svg" alt="Visit the website" /></a>
   </p>
 
   <p>
@@ -42,7 +42,7 @@
 
 ## Translation Features
 
-> 💡 On the **[website](https://asd880921.github.io/OverTranslate/en/)** you can drag the before/after comparisons, which is a quicker way to see what it actually does.
+> 💡 On the **[website](https://asd880921.github.io/OverTranslate/)** you can drag the before/after comparisons, which is a quicker way to see what it actually does.
 >
 > 🌐 **OverTranslate has a multilingual interface. The screenshots in this README show it in Traditional Chinese or English; the interface language is switchable in the app.**
 
