@@ -160,7 +160,23 @@
                                FontFamily="{DynamicResource AppFont}"
                                FontSize="12"
                                Foreground="{DynamicResource AppTextSecondary}"
+                               TextWrapping="Wrap"
                                Margin="0,8,0,0"
+                               Visibility="Collapsed"/>
+
+                    <!-- Only appears when Velopack gives up on the delta packages and starts the
+                         full one. The bar returning to zero halfway through needs a reason given
+                         to it, or it reads as the download having failed and silently restarted.
+                         Not ErrorText: nothing has gone wrong, the update is simply taking the
+                         long road. Smaller than the readout above because it explains that line
+                         rather than competing with it. -->
+                    <TextBlock x:Name="FallbackNote"
+                               Text="{DynamicResource S.Update.FellBackToFull}"
+                               FontFamily="{DynamicResource AppFont}"
+                               FontSize="11"
+                               Foreground="{DynamicResource AppTextSecondary}"
+                               TextWrapping="Wrap"
+                               Margin="0,4,0,0"
                                Visibility="Collapsed"/>
 
                     <!-- Failures are reported here rather than through a system MessageBox, which was
