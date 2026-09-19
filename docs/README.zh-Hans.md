@@ -62,8 +62,8 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 | 原文 | 翻译结果 |
 |------|----------|
 | ![截图翻译1-前.png](images/截圖翻譯1-前.png) | ![截图翻译1-后.png](images/截圖翻譯1-後.png) |
+| ![截图翻译-前.png](images/截圖翻譯-前.png) | ![截图翻译-后.png](images/截圖翻譯-後.png) |
 | ![截图翻译2-前.png](images/截圖翻譯2-前.png) | ![截图翻译2-后.png](images/截圖翻譯2-後.png) |
-| ![截图翻译3-前.png](images/截圖翻譯3-前.png) | ![截图翻译3-后.png](images/截圖翻譯3-後.png) |
 
 > 比对图中的四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1)。
 

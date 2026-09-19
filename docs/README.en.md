@@ -62,8 +62,8 @@ When you need a translation, press the hotkey (default Ctrl + Alt + A) and selec
 | Source text | Translation |
 |------|----------|
 | ![截圖翻譯1-前.png](images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](images/截圖翻譯1-後.png) |
+| ![截圖翻譯-前.png](images/截圖翻譯-前.png) | ![截圖翻譯-後.png](images/截圖翻譯-後.png) |
 | ![截圖翻譯2-前.png](images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](images/截圖翻譯2-後.png) |
-| ![截圖翻譯3-前.png](images/截圖翻譯3-前.png) | ![截圖翻譯3-後.png](images/截圖翻譯3-後.png) |
 
 > The four-panel comic in the comparison images is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1).
 
