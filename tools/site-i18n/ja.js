@@ -161,5 +161,5 @@ otLocale('ja', {
   'a11y.star': 'GitHub で Star を付ける',
   'a11y.close': '閉じる',
   'meta.title': 'OverTranslate — Windows 用のリアルタイム画面翻訳ツール',
-  'meta.description': 'OverTranslate は Windows 向けの無料の画面リアルタイム翻訳ツールです。ウェブページ・漫画・動画・ゲームなど、さまざまな場面でキャプチャ翻訳やリアルタイム翻訳などの機能を利用できます。'
+  'meta.description': 'OverTranslate は Windows 向けの無料の画面翻訳ツールです。ウェブページ・漫画・動画・ゲームなど、さまざまな場面でキャプチャ翻訳やリアルタイム翻訳などの機能を利用できます。'
 });

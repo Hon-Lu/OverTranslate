@@ -161,5 +161,5 @@ otLocale('zh-Hans', {
   'a11y.star': '前往 GitHub 给颗 Star',
   'a11y.close': '关闭',
   'meta.title': 'OverTranslate — Windows 屏幕即时翻译工具',
-  'meta.description': 'OverTranslate 是一款免费 Windows 屏幕实时翻译工具，适用于网页、漫画、影音与游戏等场景，支持截图翻译与实时翻译等多种翻译功能。'
+  'meta.description': 'OverTranslate 是一款免费 Windows 屏幕翻译工具，适用于网页、漫画、影音与游戏等场景，支持截图翻译与实时翻译等多种翻译功能。'
 });
