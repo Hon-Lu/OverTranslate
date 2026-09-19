@@ -28,6 +28,8 @@
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.ko.svg" alt="Windows 설치 버전 다운로드(권장)" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.ko.svg" alt="포터블 버전 다운로드" /></a>
+    &nbsp;
+    <a href="https://asd880921.github.io/OverTranslate/ko/"><img src="images/ui/btn-site.ko.svg" alt="공식 사이트로 이동" /></a>
   </p>
 
   <p>
@@ -39,6 +41,9 @@
 ---
 
 ## 번역 기능
+
+> 💡 **[공식 사이트](https://asd880921.github.io/OverTranslate/ko/)** 에서는 번역 전후를 좌우로 끌어서 비교할 수 있습니다. 효과를 바로 보려면 그쪽이 빠릅니다.
+>
 > 🌐 **OverTranslate는 다국어 인터페이스를 지원합니다. 이 README의 스크린샷은 중국어 번체 또는 영어 화면이지만, 인터페이스 언어는 앱에서 바꿀 수 있습니다.**
 
 OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 것을 바로 고를 수 있습니다.
@@ -62,8 +67,8 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 | 원문 | 번역 결과 |
 |------|----------|
 | ![캡처 번역1-전](images/截圖翻譯1-前.png) | ![캡처 번역1-후](images/截圖翻譯1-後.png) |
+| ![캡처 번역-전](images/截圖翻譯-前.png) | ![캡처 번역-후](images/截圖翻譯-後.png) |
 | ![캡처 번역2-전](images/截圖翻譯2-前.png) | ![캡처 번역2-후](images/截圖翻譯2-後.png) |
-| ![캡처 번역3-전](images/截圖翻譯3-前.png) | ![캡처 번역3-후](images/截圖翻譯3-後.png) |
 
 > 비교 이미지의 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1) 님의 작품입니다.
 

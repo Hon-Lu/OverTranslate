@@ -28,6 +28,8 @@
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.svg" alt="下載 Windows 安裝版（推薦）" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.svg" alt="下載免安裝版（Portable）" /></a>
+    &nbsp;
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.svg" alt="前往官方網站" /></a>
   </p>
 
   <p>
@@ -39,6 +41,9 @@
 ---
 
 ## 翻譯功能
+
+> 💡 **[官方網站](https://asd880921.github.io/OverTranslate/)** 的翻譯前後對照可以左右拖曳，想直接看效果從那裡開始比較快。
+>
 > 🌐 **OverTranslate 支援多國語言介面。README 中的應用程式圖片統一以繁體中文顯示，實際介面可切換不同語言。**
 
 OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速選擇：
@@ -62,8 +67,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 | 原文 | 翻譯結果 |
 |------|----------|
 | ![截圖翻譯1-前.png](docs/images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](docs/images/截圖翻譯1-後.png) |
+| ![截圖翻譯-前.png](docs/images/截圖翻譯-前.png) | ![截圖翻譯-後.png](docs/images/截圖翻譯-後.png) |
 | ![截圖翻譯2-前.png](docs/images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](docs/images/截圖翻譯2-後.png) |
-| ![截圖翻譯3-前.png](docs/images/截圖翻譯3-前.png) | ![截圖翻譯3-後.png](docs/images/截圖翻譯3-後.png) |
 
 > 比對圖中的四格漫畫原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1)。
 

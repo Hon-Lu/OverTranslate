@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-lang="zh-TW" data-site-root>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>OverTranslate — Windows 螢幕即時翻譯工具</title>
+<meta name="description" content="OverTranslate 是一款 Windows 螢幕翻譯工具，支援截圖翻譯與即時翻譯，譯文直接顯示在原畫面上，適合網頁、漫畫、影音與遊戲。免費開源，OCR 全程在本機執行。" />
+<meta name="theme-color" content="#070C14" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#F7F9FC" media="(prefers-color-scheme: light)" />
+<link rel="canonical" href="https://asd880921.github.io/OverTranslate/zh-TW/" />
+<link rel="alternate" hreflang="zh-Hant" href="https://asd880921.github.io/OverTranslate/zh-TW/" />
+<link rel="alternate" hreflang="en" href="https://asd880921.github.io/OverTranslate/en/" />
+<link rel="alternate" hreflang="zh-Hans" href="https://asd880921.github.io/OverTranslate/zh-Hans/" />
+<link rel="alternate" hreflang="ja" href="https://asd880921.github.io/OverTranslate/ja/" />
+<link rel="alternate" hreflang="ko" href="https://asd880921.github.io/OverTranslate/ko/" />
+<link rel="alternate" hreflang="x-default" href="https://asd880921.github.io/OverTranslate/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="OverTranslate" />
+<meta property="og:title" content="OverTranslate — Windows 螢幕即時翻譯工具" />
+<meta property="og:description" content="截圖翻譯、即時翻譯，譯文直接顯示在原畫面上。免費開源的 Windows 螢幕翻譯工具。" />
+<meta property="og:url" content="https://asd880921.github.io/OverTranslate/" />
+<meta property="og:image" content="https://asd880921.github.io/OverTranslate/images/%E7%BF%BB%E8%AD%AF%E6%AF%94%E5%B0%8D%E5%9C%96.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" type="image/svg+xml" href="images/icon.svg" />
+<link rel="apple-touch-icon" href="images/icon.svg" />
+<link rel="preconnect" href="https://img.shields.io" />
+<link rel="stylesheet" href="site/styles.css" />
+<script>
+  (function () {
+    var d = document.documentElement;
+    d.classList.add('js');
+    try {
+      var t = localStorage.getItem('ot-theme');
+      if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
+    } catch (e) {}
+
+    // 只有根目錄會依語言轉址，而且在畫面繪製前就決定，不會先閃一次中文
+    if (!d.hasAttribute('data-site-root')) return;
+    var known = ['en', 'zh-TW', 'zh-Hans', 'ja', 'ko'];
+    var want = null;
+    try {
+      var saved = localStorage.getItem('ot-lang');
+      if (known.indexOf(saved) >= 0) want = saved;
+    } catch (e) {}
+    if (!want) {
+      var tags = navigator.languages || [navigator.language || ''];
+      for (var i = 0; i < tags.length && !want; i++) {
+        var tag = String(tags[i]).toLowerCase();
+        if (!tag) continue;
+        else if (tag.indexOf('zh') === 0) want = /hant|tw|hk|mo/.test(tag) ? 'zh-TW' : 'zh-Hans';
+        else if (tag.indexOf('ja') === 0) want = 'ja';
+        else if (tag.indexOf('ko') === 0) want = 'ko';
+        else if (tag.indexOf('en') === 0) want = 'en';
+      }
+      if (!want) want = 'en';
+    }
+    if (want !== 'zh-TW') location.replace(want + '/' + location.hash);
+  })();
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#main" data-i18n="a11y.skip">跳到主要內容</a>
+
+<header class="chrome" id="chrome">
+  <div class="chrome__inner">
+    <a class="brand" href="#top">
+      <img class="brand__mark" src="images/icon.svg" width="30" height="30" alt="" aria-hidden="true" />
+      <span class="brand__name">OverTranslate</span>
+    </a>
+
+    <nav class="chrome__nav" aria-label="OverTranslate">
+      <a href="#features" data-i18n="nav.features">翻譯功能</a>
+      <a href="#engines" data-i18n="nav.engines">翻譯服務</a>
+      <a href="#privacy" data-i18n="nav.privacy">隱私</a>
+      <a href="#download" data-i18n="nav.download">下載</a>
+      <a href="#support" data-i18n="nav.support">支持</a>
+    </nav>
+
+    <div class="chrome__actions">
+      <div class="menu" data-menu>
+        <button class="iconbtn iconbtn--wide" type="button" data-menu-trigger aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c2.5 2.6 2.5 14.6 0 17.2M12 3.4c-2.5 2.6-2.5 14.6 0 17.2"/></svg>
+          <span data-lang-label>繁體中文</span>
+        </button>
+        <div class="menu__pop" data-menu-pop role="menu" hidden>
+          <a role="menuitem" href="en/" data-set-lang="en" lang="en">English</a>
+          <a role="menuitem" href="zh-TW/" data-set-lang="zh-TW" lang="zh-Hant" aria-current="true">繁體中文</a>
+          <a role="menuitem" href="zh-Hans/" data-set-lang="zh-Hans" lang="zh-Hans">简体中文</a>
+          <a role="menuitem" href="ja/" data-set-lang="ja" lang="ja">日本語</a>
+          <a role="menuitem" href="ko/" data-set-lang="ko" lang="ko">한국어</a>
+        </div>
+      </div>
+
+      <button class="iconbtn" type="button" data-theme-toggle aria-label="切換淺色 / 深色" data-i18n-attr="aria-label|a11y.theme">
+        <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7"/></svg>
+        <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 13.4A8.2 8.2 0 1 1 10.6 4a6.6 6.6 0 0 0 9.4 9.4Z"/></svg>
+      </button>
+
+      <a class="iconbtn" href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="ic-fill"><path d="M12 2.2a10 10 0 0 0-3.16 19.5c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.35 1.09 2.92.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85l-.01 2.75c0 .26.18.58.69.48A10 10 0 0 0 12 2.2Z"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero" id="top">
+  <div class="hero__glow" aria-hidden="true"></div>
+  <div class="wrap hero__inner">
+    <p class="eyebrow reveal">
+      <span class="eyebrow__os">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="ic-fill"><path d="M3 5.4 10.4 4.3v7.2H3V5.4Zm8.6-1.3L21 3v8.5h-9.4V4.1ZM3 12.7h7.4v7.2L3 18.8v-6.1Zm8.6 0H21V21l-9.4-1.1v-7.2Z"/></svg>
+        <span>Windows 10 / 11</span>
+      </span>
+      <span class="eyebrow__dot" aria-hidden="true">·</span>
+      <span data-i18n="hero.free">免費開源</span>
+    </p>
+
+    <h1 class="hero__title reveal">
+      <span class="hero__name">OverTranslate</span>
+      <span class="hero__claim" data-i18n="hero.claim">畫面可見的文字，都能直接翻譯</span>
+    </h1>
+
+    <p class="hero__lede reveal" data-i18n="hero.lede">適用於漫畫、影音與遊戲的 Windows 螢幕翻譯工具，支援截圖翻譯與即時翻譯等多種翻譯功能。</p>
+
+    <div class="hero__cta reveal">
+      <a class="btn btn--primary" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe" data-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.6v10.8M7.6 10 12 14.4 16.4 10M4.6 19.4h14.8"/></svg>
+        <span data-i18n="hero.cta.setup">下載 Windows 安裝版</span>
+      </a>
+      <a class="btn btn--ghost" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip" data-press>
+        <span data-i18n="hero.cta.portable">下載免安裝版</span>
+      </a>
+    </div>
+
+    <figure class="shot shot--hero reveal">
+      <div class="compare" data-compare data-compare-hint>
+        <img class="compare__img" src="images/截圖翻譯-後.png" width="2060" height="1160" alt="Godot 部落格翻譯成繁體中文後的畫面" data-i18n-attr="alt|shot.hero.after" decoding="async" />
+        <div class="compare__clip">
+          <img class="compare__img" src="images/截圖翻譯-前.png" width="2060" height="1160" alt="翻譯前的英文 Godot 部落格畫面" data-i18n-attr="alt|shot.hero.before" decoding="async" />
+        </div>
+        <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
+        <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+        <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+          <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+          <span class="compare__hint" aria-hidden="true" data-i18n="compare.caption">左右拖曳，查看翻譯前後的效果</span>
+        </div>
+      </div>
+      <figcaption class="src" data-i18n-html="src.hero">畫面來源：<a href="https://godotengine.org/blog/" target="_blank" rel="noopener">Godot Engine Blog</a></figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <header class="sectionhead reveal">
+      <p class="kicker" data-i18n="features.kicker">翻譯功能</p>
+      <h2 class="h2" data-i18n="features.title">五種翻譯方式，依情境選擇</h2>
+      <p class="sectionlede" data-i18n="features.lede">OverTranslate 提供五種翻譯功能，都能以快捷鍵直接叫出。</p>
+    </header>
+
+    <ul class="cards reveal">
+      <li class="card">
+        <a class="card__link" href="#capture">
+          <span class="card__kbd">Ctrl + Alt + A</span>
+          <h3 data-i18n="features.capture.title">截圖翻譯</h3>
+          <p data-i18n="features.capture.body">框選畫面內容，辨識並將譯文直接顯示在原畫面。</p>
+        </a>
+      </li>
+      <li class="card">
+        <a class="card__link" href="#realtime">
+          <span class="card__kbd" data-i18n="features.realtime.launch">從主視窗啟動</span>
+          <h3 data-i18n="features.realtime.title">即時翻譯</h3>
+          <p data-i18n="features.realtime.body">框選影片、遊戲或漫畫的內容，持續辨識並將譯文顯示在原畫面。</p>
+        </a>
+      </li>
+      <li class="card">
+        <a class="card__link" href="#lookup">
+          <span class="card__kbd">Ctrl + Alt + Q</span>
+          <h3 data-i18n="features.lookup.title">取詞翻譯</h3>
+          <p data-i18n="features.lookup.body">選取文字後開啟精簡翻譯小視窗，也可釘選常駐使用。</p>
+        </a>
+      </li>
+      <li class="card">
+        <a class="card__link" href="#lookup">
+          <span class="card__kbd">Ctrl + Alt + E</span>
+          <h3 data-i18n="features.quick.title">快速翻譯</h3>
+          <p data-i18n="features.quick.body">選取文字後按下快捷鍵，直接翻譯並取代原文。</p>
+        </a>
+      </li>
+      <li class="card">
+        <a class="card__link" href="#lookup">
+          <span class="card__kbd">Ctrl + Alt + W</span>
+          <h3 data-i18n="features.text.title">文字翻譯</h3>
+          <p data-i18n="features.text.body">使用完整翻譯視窗，支援文字輸入、語言互換與文字朗讀。</p>
+        </a>
+      </li>
+    </ul>
+
+    <p class="note reveal" data-i18n="features.note">網站中的應用程式畫面統一以繁體中文顯示，實際介面可切換為繁體中文、简体中文、English、日本語、한국어。</p>
+  </div>
+</section>
+
+<section class="section section--alt" id="capture">
+  <div class="wrap">
+    <div class="split">
+      <div class="split__text reveal">
+        <p class="kicker" data-i18n="capture.kicker">截圖翻譯</p>
+        <h2 class="h2" data-i18n="capture.title">框選畫面，譯文直接覆蓋原文</h2>
+        <p data-i18n="capture.body1">按下快捷鍵框選需要翻譯的區域，即可辨識並翻譯畫面文字。支援網頁、PDF、圖片、漫畫、影音與遊戲，並可自動辨識繁體中文、簡體中文、英文、日文與韓文。</p>
+        <aside class="aside">
+          <p data-i18n="capture.tray">主視窗可以直接關閉，程式常駐系統匣，平常不需要一直開著。</p>
+        </aside>
+      </div>
+
+      <div class="split__media reveal">
+        <figure class="shot">
+          <div class="compare compare--comic" data-compare>
+            <img class="compare__img" src="images/截圖翻譯1-後.png" width="1401" height="1285" alt="四格漫畫翻譯後的畫面" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
+            <div class="compare__clip">
+              <img class="compare__img" src="images/截圖翻譯1-前.png" width="1402" height="1287" alt="翻譯前的日文四格漫畫" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
+            </div>
+            <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
+            <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+            <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+              <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+            </div>
+          </div>
+          <figcaption class="src" data-i18n-html="capture.cap.comic">漫畫來源：<a href="https://x.com/kiyo_mariari/status/1980247239948988588/photo/1" target="_blank" rel="noopener">@kiyo_mariari</a></figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <figure class="shot subsection reveal">
+      <div class="compare compare--wide" data-compare>
+        <img class="compare__img" src="images/截圖翻譯2-後.png" width="1722" height="886" alt="韓文網頁翻譯後的畫面" data-i18n-attr="alt|shot.capture.after" loading="lazy" decoding="async" />
+        <div class="compare__clip">
+          <img class="compare__img" src="images/截圖翻譯2-前.png" width="1730" height="891" alt="翻譯前的韓文網頁畫面" data-i18n-attr="alt|shot.capture.before" loading="lazy" decoding="async" />
+        </div>
+          <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
+          <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+          <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+            <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+          </div>
+      </div>
+      <figcaption class="src" data-i18n-html="capture.cap.web">畫面來源：<a href="https://www.naddic.co.kr/ko/cls/index" target="_blank" rel="noopener">Closers 官方網站（NADDIC GAMES）</a></figcaption>
+    </figure>
+
+    <div class="split subsection reveal">
+      <div class="split__text">
+        <h3 class="h3" data-i18n="capture.tools.title">工具列還能做這些</h3>
+        <ul class="ticks">
+          <li><strong data-i18n="capture.tool1.title">複製文字</strong><span data-i18n="capture.tool1.body">不需翻譯即可將辨識出的文字複製到剪貼簿。</span></li>
+          <li><strong data-i18n="capture.tool2.title">截圖</strong><span data-i18n="capture.tool2.body">將框選畫面複製到剪貼簿，也可在設定中開啟「儲存截圖」同步存檔。</span></li>
+          <li><strong data-i18n="capture.tool3.title">標記</strong><span data-i18n="capture.tool3.body">用畫筆工具直接在截圖上標記，再複製或儲存畫面內容。</span></li>
+        </ul>
+      </div>
+      <div class="split__media">
+        <figure class="shot shot--plain">
+          <img src="images/截圖翻譯-標記.png" width="1504" height="542" alt="截圖工具列的標記功能" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="realtime">
+  <div class="wrap">
+    <header class="sectionhead reveal">
+      <p class="kicker" data-i18n="realtime.kicker">即時翻譯</p>
+      <h2 class="h2" data-i18n="realtime.title">畫面文字變動，譯文即時更新</h2>
+      <p class="sectionlede" data-i18n="realtime.lede">框選翻譯區域後，持續辨識畫面文字並自動更新譯文。適用於影片字幕、遊戲畫面與漫畫閱讀，譯文直接顯示於原位置。</p>
+    </header>
+
+    <div class="facts reveal">
+      <div class="fact">
+        <h3 data-i18n="realtime.fact1.title">兩種畫面來源</h3>
+        <p data-i18n="realtime.fact1.body">可擷取整個螢幕，或指定單一視窗。</p>
+      </div>
+      <div class="fact">
+        <h3 data-i18n="realtime.fact2.title">隨時暫停與繼續</h3>
+        <p data-i18n="realtime.fact2.body">暫停時可直接查看原文，不必關閉。</p>
+      </div>
+    </div>
+
+    <div class="tabs reveal" data-tabs>
+      <div class="tabs__bar" role="tablist" aria-label="即時翻譯模式" data-i18n-attr="aria-label|a11y.tabs">
+        <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
+        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab data-i18n="realtime.mode.prose">字幕 / 漫畫</button>
+        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab data-i18n="realtime.mode.ui">遊戲 / 介面</button>
+      </div>
+
+      <div class="tabs__panel" id="panel-prose" role="tabpanel" aria-labelledby="tab-prose" data-tabpanel>
+        <p class="tabs__lede" data-i18n="realtime.prose.body">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</p>
+        <div class="grid2">
+          <figure class="shot">
+            <div class="compare compare--tall" data-compare>
+              <img class="compare__img" src="images/即時翻譯-漫畫翻譯後.png" width="938" height="1360" alt="漫畫即時翻譯後的畫面" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="images/即時翻譯-漫畫翻譯前.png" width="956" height="1363" alt="翻譯前的日文漫畫畫面" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.comic">漫畫來源：<a href="https://genshin.hoyoverse.com/ja/manga/detail/104872?mute=1" target="_blank" rel="noopener">《原神》官方漫畫 第五話「危険地帯」</a></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="compare" data-compare>
+              <img class="compare__img" src="images/即時翻譯-影片翻譯.png" width="1920" height="1080" alt="影片字幕即時翻譯後的畫面" data-i18n-attr="alt|shot.video.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="images/即時翻譯-影片框.png" width="1921" height="1080" alt="影片字幕框選中的畫面" data-i18n-attr="alt|shot.video.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.video">影片來源：<a href="https://www.youtube.com/watch?v=Tsmf4dkigbw" target="_blank" rel="noopener">BanG Dream! Girls Band Party!☆PICO～OHMORI～</a></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="compare" data-compare>
+              <img class="compare__img" src="images/即時翻譯1-對話遊戲翻譯.png" width="2557" height="1437" alt="遊戲劇情對話即時翻譯後的畫面" data-i18n-attr="alt|shot.story.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="images/即時翻譯1-對話遊戲框.png" width="2557" height="1437" alt="遊戲劇情對話框選中的畫面" data-i18n-attr="alt|shot.story.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.story">遊戲畫面來源：<a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《魔法少女的魔女審判》</a></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="compare" data-compare>
+              <img class="compare__img" src="images/即時翻譯2-對話遊戲翻譯.png" width="2557" height="1437" alt="遊戲劇情對話即時翻譯後的畫面" data-i18n-attr="alt|shot.story2.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="images/即時翻譯2-對話遊戲框.png" width="2557" height="1437" alt="遊戲劇情對話框選中的畫面" data-i18n-attr="alt|shot.story2.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.story2">遊戲畫面來源：<a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《魔法少女的魔女審判》</a></figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="tabs__panel" id="panel-ui" role="tabpanel" aria-labelledby="tab-ui" data-tabpanel hidden>
+        <p class="tabs__lede" data-i18n="realtime.ui.body">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</p>
+        <div class="grid2">
+          <figure class="shot">
+            <div class="compare" data-compare>
+              <img class="compare__img" src="images/即時翻譯-遊戲翻譯.png" width="2557" height="1437" alt="遊戲介面即時翻譯後的畫面" data-i18n-attr="alt|shot.game.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="images/即時翻譯-遊戲翻譯框.png" width="2557" height="1437" alt="遊戲介面框選中的畫面" data-i18n-attr="alt|shot.game.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.game">遊戲畫面來源：<a href="https://store.steampowered.com/app/774801/Crab_Champions/" target="_blank" rel="noopener">Crab Champions</a></figcaption>
+          </figure>
+          <figure class="shot shot--plain">
+            <img src="images/即時翻譯-聊天室比對圖.png" width="1695" height="1260" alt="聊天室訊息即時翻譯的前後比對" data-i18n-attr="alt|shot.chat" loading="lazy" decoding="async" data-zoom />
+            <figcaption class="src" data-i18n-html="realtime.cap.chat">遊戲畫面來源：<a href="https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/" target="_blank" rel="noopener">Phantasy Star Online 2 New Genesis</a></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="split subsection reveal">
+      <div class="split__text">
+        <h3 class="h3" data-i18n="realtime.look.title">顯示樣式可依需求調整</h3>
+        <p data-i18n="realtime.look.body">文字顏色與底色支援自動或固定設定，並可調整底色透明度、邊框與預覽效果。</p>
+      </div>
+      <div class="split__media">
+        <figure class="shot shot--app">
+          <img src="images/即時翻譯視窗預覽.png" width="1513" height="912" alt="OverTranslate 即時翻譯的外觀設定" data-i18n-attr="alt|shot.realtimeapp" data-loc-img="即時翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="lookup">
+  <div class="wrap">
+    <header class="sectionhead reveal">
+      <p class="kicker" data-i18n="more.kicker">其他翻譯功能</p>
+      <h2 class="h2" data-i18n="more.title">選取、輸入，都能直接翻譯</h2>
+    </header>
+
+    <div class="tabs tabs--center reveal" data-tabs>
+      <div class="tabs__bar" role="tablist" aria-label="其他翻譯功能" data-i18n-attr="aria-label|a11y.tabs.more">
+        <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
+        <button type="button" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" data-tab data-i18n="features.lookup.title">取詞翻譯</button>
+        <button type="button" role="tab" id="tab-quick" aria-controls="panel-quick" aria-selected="false" tabindex="-1" data-tab data-i18n="features.quick.title">快速翻譯</button>
+        <button type="button" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false" tabindex="-1" data-tab data-i18n="features.text.title">文字翻譯</button>
+      </div>
+
+      <div class="tabs__panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" data-tabpanel>
+        <div class="split">
+          <div class="split__text">
+            <span class="kbd">Ctrl + Alt + Q</span>
+            <p data-i18n="more.lookup.body">選取文字後按下快捷鍵，即可自動帶入並翻譯；未選取文字時也可直接輸入，視窗亦可釘選持續顯示。</p>
+          </div>
+          <div class="split__media">
+            <figure class="shot shot--plain">
+              <img src="images/選詞翻譯.png" width="1632" height="884" alt="取詞翻譯的小視窗" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
+            </figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs__panel" id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" data-tabpanel hidden>
+        <div class="split">
+          <div class="split__text">
+            <span class="kbd">Ctrl + Alt + E</span>
+            <p data-i18n="more.quick.body">選取文字後按下快捷鍵，翻譯結果會自動貼上並取代原文，無需開啟其他視窗；適用於可輸入文字的欄位。</p>
+          </div>
+          <div class="split__media">
+            <figure class="shot shot--plain">
+              <img src="images/快速翻譯.png" width="1672" height="941" alt="快速翻譯直接取代原文" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
+            </figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs__panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text" data-tabpanel hidden>
+        <div class="split">
+          <div class="split__text">
+            <span class="kbd">Ctrl + Alt + W</span>
+            <p data-i18n="more.text.body">輸入或貼上文字即可翻譯，可快速互換來源與目標語言，並支援原文與譯文朗讀。</p>
+          </div>
+          <div class="split__media">
+            <figure class="shot shot--plain">
+              <img src="images/翻譯視窗預覽.png" width="1302" height="802" alt="完整的文字翻譯視窗" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="engines">
+  <div class="wrap">
+    <header class="sectionhead reveal">
+      <p class="kicker" data-i18n="engines.kicker">翻譯服務</p>
+      <h2 class="h2" data-i18n="engines.title">內建多種翻譯服務</h2>
+      <p class="sectionlede" data-i18n="engines.lede">多種翻譯平台安裝後即可使用，無需註冊帳號或申請金鑰。</p>
+    </header>
+
+    <ul class="engines reveal">
+      <li class="engine">
+        <h3>Microsoft <span data-i18n="engines.ms.suffix">翻譯</span></h3>
+        <p data-i18n="engines.ms.body">穩定性佳、回應快速</p>
+        <span class="pill pill--default" data-i18n="engines.badge.default">預設</span>
+      </li>
+      <li class="engine">
+        <h3>Bing <span data-i18n="engines.bing.suffix">翻譯</span></h3>
+        <p data-i18n="engines.bing.body">翻譯品質佳</p>
+        <span class="pill" data-i18n="engines.badge.free">免設定</span>
+      </li>
+      <li class="engine">
+        <h3>Google <span data-i18n="engines.google.suffix">翻譯</span></h3>
+        <p data-i18n="engines.google.body">表現均衡，適合日常使用</p>
+        <span class="pill" data-i18n="engines.badge.free">免設定</span>
+      </li>
+    </ul>
+
+    <div class="split split--tight">
+      <div class="split__text reveal">
+        <h3 class="h3" data-i18n="engines.fallback.title">自動備援</h3>
+        <p data-i18n="engines.fallback.body">當某個翻譯服務無法使用或回應過慢時，會自動切換到其他可用的服務，不需要自己重試或改設定。</p>
+      </div>
+      <div class="split__text reveal">
+        <h3 class="h3" data-i18n="engines.advanced.title">外部翻譯服務與 AI 模型</h3>
+        <p data-i18n="engines.advanced.body">除了內建服務，也能自行加入其他翻譯服務，或使用本地 AI 模型進行翻譯；不額外設定也不影響一般使用。</p>
+        <p>
+          <a class="textlink" href="https://github.com/asd880921/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
+            <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="privacy">
+  <div class="wrap">
+    <div class="split">
+      <div class="split__text reveal">
+        <p class="kicker" data-i18n="privacy.kicker">隱私</p>
+        <h2 class="h2" data-i18n="privacy.title">畫面與資料皆保留於本機</h2>
+        <p data-i18n="privacy.body1">畫面只在本機辨識，圖片不會上傳。翻譯時僅傳送辨識出的文字；若使用本地 AI 模型，整個流程都能在電腦上完成。</p>
+        <p class="note note--inline" data-i18n="privacy.note">應用紀錄僅儲存在本機，不會自動上傳。</p>
+      </div>
+      <div class="split__media reveal">
+        <dl class="models">
+          <div class="model">
+            <dt data-i18n="privacy.step1.title">1 · 框選畫面</dt>
+            <dd data-i18n="privacy.step1.body">框選的範圍僅保留在本機。</dd>
+          </div>
+          <div class="model">
+            <dt data-i18n="privacy.step2.title">2 · 辨識文字</dt>
+            <dd data-i18n="privacy.step2.body">文字辨識同樣在本機完成，圖片不會外傳。</dd>
+          </div>
+          <div class="model">
+            <dt data-i18n="privacy.step3.title">3 · 翻譯</dt>
+            <dd data-i18n="privacy.step3.body">僅將辨識出的文字送往所選的翻譯服務。</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="settings">
+  <div class="wrap">
+    <div class="split split--reverse">
+      <div class="split__text reveal">
+        <p class="kicker" data-i18n="settings.kicker">設定</p>
+        <h2 class="h2" data-i18n="settings.title">依使用習慣調整</h2>
+        <ul class="ticks">
+          <li><strong data-i18n="settings.1.title">介面語言</strong><span data-i18n="settings.1.body">支援繁體中文、簡體中文、英文、日文與韓文，切換後立即生效；首次啟動時會依 Windows 顯示語言自動套用。</span></li>
+          <li><strong data-i18n="settings.2.title">快捷鍵</strong><span data-i18n="settings.2.body">支援組合鍵、單鍵、滑鼠按鍵與遊戲手把按鍵，可依使用習慣自訂。</span></li>
+          <li><strong data-i18n="settings.3.title">主題</strong><span data-i18n="settings.3.body">提供淺色與深色兩種顯示模式。</span></li>
+          <li><strong data-i18n="settings.4.title">自動翻譯</strong><span data-i18n="settings.4.body">截圖框選完成後可立即翻譯，無需手動點選按鈕。</span></li>
+          <li><strong data-i18n="settings.5.title">開機啟動與截圖儲存</strong><span data-i18n="settings.5.body">可設定開機自動啟動，並自動儲存截圖與指定儲存位置。</span></li>
+        </ul>
+        <p>
+          <a class="textlink" href="https://github.com/asd880921/OverTranslate/blob/main/README.md" data-loc-href="readme" target="_blank" rel="noopener">
+            <span data-i18n="settings.link">完整設定說明</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+        </p>
+      </div>
+      <div class="split__media reveal">
+        <figure class="shot shot--app">
+          <img src="images/設定頁.png" width="1582" height="882" alt="OverTranslate 的設定頁" data-i18n-attr="alt|shot.settings" data-loc-img="設定頁" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--download" id="download">
+  <div class="wrap">
+    <header class="sectionhead reveal">
+      <p class="kicker" data-i18n="download.kicker">下載</p>
+      <h2 class="h2" data-i18n="download.title">選擇適合你的版本</h2>
+      <p class="sectionlede version">
+        <span data-i18n="download.version">目前版本</span>
+        <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=flat-square&amp;label=&amp;color=52C4FA&amp;labelColor=20293a" alt="最新版本" data-i18n-attr="alt|download.version.alt" width="52" height="20" loading="lazy" decoding="async" />
+      </p>
+    </header>
+
+    <p class="stat reveal">
+      <a href="https://github.com/asd880921/OverTranslate/releases" target="_blank" rel="noopener">
+        <img src="https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/overtranslate-downloads-history.zh-TW.svg" alt="累積下載次數與每日新增" data-i18n-attr="alt|hero.stat" data-loc-src="statcard" loading="lazy" decoding="async" />
+      </a>
+    </p>
+    <div class="dl reveal">
+      <a class="dl__card dl__card--primary" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe" data-press>
+        <span class="dl__badge" data-i18n="download.recommended">推薦</span>
+        <h3 data-i18n="download.setup.title">Windows 安裝版</h3>
+        <p data-i18n="download.setup.body">一般安裝流程，安裝後即可使用，支援自動更新。</p>
+        <span class="dl__file">OverTranslate-win-Setup.exe</span>
+      </a>
+      <a class="dl__card" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip" data-press>
+        <h3 data-i18n="download.portable.title">免安裝版（Portable）</h3>
+        <p data-i18n="download.portable.body">解壓後直接執行，不需安裝，同樣支援自動更新。</p>
+        <span class="dl__file">OverTranslate-win-Portable.zip</span>
+      </a>
+    </div>
+
+    <div class="req reveal">
+      <h3 class="h3" data-i18n="download.req.title">系統需求</h3>
+      <ul class="ticks ticks--compact">
+        <li><strong data-i18n="download.req.1.title">作業系統</strong><span data-i18n="download.req.1.body">Windows 10 / 11。即時翻譯的螢幕擷取需 Windows 11 24H2 以上，視窗擷取需 Windows 10 1903 以上。</span></li>
+        <li><strong data-i18n="download.req.2.title">執行環境</strong><span data-i18n="download.req.2.body">安裝檔已內含所需環境，不需另外安裝其他元件。</span></li>
+        <li><strong data-i18n="download.req.3.title">進階選項</strong><span data-i18n="download.req.3.body">使用 DeepL 或自行架設的 AI 模型時需自備金鑰或服務位址，內建的翻譯服務則不需設定。</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="support" id="support">
+  <div class="wrap support__inner reveal">
+    <h2 class="h2" data-i18n="support.title">支持專案</h2>
+    <p data-i18n="support.body">OverTranslate 是免費提供的 Windows 翻譯工具。如果這個專案對你有幫助，歡迎請我喝杯咖啡，支持後續開發與維護。</p>
+    <p class="support__cta">
+      <a class="btn btn--ghost" href="https://buymeacoffee.com/hon.lu" target="_blank" rel="noopener" data-press><span data-i18n="support.coffee">☕ 贊助我喝杯咖啡</span></a>
+      <a class="btn btn--ghost" href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener" data-press>
+        <span data-i18n="support.star">GitHub ⭐ Star</span>
+      </a>
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div class="foot__brand">
+      <img src="images/icon.svg" width="34" height="34" alt="" aria-hidden="true" />
+      <div>
+        <p class="foot__name">OverTranslate</p>
+        <p class="foot__license" data-i18n="foot.license">採用 MIT License 開源授權</p>
+      </div>
+    </div>
+
+    <nav class="foot__links" aria-label="Links">
+      <a href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/asd880921/OverTranslate/releases" target="_blank" rel="noopener" data-i18n="foot.releases">版本紀錄</a>
+      <a href="https://github.com/asd880921/OverTranslate/issues" target="_blank" rel="noopener" data-i18n="foot.issues">問題回報</a>
+      <a href="https://buymeacoffee.com/hon.lu" target="_blank" rel="noopener" data-i18n="foot.sponsor">贊助</a>
+      <a href="https://github.com/asd880921/OverTranslate/blob/main/PRIVACY.md" target="_blank" rel="noopener" data-i18n="foot.privacy">隱私權說明</a>
+      <a href="https://github.com/asd880921/OverTranslate/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="foot.licensefile">授權條款</a>
+    </nav>
+
+    <div class="foot__langs">
+      <span class="foot__langlabel" data-i18n="foot.language">語言</span>
+      <a href="en/" data-set-lang="en" lang="en">English</a>
+      <a href="zh-TW/" data-set-lang="zh-TW" lang="zh-Hant" aria-current="true">繁體中文</a>
+      <a href="zh-Hans/" data-set-lang="zh-Hans" lang="zh-Hans">简体中文</a>
+      <a href="ja/" data-set-lang="ja" lang="ja">日本語</a>
+      <a href="ko/" data-set-lang="ko" lang="ko">한국어</a>
+    </div>
+
+  </div>
+</footer>
+
+<div class="zoom" data-zoom-layer hidden>
+  <button class="zoom__close" type="button" data-zoom-close aria-label="關閉" data-i18n-attr="aria-label|a11y.close">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+  <img class="zoom__img" data-zoom-img src="" alt="" />
+</div>
+
+<script src="site/app.js" defer></script>
+</body>
+</html>

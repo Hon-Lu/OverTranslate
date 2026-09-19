@@ -1,0 +1,30 @@
+name: Site
+
+# 各語言頁面是從 docs/index.html 產生的。只要有人改了正本或翻譯卻忘了重新產生，
+# 網站上就會出現新舊混雜的內容，而且沒人會發現 —— 所以這裡替人記得。
+on:
+  push:
+    paths:
+      - 'docs/index.html'
+      - 'docs/**/index.html'
+      - 'tools/build-site.py'
+      - 'tools/site-i18n/**'
+  pull_request:
+    paths:
+      - 'docs/index.html'
+      - 'docs/**/index.html'
+      - 'tools/build-site.py'
+      - 'tools/site-i18n/**'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: 語言頁面是否與正本同步
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: 重新產生並比對
+        run: python tools/build-site.py --check

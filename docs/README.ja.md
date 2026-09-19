@@ -28,6 +28,8 @@
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.ja.svg" alt="Windows インストーラーをダウンロード（推奨）" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.ja.svg" alt="ポータブル版をダウンロード" /></a>
+    &nbsp;
+    <a href="https://asd880921.github.io/OverTranslate/ja/"><img src="images/ui/btn-site.ja.svg" alt="公式サイトへ" /></a>
   </p>
 
   <p>
@@ -39,6 +41,9 @@
 ---
 
 ## 翻訳機能
+
+> 💡 **[公式サイト](https://asd880921.github.io/OverTranslate/ja/)** では翻訳前と翻訳後を左右にドラッグして見比べられます。効果を確かめるならそちらが早いです。
+>
 > 🌐 **OverTranslate は多言語インターフェースに対応しています。この README のスクリーンショットは繁体字中国語または英語の画面ですが、表示言語はアプリ内で切り替えられます。**
 
 OverTranslate には 5 つの翻訳機能があり、その場に合ったものをすぐ選べます。
@@ -62,8 +67,8 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 | 原文 | 翻訳結果 |
 |------|----------|
 | ![キャプチャ翻訳1-前](images/截圖翻譯1-前.png) | ![キャプチャ翻訳1-後](images/截圖翻譯1-後.png) |
+| ![キャプチャ翻訳-前](images/截圖翻譯-前.png) | ![キャプチャ翻訳-後](images/截圖翻譯-後.png) |
 | ![キャプチャ翻訳2-前](images/截圖翻譯2-前.png) | ![キャプチャ翻訳2-後](images/截圖翻譯2-後.png) |
-| ![キャプチャ翻訳3-前](images/截圖翻譯3-前.png) | ![キャプチャ翻訳3-後](images/截圖翻譯3-後.png) |
 
 > 比較画像の 4 コマ漫画は [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1) さんの作品です。
 
