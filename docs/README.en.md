@@ -20,10 +20,6 @@
   <p>A Windows screen translator for everyday use, comics, video and games, with screenshot translation, real-time translation and more, showing the results right on the original screen.</p>
 
   <p>
-    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.en.svg" alt="Visit the website" /></a>
-  </p>
-
-  <p>
     <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
   </p>
@@ -36,6 +32,10 @@
 
   <p>
     <a href="https://github.com/asd880921/github-statcards"><img src="https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/overtranslate-downloads-history.svg" alt="Total downloads and daily growth" /></a>
+  </p>
+
+  <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.en.svg" alt="Visit the website" /></a>
   </p>
 
 </div>

@@ -20,10 +20,6 @@
   <p>一款适合日常使用、漫画、影音与游戏的 Windows 屏幕翻译工具，支持截图翻译、实时翻译等多种翻译功能，翻译结果可直接显示在原画面上。</p>
 
   <p>
-    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.zh-Hans.svg" alt="前往官方网站" /></a>
-  </p>
-
-  <p>
     <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
   </p>
@@ -36,6 +32,10 @@
 
   <p>
     <a href="https://github.com/asd880921/github-statcards"><img src="https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/overtranslate-downloads-history.svg" alt="累计下载次数与每日新增" /></a>
+  </p>
+
+  <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.zh-Hans.svg" alt="前往官方网站" /></a>
   </p>
 
 </div>
