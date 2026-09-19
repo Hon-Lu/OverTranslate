@@ -59,3 +59,5 @@ launchSettings.json
 # publish
 # publish-velopack.ps1 與 docs/ops/ 的發版文件都已納入版控 ——
 # CI 在本倉打包，腳本與文件都必須跟著程式碼走，否則一定漂移。
+# Python 產生器的快取
+__pycache__/
