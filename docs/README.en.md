@@ -20,13 +20,15 @@
   <p>A Windows screen translator for everyday use, comics, video and games, with screenshot translation, real-time translation and more, showing the results right on the original screen.</p>
 
   <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.en.svg" alt="Visit the website" /></a>
+  </p>
+
+  <p>
     <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
   </p>
 
   <p>
-    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.en.svg" alt="Visit the website" /></a>
-    &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.en.svg" alt="Download the Windows installer (recommended)" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.en.svg" alt="Download the portable version" /></a>
@@ -42,8 +44,6 @@
 
 ## Translation Features
 
-> 💡 On the **[website](https://asd880921.github.io/OverTranslate/)** you can drag the before/after comparisons, which is a quicker way to see what it actually does.
->
 > 🌐 **OverTranslate has a multilingual interface. The screenshots in this README show it in Traditional Chinese or English; the interface language is switchable in the app.**
 
 OverTranslate currently offers five translation features, so you can pick the one that suits what you are doing:
