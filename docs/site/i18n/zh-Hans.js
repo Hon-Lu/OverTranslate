@@ -162,6 +162,6 @@ otLocale('zh-Hans', {
   'download.version.alt': '最新版本',
   'hero.stat': '累计下载次数与每日新增',
   'a11y.close': '关闭',
-  'meta.title': 'OverTranslate — Windows 屏幕翻译工具',
+  'meta.title': 'OverTranslate — Windows 屏幕即时翻译工具',
   'meta.description': 'OverTranslate 是一款 Windows 屏幕翻译工具，支持截图翻译与实时翻译，译文直接显示在原画面上，适合网页、漫画、影音与游戏。免费开源，识别全程在本机执行。'
 });

@@ -162,6 +162,6 @@ otLocale('ja', {
   'download.version.alt': '最新バージョン',
   'hero.stat': '累計ダウンロード数と日次の増加',
   'a11y.close': '閉じる',
-  'meta.title': 'OverTranslate — Windows 用の画面翻訳ツール',
+  'meta.title': 'OverTranslate — Windows 用のリアルタイム画面翻訳ツール',
   'meta.description': 'OverTranslate は Windows 用の画面翻訳ツールです。キャプチャ翻訳やリアルタイム翻訳に対応し、訳文は元の画面にそのまま重ねて表示されます。Web ページ・漫画・動画・ゲームに。無料・オープンソースで、文字の読み取りはすべて手元の PC で行われます。'
 });
