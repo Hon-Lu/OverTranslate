@@ -290,6 +290,35 @@ internal sealed record Reduction(Mat Sum, Mat Seen) : IDisposable
 /// </remarks>
 internal static class CpuHoleRepair
 {
+    /// <summary>Which inpainting fills a tile, and how far around a pixel it reads to do it.</summary>
+    /// <remarks>
+    /// <para>Both were the tutorial's defaults rather than a choice. They were swept against clean
+    /// picture: eight 1824x223 bands of real frames the shipped detector finds no text anywhere in,
+    /// a subtitle drawn over each, and the repair scored inside its own mask against the band it was
+    /// cut from. Forty smaller crops of the same kind, at 640x220, answer the same way.</para>
+    ///
+    /// <para><see cref="InpaintTypes.Telea"/> is the cheaper of the two and buys nothing with it.
+    /// Over the eight bands the whole repair goes from 34.4ms to 32.0ms — the inpainting call itself
+    /// from 15.3 to 13.0 — while the error goes from 19.47 to 19.54 levels, and over the forty
+    /// smaller crops Navier–Stokes is the better of the two in 30. Two milliseconds of a hundred is
+    /// not a reason to change what the fill is.</para>
+    ///
+    /// <para>The radius is where the cost actually is, and the trap is that levels do not see it. At
+    /// 1, 2, 3 and 4 the error is 19.43, 19.51, 19.47 and 19.48 while the repair costs 24.1, 28.0,
+    /// 35.3 and 44.4ms — read that alone and the radius is free to lower. What separates them is
+    /// colour: scored as distance from the truth's a*/b*, the worst hundredth inside the mask on the
+    /// hardest band is 25 at radius 1, 18 at 2 and 17 at 3, and that number is a picture. At 1 a
+    /// cyan streak stands in the fill where the scene has none and the tiles step against one
+    /// another; at 2 the steps are still there on smooth dark picture. Three is where both stop, and
+    /// four costs a quarter more than three for nothing. This is the same axis the half-resolution
+    /// choice sits on — see <see cref="RepairReduced"/> — and it fails the same way: mean error is
+    /// blind to it, so it cannot be the thing that decides.</para>
+    /// </remarks>
+    private const InpaintTypes Fill = InpaintTypes.NS;
+
+    /// <inheritdoc cref="Fill"/>
+    private const int FillRadius = 3;
+
     /// <summary>Departure from a local slope, in levels, at which the smooth fill is fully trusted.</summary>
     /// <inheritdoc cref="SlopeShare"/>
     private const double SlopeDeparture = 8;
@@ -556,7 +585,7 @@ internal static class CpuHoleRepair
                 using var filled = new Mat();
                 if (radius <= 5 || Math.Min(context.Width, context.Height) < 8)
                 {
-                    Cv2.Inpaint(frame, holes, filled, 3, InpaintTypes.NS);
+                    Cv2.Inpaint(frame, holes, filled, FillRadius, Fill);
                     full++;
                 }
                 else
@@ -881,7 +910,7 @@ internal static class CpuHoleRepair
         Cv2.Resize(expanded, smallMask, size, interpolation: InterpolationFlags.Area);
         Cv2.Threshold(smallMask, smallMask, 0, 255, ThresholdTypes.Binary);
         using var filled = new Mat();
-        Cv2.Inpaint(small, smallMask, filled, 3, InpaintTypes.NS);
+        Cv2.Inpaint(small, smallMask, filled, FillRadius, Fill);
         using var full = new Mat();
         Cv2.Resize(filled, full, source.Size(), interpolation: InterpolationFlags.Linear);
         var result = source.Clone();

@@ -102,7 +102,7 @@ internal static class CpuAdaptiveProbe
                 }
                 double cpuMs = (process.TotalProcessorTime - cpu).TotalMilliseconds / 7;
                 timings.Sort();
-                double? coverage = null, mae = null, backgroundMae = null;
+                double? coverage = null, mae = null, backgroundMae = null, chroma = null, chromaWorst = null;
                 if (glyphs is not null && truth is not null)
                 {
                     using var binary = new Mat(); using var hit = new Mat(); using var delta = new Mat(); using var background = new Mat();
@@ -115,13 +115,15 @@ internal static class CpuAdaptiveProbe
                     Cv2.BitwiseNot(binary, background);
                     error = Cv2.Mean(delta, background);
                     backgroundMae = (error.Val0 + error.Val1 + error.Val2) / 3;
+                    (chroma, chromaWorst) = Chroma(truth, first.Image, binary);
                 }
                 process.Refresh();
                 records.Add(new { name, method, medianMs = timings[3], maxMs = timings[^1], cpuMs,
                     allocatedBytes = allocations / 7, workingSetMiB = process.WorkingSet64 / 1048576.0,
                     maskPixels = Cv2.CountNonZero(usedMask), first.FullTiles, first.ReducedTiles,
-                    changedOutside, glyphCoverage = coverage, glyphMae = mae, backgroundMae });
-                Console.WriteLine($"{name,-16} {method,-9} {timings[3],6:F1}ms mask={Cv2.CountNonZero(usedMask),6} tiles={first.FullTiles}/{first.ReducedTiles} coverage={coverage:P1} MAE={mae:F1}");
+                    changedOutside, glyphCoverage = coverage, glyphMae = mae, backgroundMae,
+                    glyphChroma = chroma, glyphChromaWorst = chromaWorst });
+                Console.WriteLine($"{name,-16} {method,-9} {timings[3],6:F1}ms mask={Cv2.CountNonZero(usedMask),6} tiles={first.FullTiles}/{first.ReducedTiles} coverage={coverage:P1} MAE={mae:F1} chroma={chroma:F1}/{chromaWorst:F0}");
             }
             void Preview(Mat selected, string label)
             {
@@ -129,6 +131,38 @@ internal static class CpuAdaptiveProbe
                 Cv2.ImWrite(prefix + "-" + label + ".png", preview);
             }
         }
+    }
+
+    /// <summary>How far the fill's colour wanders from the truth's, and the worst hundredth of that.</summary>
+    /// <remarks>
+    /// Levels are blind to one whole family of failure here, and it is the family a reader notices
+    /// first. Sweeping the inpainting radius moved the mean error by hundredths of a level while the
+    /// fill gained a cyan streak that is obvious at a glance, and the earlier scale sweep behaved the
+    /// same way. Distance in a*b* sees it. The worst hundredth is reported beside the mean because
+    /// the artefact is a streak across a few hundred pixels, which a mean over a whole strip hides.
+    /// </remarks>
+    private static (double Mean, double Worst) Chroma(Mat truth, Mat result, Mat mask)
+    {
+        using var a = new Mat(); using var b = new Mat(); using var lab = new Mat();
+        Cv2.CvtColor(truth, a, ColorConversionCodes.BGR2Lab);
+        Cv2.CvtColor(result, b, ColorConversionCodes.BGR2Lab);
+        Cv2.Absdiff(a, b, lab);
+        var planes = Cv2.Split(lab);
+        try
+        {
+            using var chroma = new Mat();
+            Cv2.Add(planes[1], planes[2], chroma, dtype: MatType.CV_32F);
+            var inside = new List<float>();
+            var masked = mask.GetGenericIndexer<byte>();
+            var levels = chroma.GetGenericIndexer<float>();
+            int rows = chroma.Rows, cols = chroma.Cols;
+            for (int y = 0; y < rows; y++)
+            for (int x = 0; x < cols; x++)
+                if (masked[y, x] != 0) inside.Add(levels[y, x]);
+            inside.Sort();
+            return (Cv2.Mean(chroma, mask).Val0, inside.Count == 0 ? 0 : inside[(int)(inside.Count * .99)]);
+        }
+        finally { foreach (var plane in planes) plane.Dispose(); }
     }
 
     private static CpuRepair Repair(string method, Mat source, Mat mask, Mat oldMask) => method switch
