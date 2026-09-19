@@ -25,11 +25,11 @@
   </p>
 
   <p>
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="images/ui/btn-site.ja.svg" alt="公式サイトへ" /></a>
+    &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.ja.svg" alt="Windows インストーラーをダウンロード（推奨）" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.ja.svg" alt="ポータブル版をダウンロード" /></a>
-    &nbsp;
-    <a href="https://asd880921.github.io/OverTranslate/ja/"><img src="images/ui/btn-site.ja.svg" alt="公式サイトへ" /></a>
   </p>
 
   <p>
@@ -42,7 +42,7 @@
 
 ## 翻訳機能
 
-> 💡 **[公式サイト](https://asd880921.github.io/OverTranslate/ja/)** では翻訳前と翻訳後を左右にドラッグして見比べられます。効果を確かめるならそちらが早いです。
+> 💡 **[公式サイト](https://asd880921.github.io/OverTranslate/)** では翻訳前と翻訳後を左右にドラッグして見比べられます。効果を確かめるならそちらが早いです。
 >
 > 🌐 **OverTranslate は多言語インターフェースに対応しています。この README のスクリーンショットは繁体字中国語または英語の画面ですが、表示言語はアプリ内で切り替えられます。**
 
