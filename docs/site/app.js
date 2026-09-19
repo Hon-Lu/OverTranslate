@@ -449,172 +449,15 @@
     });
   })();
 
-  /* ---------------- language ---------------- */
+  /* ---------------- language ----------------
+     文字在建置階段就寫進各語言的 HTML，轉址在 <head> 完成，
+     這裡只剩一件事：記住使用者主動選過的語言。 */
 
-  var LANGS = {
-    'zh-TW': { html: 'zh-Hant', label: '繁體中文', imgSuffix: '', statcard: 'overtranslate-downloads-history.zh-TW.svg', readme: 'README.md', ollama: 'docs/guides/OLLAMA_GUIDE.md' },
-    'zh-Hans': { html: 'zh-Hans', label: '简体中文', imgSuffix: '_zh-Hans', statcard: 'overtranslate-downloads-history.svg', readme: 'docs/README.zh-Hans.md', ollama: 'docs/guides/OLLAMA_GUIDE.zh-Hans.md' },
-    'en': { html: 'en', label: 'English', imgSuffix: '_en', statcard: 'overtranslate-downloads-history.svg', readme: 'docs/README.en.md', ollama: 'docs/guides/OLLAMA_GUIDE.en.md' },
-    'ja': { html: 'ja', label: '日本語', imgSuffix: '_jp', statcard: 'overtranslate-downloads-history.svg', readme: 'docs/README.ja.md', ollama: 'docs/guides/OLLAMA_GUIDE.ja.md' },
-    'ko': { html: 'ko', label: '한국어', imgSuffix: '_ko', statcard: 'overtranslate-downloads-history.svg', readme: 'docs/README.ko.md', ollama: 'docs/guides/OLLAMA_GUIDE.ko.md' }
-  };
-  var BASE_LANG = 'zh-TW';      // HTML 內建的那份文字，也是缺字時的回退來源
-  var FALLBACK_LANG = 'en';     // 瀏覽器語言都對不上時給英文，通用度最高
-  var REPO = 'https://github.com/asd880921/OverTranslate/blob/main/';
-  var CARDS = 'https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/';
-
-  var dictionaries = {};
-  var pending = {};
-  var currentLang = BASE_LANG;
-
-  // The markup itself is the zh-TW source of truth; snapshot it before anything changes.
-  (function snapshotBase() {
-    var base = {};
-    document.querySelectorAll('[data-i18n]').forEach(function (el) {
-      base[el.getAttribute('data-i18n')] = el.textContent;
-    });
-    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
-      base[el.getAttribute('data-i18n-html')] = el.innerHTML;
-    });
-    document.querySelectorAll('[data-i18n-attr]').forEach(function (el) {
-      el.getAttribute('data-i18n-attr').split(';').forEach(function (pair) {
-        var parts = pair.split('|');
-        if (parts.length === 2) base[parts[1].trim()] = el.getAttribute(parts[0].trim()) || '';
-      });
-    });
-    base['meta.title'] = document.title;
-    var desc = document.querySelector('meta[name="description"]');
-    base['meta.description'] = desc ? desc.getAttribute('content') : '';
-    dictionaries[BASE_LANG] = base;
-  })();
-
-  window.otLocale = function (lang, dict) {
-    dictionaries[lang] = dict;
-    var waiting = pending[lang];
-    delete pending[lang];
-    if (waiting) waiting.forEach(function (fn) { fn(); });
-  };
-
-  function loadLocale(lang, done) {
-    if (dictionaries[lang]) { done(); return; }
-    if (pending[lang]) { pending[lang].push(done); return; }
-    pending[lang] = [done];
-    var script = document.createElement('script');
-    script.src = 'site/i18n/' + lang + '.js';
-    script.onerror = function () {
-      delete pending[lang];
-      dictionaries[lang] = dictionaries[BASE_LANG];
-      done();
-    };
-    document.head.appendChild(script);
-  }
-
-  function applyLanguage(lang) {
-    var meta = LANGS[lang] || LANGS[BASE_LANG];
-    var dict = dictionaries[lang] || dictionaries[BASE_LANG];
-    var base = dictionaries[BASE_LANG];
-    function t(key) {
-      return Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : base[key];
-    }
-
-    currentLang = lang;
-    root.setAttribute('lang', meta.html);
-    root.setAttribute('data-lang', lang);
-
-    document.querySelectorAll('[data-i18n]').forEach(function (el) {
-      var value = t(el.getAttribute('data-i18n'));
-      if (value !== undefined) el.textContent = value;
-    });
-    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
-      var value = t(el.getAttribute('data-i18n-html'));
-      if (value !== undefined) el.innerHTML = value;
-    });
-    document.querySelectorAll('[data-i18n-attr]').forEach(function (el) {
-      el.getAttribute('data-i18n-attr').split(';').forEach(function (pair) {
-        var parts = pair.split('|');
-        if (parts.length !== 2) return;
-        var value = t(parts[1].trim());
-        if (value !== undefined) el.setAttribute(parts[0].trim(), value);
-      });
-    });
-
-    // screenshots that exist per interface language
-    document.querySelectorAll('[data-loc-img]').forEach(function (img) {
-      img.src = 'images/' + img.getAttribute('data-loc-img') + meta.imgSuffix + '.png';
-    });
-    document.querySelectorAll('[data-loc-src]').forEach(function (img) {
-      if (img.getAttribute('data-loc-src') === 'statcard') img.src = CARDS + meta.statcard;
-    });
-    document.querySelectorAll('[data-loc-href]').forEach(function (a) {
-      var kind = a.getAttribute('data-loc-href');
-      a.href = REPO + (kind === 'ollama' ? meta.ollama : meta.readme);
-    });
-
-    var title = t('meta.title');
-    if (title) document.title = title;
-    var desc = document.querySelector('meta[name="description"]');
-    var descText = t('meta.description');
-    if (desc && descText) desc.setAttribute('content', descText);
-    var ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle && title) ogTitle.setAttribute('content', title);
-
-    var label = document.querySelector('[data-lang-label]');
-    if (label) label.textContent = meta.label;
-
-    document.querySelectorAll('[data-set-lang]').forEach(function (el) {
-      var on = el.getAttribute('data-set-lang') === lang;
-      if (el.getAttribute('role') === 'menuitemradio') el.setAttribute('aria-checked', on ? 'true' : 'false');
-      if (el.tagName === 'A') el.setAttribute('aria-current', on ? 'true' : 'false');
-    });
-
-    var canonical = document.querySelector('link[rel="canonical"]');
-    if (canonical) {
-      canonical.href = 'https://asd880921.github.io/OverTranslate/' + (lang === BASE_LANG ? '' : '?lang=' + lang);
-    }
-  }
-
-  /* `explicit` = 使用者自己從選單挑的，而不是我們猜的。
-     只有主動選擇才寫進網址與 localStorage：乾淨網址代表「依你的環境決定」，
-     分享出去時對方看到的是對方的語言；帶 ?lang= 才是刻意指定。 */
-  function setLanguage(lang, explicit) {
-    if (!LANGS[lang]) lang = FALLBACK_LANG;
-    loadLocale(lang, function () {
-      applyLanguage(lang);
-      if (!explicit) return;
-      try { localStorage.setItem('ot-lang', lang); } catch (e) {}
-      try {
-        var url = new URL(window.location.href);
-        url.searchParams.set('lang', lang);
-        history.replaceState(null, '', url.toString());
-      } catch (e) {
-        // file:// 這類 opaque origin 會拒絕 replaceState，頁面本身不受影響
-      }
-    });
-  }
-
-  function detectLanguage() {
-    var boot = root.getAttribute('data-lang-boot');
-    if (boot && LANGS[boot]) return boot;
-    var tags = navigator.languages || [navigator.language || ''];
-    for (var i = 0; i < tags.length; i++) {
-      var tag = String(tags[i]).toLowerCase();
-      if (!tag) continue;
-      if (tag.indexOf('zh') === 0) {
-        return /hant|tw|hk|mo/.test(tag) ? 'zh-TW' : 'zh-Hans';
-      }
-      if (tag.indexOf('ja') === 0) return 'ja';
-      if (tag.indexOf('ko') === 0) return 'ko';
-      if (tag.indexOf('en') === 0) return 'en';
-    }
-    return FALLBACK_LANG;
-  }
-
+  // 主動點過語言就記下來，之後回到根目錄直接送去同一個語言
   document.addEventListener('click', function (e) {
     var setter = e.target.closest ? e.target.closest('[data-set-lang]') : null;
     if (!setter) return;
-    e.preventDefault();
-    setLanguage(setter.getAttribute('data-set-lang'), true);
-    closeMenu();
+    try { localStorage.setItem('ot-lang', setter.getAttribute('data-set-lang')); } catch (err) {}
   });
 
   /* language menu popover */
@@ -668,5 +511,4 @@
     });
   }
 
-  setLanguage(detectLanguage(), false);
 })();

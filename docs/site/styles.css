@@ -284,7 +284,7 @@ p:last-child { margin-bottom: 0; }
   gap: 2px;
 }
 .menu__pop[hidden] { display: none; }
-.menu__pop button {
+.menu__pop a {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -297,11 +297,12 @@ p:last-child { margin-bottom: 0; }
   font: inherit;
   font-size: 0.9rem;
   text-align: start;
+  text-decoration: none;
   cursor: pointer;
 }
-.menu__pop button:hover { background: var(--surface-2); color: var(--ink); }
-.menu__pop button[aria-checked="true"] { color: var(--ink); font-weight: 600; }
-.menu__pop button[aria-checked="true"]::after {
+.menu__pop a:hover { background: var(--surface-2); color: var(--ink); }
+.menu__pop a[aria-current="true"] { color: var(--ink); font-weight: 600; }
+.menu__pop a[aria-current="true"]::after {
   content: "";
   width: 14px;
   height: 8px;
