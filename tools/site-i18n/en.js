@@ -161,5 +161,5 @@ otLocale('en', {
   'a11y.star': 'Star it on GitHub',
   'a11y.close': 'Close',
   'meta.title': 'OverTranslate — Real-time Screen Translator for Windows',
-  'meta.description': 'OverTranslate is a Windows screen translator with screenshot translation and real-time translation. The translation is shown right on the original screen — for web pages, comics, video and games. Free, open source, and the recognition runs entirely on your own machine.'
+  'meta.description': 'OverTranslate is a free real-time screen translator for Windows. It works on web pages, comics, video and games, with screenshot translation, real-time translation and more.'
 });

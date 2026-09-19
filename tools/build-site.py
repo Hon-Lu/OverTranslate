@@ -225,6 +225,9 @@ def build():
         page = re.sub(r'<meta name="description" content="[^"]*" />',
                       '<meta name="description" content="%s" />' % strings['meta.description'],
                       page, count=1)
+        page = re.sub(r'<meta property="og:description" content="[^"]*" />',
+                      '<meta property="og:description" content="%s" />' % strings['hero.lede'],
+                      page, count=1)
         page = re.sub(r'<meta property="og:title" content="[^"]*" />',
                       '<meta property="og:title" content="%s" />' % strings['meta.title'],
                       page, count=1)
