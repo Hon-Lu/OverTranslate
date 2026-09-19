@@ -28,6 +28,8 @@
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.ko.svg" alt="Windows 설치 버전 다운로드(권장)" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.ko.svg" alt="포터블 버전 다운로드" /></a>
+    &nbsp;
+    <a href="https://asd880921.github.io/OverTranslate/ko/"><img src="images/ui/btn-site.ko.svg" alt="공식 사이트로 이동" /></a>
   </p>
 
   <p>
@@ -39,6 +41,9 @@
 ---
 
 ## 번역 기능
+
+> 💡 **[공식 사이트](https://asd880921.github.io/OverTranslate/ko/)** 에서는 번역 전후를 좌우로 끌어서 비교할 수 있습니다. 효과를 바로 보려면 그쪽이 빠릅니다.
+>
 > 🌐 **OverTranslate는 다국어 인터페이스를 지원합니다. 이 README의 스크린샷은 중국어 번체 또는 영어 화면이지만, 인터페이스 언어는 앱에서 바꿀 수 있습니다.**
 
 OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 것을 바로 고를 수 있습니다.
