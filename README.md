@@ -28,6 +28,8 @@
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.svg" alt="下載 Windows 安裝版（推薦）" /></a>
     &nbsp;
     <a href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.svg" alt="下載免安裝版（Portable）" /></a>
+    &nbsp;
+    <a href="https://asd880921.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.svg" alt="前往官方網站" /></a>
   </p>
 
   <p>
@@ -39,6 +41,9 @@
 ---
 
 ## 翻譯功能
+
+> 💡 **[官方網站](https://asd880921.github.io/OverTranslate/)** 的翻譯前後對照可以左右拖曳，想直接看效果從那裡開始比較快。
+>
 > 🌐 **OverTranslate 支援多國語言介面。README 中的應用程式圖片統一以繁體中文顯示，實際介面可切換不同語言。**
 
 OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速選擇：
