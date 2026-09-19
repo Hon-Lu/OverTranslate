@@ -63,8 +63,9 @@ LEDE = {
     'ko':      u'만화·영상·게임에 쓸 수 있는 Windows 화면 번역 도구.',
 }
 
-# 對照區在縮圖上的可用範圍。寬度一定用滿，高度是上限，超過就從底部切掉
-SHOT_W, SHOT_MAX_H = 1104, 368
+# 對照區在縮圖上的尺寸。高度是上限，超過就從底部切掉 ——
+# 原圖上緣的留白要留著給「原文／譯文」標籤站，不能從那邊切
+SHOT_W, SHOT_MAX_H = 1060, 374
 
 TEMPLATE = u'''<!doctype html>
 <meta charset="utf-8">
@@ -106,15 +107,27 @@ TEMPLATE = u'''<!doctype html>
     letter-spacing: -0.018em; color: #e9eef6;
   }}
   .lede {{
-    /* 網站 .hero__lede 在 1200px 寬時的實際值 */
-    margin-top: 12px; font-size: 17.28px; line-height: 1.75; color: #9aabc0;
+    /* 字級照網站 .hero__lede，但行高與間距收緊 —— 這裡只有一行，
+       留網站那種給多行段落用的鬆度會顯得散 */
+    margin-top: 2px; font-size: 17.28px; line-height: 1.5; color: #9aabc0;
+  }}
+  /* 卡片後面補一圈光暈：陰影打在純黑底上等於沒打，
+     要有東西襯著，邊緣和陰影才浮得起來 */
+  .halo {{
+    position: absolute; left: 50%; translate: -50% 0; bottom: -90px;
+    width: 1180px; height: 460px; border-radius: 50%;
+    background: radial-gradient(50% 50% at 50% 50%,
+      rgba(82, 196, 250, 0.20), rgba(82, 196, 250, 0.06) 55%, transparent 72%);
+    filter: blur(26px);
   }}
   .shot {{
     position: absolute; left: 50%; translate: -50% 0; bottom: 0;
     width: {shot_w}px; height: {shot_h}px;
-    border: 1px solid rgba(255, 255, 255, 0.10); border-bottom: 0;
-    border-radius: 18px 18px 0 0; overflow: hidden;
-    box-shadow: 0 -20px 60px -30px rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top-color: rgba(255, 255, 255, 0.26); border-bottom: 0;
+    border-radius: 22px 22px 0 0; overflow: hidden; background: #0b1220;
+    box-shadow: 0 -26px 60px -10px rgba(0, 0, 0, 0.85),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }}
   .shot img {{ display: block; width: {shot_w}px; height: {shot_h}px; }}
   /* 以下三個都照抄網站的 .compare__handle / .compare__grip / .compare__tag */
@@ -155,6 +168,7 @@ TEMPLATE = u'''<!doctype html>
   <p class="claim">{claim}</p>
   <p class="lede">{lede}</p>
 </div>
+<div class="halo"></div>
 <div class="shot">
   <img src="file:///{shot}" alt="">
   <span class="tag tag--before">{tag_before}</span>
