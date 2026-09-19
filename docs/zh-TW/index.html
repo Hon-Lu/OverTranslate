@@ -97,8 +97,11 @@
         <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 13.4A8.2 8.2 0 1 1 10.6 4a6.6 6.6 0 0 0 9.4 9.4Z"/></svg>
       </button>
 
-      <a class="iconbtn" href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener" aria-label="GitHub">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="ic-fill"><path d="M12 2.2a10 10 0 0 0-3.16 19.5c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.35 1.09 2.92.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85l-.01 2.75c0 .26.18.58.69.48A10 10 0 0 0 12 2.2Z"/></svg>
+      <a class="iconbtn iconbtn--star" href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener"
+         title="到 GitHub 點顆 Star，支持 OverTranslate" data-i18n-attr="title|a11y.star">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="ic-fill"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        <span class="iconbtn__text">Star</span>
+        <span class="starcount" data-star-count></span>
       </a>
     </div>
   </div>
@@ -126,12 +129,9 @@
     <p class="hero__lede reveal" data-i18n="hero.lede">適用於漫畫、影音與遊戲的 Windows 螢幕翻譯工具，支援截圖翻譯與即時翻譯等多種翻譯功能。</p>
 
     <div class="hero__cta reveal">
-      <a class="btn btn--primary" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe" data-press>
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.6v10.8M7.6 10 12 14.4 16.4 10M4.6 19.4h14.8"/></svg>
-        <span data-i18n="hero.cta.setup">下載 Windows 安裝版</span>
-      </a>
-      <a class="btn btn--ghost" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip" data-press>
-        <span data-i18n="hero.cta.portable">下載免安裝版</span>
+      <a class="btn btn--primary btn--lg" href="#download" data-press>
+        <span data-i18n="hero.cta.download">免費下載</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.8 9.6 12 14.8l5.2-5.2"/></svg>
       </a>
     </div>
 
@@ -562,10 +562,6 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="download.kicker">下載</p>
       <h2 class="h2" data-i18n="download.title">選擇適合你的版本</h2>
-      <p class="sectionlede version">
-        <span data-i18n="download.version">目前版本</span>
-        <img src="https://img.shields.io/github/v/release/asd880921/OverTranslate?style=flat-square&amp;label=&amp;color=52C4FA&amp;labelColor=20293a" alt="最新版本" data-i18n-attr="alt|download.version.alt" width="52" height="20" loading="lazy" decoding="async" />
-      </p>
     </header>
 
     <p class="stat reveal">
@@ -573,19 +569,29 @@
         <img src="https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/overtranslate-downloads-history.zh-TW.svg" alt="累積下載次數與每日新增" data-i18n-attr="alt|hero.stat" data-loc-src="statcard" loading="lazy" decoding="async" />
       </a>
     </p>
-    <div class="dl reveal">
-      <a class="dl__card dl__card--primary" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe" data-press>
-        <span class="dl__badge" data-i18n="download.recommended">推薦</span>
-        <h3 data-i18n="download.setup.title">Windows 安裝版</h3>
-        <p data-i18n="download.setup.body">一般安裝流程，安裝後即可使用，支援自動更新。</p>
-        <span class="dl__file">OverTranslate-win-Setup.exe</span>
+    <div class="dlrow reveal">
+      <a class="btn btn--primary btn--lg" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe" data-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.6v10.8M7.6 10 12 14.4 16.4 10M4.6 19.4h14.8"/></svg>
+        <span data-i18n="download.cta.setup">下載 Windows 安裝版</span>
       </a>
-      <a class="dl__card" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip" data-press>
-        <h3 data-i18n="download.portable.title">免安裝版（Portable）</h3>
-        <p data-i18n="download.portable.body">解壓後直接執行，不需安裝，同樣支援自動更新。</p>
-        <span class="dl__file">OverTranslate-win-Portable.zip</span>
+      <a class="btn btn--ghost btn--lg" href="https://github.com/asd880921/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip" data-press>
+        <span data-i18n="download.cta.portable">下載免安裝版</span>
       </a>
     </div>
+    <p class="dlnote reveal" data-i18n="download.note">兩種版本皆支援自動更新</p>
+
+    <aside class="starcall reveal">
+      <span class="starcall__icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" class="ic-fill"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></span>
+      <div class="starcall__text">
+        <h3 data-i18n="star.title">覺得 OverTranslate 好用嗎？</h3>
+        <p data-i18n="star.body">歡迎到 GitHub 點顆 ⭐ Star 支持，也能讓更多人看見這個專案。</p>
+      </div>
+      <a class="btn btn--star" href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener" data-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="ic-fill"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        <span data-i18n="star.cta">Star 支持</span>
+        <span class="starcount" data-star-count></span>
+      </a>
+    </aside>
 
     <div class="req reveal">
       <h3 class="h3" data-i18n="download.req.title">系統需求</h3>
@@ -604,9 +610,6 @@
     <p data-i18n="support.body">OverTranslate 是免費提供的 Windows 翻譯工具。如果這個專案對你有幫助，歡迎請我喝杯咖啡，支持後續開發與維護。</p>
     <p class="support__cta">
       <a class="btn btn--ghost" href="https://buymeacoffee.com/hon.lu" target="_blank" rel="noopener" data-press><span data-i18n="support.coffee">☕ 贊助我喝杯咖啡</span></a>
-      <a class="btn btn--ghost" href="https://github.com/asd880921/OverTranslate" target="_blank" rel="noopener" data-press>
-        <span data-i18n="support.star">GitHub ⭐ Star</span>
-      </a>
     </p>
   </div>
 </section>
