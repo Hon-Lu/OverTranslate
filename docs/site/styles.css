@@ -19,6 +19,8 @@
   --accent-2: #62eff6;
   --accent-ink: #04121c;
   --accent-soft: rgba(82, 196, 250, 0.14);
+  --star: #f5c451;
+  --star-ink: #2a1c02;
 
   --glass: rgba(10, 16, 26, 0.62);
   --glass-edge: rgba(255, 255, 255, 0.14);
@@ -57,6 +59,8 @@
   --accent-2: #0ea5c9;
   --accent-ink: #ffffff;
   --accent-soft: rgba(10, 116, 196, 0.10);
+  --star: #b07605;
+  --star-ink: #ffffff;
 
   --glass: rgba(248, 250, 253, 0.72);
   --glass-edge: rgba(255, 255, 255, 0.9);
@@ -84,6 +88,8 @@
     --accent-2: #0ea5c9;
     --accent-ink: #ffffff;
     --accent-soft: rgba(10, 116, 196, 0.10);
+    --star: #b07605;
+    --star-ink: #ffffff;
 
     --glass: rgba(248, 250, 253, 0.72);
     --glass-edge: rgba(255, 255, 255, 0.9);
@@ -256,6 +262,55 @@ p:last-child { margin-bottom: 0; }
 .iconbtn:active { transform: scale(0.95); }
 .iconbtn--wide { padding-inline: 12px; }
 
+/* star —— 導覽列這顆常駐，靠數字說話；真正開口的是下載區那一塊 */
+.iconbtn--star {
+  padding-inline: 12px;
+  border-color: color-mix(in srgb, var(--star) 40%, transparent);
+  background: color-mix(in srgb, var(--star) 13%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.iconbtn--star:hover {
+  border-color: color-mix(in srgb, var(--star) 62%, transparent);
+  background: color-mix(in srgb, var(--star) 22%, transparent);
+  color: var(--ink);
+}
+.iconbtn--star svg { color: var(--star); }
+
+/* 手機放不下三個帶字的控制項。語言留地球、Star 留數字，
+   因為數字才是這顆按鈕真正在說的事。 */
+@media (max-width: 520px) {
+  .iconbtn--star { padding-inline: 10px; }
+  .iconbtn--star .iconbtn__text { display: none; }
+  .menu [data-lang-label] { display: none; }
+  .menu .iconbtn--wide { padding-inline: 9px; }
+}
+
+/* 數字是向 GitHub 要的，拿不到就讓它保持收合，不留下一塊空格 */
+.starcount {
+  display: inline-flex;
+  align-items: center;
+  max-width: 0;
+  margin-left: -7px;
+  padding-left: 0;
+  border-left: 0 solid color-mix(in srgb, var(--star) 38%, transparent);
+  overflow: hidden;
+  opacity: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  transition: max-width 340ms cubic-bezier(0.2, 0.8, 0.3, 1),
+              margin-left 340ms cubic-bezier(0.2, 0.8, 0.3, 1),
+              padding-left 340ms cubic-bezier(0.2, 0.8, 0.3, 1),
+              opacity 260ms ease 80ms;
+}
+.starcount.is-in {
+  max-width: 6ch;
+  margin-left: 0;
+  padding-left: 9px;
+  border-left-width: 1px;
+  opacity: 1;
+}
+
 .ic-moon { display: none; }
 :root[data-theme="light"] .ic-sun { display: none; }
 :root[data-theme="light"] .ic-moon { display: block; }
@@ -340,6 +395,10 @@ p:last-child { margin-bottom: 0; }
   color: var(--ink);
 }
 .btn--ghost:hover { background: var(--surface-2); }
+.btn--lg { padding: 16px 32px; font-size: 1.05rem; }
+/* 首頁只剩一顆，要撐得起上面那行大標 */
+.hero__cta .btn--lg { padding-inline: 46px; }
+.btn--lg svg { width: 20px; height: 20px; }
 [data-press] { transition: transform 140ms cubic-bezier(0.2, 0.8, 0.3, 1); }
 [data-press].is-pressed { transform: scale(0.972); }
 
@@ -821,45 +880,18 @@ p:last-child { margin-bottom: 0; }
 .stat a { display: inline-block; text-decoration: none; }
 .stat img { margin-inline: auto; border-radius: var(--r-m); }
 
-.version { display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 0.86rem; }
-.version img { border-radius: 4px; }
-
-/* download */
-.dl { display: grid; gap: 16px; margin-bottom: clamp(24px, 3vw, 32px); }
-@media (min-width: 760px) { .dl { grid-template-columns: 1fr 1fr; } }
-.dl__card {
-  position: relative;
-  display: block;
-  padding: 28px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-xl);
-  background: var(--surface);
-  text-decoration: none;
-  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.3, 1), border-color 260ms ease;
-  will-change: transform;
+/* download —— 首頁那兩顆搬到這裡，卡片就不需要了 */
+.dlrow { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.dlnote {
+  margin: 14px 0 clamp(24px, 3vw, 32px);
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 0.88rem;
 }
-.dl__card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-.dl__card--primary {
-  border-color: transparent;
-  background:
-    linear-gradient(var(--bg-2), var(--bg-2)) padding-box,
-    linear-gradient(135deg, var(--accent-2), var(--accent)) border-box;
-  border: 1.5px solid transparent;
+@media (max-width: 520px) {
+  .dlrow { flex-direction: column; }
+  .dlrow .btn { width: 100%; }
 }
-.dl__badge {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent-2), var(--accent));
-  color: var(--accent-ink);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-.dl__card h3 { font-size: 1.22rem; letter-spacing: -0.018em; margin-bottom: 8px; }
-.dl__card p { color: var(--ink-2); font-size: 0.9rem; margin-bottom: 16px; }
-.dl__file { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-3); word-break: break-all; }
 
 .req {
   padding: clamp(24px, 4vw, 36px);
@@ -868,6 +900,47 @@ p:last-child { margin-bottom: 0; }
   background: var(--surface);
 }
 .req .note--inline { margin-top: 20px; }
+
+/* 下載完才是最願意按星的那一刻，所以這塊貼著下載卡片放 */
+.starcall {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2.2vw, 22px);
+  padding: clamp(20px, 2.6vw, 26px);
+  margin-bottom: clamp(24px, 3vw, 32px);
+  border: 1px solid color-mix(in srgb, var(--star) 30%, transparent);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(130% 150% at 0% 0%, color-mix(in srgb, var(--star) 12%, transparent), transparent 60%),
+    var(--surface);
+}
+.starcall__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--star) 20%, transparent);
+  color: var(--star);
+}
+.starcall__icon svg { width: 24px; height: 24px; }
+.starcall__text { flex: 1 1 auto; min-width: 0; }
+.starcall h3 { font-size: 1.06rem; letter-spacing: -0.014em; }
+.starcall p { margin-top: 6px; color: var(--ink-2); font-size: 0.88rem; line-height: 1.7; }
+.btn--star {
+  flex: none;
+  border-color: transparent;
+  background: var(--star);
+  color: var(--star-ink);
+  box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--star) 80%, transparent);
+}
+.btn--star svg { width: 18px; height: 18px; }
+.btn--star .starcount { border-left-color: color-mix(in srgb, var(--star-ink) 28%, transparent); }
+@media (max-width: 720px) {
+  .starcall { flex-direction: column; align-items: flex-start; }
+  .btn--star { width: 100%; }
+}
 
 /* support */
 .support { padding: clamp(48px, 7vw, 88px) 0; background: linear-gradient(to bottom, transparent, var(--surface)); }
@@ -952,8 +1025,9 @@ html.js .reveal.is-in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { transition: opacity 200ms ease; transform: none !important; }
-  .card__link:hover, .dl__card:hover { transform: none; }
+  .card__link:hover { transform: none; }
   .compare__grip { transition: none; }
+  .starcount { transition: none; }
   * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
 
@@ -968,5 +1042,5 @@ html.js .reveal.is-in { opacity: 1; transform: none; }
 @media (prefers-contrast: more) {
   :root { --ink-2: var(--ink); --ink-3: var(--ink); --line: currentColor; }
   .chrome, .menu__pop { background: var(--bg); }
-  .card__link, .engine, .fact, .model, .dl__card, .req, .note { border-color: var(--ink-3); }
+  .card__link, .engine, .fact, .model, .starcall, .req, .note { border-color: var(--ink-3); }
 }

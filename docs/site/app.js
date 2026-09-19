@@ -511,4 +511,32 @@
     });
   }
 
+  /* ---------------- star count ----------------
+     數字向 GitHub 要，同一次瀏覽只要一次。要不到就讓它保持收合，
+     按鈕本身照常能按，不會留下一塊空白。 */
+  var starSlots = document.querySelectorAll('[data-star-count]');
+  if (starSlots.length) {
+    var paintStars = function (text) {
+      for (var i = 0; i < starSlots.length; i++) {
+        starSlots[i].textContent = text;
+        starSlots[i].classList.add('is-in');
+      }
+    };
+    var cachedStars = null;
+    try { cachedStars = sessionStorage.getItem('ot-stars'); } catch (err) {}
+    if (cachedStars) {
+      paintStars(cachedStars);
+    } else if (window.fetch) {
+      fetch('https://api.github.com/repos/asd880921/OverTranslate')
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          if (!data || typeof data.stargazers_count !== 'number') return;
+          var text = String(data.stargazers_count);
+          try { sessionStorage.setItem('ot-stars', text); } catch (err) {}
+          paintStars(text);
+        })
+        .catch(function () {});
+    }
+  }
+
 })();
