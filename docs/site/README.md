@@ -49,12 +49,14 @@ python tools/build-og.py
 4. 跑 `python tools/build-og.py`
 
 **兩張要裁成一模一樣的範圍**，中間那條分割線才對得起來；尺寸不同產生器會擋下來。
+四個角記得留一點空白，「原文／譯文」的標籤要放在那裡。
 寬度會縮到 1104，高度照比例走，超過 368 就從底部切掉。
 
 | 縮圖上的字 | 來源 |
 |------------|------|
 | 標語 `hero.claim`、`hero.free` | 各語言的 `index.html`，自動撈 |
 | 簡介那一行 | `build-og.py` 的 `LEDE`，是 `hero.lede` 的第一句 |
+| 「原文／譯文」標籤 | `compare.before` / `compare.after`，自動撈 |
 
 **改了 `hero.claim`、`hero.free` 或 `hero.lede` 之後要重跑**，其中 `hero.lede`
 還要順手改 `LEDE`，否則縮圖上的字會停在舊版。這支需要本機有 Edge 與 Pillow，

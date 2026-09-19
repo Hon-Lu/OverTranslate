@@ -117,6 +117,29 @@ TEMPLATE = u'''<!doctype html>
     box-shadow: 0 -20px 60px -30px rgba(0, 0, 0, 0.9);
   }}
   .shot img {{ display: block; width: {shot_w}px; height: {shot_h}px; }}
+  /* 以下三個都照抄網站的 .compare__handle / .compare__grip / .compare__tag */
+  .divider {{
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.22), 0 0 18px rgba(0, 0, 0, 0.35);
+  }}
+  .grip {{
+    position: absolute; top: 50%; left: 50%; translate: -50% -50%;
+    display: grid; place-items: center; width: 42px; height: 42px;
+    border-radius: 999px; background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.6); color: #0d1622;
+  }}
+  .grip svg {{
+    width: 22px; height: 22px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }}
+  .tag {{
+    position: absolute; top: 11px; padding: 5px 13px; border-radius: 999px;
+    background: rgba(8, 13, 22, 0.72); color: #fff;
+    font-size: 15px; font-weight: 620; letter-spacing: 0.02em;
+  }}
+  .tag--before {{ left: 11px; }}
+  .tag--after {{ right: 11px; }}
 </style>
 <div class="glow"></div>
 <div class="stack">
@@ -134,6 +157,10 @@ TEMPLATE = u'''<!doctype html>
 </div>
 <div class="shot">
   <img src="file:///{shot}" alt="">
+  <span class="tag tag--before">{tag_before}</span>
+  <span class="tag tag--after">{tag_after}</span>
+  <span class="divider"></span>
+  <span class="grip"><svg viewBox="0 0 24 24"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
 </div>
 '''
 
@@ -165,17 +192,11 @@ def compose_shot():
     shot = before.copy()
     shot.paste(after.crop((mid, 0, w, h)), (mid, 0))
 
-    # 先縮到縮圖上的寬度，分割線最後才畫，才會是乾淨的 2px
+    # 分割線與握把由 HTML 疊上去，這裡只負責把兩半拼起來
     height = int(round(h * SHOT_W / float(w)))
     shot = shot.resize((SHOT_W, height), Image.LANCZOS)
     if height > SHOT_MAX_H:
         shot = shot.crop((0, 0, SHOT_W, SHOT_MAX_H))
-
-    px = shot.load()
-    centre = SHOT_W // 2
-    for x in range(centre - 1, centre + 1):
-        for y in range(shot.size[1]):
-            px[x, y] = (255, 255, 255)
 
     fd, tmp = tempfile.mkstemp(suffix='.png')
     os.close(fd)
@@ -186,7 +207,7 @@ def compose_shot():
 def strings(page):
     """把首頁已經翻譯好的字撈出來，不要在這裡再維護一份。"""
     html = io.open(os.path.join(ROOT, page), encoding='utf-8').read()
-    want = ('hero.free', 'hero.claim')
+    want = ('hero.free', 'hero.claim', 'compare.before', 'compare.after')
     out = {}
     for key in want:
         m = re.search(r'data-i18n="%s">([^<]*)<' % re.escape(key), html)
@@ -208,6 +229,7 @@ def main():
             html = TEMPLATE.format(
                 font=font, free=s['hero.free'], claim=s['hero.claim'],
                 lede=LEDE[lang],
+                tag_before=s['compare.before'], tag_after=s['compare.after'],
                 shot=shot.replace('\\', '/'), shot_w=SHOT_W, shot_h=shot_h)
 
             fd, tmp = tempfile.mkstemp(suffix='.html')
