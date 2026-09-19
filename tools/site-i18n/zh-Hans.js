@@ -102,7 +102,7 @@ otLocale('zh-Hans', {
   'download.cta.portable': '下载免安装版',
   'download.note': '两种版本均支持自动更新',
   'star.title': '觉得 OverTranslate 好用吗？',
-  'star.body': '欢迎到 GitHub 点颗 ⭐ Star 支持，也能让更多人看见这个项目。',
+  'star.body': '欢迎到 GitHub 给颗 ⭐ Star，也能让更多人看见这个项目。',
   'star.cta': 'Star 支持',
   'download.req.title': '系统需求',
   'download.req.1.title': '操作系统',

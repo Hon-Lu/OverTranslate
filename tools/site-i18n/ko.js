@@ -102,7 +102,7 @@ otLocale('ko', {
   'download.cta.portable': '무설치 버전 다운로드',
   'download.note': '두 버전 모두 자동 업데이트를 지원합니다',
   'star.title': 'OverTranslate가 마음에 드셨나요?',
-  'star.body': 'GitHub에서 ⭐ Star를 눌러 응원해 주세요. 더 많은 사람이 이 프로젝트를 발견하는 데 도움이 됩니다.',
+  'star.body': 'GitHub에서 ⭐ Star를 눌러 주세요. 더 많은 사람이 이 프로젝트를 발견하는 데에도 도움이 됩니다.',
   'star.cta': 'Star 누르기',
   'download.req.title': '시스템 요구 사항',
   'download.req.1.title': '운영체제',

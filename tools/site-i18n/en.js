@@ -102,7 +102,7 @@ otLocale('en', {
   'download.cta.portable': 'Download portable version',
   'download.note': 'Both versions support automatic updates',
   'star.title': 'Enjoying OverTranslate?',
-  'star.body': 'Star it on GitHub ⭐ to support the project and help more people find it.',
+  'star.body': 'Give it a ⭐ Star on GitHub. It also helps more people find the project.',
   'star.cta': 'Star',
   'download.req.title': 'System requirements',
   'download.req.1.title': 'Operating system',
