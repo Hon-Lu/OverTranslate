@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Documents;
@@ -21,6 +22,11 @@ public partial class UpdateWindow : Window
 
     // Runs once per download attempt; see StartSlowHintTimer.
     private DispatcherTimer? _slowHintTimer;
+
+    // What the running attempt is fetching, and the last figure it reported. Both are reset per
+    // attempt; see OnDownloadProgress for why the figure has to be remembered.
+    private Fetching _fetching;
+    private int _lastPercent;
 
     /// <summary>
     /// Opens the update window, or brings the open one forward.
@@ -94,6 +100,9 @@ public partial class UpdateWindow : Window
         {
             SetPhase(Phase.Downloading);
             ErrorText.Visibility = Visibility.Collapsed;
+            FallbackNote.Visibility = Visibility.Collapsed;
+            _fetching = WillFetchDelta() ? Fetching.Delta : Fetching.Full;
+            _lastPercent = 0;
             DownloadProgress.IsIndeterminate = false;
             DownloadProgress.Value = 0;
             DownloadProgress.Visibility = Visibility.Visible;
@@ -114,6 +123,7 @@ public partial class UpdateWindow : Window
             SetPhase(Phase.Offering);
             StopSlowHintTimer();
             SlowHint.Visibility = Visibility.Collapsed;
+            FallbackNote.Visibility = Visibility.Collapsed;
             // The button is the way to try again, so it says so — this is the one thing about it
             // that changes, now that the progress no longer lives on its label.
             DownloadBtnText.Text = LocalizationService.Get("S.Update.Retry");
@@ -136,6 +146,7 @@ public partial class UpdateWindow : Window
         SetPhase(Phase.Offering);
         StopSlowHintTimer();
         SlowHint.Visibility = Visibility.Collapsed;
+        FallbackNote.Visibility = Visibility.Collapsed;
         DownloadProgress.BeginAnimation(System.Windows.Controls.ProgressBar.ValueProperty, null);
         DownloadProgress.IsIndeterminate = false;
         DownloadProgress.Value = 0;
@@ -153,6 +164,77 @@ public partial class UpdateWindow : Window
 
         /// <summary>Handing over to Velopack. Not abandonable, and nearly over.</summary>
         Applying,
+    }
+
+    /// <summary>Which package the running attempt is fetching.</summary>
+    /// <remarks>
+    /// Velopack can start on the delta packages and end up fetching the whole thing anyway, and it
+    /// does not say so. This follows that switch, so the line under the bar always names the file
+    /// actually coming down — which is also the only way its size means anything.
+    /// </remarks>
+    private enum Fetching
+    {
+        /// <summary>The deltas, to be merged into the installed version by Update.exe.</summary>
+        Delta,
+
+        /// <summary>The whole package.</summary>
+        Full,
+    }
+
+    /// <summary>Velopack's UpdateOptions.MaximumDeltasBeforeFallback default, which this app leaves alone.</summary>
+    private const int MaximumDeltas = 10;
+
+    /// <summary>
+    /// Velopack budgets the delta download across 0-70 and only reports 100 once Update.exe has
+    /// merged the patches. So 70 means the bytes are all in and the merge is running — a stretch
+    /// with no progress of its own, which reads as a stall at an arbitrary number unless the line
+    /// underneath stops claiming to be downloading.
+    /// </summary>
+    private const int DeltaDownloadCeiling = 70;
+
+    /// <summary>
+    /// Whether Velopack will start this attempt on the deltas rather than the full package.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors the guards inside Velopack's own DownloadUpdatesAsync — a base package has to be on
+    /// disk, a delta has to be offered, and the deltas must be neither too many nor larger than the
+    /// full package. Duplicated because the library exposes no way to ask. It decides a caption and
+    /// a file size and nothing else, so the cost of drifting out of step with a future Velopack is
+    /// a line that names the wrong file for a moment, not a download that misbehaves: the switch in
+    /// <see cref="OnDownloadProgress"/> corrects it the moment the figure contradicts it.
+    /// </remarks>
+    private bool WillFetchDelta()
+    {
+        var info = _updateInfo.VelopackInfo;
+        if (info.BaseRelease?.FileName is null || info.DeltasToTarget.Length == 0)
+            return false;
+
+        return info.DeltasToTarget.Length <= MaximumDeltas
+            && info.DeltasToTarget.Sum(d => d.Size) <= info.TargetFullRelease.Size;
+    }
+
+    private long CurrentDownloadSize() =>
+        _fetching == Fetching.Delta
+            ? _updateInfo.VelopackInfo.DeltasToTarget.Sum(d => d.Size)
+            : _updateInfo.VelopackInfo.TargetFullRelease.Size;
+
+    /// <summary>Sizes a download the way Explorer does: kilobytes below a megabyte, megabytes above.</summary>
+    /// <remarks>
+    /// Not fixed to megabytes. A delta for a release that only touched a few small files runs to
+    /// tens of kilobytes, and "0.0 MB" sitting next to a live percentage reads as a bug rather than
+    /// as a small file.
+    ///
+    /// The space before the unit is non-breaking. The line wraps on a 360px window in the longer
+    /// languages, and left to itself WPF will happily put "139.8" on one line and "MB" on the next.
+    /// </remarks>
+    private static string FormatSize(long bytes)
+    {
+        const double Kilobyte = 1024d;
+        const double Megabyte = Kilobyte * 1024d;
+
+        return bytes >= Megabyte
+            ? string.Format(CultureInfo.CurrentCulture, "{0:0.#} MB", bytes / Megabyte)
+            : string.Format(CultureInfo.CurrentCulture, "{0:0} KB", Math.Max(1d, bytes / Kilobyte));
     }
 
     /// <summary>
@@ -231,14 +313,24 @@ public partial class UpdateWindow : Window
     }
 
     /// <summary>
-    /// The download's own line: the same sentence, with the figure in the accent colour.
+    /// The line under the bar: what is being fetched, how far in, and how big it is — or, once the
+    /// bytes are in, what is being done with them.
     /// </summary>
     /// <remarks>
-    /// The number is the only part of this line that carries information — the words around it say
-    /// the same thing for the whole download — so it is the part that is coloured, and it is
-    /// coloured in the same accent as the progress bar directly above it, which is what it is a
-    /// readout of. The unit travels with the figure: "45" and "%" are one number, and splitting
-    /// them across two colours would read as two.
+    /// Naming the file is what keeps the fallback from looking like a fault. When Velopack gives up
+    /// on the deltas it starts the full package from zero, and a line that only ever said
+    /// "downloading 45%" left the bar dropping back to the start with nothing to explain it. Saying
+    /// "full installer" alongside a size that jumped from 21 MB to 140 MB does explain it, and the
+    /// note in <c>FallbackNote</c> says the rest.
+    ///
+    /// The two stretches with no progress of their own get their own sentences rather than a frozen
+    /// figure: the delta merge at <see cref="DeltaDownloadCeiling"/>, and everything between the
+    /// last byte and the handover — Velopack still has to pull the new Update.exe out of the
+    /// package and sweep the directory, and the window can still be cancelled throughout.
+    ///
+    /// The figure is the part that is coloured, in the same accent as the progress bar directly
+    /// above it, which is what it is a readout of. The unit travels with the figure: "45" and "%"
+    /// are one number, and splitting them across two colours would read as two.
     ///
     /// Built out of runs rather than formatted into one string, so the placeholder can be found and
     /// what surrounds it left in whatever order the language puts it. The percent sign is inside
@@ -250,7 +342,21 @@ public partial class UpdateWindow : Window
     /// </remarks>
     private void SetDownloadStatus(int percent)
     {
-        var template = LocalizationService.Get("S.Update.Downloading");
+        if (percent >= 100)
+        {
+            SetStatus(LocalizationService.Get("S.Update.Preparing"));
+            return;
+        }
+
+        if (_fetching == Fetching.Delta && percent >= DeltaDownloadCeiling)
+        {
+            SetStatus(LocalizationService.Get("S.Update.Patching"));
+            return;
+        }
+
+        var key = _fetching == Fetching.Delta ? "S.Update.DownloadingDelta" : "S.Update.DownloadingFull";
+        var template = LocalizationService.Get(key);
+        var size = FormatSize(CurrentDownloadSize());
         var at = template.IndexOf("{0}", StringComparison.Ordinal);
 
         StatusText.Inlines.Clear();
@@ -258,25 +364,46 @@ public partial class UpdateWindow : Window
         if (at < 0)
         {
             // A translation that dropped the placeholder still has to show the number.
-            StatusText.Inlines.Add(new Run(LocalizationService.Format("S.Update.Downloading", percent)));
+            StatusText.Inlines.Add(new Run(LocalizationService.Format(key, $"{percent}%", size)));
         }
         else
         {
             var figure = new Run($"{percent}%") { FontWeight = FontWeights.SemiBold };
             figure.SetResourceReference(TextElement.ForegroundProperty, "AppAccent");
 
-            if (at > 0) StatusText.Inlines.Add(new Run(template[..at]));
+            if (at > 0) StatusText.Inlines.Add(new Run(WithSize(template[..at], size)));
             StatusText.Inlines.Add(figure);
-            if (at + 3 < template.Length) StatusText.Inlines.Add(new Run(template[(at + 3)..]));
+            if (at + 3 < template.Length) StatusText.Inlines.Add(new Run(WithSize(template[(at + 3)..], size)));
         }
 
         StatusText.Visibility = Visibility.Visible;
+
+        // The size is a plain substitution wherever the language puts it; only the figure needs a
+        // run of its own, so only the figure's placeholder is worth splitting the template on.
+        static string WithSize(string part, string size) => part.Replace("{1}", size);
     }
 
+    /// <summary>
+    /// The progress callback, and the only place the app learns that the deltas were abandoned.
+    /// </summary>
+    /// <remarks>
+    /// Velopack raises nothing when a delta fails to apply: it logs a warning, deletes the partial
+    /// file and starts the full package over from zero. The figure going backwards is the only sign
+    /// that reaches here, and it cannot mean anything else — each download is scaled on its own
+    /// (0-<see cref="DeltaDownloadCeiling"/> for deltas, 0-100 for the full package) and within one
+    /// the figure only climbs.
+    /// </remarks>
     private void OnDownloadProgress(int percent)
     {
         Dispatcher.Invoke(() =>
         {
+            if (_fetching == Fetching.Delta && percent < _lastPercent)
+            {
+                _fetching = Fetching.Full;
+                FallbackNote.Visibility = Visibility.Visible;
+            }
+
+            _lastPercent = percent;
             DownloadProgress.Value = percent;
             SetDownloadStatus(percent);
         });
@@ -294,12 +421,14 @@ public partial class UpdateWindow : Window
         StopSlowHintTimer();
         SlowHint.Visibility = Visibility.Collapsed;
 
+        // Said before the bar finishes moving rather than after it: this is the step there is no
+        // way back from, and the button that could have stopped it went dead a line ago.
+        SetStatus(LocalizationService.Get("S.Update.Applying"));
         await AnimateProgressToFullAsync();
 
         // The apply step exposes no progress at all, so an indeterminate bar is the honest signal:
         // still working, duration unknown. It keeps moving, which a bar frozen at 100% would not.
         DownloadProgress.IsIndeterminate = true;
-        SetStatus(LocalizationService.Get("S.Update.Applying"));
 
         // Let those two land on screen: ApplyUpdatesAndRestart blocks this thread and then kills the
         // process, so anything not painted by now is never painted at all.
@@ -310,7 +439,6 @@ public partial class UpdateWindow : Window
     {
         var completed = new TaskCompletionSource();
 
-        SetDownloadStatus(100);
         var toFull = new DoubleAnimation(100, TimeSpan.FromMilliseconds(280))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }

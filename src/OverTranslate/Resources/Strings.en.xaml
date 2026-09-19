@@ -64,8 +64,12 @@
     <sys:String x:Key="S.Update.Later">Later</sys:String>
     <sys:String x:Key="S.Update.Now">Update now</sys:String>
     <sys:String x:Key="S.Update.Skip">Skip this version and stop reminding me</sys:String>
-    <sys:String x:Key="S.Update.Downloading">Downloading {0}</sys:String>
-    <sys:String x:Key="S.Update.Applying">Applying...</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">Downloading update {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">Downloading full installer {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.Patching">Applying update...</sys:String>
+    <sys:String x:Key="S.Update.Preparing">Preparing to install...</sys:String>
+    <sys:String x:Key="S.Update.Applying">Installing...</sys:String>
+    <sys:String x:Key="S.Update.FellBackToFull">Update file could not be applied — using a full update</sys:String>
     <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">Downloading slowly? </sys:String>
     <sys:String x:Key="S.Update.SlowLink">Get it manually from GitHub</sys:String>
     <sys:String x:Key="S.Update.Cancel">Cancel update</sys:String>

@@ -65,8 +65,12 @@
     <sys:String x:Key="S.Update.Later">나중에</sys:String>
     <sys:String x:Key="S.Update.Now">지금 업데이트</sys:String>
     <sys:String x:Key="S.Update.Skip">이 버전 건너뛰고 다시 알리지 않기</sys:String>
-    <sys:String x:Key="S.Update.Downloading">내려받는 중 {0}</sys:String>
-    <sys:String x:Key="S.Update.Applying">적용 중…</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">업데이트 파일 내려받는 중 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">전체 설치 파일 내려받는 중 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.Patching">업데이트 적용 중…</sys:String>
+    <sys:String x:Key="S.Update.Preparing">설치 준비 중…</sys:String>
+    <sys:String x:Key="S.Update.Applying">설치 중…</sys:String>
+    <sys:String x:Key="S.Update.FellBackToFull">업데이트 파일을 적용하지 못해 전체 업데이트로 전환</sys:String>
     <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">내려받기가 느린가요? </sys:String>
     <sys:String x:Key="S.Update.SlowLink">GitHub에서 직접 내려받기</sys:String>
     <sys:String x:Key="S.Update.Cancel">업데이트 취소</sys:String>

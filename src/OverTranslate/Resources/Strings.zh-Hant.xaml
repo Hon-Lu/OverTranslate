@@ -63,8 +63,12 @@
     <sys:String x:Key="S.Update.Later">稍後再說</sys:String>
     <sys:String x:Key="S.Update.Now">立即更新</sys:String>
     <sys:String x:Key="S.Update.Skip">跳過此版本，不要再提醒我</sys:String>
-    <sys:String x:Key="S.Update.Downloading">下載中 {0}</sys:String>
-    <sys:String x:Key="S.Update.Applying">套用中…</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">下載更新檔 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">下載完整安裝包 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.Patching">套用更新中…</sys:String>
+    <sys:String x:Key="S.Update.Preparing">準備安裝…</sys:String>
+    <sys:String x:Key="S.Update.Applying">安裝中…</sys:String>
+    <sys:String x:Key="S.Update.FellBackToFull">更新檔無法套用，已切換為完整更新</sys:String>
     <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">下載速度較慢？</sys:String>
     <sys:String x:Key="S.Update.SlowLink">前往 GitHub 手動下載</sys:String>
     <sys:String x:Key="S.Update.Cancel">取消更新</sys:String>

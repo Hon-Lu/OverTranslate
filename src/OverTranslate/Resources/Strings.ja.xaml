@@ -65,8 +65,12 @@
     <sys:String x:Key="S.Update.Later">あとで</sys:String>
     <sys:String x:Key="S.Update.Now">今すぐ更新</sys:String>
     <sys:String x:Key="S.Update.Skip">このバージョンをスキップして通知しない</sys:String>
-    <sys:String x:Key="S.Update.Downloading">ダウンロード中 {0}</sys:String>
-    <sys:String x:Key="S.Update.Applying">適用中…</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">更新ファイルをダウンロード中 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">完全パッケージをダウンロード中 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.Patching">更新を適用中…</sys:String>
+    <sys:String x:Key="S.Update.Preparing">インストールの準備中…</sys:String>
+    <sys:String x:Key="S.Update.Applying">インストール中…</sys:String>
+    <sys:String x:Key="S.Update.FellBackToFull">更新ファイルを適用できず、完全更新に切り替えました</sys:String>
     <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">ダウンロードが遅い？</sys:String>
     <sys:String x:Key="S.Update.SlowLink">GitHub から手動で入手</sys:String>
     <sys:String x:Key="S.Update.Cancel">更新をキャンセル</sys:String>
