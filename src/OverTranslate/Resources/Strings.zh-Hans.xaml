@@ -44,15 +44,12 @@
     <sys:String x:Key="S.Tray.Exit">退出</sys:String>
 
     <!-- ── About ── -->
-    <sys:String x:Key="S.About.Author">作者</sys:String>
     <sys:String x:Key="S.About.Website">前往官方网站</sys:String>
-    <sys:String x:Key="S.About.Star">Star</sys:String>
-    <sys:String x:Key="S.About.StarTip">到 GitHub 为项目点个 Star</sys:String>
+    <sys:String x:Key="S.About.Star">到 GitHub 点颗 Star 支持</sys:String>
     <sys:String x:Key="S.About.Sponsor">赞助</sys:String>
     <sys:String x:Key="S.About.SponsorTip">通过 Buy Me a Coffee 赞助</sys:String>
     <sys:String x:Key="S.About.Version">版本 {0}</sys:String>
-    <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">免费开源，可自由使用。觉得好用的话，欢迎帮忙点颗 </sys:String>
-    <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> 支持一下！</sys:String>
+    <sys:String x:Key="S.About.OpenSource">免费开源，可自由使用，没有广告也没有内购。</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">复制消息</sys:String>

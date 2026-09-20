@@ -31,6 +31,9 @@ public partial class AboutOverlay : UserControl
     public AboutOverlay()
     {
         InitializeComponent();
+        // The same embedded .ico the taskbar and the shell header use, so the card cannot end up
+        // showing a stale second copy of the mark.
+        AppIcon.Source = AppIconService.CreateMainIcon();
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
         VersionText.Text = LocalizationService.Format("S.About.Version", version);
     }
