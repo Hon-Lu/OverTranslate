@@ -45,7 +45,7 @@
     <sys:String x:Key="S.About.Sponsor">贊助</sys:String>
     <sys:String x:Key="S.About.SponsorTip">透過 Buy Me a Coffee 贊助</sys:String>
     <sys:String x:Key="S.About.Version">版本 {0}</sys:String>
-    <sys:String x:Key="S.About.OpenSource">免費開源，可自由使用，沒有廣告也沒有內購。</sys:String>
+    <sys:String x:Key="S.About.OpenSource">免費開源，可自由使用。</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">複製訊息</sys:String>

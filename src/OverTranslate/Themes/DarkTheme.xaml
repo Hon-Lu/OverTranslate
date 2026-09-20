@@ -110,7 +110,10 @@
          pale cyan that takes black text — correct Fluent for a filled button on a page, a bright
          patch shouting off a bar that floats over whatever the user is actually looking at. A blue
          deep enough to carry white text sits on the bar instead of on top of it. In the light theme
-         the accent already is that blue and already carries white, so there it is the accent. -->
+         the accent already is that blue and already carries white, so there it is the accent.
+
+         Also used by DeepAccentButton, for the same reason in a different place: any filled
+         button whose label has to be white. The name records where it was first needed. -->
     <SolidColorBrush x:Key="ToolbarPrimaryBg"        Color="#3B82F6"/>
     <SolidColorBrush x:Key="ToolbarPrimaryHoverBg"   Color="#5693F8"/>
     <SolidColorBrush x:Key="ToolbarPrimaryPressedBg" Color="#2F6FE0"/>

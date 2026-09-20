@@ -50,7 +50,7 @@
     <sys:String x:Key="S.About.Sponsor">支援する</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Buy Me a Coffee で支援する</sys:String>
     <sys:String x:Key="S.About.Version">バージョン {0}</sys:String>
-    <sys:String x:Key="S.About.OpenSource">無料・オープンソースで自由に使えます。広告もアプリ内課金もありません。</sys:String>
+    <sys:String x:Key="S.About.OpenSource">無料・オープンソースで自由に使えます。</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">メッセージをコピー</sys:String>

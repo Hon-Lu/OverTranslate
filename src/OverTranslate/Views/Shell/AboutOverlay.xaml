@@ -54,18 +54,18 @@
                      drift. Version and author sit on the same AppTextSecondary: the palette has
                      two text levels by design, so the step between them is font size, not a third
                      grey that would fail against AppCardBg. -->
-                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="26,2,26,20">
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="26,2,26,18">
                     <Image x:Name="AppIcon"
-                           Width="88" Height="88"
+                           Width="64" Height="64"
                            HorizontalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
                     <TextBlock Text="OverTranslate"
                                FontFamily="{DynamicResource AppFont}"
-                               FontSize="26"
+                               FontSize="24"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource AppTextPrimary}"
                                HorizontalAlignment="Center"
-                               Margin="0,14,0,0"/>
+                               Margin="0,11,0,0"/>
                     <TextBlock x:Name="VersionText"
                                FontFamily="{DynamicResource AppFont}"
                                FontSize="14"
@@ -81,35 +81,45 @@
                 </StackPanel>
 
                 <!-- Starring is the one thing a reader of this card can do that actually helps, so
-                     it takes the accent and the full width. The mark is GitHub's own, drawn as a
-                     path because the icon font has no glyph for it; it is filled with AppAccentFg
-                     so it flips with the theme exactly like the label beside it. The arrow sits
-                     inside the centred group rather than pinned to the right edge: AccentButton's
-                     template centres its content, and pinning would cost a copy of the template
-                     for one decorative glyph. -->
+                     it takes the full width and the strongest fill. DeepAccentButton rather than
+                     AccentButton because this label is white: the dark theme's AppAccent is a pale
+                     cyan built to take black text, and white on it is unreadable.
+
+                     The mark is GitHub's own, drawn as a path because the icon font has no glyph
+                     for it. The arrow is a stroked path too, not a font glyph — at this size the
+                     icon font's arrow is a hairline beside a 15px semibold label. Both are white
+                     outright rather than themed: this button's fill is a deep blue in both themes,
+                     so there is nothing for them to flip with. -->
                 <Button Grid.Row="1"
-                        Style="{StaticResource AccentButton}"
+                        Style="{StaticResource DeepAccentButton}"
                         Height="46"
                         HorizontalAlignment="Stretch"
                         Click="StarBtn_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Width="17" Height="17"
-                              Stretch="Uniform"
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Path Width="19" Height="19"
+                                  Stretch="Uniform"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,0"
+                                  Fill="#FFFFFF"
+                                  Data="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                            <TextBlock Text="{DynamicResource S.About.Star}"
+                                       VerticalAlignment="Center"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FFFFFF"
+                                       FontFamily="{DynamicResource AppFont}"/>
+                        </StackPanel>
+
+                        <Path HorizontalAlignment="Right"
                               VerticalAlignment="Center"
-                              Margin="0,0,10,0"
-                              Fill="{DynamicResource AppAccentFg}"
-                              Data="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
-                        <TextBlock Text="{DynamicResource S.About.Star}"
-                                   VerticalAlignment="Center"
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   FontFamily="{DynamicResource AppFont}"/>
-                        <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                   FontSize="13" Text="&#xE72A;"
-                                   VerticalAlignment="Center"
-                                   Margin="12,1,0,0"
-                                   Opacity="0.8"/>
-                    </StackPanel>
+                              Stroke="#FFFFFF"
+                              StrokeThickness="1.9"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M0 8h17M11.6 2.6 17 8l-5.4 5.4"/>
+                    </Grid>
                 </Button>
 
                 <!-- The site and the sponsor page are both secondary to starring, and they are the
@@ -159,7 +169,7 @@
                     </Button>
                 </Grid>
 
-                <Rectangle Grid.Row="3" Height="1" Margin="0,20,0,0"
+                <Rectangle Grid.Row="3" Height="1" Margin="0,18,0,0"
                            Fill="{DynamicResource AppSeparator}"/>
 
                 <!-- The Star button above is now the largest thing on the card, so this sentence no

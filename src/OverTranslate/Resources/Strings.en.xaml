@@ -49,7 +49,7 @@
     <sys:String x:Key="S.About.Sponsor">Support</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Support via Buy Me a Coffee</sys:String>
     <sys:String x:Key="S.About.Version">Version {0}</sys:String>
-    <sys:String x:Key="S.About.OpenSource">Free and open source, with no ads and no in-app purchases.</sys:String>
+    <sys:String x:Key="S.About.OpenSource">Free and open source.</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">Copy message</sys:String>
