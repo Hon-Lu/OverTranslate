@@ -269,3 +269,6 @@ OverTranslate 是免費提供的 Windows 翻譯工具。
 你可以自由使用、修改、散布本軟體，亦可用於商業用途；主要要求是在複製或散布時保留原始的版權聲明與 MIT 授權條款。  
 完整授權內容請參閱 [LICENSE](LICENSE)。
 
+## Code signing policy
+
+See [CODE_SIGNING.md](CODE_SIGNING.md).
