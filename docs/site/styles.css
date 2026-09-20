@@ -520,10 +520,18 @@ p:last-child { margin-bottom: 0; }
   text-align: center;
 }
 .shot--hero { margin-inline: auto; }
-.shot .src { display: block; font-size: 0.76rem; color: var(--ink-3); }
-.shot figcaption > .src { margin-top: 5px; }
-.shot .src a { color: inherit; text-underline-offset: 2px; }
-.shot .src a:hover { color: var(--ink-2); }
+/* 出處要看得清楚才算數。原本是 --ink-3 搭 0.76rem，淺色主題下只有 3.5:1，低於 AA 的
+   4.5:1；改成跟內文同一階的 --ink-2 並放大半級，與內文的區隔交給字級，不是靠把字調暗。
+   作品名才是這行真正要傳達的，所以連結再亮一階，底線壓淡免得整行變吵。 */
+.shot .src { display: block; font-size: 0.82rem; color: var(--ink-2); }
+.shot figcaption > .src { margin-top: 6px; }
+.shot .src a {
+  color: var(--ink);
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  transition: color 160ms ease, text-decoration-color 160ms ease;
+}
+.shot .src a:hover { color: var(--accent); text-decoration-color: currentColor; }
 .shot--plain img,
 .shot--app img {
   border: 1px solid var(--line);
@@ -942,11 +950,70 @@ p:last-child { margin-bottom: 0; }
   .btn--star { width: 100%; }
 }
 
-/* support */
-.support { padding: clamp(48px, 7vw, 88px) 0; background: linear-gradient(to bottom, transparent, var(--surface)); }
-.support__inner { max-width: 58ch; margin-inline: auto; text-align: center; }
-.support__inner p { margin-top: 16px; color: var(--ink-2); line-height: 1.8; }
-.support__cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 26px; }
+/* .starcall 的姊妹卡片，接在它下面：同樣的骨架與 46px 圖框，所以兩張卡的文字欄位
+   會對齊。整組換成主題色而不是再一次的金色，兩張卡才分得開；按鈕是純色的，跟上面
+   那顆漸層的下載主鈕還認得出差別。作者資訊放在這裡而不是頁尾獨立一節，是因為多數
+   人看到下載就不會再往下捲。 */
+.authorcall {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2.2vw, 22px);
+  padding: clamp(20px, 2.6vw, 26px);
+  margin-bottom: clamp(24px, 3vw, 32px);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(130% 150% at 0% 0%, var(--accent-soft), transparent 60%),
+    var(--surface);
+}
+.authorcall__avatar {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  /* 頭像是淺色插圖，深色底下沒有這圈邊就像直接貼上去的 */
+  box-shadow: 0 0 0 1px var(--line);
+}
+.authorcall__text { flex: 1 1 auto; min-width: 0; }
+.authorcall h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 1.06rem;
+  letter-spacing: -0.014em;
+}
+.authorcall p { margin-top: 6px; color: var(--ink-2); font-size: 0.88rem; line-height: 1.7; }
+.authorcall__handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-3);
+  font-size: 0.84rem;
+  font-weight: 400;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+/* 箭頭往外推一點，先告訴你這一下會離開這個網站 */
+.authorcall__handle svg { width: 12px; height: 12px; transition: transform 160ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.authorcall__handle:hover { color: var(--accent); }
+.authorcall__handle:hover svg { transform: translate(2px, -2px); }
+.btn--sponsor {
+  flex: none;
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+.btn--sponsor svg { width: 18px; height: 18px; }
+
+@media (max-width: 720px) {
+  /* .starcall 在這個寬度改直排，這張跟著折：文字擠不進頭像旁邊就自己換行，按鈕再
+     佔滿一整列，兩張卡片的折法才會一致 */
+  .authorcall { flex-wrap: wrap; }
+  .authorcall .btn { width: 100%; }
+}
 
 /* footer */
 .foot { padding: clamp(40px, 6vw, 64px) 0 48px; border-top: 1px solid var(--line-soft); }
