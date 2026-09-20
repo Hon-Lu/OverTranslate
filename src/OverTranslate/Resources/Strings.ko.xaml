@@ -46,10 +46,11 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Author">만든 사람</sys:String>
-    <sys:String x:Key="S.About.ViewSource">GitHub에서 소스 코드 보기</sys:String>
+    <sys:String x:Key="S.About.Website">공식 웹사이트 열기</sys:String>
+    <sys:String x:Key="S.About.Star">GitHub에서 Star 누르기</sys:String>
     <sys:String x:Key="S.About.Version">버전 {0}</sys:String>
-    <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">무료 오픈 소스로 자유롭게 사용할 수 있습니다. 도움이 되었다면 GitHub에서</sys:String>
-    <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve">Star를 눌러 주시면 큰 힘이 됩니다.</sys:String>
+    <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">무료 오픈 소스로 자유롭게 사용할 수 있습니다. 마음에 드셨다면 </sys:String>
+    <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> 하나로 응원해 주세요!</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">메시지 복사</sys:String>

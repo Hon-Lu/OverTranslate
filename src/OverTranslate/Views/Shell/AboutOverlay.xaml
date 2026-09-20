@@ -80,16 +80,40 @@
                                    HorizontalAlignment="Right"/>
                     </Grid>
 
-                    <Button Style="{StaticResource FlatButton}"
+                    <!-- The site is the front door — feature tour, download, guides — and it picks
+                         its language from the browser, so a single URL serves every locale. It
+                         takes the accent so the card has one obvious destination; the repository
+                         is still one click away from there. The icon inherits AppAccentFg from the
+                         button rather than naming a brush, so it flips with the theme. -->
+                    <Button Style="{StaticResource AccentButton}"
                             Height="34"
                             HorizontalAlignment="Stretch"
-                            Click="GitHubBtn_Click">
+                            Margin="0,0,0,8"
+                            Click="WebsiteBtn_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                        FontSize="14" Text="&#xE774;"
+                                       Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S.About.Website}"
+                                       VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource AppFont}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- GitHub is worth a button, but reading the source is not what most people
+                         open this card for — starring is the one thing they can do that helps. The
+                         glyph is the same accent star the sentence below uses, so the button and
+                         the ask read as one thought. -->
+                    <Button Style="{StaticResource FlatButton}"
+                            Height="34"
+                            HorizontalAlignment="Stretch"
+                            Click="StarBtn_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14" Text="&#xE735;"
                                        Width="22" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource AppTextSecondary}"/>
-                            <TextBlock Text="{DynamicResource S.About.ViewSource}"
+                                       Foreground="{DynamicResource AppAccent}"/>
+                            <TextBlock Text="{DynamicResource S.About.Star}"
                                        VerticalAlignment="Center"
                                        FontFamily="{DynamicResource AppFont}"/>
                         </StackPanel>
@@ -98,9 +122,10 @@
 
                 <!-- The reader is already using the app, so a feature pitch here has no audience.
                      What they cannot know from the UI is that it is free and open source, and that
-                     starring it actually helps. The star is drawn from the icon font rather than the
-                     ⭐ emoji: WPF has no colour-font support, so the emoji would fall back to a
-                     black-and-white glyph at an unpredictable size. -->
+                     starring it actually helps. It no longer names GitHub — the button directly
+                     above says where, so this only has to say why. The star is drawn from the icon
+                     font rather than the ⭐ emoji: WPF has no colour-font support, so the emoji
+                     would fall back to a black-and-white glyph at an unpredictable size. -->
                 <TextBlock Grid.Row="3"
                            FontFamily="{DynamicResource AppFont}"
                            FontSize="12"
