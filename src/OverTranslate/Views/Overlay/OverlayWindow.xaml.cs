@@ -669,11 +669,23 @@ public partial class OverlayWindow : Window
             double wpfH = block.Bounds.Height / _dpiY;
             double borderW = Math.Max(wpfW + BubbleExpand * 2, BubbleMinWidth);
             double borderH = wpfH + BubbleExpand * 2;
+
+            // A column narrow enough for the minimum width to bite is widened on both sides, not
+            // just to the right. The grid is centred across the bubble, so a bubble that is not
+            // itself centred on the source column puts the whole translation beside the writing it
+            // replaces — and a single comic column is exactly the case that trips the minimum.
+            double widthPadding = (borderW - (wpfW + BubbleExpand * 2)) / 2;
             double sourceGlyphSize = GetSourceFontReferenceHeight(block, wpfH);
             string text = new(block.TranslatedText.Where(c => !char.IsWhiteSpace(c)).ToArray());
-            var grid = FitVerticalGrid(borderW, borderH, sourceGlyphSize, text.Length);
+
+            // Fitted on the source's own footprint rather than on the bubble's. Those two extra
+            // pixels a side are there to stop the edge of the source bleeding out from under the
+            // bubble; letting them buy a row of type as well is what had this overlay and the live
+            // one answering the same sentence with a different number of columns.
+            var grid = FitVerticalGrid(wpfW, wpfH, sourceGlyphSize, text.Length);
             double cellSize = grid.CellSize;
-            borderH = grid.Height;
+            double gridHeight = grid.Height;
+            borderH = gridHeight + BubbleExpand * 2;
 
             double maxLeft = Math.Min(
                 canvasWidth - borderW - OverlayPadding,
@@ -682,7 +694,7 @@ public partial class OverlayWindow : Window
                 canvasHeight - borderH - OverlayPadding,
                 selectionBottom - borderH);
             double left = Math.Clamp(
-                canvasX - BubbleExpand,
+                canvasX - BubbleExpand - widthPadding,
                 Math.Max(OverlayPadding, selectionLeft),
                 Math.Max(Math.Max(OverlayPadding, selectionLeft), maxLeft));
             double top = Math.Clamp(
@@ -709,9 +721,13 @@ public partial class OverlayWindow : Window
             BubbleBackgroundCanvas.Children.Add(backgroundBorder);
             System.Windows.Media.Brush foreground = new SolidColorBrush(plateText);
 
-            var bubbleBounds = new Rect(left, top, borderW, borderH);
+            // The grid sits on the source inside the bubble, so the coverage the bubble adds is
+            // spent on covering and not on where the type goes. Centred across, top-aligned down:
+            // see VerticalTextGrid.Cells for why those are two different answers.
+            var gridBounds = new Rect(
+                left + BubbleExpand + widthPadding, top + BubbleExpand, wpfW, gridHeight);
             double fontSize = cellSize * 0.92;
-            foreach (var (glyph, cellBounds) in VerticalCells(text, bubbleBounds, cellSize))
+            foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, cellSize))
             {
                 var cell = new TextBlock
                 {

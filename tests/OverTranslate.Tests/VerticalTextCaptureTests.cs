@@ -11,16 +11,17 @@ namespace OverTranslate.Tests;
 public class VerticalTextCaptureTests
 {
     [Fact]
-    public async Task VerticalRecognition_RotatesAnticlockwiseAndMapsBoundsBack()
+    public async Task VerticalRecognition_PreservesSourceFrameAndRequestsVerticalRecognition()
     {
         using var source = new Bitmap(100, 60);
         using var engine = new RecordingOcrEngine(
-            new OcrTextBlock("縦", new System.Windows.Rect(10, 20, 30, 8), Confidence: 0.75));
+            new OcrTextBlock("縦", new System.Windows.Rect(72, 10, 8, 30), Confidence: 0.75));
 
         var result = await OcrService.RecognizeVerticalAsync(
             engine, source, "JA", CancellationToken.None);
 
-        Assert.Equal(new Size(60, 100), engine.RecognizedSize);
+        Assert.Equal(source.Size, engine.RecognizedSize);
+        Assert.True(engine.VerticalText);
         var block = Assert.Single(result);
         Assert.Equal(new System.Windows.Rect(72, 10, 8, 30), block.Bounds);
         Assert.Equal(8, block.RenderGlyphHeight);
@@ -116,17 +117,67 @@ public class VerticalTextCaptureTests
         Assert.Equal(column.Bounds, kept.Bounds);
     }
 
+    /// <summary>
+    /// Down the column, then one column left — and the columns actually used sit centred across the
+    /// bubble rather than hard against its right edge.
+    /// </summary>
+    /// <remarks>
+    /// Four columns of room, three rows deep, and five characters to place: two columns are filled
+    /// and the fourth column of slack is shared, half a column either side. Hanging it all off one
+    /// edge is what made every translation read as displaced towards the top right of the source it
+    /// replaced.
+    /// </remarks>
     [Fact]
-    public void VerticalCells_RunDownThenMoveLeft()
+    public void VerticalCells_RunDownThenMoveLeft_CentredAcrossTheBubble()
     {
         var cells = OverlayWindow.VerticalCells(
             "ABCDE", new System.Windows.Rect(10, 20, 40, 30), 10).ToList();
 
-        Assert.Equal(new System.Windows.Rect(40, 20, 10, 10), cells[0].Cell);
-        Assert.Equal(new System.Windows.Rect(40, 30, 10, 10), cells[1].Cell);
-        Assert.Equal(new System.Windows.Rect(40, 40, 10, 10), cells[2].Cell);
-        Assert.Equal(new System.Windows.Rect(30, 20, 10, 10), cells[3].Cell);
-        Assert.Equal(new System.Windows.Rect(30, 30, 10, 10), cells[4].Cell);
+        Assert.Equal(new System.Windows.Rect(30, 20, 10, 10), cells[0].Cell);
+        Assert.Equal(new System.Windows.Rect(30, 30, 10, 10), cells[1].Cell);
+        Assert.Equal(new System.Windows.Rect(30, 40, 10, 10), cells[2].Cell);
+        Assert.Equal(new System.Windows.Rect(20, 20, 10, 10), cells[3].Cell);
+        Assert.Equal(new System.Windows.Rect(20, 30, 10, 10), cells[4].Cell);
+    }
+
+    /// <summary>
+    /// A box cut to an exact number of cells holds that many columns, not one fewer.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, on <c>.ai/test-images/vertical-image-ja/genshin-4koma-column-merge.png</c>: the
+    /// left balloon comes back 21.9px per character with 27 characters to place over three columns,
+    /// and the live overlay sizes its grid as exactly <c>columns * cellSize</c>. Dividing that back
+    /// by the cell is not reliably the count that built it, so the third column measured away and
+    /// five characters were dropped — silently, because a character with no cell is simply never
+    /// drawn. The tolerance in <see cref="OverlayWindow.VerticalCells"/> is what holds it, and the
+    /// expression here is the caller's own so the test cannot drift off the case it guards.
+    /// </remarks>
+    [Fact]
+    public void VerticalCells_KeepEveryColumnOfAGridCutToSize()
+    {
+        const double cellSize = 21.9;
+        const int columns = 3;
+        const int rows = 11;
+        var text = new string('あ', 27);
+
+        var cells = OverlayWindow.VerticalCells(
+            text,
+            new System.Windows.Rect(0, 0, columns * cellSize, rows * cellSize),
+            cellSize).ToList();
+
+        Assert.Equal(text.Length, cells.Count);
+        Assert.Equal(columns, cells.Select(cell => Math.Round(cell.Cell.Left, 3)).Distinct().Count());
+    }
+
+    /// <summary>A grid that fills its bubble is unmoved by the centring.</summary>
+    [Fact]
+    public void VerticalCells_FillingTheBubbleStayAgainstItsEdges()
+    {
+        var cells = OverlayWindow.VerticalCells(
+            "ABCDEF", new System.Windows.Rect(10, 20, 20, 30), 10).ToList();
+
+        Assert.Equal(new System.Windows.Rect(20, 20, 10, 10), cells[0].Cell);
+        Assert.Equal(new System.Windows.Rect(10, 20, 10, 10), cells[3].Cell);
     }
 
     [Fact]
@@ -196,17 +247,16 @@ public class VerticalTextCaptureTests
     }
 
     /// <summary>
-    /// The layout box has to turn with the picture, or the column merge below is comparing a
-    /// rectangle in the rotated frame against ones that are not.
+    /// Both coverage and layout boxes retain their original source coordinates.
     /// </summary>
     [Fact]
-    public async Task VerticalRecognition_MapsLayoutBoundsBackAsWellAsBounds()
+    public async Task VerticalRecognition_PreservesLayoutBoundsAsWellAsBounds()
     {
         using var source = new Bitmap(100, 60);
         // As the CJK path hands it over: Bounds pulled in onto the glyphs, LayoutBounds untouched.
-        var recognized = new OcrTextBlock("縦書き", new System.Windows.Rect(10, 22, 30, 8))
+        var recognized = new OcrTextBlock("縦書き", new System.Windows.Rect(22, 10, 8, 30))
         {
-            LayoutBounds = new System.Windows.Rect(10, 20, 30, 12),
+            LayoutBounds = new System.Windows.Rect(20, 10, 12, 30),
             LayoutScript = OcrLayoutScript.Cjk,
         };
         using var engine = new RecordingOcrEngine(recognized);
@@ -215,15 +265,14 @@ public class VerticalTextCaptureTests
             engine, source, "JA", CancellationToken.None);
 
         var block = Assert.Single(result);
-        Assert.Equal(OcrService.MapVerticalBoundsBack(recognized.Bounds, source.Width), block.Bounds);
+        Assert.Equal(recognized.Bounds, block.Bounds);
         Assert.Equal(
-            OcrService.MapVerticalBoundsBack(recognized.LayoutBounds, source.Width),
+            recognized.LayoutBounds,
             block.LayoutBounds);
         Assert.NotEqual(block.Bounds, block.LayoutBounds);
 
-        // Render contract: the overlay's own numbers are still the rotated row height and the
-        // mapped coverage box, untouched by any of the above.
-        Assert.Equal(recognized.Bounds.Height, block.RenderGlyphHeight);
+        // A vertical cell is measured across the column, not along its height.
+        Assert.Equal(recognized.Bounds.Width, block.RenderGlyphHeight);
     }
 
     [Theory]
@@ -237,7 +286,7 @@ public class VerticalTextCaptureTests
     {
         using var source = new Bitmap(100, 60);
         using var engine = new RecordingOcrEngine(
-            new OcrTextBlock(text, new System.Windows.Rect(10, 20, 30, 10)));
+            new OcrTextBlock(text, new System.Windows.Rect(20, 10, 10, 60)));
 
         var result = await OcrService.RecognizeVerticalAsync(
             engine, source, "JA", CancellationToken.None);
@@ -288,27 +337,9 @@ public class VerticalTextCaptureTests
         Assert.NotNull(merged.LayoutGlyphHeight);
     }
 
-    // ---- design.md §8.5.1 #4 (v2.1, reversed): the capture mode reaches none of this ----
-
-    /// <summary>
-    /// A capture mode cannot change how vertical text is grouped, and the relaxed profile that
-    /// would have changed it is here to prove the test is asking a real question.
-    /// </summary>
-    /// <remarks>
-    /// <para>v1.1 wired the mode's profile into the first pass on the grounds that it is "the same
-    /// horizontal grouper". It is the same grouper, and that turned out to be the wrong reason: the
-    /// picture has been turned 270° before it gets there, so each column of the original arrives as
-    /// a row, and the first pass's "does this line continue on the next one" is being asked of
-    /// column against column — the very geometry the column merge was denied a profile over.</para>
-    ///
-    /// <para>The pair below is the set-solid one from <c>OcrTextBlockGrouperTests</c>, chosen
-    /// because the two profiles are known to disagree about it. The first two assertions establish
-    /// that disagreement rather than assume it: without them, a pipeline that ignored the profile
-    /// and a pair that no profile would have joined look exactly alike, which is the mistake the
-    /// harness made for two steps.</para>
-    /// </remarks>
+    // Horizontal capture profiles must not change native vertical grouping.
     [Fact]
-    public async Task TheRelaxedProfile_DoesNotReachTheGroupingThatRunsOnTheRotatedFrame()
+    public async Task TheRelaxedProfile_DoesNotReachVerticalGrouping()
     {
         var (previous, current) = OcrTextBlockGrouperTests.CentredBalloonPair();
         OcrTextBlock[] pair = [previous, current];
@@ -320,14 +351,16 @@ public class VerticalTextCaptureTests
         // Big enough to hold the fixture's boxes: mapping back off the edge of the picture would
         // make the column merge judge rectangles that never existed.
         using var source = new Bitmap(1300, 1300);
-        using var engine = new RecordingOcrEngine(pair);
+        using var engine = new RecordingOcrEngine(pair.Select(b => b with
+        {
+            Bounds = ToVerticalBounds(b.Bounds, source.Width),
+            LayoutBounds = ToVerticalBounds(b.LayoutBounds, source.Width),
+        }).ToArray());
 
         var result = await OcrService.RecognizeVerticalAsync(
             engine, source, "EN", CancellationToken.None);
 
-        // Two lines in, two blocks out: the first pass judged them on the conservative figures and
-        // kept them apart. Had the relaxed profile reached it they would have been joined there and
-        // come back as one.
+        // Separate source columns stay separate, independent of horizontal capture profiles.
         Assert.Equal(2, result.Count);
         Assert.DoesNotContain(
             result,
@@ -355,16 +388,21 @@ public class VerticalTextCaptureTests
         Assert.DoesNotContain(parameters, parameter => parameter.ParameterType == typeof(GroupingProfile));
     }
 
+    private static System.Windows.Rect ToVerticalBounds(System.Windows.Rect r, int width) =>
+        new(width - r.Bottom, r.X, r.Height, r.Width);
+
     private sealed class RecordingOcrEngine(params OcrTextBlock[] blocks) : IOcrEngine
     {
         public Size RecognizedSize { get; private set; }
+        public bool VerticalText { get; private set; }
 
         public Task<List<OcrTextBlock>> RecognizeAsync(
             Bitmap bitmap,
             string sourceLanguage,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, bool verticalText = false)
         {
             RecognizedSize = bitmap.Size;
+            VerticalText = verticalText;
             return Task.FromResult(blocks.AsDetected());
         }
 
@@ -372,7 +410,7 @@ public class VerticalTextCaptureTests
             Bitmap bitmap,
             string sourceLanguage,
             int? maxDetectSize = null,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default, bool verticalText = false) =>
             Task.FromResult<List<OcrTextBlock>?>(blocks.AsDetected());
 
         public void Dispose()

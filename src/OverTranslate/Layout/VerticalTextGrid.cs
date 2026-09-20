@@ -14,9 +14,10 @@ namespace OverTranslate.Layout;
 /// vertical text out since issue #132 and the live one does now too, and the two disagreeing about
 /// which way the columns run — or about whether a bracket is turned — would be the same feature
 /// behaving differently in two places for no reason the reader could see. What they do NOT share is
-/// how big the grid is allowed to get: a still capture may grow its bubble past the source, and a
-/// live block may not grow past the rectangle the user drew. That is the difference between
-/// <see cref="Fit"/> and <see cref="FitWithin"/>, and it is the only difference.
+/// what gives once the cell has shrunk as far as it may and the text still does not fit: a still
+/// capture grows its bubble down the page, and a live block — which is exactly the rectangle the
+/// user drew — opens another column instead and finally loses the tail. That is the difference
+/// between <see cref="Fit"/> and <see cref="FitWithin"/>, and it is the only difference.
 /// </remarks>
 internal static class VerticalTextGrid
 {
@@ -29,23 +30,43 @@ internal static class VerticalTextGrid
     internal static bool RotatesGlyph(char glyph) => RotatedGlyphs.Contains(glyph);
 
     /// <summary>Returns cells in vertical reading order: downwards, then one column left.</summary>
+    /// <remarks>
+    /// Against the top of the box, centred across it — the horizontal overlay's rule given a quarter
+    /// turn, where a line starts hard against the left edge and the lines together sit centred down
+    /// the box. Along the writing there is a corner the reader is already looking at: vertical text
+    /// begins at the top of the rightmost column, so a translation shorter than its source has to
+    /// start where the source started and simply run out early. Across the writing there is no such
+    /// corner, and a translation that needs fewer columns than the box holds leaves slack that
+    /// belongs on both sides: hanging all of it off one edge slides the whole block away from the
+    /// writing it replaces, by a different amount for every block on the page.
+    /// </remarks>
     internal static IEnumerable<(char Glyph, Rect Cell)> Cells(
         string text,
         Rect bounds,
         double cellSize)
     {
-        int columns = Math.Max(1, (int)Math.Floor(bounds.Width / cellSize));
+        // Both tolerances are there for the same reason: a box cut to an exact number of cells is
+        // the ordinary case on the live path, where the caller sizes it from this very grid, and
+        // `columns * cellSize / cellSize` is not reliably `columns` in binary. Without the slack a
+        // three-column grid measures itself at two and the last column of the sentence is dropped
+        // — silently, because every glyph in it simply never gets a cell.
+        int columns = Math.Max(1, (int)Math.Floor((bounds.Width + 0.01) / cellSize));
         int rows = Math.Max(1, (int)Math.Floor((bounds.Height + 0.01) / cellSize));
+
+        // A column is filled to the bottom of the room it has before the next one starts, so the
+        // columns actually occupied — the ones that get centred — are that many of them.
+        int used = Math.Min(columns, Math.Max(1, (int)Math.Ceiling((double)text.Length / rows)));
+        double right = bounds.Left + (bounds.Width + used * cellSize) / 2;
 
         for (int i = 0; i < text.Length; i++)
         {
             int column = i / rows;
             int row = i % rows;
-            if (column >= columns)
+            if (column >= used)
                 yield break;
 
             yield return (text[i], new Rect(
-                bounds.Left + bounds.Width - (column + 1) * cellSize,
+                right - (column + 1) * cellSize,
                 bounds.Top + row * cellSize,
                 cellSize,
                 cellSize));
@@ -88,21 +109,35 @@ internal static class VerticalTextGrid
     }
 
     /// <summary>
-    /// The live overlay's fit: a grid that fits inside the room it is given and never asks for more.
+    /// The live overlay's fit: the source's own footprint if the type can be made to sit in it, and
+    /// never wider than the block.
     /// </summary>
     /// <remarks>
-    /// <para>The live layer is exactly the block the user drew, so there is no growing out of it —
-    /// anything past the edge is not rendered at all, and a sentence that ends early with nothing to
-    /// say so is the failure this whole overlay is written to avoid. So the cell shrinks instead,
-    /// down to a floor the caller sets, and the columns are counted from what is left.</para>
+    /// <para>The order of the two concessions is the whole of this method, and getting it backwards
+    /// is what <see cref="Fit"/> already had right. A translation too long for the column it
+    /// replaces can either be set a little smaller in that column or be spread over more columns
+    /// than the source had, and only the first of those stays inside the balloon. The second walks
+    /// out of it: the columns are laid right to left, so the extra ones land on whatever is drawn
+    /// beside the source — the next balloon, the next panel, the picture. So the cell shrinks first,
+    /// down to the caller's readability floor, and columns are added only once that has run out.
+    /// The screenshot overlay reaches the same answer by shrinking before it grows the bubble.</para>
     ///
-    /// <para>Returned as a size rather than a count because the caller is placing a rectangle: the
-    /// grid is anchored to the source's first character, not centred on the block, and it has to
-    /// know how far the other two edges reach to do that.</para>
+    /// <para><paramref name="columnLength"/> is how long one column may run, and it is the source's
+    /// own length rather than the block's. Over a comic page the block IS the page, so a column
+    /// given the block's height fits every sentence into one and runs it from the top of the
+    /// picture to the bottom, straight through the panels either side of the balloon it came
+    /// from.</para>
+    ///
+    /// <para>Returned as a size rather than a count because the caller is placing a rectangle over
+    /// the source and has to know how far it reaches to do that.</para>
     /// </remarks>
+    /// <param name="columnRoom">How wide the source group was: the grid stays inside it if it can.</param>
+    /// <param name="columnLength">How far down one column may run.</param>
+    /// <param name="maxWidth">The block. The grid is never wider, whatever is left unplaced.</param>
     internal static (double CellSize, double Width, double Height) FitWithin(
+        double columnRoom,
+        double columnLength,
         double maxWidth,
-        double maxHeight,
         double preferredCellSize,
         double minCellSize,
         int characterCount)
@@ -110,22 +145,22 @@ internal static class VerticalTextGrid
         int needed = Math.Max(1, characterCount);
         double cellSize = Math.Max(minCellSize, preferredCellSize);
 
-        while (true)
+        while (cellSize > minCellSize && Capacity(columnRoom, columnLength, cellSize) < needed)
         {
-            int rows = Math.Max(1, (int)Math.Floor(maxHeight / cellSize));
-            int columns = Math.Max(1, (int)Math.Ceiling((double)needed / rows));
-
-            if (columns * cellSize <= maxWidth || cellSize <= minCellSize)
-            {
-                // At the floor the text may still not fit; keep the grid inside the block anyway and
-                // let the tail be the thing that is lost, rather than the block's own edge.
-                columns = Math.Max(1, Math.Min(columns, (int)Math.Floor(maxWidth / cellSize)));
-                rows = Math.Max(1, Math.Min(rows, (int)Math.Ceiling((double)needed / columns)));
-                return (cellSize, columns * cellSize, rows * cellSize);
-            }
-
             cellSize = Math.Max(minCellSize, cellSize - 0.5);
         }
+
+        int rows = Math.Max(1, (int)Math.Floor(columnLength / cellSize));
+        int columns = Math.Max(1, (int)Math.Ceiling((double)needed / rows));
+
+        // At the floor the text may still not fit; keep the grid inside the block anyway and let
+        // the tail be the thing that is lost, rather than the block's own edge.
+        columns = Math.Max(1, Math.Min(columns, (int)Math.Floor(maxWidth / cellSize)));
+
+        // Every column but the last is full, so a grid over one column is the only one shorter than
+        // the room it was given.
+        int usedRows = columns > 1 ? rows : Math.Min(rows, needed);
+        return (cellSize, columns * cellSize, usedRows * cellSize);
     }
 
     private static int Capacity(double width, double height, double cellSize) =>

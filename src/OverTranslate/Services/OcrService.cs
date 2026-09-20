@@ -73,9 +73,9 @@ public class OcrService : IDisposable
     /// <param name="mode">The live region's mode. Panel preserves the historical path for callers
     /// that do not specify one; the application always passes its region's explicit mode.</param>
     /// <param name="orientation">
-    /// Which way the region's text is written. Vertical turns the frame 270° and reads it with the
+    /// Which way the region's text is written. Vertical detects in source coordinates and uses the
     /// vertical pipeline — see <see cref="TryRecognizeVerticalAsync"/>; the mode does not reach that
-    /// path, for the reason <see cref="GroupingProfile.Vertical"/> gives.
+    /// path because horizontal row thresholds do not describe column geometry.
     /// </param>
     public async Task<List<OcrTextBlock>?> TryRecognizeAsync(
         Bitmap bitmap,
@@ -91,7 +91,7 @@ public class OcrService : IDisposable
         if (orientation == Realtime.RealtimeTextOrientation.Vertical)
         {
             return await TryRecognizeVerticalAsync(
-                bitmap, OcrLanguageRouter.Normalize(sourceLanguage), maxDetectSize, cancellationToken);
+                _engine, bitmap, OcrLanguageRouter.Normalize(sourceLanguage), maxDetectSize, cancellationToken);
         }
 
         var blocks = await _engine.TryRecognizeAsync(
@@ -114,45 +114,31 @@ public class OcrService : IDisposable
         return GroupRealtime(blocks, bitmap.Height, mode);
     }
 
-    /// <summary>
-    /// The live-screen half of the vertical pipeline: the same 270° turn and the same grouping the
-    /// screenshot path uses, asked for a free inference slot rather than queued for one.
-    /// </summary>
-    /// <remarks>
-    /// <para>It shares <see cref="RecognizeVerticalAsync"/>'s procedure and deliberately not the
-    /// live path's <see cref="GroupRealtime"/>. Both of that method's branches judge rows against
-    /// rows of the original picture — the dialogue grouper asks which reading completes a line,
-    /// the panel grouper which line continues a paragraph — and here a "row" is a whole column, so
-    /// neither question is the one in front of it. <see cref="GroupingProfile.Vertical"/> is what
-    /// the turned picture is measured on, and it is the only profile that has been.</para>
-    ///
-    /// <para>The two live-path filters that are not about rows do run. The scenery filter is text
-    /// and confidence only, and the collapse filter is applied here rather than by the caller
-    /// because here the picture is still turned: a collapse is one box thrown across the block
-    /// perpendicular to the writing, which in the turned frame is the same box height test the
-    /// horizontal path makes, and after the mapping back it would be a test of something else.</para>
-    /// </remarks>
-    private async Task<List<OcrTextBlock>?> TryRecognizeVerticalAsync(
+    /// <summary>Reads original-frame columns without queueing a busy realtime engine.</summary>
+    internal static async Task<List<OcrTextBlock>?> TryRecognizeVerticalAsync(
+        IOcrEngine engine,
         Bitmap bitmap,
         string language,
         int? maxDetectSize,
         CancellationToken cancellationToken)
     {
-        using var rotated = new Bitmap(bitmap);
-        rotated.RotateFlip(RotateFlipType.Rotate270FlipNone);
+        var blocks = await engine.TryRecognizeAsync(
+            bitmap, language, maxDetectSize, cancellationToken, verticalText: true);
+        return blocks is null ? null : GroupVertical(blocks, bitmap.Width, realtime: true, bitmap: bitmap);
+    }
 
-        var blocks = await _engine.TryRecognizeAsync(
-            rotated, language, maxDetectSize, cancellationToken);
-        if (blocks is null)
-            return null;
+    internal static List<OcrTextBlock> GroupVertical(
+        List<OcrTextBlock> blocks, double frameWidth, bool realtime = false, Bitmap? bitmap = null)
+    {
+        if (realtime)
+            blocks = RejectUnconvincingBlocks(blocks)
+                .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
+                    block.Bounds.Width, frameWidth, block.Text)).ToList();
 
-        var filtered = RejectUnconvincingBlocks(blocks)
-            .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
-                block.Bounds.Height, rotated.Height, block.Text))
-            .ToList();
-
-        return MapVerticalColumnsBack(
-            OcrTextBlockGrouper.Group(filtered, GroupingProfile.Vertical), bitmap.Width);
+        using var pixels = bitmap is null ? null : OnnxOcrEngine.ConvertToSkBitmap(bitmap);
+        var columns = VerticalOcrGeometry.JoinColumnFragments(
+            blocks.Where(IsVerticalColumnCandidate).ToList(), pixels);
+        return MergeVerticalColumns(columns);
     }
 
     /// <summary>
@@ -280,70 +266,19 @@ public class OcrService : IDisposable
             : blocks;
 
     /// <summary>
-    /// Turns vertical writing anticlockwise for the horizontal detector, then maps the grouped
-    /// results back to the original image. The rightmost source column becomes the first detected
-    /// row, preserving Japanese reading order.
+    /// Detects columns in the original frame; only recognition crops change orientation.
+    /// Screenshot and realtime share the same source-coordinate grouping.
     /// </summary>
-    /// <remarks>
-    /// <para>Takes no profile, and that absence is the contract. Neither pass here is judging what
-    /// the capture modes were measured on: the column merge compares column against column, and so
-    /// — once the picture has been turned 270° — does the first pass, because every column of the
-    /// original reaches the detector as a row. Handing either of them a relaxed threshold would be
-    /// relaxing something nobody has measured, and the measurement says what that buys: the relaxed
-    /// profile joined balloons rather than the lines inside them.</para>
-    ///
-    /// <para>Both passes therefore run on <see cref="GroupingProfile.Vertical"/>, which holds the
-    /// conservative figures under its own name so that tightening the interface mode later cannot
-    /// move vertical text with it.</para>
-    /// </remarks>
     internal static async Task<List<OcrTextBlock>> RecognizeVerticalAsync(
         IOcrEngine engine,
         Bitmap bitmap,
         string sourceLanguage,
         CancellationToken cancellationToken)
     {
-        using var rotated = new Bitmap(bitmap);
-        rotated.RotateFlip(RotateFlipType.Rotate270FlipNone);
-
-        var blocks = await RecognizeAndGroupAsync(
-            engine, rotated, sourceLanguage, GroupingProfile.Vertical, cancellationToken);
-
-        return MapVerticalColumnsBack(blocks, bitmap.Width);
+        var blocks = await engine.RecognizeAsync(
+            bitmap, sourceLanguage, cancellationToken, verticalText: true);
+        return GroupVertical(blocks, bitmap.Width, bitmap: bitmap);
     }
-
-    /// <summary>
-    /// Turns grouped rows of the rotated picture back into columns of the original, then reassembles
-    /// the ones belonging to the same piece of writing.
-    /// </summary>
-    /// <remarks>
-    /// Shared by the screenshot and live-screen entry points so there is one description of what a
-    /// vertical reading is. What differs between them is how the recognition was asked for, which is
-    /// settled before this runs.
-    /// </remarks>
-    internal static List<OcrTextBlock> MapVerticalColumnsBack(
-        List<OcrTextBlock> blocks, int originalWidth)
-    {
-        var columns = blocks.Select(block => block with
-        {
-            Bounds = MapVerticalBoundsBack(block.Bounds, originalWidth),
-            // The layout box turns with the picture. Without it the second pass below would be
-            // reading a rectangle still in the rotated frame beside one that is not.
-            LayoutBounds = MapVerticalBoundsBack(block.LayoutBounds, originalWidth),
-            SourceLineBounds = null,
-            // After mapping back, a column is tall and narrow. The rotated row height is the
-            // original glyph width and is the useful reference for a square vertical cell. Only the
-            // render metric: what the columns are grouped on is LayoutBounds, above.
-            RenderGlyphHeight = block.Bounds.Height,
-        }).ToList();
-
-        return MergeVerticalColumns(columns);
-    }
-
-    internal static Rect MapVerticalBoundsBack(Rect rotated, int originalWidth) => new(
-        originalWidth - (rotated.Y + rotated.Height),
-        rotated.X,
-        rotated.Height,
-        rotated.Width);
 
     /// <summary>
     /// Reassembles adjacent right-to-left columns that share a top edge. A lone column is split
@@ -394,13 +329,15 @@ public class OcrService : IDisposable
 
     private static bool IsSameVerticalTextGroup(OcrTextBlock a, OcrTextBlock b)
     {
-        double columnWidth = Math.Max(a.LayoutBounds.Width, b.LayoutBounds.Width);
-        if (Math.Abs(a.LayoutBounds.Y - b.LayoutBounds.Y) > columnWidth * 0.6)
+        // Detector padding is not character size. Compare centres and character pitch so
+        // a generous quad cannot bridge a gutter into the next balloon or manga panel.
+        double pitch = Math.Max(VerticalOcrGeometry.GlyphPitch(a), VerticalOcrGeometry.GlyphPitch(b));
+        if (Math.Abs(a.LayoutBounds.Y - b.LayoutBounds.Y) > pitch * 0.6)
             return false;
 
-        double gap = Math.Max(a.LayoutBounds.Left, b.LayoutBounds.Left) -
-                     Math.Min(a.LayoutBounds.Right, b.LayoutBounds.Right);
-        return gap <= columnWidth * 0.6;
+        double distance = Math.Abs((a.LayoutBounds.Left + a.LayoutBounds.Right) / 2 -
+                                   (b.LayoutBounds.Left + b.LayoutBounds.Right) / 2);
+        return distance <= pitch * 1.6;
     }
 
     private static OcrTextBlock CombineVerticalColumns(List<OcrTextBlock> group)
@@ -438,40 +375,11 @@ public class OcrService : IDisposable
     }
 
     /// <summary>
-    /// How big one cell of vertical writing is, taken from the area each character occupies rather
-    /// than from how wide the detector drew the column.
+    /// Uses native-column pitch for the square overlay cells, independently of coverage bounds.
+    /// Blocks without measured pitch retain the area-based fallback: sqrt(width * height / count)
+    /// keeps an unresolved two-column detection from doubling the font size. The column width
+    /// caps that estimate when recognition has read only a small part of a long box.
     /// </summary>
-    /// <remarks>
-    /// <para>MEASURED. This used to be the median of the column widths, which is right whenever a
-    /// detection box holds exactly one column — and silently doubles when one holds two. On the
-    /// comic page at <c>.ai/test-images/vertical-image-ja/genshin-4koma-column-merge.png</c>,
-    /// fourteen of the fifteen columns came back 22–26px wide with 21px of length per character,
-    /// and the fifteenth was a single box thrown across two of them: 46px wide, 252px long, 22
-    /// characters, 11.5px of length per character. The median of that group's two widths is the 46, so the balloon was drawn at twice
-    /// the size of the text it replaced — the complaint this fixes, and it is on the screenshot path
-    /// as much as the live one.</para>
-    ///
-    /// <para>Neither figure alone survives that box: its width is twice the truth and its length per
-    /// character is half of it. Their product is not, and that is the whole of the rule. Vertical CJK
-    /// sets on a square grid, so a column of <c>n</c> characters covers <c>width × length = n × g²</c>
-    /// whatever the box did, and <c>g = sqrt(width × length / n)</c> falls out. Over the fifteen
-    /// columns above it returns 22.6, 23.1, 24.6, 23.7 … for the good ones and <b>23.0</b> for the
-    /// doubled one — the same answer, from a box that was wrong in both directions.</para>
-    ///
-    /// <para>The width is still consulted, as a ceiling. The area rule has its own failure — a box
-    /// far longer than the few characters read out of it, which is what a stray mark or a dropped
-    /// reading looks like — and there the width is the sober number. Taking the smaller of the two
-    /// means each covers the other's failure, and it costs nothing on real columns: over those
-    /// fifteen the area figure was already below the width every time, because a detection box
-    /// carries a pixel or two of air on each side. The median across columns sits on top of both,
-    /// so one badly read column cannot carry the group.</para>
-    ///
-    /// <para>Latin down the spine of a book is not on a square grid, and this returns something too
-    /// small for it. That is already the assumption everywhere else: both overlays lay vertical text
-    /// out in square cells (<see cref="Layout.VerticalTextGrid"/>), so a Latin column was never going
-    /// to be drawn as one anyway — what changes here is only which of two wrong numbers it gets, and
-    /// this one at least cannot double.</para>
-    /// </remarks>
     private static double VerticalGlyphSize(List<OcrTextBlock> columns)
     {
         var sizes = columns
@@ -479,7 +387,10 @@ public class OcrService : IDisposable
             {
                 var characters = column.Text.Count(character => !char.IsWhiteSpace(character));
 
-                // Nothing read out of it: the box is all there is to go on.
+                // Native vertical OCR supplies pitch; legacy/unmeasured blocks fall back to area.
+                if (column.RenderGlyphHeight is > 0)
+                    return Math.Min(column.Bounds.Width, column.RenderGlyphHeight.Value);
+
                 return characters > 0
                     ? Math.Min(
                         column.Bounds.Width,
