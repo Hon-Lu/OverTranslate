@@ -24,11 +24,16 @@ public partial class AboutOverlay : UserControl
 
     private const string GitHubUrl = "https://github.com/asd880921/OverTranslate";
 
+    private const string SponsorUrl = "https://buymeacoffee.com/hon.lu";
+
     private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(140));
 
     public AboutOverlay()
     {
         InitializeComponent();
+        // The same embedded .ico the taskbar and the shell header use, so the card cannot end up
+        // showing a stale second copy of the mark.
+        AppIcon.Source = AppIconService.CreateMainIcon();
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
         VersionText.Text = LocalizationService.Format("S.About.Version", version);
     }
@@ -113,6 +118,8 @@ public partial class AboutOverlay : UserControl
     private void WebsiteBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(WebsiteUrl);
 
     private void StarBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(GitHubUrl);
+
+    private void SponsorBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(SponsorUrl);
 
     private static void OpenInBrowser(string url)
         => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });

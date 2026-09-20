@@ -14,11 +14,11 @@
              glyph there, leaving the whole card looking soft. Layout rounding snaps the card to
              whole device pixels so the text inside always starts on the pixel grid. -->
         <Border x:Name="Card"
-                Width="400"
+                Width="420"
                 UseLayoutRounding="True"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                CornerRadius="12"
+                CornerRadius="14"
                 Background="{DynamicResource AppCardBg}"
                 BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="1"
@@ -31,8 +31,9 @@
                 <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
             </Border.Effect>
 
-            <Grid Margin="24,20,24,24">
+            <Grid Margin="26,22,26,26">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -44,101 +45,145 @@
                         Style="{StaticResource OverlayCloseButton}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Margin="0,-4,-8,0"
+                        Margin="0,-6,-10,0"
                         ToolTip="{DynamicResource S.Common.Close}"
                         Click="CloseBtn_Click"/>
 
-                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="24,4,24,18">
+                <!-- Identity block. The icon is the one the taskbar and the shell header already
+                     show, loaded from the same embedded .ico rather than a second copy that could
+                     drift. Version and author sit on the same AppTextSecondary: the palette has
+                     two text levels by design, so the step between them is font size, not a third
+                     grey that would fail against AppCardBg. -->
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="26,2,26,18">
+                    <Image x:Name="AppIcon"
+                           Width="64" Height="64"
+                           HorizontalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
                     <TextBlock Text="OverTranslate"
                                FontFamily="{DynamicResource AppFont}"
-                               FontSize="22"
+                               FontSize="24"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource AppTextPrimary}"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               Margin="0,11,0,0"/>
                     <TextBlock x:Name="VersionText"
                                FontFamily="{DynamicResource AppFont}"
-                               FontSize="13"
+                               FontSize="14"
                                Foreground="{DynamicResource AppTextSecondary}"
                                HorizontalAlignment="Center"
-                               Margin="0,4,0,0"/>
+                               Margin="0,6,0,0"/>
+                    <TextBlock Text="Hon.Lu (asd880921)"
+                               FontFamily="{DynamicResource AppFont}"
+                               FontSize="12.5"
+                               Foreground="{DynamicResource AppTextSecondary}"
+                               HorizontalAlignment="Center"
+                               Margin="0,3,0,0"/>
                 </StackPanel>
 
-                <Rectangle Grid.Row="1" Height="1" Fill="{DynamicResource AppSeparator}"/>
+                <!-- Starring is the one thing a reader of this card can do that actually helps, so
+                     it takes the full width and the strongest fill. DeepAccentButton rather than
+                     AccentButton because this label is white: the dark theme's AppAccent is a pale
+                     cyan built to take black text, and white on it is unreadable.
 
-                <StackPanel Grid.Row="2" Margin="0,16,0,16">
-                    <Grid Margin="0,0,0,12">
-                        <TextBlock Text="{DynamicResource S.About.Author}"
-                                   FontFamily="{DynamicResource AppFont}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource AppTextSecondary}"
-                                   HorizontalAlignment="Left"/>
-                        <TextBlock Text="Hon.Lu (asd880921)"
-                                   FontFamily="{DynamicResource AppFont}"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AppTextPrimary}"
-                                   HorizontalAlignment="Right"/>
+                     The mark is GitHub's own, drawn as a path because the icon font has no glyph
+                     for it. The arrow is a stroked path too, not a font glyph — at this size the
+                     icon font's arrow is a hairline beside a 15px semibold label. Both are white
+                     outright rather than themed: this button's fill is a deep blue in both themes,
+                     so there is nothing for them to flip with. -->
+                <Button Grid.Row="1"
+                        Style="{StaticResource DeepAccentButton}"
+                        Height="46"
+                        HorizontalAlignment="Stretch"
+                        Click="StarBtn_Click">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Path Width="19" Height="19"
+                                  Stretch="Uniform"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,0"
+                                  Fill="#FFFFFF"
+                                  Data="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                            <TextBlock Text="{DynamicResource S.About.Star}"
+                                       VerticalAlignment="Center"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FFFFFF"
+                                       FontFamily="{DynamicResource AppFont}"/>
+                        </StackPanel>
+
+                        <Path HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Stroke="#FFFFFF"
+                              StrokeThickness="1.9"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M0 8h17M11.6 2.6 17 8l-5.4 5.4"/>
                     </Grid>
+                </Button>
 
-                    <!-- The site is the front door — feature tour, download, guides — and it picks
-                         its language from the browser, so a single URL serves every locale. It
-                         takes the accent so the card has one obvious destination; the repository
-                         is still one click away from there. The icon inherits AppAccentFg from the
-                         button rather than naming a brush, so it flips with the theme. -->
-                    <Button Style="{StaticResource AccentButton}"
-                            Height="34"
+                <!-- The site and the sponsor page are both secondary to starring, and they are the
+                     same weight as each other, so they share a row. "贊助" alone does not say where
+                     it leads, and it leads to a payment page, so the destination is in the tooltip;
+                     the button above names GitHub in the label and needs no such note. -->
+                <Grid Grid.Row="2" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Style="{StaticResource FlatButton}"
+                            Height="40"
                             HorizontalAlignment="Stretch"
-                            Margin="0,0,0,8"
                             Click="WebsiteBtn_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14" Text="&#xE774;"
-                                       Width="22" VerticalAlignment="Center"/>
+                                       FontSize="15" Text="&#xE774;"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,9,0"
+                                       Foreground="{DynamicResource AppAccent}"/>
                             <TextBlock Text="{DynamicResource S.About.Website}"
                                        VerticalAlignment="Center"
                                        FontFamily="{DynamicResource AppFont}"/>
                         </StackPanel>
                     </Button>
 
-                    <!-- GitHub is worth a button, but reading the source is not what most people
-                         open this card for — starring is the one thing they can do that helps. The
-                         glyph is the same accent star the sentence below uses, so the button and
-                         the ask read as one thought. -->
-                    <Button Style="{StaticResource FlatButton}"
-                            Height="34"
+                    <Button Grid.Column="2"
+                            Style="{StaticResource FlatButton}"
+                            Height="40"
                             HorizontalAlignment="Stretch"
-                            Click="StarBtn_Click">
+                            ToolTip="{DynamicResource S.About.SponsorTip}"
+                            Click="SponsorBtn_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14" Text="&#xE735;"
-                                       Width="22" VerticalAlignment="Center"
+                                       FontSize="15" Text="&#xEC32;"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,9,0"
                                        Foreground="{DynamicResource AppAccent}"/>
-                            <TextBlock Text="{DynamicResource S.About.Star}"
+                            <TextBlock Text="{DynamicResource S.About.Sponsor}"
                                        VerticalAlignment="Center"
                                        FontFamily="{DynamicResource AppFont}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </Grid>
 
-                <!-- The reader is already using the app, so a feature pitch here has no audience.
-                     What they cannot know from the UI is that it is free and open source, and that
-                     starring it actually helps. It no longer names GitHub — the button directly
-                     above says where, so this only has to say why. The star is drawn from the icon
-                     font rather than the ⭐ emoji: WPF has no colour-font support, so the emoji
-                     would fall back to a black-and-white glyph at an unpredictable size. -->
-                <TextBlock Grid.Row="3"
+                <Rectangle Grid.Row="3" Height="1" Margin="0,18,0,0"
+                           Fill="{DynamicResource AppSeparator}"/>
+
+                <!-- The Star button above is now the largest thing on the card, so this sentence no
+                     longer repeats the ask — it only says what the interface cannot: that the app
+                     is free, open source, and has nothing to sell you. -->
+                <TextBlock Grid.Row="4"
+                           Text="{DynamicResource S.About.OpenSource}"
                            FontFamily="{DynamicResource AppFont}"
                            FontSize="12"
                            Foreground="{DynamicResource AppTextSecondary}"
                            TextWrapping="Wrap"
-                           LineHeight="18">
-                    <Run Text="{DynamicResource S.About.OpenSourceBefore}"/>
-                    <Run Text="&#xE735;"
-                         FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                         FontSize="11"
-                         Foreground="{DynamicResource AppAccent}"/>
-                    <Run Text="{DynamicResource S.About.OpenSourceAfter}"/>
-                </TextBlock>
+                           TextAlignment="Center"
+                           LineHeight="18"
+                           Margin="0,14,0,0"/>
             </Grid>
         </Border>
     </Grid>

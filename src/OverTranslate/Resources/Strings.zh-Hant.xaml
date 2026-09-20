@@ -40,15 +40,12 @@
     <sys:String x:Key="S.Tray.Exit">結束</sys:String>
 
     <!-- ── About ── -->
-    <sys:String x:Key="S.About.Author">作者</sys:String>
     <sys:String x:Key="S.About.Website">前往官方網站</sys:String>
-    <sys:String x:Key="S.About.Star">到 GitHub 點個 Star</sys:String>
+    <sys:String x:Key="S.About.Star">GitHub 給顆 Star 支持</sys:String>
+    <sys:String x:Key="S.About.Sponsor">贊助</sys:String>
+    <sys:String x:Key="S.About.SponsorTip">透過 Buy Me a Coffee 贊助</sys:String>
     <sys:String x:Key="S.About.Version">版本 {0}</sys:String>
-    <!-- Split around the star glyph, which sits mid-sentence in every language but not at the same
-         point. xml:space keeps the space either side of it — XAML trims element content otherwise,
-         and the glyph would end up wedged against the words. -->
-    <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">免費開源，可自由使用。覺得好用的話，歡迎幫忙點顆 </sys:String>
-    <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> 支持一下！</sys:String>
+    <sys:String x:Key="S.About.OpenSource">免費開源，可自由使用。</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">複製訊息</sys:String>
