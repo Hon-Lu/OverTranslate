@@ -177,9 +177,11 @@ public class OcrService : IDisposable
         using var pixels = bitmap is null ? null : OnnxOcrEngine.ConvertToSkBitmap(bitmap);
         var merged = MergeVerticalColumns(
             VerticalOcrGeometry.JoinColumnFragments(candidates, pixels));
-
         merged.AddRange(across.Select(block => block with { RunsAcross = true }));
-        return merged;
+
+        // Last, so that a reading sitting on a row is judged against it too — the furigana over a
+        // sign reads the same way whether the sign runs down the page or across it.
+        return WithoutRuby(merged);
     }
 
     /// <summary>
@@ -325,6 +327,74 @@ public class OcrService : IDisposable
     /// Reassembles adjacent right-to-left columns that share a top edge. A lone column is split
     /// into character cells so overlay layout still receives a usable vertical footprint.
     /// </summary>
+    /// <summary>
+    /// How small a group has to be set, against the one it sits on, to be the ruby over it.
+    /// </summary>
+    /// <remarks>
+    /// Ruby is set at about half the body size, and the corpus agrees with the typography. MEASURED
+    /// over the 24 comic pages, on every pair of vertical groups whose boxes overlap: the ones where
+    /// the small group is a reading — <c>じょうだん</c> over <c>冗談</c>, <c>まじゅっ</c> over
+    /// <c>魔術</c>, <c>ぐち</c> over <c>口</c> — run from 0.22 to 0.58 of the body, and the ones
+    /// where it is a piece of the sentence that grouping left behind — <c>間だろ</c>, <c>に礼をして
+    /// ほしくて</c>, <c>の</c>, <c>べて</c> — run 0.65, 0.73, 0.86, 1.02. The bar sits in the gap,
+    /// and it is the size rather than the position that separates them: both kinds sit right on top
+    /// of the text they belong to.
+    /// </remarks>
+    private const double RubyMaxRelativeSize = 0.60;
+
+    /// <summary>How much of the smaller group has to lie on the other one.</summary>
+    /// <remarks>
+    /// Half, where the measurement would allow a third: every ruby pair on the corpus but one is at
+    /// 0.64 or above and most are wholly inside, so the looser bar buys one more case
+    /// (<c>ちゃく</c>, at 0.41) and pays for it by reaching towards the small aside balloons that
+    /// sit beside a big one. The one it misses is a reading printed twice; the ones it would start
+    /// guessing at are sentences.
+    /// </remarks>
+    private const double RubySharedArea = 0.50;
+
+    /// <summary>
+    /// Drops a group that is the reading printed over another one rather than a line of its own.
+    /// </summary>
+    /// <remarks>
+    /// <para>Two translations drawn on top of each other, which is what this is here to stop, and
+    /// what the user sees first: the balloon's own translation and a second bubble over it holding
+    /// whatever the ruby was read as. The ruby is a pronunciation guide for text that is already in
+    /// the group underneath, so there is nothing in it to lose — and it cannot be merged into that
+    /// group either, because inserting a reading into the middle of a sentence is how
+    /// <c>まえきようかぎお前には今日限りで</c> happens.</para>
+    ///
+    /// <para>WHAT IS DROPPED must be a column, and that is not a detail: the pairs this would
+    /// otherwise get wrong are all rows. A name plate sets its title smaller than the name —
+    /// <c>剣聖</c> at 0.51 of <c>オリヴァー・カーディフ</c> — and the two boxes overlap, so on size
+    /// and position alone the title reads exactly like ruby. Ruby in vertical writing is itself set
+    /// in columns, so asking that of the candidate alone tells the two apart, and leaves the body it
+    /// sits on free to be either: <c>ぐち</c> over the horizontal sign <c>迷宮入り口</c> is still
+    /// a reading printed over the word it belongs to.</para>
+    /// </remarks>
+    internal static List<OcrTextBlock> WithoutRuby(List<OcrTextBlock> groups) =>
+        groups.Count < 2
+            ? groups
+            : [.. groups.Where(group => !groups.Any(other =>
+                !ReferenceEquals(other, group) && IsRubyOver(group, other)))];
+
+    private static bool IsRubyOver(OcrTextBlock candidate, OcrTextBlock body)
+    {
+        if (candidate.RunsAcross ||
+            candidate.RenderGlyphHeight is not { } reading ||
+            body.RenderGlyphHeight is not { } text ||
+            reading >= text * RubyMaxRelativeSize)
+            return false;
+
+        var shared = Rect.Intersect(candidate.Bounds, body.Bounds);
+        if (shared.IsEmpty)
+            return false;
+
+        // Against the candidate's own area: the question is how much of the reading lies on the
+        // text, not how much of a long sentence happens to be covered by a two-glyph gloss.
+        var area = candidate.Bounds.Width * candidate.Bounds.Height;
+        return area > 0 && shared.Width * shared.Height / area >= RubySharedArea;
+    }
+
     internal static List<OcrTextBlock> MergeVerticalColumns(List<OcrTextBlock> columns)
     {
         var remaining = columns
