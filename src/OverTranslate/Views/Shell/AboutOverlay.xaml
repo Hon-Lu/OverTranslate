@@ -100,24 +100,57 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- GitHub is worth a button, but reading the source is not what most people
-                         open this card for — starring is the one thing they can do that helps. The
-                         glyph is the same accent star the sentence below uses, so the button and
-                         the ask read as one thought. -->
-                    <Button Style="{StaticResource FlatButton}"
-                            Height="34"
-                            HorizontalAlignment="Stretch"
-                            Click="StarBtn_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14" Text="&#xE735;"
-                                       Width="22" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource AppAccent}"/>
-                            <TextBlock Text="{DynamicResource S.About.Star}"
-                                       VerticalAlignment="Center"
-                                       FontFamily="{DynamicResource AppFont}"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- The site is where you go to learn more; starring and sponsoring are both
+                         ways to help. Those two belong on one row — stacked as a third full-width
+                         button, the card would read as three consecutive appeals instead of a
+                         version dialogue. Side by side each button has about 172px, so the labels
+                         are short enough that the glyph carries the meaning, which also keeps the
+                         longer Japanese and Korean wording inside the button. Both glyphs take the
+                         accent: two identical buttons in one row with different icon colours reads
+                         as a mistake, not as a hierarchy. Where each one leads is in the tooltip,
+                         because "Star" and "Sponsor" alone do not say it — least of all the one
+                         that opens a payment page. -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Style="{StaticResource FlatButton}"
+                                Height="34"
+                                HorizontalAlignment="Stretch"
+                                ToolTip="{DynamicResource S.About.StarTip}"
+                                Click="StarBtn_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="14" Text="&#xE735;"
+                                           Width="22" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AppAccent}"/>
+                                <TextBlock Text="{DynamicResource S.About.Star}"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource AppFont}"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2"
+                                Style="{StaticResource FlatButton}"
+                                Height="34"
+                                HorizontalAlignment="Stretch"
+                                ToolTip="{DynamicResource S.About.SponsorTip}"
+                                Click="SponsorBtn_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="14" Text="&#xEC32;"
+                                           Width="22" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AppAccent}"/>
+                                <TextBlock Text="{DynamicResource S.About.Sponsor}"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource AppFont}"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </StackPanel>
 
                 <!-- The reader is already using the app, so a feature pitch here has no audience.

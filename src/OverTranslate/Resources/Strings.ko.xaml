@@ -47,7 +47,10 @@
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Author">만든 사람</sys:String>
     <sys:String x:Key="S.About.Website">공식 웹사이트 열기</sys:String>
-    <sys:String x:Key="S.About.Star">GitHub에서 Star 누르기</sys:String>
+    <sys:String x:Key="S.About.Star">Star</sys:String>
+    <sys:String x:Key="S.About.StarTip">GitHub에서 프로젝트에 Star 누르기</sys:String>
+    <sys:String x:Key="S.About.Sponsor">후원하기</sys:String>
+    <sys:String x:Key="S.About.SponsorTip">Buy Me a Coffee로 후원하기</sys:String>
     <sys:String x:Key="S.About.Version">버전 {0}</sys:String>
     <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">무료 오픈 소스로 자유롭게 사용할 수 있습니다. 마음에 드셨다면 </sys:String>
     <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> 하나로 응원해 주세요!</sys:String>

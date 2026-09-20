@@ -24,6 +24,8 @@ public partial class AboutOverlay : UserControl
 
     private const string GitHubUrl = "https://github.com/asd880921/OverTranslate";
 
+    private const string SponsorUrl = "https://buymeacoffee.com/hon.lu";
+
     private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(140));
 
     public AboutOverlay()
@@ -113,6 +115,8 @@ public partial class AboutOverlay : UserControl
     private void WebsiteBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(WebsiteUrl);
 
     private void StarBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(GitHubUrl);
+
+    private void SponsorBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(SponsorUrl);
 
     private static void OpenInBrowser(string url)
         => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });

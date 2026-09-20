@@ -47,7 +47,10 @@
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Author">作者</sys:String>
     <sys:String x:Key="S.About.Website">公式サイトを開く</sys:String>
-    <sys:String x:Key="S.About.Star">GitHub で Star をつける</sys:String>
+    <sys:String x:Key="S.About.Star">Star</sys:String>
+    <sys:String x:Key="S.About.StarTip">GitHub でプロジェクトに Star をつける</sys:String>
+    <sys:String x:Key="S.About.Sponsor">支援する</sys:String>
+    <sys:String x:Key="S.About.SponsorTip">Buy Me a Coffee で支援する</sys:String>
     <sys:String x:Key="S.About.Version">バージョン {0}</sys:String>
     <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">無料・オープンソースで自由に使えます。気に入ったら </sys:String>
     <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> を押して応援してください！</sys:String>

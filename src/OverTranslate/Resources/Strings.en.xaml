@@ -46,7 +46,10 @@
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Author">Author</sys:String>
     <sys:String x:Key="S.About.Website">Visit the website</sys:String>
-    <sys:String x:Key="S.About.Star">Star it on GitHub</sys:String>
+    <sys:String x:Key="S.About.Star">Star</sys:String>
+    <sys:String x:Key="S.About.StarTip">Star the project on GitHub</sys:String>
+    <sys:String x:Key="S.About.Sponsor">Support</sys:String>
+    <sys:String x:Key="S.About.SponsorTip">Support via Buy Me a Coffee</sys:String>
     <sys:String x:Key="S.About.Version">Version {0}</sys:String>
     <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">Free and open source. If you like it, drop a </sys:String>
     <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> to show your support!</sys:String>
