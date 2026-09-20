@@ -329,7 +329,14 @@ public partial class OverlayWindow : Window
                 selScreenY,
                 selScreenWidth,
                 selScreenHeight);
-            return;
+
+            // A page of vertical writing is not made only of vertical writing. What the reading
+            // stage marked as running across — a name plate, a caption box, a scene label — is set
+            // across, by the ordinary path below, and falls through to it here. Both passes are
+            // handed the whole list so each still sees the other's boxes when it asks what its
+            // neighbours are; each draws only its own kind.
+            if (!blocks.Any(block => block.RunsAcross))
+                return;
         }
 
         // Window top-left in physical pixels
@@ -341,6 +348,8 @@ public partial class OverlayWindow : Window
         foreach (var block in blocks)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+            // Drawn as a column already; here only to be counted as a neighbour.
+            if (_currentVerticalText && !block.RunsAcross) continue;
 
             // Physical pixel position on screen
             double physX = selScreenX + block.Bounds.X;
@@ -661,6 +670,9 @@ public partial class OverlayWindow : Window
         foreach (var block in blocks)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText))
+                continue;
+            // Horizontal writing on a vertical page: the ordinary path sets it across.
+            if (block.RunsAcross)
                 continue;
 
             double canvasX = (selScreenX + block.Bounds.X - winPhysLeft) / _dpiX;

@@ -546,7 +546,11 @@ public partial class RealtimeBlockWindow : Window
         foreach (var block in _lines)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
-            if (_orientation == RealtimeTextOrientation.Vertical)
+
+            // RunsAcross is the reading stage saying this block is horizontal writing that happened
+            // to be on a vertical page — a name plate, a caption box, a scene label. It falls
+            // through to the branches below, which are the ones that set a line across.
+            if (_orientation == RealtimeTextOrientation.Vertical && !block.RunsAcross)
             {
                 // Before the mode, and instead of it. Both of the horizontal branches below are
                 // about lines that run across — one wraps a paragraph into rows, the other fits a

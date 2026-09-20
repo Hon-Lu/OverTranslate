@@ -893,7 +893,7 @@ public sealed class RealtimeTranslationSession
                         : block.Text,
                 block.Bounds,
                 block.SourceLineBounds,
-                block.RenderGlyphHeight))
+                block.RenderGlyphHeight) { RunsAcross = block.RunsAcross })
             .ToList();
     }
 

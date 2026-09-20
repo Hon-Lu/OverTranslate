@@ -90,7 +90,8 @@ public class GTranslateProvider : ITranslationProvider
             var (translation, detLang) = results[i];
             if (!string.IsNullOrEmpty(detLang))
                 langVotes[detLang] = langVotes.GetValueOrDefault(detLang) + 1;
-            translated.Add(new TranslatedBlock(blocks[i].Text, translation, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight));
+            translated.Add(new TranslatedBlock(blocks[i].Text, translation, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
+                { RunsAcross = blocks[i].RunsAcross });
         }
 
         string detectedLang = langVotes.Count > 0 ? langVotes.MaxBy(kv => kv.Value).Key : "";

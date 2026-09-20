@@ -35,6 +35,22 @@ public record OcrTextBlock(
 
     // Optional screenshot-only evidence; never used to size the rendered translation.
     public double? LayoutInkHeight { get; init; }
+
+    /// <summary>
+    /// This block's own text runs across the page rather than down it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Only the vertical pipeline sets this, and only for what it found that is not a column:
+    /// a name plate, a caption box, a scene label, the chapter-end line. A page of vertical writing
+    /// is not made only of vertical writing, and the overlay cannot tell the two apart once they
+    /// are side by side — a short column and a short row are the same rectangle. So the stage that
+    /// does know says so here.</para>
+    ///
+    /// <para>Left false by the horizontal pipeline, where everything runs across and nothing needs
+    /// telling. Read only on the vertical branch of either overlay, which is the one place where
+    /// "not a column" is the thing it means.</para>
+    /// </remarks>
+    public bool RunsAcross { get; init; }
 }
 
 public class OcrService : IDisposable
@@ -127,6 +143,24 @@ public class OcrService : IDisposable
         return blocks is null ? null : GroupVertical(blocks, bitmap.Width, realtime: true, bitmap: bitmap);
     }
 
+    /// <summary>
+    /// Columns are assembled right to left; the horizontal writing on the same page is kept beside
+    /// them rather than thrown away.
+    /// </summary>
+    /// <remarks>
+    /// <para>MEASURED. Keeping the rows out of the column merge is necessary — a box thrown across
+    /// two columns joins them into one block, which is what
+    /// <see cref="IsVerticalColumnCandidate"/> is for. Dropping them from the OUTPUT as well was a
+    /// separate thing the same filter did, and it cost real text: over the 15 comic pages in
+    /// <c>.ai/test-images/vertical-image-ja2</c> it discarded 11 blocks across 6 of them — the name
+    /// plates (<c>付与術士</c>, <c>オルン・ドゥーラ</c>), three lines of a narration box, a scene
+    /// label, the chapter-end line. Every one had been read correctly, at 0.87 to 1.00 confidence.
+    /// Not a column and not wanted are different statements, and only the first was measured.</para>
+    ///
+    /// <para>They are marked rather than merged into the column groups. Reading order between a
+    /// caption and the columns around it is a question nothing here can answer, and guessing at it
+    /// would put a name plate in the middle of somebody's dialogue.</para>
+    /// </remarks>
     internal static List<OcrTextBlock> GroupVertical(
         List<OcrTextBlock> blocks, double frameWidth, bool realtime = false, Bitmap? bitmap = null)
     {
@@ -135,10 +169,17 @@ public class OcrService : IDisposable
                 .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
                     block.Bounds.Width, frameWidth, block.Text)).ToList();
 
+        var candidates = new List<OcrTextBlock>();
+        var across = new List<OcrTextBlock>();
+        foreach (var block in blocks)
+            (IsVerticalColumnCandidate(block) ? candidates : across).Add(block);
+
         using var pixels = bitmap is null ? null : OnnxOcrEngine.ConvertToSkBitmap(bitmap);
-        var columns = VerticalOcrGeometry.JoinColumnFragments(
-            blocks.Where(IsVerticalColumnCandidate).ToList(), pixels);
-        return MergeVerticalColumns(columns);
+        var merged = MergeVerticalColumns(
+            VerticalOcrGeometry.JoinColumnFragments(candidates, pixels));
+
+        merged.AddRange(across.Select(block => block with { RunsAcross = true }));
+        return merged;
     }
 
     /// <summary>

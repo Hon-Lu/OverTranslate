@@ -220,6 +220,53 @@ public class RealtimeVerticalTextTests
         Assert.True(columns > 1, "a translation this long is expected to take more than one column");
     }
 
+    /// <summary>
+    /// A block the reading stage marked as running across is set across, even in a vertical region.
+    /// </summary>
+    /// <remarks>
+    /// A comic page in vertical writing still carries horizontal writing on it — a name plate, a
+    /// caption box, a scene label. Set down a square grid instead, a name of eight characters over
+    /// a 240x36 box becomes seven one-cell columns filled right to left: the name comes out
+    /// backwards and the last character has nowhere to go. That is worse than not drawing it, which
+    /// is what the pipeline used to do, so keeping the text is only half the fix.
+    /// </remarks>
+    [Fact]
+    public void A_block_marked_as_running_across_is_set_across()
+    {
+        var plate = new Rect(200, 60, 240, 36);
+
+        var drawn = OnStaThread(() => DrawAcross(
+            new TranslatedBlock("オルン・ドゥーラ", "奧倫·多拉", plate, null, 32)
+            {
+                RunsAcross = true,
+            }));
+
+        // One line across, not a stack of one-cell columns: the vertical path gives every glyph its
+        // own TextBlock, and the horizontal one draws the whole line as a single element.
+        Assert.Equal("奧倫·多拉", drawn);
+    }
+
+    /// <summary>Reads back the one text element the horizontal path draws for a line.</summary>
+    private static string DrawAcross(TranslatedBlock block)
+    {
+        var window = new RealtimeBlockWindow(
+            0, ColumnBlock, _ => null, "JA", "ZH-TW",
+            RealtimeSubtitleColors.DefaultText,
+            RealtimeSubtitleColors.DefaultScrim,
+            RealtimeSubtitleColors.DefaultScrimOpacity,
+            orientation: RealtimeTextOrientation.Vertical);
+
+        typeof(RealtimeBlockWindow)
+            .GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(window, true);
+
+        window.SetLines([block]);
+
+        var canvas = (Canvas)window.FindName("TextCanvas");
+        var container = Assert.IsType<Border>(Assert.Single(canvas.Children));
+        return Assert.IsType<TextBlock>(container.Child).Text;
+    }
+
     /// <summary>The background still covers the source it is there to hide.</summary>
     [Fact]
     public void The_background_covers_the_source_column()

@@ -17,7 +17,18 @@ public record TranslatedBlock(
 
     // Set by placement, read by the overlay. Default until something decides otherwise, so the
     // realtime path and the translation providers carry it without knowing it is there.
-    OverlayLayoutIntent LayoutIntent = OverlayLayoutIntent.Default);
+    OverlayLayoutIntent LayoutIntent = OverlayLayoutIntent.Default)
+{
+    /// <summary>
+    /// Carried over from the block this was read from — see <see cref="OcrTextBlock.RunsAcross"/>.
+    /// </summary>
+    /// <remarks>
+    /// A property rather than a constructor parameter because every provider builds this record
+    /// from the same five fields and none of them has any business deciding this one. They copy it
+    /// across unread, which is all a translator can honestly do with it.
+    /// </remarks>
+    public bool RunsAcross { get; init; }
+}
 
 public class TranslationService
 {

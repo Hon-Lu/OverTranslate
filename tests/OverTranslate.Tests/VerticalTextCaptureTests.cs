@@ -105,6 +105,49 @@ public class VerticalTextCaptureTests
         Assert.Equal(8, merged.RenderGlyphHeight!.Value, precision: 10);
     }
 
+    /// <summary>
+    /// Horizontal writing on a vertical page is kept and marked, not discarded.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, on the 15 comic pages in <c>.ai/test-images/vertical-image-ja2</c>: the wide-box
+    /// filter threw away 11 correctly-read blocks across 6 of them at 0.87 to 1.00 confidence — the
+    /// name plates, a three-line narration box, a scene label, the chapter-end line. Keeping them
+    /// out of the column merge is the part that was needed; dropping them from the output was a
+    /// separate thing the same test did.
+    /// </remarks>
+    [Fact]
+    public void GroupVertical_KeepsHorizontalTextAndMarksItAsRunningAcross()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            new("右", new System.Windows.Rect(80, 10, 10, 60)),
+            new("オルン・ドゥーラ", new System.Windows.Rect(20, 100, 240, 36)),
+            new("左", new System.Windows.Rect(20, 10, 10, 60)),
+        }.AsDetected();
+
+        var result = OcrService.GroupVertical(blocks, frameWidth: 300);
+
+        // The wide box still does not bridge the two columns.
+        Assert.Equal(["右", "左", "オルン・ドゥーラ"], result.Select(block => block.Text));
+        Assert.All(result.Take(2), column => Assert.False(column.RunsAcross));
+        Assert.True(result[2].RunsAcross, "the name plate is expected to be marked as running across");
+    }
+
+    /// <summary>The flag says what the text does, not how wide its box happens to be.</summary>
+    [Fact]
+    public void GroupVertical_LeavesColumnGroupsUnmarked()
+    {
+        var columns = new List<OcrTextBlock>
+        {
+            new("右", new System.Windows.Rect(80, 10, 10, 60)),
+            new("中", new System.Windows.Rect(68, 12, 10, 60)),
+        }.AsDetected();
+
+        var merged = Assert.Single(OcrService.GroupVertical(columns, frameWidth: 300));
+
+        Assert.False(merged.RunsAcross);
+    }
+
     [Fact]
     public void MergeVerticalColumns_KeepsAOneCharacterWideDetection()
     {
