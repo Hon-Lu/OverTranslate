@@ -255,6 +255,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 .Recognize(Enumerable.Range(0, session.Boxes.Count).ToArray(), out var recognised)
                 .ToList();
 
+            if (verticalText && TurnedFrameDetection.Enabled)
+                blocks.AddRange(ReadTurnedFrame(
+                    runtime, bitmap, normalizedLanguage, maxDetectSize, blocks));
+
             // Counts and lengths only — enough to tell "found nothing" from "found the wrong thing"
             // without the recognised text itself, which LogBlocks keeps at Debug.
             Log.Info(
@@ -601,6 +605,61 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             if (_releasesRuntime)
                 _owner.ReleaseRuntime();
         }
+    }
+
+    /// <summary>
+    /// Reads the turned frame and returns only what the upright pass never found there.
+    /// </summary>
+    /// <remarks>
+    /// <para>Detection runs over the whole turned frame — it is one pass and cannot be asked about
+    /// part of a picture — but recognition is per box, and only the boxes that survive the overlap
+    /// test are recognised. That is what makes this cost a detection rather than a whole second
+    /// read: see <see cref="TurnedFrameDetection"/> for the measurement.</para>
+    ///
+    /// <para>What it is compared against is what the upright pass READ, not what it detected, and
+    /// that distinction is the whole of it. MEASURED on
+    /// <c>.ai/test-images/vertical-image-ja2/2026-09-20 19 14 55.png</c>: the upright detector
+    /// returns 15 boxes and 13 of them produce text, and the two that produce none sit exactly on
+    /// the balloon this pass exists to recover. Compared against the boxes, every turned candidate
+    /// looks like somewhere the upright pass had already been, and the balloon is skipped — a box
+    /// that was found and read as nothing is not coverage, it is the failure itself.</para>
+    ///
+    /// <para>The turned session is a vertical one like the upright session, so its blocks arrive
+    /// prepared the same way — <see cref="VerticalOcrGeometry.PrepareBlocks"/> and all. The two
+    /// pieces of vertical machinery that would be wrong on a turned frame decline by themselves:
+    /// a column is a WIDE box there, so neither the crop turn nor the column split has anything to
+    /// act on.</para>
+    /// </remarks>
+    private List<OcrTextBlock> ReadTurnedFrame(
+        RapidOcrRuntime runtime,
+        Bitmap bitmap,
+        string normalizedLanguage,
+        int? maxDetectSize,
+        IReadOnlyList<OcrTextBlock> upright)
+    {
+        using var turned = TurnedFrameDetection.Turn(bitmap);
+        using var session = new DetectionSession(
+            this, runtime, turned, normalizedLanguage, maxDetectSize,
+            releasesRuntime: false, repairRows: false, verticalText: true);
+
+        var wanted = TurnedFrameDetection.PiecesTheUprightPassMissed(
+            [.. upright.Select(box => box.Bounds)],
+            [.. session.Boxes.Select(box => box.Bounds)],
+            bitmap.Width);
+
+        if (wanted.Count == 0)
+            return [];
+
+        var found = session.Recognize(wanted)
+            .Where(TurnedFrameDetection.WorthKeeping)
+            .Select(block => TurnedFrameDetection.ToUpright(block, bitmap.Width))
+            .ToList();
+
+        Log.Info(
+            "ONNX OCR turned frame: {Candidates} box(es) the upright pass missed, {Blocks} read",
+            wanted.Count, found.Count);
+
+        return found;
     }
 
     private static readonly MethodInfo PrepareDetectorInputMethod =
