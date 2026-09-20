@@ -35,17 +35,32 @@ namespace OverTranslate.Services.Ocr;
 internal static class TurnedFrameDetection
 {
     /// <summary>
-    /// How much of the smaller box two readings may share before the second is taken to be the same
-    /// piece of writing.
+    /// How much of the smaller box two readings may share before the second is taken to be the
+    /// same piece of writing.
     /// </summary>
     /// <remarks>
-    /// Deliberately low. What this pass is for is writing the upright one did not find at all, so a
-    /// box landing on one that already exists is noise at best and a doubled reading at worst — the
-    /// same column recognised twice and drawn twice, one translation on top of the other. It also
-    /// covers a column the upright pass found in fragments: the turned pass's whole column contains
-    /// each fragment, so its overlap against the smaller of the two is 1.
+    /// <para>What this pass is for is writing the upright one did not find at all, so a box landing
+    /// on one that already exists is noise at best and a doubled reading at worst — the same column
+    /// recognised twice and drawn twice, one translation on top of the other. It also covers a
+    /// column the upright pass found in fragments: the turned pass's whole column contains each
+    /// fragment, so its overlap against the smaller of the two is 1.</para>
+    ///
+    /// <para>MEASURED as a window rather than picked, over the 15 comic pages, because both ends of
+    /// it cost text. It began at 0.30, and that is low enough to refuse a column the upright pass
+    /// never read. Where one detector quad is drawn around a column, the reading beside it and the
+    /// HEAD of the balloon, the upright pass reads that quad as the middle column alone — so the
+    /// head IS covered, by a box whose text is not the head's. On 2026-09-20 19 14 57.png the head
+    /// is オレは, this pass finds it at 1069,995 36x84, it shares 0.56 of itself with that box, and
+    /// the balloon was translated as 正しい判断をしたまでだ without it.</para>
+    ///
+    /// <para>The window: at 0.50 nothing changes; at 0.60 that head comes back and a balloon that
+    /// had been merged into its neighbour separates; 0.70 reads the same; at 0.75 the first doubled
+    /// column appears (<c>ねえお姉…お姉</c>) and by 0.85 there are fifteen of them —
+    /// <c>改めて改めて</c>, <c>でも料理は本当にでも料理は本当に</c>, <c>6565</c>. This sits in the
+    /// middle of that window, and the count of overlapping translation boxes over the corpus does
+    /// not move at it.</para>
     /// </remarks>
-    private const double SamePieceOfWriting = 0.30;
+    private const double SamePieceOfWriting = 0.65;
 
     /// <summary>Off only for measuring what it is worth; the app always leaves it on.</summary>
     internal static bool Enabled { get; set; } = true;

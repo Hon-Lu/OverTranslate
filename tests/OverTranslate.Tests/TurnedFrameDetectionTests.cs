@@ -67,6 +67,29 @@ public class TurnedFrameDetectionTests
         Assert.Equal([0], missed);
     }
 
+    /// <summary>
+    /// A column the upright pass never read, under a box that holds the column beside it.
+    /// </summary>
+    /// <remarks>
+    /// The case the overlap bar was raised for, with the figures off
+    /// 2026-09-20 19 14 57.png. One detector quad is drawn around 正しい判断を, the reading beside
+    /// it and the head of the balloon; the upright pass reads that quad as the middle column alone.
+    /// So the head is covered — by a box whose text is not the head's — and a bar low enough to
+    /// refuse anything half covered refuses the only reading of it there is.
+    /// </remarks>
+    [Fact]
+    public void A_piece_under_the_box_of_a_column_that_was_read_as_something_else_is_taken()
+    {
+        var readAsTheColumnBeside = new Rect(1024, 986, 65, 177);
+        // オレは, which shares 0.56 of itself with that box: 1069,995 36x84 upright.
+        var head = new Rect(995, 715, 84, 36);
+
+        var missed = TurnedFrameDetection.PiecesTheUprightPassMissed(
+            [readAsTheColumnBeside], [head], sourceWidth: 1820);
+
+        Assert.Equal([0], missed);
+    }
+
     /// <summary>Two turned boxes on the same place cannot both come through.</summary>
     [Fact]
     public void The_turned_passs_own_boxes_are_weighed_against_each_other_too()
