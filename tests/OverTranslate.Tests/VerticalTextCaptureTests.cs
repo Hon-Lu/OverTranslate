@@ -50,6 +50,50 @@ public class VerticalTextCaptureTests
         Assert.Equal("別", result[1].Text);
     }
 
+    /// <summary>
+    /// The columns of one balloon do not start at one height, and are still one balloon.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, on <c>2026-09-20 19 14 56 (3).png</c> read at the size a two-page spread gives
+    /// each page: the three columns of <c>これまで苦楽を共にしてきた仲間に対する態度か？</c> start
+    /// 11px apart on a 14.6px pitch — 0.75 of a character. Judged on their top edges they were
+    /// three separate groups, and because their padded boxes overlap, three translations were
+    /// drawn on top of one another. The balloon is an oval: the columns at its edges are shorter
+    /// and begin lower, by a fraction of their own length rather than by a fixed number of
+    /// characters.
+    /// </remarks>
+    [Fact]
+    public void MergeVerticalColumns_JoinsColumnsThatStartAtDifferentHeights()
+    {
+        var columns = new List<OcrTextBlock>
+        {
+            new("これまで苦楽を", new System.Windows.Rect(239, 154, 31, 102)),
+            new("共にしてきた", new System.Windows.Rect(220, 165, 26, 81)),
+            new("仲間に対する態度か？", new System.Windows.Rect(200, 153, 32, 144)),
+        }.AsDetected();
+
+        var merged = Assert.Single(OcrService.MergeVerticalColumns(columns));
+
+        Assert.Equal("これまで苦楽を共にしてきた仲間に対する態度か？", merged.Text);
+    }
+
+    /// <summary>
+    /// Running alongside is not enough on its own — a gutter still separates two balloons.
+    /// </summary>
+    [Fact]
+    public void MergeVerticalColumns_StillRefusesColumnsAcrossAGutter()
+    {
+        var columns = new List<OcrTextBlock>
+        {
+            new("これまで苦楽を", new System.Windows.Rect(239, 154, 31, 102)),
+            new("別の吹き出し", new System.Windows.Rect(120, 165, 26, 81)),
+        }.AsDetected();
+
+        var result = OcrService.MergeVerticalColumns(columns);
+
+        Assert.Equal(2, result.Count);
+    }
+
     [Fact]
     public void MergeVerticalColumns_DropsWideHorizontalTextBeforeItBridgesSeparateColumns()
     {
@@ -382,33 +426,52 @@ public class VerticalTextCaptureTests
 
     // Horizontal capture profiles must not change native vertical grouping.
     [Fact]
-    public async Task TheRelaxedProfile_DoesNotReachVerticalGrouping()
+    public async Task VerticalGroupingAnswersOnGeometry_NotOnACaptureProfile()
     {
         var (previous, current) = OcrTextBlockGrouperTests.CentredBalloonPair();
         OcrTextBlock[] pair = [previous, current];
 
-        // The two profiles really do answer this pair differently.
+        // The two profiles really do answer this pair differently, which is what makes it worth
+        // asking the vertical path about at all.
         Assert.Equal(2, OcrTextBlockGrouper.Group([.. pair], GroupingProfile.Interface).Count);
         Assert.Single(OcrTextBlockGrouper.Group([.. pair], GroupingProfile.General));
 
+        // Turned into columns the pair is joined, and it is the geometry saying so: the two run
+        // alongside each other for their whole length, 1.4 character widths apart, which is what
+        // the two columns of one balloon look like — and the fixture is one balloon, "A BARBARIAN
+        // A HEREDITARY TITLE!". It used to be refused, by a test on the columns' TOP EDGES that a
+        // balloon's ragged tops fail; see SideBySideAlongTheColumn for the page that cost.
+        Assert.Single(await GroupColumns(pair, gutter: 0));
+
+        // A gutter between them is refused, with the profiles no more involved than before: the
+        // distance test is what holds the edge of a balloon, and it still does.
+        var apart = await GroupColumns(pair, gutter: 260);
+        Assert.Equal(2, apart.Count);
+        Assert.DoesNotContain(
+            apart,
+            block => block.Text.Contains("A BARBARIAN A") && block.Text.Contains("HEREDITARY TITLE!"));
+    }
+
+    /// <summary>
+    /// Runs the vertical pipeline over the pair turned into columns, moved this far apart.
+    /// </summary>
+    private static async Task<List<OcrTextBlock>> GroupColumns(OcrTextBlock[] pair, double gutter)
+    {
         // Big enough to hold the fixture's boxes: mapping back off the edge of the picture would
         // make the column merge judge rectangles that never existed.
         using var source = new Bitmap(1300, 1300);
-        using var engine = new RecordingOcrEngine(pair.Select(b => b with
+        using var engine = new RecordingOcrEngine(pair.Select((block, index) => block with
         {
-            Bounds = ToVerticalBounds(b.Bounds, source.Width),
-            LayoutBounds = ToVerticalBounds(b.LayoutBounds, source.Width),
+            Bounds = Shift(ToVerticalBounds(block.Bounds, source.Width), index * gutter),
+            LayoutBounds = Shift(ToVerticalBounds(block.LayoutBounds, source.Width), index * gutter),
         }).ToArray());
 
-        var result = await OcrService.RecognizeVerticalAsync(
+        return await OcrService.RecognizeVerticalAsync(
             engine, source, "EN", CancellationToken.None);
-
-        // Separate source columns stay separate, independent of horizontal capture profiles.
-        Assert.Equal(2, result.Count);
-        Assert.DoesNotContain(
-            result,
-            block => block.Text.Contains("A BARBARIAN A") && block.Text.Contains("HEREDITARY TITLE!"));
     }
+
+    private static System.Windows.Rect Shift(System.Windows.Rect rect, double dx) =>
+        new(rect.X - dx, rect.Y, rect.Width, rect.Height);
 
     /// <summary>
     /// Neither vertical pass takes a profile, and this is the guard on it staying that way.

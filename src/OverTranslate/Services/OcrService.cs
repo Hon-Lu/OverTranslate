@@ -175,12 +175,15 @@ public class OcrService : IDisposable
             (IsVerticalColumnCandidate(block) ? candidates : across).Add(block);
 
         using var pixels = bitmap is null ? null : OnnxOcrEngine.ConvertToSkBitmap(bitmap);
+
         var merged = MergeVerticalColumns(
             VerticalOcrGeometry.JoinColumnFragments(candidates, pixels));
         merged.AddRange(across.Select(block => block with { RunsAcross = true }));
 
         // Last, so that a reading sitting on a row is judged against it too — the furigana over a
-        // sign reads the same way whether the sign runs down the page or across it.
+        // sign reads the same way whether the sign runs down the page or across it. What keeps a
+        // reading from being swallowed before it gets here is the size test in
+        // IsSameVerticalTextGroup, not the order of these two lines.
         return WithoutRuby(merged);
     }
 
@@ -344,11 +347,19 @@ public class OcrService : IDisposable
 
     /// <summary>How much of the smaller group has to lie on the other one.</summary>
     /// <remarks>
-    /// Half, where the measurement would allow a third: every ruby pair on the corpus but one is at
-    /// 0.64 or above and most are wholly inside, so the looser bar buys one more case
+    /// Half, where the measurement would allow a third: every ruby pair on the corpus but one is
+    /// at 0.64 or above and most are wholly inside, so the looser bar buys one more case
     /// (<c>ちゃく</c>, at 0.41) and pays for it by reaching towards the small aside balloons that
     /// sit beside a big one. The one it misses is a reading printed twice; the ones it would start
     /// guessing at are sentences.
+    ///
+    /// AREA, deliberately, and not "runs alongside and nearly touches". That wider test was tried
+    /// and reverted: it reaches the readings that sit just OUTSIDE a group's box as well, which is
+    /// more of them — but it leans the whole decision on the pitch estimate, and that estimate is
+    /// noisy for a column whose reading came back short or mis-read. It cost
+    /// <c>俺とオリヴァーが結成したこのパーティは</c>, a whole line of dialogue dropped as a gloss.
+    /// A reading left beside the text draws a small bubble of its own next to the balloon; a
+    /// reading that eats a line of dialogue is the fault this pipeline exists to avoid.
     /// </remarks>
     private const double RubySharedArea = 0.50;
 
@@ -358,18 +369,19 @@ public class OcrService : IDisposable
     /// <remarks>
     /// <para>Two translations drawn on top of each other, which is what this is here to stop, and
     /// what the user sees first: the balloon's own translation and a second bubble over it holding
-    /// whatever the ruby was read as. The ruby is a pronunciation guide for text that is already in
-    /// the group underneath, so there is nothing in it to lose — and it cannot be merged into that
-    /// group either, because inserting a reading into the middle of a sentence is how
-    /// <c>まえきようかぎお前には今日限りで</c> happens.</para>
+    /// whatever the reading was read as. The reading is a pronunciation guide for text that is
+    /// already in the group underneath, so there is nothing in it to lose — and it cannot be merged
+    /// into that group either, because inserting a reading into the middle of a sentence is how
+    /// <c>俺たちはあつかまじゅっ支援魔術を扱う</c> happens — a reading that HAS been merged is past
+    /// saving here, and remains the open half of this problem.</para>
     ///
     /// <para>WHAT IS DROPPED must be a column, and that is not a detail: the pairs this would
     /// otherwise get wrong are all rows. A name plate sets its title smaller than the name —
     /// <c>剣聖</c> at 0.51 of <c>オリヴァー・カーディフ</c> — and the two boxes overlap, so on size
-    /// and position alone the title reads exactly like ruby. Ruby in vertical writing is itself set
-    /// in columns, so asking that of the candidate alone tells the two apart, and leaves the body it
-    /// sits on free to be either: <c>ぐち</c> over the horizontal sign <c>迷宮入り口</c> is still
-    /// a reading printed over the word it belongs to.</para>
+    /// and position alone the title reads exactly like a reading. Ruby in vertical writing is
+    /// itself set in columns, so asking that of the candidate alone tells the two apart, and leaves
+    /// the body it sits on free to be either: <c>ぐち</c> over the horizontal sign
+    /// <c>迷宮入り口</c> is still a reading printed over the word it belongs to.</para>
     /// </remarks>
     internal static List<OcrTextBlock> WithoutRuby(List<OcrTextBlock> groups) =>
         groups.Count < 2
@@ -438,12 +450,50 @@ public class OcrService : IDisposable
                column.LayoutBounds.Width <= column.LayoutBounds.Height * maxWidthToHeightRatio;
     }
 
+    /// <summary>
+    /// How much of the shorter column has to run alongside the other one for the two to be the
+    /// same piece of writing.
+    /// </summary>
+    /// <remarks>
+    /// <para>MEASURED, and it replaces a test on the TOP EDGES that said the same thing about a
+    /// different shape. A balloon is an oval, so its columns do not start at one height: the ones
+    /// at the edges are shorter and begin lower, by a fraction of their own length rather than by
+    /// some number of characters. On <c>2026-09-20 19 14 56 (3).png</c> read at the size a
+    /// two-page spread gives each page, the three columns of
+    /// <c>これまで苦楽を共にしてきた仲間に対する態度か？</c> start 11px apart on a 14.6px pitch —
+    /// 0.75 of a character, past the old bar of 0.6 — so the sentence came apart into three
+    /// groups, and since their padded boxes overlap, three translations were drawn on top of one
+    /// another. That is the doubled bubble, and it is a grouping failure rather than a doubled
+    /// reading.</para>
+    ///
+    /// <para>What columns of one balloon do instead of starting together is RUN TOGETHER, and that
+    /// survives the ragged top. It also keeps what the top test was there for: a balloon stacked
+    /// above another shares no length with it at all, so the two still refuse each other, and the
+    /// gutter is still held by the distance test below.</para>
+    ///
+    /// <para>IT COSTS SOMETHING, and the cost is known rather than guessed at: a reading runs
+    /// alongside its column too, so more of them are now joined into the sentence instead of being
+    /// left beside it for <see cref="WithoutRuby"/> to drop — about 68 characters of ruby across
+    /// the fifteen pages. Two gates were built to refuse the reading at this seam and both were
+    /// measured and removed: on <c>GlyphPitch</c>, which divides a column's length by what came
+    /// out of it and so returns a whole box height for a one-character column — 「が」 at 53
+    /// against its own sentence's 28.8, refused as a reading and lost; and on the box width, where
+    /// adjacent columns vary enough that the overlapping pairs went from 23 to 50. Losing a line
+    /// of dialogue is worse than carrying a reading into one, so the seam is left open and the
+    /// readings are dealt with where the measurement holds.</para>
+    /// </remarks>
+    private const double SideBySideAlongTheColumn = 0.5;
+
     private static bool IsSameVerticalTextGroup(OcrTextBlock a, OcrTextBlock b)
     {
         // Detector padding is not character size. Compare centres and character pitch so
         // a generous quad cannot bridge a gutter into the next balloon or manga panel.
         double pitch = Math.Max(VerticalOcrGeometry.GlyphPitch(a), VerticalOcrGeometry.GlyphPitch(b));
-        if (Math.Abs(a.LayoutBounds.Y - b.LayoutBounds.Y) > pitch * 0.6)
+
+        double shared = Math.Min(a.LayoutBounds.Bottom, b.LayoutBounds.Bottom) -
+                        Math.Max(a.LayoutBounds.Top, b.LayoutBounds.Top);
+        double shorter = Math.Min(a.LayoutBounds.Height, b.LayoutBounds.Height);
+        if (shorter <= 0 || shared < shorter * SideBySideAlongTheColumn)
             return false;
 
         double distance = Math.Abs((a.LayoutBounds.Left + a.LayoutBounds.Right) / 2 -
