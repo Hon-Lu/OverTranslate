@@ -29,6 +29,24 @@ public class VerticalRubyColumnTests
         Assert.Equal(["正しい判断を"], VerticalRubyColumns.Drop([writing, reading]).Select(b => b.Text));
     }
 
+    /// <summary>The reading's room goes to the column it annotates, not away with the reading.</summary>
+    /// <remarks>
+    /// Grouping asks how far apart two columns are, so a column measured without the reading that
+    /// was set beside it sits further from its neighbour than the detector ever framed it. Keeping
+    /// the room also leaves the bubble drawn over the reading rather than beside it.
+    /// </remarks>
+    [Fact]
+    public void The_room_a_reading_took_up_is_left_to_the_writing()
+    {
+        var writing = Column("正しい判断を", new Rect(1024, 986, 27, 177));
+        var reading = Column("ただはんだん", new Rect(1051, 986, 13, 177));
+
+        var kept = VerticalRubyColumns.Drop([writing, reading]);
+
+        Assert.Equal(new Rect(1024, 986, 40, 177), Assert.Single(kept).Bounds);
+        Assert.Equal(new Rect(1024, 986, 40, 177), kept[0].LayoutBounds);
+    }
+
     /// <summary>
     /// A column of dialogue that happens to be narrow is kept, and the size of its glyphs is what
     /// says so — not the width of the box around them.

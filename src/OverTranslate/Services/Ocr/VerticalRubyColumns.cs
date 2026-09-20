@@ -68,11 +68,56 @@ internal static class VerticalRubyColumns
     /// <summary>How much of the reading has to lie alongside the writing.</summary>
     private const double AlongsideTheWriting = 0.85;
 
-    internal static List<OcrTextBlock> Drop(List<OcrTextBlock> columns) =>
-        columns.Count < 2
-            ? columns
-            : [.. columns.Where(column => !columns.Any(other =>
-                !ReferenceEquals(other, column) && IsReadingOf(column, other)))];
+    /// <summary>
+    /// Takes the readings out of the text and gives their ROOM to the columns they annotate.
+    /// </summary>
+    /// <remarks>
+    /// The room matters as much as the text. Grouping asks how far apart two columns are against
+    /// how big their glyphs are, and a column's box that has had the reading taken off it sits a
+    /// reading's width further from its neighbour than the same column measured with the reading
+    /// still in it. Simply dropping the reading therefore pushes the columns of one balloon apart
+    /// far enough to be read as two — measured, it broke 俺の本職は剣士なんだから into three. So
+    /// the reading's rectangle is unioned into the writing's, which leaves every column where the
+    /// detector would have put it if it had never separated the two, and leaves the bubble drawn
+    /// over the reading rather than beside it.
+    /// </remarks>
+    internal static List<OcrTextBlock> Drop(List<OcrTextBlock> columns)
+    {
+        if (columns.Count < 2) return columns;
+
+        // Which column each one is a reading of, or -1 to keep it. The NEAREST one it could be a
+        // reading of: a reading is set against its own kanji, and a column further left of it is a
+        // coincidence rather than the word being read.
+        var annotates = new int[columns.Count];
+        for (var i = 0; i < columns.Count; i++)
+        {
+            annotates[i] = -1;
+            for (var j = 0; j < columns.Count; j++)
+            {
+                if (i == j || !IsReadingOf(columns[i], columns[j])) continue;
+                if (annotates[i] < 0 ||
+                    columns[j].LayoutBounds.Right > columns[annotates[i]].LayoutBounds.Right)
+                    annotates[i] = j;
+            }
+        }
+
+        var bounds = columns.Select(column => column.Bounds).ToArray();
+        var layout = columns.Select(column => column.LayoutBounds).ToArray();
+        for (var i = 0; i < columns.Count; i++)
+        {
+            if (annotates[i] < 0) continue;
+            var at = annotates[i];
+            bounds[at] = Rect.Union(bounds[at], columns[i].Bounds);
+            layout[at] = Rect.Union(layout[at], columns[i].LayoutBounds);
+        }
+
+        var kept = new List<OcrTextBlock>(columns.Count);
+        for (var i = 0; i < columns.Count; i++)
+            if (annotates[i] < 0)
+                kept.Add(columns[i] with { Bounds = bounds[i], LayoutBounds = layout[i] });
+
+        return kept;
+    }
 
     private static bool IsReadingOf(OcrTextBlock reading, OcrTextBlock writing)
     {
