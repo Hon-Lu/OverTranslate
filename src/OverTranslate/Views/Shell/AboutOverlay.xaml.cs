@@ -18,6 +18,10 @@ namespace OverTranslate.Views.Shell;
 /// </summary>
 public partial class AboutOverlay : UserControl
 {
+    // The site reads the browser's language and redirects itself, so there is one URL for every
+    // interface language rather than a per-locale table like DocumentationLinks keeps.
+    private const string WebsiteUrl = "https://asd880921.github.io/OverTranslate/";
+
     private const string GitHubUrl = "https://github.com/asd880921/OverTranslate";
 
     private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(140));
@@ -106,6 +110,10 @@ public partial class AboutOverlay : UserControl
         base.OnKeyDown(e);
     }
 
-    private void GitHubBtn_Click(object sender, RoutedEventArgs e)
-        => Process.Start(new ProcessStartInfo(GitHubUrl) { UseShellExecute = true });
+    private void WebsiteBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(WebsiteUrl);
+
+    private void StarBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(GitHubUrl);
+
+    private static void OpenInBrowser(string url)
+        => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 }

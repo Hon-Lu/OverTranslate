@@ -45,10 +45,11 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Author">作者</sys:String>
-    <sys:String x:Key="S.About.ViewSource">在 GitHub 上查看源代码</sys:String>
+    <sys:String x:Key="S.About.Website">前往官方网站</sys:String>
+    <sys:String x:Key="S.About.Star">到 GitHub 点个 Star</sys:String>
     <sys:String x:Key="S.About.Version">版本 {0}</sys:String>
-    <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">免费开源，可自由使用。如果觉得有帮助，也欢迎到 GitHub 帮忙点个</sys:String>
-    <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve">Star，感谢！</sys:String>
+    <sys:String x:Key="S.About.OpenSourceBefore" xml:space="preserve">免费开源，可自由使用。觉得好用的话，欢迎帮忙点颗 </sys:String>
+    <sys:String x:Key="S.About.OpenSourceAfter" xml:space="preserve"> 支持一下！</sys:String>
 
     <!-- ── Toast ── -->
     <sys:String x:Key="S.Toast.CopyMessage">复制消息</sys:String>
