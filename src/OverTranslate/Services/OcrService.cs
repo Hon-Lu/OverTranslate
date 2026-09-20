@@ -169,6 +169,10 @@ public class OcrService : IDisposable
                 .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
                     block.Bounds.Width, frameWidth, block.Text)).ToList();
 
+        // Before anything joins or groups: a reading merged into a sentence cannot be taken back
+        // out of it afterwards, which is what Ocr.VerticalRubyColumns exists to say.
+        blocks = Ocr.VerticalRubyColumns.Drop(blocks);
+
         var candidates = new List<OcrTextBlock>();
         var across = new List<OcrTextBlock>();
         foreach (var block in blocks)
