@@ -296,6 +296,16 @@ internal static class RealtimeDetectorSize
     /// where one source is 8598px on its longest side, and bounds what an oversized region can
     /// spend — 2.8s against 27.6s on that one page.
     ///
+    /// THE CAP HAS A FLOOR UNDER IT, and without one it would be a regression on a big display. A
+    /// flat cap at 2048 is not a cap once the region passes about 3000px on its longest side — it
+    /// becomes a HARDER downscale than <see cref="PanelFraction"/> asks for, so a region grabbed
+    /// off a 4K screen would have been read at 0.53 where it used to be read at 0.68, which is the
+    /// wrong direction by everything measured above. Taking the larger of the two says the one
+    /// thing both bounds are for: never downscale a page of columns more than the fractions
+    /// already do, and do not pay for more than the screenshot flow would. Above 3000px the
+    /// fraction wins and the cost of an oversized source comes back with it; a watched region is
+    /// part of a display, so that is a source no region can be.
+    ///
     /// COST, on the pages this is for: a whole two-page spread goes from about 1.0s to 1.8s per
     /// pass, which is the same work the screenshot flow already does on the same picture. Vertical
     /// reading is a comic-reading feature and a comic page is looked at for seconds at a time, so
@@ -337,7 +347,9 @@ internal static class RealtimeDetectorSize
             return (native, []);
 
         if (orientation == RealtimeTextOrientation.Vertical)
-            return (Math.Min(native, Ocr.OnnxOcrEngine.ScreenshotDetectSize), []);
+            return (Math.Max(
+                Math.Min(native, Ocr.OnnxOcrEngine.ScreenshotDetectSize),
+                RoundToStride((int)(native * PanelFraction))), []);
 
         // The mode decides where to start; the other mode's fraction is then the first thing to try
         // if that start read nothing.
