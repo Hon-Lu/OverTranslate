@@ -61,6 +61,12 @@ internal static class VerticalColumnDetection
                 continue;
             }
 
+            // The slack the detector left around this box's own ink, so that a part which is as
+            // long as the box comes back exactly as tall as the box was. Grouping compares a
+            // column's length against its neighbours', and a part measured tight beside a box
+            // measured loose is a difference in how they were cut, not in what they say.
+            var boxRows = InkRows(image, left, right, top, bottom, mode);
+
             var edges = new[] { 0 }.Concat(cuts).Append(width).ToArray();
             var parts = new List<TextBox>();
             var ambiguous = false;
@@ -72,9 +78,11 @@ internal static class VerticalColumnDetection
                 if (occupied.Length == 0) continue;
                 a = Math.Max(a, occupied[0] - 2);
                 b = Math.Min(b, occupied[^1] + 3);
+                var (partTop, partBottom) = PartRows(
+                    image, left + a, left + b, top, bottom, mode, boxRows);
                 // Ignore a sliver already covered by another native column detection.
                 if (boxes.Any(other => !ReferenceEquals(other, box) &&
-                    Overlap(other, left + a, top, left + b, bottom) > 0.65)) continue;
+                    Overlap(other, left + a, partTop, left + b, partBottom) > 0.65)) continue;
                 // Do not silently discard a narrow punctuation/ruby fragment when splitting.
                 if (occupied.Length < 8)
                 {
@@ -84,14 +92,58 @@ internal static class VerticalColumnDetection
                 parts.Add(new TextBox
                 {
                     Score = box.Score,
-                    BoxPoints = [new(left + a, top), new(left + b, top),
-                        new(left + b, bottom), new(left + a, bottom)],
+                    BoxPoints = [new(left + a, partTop), new(left + b, partTop),
+                        new(left + b, partBottom), new(left + a, partBottom)],
                 });
             }
             if (!ambiguous && parts.Count >= 2) result.AddRange(parts);
             else result.Add(box);
         }
         return result;
+    }
+
+    /// <summary>Where a split part's own ink starts and stops down the box.</summary>
+    /// <remarks>
+    /// <para>The cut is made across the box, so without this every part comes out the full height
+    /// of the box it came from — and a part's height is what says how big its characters are.
+    /// MEASURED on <c>.ai/test-images/vertical-image-ja2/2026-09-20 19 14 59.png</c>: the quad
+    /// around お姉… and its reading ねえ splits into a 30-wide part and a 25-wide part, both 112
+    /// tall. The reading is two characters of ruby about 27px tall, so at 112 it measures 56px to
+    /// the character against the sentence's 37, and <see cref="VerticalRubyColumns"/> — which is
+    /// asking exactly this question — reads it as a column of its own and merges ねえ into the
+    /// sentence. Trimmed to its ink it measures 13, and is dropped as the reading it is.</para>
+    ///
+    /// <para>The margin matches the one the horizontal trim takes, for the same reason: the
+    /// threshold finds the strokes, not the antialiasing around them, and a crop that starts on the
+    /// first dark pixel cuts into the glyph.</para>
+    /// </remarks>
+    private static (int First, int Last) InkRows(
+        SKBitmap image, int left, int right, int top, int bottom, int mode)
+    {
+        var first = -1;
+        var last = -1;
+        for (var y = top; y < bottom; y++)
+        {
+            var found = false;
+            for (var x = left; x < right && !found; x++)
+                found = Math.Abs(Luminance(image.GetPixel(x, y)) - mode) > 48;
+            if (!found) continue;
+            if (first < 0) first = y;
+            last = y;
+        }
+
+        return first < 0 ? (top, bottom - 1) : (first, last);
+    }
+
+    /// <summary>A split part's box, down the page, carrying the box's own slack.</summary>
+    private static (int Top, int Bottom) PartRows(
+        SKBitmap image, int left, int right, int top, int bottom, int mode,
+        (int First, int Last) boxRows)
+    {
+        var (first, last) = InkRows(image, left, right, top, bottom, mode);
+        var above = boxRows.First - top;
+        var below = bottom - 1 - boxRows.Last;
+        return (Math.Max(top, first - above), Math.Min(bottom, last + 1 + below));
     }
 
     private static int Luminance(SKColor c) => (c.Red * 77 + c.Green * 150 + c.Blue * 29) >> 8;

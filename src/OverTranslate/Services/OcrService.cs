@@ -193,9 +193,30 @@ public class OcrService : IDisposable
         // The readings go first. What is left is then the page's real writing, which is what the row
         // test has to be asked against: a reading IS a column, and a reading sitting on a sign made
         // the row test drop the sign — 迷宮入り口 thrown away because ぐち lay on it.
-        var groups = WithoutRowsOverColumns(WithoutRuby(merged));
+        var groups = WithoutWordlessGroups(WithoutRowsOverColumns(WithoutRuby(merged)));
         return realtime ? WithoutUnconvincingGroups(groups) : groups;
     }
+
+    /// <summary>Drops what a translator would hand straight back.</summary>
+    /// <remarks>
+    /// <para>A group with no letter in it anywhere — digits, punctuation, dashes — has nothing to
+    /// translate into anything. Sending it costs a call, and what comes back is painted over the
+    /// page as a bubble, so the reader is shown a translation of nothing sitting on the artwork.</para>
+    ///
+    /// <para>MEASURED over the 15 comic pages in <c>.ai/test-images/vertical-image-ja2</c>: 16
+    /// groups survive grouping without matching anything a reader would call text, and 14 of them
+    /// are the PAGE NUMBER — 11, 34, 35, 37, 42, 45, 48, 58, 59, 61, 62, 63, 64, 65. A printed page
+    /// carries its number in the margin in the same typeface as nothing else on it, the detector
+    /// finds it every time, and it is the one thing on the page that is certainly not dialogue. The
+    /// other two are a stray digit off the artwork.</para>
+    ///
+    /// <para>Deliberately not a test on length or on confidence. The page numbers are read perfectly
+    /// — 1.00, every one of them — and at two characters they are longer than plenty of real
+    /// balloons (<c>ん？</c>, <c>これが</c>). What is wrong with them is not that the reading is
+    /// poor or short; it is that there is no word in it.</para>
+    /// </remarks>
+    internal static List<OcrTextBlock> WithoutWordlessGroups(List<OcrTextBlock> groups) =>
+        [.. groups.Where(group => group.Text.Any(char.IsLetter))];
 
     /// <summary>
     /// Drops the groups the live path treats as scenery read as text — asked of the SENTENCE, not
