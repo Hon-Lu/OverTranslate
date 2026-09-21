@@ -67,21 +67,23 @@ public class RealtimeDetectorSizeTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The cap never becomes a harder downscale than the fractions themselves ask for.
+    /// A region off a large display is read at the screenshot size and no larger.
     /// </summary>
     /// <remarks>
-    /// A flat cap at the screenshot size stops being a cap once the region passes about 3000px:
-    /// a region off a 4K screen would be read at 0.53 where it used to be read at 0.68, which is
-    /// the wrong direction by everything the fraction was raised for.
+    /// There was a floor under the cap here, on the argument that at about 3000px a flat cap
+    /// becomes a harder downscale than the fraction — 0.53 off a 4K screen where a smaller region
+    /// gets 0.68. That is an argument about ratios; read at both sizes the accuracy goes the other
+    /// way. A 4K crop of a comic page reads 143 characters at the cap against 139 under the floor,
+    /// and a 2590x4096 strip reads 朝は4本足昼は2本足は３本足で歩むモノ whole at the cap and in two
+    /// pieces under it.
     /// </remarks>
     [Fact]
-    public void A_region_of_columns_off_a_large_display_is_never_read_smaller_than_before()
+    public void A_region_of_columns_off_a_large_display_is_read_at_the_screenshot_size()
     {
         var (primary, _) = RealtimeDetectorSize.For(
             3840, 2160, RealtimeBlockMode.Panel, RealtimeTextOrientation.Vertical);
 
-        Assert.True(primary >= RealtimeDetectorSize.For(3840, 2160, RealtimeBlockMode.Panel).Primary,
-            $"a page of columns was read at {primary}, smaller than writing across would have been");
+        Assert.Equal(RealtimeDetectorSize.ColumnsAreReadAtTheScreenshotSize, primary);
     }
 
     /// <summary>Writing that runs across is what every fraction here was measured on, and is unmoved.</summary>

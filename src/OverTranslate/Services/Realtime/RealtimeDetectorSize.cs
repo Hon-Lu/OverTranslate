@@ -296,15 +296,21 @@ internal static class RealtimeDetectorSize
     /// where one source is 8598px on its longest side, and bounds what an oversized region can
     /// spend — 2.8s against 27.6s on that one page.
     ///
-    /// THE CAP HAS A FLOOR UNDER IT, and without one it would be a regression on a big display. A
-    /// flat cap at 2048 is not a cap once the region passes about 3000px on its longest side — it
-    /// becomes a HARDER downscale than <see cref="PanelFraction"/> asks for, so a region grabbed
-    /// off a 4K screen would have been read at 0.53 where it used to be read at 0.68, which is the
-    /// wrong direction by everything measured above. Taking the larger of the two says the one
-    /// thing both bounds are for: never downscale a page of columns more than the fractions
-    /// already do, and do not pay for more than the screenshot flow would. Above 3000px the
-    /// fraction wins and the cost of an oversized source comes back with it; a watched region is
-    /// part of a display, so that is a source no region can be.
+    /// A FLOOR WAS PUT UNDER THE CAP AND THEN MEASURED AWAY. The argument for it was that a flat
+    /// cap at 2048 stops being a cap once the region passes about 3000px on its longest side — it
+    /// becomes a HARDER downscale than <see cref="PanelFraction"/> asks for, so a region off a 4K
+    /// screen would be read at 0.53 where a smaller one is read at 0.68. That is a statement about
+    /// ratios, and the table above is about accuracy; nothing had been read at both sizes to say
+    /// which way it actually went.
+    ///
+    /// Read at both sizes, it goes the other way. On the three pages in the corpora wider or taller
+    /// than 2048 the cap alone is the better of the two, and the floor is neutral at best: a 4K
+    /// crop of a comic page reads 143 characters at 2048 against 139 at 2611, with ウワ！汚ったねぇ
+    /// intact at the cap and 汚ったねえ without it; a 2590x4096 four-panel strip reads
+    /// 朝は4本足昼は2本足は３本足で歩むモノ as one sentence at 2048 and in two broken pieces at
+    /// 2816; a 2297x3123 page is a wash. The 8598px source the cap was introduced for is worse
+    /// again without it — 19 fragmented groups against 14 whole sentences. So the vertical branch
+    /// is now exactly the screenshot flow's rule, which is also the simplest thing it could be.
     ///
     /// COST, on the pages this is for: a whole two-page spread goes from about 1.0s to 1.8s per
     /// pass, which is the same work the screenshot flow already does on the same picture. Vertical
@@ -347,9 +353,7 @@ internal static class RealtimeDetectorSize
             return (native, []);
 
         if (orientation == RealtimeTextOrientation.Vertical)
-            return (Math.Max(
-                Math.Min(native, Ocr.OnnxOcrEngine.ScreenshotDetectSize),
-                RoundToStride((int)(native * PanelFraction))), []);
+            return (Math.Min(native, Ocr.OnnxOcrEngine.ScreenshotDetectSize), []);
 
         // The mode decides where to start; the other mode's fraction is then the first thing to try
         // if that start read nothing.
