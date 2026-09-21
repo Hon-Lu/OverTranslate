@@ -38,15 +38,14 @@ internal static class VerticalColumnEnds
     /// because the walk stops at the first blank row anyway and the budget is only there for the
     /// case where it never finds one.
     ///
-    /// MEASURED at 0.4, 0.5, 0.6 and 0.9 over the 15 comic pages and the 12 web ones, and the
-    /// honest summary is that it is worth about what it costs on the corpus everything else was
-    /// tuned on: character recall there goes 0.975 to 0.976 while whole balloons go 124 to 123,
-    /// because a longer reading changes the character pitch grouping measures with. What decided it
-    /// is the corpus that was NOT tuned on — the twelve pages off other projects' test packs, where
-    /// recall goes 0.923 to 0.931 and whole balloons 40 to 41, and where the recovered characters
-    /// are the first one of a line every time: ヘッドの下なら for ッドの下なら, お来てるな for
-    /// 来てるな, この辺り一帯 for この辺り帯, 私の知らない人 for の知らない人. Above 0.5 both
-    /// corpora fall: the walk starts finding the artwork past the end of the balloon.
+    /// MEASURED at 0.35, 0.4, 0.5 and 0.9 over the 15 comic pages and the 12 web ones. What it
+    /// recovers is the first character of a line, every time — 私の知らない人 for の知らない人,
+    /// ヘッドの下なら for ッドの下なら, お来てるな for 来てるな, この辺り一帯 for この辺り帯,
+    /// 娘の悪いでしょ for の悪いでしょ — and what it costs is the occasional stray mark picked up
+    /// off a balloon's edge. Character recall goes 0.975 to 0.977 on the comic pages and 0.923 to
+    /// 0.938 on the web ones; whole balloons hold at 125 and 41. Below 0.5 the budget stops
+    /// covering a whole glyph and half the recoveries go; at 0.9 the walk starts finding the
+    /// artwork past the end of the balloon and both corpora fall.
     /// </remarks>
     private const double Reach = 0.5;
 
@@ -108,23 +107,31 @@ internal static class VerticalColumnEnds
     /// <remarks>
     /// A glyph's ink stops at the column; a rule does not. The border of a narration box, the
     /// outline of a balloon and the edge of a panel all run right through where a column ends, and
-    /// each of them offers the walk an unbroken row of ink to spend its whole budget on. MEASURED:
-    /// without this the narration box on 2026-09-20 19 14 57 (2).png turned
-    /// だって俺はパーティから捨てられる辛さを知っている into
-    /// だって俺はなさテかってきてられる, because every column in it grew into the border and the
-    /// crops stopped being columns.
-    ///
-    /// Asked of BOTH sides, because a reading sits along one side of its column for its whole
-    /// length — testing either side alone would refuse to extend any column that has furigana.
+    /// each of them offers the walk an unbroken row of ink to spend its whole budget on.
     /// </remarks>
     private static bool Continues(SKBitmap image, int left, int right, int y, int mode, double floor)
     {
         if (!HasInk(image, left, right, y, mode, floor)) return false;
 
-        var reach = Math.Max(2, (right - left) / 4);
-        return !(HasInk(image, Math.Max(0, left - reach), left, y, mode, 1) &&
-                 HasInk(image, right, Math.Min(image.Width, right + reach), y, mode, 1));
+        // A rule runs THROUGH the column: its ink is unbroken from outside one edge to outside the
+        // other. A neighbouring column's ink, or a reading down the side, is ink outside the edge
+        // with a gutter between — which is why "is there anything out there" was the wrong
+        // question. MEASURED on the column 私の知らない人…: at the row that holds the top of 私
+        // there are 12 ink pixels to its left (the next column of the same balloon) and 7 to its
+        // right (its own reading), and asking only whether they exist stopped the walk and left the
+        // 私 off the page. Neither of them touches this column's edge.
+        return !(Crosses(image, left, y, mode) && Crosses(image, right, y, mode));
     }
+
+    private static bool Crosses(SKBitmap image, int edge, int y, int mode)
+    {
+        var outside = edge == 0 ? 0 : edge - 1;
+        var inside = Math.Min(image.Width - 1, edge);
+        return Ink(image, outside, y, mode) && Ink(image, inside, y, mode);
+    }
+
+    private static bool Ink(SKBitmap image, int x, int y, int mode) =>
+        Math.Abs(Luminance(image.GetPixel(x, y)) - mode) > 48;
 
     private static bool HasInk(SKBitmap image, int left, int right, int y, int mode, double floor)
     {

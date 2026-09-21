@@ -45,10 +45,8 @@ public class VerticalColumnEndTests
     /// </summary>
     /// <remarks>
     /// The border of a narration box, a balloon's outline, the edge of a panel: each offers an
-    /// unbroken row of ink for the walk to spend its whole budget on. MEASURED on
-    /// 2026-09-20 19 14 57 (2).png, where every column of one narration box grew into its border
-    /// and だって俺はパーティから捨てられる辛さを知っている came back as
-    /// だって俺はなさテかってきてられる.
+    /// unbroken row of ink for the walk to spend its whole budget on. What makes it a rule is that
+    /// the ink runs THROUGH — unbroken from outside one edge to outside the other.
     /// </remarks>
     [Fact]
     public void A_rule_crossing_the_column_stops_the_reach()
@@ -57,6 +55,25 @@ public class VerticalColumnEndTests
         var extended = VerticalColumnEnds.Extend(page, Box(40, 240));
 
         Assert.Equal(40, Top(extended));
+    }
+
+    /// <summary>
+    /// A neighbour beside the column is not a rule, however much ink it has.
+    /// </summary>
+    /// <remarks>
+    /// The case that decided the shape of this test. A column of vertical Japanese has the next
+    /// column of the same balloon on one side and its own reading on the other, so asking merely
+    /// whether there is ink out there refuses to extend almost every column on the page. MEASURED
+    /// on 私の知らない人…: at the row holding the top of 私 there are 12 ink pixels to its left and
+    /// 7 to its right, and the 私 was left off the page for it.
+    /// </remarks>
+    [Fact]
+    public void Ink_beside_the_column_with_a_gutter_between_is_not_a_rule()
+    {
+        using var page = Page(neighbours: true);
+        var extended = VerticalColumnEnds.Extend(page, Box(44, 240));
+
+        Assert.Equal(FirstMark, Top(extended));
     }
 
     /// <summary>Over artwork every row has ink, so the question cannot be asked.</summary>
@@ -69,7 +86,7 @@ public class VerticalColumnEndTests
         Assert.Equal(44, Top(extended));
     }
 
-    private static SKBitmap Page(int? ruleAt = null, bool noisy = false)
+    private static SKBitmap Page(int? ruleAt = null, bool noisy = false, bool neighbours = false)
     {
         var bitmap = new SKBitmap(200, 300);
         using var canvas = new SKCanvas(bitmap);
@@ -88,6 +105,14 @@ public class VerticalColumnEndTests
         // and the flat-background pre-filter is part of what is under test.
         for (var i = 0; i < 10; i++)
             canvas.DrawRect(Left, FirstMark + i * 20, Width, 8, ink);
+        if (neighbours)
+            for (var i = 0; i < 10; i++)
+            {
+                // The next column of the balloon, and the reading down the other side. Both run the
+                // whole length of the column, and neither touches it.
+                canvas.DrawRect(Left - 20, FirstMark + i * 20, 14, 8, ink);
+                canvas.DrawRect(Left + Width + 6, FirstMark + i * 20, 8, 8, ink);
+            }
         if (ruleAt is { } y2) canvas.DrawRect(0, y2, 200, 4, ink);
         return bitmap;
     }
