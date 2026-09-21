@@ -76,8 +76,9 @@ internal static class VerticalColumnDetection
                 var b = edges[i + 1];
                 var occupied = Enumerable.Range(a, b - a).Where(x => ink[x] > height * 0.015).ToArray();
                 if (occupied.Length == 0) continue;
-                a = Math.Max(a, occupied[0] - 2);
-                b = Math.Min(b, occupied[^1] + 3);
+                var band = WidestBand(occupied, ink);
+                a = Math.Max(a, band.First - 2);
+                b = Math.Min(b, band.Last + 3);
                 var (partTop, partBottom) = PartRows(
                     image, left + a, left + b, top, bottom, mode, boxRows);
                 // Ignore a sliver already covered by another native column detection.
@@ -102,7 +103,51 @@ internal static class VerticalColumnDetection
         return result;
     }
 
-    /// <summary>Where a split part's own ink starts and stops down the box.</summary>
+    /// <summary>
+    /// The one run of ink a split part is really about, of the runs a blank gutter separates.
+    /// </summary>
+    /// <remarks>
+    /// A part is cut between gutters, but not every gutter is allowed to be a cut — one within
+    /// eight pixels of the box's edge is refused, because cutting there would leave a sliver rather
+    /// than a column. The ink past that refused gutter still ends up inside the part, and it is not
+    /// this part's writing.
+    ///
+    /// MEASURED on .ai/test-images/vertical-image-ja2/2026-09-20 19 14 59.png. The quad around
+    /// お姉… and its reading ねえ is cut once; the right-hand part comes out 25 wide, holding the
+    /// reading's 11 pixels of ink, a 7 pixel gutter, and then 6 pixels of the balloon's own outline
+    /// running the full height of the box. That outline is what stops the part being trimmed down
+    /// the page — every row has ink in it — so the reading keeps the box's full 112 rows, measures
+    /// bigger per character than the sentence it annotates, and is merged into it as ねえお姉….
+    ///
+    /// A real column's ink has no gutter through it: its glyphs are stacked on one another and
+    /// share an x range, so the profile along x is their union. Anything a blank band separates
+    /// from the body of the ink is something else that happened to be inside the cut.
+    /// </remarks>
+    private static (int First, int Last) WidestBand(int[] occupied, int[] ink)
+    {
+        var best = (First: occupied[0], Last: occupied[0], Width: 0, Weight: 0L);
+        var start = occupied[0];
+        var weight = 0L;
+        for (var i = 0; i < occupied.Length; i++)
+        {
+            weight += ink[occupied[i]];
+            if (i + 1 < occupied.Length && occupied[i + 1] - occupied[i] <= 2) continue;
+
+            // Widest rather than darkest: what is being rejected is a rule drawn down the side of
+            // the cut, and a rule is a couple of pixels across and as tall as the box, so it can
+            // hold more ink than the characters do. What it cannot be is as WIDE as they are — a
+            // column is as wide as its glyphs whatever they are.
+            var width = occupied[i] - start + 1;
+            if (width > best.Width || (width == best.Width && weight > best.Weight))
+                best = (start, occupied[i], width, weight);
+            if (i + 1 < occupied.Length) start = occupied[i + 1];
+            weight = 0;
+        }
+
+        return (best.First, best.Last);
+    }
+
+    /// <summary>Where a split part's own ink starts and stops down the page.</summary>
     /// <remarks>
     /// <para>The cut is made across the box, so without this every part comes out the full height
     /// of the box it came from — and a part's height is what says how big its characters are.

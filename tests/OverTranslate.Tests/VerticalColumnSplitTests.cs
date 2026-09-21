@@ -57,6 +57,32 @@ public class VerticalColumnSplitTests
             Assert.Equal(180, Height(part));
     }
 
+    /// <summary>
+    /// What a gutter separates from a part's ink is not that part's writing.
+    /// </summary>
+    /// <remarks>
+    /// A gutter within eight pixels of the quad's edge cannot be a cut — cutting there would leave
+    /// a sliver rather than a column — so whatever is past it stays inside the part. On
+    /// 2026-09-20 19 14 59.png that is the balloon's own outline, running the full height of the
+    /// quad beside the reading ねえ: with it in the part, every row has ink, the part keeps the
+    /// quad's full height, and the reading measures bigger per character than the sentence it
+    /// annotates. It was merged into it as ねえお姉….
+    /// </remarks>
+    [Fact]
+    public void A_part_does_not_keep_what_a_gutter_separates_from_its_ink()
+    {
+        using var page = Page(
+            marks: Stack(40, 26, 20, 12, 8),
+            // The reading, a gutter, then a rule down the side holding more ink than the reading.
+            reading: [.. Stack(92, 10, 70, 8, 2), (112, 14, 3, 172)]);
+
+        var parts = VerticalColumnDetection.Split(page, [Quad(30, 10, 88, 180)]);
+
+        Assert.Equal(2, parts.Count);
+        var (_, small) = Order(parts);
+        Assert.InRange(Height(small), 30, 70);
+    }
+
     [Fact]
     public void A_quad_holding_one_column_is_left_alone()
     {
