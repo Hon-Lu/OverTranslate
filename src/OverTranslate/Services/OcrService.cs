@@ -606,7 +606,27 @@ public class OcrService : IDisposable
     /// of dialogue is worse than carrying a reading into one, so the seam is left open and the
     /// readings are dealt with where the measurement holds.</para>
     /// </remarks>
-    private const double SideBySideAlongTheColumn = 0.5;
+    /// <remarks>
+    /// <para>MEASURED at 0.6, 0.5, 0.35, 0.2 and 0.0 over the 15 comic pages, by labelling every
+    /// column with the transcribed balloon it came out of and comparing the groups this produces
+    /// against those balloons. 0.5 gets 111 of 138 balloons exactly right, 17 split apart and 8
+    /// mixed with a neighbour; 0.35 and 0.2 both get 113 with the SAME 8 mixed, and 0.0 falls back
+    /// to 111. So two balloons come back for nothing, and the floor sits at the higher of the two
+    /// values that buy them.</para>
+    ///
+    /// <para>THE OTHER 25 ARE NOT A THRESHOLD PROBLEM, and this is worth writing down because the
+    /// obvious next move is to keep turning this dial. Three separate signals were swept against
+    /// those balloons and none of them beat 113: the distance bar below at every value from 1.6 to
+    /// 2.8, the gutter between the boxes instead of their centres at every value from 0.3 to 2.5,
+    /// and whether one run of the page's background connects the two columns — a flood fill from
+    /// beside one box to beside the other, which is the balloon itself and separates the pairs
+    /// 211/228 against 33/371 on its own. Every one of them trades split balloons for mixed ones
+    /// at about one for one. Two balloons side by side in a panel put their columns as close
+    /// together as one balloon does, so the pair geometry does not carry the answer, and the
+    /// flood fill leaks wherever the writing is not inside a balloon at all — a narration box,
+    /// a line lettered straight onto the artwork.</para>
+    /// </remarks>
+    private const double SideBySideAlongTheColumn = 0.35;
 
     private static bool IsSameVerticalTextGroup(OcrTextBlock a, OcrTextBlock b)
     {
