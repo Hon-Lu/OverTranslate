@@ -546,7 +546,14 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             if (boxIndices.Count == 0) return Array.Empty<OcrTextBlock>();
 
             var chosen = boxIndices.Select(index => _detectorSpaceBoxes[index]).ToList();
-            var cropBoxes = _verticalText ? chosen.Select(VerticalOcrGeometry.ForRecognition).ToList() : chosen;
+            // The crop, and only the crop, reaches for a glyph the box stopped short of: what
+            // grouping is handed below is still the detector's own geometry. See VerticalColumnEnds.
+            var cropBoxes = _verticalText
+                ? chosen
+                    .Select(box => VerticalOcrGeometry.ForRecognition(
+                        VerticalColumnEnds.Extend(_detectorBitmap, box)))
+                    .ToList()
+                : chosen;
             var partImages = (SKBitmap[])GetPartImagesMethod.Invoke(
                 null, new object[] { _detectorBitmap, cropBoxes })!;
             try
