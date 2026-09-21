@@ -653,6 +653,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         var found = session.Recognize(wanted)
             .Where(TurnedFrameDetection.WorthKeeping)
             .Select(block => TurnedFrameDetection.ToUpright(block, bitmap.Width))
+            .Where(block => !TurnedFrameDetection.SaysWhatWasAlreadyRead(block, upright))
             .ToList();
 
         Log.Info(

@@ -90,6 +90,84 @@ public class TurnedFrameDetectionTests
         Assert.Equal([0], missed);
     }
 
+    /// <summary>
+    /// A speck the upright pass read inside a column cannot speak for the column.
+    /// </summary>
+    /// <remarks>
+    /// The figures are off 2026-09-20 19 14 59.png. One detector quad covers the two columns
+    /// パーティを組む and 資格なんてない！！, reads as nothing because it holds two columns at once,
+    /// and the upright pass separately lands a 19x23 box on a single か inside the left one. That
+    /// speck shares 0.79 of ITSELF with this column, so a test asked of the smaller rectangle
+    /// refused the sentence to keep from doubling one character.
+    /// </remarks>
+    [Fact]
+    public void A_speck_read_inside_a_column_does_not_stand_for_the_column()
+    {
+        var speck = new Rect(1083, 773, 19, 23);
+        // パーティを組む at 1087,721 74x294 upright, which the turned frame holds at 721,660 294x74.
+        var column = new Rect(721, 660, 294, 74);
+
+        var missed = TurnedFrameDetection.PiecesTheUprightPassMissed(
+            [speck], [column], sourceWidth: 1821);
+
+        Assert.Equal([0], missed);
+    }
+
+    /// <summary>
+    /// A column the upright pass read in pieces is still refused, because the pieces are weighed
+    /// together.
+    /// </summary>
+    [Fact]
+    public void A_column_the_upright_pass_read_in_fragments_is_not_taken_again()
+    {
+        var top = new Rect(1087, 721, 74, 150);
+        var bottom = new Rect(1087, 871, 74, 144);
+        var column = new Rect(721, 660, 294, 74);
+
+        var missed = TurnedFrameDetection.PiecesTheUprightPassMissed(
+            [top, bottom], [column], sourceWidth: 1821);
+
+        Assert.Empty(missed);
+    }
+
+    /// <summary>
+    /// A reading that repeats what the upright pass said in the same place is not added.
+    /// </summary>
+    /// <remarks>
+    /// 2026-09-20 19 14 59 (2).png: the column 剣士…？ and its reading けんし are read upright as
+    /// boxes 44 and 16 wide, and this pass finds the whole column as one box 102 wide because the
+    /// balloon around it is empty. Those two cover 0.58 of it — and the balloon head this pass
+    /// exists to recover is covered 0.56, so the rectangles cannot tell the two cases apart.
+    /// </remarks>
+    [Fact]
+    public void A_reading_that_repeats_what_was_already_read_is_dropped()
+    {
+        var candidate = new OcrTextBlock("剣士…？", new Rect(1367, 847, 102, 208));
+        var upright = new OcrTextBlock("剣士…？", new Rect(1389, 845, 44, 208));
+
+        Assert.True(TurnedFrameDetection.SaysWhatWasAlreadyRead(candidate, [upright]));
+    }
+
+    [Fact]
+    public void A_reading_of_different_words_in_the_same_place_is_kept()
+    {
+        // The オレは case: the box it lies under was read as the column beside it.
+        var candidate = new OcrTextBlock("オレは", new Rect(1069, 995, 36, 84));
+        var upright = new OcrTextBlock("正しい判断を", new Rect(1024, 986, 65, 177));
+
+        Assert.False(TurnedFrameDetection.SaysWhatWasAlreadyRead(candidate, [upright]));
+    }
+
+    /// <summary>A lone glyph shares itself with half the sentences on the page.</summary>
+    [Fact]
+    public void A_single_character_the_upright_pass_read_cannot_speak_for_a_sentence()
+    {
+        var candidate = new OcrTextBlock("パーティを組む", new Rect(1087, 721, 74, 294));
+        var upright = new OcrTextBlock("を", new Rect(1083, 773, 19, 23));
+
+        Assert.False(TurnedFrameDetection.SaysWhatWasAlreadyRead(candidate, [upright]));
+    }
+
     /// <summary>Two turned boxes on the same place cannot both come through.</summary>
     [Fact]
     public void The_turned_passs_own_boxes_are_weighed_against_each_other_too()
