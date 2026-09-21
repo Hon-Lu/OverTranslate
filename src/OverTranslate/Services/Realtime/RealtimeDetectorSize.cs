@@ -266,6 +266,48 @@ internal static class RealtimeDetectorSize
     /// </remarks>
     public const double NativeFraction = 1.0;
 
+    /// <summary>
+    /// A region of columns is read at the size the screenshot flow reads one, and none of the
+    /// fractions above apply to it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Every table in this type was measured on writing that runs ACROSS. A row of glyphs
+    /// resized down stays a row of glyphs; a page of columns does not. Columns of Japanese sit about
+    /// a glyph apart, so at 0.68 a 25px column and the 12px reading beside it land 17px and 8px
+    /// apart on the detector's own probability map, and what comes back is one box over both of
+    /// them — or over the next column as well. Recognition is then handed a crop with two columns
+    /// side by side in a strip 48 pixels tall, and loses most of what is in it.</para>
+    ///
+    /// <para>MEASURED against what the screenshot flow reads on the same pages, counting the
+    /// screenshot's groups that the live read does not cover:</para>
+    ///
+    /// <code>
+    ///   detector size     ja2, 15 spreads   the same at 70%   vertical-image-ja, 9
+    ///   0.68 (PanelFraction)   17 missing        25 missing         11 missing
+    ///   0.80                   12                20                 10
+    ///   0.85                   12                18                  7
+    ///   0.90                   13                14                  7
+    ///   native                  4                 5                  5
+    /// </code>
+    ///
+    /// The direction is the opposite of <see cref="StripFraction"/>'s and there is no peak in the
+    /// middle to find: the fractions between buy almost nothing and the reading only comes right at
+    /// the top. Capping at the screenshot size costs one group of the 88 on the second corpus,
+    /// where one source is 8598px on its longest side, and bounds what an oversized region can
+    /// spend — 2.8s against 27.6s on that one page.
+    ///
+    /// COST, on the pages this is for: a whole two-page spread goes from about 1.0s to 1.8s per
+    /// pass, which is the same work the screenshot flow already does on the same picture. Vertical
+    /// reading is a comic-reading feature and a comic page is looked at for seconds at a time, so
+    /// the trade is a poor one only if the reader is scrolling faster than they can read.
+    ///
+    /// NO FALLBACKS. The chain below exists because text can be out of the detector's range in two
+    /// directions and they need opposite sizes. Here only one direction exists — everything smaller
+    /// was measured and is strictly worse — so a second inference on an empty region would be
+    /// paying the most expensive size twice to ask a question already answered.
+    /// </remarks>
+    public static int ColumnsAreReadAtTheScreenshotSize => Ocr.OnnxOcrEngine.ScreenshotDetectSize;
+
     /// <param name="mode">
     /// What the user says the block holds. This used to be guessed from the block's width-to-height
     /// ratio, which is a fact about how the user dragged rather than about what they are reading —
@@ -279,14 +321,23 @@ internal static class RealtimeDetectorSize
     /// produces it: text too large collapses into one unreadable box, text too small is never
     /// detected, and a scale the model simply dislikes returns nothing.
     /// </param>
+    /// <param name="orientation">
+    /// Which way the region's text is written. Every fraction in this type was measured on writing
+    /// that runs ACROSS — subtitle strips and interface panels — and columns do not behave like it;
+    /// see <see cref="ColumnsAreReadAtTheScreenshotSize"/>.
+    /// </param>
     public static (int Primary, IReadOnlyList<int> Fallbacks) For(
-        int width, int height, RealtimeBlockMode mode)
+        int width, int height, RealtimeBlockMode mode,
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal)
     {
         var native = Math.Max(width, height);
 
         // ImgResize only ever downscales, so passing the longest side asks for the image as it is.
         if (native < DownscaleMinSide)
             return (native, []);
+
+        if (orientation == RealtimeTextOrientation.Vertical)
+            return (Math.Min(native, Ocr.OnnxOcrEngine.ScreenshotDetectSize), []);
 
         // The mode decides where to start; the other mode's fraction is then the first thing to try
         // if that start read nothing.

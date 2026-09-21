@@ -929,7 +929,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     // Default ImgResize (1024) downscales wide UI screenshots and destroys small-text detail,
     // causing recognition errors. Raising it keeps typical captures near native resolution;
     // smaller images are unaffected, because ImgResize only ever downscales.
-    private const int ScreenshotDetectSize = 2048;
+    internal const int ScreenshotDetectSize = 2048;
 
     /// <param name="maxDetectSize">
     /// Longest side to give the detector, or null for the screenshot default. A caller that knows
