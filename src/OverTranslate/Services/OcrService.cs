@@ -166,10 +166,20 @@ public class OcrService : IDisposable
     {
         // The collapse test only; the short-and-unsure test waits for the groups — see the remarks
         // on WithoutUnconvincingGroups for why asking it of a column throws balloons away.
+        //
+        // Asked of COLUMNS, because what it recognises is a box thrown across the columns and the
+        // width is only that box's giveaway for something written down the page. A row spanning the
+        // frame is a row spanning the frame: MEASURED on
+        // .ai/test-images/vertical-manga-web/mokuro-000a.jpg, where the cover title うちの猫ず日記 is
+        // read whole at 1.00 in a box 840 wide on an 827 wide page, and was thrown away every time
+        // as a collapse holding "a character or two of nonsense" — seven characters being under the
+        // ten that bar was measured at, on English subtitles, where ten characters is nothing and in
+        // Japanese it is a sentence.
         if (realtime)
             blocks = blocks
-                .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
-                    block.Bounds.Width, frameWidth, block.Text)).ToList();
+                .Where(block => !IsVerticalColumnCandidate(block) ||
+                    !Realtime.CollapsedDetection.IsCollapsed(
+                        block.Bounds.Width, frameWidth, block.Text)).ToList();
 
         // Before anything joins or groups: a reading merged into a sentence cannot be taken back
         // out of it afterwards, which is what Ocr.VerticalRubyColumns exists to say.
