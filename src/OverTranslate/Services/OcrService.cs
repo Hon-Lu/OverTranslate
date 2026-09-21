@@ -188,7 +188,10 @@ public class OcrService : IDisposable
         // sign reads the same way whether the sign runs down the page or across it. What keeps a
         // reading from being swallowed before it gets here is the size test in
         // IsSameVerticalTextGroup, not the order of these two lines.
-        return WithoutRuby(merged);
+        // The readings go first. What is left is then the page's real writing, which is what the row
+        // test has to be asked against: a reading IS a column, and a reading sitting on a sign made
+        // the row test drop the sign — 迷宮入り口 thrown away because ぐち lay on it.
+        return WithoutRowsOverColumns(WithoutRuby(merged));
     }
 
     /// <summary>
@@ -409,6 +412,71 @@ public class OcrService : IDisposable
         // text, not how much of a long sentence happens to be covered by a two-glyph gloss.
         var area = candidate.Bounds.Width * candidate.Bounds.Height;
         return area > 0 && shared.Width * shared.Height / area >= RubySharedArea;
+    }
+
+    /// <summary>
+    /// How much of a row has to lie on a group of columns before the row is taken to be a misread
+    /// of those columns rather than writing of its own.
+    /// </summary>
+    /// <remarks>
+    /// Low, because there is nothing above it. MEASURED over both vertical corpora read at five
+    /// capture scales — about ninety page readings — a row that is really a row NEVER touches a
+    /// column at all: the name plates, the narration boxes, the scene labels and the signs all
+    /// stand in their own space, and every single overlap found was this fault.
+    /// </remarks>
+    private const double RowLyingOnColumns = 0.15;
+
+    /// <summary>
+    /// Drops a row drawn across a group of columns, which is the head of those columns misread.
+    /// </summary>
+    /// <remarks>
+    /// <para>The tops of two neighbouring columns sit side by side, and with a reading set between
+    /// them they make a short wide patch of ink that the detector frames as one box running across.
+    /// <see cref="IsVerticalColumnCandidate"/> then measures that box, finds it wider than it is
+    /// tall, and correctly reports that it is not a column — so the heads of the balloon are set as
+    /// a row, in the order a row is read, over the balloon they came from: 俺 and 剣 come back as
+    /// <c>剣俺</c> laid across 俺の本職は剣士なんだから, which itself has lost them.</para>
+    ///
+    /// <para>Whether the capture is at exactly the right scale decides it. Over the 15 comic
+    /// spreads this happens on none at native size, one at 0.85, none at 0.90 or 0.95 and two at
+    /// 1.05 — so it cannot be tuned out of the detector, and a reader taking a screenshot has no
+    /// way to know which scale they are on.</para>
+    ///
+    /// <para>WHAT IS LOST is the two characters, which were lost from the balloon anyway — the
+    /// columns' own reading is missing them either way, and this changes nothing about that. What
+    /// it removes is the second, worse failure on top of it: a bubble of Chinese laid across the
+    /// middle of a balloon that already has its own. A row over a column is always one of these two
+    /// and never a third thing, so dropping it cannot cost writing that would otherwise be read.</para>
+    /// </remarks>
+    internal static List<OcrTextBlock> WithoutRowsOverColumns(List<OcrTextBlock> groups) =>
+        !groups.Any(group => group.RunsAcross) || !groups.Any(group => !group.RunsAcross)
+            ? groups
+            : [.. groups.Where(group => !group.RunsAcross || !groups.Any(column =>
+                !column.RunsAcross && RunsDownThePage(column) &&
+                LiesOn(group.Bounds, column.Bounds) >= RowLyingOnColumns))];
+
+    /// <summary>
+    /// Whether a group is writing that actually runs down the page, rather than something short
+    /// that merely failed to be a row.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the group doing the overruling, and it is not a formality. A name plate sets its
+    /// title above the name and the title is two characters — <c>剣聖</c> at 47x34 — which is
+    /// inside <see cref="IsVerticalColumnCandidate"/>'s bar and so arrives here as a column. Read
+    /// at the realtime size it lies on 0.44 of オリヴァー・カーディフ, and without this the plate
+    /// loses the name. A row may only be overruled by a balloon, and a balloon is taller than it
+    /// is wide.
+    /// </remarks>
+    private static bool RunsDownThePage(OcrTextBlock group) =>
+        group.Bounds.Height > group.Bounds.Width;
+
+    /// <summary>How much of the smaller of two boxes the two of them share.</summary>
+    private static double LiesOn(Rect a, Rect b)
+    {
+        var shared = Rect.Intersect(a, b);
+        if (shared.IsEmpty) return 0;
+        var smaller = Math.Min(a.Width * a.Height, b.Width * b.Height);
+        return smaller <= 0 ? 0 : shared.Width * shared.Height / smaller;
     }
 
     internal static List<OcrTextBlock> MergeVerticalColumns(List<OcrTextBlock> columns)
