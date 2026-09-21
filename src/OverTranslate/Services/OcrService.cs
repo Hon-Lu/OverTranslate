@@ -164,8 +164,10 @@ public class OcrService : IDisposable
     internal static List<OcrTextBlock> GroupVertical(
         List<OcrTextBlock> blocks, double frameWidth, bool realtime = false, Bitmap? bitmap = null)
     {
+        // The collapse test only; the short-and-unsure test waits for the groups — see the remarks
+        // on WithoutUnconvincingGroups for why asking it of a column throws balloons away.
         if (realtime)
-            blocks = RejectUnconvincingBlocks(blocks)
+            blocks = blocks
                 .Where(block => !Realtime.CollapsedDetection.IsCollapsed(
                     block.Bounds.Width, frameWidth, block.Text)).ToList();
 
@@ -191,8 +193,37 @@ public class OcrService : IDisposable
         // The readings go first. What is left is then the page's real writing, which is what the row
         // test has to be asked against: a reading IS a column, and a reading sitting on a sign made
         // the row test drop the sign — 迷宮入り口 thrown away because ぐち lay on it.
-        return WithoutRowsOverColumns(WithoutRuby(merged));
+        var groups = WithoutRowsOverColumns(WithoutRuby(merged));
+        return realtime ? WithoutUnconvincingGroups(groups) : groups;
     }
+
+    /// <summary>
+    /// Drops the groups the live path treats as scenery read as text — asked of the SENTENCE, not
+    /// of the columns it is built from.
+    /// </summary>
+    /// <remarks>
+    /// <para><see cref="Realtime.ShortReadingDetection.IsUnconvincingShortText"/> throws away a
+    /// reading of fewer than ten characters that the recogniser scored under 0.80, and it was
+    /// measured on whole subtitle lines over video, where the short ones really were scenery:
+    /// <c>605G0</c>, <c>DM</c>, <c>M'</c>. That reasoning does not survive being asked of a COLUMN.
+    /// A column of vertical Japanese is a handful of characters by construction — that is what a
+    /// column is — so the length half of the test is true of nearly every one of them, and what is
+    /// left is "throw away any column the recogniser scored under 0.80".</para>
+    ///
+    /// <para>MEASURED on a frame the user captured: the balloon とはいえ／そいつらにとって is white
+    /// text on a black panel, and the two columns come back at 0.74 and 0.68 — the whole balloon
+    /// thrown away, both columns, while 俺が不要な存在なのはわかった beside it survives at 0.99.
+    /// Dark panels score lower across the board, so this took whole balloons off the page and took
+    /// the same ones every time, which is what the report of "always the same sentences missing"
+    /// was.</para>
+    ///
+    /// <para>Asked of the group instead, the test means what it meant where it was measured: a
+    /// group IS the line. The balloon above comes back as twelve characters at 0.71 and is kept,
+    /// and the scenery the test exists for — a couple of characters off a wooden floor — is still
+    /// a couple of characters after grouping, because there was nothing beside it to group with.</para>
+    /// </remarks>
+    internal static List<OcrTextBlock> WithoutUnconvincingGroups(List<OcrTextBlock> groups) =>
+        RejectUnconvincingBlocks(groups);
 
     /// <summary>
     /// Whether this frame holds anything worth recognising, asked with detection alone at a
