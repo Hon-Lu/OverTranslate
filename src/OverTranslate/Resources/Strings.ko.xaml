@@ -157,6 +157,14 @@
     <sys:String x:Key="S.QuickLookup.ProviderHint">캡처 번역·텍스트 번역과 같은 서비스를 사용합니다</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">번역 결과 자동 복사</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">번역이 끝나면 결과를 클립보드에 자동으로 복사합니다</sys:String>
+    <sys:String x:Key="S.QuickLookup.Bilingual">양방향 번역</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualHint">입력한 언어를 판별해 지정한 두 언어 사이에서 번역합니다</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFallback">다른 언어가 감지되면 왼쪽에서 선택한 언어 ‘{0}’(으)로 번역합니다</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFirst">첫 번째 언어</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualSecond">두 번째 언어</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusIdle">양방향: 자동 판별</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusPair">양방향: {0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusTip">‘{0}’과(와) ‘{1}’ 사이에서 번역 방향을 자동으로 판단합니다. 클릭하면 언어를 바꿀 수 있습니다.</sys:String>
     <sys:String x:Key="S.QuickLookup.Collapse">접기</sys:String>
     <sys:String x:Key="S.QuickLookup.Expand">펼치기</sys:String>
     <sys:String x:Key="S.QuickLookup.TranslationCopied">클립보드에 복사했습니다</sys:String>

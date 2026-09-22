@@ -157,6 +157,14 @@
     <sys:String x:Key="S.QuickLookup.ProviderHint">キャプチャ翻訳・テキスト翻訳と共通のサービスです</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">翻訳結果を自動でコピー</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">翻訳が終わると結果をクリップボードにコピーします</sys:String>
+    <sys:String x:Key="S.QuickLookup.Bilingual">二言語間翻訳</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualHint">入力された言語を判別し、指定した 2 つの言語の間で翻訳します</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFallback">ほかの言語を検出したときは、左側で選んだ言語「{0}」に翻訳します</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFirst">第 1 言語</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualSecond">第 2 言語</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusIdle">二言語間：自動判別</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusPair">二言語間：{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusTip">「{0}」と「{1}」の間で翻訳方向を自動で判断します。クリックすると言語を変更できます。</sys:String>
     <sys:String x:Key="S.QuickLookup.Collapse">折りたたむ</sys:String>
     <sys:String x:Key="S.QuickLookup.Expand">展開</sys:String>
     <sys:String x:Key="S.QuickLookup.TranslationCopied">クリップボードにコピーしました</sys:String>

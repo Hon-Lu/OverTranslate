@@ -146,6 +146,29 @@ public partial class QuickLookupWindow : Window
     /// </remarks>
     private string _detectedLang = "";
 
+    /// <summary>The two languages 雙語互譯 moves between, as this window currently holds them.</summary>
+    /// <remarks>
+    /// Kept here rather than read back off a picker because the pair is shown in two pickers and one
+    /// line of text at once, and the instant one of them is changed the others are still holding
+    /// what it used to be. Which language just left the slot is exactly what
+    /// <see cref="ApplyBilingualPick"/> needs to turn the pair around.
+    /// </remarks>
+    private string _bilingualFirst = QuickLookupSettings.DefaultFirstLanguage;
+
+    /// <inheritdoc cref="_bilingualFirst"/>
+    private string _bilingualSecond = QuickLookupSettings.DefaultSecondLanguage;
+
+    /// <summary>
+    /// The language the current text turned out to be in under 雙語互譯, or null when there is
+    /// nothing to go on yet.
+    /// </summary>
+    /// <remarks>
+    /// This is what the header reads out. Null is the honest answer for an empty box and for a
+    /// selection that has just arrived, and it is also all this window can say until the language of
+    /// the text is worked out before it is sent — see <see cref="RenderBilingualStatus"/>.
+    /// </remarks>
+    private string? _bilingualSource;
+
     /// <summary>The button currently driving playback, so a second click stops rather than replays.</summary>
     private Button? _ttsActiveBtn;
 
@@ -314,6 +337,12 @@ public partial class QuickLookupWindow : Window
         LocalizationService.BindLocalizedItems(SrcLangBox, LanguageData.SourceLanguages);
         LocalizationService.BindLocalizedItems(TgtLangBox, LanguageData.TargetLanguages);
         LocalizationService.BindLocalizedItems(ProviderBox, LanguageData.Providers);
+
+        // Off the target languages, both of them: each end of the bilingual pair has to be somewhere
+        // a translation can land, so 自動 is not on offer the way it is for a source picker.
+        LocalizationService.BindLocalizedItems(BilingualFirstBox, LanguageData.TargetLanguages);
+        LocalizationService.BindLocalizedItems(BilingualSecondBox, LanguageData.TargetLanguages);
+
         LoadSharedPreferences();
         _suppressAuto = false;
 
@@ -323,8 +352,17 @@ public partial class QuickLookupWindow : Window
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
         AutoCopyToggle.Checked       += AutoCopyToggle_Toggled;
         AutoCopyToggle.Unchecked     += AutoCopyToggle_Toggled;
+        BilingualToggle.Checked      += BilingualToggle_Toggled;
+        BilingualToggle.Unchecked    += BilingualToggle_Toggled;
 
-        foreach (var picker in new[] { SrcLangBox, TgtLangBox, ProviderBox })
+        BilingualFirstBox.SelectionChanged  += BilingualFirstBox_SelectionChanged;
+        BilingualSecondBox.SelectionChanged += BilingualSecondBox_SelectionChanged;
+
+        foreach (var picker in new[]
+                 {
+                     SrcLangBox, TgtLangBox, ProviderBox,
+                     BilingualFirstBox, BilingualSecondBox
+                 })
         {
             picker.DropDownOpened += (_, _) => _dropDownOpen = true;
             picker.DropDownClosed += (_, _) =>
@@ -368,6 +406,7 @@ public partial class QuickLookupWindow : Window
         RenderResultPresentation();
         RenderSettingsButton();
         RenderSettingsHint();
+        RenderBilingualMode();
     }
 
     /// <summary>
@@ -394,6 +433,9 @@ public partial class QuickLookupWindow : Window
 
         _detectedLang = "";
         _seq++;
+
+        // New text, so the direction the header is reading out belongs to the old text.
+        ForgetBilingualDirection();
 
         if (selection.Length == 0) ShowBody(false);
         else RequestTranslate();
@@ -919,6 +961,10 @@ public partial class QuickLookupWindow : Window
         {
             _seq++;
             _detectedLang = "";
+
+            // An empty box has no language, so the header goes back to saying it will work one out.
+            ForgetBilingualDirection();
+
             ShowBody(_settingsOpen);
             return;
         }
@@ -941,8 +987,20 @@ public partial class QuickLookupWindow : Window
         HideAutoCopyConfirmation(immediate: true);
 
         var settings = SettingsService.Instance.Current;
-        var srcLang = LanguageData.GetValidSourceCode(SrcLangBox.SelectedValue as string);
-        var tgtLang = LanguageData.GetValidTargetCode(TgtLangBox.SelectedValue as string);
+        var bilingual = BilingualToggle.IsChecked == true;
+
+        // 自動 on the source side in this mode, always. What the pair decides is which of the two
+        // languages the answer comes back in; what the text was written in is still the engine's
+        // question to answer, and leaving it 自動 is what keeps a wrong guess cheap — the worst it
+        // can produce is the other of the user's own two languages, never a translation out of a
+        // language the text is not in.
+        var srcLang = bilingual
+            ? LanguageData.AutomaticSourceLanguage
+            : LanguageData.GetValidSourceCode(SrcLangBox.SelectedValue as string);
+
+        var tgtLang = bilingual
+            ? ResolveBilingualTarget(text)
+            : LanguageData.GetValidTargetCode(TgtLangBox.SelectedValue as string);
 
         if (AppServices.Translation.RequiresApiKey && string.IsNullOrWhiteSpace(settings.ApiKey))
         {
@@ -960,6 +1018,23 @@ public partial class QuickLookupWindow : Window
                 [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey);
 
             if (seq != _seq) return;
+
+            // The characters were only ever a guess, and the engine has now said what the text
+            // actually was. Where the two disagree about which way this should have gone, the round
+            // trip is spent again rather than showing the answer to the wrong question — the result
+            // has not been put on screen yet, so nothing flickers; the spinner simply runs longer.
+            if (bilingual)
+            {
+                var corrected = CorrectedBilingualTarget(detected, tgtLang);
+                if (corrected is not null)
+                {
+                    tgtLang = corrected;
+                    (results, detected) = await AppServices.Translation.TranslateAsync(
+                        [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey);
+
+                    if (seq != _seq) return;
+                }
+            }
 
             SetTranslationLoading(false);
             _detectedLang = detected ?? "";
@@ -1101,6 +1176,10 @@ public partial class QuickLookupWindow : Window
     /// <inheritdoc cref="_detectedLang"/>
     private string EffectiveSourceLanguage()
     {
+        // 雙語互譯 has no source picker to read: the text decides, and what it decided is already
+        // recorded — see SetBilingualSource.
+        if (BilingualToggle.IsChecked == true) return _bilingualSource ?? _detectedLang;
+
         var chosen = SrcLangBox.SelectedValue as string;
         if (!LanguageData.IsAutomaticSource(chosen)) return LanguageData.GetValidSourceCode(chosen);
         return _detectedLang;
@@ -1125,9 +1204,14 @@ public partial class QuickLookupWindow : Window
     /// </remarks>
     private void RenderSourceTtsAvailability()
     {
+        // Under 雙語互譯 the unresolved state is narrower: the characters answer for any pair
+        // written in two scripts, so only a pair that shares one can still be waiting on an engine
+        // that is never going to say.
         var openAiAutomatic =
             SettingsService.Instance.Current.Provider == TranslationProvider.OpenAI &&
-            LanguageData.IsAutomaticSource(SrcLangBox.SelectedValue as string);
+            (BilingualToggle.IsChecked == true
+                ? _bilingualSource is null
+                : LanguageData.IsAutomaticSource(SrcLangBox.SelectedValue as string));
 
         var available = !openAiAutomatic &&
                         EffectiveSourceLanguage().Length > 0 &&
@@ -1380,6 +1464,10 @@ public partial class QuickLookupWindow : Window
         ProviderBox.SelectedValue = settings.Provider;
         if (ProviderBox.SelectedValue is null) ProviderBox.SelectedIndex = 0;
         AutoCopyToggle.IsChecked = settings.QuickLookup.AutoCopyTranslation;
+
+        BilingualToggle.IsChecked = settings.QuickLookup.BilingualEnabled;
+        LoadBilingualPair();
+        RenderBilingualMode();
     }
 
     private void AutoCopyToggle_Toggled(object sender, RoutedEventArgs e)
@@ -1390,6 +1478,283 @@ public partial class QuickLookupWindow : Window
             AutoCopyToggle.IsChecked == true;
         SettingsService.Instance.Save();
     }
+
+    // ══════════════════════════ 雙語互譯 ══════════════════════════
+
+    private void BilingualToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAuto) return;
+
+        SettingsService.Instance.Current.QuickLookup.BilingualEnabled =
+            BilingualToggle.IsChecked == true;
+        SettingsService.Instance.Save();
+
+        RenderBilingualMode();
+        RetranslateUnderNewPair();
+    }
+
+    /// <summary>
+    /// Sends the text off again, because which languages it is going between has just changed.
+    /// </summary>
+    /// <remarks>
+    /// The same thing <see cref="ApplyLanguagePair"/> does for the fixed pair, and for the same
+    /// reason: the answer on screen belongs to the pair it was asked under, and leaving it there
+    /// would have the popup showing one translation while the header names a different pair.
+    /// </remarks>
+    private void RetranslateUnderNewPair()
+    {
+        _detectedLang = "";
+        ForgetBilingualDirection();
+        RenderSourceTtsAvailability();
+        RequestTranslate();
+    }
+
+    /// <summary>Puts the header and the settings panel into the shape the switch calls for.</summary>
+    /// <remarks>
+    /// The header's two shapes trade places rather than one of them changing what it holds: the
+    /// pickers do not mean the same thing on the two sides of this switch, and the fixed pair has to
+    /// still be the fixed pair when the switch goes back off.
+    ///
+    /// The settings row grows the panel, which grows the window. Nothing has to be done about that
+    /// here — the popup is <c>SizeToContent</c> and <see cref="KeepBodyOnScreen"/> already runs on
+    /// the resize, which is what keeps the card on the screen when it opens downwards near an edge.
+    /// </remarks>
+    private void RenderBilingualMode()
+    {
+        var on = BilingualToggle.IsChecked == true;
+
+        FixedPairPanel.Visibility      = on ? Visibility.Collapsed : Visibility.Visible;
+        BilingualStatusBtn.Visibility  = on ? Visibility.Visible   : Visibility.Collapsed;
+        BilingualPairRow.Visibility    = on ? Visibility.Visible   : Visibility.Collapsed;
+
+        RenderBilingualStatus();
+    }
+
+    /// <summary>Writes the header's one line: what the popup is translating, and which way.</summary>
+    /// <remarks>
+    /// Three readings, and the rule is that the line only ever claims what is known. With no text,
+    /// or with text that has not been placed yet, it says 自動偵測 — the direction has not been
+    /// decided, and naming one before it has would be the header telling the user something the
+    /// popup has not done. Once the language of the text is known it reads 原文 → 譯文, which is the
+    /// answer to the only question this mode raises: 「which way did it just go?」
+    ///
+    /// The pair itself is not in the line. It is a setting rather than a state, it is two more names
+    /// than this cell has room for beside the ones already there, and it is one click away in the
+    /// tooltip and in the panel this button opens.
+    ///
+    /// <see cref="_bilingualSource"/> is null everywhere today, because deciding which of the two
+    /// languages the text is in has to happen before the translation is sent and nothing does that
+    /// yet. The line reads 自動偵測 until it does, which is true rather than merely unimplemented.
+    /// </remarks>
+    private void RenderBilingualStatus()
+    {
+        var first  = LanguageData.GetTargetDisplayName(_bilingualFirst);
+        var second = LanguageData.GetTargetDisplayName(_bilingualSecond);
+
+        BilingualStatusText.Text = _bilingualSource is null
+            ? LocalizationService.Get("S.QuickLookup.BilingualStatusIdle")
+            : LocalizationService.Format(
+                "S.QuickLookup.BilingualStatusPair",
+                LanguageData.GetTargetDisplayName(_bilingualSource),
+                LanguageData.GetTargetDisplayName(TargetOppositeOf(_bilingualSource)));
+
+        BilingualStatusBtn.ToolTip =
+            LocalizationService.Format("S.QuickLookup.BilingualStatusTip", first, second);
+    }
+
+    /// <summary>Which of the pair a text in <paramref name="source"/> is translated into.</summary>
+    /// <remarks>
+    /// The whole of what 雙語互譯 decides, in one line. The second language is the answer only for
+    /// text already in the first; everything else — including the languages the pair does not
+    /// mention at all — goes to the first, which is what makes it the first.
+    /// </remarks>
+    private string TargetOppositeOf(string source) =>
+        string.Equals(source, _bilingualFirst, StringComparison.OrdinalIgnoreCase)
+            ? _bilingualSecond
+            : _bilingualFirst;
+
+    /// <summary>Records which of the two languages the text turned out to be in.</summary>
+    /// <remarks>
+    /// 朗讀原文 is settled from here too, because this is the answer it has been waiting for. It is
+    /// also the one place this mode is better off than the fixed pair: the characters name the
+    /// language without asking anybody, so the speaker works even under an OpenAI-compatible server,
+    /// which never reports one — see <see cref="RenderSourceTtsAvailability"/>.
+    /// </remarks>
+    private void SetBilingualSource(string? source)
+    {
+        _bilingualSource = source;
+        RenderBilingualStatus();
+        RenderSourceTtsAvailability();
+    }
+
+    /// <summary>Takes the header back to 自動偵測, for when there is nothing left to read.</summary>
+    private void ForgetBilingualDirection()
+    {
+        if (_bilingualSource is null) return;
+        SetBilingualSource(null);
+    }
+
+    /// <summary>Reads the text, names the direction, and answers with the language to ask for.</summary>
+    private string ResolveBilingualTarget(string text)
+    {
+        SetBilingualSource(
+            BilingualDirection.ResolveSource(text, _bilingualFirst, _bilingualSecond));
+
+        return _bilingualSource is null
+            ? _bilingualFirst
+            : TargetOppositeOf(_bilingualSource);
+    }
+
+    /// <summary>
+    /// What the translation should have been asked for, once the engine has said what the text was.
+    /// </summary>
+    /// <returns>
+    /// The language to ask again in, or null when the guess already stands — which is the ordinary
+    /// case, and the whole reason the characters are consulted first.
+    /// </returns>
+    /// <remarks>
+    /// An OpenAI-compatible server reports nothing here and this does nothing, leaving the guess in
+    /// place. For a pair written in two scripts that guess was never in doubt; for one written in
+    /// the same script it means the mode stays on the first language, which is what the settings
+    /// panel says happens to anything it cannot place.
+    /// </remarks>
+    private string? CorrectedBilingualTarget(string? detected, string sentTarget)
+    {
+        if (string.IsNullOrEmpty(detected)) return null;
+
+        var key = LanguageKey(detected);
+        var isFirst = LanguageKey(_bilingualFirst) == key;
+        var isSecond = LanguageKey(_bilingualSecond) == key;
+
+        // 繁體 and 簡體 are both 「ZH」 to every engine that reports one, so on that pair this
+        // answer cannot separate what OpenCC already separated from the characters. It stands aside
+        // rather than overwriting a better answer with a coarser one.
+        if (isFirst && isSecond) return null;
+
+        var source = isFirst ? _bilingualFirst
+                   : isSecond ? _bilingualSecond
+                   : LanguageData.MapSourceToTargetCode(detected);
+
+        if (source is not null) SetBilingualSource(source);
+
+        var wanted = isFirst ? _bilingualSecond : _bilingualFirst;
+        return wanted.Equals(sentTarget, StringComparison.OrdinalIgnoreCase) ? null : wanted;
+    }
+
+    /// <summary>
+    /// A language code reduced to the language it names, so the pair and the engine can be compared.
+    /// </summary>
+    /// <remarks>
+    /// The pair is stored in target codes (EN-US, PT-BR) and an engine reports source codes (EN,
+    /// PT), so neither side can be matched against the other as written. 繁體 and 簡體 both fold to
+    /// ZH deliberately: an engine saying 「Chinese」 has not said which, and pretending otherwise is
+    /// how this would come to re-translate 中文 into 中文.
+    /// </remarks>
+    private static string LanguageKey(string code)
+    {
+        var upper = code.ToUpperInvariant();
+        return upper.StartsWith("ZH", StringComparison.Ordinal) ? "ZH" : upper.Split('-')[0];
+    }
+
+    /// <remarks>
+    /// The pickers left the header when this mode took it over, so this is the way back to them. The
+    /// gear does the same thing, but the pair is what the user was looking at when they decided they
+    /// wanted it changed, and that is the thing that should be clickable.
+    /// </remarks>
+    private void BilingualStatusBtn_Click(object sender, RoutedEventArgs e) => ShowSettings(true);
+
+    /// <summary>Reads the stored pair into the pickers and the header line that show it.</summary>
+    private void LoadBilingualPair()
+    {
+        var quickLookup = SettingsService.Instance.Current.QuickLookup;
+        var first  = LanguageData.GetValidTargetCode(quickLookup.BilingualFirstLanguage);
+        var second = LanguageData.GetValidTargetCode(quickLookup.BilingualSecondLanguage);
+
+        // One language twice is a pair that translates nothing into itself. The pickers cannot
+        // produce it — see ApplyBilingualPick — so it can only come from a hand-edited settings
+        // file, and the second slot is the one to move: the first is also the fallback, and
+        // redirecting that would change what every lookup does rather than just this pair.
+        if (string.Equals(first, second, StringComparison.OrdinalIgnoreCase))
+        {
+            second = string.Equals(first, QuickLookupSettings.DefaultSecondLanguage,
+                                   StringComparison.OrdinalIgnoreCase)
+                ? QuickLookupSettings.DefaultFirstLanguage
+                : QuickLookupSettings.DefaultSecondLanguage;
+        }
+
+        SetBilingualPair(first, second);
+    }
+
+    private void BilingualFirstBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressAuto) return;
+        ApplyBilingualPick(((ComboBox)sender).SelectedValue as string, firstSlot: true);
+    }
+
+    private void BilingualSecondBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressAuto) return;
+        ApplyBilingualPick(((ComboBox)sender).SelectedValue as string, firstSlot: false);
+    }
+
+    /// <summary>Takes a pick in one slot, settles the other, and stores the pair.</summary>
+    /// <param name="firstSlot">Which slot was picked in — the first is also the fallback.</param>
+    private void ApplyBilingualPick(string? picked, bool firstSlot)
+    {
+        if (string.IsNullOrEmpty(picked)) return;
+
+        var first  = firstSlot ? picked : _bilingualFirst;
+        var second = firstSlot ? _bilingualSecond : picked;
+
+        // Picking the language the other slot is already holding is how the pair gets turned around.
+        // There is no reading of 「英文 ⇄ 英文」 that translates anything, and the one thing the user
+        // can have meant is that the language they just displaced goes to the other side — which is
+        // also the only way to change which of the two is the fallback.
+        if (string.Equals(first, second, StringComparison.OrdinalIgnoreCase))
+        {
+            if (firstSlot) second = _bilingualFirst;
+            else           first  = _bilingualSecond;
+        }
+
+        SetBilingualPair(first, second);
+
+        var quickLookup = SettingsService.Instance.Current.QuickLookup;
+        quickLookup.BilingualFirstLanguage  = first;
+        quickLookup.BilingualSecondLanguage = second;
+        SettingsService.Instance.Save();
+
+        RetranslateUnderNewPair();
+    }
+
+    /// <summary>Writes one pair into the pickers, the line under them, and the header.</summary>
+    private void SetBilingualPair(string first, string second)
+    {
+        _bilingualFirst  = first;
+        _bilingualSecond = second;
+
+        // Restored rather than set to false: this also runs from LoadSharedPreferences, which is
+        // called from inside a suppressed stretch of its own.
+        var wasSuppressed = _suppressAuto;
+        _suppressAuto = true;
+
+        BilingualFirstBox.SelectedValue  = first;
+        BilingualSecondBox.SelectedValue = second;
+
+        _suppressAuto = wasSuppressed;
+
+        RenderBilingualFallbackHint();
+        RenderBilingualStatus();
+    }
+
+    /// <remarks>
+    /// Composed here rather than in the XAML because it names whichever language is in the first
+    /// slot, and that is also why it has to be rebuilt when the interface language changes — see
+    /// <see cref="OnLanguageChanged"/>.
+    /// </remarks>
+    private void RenderBilingualFallbackHint() =>
+        BilingualFallbackHint.Text = LocalizationService.Format(
+            "S.QuickLookup.BilingualFallback",
+            LanguageData.GetTargetDisplayName(_bilingualFirst));
 
     private void LangBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -1508,6 +1873,8 @@ public partial class QuickLookupWindow : Window
         RenderSettingsButton();
         RenderSettingsHint();
         RenderSourceTtsAvailability();
+        RenderBilingualFallbackHint();
+        RenderBilingualStatus();
         if (TranslatedText.Text.Length > 0 && StatusText.Visibility != Visibility.Visible)
             RenderCompactCompletion();
     }
