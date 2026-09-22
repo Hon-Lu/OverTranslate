@@ -197,7 +197,7 @@
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">가로쓰기</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">세로쓰기</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">원문이 가로로, 왼쪽에서 오른쪽으로 쓰여 있습니다</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">원문이 세로로, 위에서 아래·오른쪽에서 왼쪽으로 쓰여 있습니다</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">원문이 세로로, 위에서 아래·오른쪽에서 왼쪽으로 쓰여 있습니다 (일본어 책·만화)</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">선택 영역의 내용 종류</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">일반</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">UI</sys:String>
@@ -363,8 +363,8 @@
     <!-- Block mode picker -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">자막 / 만화</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">게임 / UI</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">자막이나 대사 창 — 글자가 커서 읽을 때 축소합니다</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">게임 패널이나 아이템 설명 — 글자가 작아 그대로 읽습니다</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">한 덩어리의 글이 다음 글로 바뀌는 화면 — 자막, 스토리 대사, 만화 대사</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiSummary">화면 곳곳에 흩어진 짧은 글 — HUD, 메뉴, 아이템 설명, 채팅</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">영상 자막, 게임 스토리 대사, 만화 글자처럼 이어서 읽는 글에 적합합니다.</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiGuidance">게임 화면, 채팅창, 메뉴와 인터페이스 글자처럼 이어서 읽는 글이 아닌 것에 적합합니다.</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">모드 설명 접기</sys:String>
