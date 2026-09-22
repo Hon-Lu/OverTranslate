@@ -63,7 +63,12 @@ internal static class OcrTextBlockGrouper
             return blocks.ToList();
         }
 
-        var sameLineMerged = MergeSameLineFragments(blocks, decisions, trace, profile);
+        // The readings printed above the writing, out before anything measures a leading against
+        // them: one sits in the gap between two lines of a paragraph, which is where
+        // NothingLiesBetween looks. After the same-line merge, so that the several readings of one
+        // line the detector framed separately are judged as the one box it hands on.
+        var sameLineMerged = HorizontalRubyLines.Drop(
+            MergeSameLineFragments(blocks, decisions, trace, profile));
         var sorted = sameLineMerged
             .OrderBy(block => block.LayoutBounds.Y)
             .ThenBy(block => block.LayoutBounds.X)
