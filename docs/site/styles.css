@@ -262,26 +262,20 @@ p:last-child { margin-bottom: 0; }
 .iconbtn:active { transform: scale(0.95); }
 .iconbtn--wide { padding-inline: 12px; }
 
-/* star —— 導覽列這顆常駐，靠數字說話；真正開口的是下載區那一塊 */
-.iconbtn--star {
+/* GitHub —— 導覽列這顆常駐，靠數字說話；真正開口的是下載區那一塊。
+   標誌是 GitHub 自家的，整顆就保持中性：金色留給下面那張 .starcall，
+   兩者才分得開。填滿的標誌在同一個尺寸下比線稿圖示重，所以收到 16px。 */
+.iconbtn--gh {
   padding-inline: 12px;
-  border-color: color-mix(in srgb, var(--star) 40%, transparent);
-  background: color-mix(in srgb, var(--star) 13%, transparent);
   color: var(--ink);
   font-weight: 600;
 }
-.iconbtn--star:hover {
-  border-color: color-mix(in srgb, var(--star) 62%, transparent);
-  background: color-mix(in srgb, var(--star) 22%, transparent);
-  color: var(--ink);
-}
-.iconbtn--star svg { color: var(--star); }
+.iconbtn--gh svg { width: 16px; height: 16px; }
+.iconbtn--gh .starcount { border-left-color: var(--line); }
 
-/* 手機放不下三個帶字的控制項。語言留地球、Star 留數字，
-   因為數字才是這顆按鈕真正在說的事。 */
+/* 手機放不下三個帶字的控制項，語言留地球。 */
 @media (max-width: 520px) {
-  .iconbtn--star { padding-inline: 10px; }
-  .iconbtn--star .iconbtn__text { display: none; }
+  .iconbtn--gh { padding-inline: 10px; }
   .menu [data-lang-label] { display: none; }
   .menu .iconbtn--wide { padding-inline: 9px; }
 }
