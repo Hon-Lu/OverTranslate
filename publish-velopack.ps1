@@ -13,7 +13,11 @@ param(
     [string]$PublishProfile = "FolderProfile",
     [string]$Configuration = "Release",
     [switch]$SkipPublish,
-    [string]$Version
+    [string]$Version,
+    # 打包用的是 fork 版 vpk（asd880921/velopack 的 fork/stable-stub-1.2.0），不是 nuget 上的官方
+    # 版本 —— 只有它認得 --stableStub。取得與建置方式見該倉的 FORK-APPS.md。
+    # 沒給就用這台機器的慣例位置（fork 與本倉並排 clone），CI 則明確傳進來。
+    [string]$VpkPath = $env:OVERTRANSLATE_VPK_PATH
 )
 
 $ErrorActionPreference = "Stop"
@@ -131,8 +135,24 @@ if (-not $SkipPublish) {
     Write-Host ""
 }
 
-if (-not (Get-Command "vpk" -ErrorAction SilentlyContinue)) {
-    throw "找不到 vpk。請先確認已安裝 Velopack CLI，或重新開啟終端機。"
+if ([string]::IsNullOrWhiteSpace($VpkPath)) {
+    # 本機慣例：fork 與本倉並排 clone。
+    $VpkPath = "..\velopack\build\Release\net10.0\vpk.exe"
+}
+
+$vpkFullPath = Resolve-FullPath $VpkPath
+if (-not (Test-Path $vpkFullPath)) {
+    # 刻意不退回 PATH 上的官方 vpk。官方版不認得 --stableStub 會直接失敗；就算拔掉那個旗標，
+    # 打出來的 stub 也是每次發版換一顆雜湊的那種，檔案信譽永遠從零開始 —— 正是要避免的事。
+    throw @"
+找不到 fork 版 vpk：$vpkFullPath
+
+取得與建置方式見 fork 的 FORK-APPS.md：裝官方 vpk 1.2.0 取它的 vendor 二進位（必須沿用官方那份，
+自己編的 Rust 產物會連帶換掉 Update.exe 的雜湊）、clone fork/stable-stub-1.2.0、把 vendor 複製進去、
+dotnet build src/vpk/Velopack.Vpk -c Release -f net10.0。
+
+建好之後用 -VpkPath 指到 build/Release/net10.0/vpk.exe，或設環境變數 OVERTRANSLATE_VPK_PATH。
+"@
 }
 
 if (-not (Test-Path $publishFullPath)) {
@@ -161,6 +181,7 @@ Write-Host "Velopack 打包開始..." -ForegroundColor Cyan
 Write-Host "Version   : $Version"
 Write-Host "PublishDir: $publishFullPath"
 Write-Host "OutputDir : $outputFullPath"
+Write-Host "vpk       : $vpkFullPath"
 
 $packArgs = @(
     "pack",
@@ -172,10 +193,14 @@ $packArgs = @(
     "--packAuthors", $PackAuthors,
     "--icon", $iconFullPath,
     "--channel", $Channel,
-    "--outputDir", $outputFullPath
+    "--outputDir", $outputFullPath,
+    # 根目錄那顆啟動器 stub 沿用主程式的資源（圖示、資訊清單、公司名），但版本欄位凍結成 1.0.0，
+    # 所以它的位元組不再每次發版都變。那顆檔沒有簽章，雜湊一換，Defender 的雲端信譽就重來一次
+    # —— 這正是 #210 那個 Wacatac.B!ml 誤判的溫床。詳見 fork 的 FORK-APPS.md。
+    "--stableStub"
 )
 
-& vpk @packArgs
+& $vpkFullPath @packArgs
 if ($LASTEXITCODE -ne 0) {
     throw "vpk pack 失敗，exit code: $LASTEXITCODE"
 }

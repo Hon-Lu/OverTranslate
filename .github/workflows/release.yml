@@ -41,13 +41,21 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          # 8.0.x 是應用程式自己的目標框架。10.0.x 是下面那個 fork 版 vpk 要的——它的相依套件
+          # 是 10.0 那一代，用 8.0 的 SDK 建不起來。兩個都裝時 dotnet 會挑最新的 SDK 來建 app，
+          # 實測 stub 的雜湊不受 SDK 版本影響（凍結後只剩圖示、資訊清單與那幾個字串會動）。
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: 安裝 Velopack CLI
         shell: pwsh
         run: |
           # 版本鎖死，與 OverTranslate.csproj 的 Velopack 套件一致。
           # CLI 與 runtime 版本不一致時產出的 delta 可能無法套用。
+          #
+          # 這一顆有兩個用途：下一步的 `vpk download github`，以及提供官方的 vendor 二進位
+          # （update.exe / stub.exe / setup.exe）給 fork 版 vpk 用。打包本身不走這顆。
           dotnet tool install -g vpk --version 1.2.0
           "$env:USERPROFILE\.dotnet\tools" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
@@ -93,6 +101,42 @@ jobs:
           }
           Write-Host "版號未被使用，繼續。"
 
+      - name: 建置 fork 版 vpk
+        id: vpkfork
+        shell: pwsh
+        run: |
+          # 打包走自用 fork（asd880921/velopack 的 fork/stable-stub-1.2.0），它基於 1.2.0 tag，
+          # 比官方只多一個 `--stableStub`：讓根目錄那顆未簽章的啟動器 stub 不再跟著版號與 commit
+          # 換雜湊。那顆檔的 Defender 雲端信譽是按雜湊累積的，每版換一次就等於每版從零開始（#210）。
+          # 背景與完整說明在 fork 的 FORK-APPS.md。
+          #
+          # 不能用 --depth 1：那個倉用 Nerdbank.GitVersioning 算版號，淺 clone 會讓建置直接失敗
+          # （Shallow clone lacks the objects required to calculate version height）。
+          # --single-branch 只抓這一條分支（17 秒、543 MB），core.longpaths 是防它 test/fixtures
+          # 底下那串超長路徑在 checkout 階段炸掉。
+          $fork = Join-Path $env:RUNNER_TEMP 'velopack-fork'
+          git -c core.longpaths=true clone --single-branch -b fork/stable-stub-1.2.0 https://github.com/asd880921/velopack $fork
+          if ($LASTEXITCODE -ne 0) { throw "clone velopack fork 失敗。" }
+
+          # vendor 的 Rust 二進位必須沿用官方 1.2.0 那份，不能自己編：本機或 CI 編出來的
+          # update.exe 不會與官方 CI 的產物位元組相同，Update.exe 的雜湊就會跟著變——
+          # 那正是這件事要避免的。fork 只改 C# 打包工具，vendor 原封不動。
+          $vendor = "$env:USERPROFILE\.dotnet\tools\.store\vpk\1.2.0\vpk\1.2.0\vendor"
+          if (-not (Test-Path "$vendor\update.exe")) { throw "找不到官方 vpk 1.2.0 的 vendor：$vendor" }
+          # 目的地先確保存在。Copy-Item 的萬用字元來源遇到不存在的目的地時，會把 signing\ 與 wix\
+          # 的內容攤平成同一層，攤平後 vpk 仍然打得出包，只是簽章與 wix 那些路徑會悄悄失準。
+          New-Item -ItemType Directory -Force -Path "$fork\vendor" | Out-Null
+          Copy-Item "$vendor\*" "$fork\vendor" -Recurse -Force
+
+          dotnet build "$fork\src\vpk\Velopack.Vpk" -c Release -f net10.0
+          if ($LASTEXITCODE -ne 0) { throw "建置 fork 版 vpk 失敗。" }
+
+          # Release 下 vendor 是從執行檔往上三層找的，所以直接跑 build 輸出的這顆就會看到
+          # 上面複製進去的官方二進位，不必再包成 global tool。
+          $exe = "$fork\build\Release\net10.0\vpk.exe"
+          if (-not (Test-Path $exe)) { throw "建置完成但找不到 $exe。" }
+          "exe=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+
       - name: 抓上一版 full 包（產生 delta 用）
         continue-on-error: true
         shell: pwsh
@@ -112,7 +156,14 @@ jobs:
       - name: 打包
         shell: pwsh
         run: |
-          .\publish-velopack.ps1 -Version ${{ steps.ver.outputs.version }}
+          .\publish-velopack.ps1 -Version ${{ steps.ver.outputs.version }} -VpkPath '${{ steps.vpkfork.outputs.exe }}'
+
+      - name: 檢查未簽章原生檔的雜湊
+        shell: pwsh
+        run: |
+          # 只提醒、不擋。雜湊變了不是錯誤，是「這一版的 Defender 檔案信譽要重新養」的通知——
+          # 換圖示、改 app.manifest、改組件資訊字串、換 vpk 都會觸發，發版當下就該知道。
+          .\check-release-hashes.ps1
 
       - name: 發布 pre-release
         shell: pwsh
