@@ -25,11 +25,12 @@ $ErrorActionPreference = "Stop"
 #                 vendor 的 stub.exe（換 vpk 版本就會換）、簽章金鑰
 #   Update.exe  ← 應用程式圖示、vendor 的 update.exe、簽章金鑰
 # 版號與 commit 不在上面任何一條裡，那正是 --stableStub 凍掉的東西。
+# 兩個值都是 2026-09-23 在本機量的，用的是憑證 7F1340D9C8084D3EACB2A9E76096C3EA48554F48
+# （見 docs/ops/PUBLISH.md 第七節）。導入 --stableStub 與自簽之前，stub 每次發版都不一樣
+# ——8 次建置量到 8 顆不同雜湊——而 Update.exe 停在 9a1e4194… 沒動過。
 $expected = [ordered]@{
-    # 第一顆 --stableStub 產物，2026-09-22 在本機量的。導入前每次發版都不一樣（8 次建置 8 顆）。
-    $MainExe     = "39ffa5ee4600edfbb7a677c1e5da3bfb3a2bb571a6db29a4926617f28bcedac0"
-    # 2.2.1-beta.2（2026-09-08 換 icon）起就沒變過，與版號無關。
-    "Update.exe" = "9a1e419468148e96dd396d4935b348e3cb1ee67f2ecb437bbc112879dda36889"
+    $MainExe     = "357bf9e26e7fcaa1912c6eb804a2f7d2aa11272289250ffe7939256f2c27442c"
+    "Update.exe" = "bd85bec6cde2dc4f8dbef802fcfe257d39b19f88802eddc5360b16871f03b88a"
 }
 
 function Resolve-FullPath {
