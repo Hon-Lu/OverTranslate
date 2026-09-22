@@ -73,9 +73,6 @@ internal static class TurnedFrameDetection
     /// </remarks>
     private const double SamePieceOfWriting = 0.65;
 
-    /// <summary>Off only for measuring what it is worth; the app always leaves it on.</summary>
-    internal static bool Enabled { get; set; } = true;
-
     /// <summary>
     /// The frame turned the way the whole-frame rotation used to turn it, before this branch moved
     /// the turn onto the individual crops.
@@ -143,45 +140,20 @@ internal static class TurnedFrameDetection
     internal static bool SaysWhatWasAlreadyRead(
         OcrTextBlock candidate, IReadOnlyList<OcrTextBlock> upright)
     {
-        var mine = Squeeze(candidate.Text);
-        if (mine.Length == 0) return false;
+        if (SameWriting.Squeeze(candidate.Text).Length == 0) return false;
 
         foreach (var block in upright)
         {
-            var theirs = Squeeze(block.Text);
-            if (theirs.Length < 2) continue;
+            if (SameWriting.Squeeze(block.Text).Length < 2) continue;
             if (Overlap(candidate.Bounds, block.Bounds) <= SharesThePlace) continue;
-            if (SharedRun(mine, theirs) >= Math.Min(mine.Length, theirs.Length) * SaysTheSame)
-                return true;
+            if (SameWriting.SaysTheSame(candidate.Text, block.Text)) return true;
         }
 
         return false;
     }
 
-    /// <summary>How much of the shorter reading the two of them have in common, in order.</summary>
-    private const double SaysTheSame = 0.6;
-
     /// <summary>How much of the smaller box two readings share before they are in the same place.</summary>
     private const double SharesThePlace = 0.3;
-
-    private static string Squeeze(string text) =>
-        string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
-
-    private static int SharedRun(string a, string b)
-    {
-        var previous = new int[b.Length + 1];
-        var current = new int[b.Length + 1];
-        foreach (var left in a)
-        {
-            for (var j = 0; j < b.Length; j++)
-                current[j + 1] = left == b[j]
-                    ? previous[j] + 1
-                    : Math.Max(current[j], previous[j + 1]);
-            (previous, current) = (current, previous);
-        }
-
-        return previous[b.Length];
-    }
 
     /// <summary>How much of the smaller of two rectangles the two of them share.</summary>
     private static double Overlap(Rect a, Rect b)

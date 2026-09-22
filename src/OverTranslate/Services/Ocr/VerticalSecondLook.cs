@@ -145,10 +145,10 @@ internal static class VerticalSecondLook
     }
 
     private static int Longest(List<OcrTextBlock> blocks) =>
-        blocks.Max(block => Squeeze(block.Text).Length);
+        blocks.Max(block => SameWriting.Squeeze(block.Text).Length);
 
     private static int Characters(List<OcrTextBlock> blocks) =>
-        blocks.Sum(block => Squeeze(block.Text).Length);
+        blocks.Sum(block => SameWriting.Squeeze(block.Text).Length);
 
     /// <summary>
     /// Groups both readings' blocks into the places they are about, by where their boxes lie.
@@ -198,26 +198,5 @@ internal static class VerticalSecondLook
 
         var smaller = Math.Min(a.Width * a.Height, b.Width * b.Height);
         return smaller > 0 && shared.Width * shared.Height / smaller > InTheSamePlace;
-    }
-
-    private static string Squeeze(string text) =>
-        string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
-
-    private static int SharedRun(string a, string b)
-    {
-        if (a.Length == 0 || b.Length == 0) return 0;
-
-        var previous = new int[b.Length + 1];
-        var current = new int[b.Length + 1];
-        foreach (var left in a)
-        {
-            for (var j = 0; j < b.Length; j++)
-                current[j + 1] = left == b[j]
-                    ? previous[j] + 1
-                    : Math.Max(current[j], previous[j + 1]);
-            (previous, current) = (current, previous);
-        }
-
-        return previous[b.Length];
     }
 }

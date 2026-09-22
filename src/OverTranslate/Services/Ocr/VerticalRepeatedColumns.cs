@@ -35,15 +35,6 @@ internal static class VerticalRepeatedColumns
     /// </remarks>
     private const double Inside = 0.8;
 
-    /// <summary>How much of the shorter reading the two have to share to be the same writing.</summary>
-    /// <remarks>
-    /// The gap either side of it is wide: the duplicates measured run 0.67 to 1.00 and every ruby
-    /// pair inside another box runs 0.00, because a pronunciation spelled in kana has nothing in
-    /// common with the kanji it annotates. The one pair in between is <c>いっと</c> inside
-    /// <c>ずっと一緒に</c> at 0.67, which is a second detection of っと and is meant to go.
-    /// </remarks>
-    private const double SaysTheSame = 0.6;
-
     internal static List<OcrTextBlock> Drop(List<OcrTextBlock> columns)
     {
         if (columns.Count < 2) return columns;
@@ -54,7 +45,7 @@ internal static class VerticalRepeatedColumns
         {
             if (i == j || repeated[i] || repeated[j]) continue;
             if (!Within(columns[i].LayoutBounds, columns[j].LayoutBounds)) continue;
-            if (!SaysWhatItSays(columns[i].Text, columns[j].Text)) continue;
+            if (!SameWriting.SaysTheSame(columns[i].Text, columns[j].Text)) continue;
 
             // The one that says LESS goes. Which of the two is the smaller box does not decide it:
             // 比べて is framed inside a taller box that came back holding only て.
@@ -75,42 +66,14 @@ internal static class VerticalRepeatedColumns
         return area > 0 && shared.Width * shared.Height / area >= Inside;
     }
 
-    private static bool SaysWhatItSays(string one, string other)
-    {
-        var a = Squeeze(one);
-        var b = Squeeze(other);
-        var shorter = Math.Min(a.Length, b.Length);
-        return shorter > 0 && SharedRun(a, b) >= shorter * SaysTheSame;
-    }
-
     /// <summary>Which of two readings of the same writing to let go: the one holding less of it.</summary>
     private static bool SaysLess(OcrTextBlock mine, OcrTextBlock theirs)
     {
-        var characters = Squeeze(mine.Text).Length.CompareTo(Squeeze(theirs.Text).Length);
+        var characters = SameWriting.Squeeze(mine.Text).Length
+            .CompareTo(SameWriting.Squeeze(theirs.Text).Length);
         if (characters != 0) return characters < 0;
 
         // Same number of characters, so it is the recogniser's own word against itself.
         return (mine.Confidence ?? 0) < (theirs.Confidence ?? 0);
-    }
-
-    private static string Squeeze(string text) =>
-        string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
-
-    private static int SharedRun(string a, string b)
-    {
-        if (a.Length == 0 || b.Length == 0) return 0;
-
-        var previous = new int[b.Length + 1];
-        var current = new int[b.Length + 1];
-        foreach (var left in a)
-        {
-            for (var j = 0; j < b.Length; j++)
-                current[j + 1] = left == b[j]
-                    ? previous[j] + 1
-                    : Math.Max(current[j], previous[j + 1]);
-            (previous, current) = (current, previous);
-        }
-
-        return previous[b.Length];
     }
 }

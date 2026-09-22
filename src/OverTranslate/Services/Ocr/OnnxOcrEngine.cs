@@ -157,7 +157,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     }
 
     public Task<List<OcrTextBlock>> RecognizeAsync(
-        Bitmap bitmap, string sourceLanguage, CancellationToken cancellationToken = default, bool verticalText = false)
+        Bitmap bitmap,
+        string sourceLanguage,
+        CancellationToken cancellationToken = default,
+        bool verticalText = false)
     {
         if (!OcrLanguageRouter.IsSupported(sourceLanguage))
             throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
@@ -190,7 +193,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         Bitmap bitmap,
         string sourceLanguage,
         int? maxDetectSize = null,
-        CancellationToken cancellationToken = default, bool verticalText = false)
+        CancellationToken cancellationToken = default,
+        bool verticalText = false)
     {
         if (!OcrLanguageRouter.IsSupported(sourceLanguage))
             throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
@@ -250,12 +254,13 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             // glyphs they were dropping, and 313 subtitle, game, comic, panel and chat frames do
             // not move at all.
             using var session = new DetectionSession(
-                this, runtime, bitmap, normalizedLanguage, maxDetectSize, releasesRuntime: false, repairRows: !verticalText, verticalText: verticalText);
+                this, runtime, bitmap, normalizedLanguage, maxDetectSize,
+                releasesRuntime: false, repairRows: !verticalText, verticalText: verticalText);
             var blocks = session
                 .Recognize(Enumerable.Range(0, session.Boxes.Count).ToArray(), out var recognised)
                 .ToList();
 
-            if (verticalText && TurnedFrameDetection.Enabled)
+            if (verticalText)
                 blocks.AddRange(ReadTurnedFrame(
                     runtime, bitmap, normalizedLanguage, maxDetectSize, blocks));
 

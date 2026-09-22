@@ -353,7 +353,7 @@ internal static class RealtimeDetectorSize
             return (native, []);
 
         if (orientation == RealtimeTextOrientation.Vertical)
-            return (Math.Min(native, Ocr.OnnxOcrEngine.ScreenshotDetectSize), []);
+            return (Math.Min(native, ColumnsAreReadAtTheScreenshotSize), []);
 
         // The mode decides where to start; the other mode's fraction is then the first thing to try
         // if that start read nothing.

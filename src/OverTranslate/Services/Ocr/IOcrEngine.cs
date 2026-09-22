@@ -5,7 +5,10 @@ namespace OverTranslate.Services.Ocr;
 internal interface IOcrEngine : IDisposable
 {
     Task<List<OcrTextBlock>> RecognizeAsync(
-        Bitmap bitmap, string sourceLanguage, CancellationToken cancellationToken = default, bool verticalText = false);
+        Bitmap bitmap,
+        string sourceLanguage,
+        CancellationToken cancellationToken = default,
+        bool verticalText = false);
 
     /// <summary>
     /// Recognises only if a slot is free right now, returning null instead of queueing.
@@ -23,5 +26,6 @@ internal interface IOcrEngine : IDisposable
         Bitmap bitmap,
         string sourceLanguage,
         int? maxDetectSize = null,
-        CancellationToken cancellationToken = default, bool verticalText = false);
+        CancellationToken cancellationToken = default,
+        bool verticalText = false);
 }
