@@ -119,9 +119,16 @@ public class GroupingProfileContractTests
     /// this test is where the next person will look. The relaxed leading was first built as a
     /// constant applying to every mode, and measured that way it moved the interface mode almost as
     /// much as the general one: 15 of the 16 wrong joins it buys happened under
-    /// <see cref="GroupingProfile.Interface"/> as well. The argument for accepting those 16 was
-    /// that a user meeting them can switch modes — so a version where switching does not help was
-    /// the argument failing, not a threshold needing a nudge.</para>
+    /// <see cref="GroupingProfile.Interface"/> as well. Keeping the figure on the profile is what
+    /// leaves the unrelaxed control unrelaxed, which is what the test below is for.</para>
+    ///
+    /// <para>The rest of that argument no longer holds, and it is recorded here rather than quietly
+    /// dropped. The 16 were accepted on the grounds that a user meeting them can switch modes; the
+    /// shipped app has no such switch, because <see cref="OverTranslate.Services.Ocr.CaptureLayoutPolicy"/>
+    /// collapses every capture to <see cref="GroupingProfile.General"/> and the interface mode is
+    /// archived. A profile with no caller cannot be a refuge, so this test now guards a contract
+    /// about the shape of the type, not a live product choice. Read that type before treating any
+    /// interface-mode measurement as something a user meets.</para>
     /// </remarks>
     /// <para>The fourth arrived the same way: <see cref="GroupingProfile.RefuseSpeakerLineStarts"/>,
     /// measured on the chat-room captures, where the live panel path joined 11 pairs of separate

@@ -1070,23 +1070,54 @@ public class OcrTextBlockGrouperTests
     }
 
     /// <summary>
-    /// A known and accepted cost: two lines of one balloon that happen to be the same width are not
-    /// centred against each other, so the waiver cannot reach them.
+    /// Two lines of one balloon that happen to be the same width are read on their centres, which
+    /// is the one reading that survives their being the same width.
     /// </summary>
     /// <remarks>
-    /// The pair from comic-en.png, and the price of deciding this on centring. Its lines are within
-    /// 0.07 of a line height of each other at both ends — flush, as far as any geometry can see —
-    /// so it reads exactly like the label stack above. Two of the comic corpus's twenty-one such
-    /// joins are lost this way and the rest are kept; the user's judgement is that a comic missing
-    /// a couple of joins is worth a general mode that does not glue menus together. This test is
-    /// here so that the cost stays visible and so that removing it is a decision rather than a
-    /// side effect.
+    /// <para>The pair from comic-en.png, and what the inset reading cannot see. A letterer breaks a
+    /// balloon to about one measure, so these two run past each other by nothing at all — 0.07 of a
+    /// line height at their widest disagreement, flush as far as an inset can tell — and for a
+    /// while that was recorded here as the accepted cost of deciding this on centring.</para>
+    ///
+    /// <para>It is not a cost, it is the inset going blind at the point the setting is most
+    /// balanced: their centres are 0.05 of a line apart, which is the same claim the inset was
+    /// standing in for. Seven pairs across the two comic sets sat in this gap.</para>
+    ///
+    /// <para>Read against the realtime profile rather than the interface one, though either would
+    /// show the gating. Realtime is the profile that still has a caller, so it is the one whose
+    /// staying put is worth pinning: a subtitle band must not start joining balloon geometry
+    /// because the screenshot flow's default moved.</para>
     /// </remarks>
     [Fact]
-    public void TwoBalloonLinesOfEqualWidth_AreTheAcceptedCostOfDecidingThisOnCentring()
+    public void TwoBalloonLinesOfEqualWidth_AreReadOnTheirCentres()
     {
         var previous = LineWithGlyphHeight("THAT GUY'S FAULT", x: 368, y: 725, width: 417, height: 58, glyph: 36.0);
         var current = LineWithGlyphHeight("YOU ENDED UP IN", x: 372, y: 780, width: 415, height: 58, glyph: 31.0);
+
+        Assert.Equal(2, OcrTextBlockGrouper.Group([previous, current], GroupingProfile.Realtime).Count);
+        Assert.Single(OcrTextBlockGrouper.Group([previous, current], GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// Two short readouts stacked in a column share a centre too, and are refused on their length.
+    /// </summary>
+    /// <remarks>
+    /// <para>The real boxes of a driver overlay's 「RTX」over「VSR」, from the Korean subtitle
+    /// captures — nine of them carry this pair. Their centres land on the same pixel, so reading
+    /// the centres alone joins them, and the balloon above shows why the centres have to be read.
+    /// What separates the two is that a balloon's lines are short because the balloon is narrow: the
+    /// text as a whole still runs to the length that makes a line wrap, 14.3 line heights here
+    /// against these two's 3.3.</para>
+    ///
+    /// <para>Without this guard the centring test moved 47 pair verdicts across the non-comic
+    /// captures instead of five, the great majority of them wrong and this shape the commonest.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TwoShortReadoutsOnOneCentre_AreRefusedOnTheirLength()
+    {
+        var previous = LineWithGlyphHeight("RTX", x: 1826, y: 31, width: 36, height: 21, glyph: 10.5);
+        var current = LineWithGlyphHeight("VSR", x: 1824, y: 47, width: 40, height: 25, glyph: 12.5);
 
         Assert.Equal(2, OcrTextBlockGrouper.Group([previous, current], GroupingProfile.General).Count);
     }
