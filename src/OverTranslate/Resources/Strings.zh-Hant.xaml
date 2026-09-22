@@ -196,8 +196,8 @@
     <sys:String x:Key="S.Toolbar.Direction">原文的書寫方向</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">橫排</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">直排</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文是橫著寫的，由左至右</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文是直著寫的，由上至下、由右至左</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文橫著寫，由左至右</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文直著寫，由上至下、由右至左（日文書籍、漫畫）</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">框選內容的類型</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">介面</sys:String>
@@ -376,8 +376,8 @@
          it does to the text; en-dash-with-spaces reads better in English. -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫畫</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / 介面</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整條字幕、對話框——文字大，讀取時會縮小</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">遊戲面板、物品說明——文字小，讀取時不縮小</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段連續的話，整段換成下一段——影片字幕、劇情對話、漫畫對白</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiSummary">各自獨立的零散短文字——HUD、選單、物品說明、聊天室</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiGuidance">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">收合模式說明</sys:String>

@@ -197,7 +197,7 @@
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">横書き</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">縦書き</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文は横書きで、左から右に読みます</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文は縦書きで、上から下・右から左に読みます</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文は縦書きで、上から下・右から左に読みます（日本語の書籍やマンガ）</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">選択範囲の内容の種類</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">UI</sys:String>
@@ -363,8 +363,8 @@
     <!-- Block mode picker -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / マンガ</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">ゲーム / UI</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">字幕やセリフ枠 — 文字が大きく、読み取り時に縮小します</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">ゲームのパネルやアイテム説明 — 文字が小さく、そのまま読み取ります</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">ひとまとまりの文が次の文に入れ替わる場面 — 字幕、ストーリー会話、マンガのセリフ</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiSummary">画面に散らばる短い文字 — HUD、メニュー、アイテム説明、チャット</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">動画の字幕、ゲームのストーリー会話、マンガの文字など、続けて読む文章に向いています。</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiGuidance">ゲーム画面、チャット、メニューや UI の文字など、続けて読む文章でない場面に向いています。</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">モードの説明を閉じる</sys:String>

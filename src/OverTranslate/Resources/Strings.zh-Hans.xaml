@@ -195,8 +195,8 @@
     <sys:String x:Key="S.Toolbar.Direction">原文的书写方向</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">横排</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">竖排</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文是横着写的，从左到右</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文是竖着写的，从上到下、从右到左</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文横着写，从左到右</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文竖着写，从上到下、从右到左（日文书籍、漫画）</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">框选内容的类型</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">界面</sys:String>
@@ -362,8 +362,8 @@
     <!-- Block mode picker -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫画</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / 界面</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">整条字幕、对话框——文字大，读取时会缩小</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">游戏面板、物品说明——文字小，读取时不缩小</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段连续的话，整段换成下一段——视频字幕、剧情对话、漫画对白</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiSummary">各自独立的零散短文字——HUD、菜单、物品说明、聊天室</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">适合影音字幕、游戏剧情对话、漫画文字等情境；若内容以连续阅读的文字为主，建议使用此模式。</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiGuidance">适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">收起模式说明</sys:String>

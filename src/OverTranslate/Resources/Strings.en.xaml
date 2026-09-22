@@ -195,8 +195,8 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">Writing direction of the source</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">Horizontal</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">Vertical</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">The source runs across the page, left to right</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">The source runs down the page, right to left</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">The source runs across, left to right</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">The source runs down the page, right to left (Japanese books and comics)</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">What the selection holds</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">General</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">Interface</sys:String>
@@ -362,8 +362,8 @@ Details: {0}</sys:String>
     <!-- Block mode picker -->
     <sys:String x:Key="S.Realtime.ModeSubtitle">Subtitles / Comics</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">Game / UI</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">Subtitle lines, dialogue boxes — large text, scaled down to read</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">Game panels, item text — small text, read at full size</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">One passage, replaced by the next — subtitles, story dialogue, comics</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiSummary">Separate short strings around the screen — HUD, menus, item text, chat</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">For video subtitles, game story dialogue and comic lettering — text that is read straight through.</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUiGuidance">For game screens, chat windows, menus and UI text — anything that is not subtitles, dialogue or comics.</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">Hide mode details</sys:String>
