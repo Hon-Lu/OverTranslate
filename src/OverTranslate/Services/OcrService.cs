@@ -181,7 +181,10 @@ public class OcrService : IDisposable
         // Remove scene-sized noise before it can contaminate a real dialogue row. Confident
         // single letters (such as a split "I") may still join; isolated ones are filtered later.
         filtered = filtered.Where(b => !Realtime.CollapsedDetection.IsCollapsed(b.Bounds.Height, frameHeight, b.Text)).ToList();
-        return Realtime.DialogueTextGrouper.Group(filtered, trace, decisions);
+        // The dialogue grouper has rules of its own and does not go through OcrTextBlockGrouper,
+        // so the readings have to be taken out for it separately. See Ocr.HorizontalRubyLines.
+        return Realtime.DialogueTextGrouper.Group(
+            Ocr.HorizontalRubyLines.Drop(filtered), trace, decisions);
     }
 
     // Scenery the recogniser was not sure about. Only on this path: it is the realtime one, where
