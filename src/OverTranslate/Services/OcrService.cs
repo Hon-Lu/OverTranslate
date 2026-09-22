@@ -181,6 +181,10 @@ public class OcrService : IDisposable
                     !Realtime.CollapsedDetection.IsCollapsed(
                         block.Bounds.Width, frameWidth, block.Text)).ToList();
 
+        // Before the readings, because a column read twice is two columns to judge rather than one,
+        // and the second copy of it sits exactly where a reading would.
+        blocks = Ocr.VerticalRepeatedColumns.Drop(blocks);
+
         // Before anything joins or groups: a reading merged into a sentence cannot be taken back
         // out of it afterwards, which is what Ocr.VerticalRubyColumns exists to say. What it is
         // sure about is gone; what it only suspects comes back at the end of this method, having
