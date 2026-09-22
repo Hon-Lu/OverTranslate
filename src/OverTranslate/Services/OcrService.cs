@@ -182,8 +182,11 @@ public class OcrService : IDisposable
                         block.Bounds.Width, frameWidth, block.Text)).ToList();
 
         // Before anything joins or groups: a reading merged into a sentence cannot be taken back
-        // out of it afterwards, which is what Ocr.VerticalRubyColumns exists to say.
-        blocks = Ocr.VerticalRubyColumns.Drop(blocks);
+        // out of it afterwards, which is what Ocr.VerticalRubyColumns exists to say. What it is
+        // sure about is gone; what it only suspects comes back at the end of this method, having
+        // been kept out of every sentence on the page without being thrown away.
+        var (writing, readings) = Ocr.VerticalRubyColumns.Separate(blocks);
+        blocks = writing;
 
         var candidates = new List<OcrTextBlock>();
         var across = new List<OcrTextBlock>();
@@ -204,7 +207,25 @@ public class OcrService : IDisposable
         // test has to be asked against: a reading IS a column, and a reading sitting on a sign made
         // the row test drop the sign — 迷宮入り口 thrown away because ぐち lay on it.
         var groups = WithoutWordlessGroups(WithoutRowsOverColumns(WithoutRuby(merged)));
-        return realtime ? WithoutUnconvincingGroups(groups) : groups;
+        if (realtime) groups = WithoutUnconvincingGroups(groups);
+
+        // The suspected readings join HERE rather than above, and the position is the whole of it.
+        // A column merely refused at the grouping seam becomes a group of one, and a group of one
+        // that is small and was scored badly is precisely what WithoutUnconvincingGroups exists to
+        // delete — so refusing it up there is not "kept apart", it is a slower way of losing it.
+        // That is how 「が」 went the first time this seam was closed, and why the two earlier
+        // attempts at it were reverted.
+        //
+        // Two of the three filters still get a say, because both of them mean what they say about a
+        // reading. Wordless goes first: most of what lands here is the page number or a mark off the
+        // artwork, read as 416 or L or 8. Then the group-level ruby test, which is the measured one
+        // — asked only against the finished sentences, so a reading cannot rule another reading out.
+        // MEASURED over the 15 comic pages it takes exactly three more: み世, の6 and AJ, the ones
+        // that hold a letter and so survived the first, and it takes nothing else on any corpus.
+        var aside = WithoutWordlessGroups(
+            [.. readings.Select(reading => CombineVerticalColumns([reading]))]);
+        groups.AddRange(aside.Where(reading => !groups.Any(body => IsRubyOver(reading, body))));
+        return groups;
     }
 
     /// <summary>Drops what a translator would hand straight back.</summary>

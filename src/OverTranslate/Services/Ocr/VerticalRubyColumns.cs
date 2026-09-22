@@ -3,7 +3,8 @@ using Rect = System.Windows.Rect;
 namespace OverTranslate.Services.Ocr;
 
 /// <summary>
-/// Drops the reading columns printed beside the writing they annotate, before grouping sees them.
+/// Takes the reading columns printed beside the writing they annotate out of the writing, before
+/// grouping sees them: the certain ones are dropped, the suspected ones are merely set aside.
 /// </summary>
 /// <remarks>
 /// <para>A different stage from <see cref="OcrService.WithoutRuby"/> and a different failure. That
@@ -21,8 +22,20 @@ namespace OverTranslate.Services.Ocr;
 /// readings (<c>ただはんだん</c> at 0.48, <c>たしおれじつりょく</c> at 0.52).</para>
 ///
 /// <para>KANA ONLY, for the candidate. A reading spells out a pronunciation, so it cannot hold a
-/// kanji; a misread reading that comes back holding one is simply kept, which is the safe way for
-/// this to fail.</para>
+/// kanji — but the recogniser is free to read one out of it anyway, and over the 15 comic pages
+/// that is the single largest hole in this: of the 86 columns small enough to be a reading of
+/// something, 64 are dropped here and 22 escape, and 15 of those 22 escape on this test alone.
+/// They are not one kind of thing. Six are readings mis-read — <c>いち見んてきせい</c> for
+/// いちばんてきせい, <c>の6</c>, <c>上</c>, <c>大</c> — six are the page number or a mark off the
+/// artwork, and three are real writing: <c>仲間だろ</c>, <c>こ…来ないで…</c>, and a caption. NOTHING
+/// SEPARATES THEM BY SIZE: the reading いち見んてきせい measures 0.51 of the column beside it and
+/// the dialogue 仲間だろ measures 0.49.</para>
+///
+/// <para>So the test is not loosened. What is loosened is the ACTION — see
+/// <see cref="MightBeReadingOf"/>, which asks the same four questions without this one and only
+/// ever sets a column aside. A reading left in a sentence is a wrong word inside it and cannot be
+/// taken back out; a column set aside is a sentence drawn in two pieces, which the reader can
+/// still read.</para>
 ///
 /// <para>A KANJI IN THE WRITING. Ruby annotates kanji and nothing else, so a column of kana beside
 /// another column of kana is two pieces of writing rather than a word and its reading. This is the
@@ -81,49 +94,112 @@ internal static class VerticalRubyColumns
     /// detector would have put it if it had never separated the two, and leaves the bubble drawn
     /// over the reading rather than beside it.
     /// </remarks>
-    internal static List<OcrTextBlock> Drop(List<OcrTextBlock> columns)
-    {
-        if (columns.Count < 2) return columns;
+    /// <summary>
+    /// What is left of the page's writing, and the reading columns held out of it.
+    /// </summary>
+    /// <param name="Writing">The columns to go on grouping into sentences.</param>
+    /// <param name="Readings">
+    /// The suspected readings, which never join a sentence and are carried to the end of grouping
+    /// on their own. Certain readings are not in here; they are gone.
+    /// </param>
+    internal readonly record struct Separation(
+        List<OcrTextBlock> Writing, List<OcrTextBlock> Readings);
 
-        // Which column each one is a reading of, or -1 to keep it. The NEAREST one it could be a
-        // reading of: a reading is set against its own kanji, and a column further left of it is a
-        // coincidence rather than the word being read.
+    internal static Separation Separate(List<OcrTextBlock> columns)
+    {
+        if (columns.Count < 2) return new Separation(columns, []);
+
+        // Which column each one is a reading of, or -1 to leave it in the writing. The NEAREST one
+        // it could be a reading of: a reading is set against its own kanji, and a column further
+        // left of it is a coincidence rather than the word being read.
         var annotates = new int[columns.Count];
+        var glosses = new int[columns.Count];
         for (var i = 0; i < columns.Count; i++)
         {
-            annotates[i] = -1;
+            annotates[i] = glosses[i] = -1;
             for (var j = 0; j < columns.Count; j++)
             {
-                if (i == j || !IsReadingOf(columns[i], columns[j])) continue;
-                if (annotates[i] < 0 ||
-                    columns[j].LayoutBounds.Right > columns[annotates[i]].LayoutBounds.Right)
-                    annotates[i] = j;
+                if (i == j) continue;
+                if (IsReadingOf(columns[i], columns[j]))
+                    annotates[i] = Nearer(columns, annotates[i], j);
+                else if (MightBeReadingOf(columns[i], columns[j]))
+                    glosses[i] = Nearer(columns, glosses[i], j);
             }
+
+            // Certainty wins: a column this is sure about is dropped rather than set aside.
+            if (annotates[i] >= 0) glosses[i] = -1;
         }
 
         var bounds = columns.Select(column => column.Bounds).ToArray();
         var layout = columns.Select(column => column.LayoutBounds).ToArray();
         for (var i = 0; i < columns.Count; i++)
         {
-            if (annotates[i] < 0) continue;
-            var at = annotates[i];
-            bounds[at] = Rect.Union(bounds[at], columns[i].Bounds);
-            layout[at] = Rect.Union(layout[at], columns[i].LayoutBounds);
+            // The ROOM either way, so that the columns of one balloon stay as far apart as the
+            // detector framed them. Only the certain ones give away their Bounds as well: those are
+            // gone, so the writing's bubble should cover where they were, while a column merely set
+            // aside is still drawn and would be covered by a bubble stretched over it.
+            if (annotates[i] >= 0)
+            {
+                bounds[annotates[i]] = Rect.Union(bounds[annotates[i]], columns[i].Bounds);
+                layout[annotates[i]] = Rect.Union(layout[annotates[i]], columns[i].LayoutBounds);
+            }
+            else if (glosses[i] >= 0)
+            {
+                layout[glosses[i]] = Rect.Union(layout[glosses[i]], columns[i].LayoutBounds);
+            }
         }
 
-        var kept = new List<OcrTextBlock>(columns.Count);
+        var writing = new List<OcrTextBlock>(columns.Count);
+        var readings = new List<OcrTextBlock>();
         for (var i = 0; i < columns.Count; i++)
-            if (annotates[i] < 0)
-                kept.Add(columns[i] with { Bounds = bounds[i], LayoutBounds = layout[i] });
+        {
+            if (annotates[i] >= 0) continue;
+            if (glosses[i] >= 0) readings.Add(columns[i]);
+            else writing.Add(columns[i] with { Bounds = bounds[i], LayoutBounds = layout[i] });
+        }
 
-        return kept;
+        return new Separation(writing, readings);
     }
+
+    private static int Nearer(List<OcrTextBlock> columns, int chosen, int candidate) =>
+        chosen < 0 || columns[candidate].LayoutBounds.Right > columns[chosen].LayoutBounds.Right
+            ? candidate
+            : chosen;
+
+    /// <summary>
+    /// Whether a column is close enough to a reading to be kept out of the sentence beside it,
+    /// without being sure enough to throw away.
+    /// </summary>
+    /// <remarks>
+    /// <para><see cref="IsReadingOf"/> without the kana-only test, which is the one the recogniser
+    /// breaks: six of the readings on the 15 comic pages come back holding a character that is not
+    /// kana and walk straight into a sentence. Dropping on this would cost <c>仲間だろ</c> and
+    /// <c>こ…来ないで…</c>, which measure the same, so it does not drop — the column is set aside
+    /// and drawn on its own.</para>
+    ///
+    /// <para>A COLUMN, and taller than it is wide, asked of both sides. The material that escapes
+    /// the kana test is mostly not ruby at all: a browser title bar, a caption running across the
+    /// panel — <c>各階層の入り口に設置されている</c> at 305x43 — a taskbar button. All of them are
+    /// wider than they are tall, and none of them is what this is for.</para>
+    /// </remarks>
+    private static bool MightBeReadingOf(OcrTextBlock reading, OcrTextBlock writing) =>
+        RunsDownThePage(reading) && RunsDownThePage(writing) &&
+        HoldsKanji(writing.Text) && SitsAsAReadingOf(reading, writing);
+
+    private static bool RunsDownThePage(OcrTextBlock column) =>
+        column.LayoutBounds.Height > column.LayoutBounds.Width;
 
     private static bool IsReadingOf(OcrTextBlock reading, OcrTextBlock writing)
     {
         if (!IsKanaOnly(reading.Text) || !HoldsKanji(writing.Text))
             return false;
 
+        return SitsAsAReadingOf(reading, writing);
+    }
+
+    /// <summary>Half the size of the writing, hard against its right edge, and running with it.</summary>
+    private static bool SitsAsAReadingOf(OcrTextBlock reading, OcrTextBlock writing)
+    {
         var written = GlyphSize(writing);
         if (written <= 0 || GlyphSize(reading) > written * SmallerThanTheWriting)
             return false;
