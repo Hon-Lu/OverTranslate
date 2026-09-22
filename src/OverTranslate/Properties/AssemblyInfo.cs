@@ -13,6 +13,10 @@ using System.Windows;
 // The capture-bubble background probe: it composes candidate bubble backgrounds out of the
 // same glyph repair the realtime path runs, so it has to see those internals.
 [assembly: InternalsVisibleTo("CaptureBubbleProbe")]
+// The overlay layout probe: it shows a real OverlayWindow and measures where the bubbles landed,
+// so it constructs one — and that constructor went internal when the bubble backdrop, an internal
+// type, became an optional parameter of it.
+[assembly: InternalsVisibleTo("LayoutProbe")]
 [assembly: ThemeInfo(
     ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
                                                 //(used if a resource is not found in the page,
