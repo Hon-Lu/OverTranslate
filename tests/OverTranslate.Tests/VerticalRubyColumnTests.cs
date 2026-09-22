@@ -145,7 +145,7 @@ public class VerticalRubyColumnTests
 
     /// <summary>The room a set-aside column took up still goes to the writing, for grouping.</summary>
     /// <remarks>
-    /// Only the LayoutBounds, which is what IsSameVerticalTextGroup measures: unlike a dropped
+    /// Only the LayoutBounds, which is what IsSameGroup measures: unlike a dropped
     /// reading, a column set aside is still drawn, and stretching the sentence's own rectangle over
     /// it would lay the balloon's bubble across it.
     /// </remarks>
@@ -208,7 +208,7 @@ public class VerticalRubyColumnTests
         var writing = Column("メンバの中で", new Rect(100, 50, 30, 150));
         var candidate = Column("一", new Rect(130, 50, 14, 59));
 
-        var groups = OcrService.GroupVertical([writing, candidate], frameWidth: 900);
+        var groups = VerticalColumnGrouping.Group([writing, candidate], frameWidth: 900);
 
         Assert.Equal(["メンバの中で"], groups.Select(group => group.Text));
     }
@@ -220,7 +220,7 @@ public class VerticalRubyColumnTests
         var writing = Column("メンバの中で", new Rect(100, 50, 30, 150));
         var candidate = Column("礼ほ", new Rect(130, 50, 14, 59));
 
-        var groups = OcrService.GroupVertical([writing, candidate], frameWidth: 900);
+        var groups = VerticalColumnGrouping.Group([writing, candidate], frameWidth: 900);
 
         Assert.Equal(2, groups.Count);
     }

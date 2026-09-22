@@ -73,7 +73,7 @@ public class VerticalOcrGeometryTests
         var column = Assert.Single(joined.Where(b => b.Text == "一二三四"));
         Assert.Equal(new Rect(80, 0, 20, 82), column.Bounds);
         Assert.Equal(0.9, column.Confidence!.Value, 6);
-        Assert.Equal("一二三四左右", Assert.Single(OcrService.GroupVertical(blocks, 200)).Text);
+        Assert.Equal("一二三四左右", Assert.Single(VerticalColumnGrouping.Group(blocks, 200)).Text);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class VerticalOcrGeometryTests
             new("うちで働くスタッフに", new Rect(383, 16, 25, 165)),
             new("日本語が伝わらなくてね", new Rect(364, 17, 25, 186)),
         ]);
-        var groups = OcrService.GroupVertical(blocks, 700);
+        var groups = VerticalColumnGrouping.Group(blocks, 700);
         Assert.Equal(2, groups.Count);
         Assert.Equal("どうしたんですか？", groups[0].Text);
         Assert.Equal("うちで働くスタッフに日本語が伝わらなくてね", groups[1].Text);
@@ -198,7 +198,7 @@ public class VerticalOcrGeometryTests
         var blocks = VerticalOcrGeometry.PrepareBlocks([
             new("正しい縦書きの文章です", new Rect(80, 0, 20, 240), Confidence: 0.99),
         ]);
-        Assert.Single(OcrService.GroupVertical(blocks, 100, realtime: true));
+        Assert.Single(VerticalColumnGrouping.Group(blocks, 100, realtime: true));
     }
 
     private static TextBox Box(int x, int y, int width, int height) => new()

@@ -33,7 +33,7 @@ public class VerticalColumnMergeTests
     public void A_short_first_column_set_low_in_the_balloon_joins_the_rest()
     {
         // 改めて助けてくださりありがとうございました！ on 2026-09-20 19 15 01.png.
-        var groups = OcrService.MergeVerticalColumns(
+        var groups = VerticalColumnGrouping.MergeColumns(
         [
             Column("改めて", new Rect(1093, 128, 38, 103)),
             Column("助けてくださり", new Rect(1054, 187, 32, 179)),
@@ -50,7 +50,7 @@ public class VerticalColumnMergeTests
     [Fact]
     public void A_balloon_above_another_is_not_joined_to_it()
     {
-        var groups = OcrService.MergeVerticalColumns(
+        var groups = VerticalColumnGrouping.MergeColumns(
         [
             Column("それで", new Rect(111, 1033, 37, 90)),
             // Directly below the first, in the same column of the page: no shared length at all.
@@ -64,7 +64,7 @@ public class VerticalColumnMergeTests
     [Fact]
     public void Columns_running_the_same_length_are_one_balloon()
     {
-        var groups = OcrService.MergeVerticalColumns(
+        var groups = VerticalColumnGrouping.MergeColumns(
         [
             Column("それで", new Rect(111, 1033, 37, 90)),
             Column("オルンさん！", new Rect(79, 1033, 37, 161)),

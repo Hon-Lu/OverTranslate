@@ -1,4 +1,5 @@
 using OverTranslate.Services;
+using OverTranslate.Services.Ocr;
 using Xunit;
 using Rect = System.Windows.Rect;
 
@@ -27,7 +28,7 @@ public class VerticalCollapsedDetectionTests
     [Fact]
     public void A_title_across_the_top_of_the_page_is_not_a_collapse()
     {
-        var groups = OcrService.GroupVertical(
+        var groups = VerticalColumnGrouping.Group(
             [Block("うちの猫ず日記", new Rect(0, 22, 840, 192))], frameWidth: 827, realtime: true);
 
         Assert.Equal(["うちの猫ず日記"], groups.Select(group => group.Text));
@@ -37,7 +38,7 @@ public class VerticalCollapsedDetectionTests
     [Fact]
     public void A_box_thrown_across_the_columns_is_still_a_collapse()
     {
-        var groups = OcrService.GroupVertical(
+        var groups = VerticalColumnGrouping.Group(
             [Block("ああ", new Rect(0, 100, 840, 900))], frameWidth: 827, realtime: true);
 
         Assert.Empty(groups);
@@ -47,7 +48,7 @@ public class VerticalCollapsedDetectionTests
     [Fact]
     public void The_screenshot_flow_keeps_a_box_that_spans_the_frame()
     {
-        var groups = OcrService.GroupVertical(
+        var groups = VerticalColumnGrouping.Group(
             [Block("ああ", new Rect(0, 100, 840, 900))], frameWidth: 827);
 
         Assert.Single(groups);

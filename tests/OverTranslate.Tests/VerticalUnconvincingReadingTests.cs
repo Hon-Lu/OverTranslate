@@ -1,4 +1,5 @@
 using OverTranslate.Services;
+using OverTranslate.Services.Ocr;
 using Xunit;
 using Rect = System.Windows.Rect;
 
@@ -30,7 +31,7 @@ public class VerticalUnconvincingReadingTests
             Column("そいつらにとって", new Rect(243, 335, 45, 209), 0.68),
         };
 
-        var groups = OcrService.GroupVertical(blocks, frameWidth: 1824, realtime: true);
+        var groups = VerticalColumnGrouping.Group(blocks, frameWidth: 1824, realtime: true);
 
         Assert.Equal(["とはいえそいつらにとって"], groups.Select(group => group.Text));
     }
@@ -47,7 +48,7 @@ public class VerticalUnconvincingReadingTests
             Column("DM", new Rect(600, 400, 40, 60), 0.62),
         };
 
-        Assert.Empty(OcrService.GroupVertical(blocks, frameWidth: 1824, realtime: true));
+        Assert.Empty(VerticalColumnGrouping.Group(blocks, frameWidth: 1824, realtime: true));
     }
 
     /// <summary>The screenshot flow never ran this test and still does not.</summary>
@@ -59,6 +60,6 @@ public class VerticalUnconvincingReadingTests
             Column("DM", new Rect(600, 400, 40, 60), 0.62),
         };
 
-        Assert.Single(OcrService.GroupVertical(blocks, frameWidth: 1824, realtime: false));
+        Assert.Single(VerticalColumnGrouping.Group(blocks, frameWidth: 1824, realtime: false));
     }
 }

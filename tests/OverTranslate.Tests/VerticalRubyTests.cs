@@ -1,4 +1,5 @@
 using OverTranslate.Services;
+using OverTranslate.Services.Ocr;
 using Xunit;
 using Rect = System.Windows.Rect;
 
@@ -24,7 +25,7 @@ public class VerticalRubyTests
         var body = Block("俺たちは支援魔術を扱う付与術士が", new Rect(459, 131, 134, 199), 28.3);
         var ruby = Block("まじゅっ", new Rect(526, 198, 19, 47), 11.8);
 
-        var kept = OcrService.WithoutRuby([body, ruby]);
+        var kept = VerticalColumnGrouping.WithoutRuby([body, ruby]);
 
         Assert.Equal(["俺たちは支援魔術を扱う付与術士が"], kept.Select(block => block.Text));
     }
@@ -42,7 +43,7 @@ public class VerticalRubyTests
         var body = Block("ておととうぜん劣るのは当然だろ", new Rect(1487, 118, 130, 252), bodyGlyph);
         var fragment = Block(text, new Rect(1546, 162, 35, 64), glyph);
 
-        var kept = OcrService.WithoutRuby([body, fragment]);
+        var kept = VerticalColumnGrouping.WithoutRuby([body, fragment]);
 
         Assert.Equal(2, kept.Count);
     }
@@ -58,7 +59,7 @@ public class VerticalRubyTests
         var name = Block("オリヴァー・カーディフ", new Rect(1201, 490, 268, 51), 35.2, across: true);
         var title = Block("剣聖", new Rect(1311, 469, 52, 36), 18, across: true);
 
-        var kept = OcrService.WithoutRuby([name, title]);
+        var kept = VerticalColumnGrouping.WithoutRuby([name, title]);
 
         Assert.Equal(2, kept.Count);
     }
@@ -70,7 +71,7 @@ public class VerticalRubyTests
         var sign = Block("迷宮入り口", new Rect(1611, 89, 128, 37), 30.8, across: true);
         var ruby = Block("ぐち", new Rect(1716, 86, 18, 13), 6.5);
 
-        var kept = OcrService.WithoutRuby([sign, ruby]);
+        var kept = VerticalColumnGrouping.WithoutRuby([sign, ruby]);
 
         Assert.Equal(["迷宮入り口"], kept.Select(block => block.Text));
     }
@@ -81,7 +82,7 @@ public class VerticalRubyTests
         var one = Block("かの魔獣が", new Rect(336, 105, 55, 110), 22);
         var other = Block("近づいてるみたいだ", new Rect(308, 89, 40, 205), 30.2);
 
-        Assert.Equal(2, OcrService.WithoutRuby([one, other]).Count);
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRuby([one, other]).Count);
     }
 
     [Fact]
@@ -91,6 +92,6 @@ public class VerticalRubyTests
         // Mostly outside the body's box: below the bar this rule is willing to guess at.
         var ruby = Block("ちゃく", new Rect(1160, 186, 22, 51), 17);
 
-        Assert.Equal(2, OcrService.WithoutRuby([body, ruby]).Count);
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRuby([body, ruby]).Count);
     }
 }

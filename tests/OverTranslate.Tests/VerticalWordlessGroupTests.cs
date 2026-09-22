@@ -1,4 +1,5 @@
 using OverTranslate.Services;
+using OverTranslate.Services.Ocr;
 using Xunit;
 using Rect = System.Windows.Rect;
 
@@ -22,7 +23,7 @@ public class VerticalWordlessGroupTests
     [InlineData("——")]
     public void A_group_with_no_word_in_it_is_dropped(string text)
     {
-        Assert.Empty(OcrService.WithoutWordlessGroups([Group(text)]));
+        Assert.Empty(VerticalColumnGrouping.WithoutWordlessGroups([Group(text)]));
     }
 
     /// <summary>
@@ -36,6 +37,6 @@ public class VerticalWordlessGroupTests
     [InlineData("Sランク")]
     public void A_group_holding_a_word_is_kept(string text)
     {
-        Assert.Single(OcrService.WithoutWordlessGroups([Group(text)]));
+        Assert.Single(VerticalColumnGrouping.WithoutWordlessGroups([Group(text)]));
     }
 }

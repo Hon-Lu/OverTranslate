@@ -47,7 +47,8 @@ internal static class VerticalOcrProbe
                 var raw = size is null
                     ? await engine.RecognizeAsync(source, "JA", verticalText: true)
                     : (await engine.TryRecognizeAsync(source, "JA", size, verticalText: true))!;
-                var current = OcrService.GroupVertical(raw, source.Width, realtime: size is not null, bitmap: source);
+                var current = VerticalColumnGrouping.Group(
+                    raw, source.Width, realtime: size is not null, bitmap: source);
                 results.Add(new { path, size, oldMs, currentMs = timer.ElapsedMilliseconds, old, raw, current });
                 Draw(source, raw, current, Path.Combine(directory,
                     $"{index:D2}-{Path.GetFileNameWithoutExtension(path)}-{size?.ToString() ?? "screenshot"}.png"));

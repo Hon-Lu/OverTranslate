@@ -1,4 +1,5 @@
 using OverTranslate.Services;
+using OverTranslate.Services.Ocr;
 using Xunit;
 using Rect = System.Windows.Rect;
 
@@ -24,7 +25,7 @@ public class VerticalRowOverColumnsTests
         var balloon = Block("の本職は士なんだから", new Rect(1130, 214, 100, 218), across: false);
         var heads = Block("剣俺", new Rect(1130, 188, 110, 49), across: true);
 
-        var kept = OcrService.WithoutRowsOverColumns([balloon, heads]);
+        var kept = VerticalColumnGrouping.WithoutRowsOverColumns([balloon, heads]);
 
         Assert.Equal(["の本職は士なんだから"], kept.Select(block => block.Text));
     }
@@ -33,7 +34,7 @@ public class VerticalRowOverColumnsTests
     /// A name plate keeps its name although the title above it arrives as a column.
     /// </summary>
     /// <remarks>
-    /// 剣聖 is two characters at 47x34, inside what IsVerticalColumnCandidate calls a column, and it
+    /// 剣聖 is two characters at 47x34, inside what IsColumnCandidate calls a column, and it
     /// lies on 0.44 of the name. A row may only be overruled by writing that actually runs down the
     /// page.
     /// </remarks>
@@ -43,7 +44,7 @@ public class VerticalRowOverColumnsTests
         var title = Block("剣聖", new Rect(1112, 397, 47, 34), across: false);
         var name = Block("オリヴァー・カーディフ", new Rect(1021, 416, 228, 44), across: true);
 
-        Assert.Equal(2, OcrService.WithoutRowsOverColumns([title, name]).Count);
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRowsOverColumns([title, name]).Count);
     }
 
     /// <summary>A caption standing in its own space is writing of its own.</summary>
@@ -53,7 +54,7 @@ public class VerticalRowOverColumnsTests
         var balloon = Block("恨んでくれて構わない", new Rect(1055, 769, 102, 191), across: false);
         var caption = Block("ギルドカードに記憶させると", new Rect(1028, 609, 263, 36), across: true);
 
-        Assert.Equal(2, OcrService.WithoutRowsOverColumns([balloon, caption]).Count);
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRowsOverColumns([balloon, caption]).Count);
     }
 
     /// <summary>A page with no columns on it at all is left alone.</summary>
@@ -63,6 +64,6 @@ public class VerticalRowOverColumnsTests
         var one = Block("ディフェンダー", new Rect(1070, 1100, 168, 35), across: true);
         var other = Block("デリック・モーズレイ", new Rect(1036, 1129, 236, 34), across: true);
 
-        Assert.Equal(2, OcrService.WithoutRowsOverColumns([one, other]).Count);
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRowsOverColumns([one, other]).Count);
     }
 }

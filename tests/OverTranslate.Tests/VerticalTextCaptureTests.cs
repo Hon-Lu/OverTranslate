@@ -30,7 +30,7 @@ public class VerticalTextCaptureTests
     }
 
     [Fact]
-    public void MergeVerticalColumns_JoinsRightToLeftAndKeepsOtherGroupsSeparate()
+    public void MergeColumns_JoinsRightToLeftAndKeepsOtherGroupsSeparate()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -40,7 +40,7 @@ public class VerticalTextCaptureTests
             new("中", new System.Windows.Rect(68, 12, 10, 60), Confidence: 0.6),
         };
 
-        var result = OcrService.MergeVerticalColumns(columns.AsDetected());
+        var result = VerticalColumnGrouping.MergeColumns(columns.AsDetected());
 
         Assert.Equal(2, result.Count);
         Assert.Equal("右中左", result[0].Text);
@@ -63,7 +63,7 @@ public class VerticalTextCaptureTests
     /// characters.
     /// </remarks>
     [Fact]
-    public void MergeVerticalColumns_JoinsColumnsThatStartAtDifferentHeights()
+    public void MergeColumns_JoinsColumnsThatStartAtDifferentHeights()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -72,7 +72,7 @@ public class VerticalTextCaptureTests
             new("仲間に対する態度か？", new System.Windows.Rect(200, 153, 32, 144)),
         }.AsDetected();
 
-        var merged = Assert.Single(OcrService.MergeVerticalColumns(columns));
+        var merged = Assert.Single(VerticalColumnGrouping.MergeColumns(columns));
 
         Assert.Equal("これまで苦楽を共にしてきた仲間に対する態度か？", merged.Text);
     }
@@ -81,7 +81,7 @@ public class VerticalTextCaptureTests
     /// Running alongside is not enough on its own — a gutter still separates two balloons.
     /// </summary>
     [Fact]
-    public void MergeVerticalColumns_StillRefusesColumnsAcrossAGutter()
+    public void MergeColumns_StillRefusesColumnsAcrossAGutter()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -89,13 +89,13 @@ public class VerticalTextCaptureTests
             new("別の吹き出し", new System.Windows.Rect(120, 165, 26, 81)),
         }.AsDetected();
 
-        var result = OcrService.MergeVerticalColumns(columns);
+        var result = VerticalColumnGrouping.MergeColumns(columns);
 
         Assert.Equal(2, result.Count);
     }
 
     [Fact]
-    public void MergeVerticalColumns_DropsWideHorizontalTextBeforeItBridgesSeparateColumns()
+    public void MergeColumns_DropsWideHorizontalTextBeforeItBridgesSeparateColumns()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -104,7 +104,7 @@ public class VerticalTextCaptureTests
             new("左", new System.Windows.Rect(20, 10, 10, 60)),
         };
 
-        var result = OcrService.MergeVerticalColumns(columns.AsDetected());
+        var result = VerticalColumnGrouping.MergeColumns(columns.AsDetected());
 
         Assert.Equal(2, result.Count);
         Assert.Equal(["右", "左"], result.Select(block => block.Text));
@@ -122,7 +122,7 @@ public class VerticalTextCaptureTests
     /// replaces.
     /// </remarks>
     [Fact]
-    public void MergeVerticalColumns_SizesTheCellFromTheAreaWhenOneBoxHoldsTwoColumns()
+    public void MergeColumns_SizesTheCellFromTheAreaWhenOneBoxHoldsTwoColumns()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -130,7 +130,7 @@ public class VerticalTextCaptureTests
             new(new string('い', 8), new System.Windows.Rect(32, 453, 24, 170)),
         };
 
-        var merged = Assert.Single(OcrService.MergeVerticalColumns(columns.AsDetected()));
+        var merged = Assert.Single(VerticalColumnGrouping.MergeColumns(columns.AsDetected()));
 
         Assert.InRange(merged.RenderGlyphHeight!.Value, 20, 26);
     }
@@ -140,11 +140,11 @@ public class VerticalTextCaptureTests
     /// area rule is the one that overshoots, and the box's own width is what holds it down.
     /// </summary>
     [Fact]
-    public void MergeVerticalColumns_KeepsTheBoxWidthWhenTheAreaWouldOvershoot()
+    public void MergeColumns_KeepsTheBoxWidthWhenTheAreaWouldOvershoot()
     {
         var column = new OcrTextBlock("！", new System.Windows.Rect(10, 20, 8, 90));
 
-        var merged = Assert.Single(OcrService.MergeVerticalColumns([column.AsDetected()]));
+        var merged = Assert.Single(VerticalColumnGrouping.MergeColumns([column.AsDetected()]));
 
         Assert.Equal(8, merged.RenderGlyphHeight!.Value, precision: 10);
     }
@@ -160,7 +160,7 @@ public class VerticalTextCaptureTests
     /// separate thing the same test did.
     /// </remarks>
     [Fact]
-    public void GroupVertical_KeepsHorizontalTextAndMarksItAsRunningAcross()
+    public void Group_KeepsHorizontalTextAndMarksItAsRunningAcross()
     {
         var blocks = new List<OcrTextBlock>
         {
@@ -169,7 +169,7 @@ public class VerticalTextCaptureTests
             new("左", new System.Windows.Rect(20, 10, 10, 60)),
         }.AsDetected();
 
-        var result = OcrService.GroupVertical(blocks, frameWidth: 300);
+        var result = VerticalColumnGrouping.Group(blocks, frameWidth: 300);
 
         // The wide box still does not bridge the two columns.
         Assert.Equal(["右", "左", "オルン・ドゥーラ"], result.Select(block => block.Text));
@@ -179,7 +179,7 @@ public class VerticalTextCaptureTests
 
     /// <summary>The flag says what the text does, not how wide its box happens to be.</summary>
     [Fact]
-    public void GroupVertical_LeavesColumnGroupsUnmarked()
+    public void Group_LeavesColumnGroupsUnmarked()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -187,17 +187,17 @@ public class VerticalTextCaptureTests
             new("中", new System.Windows.Rect(68, 12, 10, 60)),
         }.AsDetected();
 
-        var merged = Assert.Single(OcrService.GroupVertical(columns, frameWidth: 300));
+        var merged = Assert.Single(VerticalColumnGrouping.Group(columns, frameWidth: 300));
 
         Assert.False(merged.RunsAcross);
     }
 
     [Fact]
-    public void MergeVerticalColumns_KeepsAOneCharacterWideDetection()
+    public void MergeColumns_KeepsAOneCharacterWideDetection()
     {
         var column = new OcrTextBlock("！", new System.Windows.Rect(10, 20, 30, 15));
 
-        var result = OcrService.MergeVerticalColumns([column.AsDetected()]);
+        var result = VerticalColumnGrouping.MergeColumns([column.AsDetected()]);
 
         var kept = Assert.Single(result);
         Assert.Equal(column.Text, kept.Text);
@@ -387,7 +387,7 @@ public class VerticalTextCaptureTests
     /// a column and bridges the two real ones into a single group.
     /// </summary>
     [Fact]
-    public void MergeVerticalColumns_JudgesTheColumnShapeOnLayoutBounds()
+    public void MergeColumns_JudgesTheColumnShapeOnLayoutBounds()
     {
         var strip = new OcrTextBlock("橫排標題", new System.Windows.Rect(35, 8, 54, 40))
         {
@@ -401,7 +401,7 @@ public class VerticalTextCaptureTests
             new OcrTextBlock("左", new System.Windows.Rect(20, 10, 10, 60)).AsDetected(),
         };
 
-        var result = OcrService.MergeVerticalColumns(columns);
+        var result = VerticalColumnGrouping.MergeColumns(columns);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(["右", "左"], result.Select(block => block.Text));
@@ -409,7 +409,7 @@ public class VerticalTextCaptureTests
 
     /// <summary>A merged column group carries layout metrics on, so nothing downstream sees a gap.</summary>
     [Fact]
-    public void MergeVerticalColumns_CarriesLayoutMetricsOntoTheGroup()
+    public void MergeColumns_CarriesLayoutMetricsOntoTheGroup()
     {
         var columns = new List<OcrTextBlock>
         {
@@ -417,7 +417,7 @@ public class VerticalTextCaptureTests
             new OcrTextBlock("中", new System.Windows.Rect(68, 12, 10, 60)),
         }.AsDetected();
 
-        var merged = Assert.Single(OcrService.MergeVerticalColumns(columns));
+        var merged = Assert.Single(VerticalColumnGrouping.MergeColumns(columns));
 
         Assert.Equal(OcrLayoutScript.Cjk, merged.LayoutScript);
         Assert.Equal(new System.Windows.Rect(68, 10, 22, 62), merged.LayoutBounds);
@@ -483,11 +483,11 @@ public class VerticalTextCaptureTests
     /// absence of the parameter is what makes it impossible rather than merely unintended.
     /// </remarks>
     [Theory]
-    [InlineData(nameof(OcrService.RecognizeVerticalAsync))]
-    [InlineData(nameof(OcrService.MergeVerticalColumns))]
-    public void TheVerticalPipeline_TakesNoProfile(string method)
+    [InlineData(typeof(OcrService), nameof(OcrService.RecognizeVerticalAsync))]
+    [InlineData(typeof(VerticalColumnGrouping), nameof(VerticalColumnGrouping.MergeColumns))]
+    public void TheVerticalPipeline_TakesNoProfile(Type owner, string method)
     {
-        var parameters = typeof(OcrService)
+        var parameters = owner
             .GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static)!
             .GetParameters();
 

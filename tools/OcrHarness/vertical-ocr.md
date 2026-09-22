@@ -128,15 +128,15 @@ dotnet test tests/OverTranslate.Tests/OverTranslate.Tests.csproj
 使用者回報「整個區塊或整行都沒辨識出來」。查下來是兩個不同的原因，這一節只處理主因。
 
 **主因：我們自己把橫排文字丟掉了，佔 11/14。**
-`IsVerticalColumnCandidate` 用寬高比 ≤ 1.4 判定一個偵測框算不算欄，不算的連同文字一起丟。
+`IsColumnCandidate` 用寬高比 ≤ 1.4 判定一個偵測框算不算欄，不算的連同文字一起丟。
 這條件擋「寬框在分組時把左右兩欄接成一組」是必要的，但「不是欄」和「不要了」是兩件事，
 只有前者被量過。`.ai/test-images/vertical-image-ja2` 的 15 張彩漫裡，它丟掉 11 個區塊、
 散在 6 張上，全部是偵測器已經讀對的（信心 0.87–1.00）：角色名牌（`付与術士`／`オルン・ドゥーラ`）、
 三行旁白框、場景標示（`迷宮入り口`）、`第１話/おわり`。舊的整圖旋轉路徑同樣會丟，**不是這次重構造成的**。
 
-改法：`GroupVertical` 改成分流而非過濾——欄走 `JoinColumnFragments` ＋ `MergeVerticalColumns`
+改法：`Group` 改成分流而非過濾——欄走 `JoinColumnFragments` ＋ `MergeColumns`
 （完全不變，寬框照樣進不去，串欄的防護原封不動），其餘標記 `RunsAcross = true` 併回輸出。
-`MergeVerticalColumns` 自己的行為沒動，它的職責就是組欄，非欄不該出現在它的輸出裡。
+`MergeColumns` 自己的行為沒動，它的職責就是組欄，非欄不該出現在它的輸出裡。
 
 **光是留下來還不夠，得用橫排畫。** `オルン・ドゥーラ` 八個字、240×36 的框，
 塞進正方格會變成七個單格欄由右往左排：名字整個倒過來，最後一個字還沒地方放。那比不畫更糟。
@@ -304,7 +304,7 @@ NLog 的 console target 寫 stdout 而不是 stderr。用 `2>&1 >/dev/null` 會�
 
 ### 根因：頂端對齊
 
-`IsSameVerticalTextGroup` 用「兩欄頂端相差 ≤ 0.6 字距」判斷是否同一組。
+`IsSameGroup` 用「兩欄頂端相差 ≤ 0.6 字距」判斷是否同一組。
 但泡泡是橢圓的——邊緣的欄比較短、起點比較低，差距是**自身長度的一個比例**而不是固定字數。
 `2026-09-20 19 14 56 (3).png` 半尺寸下，`これまで苦楽を共にしてきた仲間に対する態度か？`
 的三欄頂端相差 11px、字距 14.6px（0.75 字），超過 0.6，於是一句話被切成三組；
@@ -338,7 +338,7 @@ NLog 的 console target 寫 stdout 而不是 stderr。用 `2>&1 >/dev/null` 會�
 
 1. **用 `GlyphPitch` 比大小**——它把欄長除以讀出的字數，單字欄會回傳整個框高：
    「が」估出 53、自己那句是 28.8，比值 0.54 被判成振假名而**整欄丟失**。
-   這和 `VerticalGlyphSize` 要取中位數平滑的是同一個雜訊，群組層級的量不能直接用在單欄。
+   這和 `GroupGlyphSize` 要取中位數平滑的是同一個雜訊，群組層級的量不能直接用在單欄。
 2. **用框寬比大小**——相鄰欄的偵測框寬度差異本來就大，重疊配對從 23 暴增到 50。
 
 掉一句台詞比句子裡混進讀音嚴重，所以這個關卡留著不擋，振假名交給
@@ -361,7 +361,7 @@ NLog 的 console target 寫 stdout 而不是 stderr。用 `2>&1 >/dev/null` 會�
 
 ### 振假名：欄層級的判準
 
-新增 `Ocr.VerticalRubyColumns`，在 `GroupVertical` 分組前就把讀音欄拿掉。
+新增 `Ocr.VerticalRubyColumns`，在 `Group` 分組前就把讀音欄拿掉。
 四個條件同時成立才算讀音，缺一不可：
 
 1. **候選全是假名**——讀音是注音，不可能有漢字。誤認成漢字就留著（安全的失敗方向）。
@@ -429,7 +429,7 @@ NLog 的 console target 寫 stdout 而不是 stderr。用 `2>&1 >/dev/null` 會�
    `俺の本職は剣士なんだから`、`初めて付与術士は重要な存在だと理解した`、
    `私の知らない人…魔術士…じゃない？`、`别に礼をしてほしくて助けたわけじゃないよ`
    全部被打成兩三組，另外多漏出六個讀音。3 個補回換 4 個打散，是虧的。
-2. **`IsSameVerticalTextGroup` 改用邊緣間距**（取代中心距離）。
+2. **`IsSameGroup` 改用邊緣間距**（取代中心距離）。
    確實把上面四句全部接回來了，但也把 `manga-comigram` 的問句與回答、
    `image.jpg` 兩個人物的對話併在一起——交接文件人工核對過的分離案例。
 3. **中心距離倍率 1.6 → 2.1**。問答那組救回來了，
@@ -504,7 +504,7 @@ ja2 原尺寸剩 4 個：`36`、`で`、`ニキッ`、`SCO022`；70% 剩 5 個�
 ### 根因
 
 相鄰兩欄的**最上面那個字**是並排的，中間又夾著振假名，合起來是一塊又矮又寬的墨。
-偵測器把它框成一個橫向的框，`IsVerticalColumnCandidate` 量出寬大於高，
+偵測器把它框成一個橫向的框，`IsColumnCandidate` 量出寬大於高，
 就正確地回報「這不是欄」——於是泡泡的兩個開頭字被當成一行橫排，
 還照橫排的順序讀出來：`俺` 和 `剣` 變成 `剣俺`，蓋在自己那顆
 `俺の本職は剣士なんだから` 上，而那句本身也少了這兩個字。
@@ -526,7 +526,7 @@ ja2 原尺寸剩 4 個：`36`、`で`、`ニキッ`、`SCO022`；70% 剩 5 個�
 1. **順序**：`WithoutRuby` 必須先跑。振假名**也是欄**，
    `ぐち` 壓在招牌 `迷宮入り口` 上，先跑行列測試就會把招牌丟掉。
 2. **壓在上面的必須真的是直排**：名牌的頭銜 `剣聖` 只有兩個字（47x34），
-   在 `IsVerticalColumnCandidate` 的門檻內，所以它是「欄」，
+   在 `IsColumnCandidate` 的門檻內，所以它是「欄」，
    而它壓住 `オリヴァー・カーディフ` 的 0.44——沒有「高大於寬」這個條件，名牌就會丟掉名字。
 
 ### 驗證
@@ -978,7 +978,7 @@ confirmation，`ReadingAgain` 只在指紋沒變時才成立。沒有這道守�
 
 ### 那一刀本來就在正確的位置
 
-`VerticalRubyColumns.Drop` 跑在 `MergeVerticalColumns` 之前，正是「注音被併進句子」唯一能攔的地方。
+`VerticalRubyColumns.Drop` 跑在 `MergeColumns` 之前，正是「注音被併進句子」唯一能攔的地方。
 量它現在的成績（ja2 十五頁，`RubyWhy` probe，對每個欄問 `IsReadingOf` 的五個條件哪一個否決它）：
 
 ```
@@ -1065,7 +1065,7 @@ caps 少掉的那一顆是 `別の魔獣が24近づいてる…` 變成 `の龍�
 
 ## 截圖翻譯直排的振假名（2026-09-22 追加）
 
-**同一條路**：`RecognizeVerticalAsync` 和 `TryRecognizeVerticalAsync` 都呼叫 `GroupVertical`，
+**同一條路**：`RecognizeVerticalAsync` 和 `TryRecognizeVerticalAsync` 都呼叫 `Group`，
 `VerticalRubyColumns.Separate` 在 `realtime` 分岔之前，所以上面那次改動兩邊一起生效。用 HEAD~1 的
 worktree 建一份對照組量過（`--shot`，偵測尺寸 2048）：
 
@@ -1094,7 +1094,7 @@ diff 裡只有那五個單字，沒有別的。
 
 ### 別再重掃
 
-- **以為截圖那邊要另外改** —— 同一個 `GroupVertical`，不用。
+- **以為截圖那邊要另外改** —— 同一個 `Group`，不用。
 - **用 `WithoutRuby` 的面積門檻去對齊兩條流程** —— 尺寸不同，面積佔比就不同，對不齊；差別要在扣住那層解決。
 
 
@@ -1157,3 +1157,57 @@ diff 裡每一筆都是修好的，沒有一筆是刪掉真東西。最大的一
 
 - **用位置去掉埋在別人框裡的框** —— 62 個裡 38 個是振假名，會全部丟掉。
 - **丟掉比較小的那個框** —— `比べて` 埋在只讀出 `て` 的框裡，會丟掉兩個字。
+
+
+## 直排分組搬出 OcrService（2026-09-22 追加）
+
+`OcrService` 原本 796 行，其中約 506 行是直排欄位分組，跟這個 service「跟引擎講話」的職責無關。
+搬到 `Services/Ocr/VerticalColumnGrouping.cs`，跟其他直排階段放在同一個命名空間。
+
+`OcrService` 剩 288 行；兩個直排入口 `TryRecognizeVerticalAsync` / `RecognizeVerticalAsync` 留在原地，
+各兩行——辨識，然後分組。
+
+搬移時順手處理掉的：
+
+- **孤兒文件註解**。`MapVerticalColumnsBack` 被刪掉之後，它的 `<summary>` 留在原地，掛到了
+  `RubyMaxRelativeSize` 上，講的是「重新組合共用上緣的右至左欄位」——跟那個常數毫無關係，而且造成
+  一個成員上有兩個 `<summary>`。
+- **名稱裡多餘的 Vertical**。在一個叫 `VerticalColumnGrouping` 的類別裡，
+  `GroupVertical` → `Group`、`MergeVerticalColumns` → `MergeColumns`、
+  `CombineVerticalColumns` → `CombineColumns`、`IsVerticalColumnCandidate` → `IsColumnCandidate`、
+  `IsSameVerticalTextGroup` → `IsSameGroup`、`VerticalGlyphSize` → `GroupGlyphSize`、
+  `CombineVerticalGlyphSize` → `CombineGlyphSize`、
+  `SplitIntoVerticalCharacterCells` → `SplitIntoCharacterCells`。
+
+另外三處在同一輪整理掉：
+
+- `Squeeze` + LCS `SharedRun` 在 `TurnedFrameDetection`、`VerticalRepeatedColumns`、
+  `VerticalSecondLook` 各寫了一次，其中 `VerticalSecondLook` 那份**從來沒有被呼叫**（換成 `Longest`
+  比較法之後留下的）。合成 `Ocr/SameWriting.cs`。
+- `TurnedFrameDetection.Enabled`：`internal static bool { get; set; }`，量完之後沒有任何地方關過它。
+  辨識路徑上的可變靜態，移除。
+- `RealtimeDetectorSize.For` 繞過自己那條有名字的規則，直接取 `OnnxOcrEngine.ScreenshotDetectSize`。
+  改用 `ColumnsAreReadAtTheScreenshotSize`。
+
+### 驗證
+
+整理與搬移都要求輸出**逐字元不變**，兩者都量過：直排三語料兩條流程 6 份、橫排六語料 6 份，
+全部 byte-identical（橫排是對 `main` 比，不是對整理前）。1417 測試通過。
+
+### 橫排沒有被這個分支影響
+
+整條分支對 `main` 做過一次完整對拍，同一份探針分別對兩棵樹建置：
+
+| 語料 | | 差異 |
+|---|---|---|
+| region-subtitle-en | 53 張 / 19 組 | 0 |
+| region-subtitle-ja-card | 52 張 / 24 組 | 0 |
+| region-subtitle-ja-video | 32 張 / 32 組 | 0 |
+| screen-subtitle-en-ja | 28 張 / 91 組 | 0 |
+| screen-panel-en-ja | 18 張 / 574 組 | 0 |
+| region-web-ja-dark | 48 張 / 240 組 | 0 |
+
+唯一對橫排有實質影響的改動是 `RealtimeRegionState.Decide` 把 confirmation 的判斷移到取指紋之後
+（翻頁守門需要它）。那條路徑不寫任何狀態，`ReadingAgain` 在橫排上沒有人讀，成本是一次指紋：
+**兩條文字帶 0.1356ms**（整個區塊 0.5864ms、漫畫整頁 2.9187ms），而 confirmation 只在已經盯著文字帶
+時發生，每次文字變化一次。

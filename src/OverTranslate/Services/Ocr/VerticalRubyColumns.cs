@@ -7,8 +7,9 @@ namespace OverTranslate.Services.Ocr;
 /// grouping sees them: the certain ones are dropped, the suspected ones are merely set aside.
 /// </summary>
 /// <remarks>
-/// <para>A different stage from <see cref="OcrService.WithoutRuby"/> and a different failure. That
-/// one runs on finished groups and stops a reading being DRAWN as a second bubble over a balloon.
+/// <para>A different stage from <see cref="VerticalColumnGrouping.WithoutRuby"/> and a different
+/// failure. That one runs on finished groups and stops a reading being DRAWN as a second bubble
+/// over a balloon.
 /// This one runs on the detector's columns and stops a reading being MERGED INTO a sentence, which
 /// is what produces <c>俺たちはあつかまじゅっ支援魔術を扱う</c> — the open half of the problem the
 /// group-level rule's own remarks name. Once a reading is inside a group there is nothing left to
