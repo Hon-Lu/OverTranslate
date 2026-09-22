@@ -40,14 +40,21 @@ internal static class VerticalSecondLook
     /// The second detector size, as a share of the region's longest side.
     /// </summary>
     /// <remarks>
-    /// The middle of the band that was measured, rather than its best point. 0.77 scored highest on
-    /// the 15 captured frames (119 balloons whole) and 0.72 on characters (0.991), but the band from
-    /// 0.66 to 0.95 is flat within a few balloons and the peak moves with the sample — the same
-    /// fraction lands on a different 32-pixel step for a 1824 frame than for a 1832 one, and that
-    /// alone is worth eight balloons. A number picked off the peak of a jumpy curve is a number
-    /// fitted to fifteen frames.
+    /// <para>Which value matters less than there being a second one — every fraction measured
+    /// between 0.56 and 0.95 takes the 15 captured frames from 98 balloons whole to between 111 and
+    /// 119 as a raw union. So this was set to 0.80, the middle of that band, on the reasoning that a
+    /// number picked off the peak of a jumpy curve is a number fitted to fifteen frames.</para>
+    ///
+    /// <para>Then both were measured through <see cref="Merge"/> rather than as a raw union, and
+    /// 0.77 is better on two of the three corpora and level on the third: on the captured frames
+    /// 108 balloons whole against 105, 0.939 of them arriving as one group against 0.925, and 0.923
+    /// of the output real against 0.910; on the twelve web pages 42 whole against 41; on the comic
+    /// files 126 against 129 whole but 0.957 of the output real against 0.950. It is also the value
+    /// that reads パーティに付与術士が必要になったから as one sentence on the frame the user
+    /// reported it split on. Chosen between two measured options rather than fitted, which is the
+    /// difference from picking the peak of the sweep.</para>
     /// </remarks>
-    private const double OtherFraction = 0.80;
+    private const double OtherFraction = 0.77;
 
     /// <summary>
     /// How far apart the two sizes have to be before a second read is worth paying for.
