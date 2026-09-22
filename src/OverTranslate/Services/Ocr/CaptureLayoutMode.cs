@@ -39,5 +39,13 @@ public enum CaptureLayoutMode
     /// Game UI, menus, multi-column panels: leave the arrangement as it is and hold the merge tests
     /// a little harder.
     /// </summary>
+    /// <remarks>
+    /// <b>Archived: nothing in the app selects this.</b> <see cref="CaptureLayoutPolicy"/> turns
+    /// every requested mode into <see cref="General"/> before it reaches the pipeline, so this
+    /// member survives only to keep old settings files loading and to give the harness and the
+    /// grouping tests an unrelaxed control. It is not the live realtime panel mode — that is
+    /// <see cref="Realtime.RealtimeBlockMode.Panel"/>, a different type. Read
+    /// <see cref="CaptureLayoutPolicy"/> before spending any effort here.
+    /// </remarks>
     Interface,
 }

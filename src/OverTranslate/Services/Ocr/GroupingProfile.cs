@@ -82,10 +82,17 @@ internal sealed record GroupingProfile(
     /// every capture was grouped on before modes existed.
     /// </summary>
     /// <remarks>
-    /// This was called Standard while it was the default. It is neither standard nor the default in
-    /// v2 — the material people actually point this at is prose — but the figures have not moved,
-    /// which is what makes the swap provable: an Interface run reproduces every corpus output saved
-    /// under the old name byte for byte.
+    /// <para>This was called Standard while it was the default. It is neither standard nor the
+    /// default in v2 — the material people actually point this at is prose — but the figures have
+    /// not moved, which is what makes the swap provable: an Interface run reproduces every corpus
+    /// output saved under the old name byte for byte.</para>
+    ///
+    /// <para><b>Nothing under <c>src/</c> asks for this profile.</b> The mode that selects it is
+    /// archived and has no entry point — see <see cref="CaptureLayoutPolicy"/>, which is the whole
+    /// story. What keeps it here is that it relaxes nothing, which makes it the control the
+    /// grouping tests and <c>OcrHarness --interface</c> are written against. Do not tune it, and do
+    /// not read a measurement taken under it as something a user will meet. It is also not
+    /// <see cref="Realtime"/>, whatever the identical figures suggest.</para>
     /// </remarks>
     public static GroupingProfile Interface { get; } = new(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
@@ -117,10 +124,17 @@ internal sealed record GroupingProfile(
     /// <para>The leading limit is relaxed too, and that one is not free. It buys paragraphs — 27
     /// groups across six annotated web pages, 34 more across the older corpus, all of them prose
     /// that was being cut into half-sentences — and it charges 16 wrong joins for them, news
-    /// headlines and wiki timeline entries strung together. That trade was accepted for this mode
-    /// and refused for <see cref="Interface"/>, which is the whole reason the figure sits on the
-    /// profile: measured with it applied to both, the interface mode took 15 of those 16 wrong
-    /// joins as well, and a mode nobody can escape to is not a mode.</para>
+    /// headlines and wiki timeline entries strung together. The reason the figure sits on the
+    /// profile rather than in the grouper is that measurement: applied to both modes it took 15 of
+    /// those 16 wrong joins under <see cref="Interface"/> as well, so putting it here is what keeps
+    /// the unrelaxed control unrelaxed.</para>
+    ///
+    /// <para><b>The 16 have nowhere to be escaped to, and that is not what was written here
+    /// originally.</b> The trade was recorded as affordable because a user meeting it could switch
+    /// modes; the shipped app offers no such switch — see <see cref="CaptureLayoutPolicy"/>. The
+    /// 16 were never re-weighed against that, so they are a standing cost on the only mode there
+    /// is, not a settled one. Anyone re-opening this figure should know it was accepted on an
+    /// argument that has since stopped being true.</para>
     ///
     /// <para>The size ratio is lowered as well, and 0.80 is where the measurement put it. Hand
     /// lettering is uneven — the same sentence's lines come back 0.83 to 0.88 of each other across
