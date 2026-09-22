@@ -1,6 +1,7 @@
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
+using OverTranslate.Services.Realtime;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -284,6 +285,70 @@ public class SettingsParsingTests
 
         Assert.Equal(CaptureLayoutMode.General, settings.Capture.LayoutMode);
         Assert.True(settings.Capture.VerticalText);
+        Assert.Equal("secret", settings.ApiKey);
+    }
+
+    /// <summary>
+    /// A settings file written before the edit layer remembered its trays opens the way it behaved.
+    /// </summary>
+    /// <remarks>
+    /// The two values were hard-coded at the draw site until they moved here, so the defaults are
+    /// not a fresh opinion — they are the behaviour every existing file already has, and a file that
+    /// has never said otherwise has to keep getting it.
+    /// </remarks>
+    [Fact]
+    public void ASettingsFileWithoutBlockDefaults_DrawsBlocksTheWayTheDrawSiteUsedTo()
+    {
+        var settings = SettingsService.Parse("{}");
+
+        Assert.Equal(RealtimeBlockMode.Subtitle, settings.Realtime.BlockMode);
+        Assert.Equal(RealtimeTextOrientation.Horizontal, settings.Realtime.TextOrientation);
+        Assert.Equal(RealtimeBlockMode.Subtitle, new RealtimeSettings().BlockMode);
+        Assert.Equal(RealtimeTextOrientation.Horizontal, new RealtimeSettings().TextOrientation);
+    }
+
+    /// <summary>
+    /// What the trays were last set to survives the file, as a name rather than an ordinal.
+    /// </summary>
+    /// <remarks>
+    /// An ordinal would be the wrong format for the same reason it is wrong for the capture layout
+    /// mode: 字幕 and 遊戲 are unlikely to be the last two answers, and the day a third arrives every
+    /// stored number means something else. The round trip is what proves the press actually keeps.
+    /// </remarks>
+    [Theory]
+    [InlineData(RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Horizontal)]
+    [InlineData(RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Vertical)]
+    [InlineData(RealtimeBlockMode.Panel, RealtimeTextOrientation.Horizontal)]
+    [InlineData(RealtimeBlockMode.Panel, RealtimeTextOrientation.Vertical)]
+    public void BlockDefaults_RoundTripThroughTheFileByName(
+        RealtimeBlockMode mode, RealtimeTextOrientation orientation)
+    {
+        var written = new AppSettings();
+        written.Realtime.BlockMode = mode;
+        written.Realtime.TextOrientation = orientation;
+
+        var json = SettingsService.Serialize(written);
+        Assert.Contains(mode.ToString(), json);
+        Assert.Contains(orientation.ToString(), json);
+
+        var reloaded = SettingsService.Parse(json);
+        Assert.Equal(mode, reloaded.Realtime.BlockMode);
+        Assert.Equal(orientation, reloaded.Realtime.TextOrientation);
+    }
+
+    /// <summary>A name this build cannot read costs that field and nothing else.</summary>
+    [Fact]
+    public void ABlockDefaultThisBuildCannotRead_OpensOnTheDefaultAndCostsNothingElse()
+    {
+        var settings = SettingsService.Parse(
+            """
+            {"ApiKey":"secret",
+             "Realtime":{"BlockMode":"Webtoon","TextOrientation":"Vertical","BlockCount":3}}
+            """);
+
+        Assert.Equal(RealtimeBlockMode.Subtitle, settings.Realtime.BlockMode);
+        Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
+        Assert.Equal(3, settings.Realtime.BlockCount);
         Assert.Equal("secret", settings.ApiKey);
     }
 

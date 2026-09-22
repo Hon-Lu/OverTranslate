@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OverTranslate.Services.Realtime;
 
 /// <summary>
@@ -16,9 +18,16 @@ namespace OverTranslate.Services.Realtime;
 /// than on the session because the two questions are independent and both are per-block — a game
 /// can show a horizontal HUD and a vertical dialogue column at the same moment.
 ///
-/// It is deliberately not in the settings file. Which way a block's text runs belongs to that block
-/// of that sitting, the same line <see cref="RealtimeBlockPlacement"/> already draws for the mode.
+/// A BLOCK's answer is not in the settings file: which way a block's text runs belongs to that
+/// block of that sitting, the same line <see cref="RealtimeBlockPlacement"/> already draws for the
+/// mode. What the file keeps is the answer a NEWLY DRAWN block starts on — see
+/// <see cref="Models.RealtimeSettings.TextOrientation"/> — which is a preference about how the user
+/// works, not a fact about the picture they were watching.
+///
+/// Persisted by name for the reason <see cref="Ocr.CaptureLayoutMode"/> is: a name this build does not
+/// know fails to deserialize, which is what makes the reader keep the property's default.
 /// </remarks>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RealtimeTextOrientation
 {
     /// <summary>Written across, left to right. What all but a handful of blocks are.</summary>

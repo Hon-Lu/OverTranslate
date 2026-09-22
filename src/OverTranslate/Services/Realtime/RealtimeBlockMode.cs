@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OverTranslate.Services.Realtime;
 
 /// <summary>
@@ -19,7 +21,14 @@ namespace OverTranslate.Services.Realtime;
 ///
 /// The user knows what they are looking at and the program does not, so this is asked rather than
 /// inferred. See <see cref="RealtimeDetectorSize"/> for what each mode is worth in detector size.
+///
+/// A block's own answer lives with the block and is redrawn every sitting. What the settings file
+/// keeps is the answer a newly drawn block starts on — see
+/// <see cref="Models.RealtimeSettings.BlockMode"/> — persisted by name, so a third mode can be added
+/// without changing what the file looks like and a name this build cannot read falls back to the
+/// property's default.
 /// </remarks>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RealtimeBlockMode
 {
     /// <summary>A wide band of dialogue text — film subtitles, captions, a visual novel's text box.</summary>
