@@ -161,11 +161,22 @@ public partial class RealtimeEditWindow : Window
     /// </summary>
     private bool _crosshairEnabled = true;
 
+    /// <summary>
+    /// What the next block drawn is set to. The two trays move these as they are used — see
+    /// <see cref="BlockDefaultsChanged"/>.
+    /// </summary>
+    private RealtimeBlockMode _blockMode;
+
+    /// <inheritdoc cref="_blockMode"/>
+    private RealtimeTextOrientation _textOrientation;
+
     public RealtimeEditWindow(
         System.Drawing.Rectangle physBounds,
         IReadOnlyList<RealtimeBlockPlacement> initialBlocks,
         int maxBlocks,
-        bool guidanceExpanded)
+        bool guidanceExpanded,
+        RealtimeBlockMode blockMode,
+        RealtimeTextOrientation textOrientation)
     {
         InitializeComponent();
 
@@ -173,6 +184,8 @@ public partial class RealtimeEditWindow : Window
         _initialBlocks = initialBlocks;
         _maxBlocks = maxBlocks;
         _guidanceExpanded = guidanceExpanded;
+        _blockMode = blockMode;
+        _textOrientation = textOrientation;
 
         Loaded += (_, _) =>
         {
@@ -241,6 +254,17 @@ public partial class RealtimeEditWindow : Window
     /// last — the layer itself keeps nothing beyond its own lifetime.
     /// </summary>
     public event EventHandler<bool>? GuidanceExpandedChanged;
+
+    /// <summary>
+    /// Raised with what a block was just set to, which is what the next block drawn starts on.
+    /// </summary>
+    /// <remarks>
+    /// The block itself travels with <see cref="BlocksChanged"/> like any other edit; this says the
+    /// same press should outlive the block, and the session records it. Both trays raise it, because
+    /// the user answering one of the two questions is the same kind of event as answering the other.
+    /// </remarks>
+    public event EventHandler<(RealtimeBlockMode Mode, RealtimeTextOrientation Orientation)>?
+        BlockDefaultsChanged;
 
     public int BlockCount => _blocks.Count;
 
@@ -348,15 +372,11 @@ public partial class RealtimeEditWindow : Window
         // A click, or a slip of the hand, should not leave a useless sliver behind.
         if (box.Width < _minBlockWidth || box.Height < _minBlockHeight) return;
 
-        // Subtitle is the default because it is what nearly every block is, and because it is the
-        // cheaper mistake: the other mode's fraction is the first fallback either way, so a panel
-        // left on 字幕 costs one extra inference rather than a block that reads nothing.
-        // Horizontal for the same kind of reason: it is what all but a handful of blocks are, and a
-        // vertical block left on it reads as a stack of one-character lines, which is visibly wrong
-        // rather than quietly wrong.
-        AddBlock(
-            box, RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Horizontal, _guidanceExpanded,
-            notify: true);
+        // Whatever the user last set a block to. The two answers they arrive at are about the thing
+        // they are watching, and they are watching one thing — so the second block of a sitting, and
+        // the first of the next one, should not make them say it again. What these start at when
+        // nobody has said anything yet is RealtimeSettings.BlockMode, which keeps the reasoning.
+        AddBlock(box, _blockMode, _textOrientation, _guidanceExpanded, notify: true);
     }
 
     // Capture lost to something else entirely (an Alt+Tab, another window taking it). The drag is
@@ -406,7 +426,18 @@ public partial class RealtimeEditWindow : Window
             e.Handled = true;   // must not fall through and start drawing a new block underneath
             RemoveBlock(visual);
         };
-        visual.ModeControl.SelectionChanged += (_, _) => RaiseBlocksChanged();
+        visual.ModeControl.SelectionChanged += (_, tray) =>
+        {
+            RaiseBlocksChanged();
+
+            // The tray last pressed is the one that counts, on whichever block it was pressed — and
+            // only that tray, so a block that is 遊戲 for its own reasons does not make 遊戲 the
+            // answer for the next block just because its direction was corrected. The blocks already
+            // drawn are left alone either way: correcting one says nothing about the rest.
+            if (tray == ModeSegments.BlockTray.Mode) _blockMode = visual.ModeControl.Value;
+            else _textOrientation = visual.ModeControl.TextOrientation;
+            BlockDefaultsChanged?.Invoke(this, (_blockMode, _textOrientation));
+        };
         visual.ModeControl.ExpansionChanged += (_, expanded) =>
         {
             Apply(visual, animateMode: true);
@@ -1194,8 +1225,28 @@ public partial class RealtimeEditWindow : Window
             ApplyGuidanceState(animate: false);
         }
 
-        /// <summary>Raised when the user picks the mode this block is not already on.</summary>
-        public event EventHandler? SelectionChanged;
+        /// <summary>Which of the block's two trays the user moved.</summary>
+        public enum BlockTray
+        {
+            /// <summary>字幕 or 遊戲 — what the block holds.</summary>
+            Mode,
+
+            /// <summary>橫排 or 直排 — which way its text runs.</summary>
+            Direction,
+        }
+
+        /// <summary>
+        /// Raised with the tray that moved, when the user picks the answer this block is not
+        /// already on.
+        /// </summary>
+        /// <remarks>
+        /// One event for both trays, because taking the blocks back is what most of the answer is
+        /// for either way. It says WHICH tray because one caller does care: the window carries the
+        /// press forward as what the next block starts on, and a press on one tray is not a
+        /// statement about the other — pressing 直排 on a 遊戲 block would otherwise quietly make
+        /// 遊戲 the default too.
+        /// </remarks>
+        public event EventHandler<BlockTray>? SelectionChanged;
 
         /// <summary>
         /// Raised with the new state when the guidance changes size, so the canvas can keep it beside
@@ -1222,7 +1273,7 @@ public partial class RealtimeEditWindow : Window
 
             Value = mode;
             ApplySelection(animate: true);
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
+            SelectionChanged?.Invoke(this, BlockTray.Mode);
         }
 
         private void ApplySelection(bool animate)
@@ -1244,10 +1295,7 @@ public partial class RealtimeEditWindow : Window
 
             TextOrientation = orientation;
             ApplyDirection(animate: true);
-
-            // The same event the mode raises. What the caller does with either answer is identical —
-            // take the blocks back — and two events would only mean two subscriptions doing it.
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
+            SelectionChanged?.Invoke(this, BlockTray.Direction);
         }
 
         private void ApplyDirection(bool animate)

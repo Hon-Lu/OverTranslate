@@ -362,7 +362,10 @@ internal sealed class RealtimeSessionController
         var settings = SettingsService.Instance;
 
         var edit = new RealtimeEditWindow(
-            request.ScreenBounds, _blocks, request.MaxBlocks, settings.Current.Realtime.GuidanceExpanded);
+            request.ScreenBounds, _blocks, request.MaxBlocks,
+            settings.Current.Realtime.GuidanceExpanded,
+            settings.Current.Realtime.BlockMode,
+            settings.Current.Realtime.TextOrientation);
         edit.BlocksChanged += (_, _) =>
         {
             _blocks = [.. edit.GetPhysicalBlocks()];
@@ -374,6 +377,17 @@ internal sealed class RealtimeSessionController
         {
             if (settings.Current.Realtime.GuidanceExpanded == expanded) return;
             settings.Current.Realtime.GuidanceExpanded = expanded;
+            settings.Save();
+        };
+        // On the press for the same reason, and the pair together because they arrive together: one
+        // tray being pressed is the user telling this sitting what they are watching.
+        edit.BlockDefaultsChanged += (_, defaults) =>
+        {
+            var realtime = settings.Current.Realtime;
+            if (realtime.BlockMode == defaults.Mode &&
+                realtime.TextOrientation == defaults.Orientation) return;
+            realtime.BlockMode = defaults.Mode;
+            realtime.TextOrientation = defaults.Orientation;
             settings.Save();
         };
         edit.LimitReached += (_, _) =>

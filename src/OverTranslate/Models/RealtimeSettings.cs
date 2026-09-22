@@ -163,6 +163,35 @@ public class RealtimeSettings
     public int BlockCount { get; set; } = MinBlockCount;
 
     /// <summary>
+    /// What a newly drawn block is set to read, and which way its text runs: whatever the user last
+    /// chose on a block, restored for the next one and for the next sitting.
+    /// </summary>
+    /// <remarks>
+    /// <para>The pair the edit layer's two trays set. They are remembered for the same reason
+    /// <see cref="GuidanceExpanded"/> is, and stored the same way — the last tray pressed wins,
+    /// written on the press rather than at the end of a session — but they are worth more, because
+    /// the framing itself is not kept: every sitting begins by drawing the blocks again, and without
+    /// this every one of them begins on the same two answers however many times the user has
+    /// corrected them.</para>
+    ///
+    /// <para>The defaults stay what the draw site used to hard-code, so a settings file written
+    /// before these existed reads as the behaviour it had. 字幕 because nearly every block is one,
+    /// and the other mode's fraction is the first fallback either way — a panel left on 字幕 costs
+    /// one extra inference rather than a block that reads nothing. 橫排 because all but a handful of
+    /// blocks are, and a vertical block left on it reads as a stack of one-character lines, which is
+    /// visibly wrong rather than quietly wrong.</para>
+    ///
+    /// <para>Deliberately not on the settings page, like <see cref="GuidanceExpanded"/>: this is a
+    /// state the two trays set by being used, not a preference anyone would go looking for.</para>
+    /// </remarks>
+    public Services.Realtime.RealtimeBlockMode BlockMode { get; set; } =
+        Services.Realtime.RealtimeBlockMode.Subtitle;
+
+    /// <inheritdoc cref="BlockMode"/>
+    public Services.Realtime.RealtimeTextOrientation TextOrientation { get; set; } =
+        Services.Realtime.RealtimeTextOrientation.Horizontal;
+
+    /// <summary>
     /// Whether the per-block framing guidance on the edit layer is unfolded. Expanded on a first run,
     /// because the guidance is what stops a badly framed block.
     /// </summary>
