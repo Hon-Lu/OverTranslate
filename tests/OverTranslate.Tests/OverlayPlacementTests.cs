@@ -94,7 +94,7 @@ public class OverlayPlacementTests
     /// §8.5.1 #1 and #2: neither mode changes anything about a vertical capture.
     /// </summary>
     /// <remarks>
-    /// SourceLineBounds means something else here. CombineVerticalColumns refills it with the
+    /// SourceLineBounds means something else here. CombineColumns refills it with the
     /// columns a block was assembled from — or, for a lone column, with one cell per character —
     /// so a splitter that shares the translation out by line width would be sharing it out by
     /// character cell, and a "group" to re-set inside its box is not what the list describes.
@@ -104,7 +104,7 @@ public class OverlayPlacementTests
     [InlineData(CaptureLayoutMode.General)]
     public void VerticalText_ReachesTheVerticalRendererExactlyAsItArrived(CaptureLayoutMode mode)
     {
-        // The shape CombineVerticalColumns produces for a lone column: one cell per character.
+        // The shape CombineColumns produces for a lone column: one cell per character.
         var cells = new[]
         {
             new Rect(80, 10, 20, 20), new Rect(80, 30, 20, 20), new Rect(80, 50, 20, 20),

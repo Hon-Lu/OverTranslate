@@ -162,28 +162,9 @@ internal sealed record GroupingProfile(
         RefuseSpeakerLineStarts: true);
 
     /// <summary>
-    /// The vertical pipeline's own profile. Like <see cref="Realtime"/>, it is not
-    /// <see cref="Interface"/> — it merely holds the same figures today.
+    /// Historical rotated-frame grouping, retained for offline comparisons and fixtures.
+    /// Native vertical OCR groups columns directly and does not use a horizontal profile.
     /// </summary>
-    /// <remarks>
-    /// <para>The capture mode does not reach vertical text at all, and the reason is geometric. A
-    /// vertical capture is turned 270° before it is read, so every column of the original arrives at
-    /// the detector as a row — which means the first pass's "does this line continue on the next
-    /// one" question is being asked of column against column. That is the same geometry the column
-    /// merge was denied a profile over, and the same answer follows: none of these thresholds were
-    /// measured on it.</para>
-    ///
-    /// <para>Measured, and not merely argued. Pointing the relaxed profile at
-    /// <c>vertical-image-ja</c> joined speech balloons rather than the lines inside them — two
-    /// characters' dialogue in one group on <c>image.jpg</c>, a question merged with its answer on
-    /// <c>manga-comigram</c> — which is what waiving a length test does when the "lines" it is
-    /// judging are whole balloons.</para>
-    ///
-    /// <para>Named rather than borrowed for the reason <see cref="Realtime"/> is: tightening
-    /// <see cref="Interface"/> is a step of its own, and vertical text must not move with it by
-    /// accident. Its thresholds have never been measured on vertical material, so the day they
-    /// change ought to be a day somebody decided to change them.</para>
-    /// </remarks>
     public static GroupingProfile Vertical { get; } = new(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,

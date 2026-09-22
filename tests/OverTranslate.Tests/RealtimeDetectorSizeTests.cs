@@ -28,6 +28,75 @@ public class RealtimeDetectorSizeTests(ITestOutputHelper output)
         Assert.Equal(960, primary); // 1380 * 0.68
     }
 
+    /// <summary>
+    /// A region of columns is read at the size the screenshot flow reads one, whichever mode the
+    /// user put it in.
+    /// </summary>
+    /// <remarks>
+    /// Columns of Japanese sit about a glyph apart, so a downscale that leaves a row of glyphs
+    /// readable merges a column with the reading beside it. Measured against what the screenshot
+    /// flow reads on the same pages, 0.68 loses 17 of 196 groups on 15 comic spreads and 25 of 192
+    /// on the same spreads at 70%; the screenshot size loses 4 and 5.
+    /// </remarks>
+    [Theory]
+    [InlineData(RealtimeBlockMode.Panel)]
+    [InlineData(RealtimeBlockMode.Subtitle)]
+    public void A_region_of_columns_is_read_at_the_screenshot_size(RealtimeBlockMode mode)
+    {
+        var (primary, fallbacks) = RealtimeDetectorSize.For(
+            1828, 1300, mode, RealtimeTextOrientation.Vertical);
+
+        Assert.Equal(1828, primary);
+        Assert.NotEqual(RealtimeDetectorSize.For(1828, 1300, mode).Primary, primary);
+        // Everything smaller was measured and is strictly worse, so there is no other size to try.
+        Assert.Empty(fallbacks);
+    }
+
+    /// <summary>Bounded by what the screenshot flow itself would ask for.</summary>
+    /// <remarks>
+    /// One source in the corpus is 8598px on its longest side. Uncapped it costs 27.6s a pass and
+    /// finds one group more than the cap does at 2.8s.
+    /// </remarks>
+    [Fact]
+    public void An_oversized_region_of_columns_is_capped_where_the_screenshot_flow_caps()
+    {
+        var (primary, _) = RealtimeDetectorSize.For(
+            2600, 1600, RealtimeBlockMode.Panel, RealtimeTextOrientation.Vertical);
+
+        Assert.Equal(RealtimeDetectorSize.ColumnsAreReadAtTheScreenshotSize, primary);
+    }
+
+    /// <summary>
+    /// A region off a large display is read at the screenshot size and no larger.
+    /// </summary>
+    /// <remarks>
+    /// There was a floor under the cap here, on the argument that at about 3000px a flat cap
+    /// becomes a harder downscale than the fraction — 0.53 off a 4K screen where a smaller region
+    /// gets 0.68. That is an argument about ratios; read at both sizes the accuracy goes the other
+    /// way. A 4K crop of a comic page reads 143 characters at the cap against 139 under the floor,
+    /// and a 2590x4096 strip reads 朝は4本足昼は2本足は３本足で歩むモノ whole at the cap and in two
+    /// pieces under it.
+    /// </remarks>
+    [Fact]
+    public void A_region_of_columns_off_a_large_display_is_read_at_the_screenshot_size()
+    {
+        var (primary, _) = RealtimeDetectorSize.For(
+            3840, 2160, RealtimeBlockMode.Panel, RealtimeTextOrientation.Vertical);
+
+        Assert.Equal(RealtimeDetectorSize.ColumnsAreReadAtTheScreenshotSize, primary);
+    }
+
+    /// <summary>Writing that runs across is what every fraction here was measured on, and is unmoved.</summary>
+    [Fact]
+    public void A_region_written_across_still_gets_its_fraction()
+    {
+        var (primary, fallbacks) = RealtimeDetectorSize.For(
+            1226, 196, RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Horizontal);
+
+        Assert.Equal(RealtimeDetectorSize.For(1226, 196, RealtimeBlockMode.Subtitle).Primary, primary);
+        Assert.NotEmpty(fallbacks);
+    }
+
     [Theory]
     // The same rectangle, read both ways. These are the shapes the removed StripAspectRatio rule
     // classified — a strip at 6.4 and a panel at 2.1 — and the point of issue #35 is that the shape

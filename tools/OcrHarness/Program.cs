@@ -21,6 +21,9 @@ if (args.Length > 0 && args[0] == "--panel-layout") return PanelLayoutProbe.Run(
 if (args.Length > 0 && args[0] == "--session-equivalence")
     return SessionEquivalenceProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--vertical-ocr")
+    return await VerticalOcrProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--box-repair-rows")
     return BoxRepairRowProbe.Run(args.Skip(1).ToArray());
 

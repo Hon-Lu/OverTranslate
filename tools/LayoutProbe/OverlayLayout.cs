@@ -69,7 +69,7 @@ internal static class OverlayLayout
     /// </summary>
     /// <remarks>
     /// Its SourceLineBounds are character cells rather than lines of a paragraph — the shape
-    /// <c>CombineVerticalColumns</c> produces for a lone column — because that is what the vertical
+    /// <c>CombineColumns</c> produces for a lone column — because that is what the vertical
     /// renderer is actually handed.
     /// </remarks>
     private static void Vertical()

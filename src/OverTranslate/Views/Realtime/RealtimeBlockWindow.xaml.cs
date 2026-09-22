@@ -546,7 +546,11 @@ public partial class RealtimeBlockWindow : Window
         foreach (var block in _lines)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
-            if (_orientation == RealtimeTextOrientation.Vertical)
+
+            // RunsAcross is the reading stage saying this block is horizontal writing that happened
+            // to be on a vertical page — a name plate, a caption box, a scene label. It falls
+            // through to the branches below, which are the ones that set a line across.
+            if (_orientation == RealtimeTextOrientation.Vertical && !block.RunsAcross)
             {
                 // Before the mode, and instead of it. Both of the horizontal branches below are
                 // about lines that run across — one wraps a paragraph into rows, the other fits a
@@ -599,17 +603,15 @@ public partial class RealtimeBlockWindow : Window
     }
 
     /// <summary>
-    /// One vertical column group: the translation set downwards in square cells, anchored where the
-    /// source's first character was, over a background that covers the source it replaces.
+    /// One vertical column group: the translation set downwards in square cells over the source it
+    /// replaces, against the top of it and centred across it.
     /// </summary>
     /// <remarks>
-    /// The horizontal band spends a mismatch of length evenly on both sides — see
-    /// <see cref="RealtimeBandPlacement"/> — and this deliberately does not. Vertical writing has a
-    /// corner the reader is already looking at: the top of the rightmost column, which is where the
-    /// sentence starts. Anchoring there means a translation shorter than its source starts in
-    /// exactly the place the source did and simply runs out early, while a centred grid would move
-    /// the first character away from where the eye last saw one, on every line, by a different
-    /// amount each time.
+    /// The two halves of that anchor are not the same decision, and <see cref="VerticalTextGrid.Cells"/>
+    /// is where both are written down — the screenshot overlay sets its bubbles by the same rule.
+    /// Along the writing the top is where the source sentence began; across it there is no such
+    /// corner, so slack is spent on both sides as the horizontal band spends it (see
+    /// <see cref="RealtimeBandPlacement"/>).
     ///
     /// The grid never grows past the block. This window is exactly the rectangle the user drew, so
     /// anything outside it is not rendered — and a sentence ending early with nothing to say so is
@@ -632,9 +634,8 @@ public partial class RealtimeBlockWindow : Window
         string glyphs = new([.. line.TranslatedText.Where(character => !char.IsWhiteSpace(character))]);
         if (glyphs.Length == 0) return null;
 
-        // The cell is square and sized on the source's own column: for a vertical reading the width
-        // of the column is the glyph size, and that is what RenderGlyphHeight carries back from the
-        // turned frame — see OcrService.MapVerticalColumnsBack.
+        // The cell is square and sized on the column's character pitch, kept separate from the
+        // detector's padded coverage width — see VerticalOcrGeometry.PrepareBlocks.
         double cellPreferred = Math.Max(MinFontSize, GetGlyphHeight(line, sourceWidth));
 
         // THE COLUMN IS AS LONG AS THE ONE IT REPLACES, not as long as the block. This is the
@@ -644,20 +645,21 @@ public partial class RealtimeBlockWindow : Window
         // into a single column and runs it from the top of the picture to the bottom, straight
         // across the panels either side of the balloon it came from.
         //
-        // What the block still bounds is how far left the grid may reach. A translation too long for
-        // the source's own column takes another column beside it — which is what wrapping is in
-        // vertical writing — and only when that runs out of room does the cell shrink.
-        double columnLength = Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2);
-        double maxWidth = Math.Max(cellPreferred, canvasWidth - ScrimPaddingX * 2);
-        double maxHeight = Math.Max(cellPreferred, columnLength);
+        // The source's own width is handed over for the same reason: a translation too long for the
+        // balloon is set smaller inside it before it is allowed to take a column beside it, because
+        // the column beside it is picture. Only the block bounds how far that may finally reach.
+        double columnLength = Math.Max(cellPreferred, Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2));
+        double columnRoom = Math.Max(cellPreferred, sourceWidth);
+        double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
 
         var (cellSize, gridWidth, gridHeight) = VerticalTextGrid.FitWithin(
-            maxWidth, maxHeight, cellPreferred, MinFontSize, glyphs.Length);
+            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs.Length);
 
-        // Top-right of the source, kept inside the block. Columns are filled right to left, so the
-        // grid's right edge is where reading starts.
+        // Top of the source, centred across it, kept inside the block — the rule
+        // VerticalTextGrid.Cells sets a grid by, applied here because the grid handed to it is cut
+        // to size and so has no slack of its own left to centre in.
         double gridLeft = Math.Clamp(
-            left + sourceWidth - gridWidth, 0, Math.Max(0, canvasWidth - gridWidth));
+            left + (sourceWidth - gridWidth) / 2, 0, Math.Max(0, canvasWidth - gridWidth));
         double gridTop = Math.Clamp(top, 0, Math.Max(0, canvasHeight - gridHeight));
 
         // The background has to cover both: the source, which is the thing being hidden, and the

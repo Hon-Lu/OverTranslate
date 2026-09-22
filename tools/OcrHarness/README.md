@@ -1,5 +1,7 @@
 # OcrHarness
 
+直排 OCR 重構、官方裁圖方向、離線比較與限制：見 [vertical-ocr.md](vertical-ocr.md)。
+
 ## 固定輸入的分組實驗台
 
 `--group-prototype` 保留供後續測試，不隨 app 發佈，呼叫正式 OCR、墨跡量測與分組函式。

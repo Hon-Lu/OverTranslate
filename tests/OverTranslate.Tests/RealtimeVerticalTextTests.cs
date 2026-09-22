@@ -38,7 +38,8 @@ public class RealtimeVerticalTextTests
     public void A_vertical_grid_never_asks_for_more_room_than_it_was_given(int characters)
     {
         var (cellSize, width, height) = VerticalTextGrid.FitWithin(
-            maxWidth: 200, maxHeight: 300, preferredCellSize: 24, minCellSize: 8.5, characters);
+            columnRoom: 48, columnLength: 300, maxWidth: 200,
+            preferredCellSize: 24, minCellSize: 8.5, characters);
 
         Assert.True(width <= 200 + 0.001, $"grid is {width:0.##}px wide against 200px of room");
         Assert.True(height <= 300 + 0.001, $"grid is {height:0.##}px tall against 300px of room");
@@ -53,11 +54,36 @@ public class RealtimeVerticalTextTests
     public void A_column_too_full_for_the_block_shrinks_the_cell_instead_of_growing()
     {
         var (cellSize, width, height) = VerticalTextGrid.FitWithin(
-            maxWidth: 80, maxHeight: 200, preferredCellSize: 24, minCellSize: 8.5, characterCount: 120);
+            columnRoom: 80, columnLength: 200, maxWidth: 80,
+            preferredCellSize: 24, minCellSize: 8.5, characterCount: 120);
 
         Assert.True(cellSize < 24, $"cell stayed at {cellSize:0.##}px with 120 characters to place");
         Assert.True(width <= 80 + 0.001);
         Assert.True(height <= 200 + 0.001);
+    }
+
+    /// <summary>
+    /// The live layer's answer to a translation longer than the column it replaces, and the one it
+    /// used to get wrong: the type is set smaller inside the balloon before a second column is
+    /// opened beside it.
+    /// </summary>
+    /// <remarks>
+    /// A column beside the source is not free room, it is the picture — the next balloon, the next
+    /// panel. The screenshot overlay has always shrunk first, which is why the same page read well
+    /// there and wrapped into its neighbours here.
+    /// </remarks>
+    [Fact]
+    public void A_translation_longer_than_its_source_column_shrinks_before_it_takes_another()
+    {
+        // One source column 24px across and five characters long, asked to hold seven.
+        var (cellSize, width, _) = VerticalTextGrid.FitWithin(
+            columnRoom: 24, columnLength: 120, maxWidth: 400,
+            preferredCellSize: 24, minCellSize: 8.5, characterCount: 7);
+
+        Assert.True(cellSize < 24, $"cell stayed at {cellSize:0.##}px rather than fitting the column");
+        Assert.True(
+            width <= 24 + 0.001,
+            $"the grid took {width:0.##}px across a 24px source column");
     }
 
     [Fact]
@@ -105,9 +131,8 @@ public class RealtimeVerticalTextTests
     }
 
     /// <summary>
-    /// The anchor, and the reason it is not the centre the horizontal band uses: the reader is
-    /// already looking at the top of the rightmost column, because that is where the source sentence
-    /// began.
+    /// The anchor along the writing: the reader is already looking at the top of the rightmost
+    /// column, because that is where the source sentence began.
     /// </summary>
     [Fact]
     public void A_vertical_grid_starts_where_the_source_did()
@@ -118,6 +143,33 @@ public class RealtimeVerticalTextTests
 
         Assert.Equal(SourceColumn.Right, first.Right, 1);
         Assert.Equal(SourceColumn.Top, first.Top, 1);
+    }
+
+    /// <summary>
+    /// The anchor across the writing, which is the other answer: slack is spent on both sides.
+    /// </summary>
+    /// <remarks>
+    /// A three-column balloon whose translation needs two leaves one column of slack. Hung off the
+    /// right edge it slides the whole block a column away from the writing it replaces — and away
+    /// by a different amount for every balloon on the page, which is what read as everything
+    /// drifting towards the top right.
+    /// </remarks>
+    [Fact]
+    public void A_grid_narrower_than_its_source_is_centred_across_it()
+    {
+        // Three columns' worth of source, holding a translation that fills two of them.
+        var balloon = new Rect(360, 40, SourceGlyphSize * 3, SourceGlyphSize * 4);
+
+        var drawn = Draw("說得也是今天過得", balloon);
+
+        var left = drawn.Cells.Min(cell => cell.Left);
+        var right = drawn.Cells.Max(cell => cell.Right);
+
+        Assert.Equal(2, drawn.Cells.Select(cell => Math.Round(cell.Left, 1)).Distinct().Count());
+        Assert.Equal(
+            balloon.Left + balloon.Right,
+            left + right,
+            1);
     }
 
     [Fact]
@@ -166,6 +218,53 @@ public class RealtimeVerticalTextTests
 
         var columns = drawn.Cells.Select(cell => Math.Round(cell.Left, 1)).Distinct().Count();
         Assert.True(columns > 1, "a translation this long is expected to take more than one column");
+    }
+
+    /// <summary>
+    /// A block the reading stage marked as running across is set across, even in a vertical region.
+    /// </summary>
+    /// <remarks>
+    /// A comic page in vertical writing still carries horizontal writing on it — a name plate, a
+    /// caption box, a scene label. Set down a square grid instead, a name of eight characters over
+    /// a 240x36 box becomes seven one-cell columns filled right to left: the name comes out
+    /// backwards and the last character has nowhere to go. That is worse than not drawing it, which
+    /// is what the pipeline used to do, so keeping the text is only half the fix.
+    /// </remarks>
+    [Fact]
+    public void A_block_marked_as_running_across_is_set_across()
+    {
+        var plate = new Rect(200, 60, 240, 36);
+
+        var drawn = OnStaThread(() => DrawAcross(
+            new TranslatedBlock("オルン・ドゥーラ", "奧倫·多拉", plate, null, 32)
+            {
+                RunsAcross = true,
+            }));
+
+        // One line across, not a stack of one-cell columns: the vertical path gives every glyph its
+        // own TextBlock, and the horizontal one draws the whole line as a single element.
+        Assert.Equal("奧倫·多拉", drawn);
+    }
+
+    /// <summary>Reads back the one text element the horizontal path draws for a line.</summary>
+    private static string DrawAcross(TranslatedBlock block)
+    {
+        var window = new RealtimeBlockWindow(
+            0, ColumnBlock, _ => null, "JA", "ZH-TW",
+            RealtimeSubtitleColors.DefaultText,
+            RealtimeSubtitleColors.DefaultScrim,
+            RealtimeSubtitleColors.DefaultScrimOpacity,
+            orientation: RealtimeTextOrientation.Vertical);
+
+        typeof(RealtimeBlockWindow)
+            .GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(window, true);
+
+        window.SetLines([block]);
+
+        var canvas = (Canvas)window.FindName("TextCanvas");
+        var container = Assert.IsType<Border>(Assert.Single(canvas.Children));
+        return Assert.IsType<TextBlock>(container.Child).Text;
     }
 
     /// <summary>The background still covers the source it is there to hide.</summary>

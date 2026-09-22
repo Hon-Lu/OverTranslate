@@ -13,7 +13,7 @@ namespace OverTranslate.Layout;
 /// <see cref="OverlayLayoutIntent"/> and never learns which mode produced it.</para>
 ///
 /// <para>Vertical text leaves by the first door. Its blocks have been through
-/// <c>CombineVerticalColumns</c>, which refills <c>SourceLineBounds</c> with columns — or, for a
+/// <c>CombineColumns</c>, which refills <c>SourceLineBounds</c> with columns — or, for a
 /// lone column, with one cell per character — so neither the horizontal splitter nor the reflow
 /// intent describes anything real about them. They go to the vertical renderer exactly as they
 /// arrive, which is what they did before this layer existed.</para>

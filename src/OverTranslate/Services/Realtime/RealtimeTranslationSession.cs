@@ -556,7 +556,21 @@ public sealed class RealtimeTranslationSession
         // Try, not wait: a queued pass would be reading a frame that has already been replaced, and
         // would hold this region's loop shut while it did. Skipping costs one poll.
         var (primarySize, fallbackSizes) =
-            RealtimeDetectorSize.For(frame.Width, frame.Height, region.Mode);
+            RealtimeDetectorSize.For(frame.Width, frame.Height, region.Mode, region.Orientation);
+
+        // The confirmation pass over a still page of columns, spent on a DIFFERENT detector size
+        // instead of on the same one. See Ocr.VerticalSecondLook: the detector's answer moves with
+        // the size of its input and not smoothly, so the same picture read again at another size
+        // puts balloons together that the first size left in pieces — and this read was happening
+        // anyway, reading the identical picture at the identical size for the identical answer.
+        var readingAgain = false;
+        if (region.Orientation == RealtimeTextOrientation.Vertical && state.ReadingAgain &&
+            Ocr.VerticalSecondLook.OtherSize(frame.Width, frame.Height, primarySize) is { } otherSize)
+        {
+            primarySize = otherSize;
+            readingAgain = true;
+        }
+
         var recognized = await _ocr.TryRecognizeAsync(
             frame, sourceLanguage, primarySize, token, region.Mode, region.Orientation);
         if (recognized is null)
@@ -638,6 +652,13 @@ public sealed class RealtimeTranslationSession
 
             recognized = retried;
         }
+
+        // Both readings of the same picture, with each balloon kept as whichever of the two said
+        // the most about it. Only ever reached when the strips are unchanged, which is what says
+        // the older reading is still about what is on screen.
+        if (readingAgain)
+            recognized = Ocr.VerticalSecondLook.Merge([.. state.LastRead], recognized);
+        state.RememberRead(recognized);
 
         var ocrMs = (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         token.ThrowIfCancellationRequested();
@@ -893,7 +914,7 @@ public sealed class RealtimeTranslationSession
                         : block.Text,
                 block.Bounds,
                 block.SourceLineBounds,
-                block.RenderGlyphHeight))
+                block.RenderGlyphHeight) { RunsAcross = block.RunsAcross })
             .ToList();
     }
 

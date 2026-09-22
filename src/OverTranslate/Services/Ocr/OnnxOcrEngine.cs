@@ -157,7 +157,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     }
 
     public Task<List<OcrTextBlock>> RecognizeAsync(
-        Bitmap bitmap, string sourceLanguage, CancellationToken cancellationToken = default)
+        Bitmap bitmap,
+        string sourceLanguage,
+        CancellationToken cancellationToken = default,
+        bool verticalText = false)
     {
         if (!OcrLanguageRouter.IsSupported(sourceLanguage))
             throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
@@ -177,7 +180,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 // where giving up is still free.
                 cancellationToken.ThrowIfCancellationRequested();
 
-                return RecognizeCore(bitmap, sourceLanguage);
+                return RecognizeCore(bitmap, sourceLanguage, verticalText: verticalText);
             }
             finally
             {
@@ -190,7 +193,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         Bitmap bitmap,
         string sourceLanguage,
         int? maxDetectSize = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool verticalText = false)
     {
         if (!OcrLanguageRouter.IsSupported(sourceLanguage))
             throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
@@ -205,7 +209,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                return RecognizeCore(bitmap, sourceLanguage, maxDetectSize);
+                return RecognizeCore(bitmap, sourceLanguage, maxDetectSize, verticalText);
             }
             finally
             {
@@ -215,7 +219,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     }
 
     private List<OcrTextBlock> RecognizeCore(
-        Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null)
+        Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null, bool verticalText = false)
     {
         var normalizedLanguage = OcrLanguageRouter.Normalize(sourceLanguage);
 
@@ -250,10 +254,15 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             // glyphs they were dropping, and 313 subtitle, game, comic, panel and chat frames do
             // not move at all.
             using var session = new DetectionSession(
-                this, runtime, bitmap, normalizedLanguage, maxDetectSize, releasesRuntime: false);
+                this, runtime, bitmap, normalizedLanguage, maxDetectSize,
+                releasesRuntime: false, repairRows: !verticalText, verticalText: verticalText);
             var blocks = session
                 .Recognize(Enumerable.Range(0, session.Boxes.Count).ToArray(), out var recognised)
                 .ToList();
+
+            if (verticalText)
+                blocks.AddRange(ReadTurnedFrame(
+                    runtime, bitmap, normalizedLanguage, maxDetectSize, blocks));
 
             // Counts and lengths only — enough to tell "found nothing" from "found the wrong thing"
             // without the recognised text itself, which LogBlocks keeps at Debug.
@@ -445,6 +454,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         private IReadOnlyList<RapidOcrNet.TextBox> _detectorSpaceBoxes;
         // False when the caller acquired the runtime itself and releases it in its own finally.
         private readonly bool _releasesRuntime;
+        private readonly bool _verticalText;
 
         internal DetectionSession(
             OnnxOcrEngine owner,
@@ -453,9 +463,11 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             string normalizedLanguage,
             int? maxDetectSize,
             bool releasesRuntime = true,
-            bool repairRows = true)
+            bool repairRows = true,
+            bool verticalText = false)
         {
             _owner = owner;
+            _verticalText = verticalText;
             _releasesRuntime = releasesRuntime;
             _engine = runtime.Engine;
             _language = normalizedLanguage;
@@ -469,7 +481,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
             var detector = (TextDetector)TextDetectorField.GetValue(_engine)!;
             _detectorSpaceBoxes = detector.GetTextBoxes(
-                _detectorBitmap, scale, _options.BoxScoreThresh, _options.BoxThresh, _options.UnClipRatio);
+                _detectorBitmap, scale, _options.BoxScoreThresh, _options.BoxThresh, _options.UnClipRatio) ?? [];
+
+            if (_verticalText)
+                _detectorSpaceBoxes = VerticalColumnDetection.Split(_detectorBitmap, _detectorSpaceBoxes);
 
             // The caller works in the coordinates of the bitmap it handed in, so every box is
             // reported there. The detector-space originals are what recognition crops with and are
@@ -536,8 +551,16 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             if (boxIndices.Count == 0) return Array.Empty<OcrTextBlock>();
 
             var chosen = boxIndices.Select(index => _detectorSpaceBoxes[index]).ToList();
+            // The crop, and only the crop, reaches for a glyph the box stopped short of: what
+            // grouping is handed below is still the detector's own geometry. See VerticalColumnEnds.
+            var cropBoxes = _verticalText
+                ? chosen
+                    .Select(box => VerticalOcrGeometry.ForRecognition(
+                        VerticalColumnEnds.Extend(_detectorBitmap, box)))
+                    .ToList()
+                : chosen;
             var partImages = (SKBitmap[])GetPartImagesMethod.Invoke(
-                null, new object[] { _detectorBitmap, chosen })!;
+                null, new object[] { _detectorBitmap, cropBoxes })!;
             try
             {
                 // No classifier pass: DoAngle is false on every options set the app builds, and the
@@ -571,6 +594,9 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 }
 
                 recognised = textBlocks.ToArray();
+                if (_verticalText)
+                    return VerticalOcrGeometry.PrepareBlocks(ConvertBlocks(recognised));
+
                 return ApplyBlockFilters(
                     recognised,
                     _language,
@@ -591,6 +617,62 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             if (_releasesRuntime)
                 _owner.ReleaseRuntime();
         }
+    }
+
+    /// <summary>
+    /// Reads the turned frame and returns only what the upright pass never found there.
+    /// </summary>
+    /// <remarks>
+    /// <para>Detection runs over the whole turned frame — it is one pass and cannot be asked about
+    /// part of a picture — but recognition is per box, and only the boxes that survive the overlap
+    /// test are recognised. That is what makes this cost a detection rather than a whole second
+    /// read: see <see cref="TurnedFrameDetection"/> for the measurement.</para>
+    ///
+    /// <para>What it is compared against is what the upright pass READ, not what it detected, and
+    /// that distinction is the whole of it. MEASURED on
+    /// <c>.ai/test-images/vertical-image-ja2/2026-09-20 19 14 55.png</c>: the upright detector
+    /// returns 15 boxes and 13 of them produce text, and the two that produce none sit exactly on
+    /// the balloon this pass exists to recover. Compared against the boxes, every turned candidate
+    /// looks like somewhere the upright pass had already been, and the balloon is skipped — a box
+    /// that was found and read as nothing is not coverage, it is the failure itself.</para>
+    ///
+    /// <para>The turned session is a vertical one like the upright session, so its blocks arrive
+    /// prepared the same way — <see cref="VerticalOcrGeometry.PrepareBlocks"/> and all. The two
+    /// pieces of vertical machinery that would be wrong on a turned frame decline by themselves:
+    /// a column is a WIDE box there, so neither the crop turn nor the column split has anything to
+    /// act on.</para>
+    /// </remarks>
+    private List<OcrTextBlock> ReadTurnedFrame(
+        RapidOcrRuntime runtime,
+        Bitmap bitmap,
+        string normalizedLanguage,
+        int? maxDetectSize,
+        IReadOnlyList<OcrTextBlock> upright)
+    {
+        using var turned = TurnedFrameDetection.Turn(bitmap);
+        using var session = new DetectionSession(
+            this, runtime, turned, normalizedLanguage, maxDetectSize,
+            releasesRuntime: false, repairRows: false, verticalText: true);
+
+        var wanted = TurnedFrameDetection.PiecesTheUprightPassMissed(
+            [.. upright.Select(box => box.Bounds)],
+            [.. session.Boxes.Select(box => box.Bounds)],
+            bitmap.Width);
+
+        if (wanted.Count == 0)
+            return [];
+
+        var found = session.Recognize(wanted)
+            .Where(TurnedFrameDetection.WorthKeeping)
+            .Select(block => TurnedFrameDetection.ToUpright(block, bitmap.Width))
+            .Where(block => !TurnedFrameDetection.SaysWhatWasAlreadyRead(block, upright))
+            .ToList();
+
+        Log.Info(
+            "ONNX OCR turned frame: {Candidates} box(es) the upright pass missed, {Blocks} read",
+            wanted.Count, found.Count);
+
+        return found;
     }
 
     private static readonly MethodInfo PrepareDetectorInputMethod =
@@ -860,7 +942,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     // Default ImgResize (1024) downscales wide UI screenshots and destroys small-text detail,
     // causing recognition errors. Raising it keeps typical captures near native resolution;
     // smaller images are unaffected, because ImgResize only ever downscales.
-    private const int ScreenshotDetectSize = 2048;
+    internal const int ScreenshotDetectSize = 2048;
 
     /// <param name="maxDetectSize">
     /// Longest side to give the detector, or null for the screenshot default. A caller that knows
