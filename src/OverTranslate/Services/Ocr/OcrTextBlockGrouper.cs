@@ -1172,8 +1172,8 @@ internal static class OcrTextBlockGrouper
     }
 
     /// <summary>
-    /// Whether the narrower of two lines is centred inside the wider one, rather than stacked flush
-    /// against it.
+    /// Whether two lines are set centred on one another, rather than stacked flush against one
+    /// edge.
     /// </summary>
     /// <remarks>
     /// <para>What the waived length test was really keeping out. A line too short to have run out of
@@ -1201,12 +1201,40 @@ internal static class OcrTextBlockGrouper
     ///
     /// <para>The pixel floor is for text small enough that a fifth of a line height is a pixel or
     /// two, where the detector's own jitter would otherwise decide this.</para>
+    ///
+    /// <para>THE INSET READING GOES BLIND WHERE SPEECH IS MOST OBVIOUSLY SPEECH, which is the
+    /// second half of this. A letterer breaks a balloon's lines to about the same length, so the
+    /// better balanced the setting is the less either line runs past the other — and the inset,
+    /// which is what that running-past measures, falls to nothing. Measured on the two comic sets:
+    /// 「NICE TO SEE」over「YOU AGAIN.」is inset 9px where 10.4 is asked, 「OR IS IT WI」over
+    /// 「SEOL-AH?」8px where 10.5 is asked, and 「THAT GUY'S FAULT」over「YOU ENDED UP IN」— 418 and
+    /// 414 pixels wide, one leading apart, no edge out by more than 0.07 of a line — reads 0. Seven
+    /// pairs sat between 0 and 9px against a 10 to 15px requirement, every one of them a balloon
+    /// interior.</para>
+    ///
+    /// <para>So the second question is asked directly: do the two lines share a centre. That is
+    /// what the paragraph above says the test is about, and it stays true as the widths converge —
+    /// the seven read 0.00 to 0.11 line heights apart on their centres. The inset reading is kept
+    /// rather than replaced, because it is the one that still answers for a pair set well off
+    /// centre with both ends inset, and replacing it lost a Japanese page's wrapped heading.</para>
+    ///
+    /// <para>Measured with both halves in, over 196 captures: the two comic sets go from 34 of
+    /// their 45 hand-marked groups exactly right to 40, and from 23 spurious groups to 10. Across
+    /// the other 174 captures five pair verdicts move — two of them right (a two-line subtitle,
+    /// 「like an explosive force」/「hurtling into the sky!」, and a wrapped sentence on an English
+    /// documentation page), three of them wrong and all the same mild shape: two labels of a list
+    /// read as one line. <see cref="GroupingProfile.Interface"/> reproduces all 196 captures
+    /// unchanged, since nothing here is reached without its waiver.</para>
     /// </remarks>
     private static bool IsCentredAgainst(OcrTextBlock previous, OcrTextBlock current, double avgHeight)
     {
         var inset = Math.Max(avgHeight * SetSolidMinCentringInset, 4);
+        if (InsetWithin(previous, current) >= inset || InsetWithin(current, previous) >= inset)
+            return true;
 
-        return InsetWithin(previous, current) >= inset || InsetWithin(current, previous) >= inset;
+        return Math.Abs(CenterX(previous) - CenterX(current)) <=
+                   Math.Max(avgHeight * SetSolidMaxCentringOffset, 4) &&
+               WouldHaveWrappedTogether(previous, current);
     }
 
     /// <summary>How far <paramref name="inner"/> sits inside <paramref name="outer"/> at its nearer end.</summary>
@@ -1214,6 +1242,37 @@ internal static class OcrTextBlockGrouper
         Math.Min(
             inner.LayoutBounds.Left - outer.LayoutBounds.Left,
             outer.LayoutBounds.Right - inner.LayoutBounds.Right);
+
+    /// <summary>
+    /// The waived length test, asked of the pair rather than of the line: together, are these two
+    /// long enough that one line of them would have run out of room?
+    /// </summary>
+    /// <remarks>
+    /// <para>The centring test above cannot stand alone, because a pair of equally wide lines is
+    /// centred on one another whatever they say — and the shape the length test exists to refuse is
+    /// exactly two short tokens in a column. Measured over the corpus, asking the centres alone
+    /// moved 47 pair verdicts across the 174 non-comic captures instead of five, the great majority
+    /// of them wrong — among them nine captures of 「RTX」over「VSR」, the pair the paragraph above
+    /// names as the thing this must keep out.</para>
+    ///
+    /// <para>What is left to ask them is length, and it is not a new threshold: it is
+    /// <see cref="WrappedLineMinAspect"/>, asked of the two lines added together. A balloon's line
+    /// is short because the balloon is narrow, so no single line of one reaches that figure; the
+    /// text as a whole does. Measured, the two populations are on opposite sides of it without the
+    /// number being chosen to put them there — every pair the comic sets and the subtitle and prose
+    /// wins need runs 8.30 to 15.12, while 「RTX」/「VSR」reads 3.25, 「TD01」/「TD02」3.72,
+    /// 「Move」/「Dash」4.03, 「出版社」/「場栽誌」4.73, and a calculator's 「Targets &gt;」/「Average &gt;」
+    /// 7.13.</para>
+    ///
+    /// <para>The populations do touch at the top: the three wrong joins this takes sit at 8.28,
+    /// 8.54 and 10.81, and the lowest right one at 8.30. They are not separable on length — a
+    /// two-entry list of long entries is a pair of long lines — so this is a cost trade in the
+    /// sense <see cref="SolidLineAdvance"/> sets out, and what makes it a cheap one is that the
+    /// three are all two labels read as one line, against half a sentence handed to the translator
+    /// on the other side.</para>
+    /// </remarks>
+    private static bool WouldHaveWrappedTogether(OcrTextBlock previous, OcrTextBlock current) =>
+        Aspect(previous) + Aspect(current) >= WrappedLineMinAspect;
 
     /// <summary>
     /// The most leading two lines can have and still read as set solid, one under the other.
@@ -1318,9 +1377,27 @@ internal static class OcrTextBlockGrouper
     /// </remarks>
     private const double SetSolidMinCentringInset = 0.20;
 
+    /// <summary>
+    /// How far two lines' centres may sit apart, in line heights, and still be set centred on one
+    /// another.
+    /// </summary>
+    /// <remarks>
+    /// The same figure as <see cref="SetSolidMinCentringInset"/>, and for the same reason rather
+    /// than for tidiness: both are asking how far this pair is from being laid out symmetrically,
+    /// one by the width it has to spare and one by where the middle of it lands. The balloon pairs
+    /// this admits read 0.00 to 0.11, and the stacked labels it must keep out are a continuum
+    /// upwards from there — so, as with the inset, what separates the two populations is which side
+    /// of any figure above zero they fall on, not where the figure goes. The pixel floor is the
+    /// same detector jitter allowance.
+    /// </remarks>
+    private const double SetSolidMaxCentringOffset = 0.20;
+
     private static bool IsLongEnoughToHaveWrapped(OcrTextBlock line) =>
-        line.LayoutBounds.Height > 0 &&
-        line.LayoutBounds.Width / line.LayoutBounds.Height >= WrappedLineMinAspect;
+        Aspect(line) >= WrappedLineMinAspect;
+
+    /// <summary>A line's length in its own line heights, which is the unit the length test uses.</summary>
+    private static double Aspect(OcrTextBlock line) =>
+        line.LayoutBounds.Height > 0 ? line.LayoutBounds.Width / line.LayoutBounds.Height : 0;
 
     private static bool HasUnclosedDelimiter(string text) =>
         Count(text, '「') > Count(text, '」') ||
