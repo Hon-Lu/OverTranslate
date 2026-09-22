@@ -1223,8 +1223,16 @@ internal static class OcrTextBlockGrouper
     /// the other 174 captures five pair verdicts move — two of them right (a two-line subtitle,
     /// 「like an explosive force」/「hurtling into the sky!」, and a wrapped sentence on an English
     /// documentation page), three of them wrong and all the same mild shape: two labels of a list
-    /// read as one line. <see cref="GroupingProfile.Interface"/> reproduces all 196 captures
-    /// unchanged, since nothing here is reached without its waiver.</para>
+    /// read as one line. Those three have no mode to escape to — the screenshot flow ships one
+    /// profile — so they are a cost the default carries, taken because half a sentence handed to
+    /// the translator is the worse failure.</para>
+    ///
+    /// <para>The live path cannot reach any of this, and that is the containment that matters.
+    /// Nothing here runs without <see cref="GroupingProfile.WaiveLengthTestWhenSetSolid"/>, which
+    /// only the screenshot flow's profile sets, and a dialogue region does not come through this
+    /// file's set-solid path at all — <see cref="Realtime.DialogueTextGrouper"/> has its own rules.
+    /// Measured rather than argued: 178 subtitle, chat and panel captures replayed through the
+    /// realtime profiles group identically either side of this change.</para>
     /// </remarks>
     private static bool IsCentredAgainst(OcrTextBlock previous, OcrTextBlock current, double avgHeight)
     {

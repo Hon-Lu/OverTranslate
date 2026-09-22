@@ -1082,6 +1082,11 @@ public class OcrTextBlockGrouperTests
     /// <para>It is not a cost, it is the inset going blind at the point the setting is most
     /// balanced: their centres are 0.05 of a line apart, which is the same claim the inset was
     /// standing in for. Seven pairs across the two comic sets sat in this gap.</para>
+    ///
+    /// <para>Read against the realtime profile rather than the interface one, though either would
+    /// show the gating. Realtime is the profile that still has a caller, so it is the one whose
+    /// staying put is worth pinning: a subtitle band must not start joining balloon geometry
+    /// because the screenshot flow's default moved.</para>
     /// </remarks>
     [Fact]
     public void TwoBalloonLinesOfEqualWidth_AreReadOnTheirCentres()
@@ -1089,7 +1094,7 @@ public class OcrTextBlockGrouperTests
         var previous = LineWithGlyphHeight("THAT GUY'S FAULT", x: 368, y: 725, width: 417, height: 58, glyph: 36.0);
         var current = LineWithGlyphHeight("YOU ENDED UP IN", x: 372, y: 780, width: 415, height: 58, glyph: 31.0);
 
-        Assert.Equal(2, OcrTextBlockGrouper.Group([previous, current], GroupingProfile.Interface).Count);
+        Assert.Equal(2, OcrTextBlockGrouper.Group([previous, current], GroupingProfile.Realtime).Count);
         Assert.Single(OcrTextBlockGrouper.Group([previous, current], GroupingProfile.General));
     }
 
