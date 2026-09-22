@@ -322,39 +322,74 @@
                                Margin="8,6"
                                Fill="{DynamicResource AppSeparator}"/>
 
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                        <ComboBox x:Name="SrcLangBox"
-                                  Style="{StaticResource QuietComboBox}"
-                                  ctl:ComboBoxSearch.IsEnabled="True"
-                                  Width="78"
-                                  SelectedValuePath="Code"/>
+                    <!-- The language cell, in the two shapes it can take, sharing one cell so the
+                         row does not move when the mode changes. Off, it is the pair the user set
+                         and the button that turns it around. On, there is nothing here to decide,
+                         so it stops being controls and becomes a reading of what the popup did. -->
+                    <Grid Grid.Column="3">
+                        <StackPanel x:Name="FixedPairPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                            <ComboBox x:Name="SrcLangBox"
+                                      Style="{StaticResource QuietComboBox}"
+                                      ctl:ComboBoxSearch.IsEnabled="True"
+                                      Width="78"
+                                      SelectedValuePath="Code"/>
 
-                        <!-- Was a → held at 0.45 opacity, on the reasoning that it was punctuation
-                             rather than a third thing to read. It is a control now, so it is drawn
-                             at the same weight as the pin, gear and close beside it: a button faded
-                             to nearly half is one nobody tries to press.
+                            <!-- Was a → held at 0.45 opacity, on the reasoning that it was punctuation
+                                 rather than a third thing to read. It is a control now, so it is drawn
+                                 at the same weight as the pin, gear and close beside it: a button faded
+                                 to nearly half is one nobody tries to press.
 
-                             ⇄ in the interface font rather than 截圖翻譯's icon-font glyph, because
-                             what it replaces is a typographic mark between two words and the row is
-                             built out of light text — the same swap 文字翻譯 puts between its two
-                             pickers, which is where someone would have met this before. -->
-                        <Button Content="⇄"
-                                Style="{StaticResource IconButton}"
-                                FontFamily="{DynamicResource AppFont}"
-                                FontSize="13"
-                                Width="24" Height="26" Padding="0"
-                                Margin="2,0"
+                                 ⇄ in the interface font rather than 截圖翻譯's icon-font glyph, because
+                                 what it replaces is a typographic mark between two words and the row is
+                                 built out of light text — the same swap 文字翻譯 puts between its two
+                                 pickers, which is where someone would have met this before. -->
+                            <Button Content="⇄"
+                                    Style="{StaticResource IconButton}"
+                                    FontFamily="{DynamicResource AppFont}"
+                                    FontSize="13"
+                                    Width="24" Height="26" Padding="0"
+                                    Margin="2,0"
+                                    VerticalAlignment="Center"
+                                    ToolTip="{DynamicResource S.Translation.SwapTip}"
+                                    AutomationProperties.Name="{DynamicResource S.Translation.SwapTip}"
+                                    Click="SwapBtn_Click"/>
+
+                            <ComboBox x:Name="TgtLangBox"
+                                      Style="{StaticResource QuietComboBox}"
+                                      ctl:ComboBoxSearch.IsEnabled="True"
+                                      Width="78"
+                                      SelectedValuePath="Code"/>
+                        </StackPanel>
+
+                        <!-- Two pickers become one line of text, because in this mode there is
+                             nothing in this cell for the user to decide: the direction is read off
+                             what they typed, and the pair it is read out of is a setting they made
+                             once. What the row has to do instead is say what the popup just did —
+                             「自動偵測」 before there is anything to go on, and the direction it
+                             actually took once there is.
+
+                             A button rather than a label, because taking the pickers away took the
+                             pair off the screen with them, and a setting nobody can find from the
+                             thing it governs is one they have to go looking for. This is the way
+                             back: it opens the panel the pair now lives in.
+
+                             MaxWidth is the room this cell has before it starts eating into the
+                             text box's own minimum — see the column definitions above — so a long
+                             pair of names in a language that spells them out trims rather than
+                             squeezing the box this window exists for. The full reading stays in the
+                             tooltip. -->
+                        <Button x:Name="BilingualStatusBtn"
+                                Style="{StaticResource ResultActionButton}"
+                                Padding="8,5"
+                                MaxWidth="214"
                                 VerticalAlignment="Center"
-                                ToolTip="{DynamicResource S.Translation.SwapTip}"
-                                AutomationProperties.Name="{DynamicResource S.Translation.SwapTip}"
-                                Click="SwapBtn_Click"/>
-
-                        <ComboBox x:Name="TgtLangBox"
-                                  Style="{StaticResource QuietComboBox}"
-                                  ctl:ComboBoxSearch.IsEnabled="True"
-                                  Width="78"
-                                  SelectedValuePath="Code"/>
-                    </StackPanel>
+                                Visibility="Collapsed"
+                                Click="BilingualStatusBtn_Click">
+                            <TextBlock x:Name="BilingualStatusText"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
 
                     <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                         <Rectangle Width="1" Margin="6,6" Fill="{DynamicResource AppSeparator}"/>
@@ -628,6 +663,83 @@
                                           Width="180" Height="30"
                                           SelectedValuePath="Provider"/>
                             </Grid>
+
+                            <Rectangle Height="1" Fill="{DynamicResource AppSeparator}" Margin="0,0,0,12"/>
+
+                            <!-- Above 自動複製 because it belongs with 翻譯服務: both decide what the
+                                 popup does with the text, while auto-copy is about what happens once
+                                 it is done. -->
+                            <StackPanel Margin="0,0,0,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="{DynamicResource S.QuickLookup.Bilingual}"
+                                                   Style="{StaticResource SettingRowLabel}"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Text="{DynamicResource S.QuickLookup.BilingualHint}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,2,0,0"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <CheckBox x:Name="BilingualToggle"
+                                              Grid.Column="1"
+                                              Style="{StaticResource ToggleSwitch}"
+                                              AutomationProperties.Name="{DynamicResource S.QuickLookup.Bilingual}"/>
+                                </Grid>
+
+                                <!-- Only on screen while the switch is on. Two pickers that decide
+                                     nothing are two pickers asking to be fiddled with, and the row
+                                     above already says what they would be for. -->
+                                <StackPanel x:Name="BilingualPairRow"
+                                            Margin="0,12,0,0"
+                                            Visibility="Collapsed">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <ComboBox x:Name="BilingualFirstBox"
+                                                  Style="{StaticResource ModernComboBox}"
+                                                  ctl:ComboBoxSearch.IsEnabled="True"
+                                                  Width="170" Height="30"
+                                                  SelectedValuePath="Code"
+                                                  AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualFirst}"/>
+
+                                        <!-- Punctuation between two names rather than a control:
+                                             the order these are in is the fallback order, and the
+                                             line below says so. Swapping them is picking the other
+                                             language in either box, which moves both — see
+                                             ApplyBilingualPick. -->
+                                        <TextBlock Text="⇄"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource AppTextSecondary}"
+                                                   Width="26"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+
+                                        <ComboBox x:Name="BilingualSecondBox"
+                                                  Style="{StaticResource ModernComboBox}"
+                                                  ctl:ComboBoxSearch.IsEnabled="True"
+                                                  Width="170" Height="30"
+                                                  SelectedValuePath="Code"
+                                                  AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualSecond}"/>
+                                    </StackPanel>
+
+                                    <!-- Under the pickers and against their right edge, because it is
+                                         about the one on the left rather than about the feature: the
+                                         first language is also where everything unrecognised lands,
+                                         and nothing else on screen would say so. Written from code,
+                                         since it names whichever language that currently is. -->
+                                    <TextBlock x:Name="BilingualFallbackHint"
+                                               Style="{StaticResource FieldHint}"
+                                               HorizontalAlignment="Right"
+                                               MaxWidth="366"
+                                               Margin="0,8,0,0"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
 
                             <Rectangle Height="1" Fill="{DynamicResource AppSeparator}" Margin="0,0,0,12"/>
 

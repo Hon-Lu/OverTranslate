@@ -156,6 +156,14 @@
     <sys:String x:Key="S.QuickLookup.ProviderHint">与屏幕翻译及文字翻译共用此服务</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">自动复制翻译结果</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">翻译完成后，自动将结果复制到剪贴板</sys:String>
+    <sys:String x:Key="S.QuickLookup.Bilingual">双语互译</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualHint">自动判断输入的语言，在指定的两种语言之间互译</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFallback">检测到其他语言时，将自动翻译为左侧选取的语言“{0}”</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFirst">第一语言</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualSecond">第二语言</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusIdle">双语互译：自动检测</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusPair">双语互译：{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusTip">在“{0}”与“{1}”之间自动判断翻译方向。点击可更换语言。</sys:String>
     <sys:String x:Key="S.QuickLookup.Collapse">收起</sys:String>
     <sys:String x:Key="S.QuickLookup.Expand">展开</sys:String>
     <sys:String x:Key="S.QuickLookup.TranslationCopied">已复制到剪贴板</sys:String>

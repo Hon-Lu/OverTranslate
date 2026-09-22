@@ -156,6 +156,14 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">Shared with screen translation and text translation</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">Automatically copy translation results</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">Automatically copies the result to the clipboard when translation finishes</sys:String>
+    <sys:String x:Key="S.QuickLookup.Bilingual">Two-way translation</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualHint">Detects what you typed and translates between the two languages you choose</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFallback">Any other language detected is translated into the language on the left, {0}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFirst">First language</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualSecond">Second language</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusIdle">Two-way: detecting</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusPair">Two-way: {0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusTip">The direction is chosen for you, between {0} and {1}. Click to change the languages.</sys:String>
     <sys:String x:Key="S.QuickLookup.Collapse">Collapse</sys:String>
     <sys:String x:Key="S.QuickLookup.Expand">Expand</sys:String>
     <sys:String x:Key="S.QuickLookup.TranslationCopied">Copied to clipboard</sys:String>
