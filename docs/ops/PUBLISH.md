@@ -95,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File .\publish-velopack.ps1
   `releases.<channel>.json` 完全不因 portable 而改變 —— 所以它一樣能自動更新，
   前提是 zip 有跟其他檔案一起上傳到同一個 Release
 - 已手動 publish、只想重新打包時加 `-SkipPublish`
-- 打包完可以跑 `.\check-release-hashes.ps1` 看那兩顆未簽章原生檔的雜湊有沒有變（CI 會自動跑）
+- 打包完可以跑 `.\check-release-hashes.ps1` 看 stub 與 `Update.exe` 的雜湊有沒有變（CI 會自動跑）
 
 輸出在 `artifacts\releases\`（未版控）。**不要期待它一直在** —— Velopack 靠裡面的舊 full 包
 產生 delta，換機器或誤刪之後要先抓回來：
@@ -245,3 +245,82 @@ gh attestation verify .\OverTranslate-win-Portable.zip --repo asd880921/OverTran
 attestation 簽的是本機那幾個檔，跟上不上傳無關。排在建立 release 之前，萬一這一步掛掉，
 release 還沒建出來，重跑整個 job 就好；排在後面的話 release 已經存在，重跑會被
 「這個版號是否已經發布過」擋下來，那一版就永遠補不上 attestation 了。
+
+---
+
+## 七、自簽憑證
+
+打包時會用一張**自簽**的代碼簽章憑證簽掉這些檔：
+
+| 檔案 | 簽？ |
+|---|---|
+| 根目錄 stub、`Update.exe`、`current\OverTranslate.exe` 與其他自家 DLL | 是（約 16 個） |
+| 微軟簽的 .NET 執行檔 | 否，vpk 會自動跳過已被信任簽章的檔 |
+| `Setup.exe` | 是 |
+| `.zip` / `.nupkg` / `releases.win.json` | 不能簽（非 PE），由 attestation 涵蓋 |
+
+### 它不是什麼
+
+**不會讓 Windows 少跳任何警告。** 自簽的根憑證不被信任，使用者看到的狀態是
+`A certificate chain processed, but terminated in a root certificate which is not trusted`。
+它的用途只有一個：**日後要判斷「使用者手上那顆是不是我出的」時，可以離線、不靠 GitHub 直接看**。
+要讓作業系統自動信任，只有受信任 CA 一條路（#210 階段 B）。
+
+### 為什麼不加時戳
+
+時戳會讓相同內容每次簽出不同的位元組，stub 與 `Update.exe` 的雜湊就會每版重算一次，
+[第五節](#五那兩顆沒有簽章的原生檔210)做的事就全白費。不加時戳的代價是**憑證到期後，
+過去所有版本的簽章會一起失效**，所以那張憑證的效期一次拉到 2049（X.509 的日期編碼分界，
+再往後有相容性風險）。
+
+### 憑證怎麼來的
+
+私鑰只在本機產生，上傳到 GitHub 的是加密過的 PFX：
+
+```powershell
+$cert = New-SelfSignedCertificate `
+    -Type CodeSigningCert `
+    -Subject "CN=Hon.Lu, O=OverTranslate" `
+    -CertStoreLocation Cert:\CurrentUser\My `
+    -KeyAlgorithm RSA -KeyLength 4096 -HashAlgorithm SHA256 `
+    -KeyExportPolicy Exportable `
+    -NotAfter (Get-Date "2049-12-31")
+
+$pfxPwd = Read-Host "PFX 密碼" -AsSecureString
+Export-PfxCertificate -Cert $cert -FilePath "$HOME\overtranslate-signing.pfx" -Password $pfxPwd
+
+$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\overtranslate-signing.pfx"))
+$b64 | gh secret set SIGNING_PFX_BASE64 --repo asd880921/OverTranslate
+gh secret set SIGNING_PFX_PASSWORD --repo asd880921/OverTranslate
+```
+
+CI 會把 secret 還原成暫存 `.pfx`、匯入憑證存放區、立刻刪檔，之後只用**指紋**叫 signtool，
+密碼不會出現在任何命令列上。**缺 secret 時 job 會直接失敗**——不要安靜地發一包沒簽的出去，
+那包的雜湊會跟基準值對不上，使用者拿到的東西也與前一版不一致。
+
+### 兩件必須記住的事
+
+- **PFX 弄丟 = 換金鑰 = stub 與 `Update.exe` 的雜湊再重置一次**（而且舊版簽章與新版對不起來）。
+  備份到離線的地方，別只留在桌面。
+- **指紋要公開**。它是「事先的公開承諾」，日後要主張某顆檔不是我出的，靠的就是它。
+  指紋不是秘密，可以直接寫在 README 或這份文件裡。
+
+### 本機打包
+
+不帶 `-CertThumbprint` 就不簽，隨手打包不需要動到憑證：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish-velopack.ps1 -CertThumbprint <指紋>
+```
+
+### 實測（2026-09-23，用一張測試憑證跑過整條流程）
+
+| 情境 | stub | `Update.exe` |
+|---|---|---|
+| app 2.4.0 | 基準 | 基準 |
+| app 2.5.0（改版號重建） | 相同 | 相同 |
+| app 2.5.0 + 不同 commit | 相同 | 相同 |
+| 憑證砍掉、從 PFX 重新匯入再簽 | 相同 | 相同 |
+
+`current\OverTranslate.exe` 每版都會變——版號就寫在它裡面，本來就該變。
+簽章後 stub 的版本資源仍然是凍結的 `1.0.0`，nupkg 裡那顆與免安裝包根目錄仍是同一顆。

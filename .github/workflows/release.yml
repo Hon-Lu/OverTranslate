@@ -155,17 +155,73 @@ jobs:
               --outputDir .\artifacts\releases `
               --token $env:GH_TOKEN
 
+      - name: 匯入自簽憑證
+        id: signcert
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        run: |
+          # 私鑰只活在這個 job 裡：從 secret 還原成暫存 .pfx、匯入憑證存放區、立刻刪檔。
+          # 之後只用指紋叫 signtool，密碼與檔案路徑都不會出現在任何命令列上。
+          #
+          # 缺 secret 就直接失敗，不要安靜地發一包沒簽的出去——那包的雜湊會跟基準值對不上，
+          # 而且使用者拿到的東西會與前一版不一致。
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) {
+              throw "沒有設定 SIGNING_PFX_BASE64。見 docs/ops/PUBLISH.md 第七節。"
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
+          try {
+              $securePwd = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
+              $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePwd
+          }
+          finally { Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue }
+
+          Write-Host "憑證：$($cert.Subject)"
+          Write-Host "指紋：$($cert.Thumbprint)"
+          Write-Host "效期至：$($cert.NotAfter)"
+          "thumbprint=$($cert.Thumbprint)" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+
       - name: 打包
         shell: pwsh
         run: |
-          .\publish-velopack.ps1 -Version ${{ steps.ver.outputs.version }} -VpkPath '${{ steps.vpkfork.outputs.exe }}'
+          .\publish-velopack.ps1 -Version ${{ steps.ver.outputs.version }} `
+              -VpkPath '${{ steps.vpkfork.outputs.exe }}' `
+              -CertThumbprint '${{ steps.signcert.outputs.thumbprint }}'
 
-      - name: 檢查未簽章原生檔的雜湊
+      - name: 檢查 stub 與 Update.exe 的雜湊
         shell: pwsh
         run: |
           # 只提醒、不擋。雜湊變了不是錯誤，是「這一版的 Defender 檔案信譽要重新養」的通知——
           # 換圖示、改 app.manifest、改組件資訊字串、換 vpk 都會觸發，發版當下就該知道。
           .\check-release-hashes.ps1
+
+      - name: 取出要證明的檔案
+        shell: pwsh
+        run: |
+          # attestation 簽的是「檔案的雜湊」，所以要證明使用者硬碟上那三顆，就得把那三顆本身
+          # 交給它——證明了 zip 與 nupkg 這兩個容器，不等於證明裡面解出來的檔。
+          # 擺成跟安裝後一樣的相對位置，之後在 attestation 清單上看得出誰是誰。
+          $zip = Resolve-Path '.\artifacts\releases\OverTranslate-win-Portable.zip'
+          $dst = '.\artifacts\attest'
+          New-Item -ItemType Directory -Force -Path "$dst\current" | Out-Null
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+              foreach ($name in @('OverTranslate.exe', 'Update.exe', 'current/OverTranslate.exe')) {
+                  $entry = $archive.GetEntry($name)
+                  if ($null -eq $entry) { throw "免安裝包裡找不到 $name" }
+                  $out = Join-Path $dst $name.Replace('/', '\')
+                  [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $out, $true)
+              }
+          }
+          finally { $archive.Dispose() }
+
+          Get-ChildItem $dst -Recurse -File | ForEach-Object {
+              "$($_.FullName)  $($_.Length)  $((Get-FileHash $_.FullName -Algorithm SHA256).Hash)"
+          }
 
       - name: 產生 provenance attestation
         uses: actions/attest-build-provenance@v4
@@ -181,6 +237,9 @@ jobs:
             artifacts/releases/OverTranslate-win-Setup.exe
             artifacts/releases/OverTranslate-win-Portable.zip
             artifacts/releases/releases.win.json
+            artifacts/attest/OverTranslate.exe
+            artifacts/attest/Update.exe
+            artifacts/attest/current/OverTranslate.exe
 
       - name: 發布 pre-release
         shell: pwsh

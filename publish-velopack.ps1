@@ -17,7 +17,10 @@ param(
     # 打包用的是 fork 版 vpk（asd880921/velopack 的 fork/stable-stub-1.2.0），不是 nuget 上的官方
     # 版本 —— 只有它認得 --stableStub。取得與建置方式見該倉的 FORK-APPS.md。
     # 沒給就用這台機器的慣例位置（fork 與本倉並排 clone），CI 則明確傳進來。
-    [string]$VpkPath = $env:OVERTRANSLATE_VPK_PATH
+    [string]$VpkPath = $env:OVERTRANSLATE_VPK_PATH,
+    # 自簽憑證的指紋。給了才簽，沒給就照常打包不簽——本機隨手打包不需要動到憑證。
+    # CI 會先把憑證匯入存放區，再把指紋傳進來，私鑰不會出現在任何命令列上。
+    [string]$CertThumbprint = $env:OVERTRANSLATE_SIGN_THUMBPRINT
 )
 
 $ErrorActionPreference = "Stop"
@@ -199,6 +202,21 @@ $packArgs = @(
     # —— 這正是 #210 那個 Wacatac.B!ml 誤判的溫床。詳見 fork 的 FORK-APPS.md。
     "--stableStub"
 )
+
+if (-not [string]::IsNullOrWhiteSpace($CertThumbprint)) {
+    # **刻意不加時戳（/tr）**。時戳會讓同樣的內容每次簽出不同的位元組，stub 與 Update.exe
+    # 的雜湊就會每版重來一次——那正是上面 --stableStub 在解決的事。代價是憑證一到期，
+    # 過去所有版本的簽章會一起失效，所以那張自簽憑證的效期一次拉到 2049。
+    #
+    # vpk 會簽 packDir 裡所有 PE 檔，而這時 Update.exe（以 Squirrel.exe 之名）與 stub 都已經
+    # 在裡面了，所以使用者硬碟上那三顆全都涵蓋。已經被信任簽章的檔（微軟簽的 .NET 執行檔）
+    # 會自動跳過，不會被我們的自簽蓋掉。
+    $packArgs += @("--signParams", "/sha1 $CertThumbprint /fd SHA256")
+    Write-Host "簽章      : $CertThumbprint（自簽，不加時戳）"
+}
+else {
+    Write-Host "簽章      : 無（沒給 -CertThumbprint）" -ForegroundColor Yellow
+}
 
 & $vpkFullPath @packArgs
 if ($LASTEXITCODE -ne 0) {

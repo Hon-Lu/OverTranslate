@@ -20,7 +20,7 @@
 ## 相關檔案
 
 - [`publish-velopack.ps1`](../../publish-velopack.ps1) —— 打包腳本，CI 與手動共用同一份
-- [`check-release-hashes.ps1`](../../check-release-hashes.ps1) —— 檢查那兩顆未簽章原生檔的雜湊有沒有變，
+- [`check-release-hashes.ps1`](../../check-release-hashes.ps1) —— 檢查 stub 與 `Update.exe` 的雜湊有沒有變，
   只提醒不擋（見 [PUBLISH.md 第五節](PUBLISH.md#五那兩顆沒有簽章的原生檔210)）
 - [`.github/workflows/release.yml`](../../.github/workflows/release.yml) —— 壓 tag 觸發的自動打包
 - `artifacts/releases/` —— 本機打包輸出，未版控。**GitHub Release 才是唯一真相**，
