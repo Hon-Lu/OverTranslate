@@ -30,7 +30,9 @@ on:
       - 'v[0-9]*'
 
 permissions:
-  contents: write
+  contents: write      # 建立 release、上傳產物
+  id-token: write      # 產生 provenance attestation 時用 OIDC 換 Sigstore 憑證
+  attestations: write  # 把簽好的 attestation 寫回這個 repo
 
 jobs:
   pack:
@@ -164,6 +166,21 @@ jobs:
           # 只提醒、不擋。雜湊變了不是錯誤，是「這一版的 Defender 檔案信譽要重新養」的通知——
           # 換圖示、改 app.manifest、改組件資訊字串、換 vpk 都會觸發，發版當下就該知道。
           .\check-release-hashes.ps1
+
+      - name: 產生 provenance attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          # 逐檔對「檔案的 SHA256」簽章，簽章者是 GitHub 的 OIDC 身分，存進 Sigstore 的公開透明
+          # 日誌，檔案本身一個位元組都不會被改到——所以與上面那個雜湊穩定化完全不衝突。
+          # 使用者端驗：gh attestation verify <檔案> --repo ${{ github.repository }}
+          #
+          # 版號寫進 nupkg 的樣式裡，是為了避開「抓上一版 full 包」留在同一個資料夾的那顆舊的；
+          # -delta 不一定存在，用萬用字元讓它可有可無（-full 一定在，所以不會出現零個對象）。
+          subject-path: |
+            artifacts/releases/OverTranslate-${{ steps.ver.outputs.version }}-*.nupkg
+            artifacts/releases/OverTranslate-win-Setup.exe
+            artifacts/releases/OverTranslate-win-Portable.zip
+            artifacts/releases/releases.win.json
 
       - name: 發布 pre-release
         shell: pwsh

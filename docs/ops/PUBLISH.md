@@ -209,3 +209,39 @@ fork 的 `vendor/` 必須沿用官方 1.2.0 的 Rust 二進位（CI 從 `dotnet 
 
 > 導入時有一次性過渡：第一個帶旗標的版本會產生一顆全新的 stub，從那之後才定住。
 > 既有使用者不用重裝 —— `Update.exe` 更新時照常覆寫根目錄那顆，但寫進去的位元組相同。
+
+---
+
+## 六、產物的來源證明（provenance attestation）
+
+每次發版，CI 會對這幾個檔各產生一份 [GitHub artifact attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations)：
+
+- `OverTranslate-<版本>-full.nupkg`（與 `-delta.nupkg`，若有）
+- `OverTranslate-win-Setup.exe`
+- `OverTranslate-win-Portable.zip`
+- `releases.win.json`
+
+簽的是**檔案的 SHA256**，簽章者是 GitHub 的 OIDC 身分，記錄進 Sigstore 的公開透明日誌。
+任何人下載後都能驗它是不是這個 repo 的這條 workflow 建出來的：
+
+```powershell
+gh attestation verify .\OverTranslate-win-Portable.zip --repo asd880921/OverTranslate
+```
+
+驗得出來的是「這一顆確實由 `asd880921/OverTranslate` 的 `release.yml` 在某個 commit 上產生」，
+檔案被動過一個位元組就對不上。
+
+### 它不是什麼
+
+- **不是代碼簽章**。Windows 那邊完全不受影響，該跳的 SmartScreen 與「未知發行者」照跳。
+  那要受信任 CA 簽發的憑證，是 #210 的階段 B。
+- **自簽憑證不是替代方案**。自簽的根憑證不被信任，使用者看到的是簽章驗證失敗
+  （`A certificate chain processed, but terminated in a root certificate which is not trusted`），
+  與「檔案被竄改」長得一樣；而且竄改者可以自己做一張同名的自簽憑證重簽，名字證明不了事。
+  attestation 的身分是 GitHub，不是自己宣稱的。
+
+### 為什麼排在「發布 pre-release」之前
+
+attestation 簽的是本機那幾個檔，跟上不上傳無關。排在建立 release 之前，萬一這一步掛掉，
+release 還沒建出來，重跑整個 job 就好；排在後面的話 release 已經存在，重跑會被
+「這個版號是否已經發布過」擋下來，那一版就永遠補不上 attestation 了。
