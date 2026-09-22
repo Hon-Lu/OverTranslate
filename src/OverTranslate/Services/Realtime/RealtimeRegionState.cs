@@ -175,6 +175,7 @@ internal sealed class RealtimeRegionState
 
     private static readonly IReadOnlyList<Rectangle> NoBands = [];
     private static readonly IReadOnlyList<RenderedLine> NoLines = [];
+    private static readonly IReadOnlyList<OcrTextBlock> NoBlocks = [];
 
     private IReadOnlyList<Rectangle> _watchBands = NoBands;
     private FrameFingerprint? _rendered;
@@ -227,6 +228,35 @@ internal sealed class RealtimeRegionState
     public bool IsWatchingText => _watchBands.Count > 0;
 
     /// <summary>
+    /// Whether this pass is reading a picture the last pass already read.
+    /// </summary>
+    /// <remarks>
+    /// <para>Only ever true of the confirmation pass — the extra read a dialogue region takes after
+    /// a change, to catch a line that was still fading in when it was first read. On a still
+    /// picture that read is deterministic and therefore free of information: it hands back the
+    /// same boxes with the same text, which the log records as <c>-&gt; Unchanged</c>.</para>
+    ///
+    /// <para>That makes it the one place a second reading can be had for nothing, and a reading of
+    /// columns has something to gain from one — the detector's answer moves with the size of its
+    /// input, so the same picture read at another size finds balloons the first size did not put
+    /// together. See <see cref="Ocr.VerticalSecondLook"/>.</para>
+    /// </remarks>
+    public bool ReadingAgain { get; private set; }
+
+    /// <summary>
+    /// What the last pass read, for a second reading of the same picture to be weighed against.
+    /// </summary>
+    /// <remarks>
+    /// The blocks rather than <see cref="RenderedLines"/>, which carries text and scores but no
+    /// boxes — and which of two readings of a balloon is the better one is a question about where
+    /// they are as much as about what they say.
+    /// </remarks>
+    public IReadOnlyList<OcrTextBlock> LastRead { get; private set; } = NoBlocks;
+
+    /// <summary>Records what this pass read, for the next one to be weighed against.</summary>
+    public void RememberRead(IReadOnlyList<OcrTextBlock> blocks) => LastRead = blocks;
+
+    /// <summary>
     /// Whether enough passes have found nothing that the overlay really should be emptied — see
     /// <see cref="EmptyPassesBeforeClearing"/>.
     /// </summary>
@@ -264,7 +294,6 @@ internal sealed class RealtimeRegionState
     private RealtimeReadReason Decide(
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue)
     {
-        if (dialogue && Dialogue.TryTakeConfirmation()) return RealtimeReadReason.TextChanged;
         var current = capture(IsWatchingText ? _watchBands : null);
 
         // The strips are the text, so the share of them a change moves means what it says. A whole
@@ -273,6 +302,17 @@ internal sealed class RealtimeRegionState
         // next line of dialogue and never noticing it.
         bool Changed(FrameFingerprint? previous) =>
             IsWatchingText ? current.Differs(previous) : current.DiffersLocally(previous);
+
+        ReadingAgain = false;
+        if (dialogue && Dialogue.TryTakeConfirmation())
+        {
+            // The confirmation pass is asked for without looking at the picture, so whether it IS
+            // the same picture has to be asked here. Without it, a page turned at exactly this
+            // moment would have the previous page's reading merged into the new one's — and the
+            // reader would be shown a sentence that is no longer on screen.
+            ReadingAgain = LastRead.Count > 0 && !Changed(_rendered);
+            return RealtimeReadReason.TextChanged;
+        }
 
         if (Changed(_rendered))
         {
@@ -508,6 +548,8 @@ internal sealed class RealtimeRegionState
         _pending = null;
         _unsettledPolls = 0;
         RenderedLines = NoLines;
+        LastRead = NoBlocks;
+        ReadingAgain = false;
         RenderedText = "";
         RenderedConfidence = 0;
     }

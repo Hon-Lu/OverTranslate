@@ -934,14 +934,38 @@ recall 0.964 → 0.970。
 **成本：OCR 時間約 2.3 倍**（15 張真實擷取上中位數 1.6s → 3.7s；使用者機器上 log 是 1.4–2.6s，
 所以會變成 3.2–5.5s）。
 
-### 還沒做但是幾乎免費的版本
+### 第二次讀取是免費的：用本來就白跑的那一次
 
-log 顯示靜態畫面上**已經有第二次讀取**了：`DialogueReadingTracker` 的 confirmation pass
-（`Decide` 裡 `Dialogue.TryTakeConfirmation()` 回 `TextChanged`），而且它現在完全是白跑的——
-同一張點陣圖、同一個尺寸、同一個答案（log 裡就是 `-> Unchanged`）。把那一次改成用第二個尺寸讀，
-再跟上一輪的 block 做同樣的合併，就能拿到上面的好處而**不增加任何推論**，而且第一次上字的延遲不變。
+log 顯示靜態畫面上**本來就已經讀第二次**了：`DialogueReadingTracker` 的 confirmation pass
+（`Decide` 裡 `Dialogue.TryTakeConfirmation()` 回 `TextChanged`）。那是給字幕用的——字還在淡入時
+先讀到一半，再確認一次——但靜態漫畫頁上推論是決定性的，所以它讀出一模一樣的東西，log 裡就是
+`-> Unchanged`：
 
-需要兩件事：(1) 一個「這一輪是同一張畫面的再讀」的訊號傳到 `RunPass`；(2) `RealtimeRegionState` 記住
-上一輪的 block（`RenderedLines` 只有文字和分數）。風險在 confirmation 的判斷發生在取指紋之前，
-所以換頁的瞬間可能拿到上一頁的 block，需要一個守門。這個改動動到即時主迴圈，而主迴圈沒有整合測試，
-所以先沒做。
+```
+09:08:03  ocr=1359ms  lines=9 chars=136  shown=110  -> Translating
+09:08:04  ocr=1544ms  lines=9 chars=136  shown=136  -> Unchanged
+```
+
+所以把那一次改成用第二個尺寸讀、再跟上一輪的 block 合併，**推論次數跟原本一模一樣，第一次上字的
+延遲也一模一樣**。量過的三種做法（使用者那 15 張，每讀一次約 2.0–2.3s）：
+
+| | 每頁 OCR | 第一次上字 | 第二次讀取買到 |
+|---|---|---|---|
+| 單讀（confirmation 白跑）| 2.0 + 2.0 = 4.0s | 2.0s | 無 |
+| **用 confirmation 那一次** | 2.0 + 2.3 = 4.3s | 2.0s | 10 顆泡泡組成整句 |
+| 把雙讀塞進 `TryRecognizeVerticalAsync` | 4.3 + 4.3 = 8.6s | 4.3s | 同上，但付兩次 |
+
+第三行是一度 commit 過的版本，錯在它讓**每一次**讀取都變成雙讀，連 confirmation 那次也是，
+等於一頁四次推論。0.77 那次比原尺寸貴約 15%（2320ms 對 2042ms，因為它找到更多框要辨識），
+所以整體是 +7% 而不是 0%。
+
+實作：`RealtimeRegionState.ReadingAgain` 說這一輪是不是同一張畫面的再讀，`LastRead` 記住上一輪的
+block（`RenderedLines` 只有文字和分數，而「兩份讀取哪一份比較好」是關於位置的問題）。
+
+**守門很重要**：confirmation 是在還沒看畫面之前就被要求的，所以 `Decide` 裡改成先取指紋、再問
+confirmation，`ReadingAgain` 只在指紋沒變時才成立。沒有這道守門的話，翻頁正好撞上 confirmation 就會
+把上一頁的讀取合併進新的一頁，讀者會看到一句已經不在畫面上的話。`RealtimeReadingAgainTests` 裡
+六個測試就是在釘這件事。
+
+兩個已知範圍限制：只有**字幕模式**會跑 confirmation（漫畫預設是字幕模式，但直排 + 遊戲模式就完全
+沒有第二次讀取）；以及使用者會看到一次重畫——第一次上字時那顆泡泡是兩半，約 2 秒後併成一句。
