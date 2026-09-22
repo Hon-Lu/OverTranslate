@@ -33,7 +33,7 @@
     <sys:String x:Key="S.Shell.ShowSidebar">展开侧边栏</sys:String>
     <sys:String x:Key="S.Shell.Pin">固定后，窗口会常驻最上层</sys:String>
     <sys:String x:Key="S.Shell.Unpin">取消固定</sys:String>
-    <sys:String x:Key="S.Shell.CaptureBlockedByRealtime">实时翻译进行中，请先结束后再使用截图翻译</sys:String>
+    <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">正在框选实时翻译区块，请先点击「开始翻译」再使用截图翻译</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">实时翻译进行中，请先结束后再使用取词翻译</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">可更新至 v{0}</sys:String>
 
@@ -228,7 +228,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">程序已最小化到系统托盘，可使用 {0} 开始进行截图翻译。</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">已设置的快捷键</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">实时翻译进行中</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">请先结束实时翻译，再使用截图翻译。</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">请先结束实时翻译，再使用取词翻译。</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">缺少 API Key</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">请在设置中输入 API Key。</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">识别失败</sys:String>

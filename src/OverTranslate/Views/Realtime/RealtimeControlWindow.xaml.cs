@@ -156,6 +156,12 @@ public partial class RealtimeControlWindow : Window
     public event EventHandler? PauseToggleRequested;
 
     /// <summary>
+    /// Raised when the user asks for 截圖翻譯 from the running capsule. The session is not this
+    /// window's to stand down, so the request goes out like every other one here.
+    /// </summary>
+    public event EventHandler? CaptureRequested;
+
+    /// <summary>
     /// Raised with the state framing should be in from now on: true to take the mouse back for
     /// drawing blocks, false to hand it to whatever is underneath.
     /// </summary>
@@ -588,6 +594,8 @@ public partial class RealtimeControlWindow : Window
     private void EditBtn_Click(object sender, RoutedEventArgs e) => EditRequested?.Invoke(this, EventArgs.Empty);
 
     private void PauseBtn_Click(object sender, RoutedEventArgs e) => PauseToggleRequested?.Invoke(this, EventArgs.Empty);
+
+    private void CaptureBtn_Click(object sender, RoutedEventArgs e) => CaptureRequested?.Invoke(this, EventArgs.Empty);
 
     private void CrosshairBtn_Click(object sender, RoutedEventArgs e)
     {

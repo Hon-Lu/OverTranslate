@@ -100,6 +100,10 @@ internal sealed class RealtimeSessionController
     // update queued before a pause from restoring text after the screen was cleared.
     private int _visibleGeneration;
 
+    // What the capture currently on screen took from this session, so ResumeAfterCapture gives back
+    // exactly that and nothing more. Default — every flag false — means no capture is standing on it.
+    private RealtimeCaptureInterlude _interlude;
+
     /// <summary>
     /// The layout the last sitting ended with, offered back to the next one.
     /// </summary>
@@ -202,6 +206,10 @@ internal sealed class RealtimeSessionController
         control.EditRequested += (_, _) => EnterEditMode();
         control.CloseRequested += (_, _) => Stop();
         control.PauseToggleRequested += (_, _) => TogglePause();
+        // Handed on rather than acted on here: standing this session down is only half of a capture,
+        // and the half that owns the screen afterwards belongs to MainWindow. The button is on the
+        // running capsule only, which is the one state a capture is allowed in anyway.
+        control.CaptureRequested += (_, _) => StartCaptureFromBar();
         // Wired here rather than in EnterEditMode, which runs again on every trip back into framing
         // and would stack a fresh handler each time. The layer it talks to is whichever one is up:
         // there is none while translating, and the button that raises this is not on screen then.
@@ -251,12 +259,19 @@ internal sealed class RealtimeSessionController
     /// shortcut, each pressed by a user who can see on the bar which of the two states they are in.
     ///
     /// Does nothing while the user is framing blocks: there is nothing running to pause, and the
-    /// caller (the capture shortcut) is deliberately silent in that mode rather than explaining a
+    /// caller (the pause shortcut) is deliberately silent in that mode rather than explaining a
     /// rule about a feature the user has not started.
+    ///
+    /// Nothing either while a capture has the session stood down. The shortcut is still live then —
+    /// the bar it belongs to is off the screen, so the key is the only way to reach this at all —
+    /// and pressing it would start the loops reading the capture's own dim layer, then hand
+    /// <see cref="ResumeAfterCapture"/> a session in the opposite state from the one it recorded.
+    /// The session comes back in the state the capture found it, and that is the whole promise.
     /// </remarks>
     /// <returns>Whether there was a running session to toggle.</returns>
     public bool TogglePause()
     {
+        if (_interlude.HideLayers) return false;
         if (!IsTranslating || _session is null || _control is not { } control) return false;
 
         if (_session.IsPaused)
@@ -279,6 +294,115 @@ internal sealed class RealtimeSessionController
 
         control.SetPaused(true);
         return true;
+    }
+
+    /// <summary>
+    /// Sends the running capsule's 截圖翻譯 press on to the one place that owns a capture.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is decided here on purpose. <see cref="TryYieldToCapture"/> is called from that side
+    /// as well, so the bar, the shortcut and the nav rail all reach the same answer down the same
+    /// path rather than down three that can drift apart.
+    /// </remarks>
+    private static void StartCaptureFromBar()
+    {
+        if (System.Windows.Application.Current.MainWindow is MainWindow main)
+            main.StartCaptureFromRealtimeBar();
+    }
+
+    /// <summary>
+    /// Stands the session down so a screenshot capture can have the screen, and reports whether the
+    /// capture may start at all.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RealtimeCaptureInterlude"/> holds the rule and why it is the way it is; this does
+    /// the three things it asks for, in an order the screen depends on.
+    ///
+    /// The layers have to genuinely leave the screen, not merely be emptied: a capture grabs the
+    /// desktop with CopyFromScreen, and these windows stopped carrying WDA_EXCLUDEFROMCAPTURE when
+    /// keeping them out of frame became the realtime backend's job alone (#105). Left up, the
+    /// control bar and whatever the blocks were drawing would be baked into the very image the user
+    /// is about to select from — and could then be recognised and translated back to them.
+    ///
+    /// Idempotent, because the capture shortcut is also what closes a capture: the second press
+    /// arrives here with the session already stood down and must not hide anything twice or take a
+    /// second reading of a state this call itself changed.
+    /// </remarks>
+    /// <returns>False only while the user is framing blocks, which is where a capture is refused.</returns>
+    public bool TryYieldToCapture()
+    {
+        if (_interlude.HideLayers) return true;
+
+        var interlude = RealtimeCaptureInterlude.For(IsActive, IsTranslating, _session is { IsPaused: true });
+        if (!interlude.Allowed) return false;
+        if (!interlude.HideLayers || _control is not { } control) return true;
+
+        // First, and before this session is marked as stood down — TogglePause refuses once it is.
+        // This is what frees the OCR engine: the loops stop before the capture asks for a model of
+        // its own, so the two never read at the same time, and the swap AcquireRuntime may have to
+        // make waits only for a pass already in flight.
+        //
+        // What it reports is kept rather than what was intended, so the resume is the exact inverse
+        // of what happened here: a pause that did not take must not come back as a resume that does.
+        if (interlude.PauseWatching && !TogglePause())
+            interlude = interlude with { PauseWatching = false };
+
+        _interlude = interlude;
+
+        // Nothing to keep on top while the layers are away, and a tick that fired mid-capture would
+        // be re-asserting them over the window that asked them to leave.
+        _stayOnTop.Stop();
+
+        // One wait for the composition rather than one per window: they go together, and the user is
+        // holding a shortcut waiting for the screen to freeze.
+        List<Window> layers = [.. _blockWindows.Values];
+        layers.Add(control);
+        WindowScreenPresence.HideAndWaitForScreen(layers);
+
+        Log.Info("Realtime session yielded to a capture (paused by the capture: {Paused})",
+            interlude.PauseWatching);
+        return true;
+    }
+
+    /// <summary>
+    /// Puts the session back the way the capture found it, once that capture is off the screen.
+    /// </summary>
+    /// <remarks>
+    /// Gives back only what <see cref="TryYieldToCapture"/> took. A session the user had paused
+    /// themselves comes back paused: they pressed 暫停 for a reason of their own, and a capture that
+    /// resumed it on the way out would be moving a switch nobody touched.
+    ///
+    /// Safe to call when no capture ever stood on the session, which is what lets the capture
+    /// teardown call it unconditionally.
+    /// </remarks>
+    public void ResumeAfterCapture()
+    {
+        if (!_interlude.HideLayers) return;
+
+        var interlude = _interlude;
+        _interlude = default;
+
+        // The session can have ended while the capture was up — 結束即時翻譯 is on the tray menu, and
+        // a failing capture source ends one on its own. There is nothing left to put back then.
+        if (!IsActive || _control is not { } control) return;
+
+        // Re-asserted as they come back rather than left to the timer's next tick: the capture was
+        // topmost too, and a second of the bar sitting under whatever it left behind reads as the
+        // session having been lost.
+        foreach (var block in _blockWindows.Values)
+        {
+            block.Show();
+            AlwaysOnTop.Reassert(block);
+        }
+
+        control.Show();
+        AlwaysOnTop.Reassert(control);
+        _stayOnTop.Start();
+
+        if (interlude.PauseWatching) TogglePause();
+
+        Log.Info("Realtime session restored after a capture (resumed by the capture: {Resumed})",
+            interlude.PauseWatching);
     }
 
     public void Stop()
@@ -317,6 +441,10 @@ internal sealed class RealtimeSessionController
 
         _blocks = [];
         _request = null;
+
+        // A session can be ended from the tray while a capture stands on it. The windows this was
+        // about are gone with it, so the capture's teardown has nothing left to give back.
+        _interlude = default;
 
         RestoreShell();
         StateChanged?.Invoke(this, EventArgs.Empty);

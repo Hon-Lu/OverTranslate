@@ -34,19 +34,33 @@ internal static class WindowScreenPresence
     /// the fade-out is suppressed first so the hide is a clean cut, then the call waits for the
     /// composition that removes it. Costs at most one display frame.
     /// </summary>
-    public static void HideAndWaitForScreen(Window window)
+    public static void HideAndWaitForScreen(Window window) => HideAndWaitForScreen([window]);
+
+    /// <summary>
+    /// The same for a set of windows that have to leave together — a realtime session's control bar
+    /// and its block layers, say. The wait for the composition is paid once for all of them rather
+    /// than once each, which matters because it is a display frame per call and the user is standing
+    /// on a shortcut waiting for the screen to freeze.
+    /// </summary>
+    public static void HideAndWaitForScreen(IReadOnlyList<Window> windows)
     {
-        var hwnd = new WindowInteropHelper(window).Handle;
+        if (windows.Count == 0) return;
+
+        var handles = new nint[windows.Count];
+        for (int i = 0; i < windows.Count; i++)
+            handles[i] = new WindowInteropHelper(windows[i]).Handle;
 
         // Only for the duration of this hide. Restoring it immediately afterwards keeps the
         // window's ordinary show/close animations intact, and means there is no paired "undo"
         // call elsewhere that a future code path could forget.
-        SetTransitionsEnabled(hwnd, enabled: false);
+        foreach (var hwnd in handles) SetTransitionsEnabled(hwnd, enabled: false);
         try
         {
-            window.Hide();
+            // Every hide first, then one flush: each Hide reaches the window manager synchronously,
+            // so by the time DWM composes again none of them is left to draw.
+            for (int i = 0; i < windows.Count; i++) windows[i].Hide();
 
-            if (hwnd != nint.Zero)
+            if (Array.Exists(handles, h => h != nint.Zero))
             {
                 int hr = DwmFlush();
                 if (hr < 0)
@@ -55,7 +69,7 @@ internal static class WindowScreenPresence
         }
         finally
         {
-            SetTransitionsEnabled(hwnd, enabled: true);
+            foreach (var hwnd in handles) SetTransitionsEnabled(hwnd, enabled: true);
         }
     }
 
