@@ -204,8 +204,8 @@ fork 的 `vendor/` 必須沿用官方 1.2.0 的 Rust 二進位（CI 從 `dotnet 
 
 | 檔案 | 大小 | SHA256 |
 |---|---|---|
-| `OverTranslate.exe`（stub） | 499,880 | `357bf9e26e7fcaa1912c6eb804a2f7d2aa11272289250ffe7939256f2c27442c` |
-| `Update.exe` | 3,973,288 | `bd85bec6cde2dc4f8dbef802fcfe257d39b19f88802eddc5360b16871f03b88a` |
+| `OverTranslate.exe`（stub） | 499,880 | `39ec23561b76c9a0f3237facedb7159b50ee854ab83906da3ecdda408048f9d0` |
+| `Update.exe` | 3,973,288 | `ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d` |
 
 導入前的舊值留作對照：stub 每版都不同（8 次建置 8 顆），`Update.exe` 則從 2.2.1-beta.2 起
 一直是 `9a1e4194…`。這次改動讓這兩顆各重置一次，之後才定住。
@@ -320,7 +320,7 @@ powershell -ExecutionPolicy Bypass -File .\publish-velopack.ps1 -CertThumbprint 
 
 ```
 Subject    : CN=Hon.Lu, O=OverTranslate
-Thumbprint : 7F1340D9C8084D3EACB2A9E76096C3EA48554F48
+Thumbprint : 5817F971FCC333251C488FC90C4AF8F9208E9E1C
 NotAfter   : 2049-12-31
 Key        : RSA 4096 / SHA256
 ```
