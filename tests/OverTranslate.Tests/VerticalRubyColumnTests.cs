@@ -190,4 +190,38 @@ public class VerticalRubyColumnTests
 
         Assert.Equal(2, VerticalRubyColumns.Separate([writing, past]).Writing.Count);
     }
+
+    /// <summary>
+    /// A column set aside with one character in it is not drawn: there is no sentence to lose.
+    /// </summary>
+    /// <remarks>
+    /// This is what keeps the two flows saying the same thing. The group-level ruby test takes these
+    /// on the live path and misses them on the screenshot path — the two read at different detector
+    /// sizes, so the boxes land differently against its shared-area bar — and the same page showed a
+    /// stray 一 beside the balloon in one flow and not the other. Measured, every single-character
+    /// aside on the three corpora is a mis-read reading: 一, L, 上, 大.
+    /// </remarks>
+    [Fact]
+    public void A_single_character_set_aside_is_not_drawn()
+    {
+        // 一, mis-read out of the reading いちばん beside メンバの中で.
+        var writing = Column("メンバの中で", new Rect(100, 50, 30, 150));
+        var candidate = Column("一", new Rect(130, 50, 14, 59));
+
+        var groups = OcrService.GroupVertical([writing, candidate], frameWidth: 900);
+
+        Assert.Equal(["メンバの中で"], groups.Select(group => group.Text));
+    }
+
+    /// <summary>And two characters are, because two characters can be a line.</summary>
+    [Fact]
+    public void A_column_set_aside_that_says_more_than_one_character_is_drawn()
+    {
+        var writing = Column("メンバの中で", new Rect(100, 50, 30, 150));
+        var candidate = Column("礼ほ", new Rect(130, 50, 14, 59));
+
+        var groups = OcrService.GroupVertical([writing, candidate], frameWidth: 900);
+
+        Assert.Equal(2, groups.Count);
+    }
 }

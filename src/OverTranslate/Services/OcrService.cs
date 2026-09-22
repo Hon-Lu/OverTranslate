@@ -224,9 +224,29 @@ public class OcrService : IDisposable
         // that hold a letter and so survived the first, and it takes nothing else on any corpus.
         var aside = WithoutWordlessGroups(
             [.. readings.Select(reading => CombineVerticalColumns([reading]))]);
-        groups.AddRange(aside.Where(reading => !groups.Any(body => IsRubyOver(reading, body))));
+        groups.AddRange(aside.Where(reading =>
+            SaysMoreThanOneCharacter(reading) && !groups.Any(body => IsRubyOver(reading, body))));
         return groups;
     }
+
+    /// <summary>
+    /// Whether a column set aside has enough in it to be worth showing on its own.
+    /// </summary>
+    /// <remarks>
+    /// A column is set aside rather than dropped because ruby and dialogue cannot be told apart at
+    /// that point — but with ONE character there is no dialogue to lose. The reason a column got
+    /// there at all is that it is half the size of the kanji beside it and hard against it, which is
+    /// ruby's geometry; a real one-character balloon stands on its own with nothing to be a reading
+    /// of. MEASURED, every single-character aside on the three corpora is a mis-read reading:
+    /// <c>一</c>, <c>L</c>, <c>上</c>, <c>大</c>.
+    ///
+    /// What this actually fixes is a difference BETWEEN THE TWO FLOWS. The group-level ruby test
+    /// takes these on the live path and misses them on the screenshot path, because the two read at
+    /// different detector sizes and the boxes land differently against its shared-area bar — so the
+    /// same page showed a stray 一 beside the balloon in one flow and not the other.
+    /// </remarks>
+    private static bool SaysMoreThanOneCharacter(OcrTextBlock group) =>
+        group.Text.Count(character => !char.IsWhiteSpace(character)) > 1;
 
     /// <summary>Drops what a translator would hand straight back.</summary>
     /// <remarks>
