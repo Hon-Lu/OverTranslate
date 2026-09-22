@@ -132,8 +132,28 @@ public class VerticalOcrGeometryTests
         Assert.Equal(64, box.BoxPoints[1].X);
     }
 
+    /// <summary>
+    /// A narrow piece of ink beside the columns becomes a part of its own, and the cut still
+    /// happens.
+    /// </summary>
+    /// <remarks>
+    /// <para>This used to assert that the box was kept WHOLE — anything under eight columns of ink
+    /// abandoned the cut, so as not to silently discard a punctuation or ruby fragment. The intent
+    /// was right and the means were not: what abandoning the cut discards is the SENTENCE.</para>
+    ///
+    /// <para>MEASURED on a frame the app captured while the user read a comic
+    /// (logs/frames/region0-084148-301-primaryok-p1832.png). The detector draws one box 180 wide
+    /// around the whole balloon パーティに付与術士が必要になったから; the background is flat and
+    /// every gutter is there, and one 11-pixel ruby column between the columns took the cut away.
+    /// A 180-wide crop holding three columns at once reads as nothing, so the balloon was lost —
+    /// every pass, because the shape of the box does not change. The user reported that balloon.
+    /// </para>
+    ///
+    /// <para>The narrow piece is still not discarded. It comes out as its own box, which is what
+    /// the readings machinery downstream is for.</para>
+    /// </remarks>
     [Fact]
-    public void NarrowUnassignedInk_KeepsOriginalRatherThanLosingPunctuation()
+    public void NarrowUnassignedInk_BecomesItsOwnPartRatherThanTakingTheCutAway()
     {
         using var pixels = new SKBitmap(100, 220);
         using (var canvas = new SKCanvas(pixels))
@@ -147,8 +167,17 @@ public class VerticalOcrGeometryTests
             }
             canvas.DrawRect(70, 40, 4, 20, paint);
         }
-        var box = Box(8, 10, 76, 180);
-        Assert.Same(box, Assert.Single(VerticalColumnDetection.Split(pixels, [box])));
+
+        var parts = VerticalColumnDetection.Split(pixels, [Box(8, 10, 76, 180)]);
+
+        Assert.Equal(3, parts.Count);
+        // The two columns, and the narrow piece — which is kept rather than dropped.
+        var widths = parts
+            .Select(part => part.BoxPoints.Max(p => p.X) - part.BoxPoints.Min(p => p.X))
+            .OrderBy(width => width)
+            .ToArray();
+        Assert.True(widths[0] < 14, $"the narrow piece came out {widths[0]} wide");
+        Assert.All(widths.Skip(1), width => Assert.InRange(width, 14, 30));
     }
 
     [Fact]

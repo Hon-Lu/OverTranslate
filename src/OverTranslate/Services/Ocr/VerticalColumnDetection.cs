@@ -69,7 +69,6 @@ internal static class VerticalColumnDetection
 
             var edges = new[] { 0 }.Concat(cuts).Append(width).ToArray();
             var parts = new List<TextBox>();
-            var ambiguous = false;
             for (var i = 0; i < edges.Length - 1; i++)
             {
                 var a = edges[i];
@@ -84,12 +83,23 @@ internal static class VerticalColumnDetection
                 // Ignore a sliver already covered by another native column detection.
                 if (boxes.Any(other => !ReferenceEquals(other, box) &&
                     Overlap(other, left + a, partTop, left + b, partBottom) > 0.65)) continue;
-                // Do not silently discard a narrow punctuation/ruby fragment when splitting.
-                if (occupied.Length < 8)
-                {
-                    ambiguous = true;
-                    break;
-                }
+                // A narrow part is kept as a part of its own rather than abandoning the cut.
+                //
+                // It used to abandon it: anything under eight columns of ink set `ambiguous` and
+                // the whole box was left uncut, so as not to silently discard a punctuation or ruby
+                // fragment. What that actually discards is the SENTENCE. MEASURED on a frame the
+                // user captured (logs/frames/region0-084148-301-primaryok-p1832.png, the page
+                // 2026-09-20 19 14 56 (2).png as it reaches the app): the detector draws one box
+                // 180 wide around the whole balloon パーティに付与術士が必要になったから, the
+                // background is flat and the gutters are all there, and one 11-pixel ruby column
+                // between them takes the cut away. The 180-wide crop holds three columns at once
+                // and reads as nothing, so the balloon is lost — and it was lost every pass,
+                // because the shape of the box does not change.
+                //
+                // The same page as a file on disk splits correctly, which is why this went unseen:
+                // there the ruby columns are found as boxes of their own and skipped by the test
+                // above, so the narrow case never arises. A screen capture of the same page has
+                // been through a display pipeline and its strokes are softer, and then they are not.
                 parts.Add(new TextBox
                 {
                     Score = box.Score,
@@ -97,7 +107,7 @@ internal static class VerticalColumnDetection
                         new(left + b, partBottom), new(left + a, partBottom)],
                 });
             }
-            if (!ambiguous && parts.Count >= 2) result.AddRange(parts);
+            if (parts.Count >= 2) result.AddRange(parts);
             else result.Add(box);
         }
         return result;

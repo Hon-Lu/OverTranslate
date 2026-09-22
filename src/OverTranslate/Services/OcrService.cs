@@ -140,7 +140,27 @@ public class OcrService : IDisposable
     {
         var blocks = await engine.TryRecognizeAsync(
             bitmap, language, maxDetectSize, cancellationToken, verticalText: true);
-        return blocks is null ? null : GroupVertical(blocks, bitmap.Width, realtime: true, bitmap: bitmap);
+        if (blocks is null) return null;
+
+        var read = GroupVertical(blocks, bitmap.Width, realtime: true, bitmap: bitmap);
+
+        // The same page again at a different detector size, because the detector's answer moves
+        // with the size of its input and not smoothly — see Ocr.VerticalSecondLook for what that
+        // is worth and why a better single size is not available.
+        var other = Ocr.VerticalSecondLook.OtherSize(
+            bitmap.Width, bitmap.Height, maxDetectSize ?? Math.Max(bitmap.Width, bitmap.Height));
+        if (other is null) return read;
+
+        var again = await engine.TryRecognizeAsync(
+            bitmap, language, other, cancellationToken, verticalText: true);
+        if (again is null) return read;
+
+        // Grouped separately and merged afterwards, deliberately. Pooling the two reads' boxes and
+        // grouping once puts two readings of the same column beside each other, and the merge then
+        // has columns from two different geometries to reason about; a group is a sentence, and a
+        // sentence is the thing there is a right answer about.
+        return Ocr.VerticalSecondLook.Merge(
+            read, GroupVertical(again, bitmap.Width, realtime: true, bitmap: bitmap));
     }
 
     /// <summary>
