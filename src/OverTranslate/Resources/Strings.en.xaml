@@ -33,7 +33,7 @@
     <sys:String x:Key="S.Shell.ShowSidebar">Show sidebar</sys:String>
     <sys:String x:Key="S.Shell.Pin">Pin the window on top of other windows</sys:String>
     <sys:String x:Key="S.Shell.Unpin">Unpin</sys:String>
-    <sys:String x:Key="S.Shell.CaptureBlockedByRealtime">Realtime translation is running — stop it before using screen capture</sys:String>
+    <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">Realtime blocks are being framed — click "Start" before using screen capture</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">Realtime translation is running — stop it before using quick lookup</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">Update to v{0}</sys:String>
 
@@ -228,7 +228,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Main.MinimizedBody">Minimised to the system tray. Press {0} to start a screen capture translation.</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">your shortcut</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">Realtime translation is running</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">Stop realtime translation before using screen capture.</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">Stop realtime translation before using quick lookup.</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">No API key</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">Enter an API key in Settings.</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">Recognition failed</sys:String>

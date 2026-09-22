@@ -308,7 +308,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Starts a capture, unless a realtime session has the screen.
+    /// Starts a capture, standing a running realtime session down for its duration.
     /// </summary>
     /// <remarks>
     /// This shortcut used to pause and resume a running session, on the reasoning that a session
@@ -318,18 +318,52 @@ public partial class MainWindow : Window
     /// where their hands are while a game has the screen. 暫停 / 繼續 has its own shortcut now — see
     /// <see cref="OnRealtimePauseHotkeyPressed"/> — and this key means the one thing it is named after.
     ///
-    /// Which brings back the refusal: the two features share one OCR engine and one bounded pool of
-    /// inference slots, so a capture during a session is turned away and told why rather than
-    /// competing for them. <see cref="RefuseWhileRealtimeRuns"/> covers block framing too, where a
-    /// capture is equally out of the question.
+    /// A session no longer turns the key away. It stands down instead — paused and off the screen for
+    /// as long as the capture is up, then back the way it was; see
+    /// <see cref="Services.Realtime.RealtimeCaptureInterlude"/> for why that is better than the
+    /// refusal it replaces. Block framing is the one state still refused, and silently: the user is
+    /// mid-gesture on a layer covering the whole screen, and a notification about a second feature is
+    /// not what that press is asking about.
     /// </remarks>
     private void OnHotkeyPressed(object? sender, EventArgs e) =>
-        Dispatcher.Invoke(async () =>
-        {
-            if (RefuseWhileRealtimeRuns()) return;
+        Dispatcher.Invoke(() => RunCaptureYieldingRealtimeAsync("hotkey"));
 
-            await RunCaptureSessionAsync();
-        });
+    /// <summary>
+    /// Starts a capture from the 截圖翻譯 button on a running session's own control bar.
+    /// </summary>
+    /// <remarks>
+    /// The same door as the shortcut, opened by someone who is looking at the session rather than
+    /// remembering a key. Nothing here is specific to that: the bar goes off the screen with the
+    /// rest of the session's layers, exactly as it does for a capture started any other way.
+    /// </remarks>
+    public void StartCaptureFromRealtimeBar() =>
+        Dispatcher.Invoke(() => RunCaptureYieldingRealtimeAsync("realtime-bar"));
+
+    /// <summary>
+    /// A capture with a realtime session, if there is one, stood down around it.
+    /// </summary>
+    /// <remarks>
+    /// Shared by the shortcut and the control bar so the two cannot answer differently. The nav
+    /// rail's button has the same pair around it but hides the shell as well, which is why it keeps
+    /// its own path.
+    /// </remarks>
+    private async Task RunCaptureYieldingRealtimeAsync(string origin)
+    {
+        if (!RealtimeSessionController.Instance.TryYieldToCapture()) return;
+
+        try
+        {
+            await RunCaptureSessionAsync(origin);
+        }
+        finally
+        {
+            // A session left on screen keeps the realtime layers away until it is torn down, and
+            // CloseAll is where they come back. Nothing here means the user cancelled during
+            // selection — the session they interrupted must not be left stood down for it.
+            if (!HasActiveSession)
+                RealtimeSessionController.Instance.ResumeAfterCapture();
+        }
+    }
 
     /// <summary>
     /// Pauses a running realtime session, or resumes a paused one.
@@ -471,18 +505,17 @@ public partial class MainWindow : Window
         });
 
     /// <summary>
-    /// Turns a capture away while a realtime session owns the screen, and says why.
+    /// Turns 取詞翻譯 away while a realtime session owns the screen, and says why.
     /// </summary>
     /// <remarks>
-    /// The two features share one OCR engine and one bounded pool of inference slots, and a
-    /// realtime session uses them continuously. Running a capture alongside it would have them
-    /// competing for those slots, and — if the two were set to different source languages — swapping
-    /// the loaded model back and forth between every read. See OcrEngineConcurrencyTests for what
-    /// that measured out as before this rule existed.
+    /// Not about the OCR engine, which is what this used to be for and what
+    /// <see cref="Services.Realtime.RealtimeCaptureInterlude"/> now answers for captures. What rules
+    /// a popup out is the screen: a session composes the monitor without this application's own
+    /// layers (#94), a popup created afterwards is not on that list, and the session would end up
+    /// reading its text back to the user as if it were part of what they are watching.
     ///
-    /// Told rather than ignored, because the ways in that still come here are deliberate presses on
-    /// a control that looks available — the shell's own button. The capture shortcut no longer goes
-    /// through this at all: it has its own answer during a session, see <see cref="OnHotkeyPressed"/>.
+    /// Told rather than ignored, because the shortcut is otherwise available everywhere and silence
+    /// would read as breakage — see <see cref="StartQuickLookup"/>, which is the only way in here.
     /// </remarks>
     private bool RefuseWhileRealtimeRuns()
     {
@@ -503,10 +536,11 @@ public partial class MainWindow : Window
     /// </summary>
     public void StartCaptureFromShell(Window shell)
     {
-        // The rail's button is disabled while a session runs, so this is the guard rather than the
-        // notice — but it is the one that actually enforces the rule, and a disabled button is a
-        // presentation detail that a future layout change could drop.
-        if (RefuseWhileRealtimeRuns()) return;
+        // Stands a running session down exactly as the shortcut does, and refuses in the one state
+        // that shortcut refuses in. The rail's button is disabled while blocks are being framed, so
+        // this is the guard rather than the notice — but it is the one that actually enforces the
+        // rule, and a disabled button is a presentation detail a future layout change could drop.
+        if (!RealtimeSessionController.Instance.TryYieldToCapture()) return;
 
         if (HasActiveSession)
         {
@@ -543,9 +577,13 @@ public partial class MainWindow : Window
             // A live session owns the screen, and the shell stays away until it ends — CloseAll and
             // the overlay's own teardown both restore it. No session here means the user cancelled
             // during selection, and a window that vanished because they pressed a button inside it
-            // must come straight back.
+            // must come straight back. A realtime session stood down for this capture is in exactly
+            // the same position, and comes back at the same two moments.
             if (!HasActiveSession)
+            {
                 RestoreShellAfterCapture();
+                RealtimeSessionController.Instance.ResumeAfterCapture();
+            }
         }
     }
 
@@ -1380,6 +1418,11 @@ public partial class MainWindow : Window
         // Last, so a shell hidden for this capture comes back only once the screen is clear of the
         // dim layer and overlay it would otherwise be raised behind.
         RestoreShellAfterCapture();
+
+        // And the realtime layers after that, for the same reason twice over: they are topmost, so
+        // they would come back over a capture still being torn down. Unconditional — it does nothing
+        // unless this capture is the one that stood a session down.
+        RealtimeSessionController.Instance.ResumeAfterCapture();
     }
 
     /// <summary>

@@ -29,7 +29,7 @@
     <sys:String x:Key="S.Shell.ShowSidebar">展開側邊欄</sys:String>
     <sys:String x:Key="S.Shell.Pin">釘選後，視窗會常駐最上層</sys:String>
     <sys:String x:Key="S.Shell.Unpin">取消釘選</sys:String>
-    <sys:String x:Key="S.Shell.CaptureBlockedByRealtime">即時翻譯進行中，請先結束後再使用截圖翻譯</sys:String>
+    <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">正在框選即時翻譯區塊，請先點擊「開始翻譯」再使用截圖翻譯</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">即時翻譯進行中，請先結束後再使用取詞翻譯</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">可更新至 v{0}</sys:String>
 
@@ -232,7 +232,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">程式已縮小至系統匣，可使用 {0} 開始進行截圖翻譯。</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">已設定的快捷鍵</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">即時翻譯進行中</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">請先結束即時翻譯，再使用截圖翻譯。</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">請先結束即時翻譯，再使用取詞翻譯。</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">缺少 API Key</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">請在設定中輸入 API Key。</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">辨識失敗</sys:String>

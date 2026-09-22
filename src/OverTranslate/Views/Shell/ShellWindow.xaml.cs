@@ -260,27 +260,33 @@ public partial class ShellWindow : Window
     }
 
     /// <summary>
-    /// Greys out the rail's 快速工具 rows while a realtime session is running, and says why.
+    /// Greys out the rail's 快速工具 rows a realtime session is in the way of, and says why.
     /// </summary>
     /// <remarks>
-    /// All three features share one OCR engine and one pool of inference slots, so they are
-    /// exclusive — see MainWindow.RefuseWhileRealtimeRuns, which is what actually enforces it. This
-    /// is the half the user sees: a button that refuses when pressed teaches nothing, while a
-    /// disabled one carrying its reason answers the question before it is asked.
+    /// The two rows answer to different rules now. 截圖翻譯 runs during a session — it stands the
+    /// session down for its own duration, see Services.Realtime.RealtimeCaptureInterlude — and is
+    /// refused only while blocks are being framed, where there is nothing running to stand down and
+    /// the screenshot would be of the edit layer. 取詞翻譯 is refused for the whole of a session, on
+    /// a rule about the screen rather than the engine: see MainWindow.RefuseWhileRealtimeRuns.
     ///
-    /// The shell is hidden for the duration of a session, so this matters in one specific way in: a
-    /// user who opens 設定 from the tray mid-session gets the rail, and its actions with it.
+    /// This is the half the user sees; each feature enforces its own rule when pressed. The shell is
+    /// hidden for the duration of a session, so it matters in one specific way in: a user who opens
+    /// 設定 from the tray mid-session gets the rail, and its actions with it. That is also why the
+    /// framing state is a backstop rather than something met — the edit layer is topmost and covers
+    /// the screen, so the rail is behind it while blocks are being drawn.
     /// </remarks>
     private void OnRealtimeStateChanged(object? sender, EventArgs e) =>
         Dispatcher.BeginInvoke(RefreshQuickToolAvailability);
 
     public void RefreshQuickToolAvailability()
     {
-        var running = Realtime.RealtimeSessionController.Instance.IsActive;
+        var controller = Realtime.RealtimeSessionController.Instance;
+        var running = controller.IsActive;
+        var framing = running && !controller.IsTranslating;
 
-        CaptureBtn.IsEnabled = !running;
-        CaptureBtn.ToolTip = running
-            ? LocalizationService.Get("S.Shell.CaptureBlockedByRealtime")
+        CaptureBtn.IsEnabled = !framing;
+        CaptureBtn.ToolTip = framing
+            ? LocalizationService.Get("S.Shell.CaptureBlockedByRealtimeFraming")
             : null;
 
         // 取詞翻譯 is not merely refused during a session — a session already dismisses the popup

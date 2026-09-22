@@ -230,6 +230,39 @@
                                        Foreground="{DynamicResource AppTextPrimary}"/>
                         </StackPanel>
 
+                        <!-- 截圖翻譯, from inside the session. The blocks were framed once and loosely,
+                             around where text usually appears; whatever falls outside them, or comes out
+                             wrong at the size they were drawn at, has no second chance here, because the
+                             session only ever shows its latest reading. A capture is that second chance
+                             — one frame the user picked, at a size they picked, repeatable until it
+                             comes out right. Pressing this stands the session down for as long as the
+                             capture is up and puts it back exactly as it was; see
+                             Services.Realtime.RealtimeCaptureInterlude.
+
+                             Leftmost of the four, because the right edge is the one pinned as the bar
+                             changes width (see OnWindowPosChanging): a button added on this side leaves
+                             暫停, 編輯 and ✕ exactly where the hand already knows they are.
+
+                             The mark is the one 截圖翻譯 carries in the nav rail, so this reads as that
+                             feature rather than as a third session control. Drawn rather than typed for
+                             the same reason as the two buttons in the edit tray: MDL2 has no framing
+                             corners, and a Path has no font fallback to lose. -->
+                        <Button x:Name="CaptureBtn"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Margin="0,0,4,0"
+                                ToolTip="{DynamicResource S.Shell.CaptureTranslate}"
+                                AutomationProperties.Name="{DynamicResource S.Shell.CaptureTranslate}"
+                                Click="CaptureBtn_Click">
+                            <Path Width="13" Height="13"
+                                  Stretch="Uniform"
+                                  Data="{StaticResource CaptureMarkGeometry}"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
+                        </Button>
+
                         <!-- Icon-only keeps the running capsule compact. Its tooltip names both the
                              action and the user's configured keyboard equivalent. The glyph is the
                              action, not the state: a running session shows ⏸ because that is what

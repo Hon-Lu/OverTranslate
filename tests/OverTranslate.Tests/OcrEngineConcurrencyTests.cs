@@ -16,16 +16,20 @@ namespace OverTranslate.Tests;
 ///   - TryRecognize... blocked 1071ms, though its whole contract is to give up rather than wait.
 ///   - Recognize... threw "等待其他辨識結束以切換 OCR 模型時逾時。" after 10s under three regions
 ///     of load, because a swap-waiter has no priority over new same-model callers and so starves.
-/// They are skipped rather than fixed because the scenario is now unreachable by design: a
-/// screenshot capture refuses to start while a realtime session runs, and a session refuses to
-/// start over a capture — see MainWindow.RefuseWhileRealtimeRuns. Unskip these if that exclusion is
-/// ever dropped; the arbitration in AcquireRuntime would then have to be made fair, and the EN↔KO
-/// model reload (~1s each way) dealt with too.
+/// They are skipped rather than fixed because the scenario is still unreachable by design, though
+/// no longer by refusal. A capture may now start during a session, but the session is paused before
+/// it does — its poll loops stopped, so nothing new arrives to starve the swap-waiter — and it is
+/// only started again once the capture is off the screen; see
+/// Services.Realtime.RealtimeCaptureInterlude. A session refuses to start over a capture for the
+/// same reason, from the other side. What AcquireRuntime still waits out is a single pass that was
+/// already in flight when the pause landed, which is bounded by one inference rather than by load.
+/// Unskip these if the two are ever allowed to read at the same time; the arbitration would then
+/// have to be made fair, and the EN↔KO model reload (~1s each way) dealt with too.
 /// </remarks>
 public class OcrEngineConcurrencyTests(ITestOutputHelper output)
 {
     private const string SkipReason =
-        "並存情境已由「即時翻譯與截圖翻譯互斥」排除；若該互斥取消，解除 Skip 並修正 AcquireRuntime。";
+        "並存情境已由「截圖翻譯開始前先暫停即時翻譯」排除；若兩者改為可同時辨識，解除 Skip 並修正 AcquireRuntime。";
 
     // Large enough that detection takes long enough to overlap deliberately, blank so nothing is
     // recognised — these tests are about arbitration, not about what the models read.

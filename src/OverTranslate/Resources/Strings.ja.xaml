@@ -34,7 +34,7 @@
     <sys:String x:Key="S.Shell.ShowSidebar">サイドバーを開く</sys:String>
     <sys:String x:Key="S.Shell.Pin">ウィンドウを常に手前に表示します</sys:String>
     <sys:String x:Key="S.Shell.Unpin">ピン留めを解除</sys:String>
-    <sys:String x:Key="S.Shell.CaptureBlockedByRealtime">リアルタイム翻訳の実行中です。終了してからキャプチャ翻訳をご利用ください</sys:String>
+    <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">ブロックを選択中です。「開始」を押してからキャプチャ翻訳をご利用ください</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">リアルタイム翻訳の実行中です。終了してからクイック辞書をご利用ください</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">v{0} にアップデート</sys:String>
 
@@ -229,7 +229,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">タスクトレイに最小化しました。{0} でキャプチャ翻訳を開始できます。</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">設定したショートカットキー</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">リアルタイム翻訳の実行中</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">リアルタイム翻訳を終了してからキャプチャ翻訳をご利用ください。</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">リアルタイム翻訳を終了してからクイック辞書をご利用ください。</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">API キーがありません</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">設定で API キーを入力してください。</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">認識に失敗しました</sys:String>
