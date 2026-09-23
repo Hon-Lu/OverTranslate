@@ -172,12 +172,28 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 
 ### 現在的樣子
 
-打包帶 `--noStub`，root 只剩 `Update.exe`、`current\` 與 `.portable`：
+打包帶 `--noStub`，root 只剩 `Update.exe`、`current\`、`.portable`，以及打包腳本補進去的
+`OverTranslate.lnk`：
 
 | 使用情境 | 怎麼啟動 |
 |---|---|
 | 安裝版 | 捷徑指向 `current\OverTranslate.exe`，Velopack 本來就是這樣建的，**不受影響** |
-| 免安裝版 | 使用者要進 `current\` 執行主程式（以前是點根目錄那顆 stub） |
+| 免安裝版 | 點根目錄的 `OverTranslate.lnk`（由 `publish-velopack.ps1` 在打包後放進去） |
+
+### 免安裝包根目錄的那個捷徑
+
+`.lnk` 不是 PE，不會有未簽章原生執行檔的問題，而且免安裝 zip 不在任何校驗鏈裡
+（`releases.<channel>.json` 只記 nupkg 的 SHA256），所以打包後改它是安全的。有兩個細節：
+
+- **必須帶相對路徑欄位**（`IShellLink::SetRelativePath`）。捷徑裡存的絕對路徑是打包機器上的位置，
+  使用者機器上不存在，Windows 會退而用相對路徑去找。`WScript.Shell` 建的捷徑只有絕對路徑，
+  解壓到別的地方就是死捷徑 —— 這點實測過。
+- **圖示在第一次點開之前是通用的**。Shell 取圖示時不走相對路徑，所以看不到應用程式圖示；
+  點過一次之後 Windows 會把解析出來的路徑寫回捷徑，圖示就正確了。已知且接受的代價。
+
+實測：解壓到任意路徑都能解析到 `current\OverTranslate.exe`（關掉 Shell 的搜尋補救仍然成立），
+Defender 掃 zip 與解壓後的資料夾都是 0 偵測。程式自我更新只換 `current\`，捷徑不歸 Velopack 管，
+更新後仍然有效。
 
 `--noStub` 同時讓 stub **不進 `.nupkg`**，這點是關鍵：更新器每次套用更新都會把套件裡的 stub
 解回根目錄（`Bundle.extract_stubs_to_dir`），套件裡沒有它就沒有東西可以還原 —— 而且**現場的舊版
@@ -188,7 +204,7 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 | 情境 | 結果 |
 |---|---|
 | 打包 | `Skipping launcher stub, --noStub was specified.`，簽章檔數 16 → 15 |
-| 免安裝包 | root 只有 `.portable` 與 `Update.exe`，整包沒有任何 `_ExecutionStub` |
+| 免安裝包 | root 只有 `.portable`、`Update.exe` 與補進去的 `OverTranslate.lnk`，整包沒有任何 `_ExecutionStub` |
 | `.nupkg` | 沒有任何 `_ExecutionStub` |
 | 從「有 stub 的舊版」更新上來 | 舊 stub 留在原地沒被動過（時間戳沒變），**沒有產生新的** |
 | 把舊 stub 刪掉再更新一次 | root 仍然只有 `Update.exe`、`current\`、`packages\`、`.portable` |
