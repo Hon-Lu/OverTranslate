@@ -178,7 +178,7 @@ if (-not (Test-Path $iconFullPath)) {
     throw "找不到 icon：$iconFullPath"
 }
 
-# 我們自己的啟動器（tools\launcher 編出來的，二進位跟著原始碼一起進版控）。
+# 我們自己的啟動器（src\OverTranslate.Launcher 編出來的，二進位跟著原始碼一起進版控）。
 #
 # 它在 pack 之前就要放進 packDir，而且檔名必須是 Velopack 約定的
 # <主程式>_ExecutionStub.exe —— 這個名字帶來的三個行為，剛好就是我們要的：
@@ -191,9 +191,9 @@ if (-not (Test-Path $iconFullPath)) {
 #
 # 免安裝包是唯一的例外：vpk 是把整個 packDir 複製進 zip 的 current\，原本再把 stub 搬到根目錄，
 # 而 --noStub 把那個搬移跳掉了，所以 zip 的 current\ 會留下一份多餘的。打包後在下面刪掉。
-$launcherPath = Resolve-FullPath ".\tools\launcher\dist\OverTranslate-launcher-unsigned.exe"
+$launcherPath = Resolve-FullPath ".\src\OverTranslate.Launcher\dist\OverTranslate-launcher-unsigned.exe"
 if (-not (Test-Path $launcherPath)) {
-    throw "找不到啟動器：$launcherPath（見 tools\launcher\README.md）"
+    throw "找不到啟動器：$launcherPath（見 src\OverTranslate.Launcher\README.md）"
 }
 
 # 換了應用程式圖示卻忘了重編啟動器，是這裡唯一抓得到的地方 —— 啟動器的雜湊不會因為 app.ico
@@ -203,10 +203,10 @@ if (Test-Path $buildInfoPath) {
     $recordedIconHash = (Select-String -Path $buildInfoPath -Pattern '^icon_sha\s*=\s*(\S+)').Matches.Groups[1].Value
     $currentIconHash = (Get-FileHash -LiteralPath $iconFullPath -Algorithm SHA256).Hash.ToLower()
     if ($recordedIconHash -and $recordedIconHash -ne $currentIconHash) {
-        Write-Warning ("應用程式圖示已經換過，但 tools\launcher 還沒重編 —— 出貨的啟動器會帶著舊圖示。`n" +
+        Write-Warning ("應用程式圖示已經換過，但 src\OverTranslate.Launcher 還沒重編 —— 出貨的啟動器會帶著舊圖示。`n" +
                        "  目前的 app.ico : $currentIconHash`n" +
                        "  啟動器編譯時用的: $recordedIconHash`n" +
-                       "  重編步驟見 tools\launcher\README.md。")
+                       "  重編步驟見 src\OverTranslate.Launcher\README.md。")
     }
 }
 

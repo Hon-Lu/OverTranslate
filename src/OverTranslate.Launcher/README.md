@@ -46,7 +46,7 @@ Velopack 的版面是：安裝根目錄放 `Update.exe` 與 `current\`，主程�
 需要 Rust（msvc 工具鏈）與 Windows SDK 的 `rc.exe`（裝 Visual Studio 或 Build Tools 就有）。
 
 ```pwsh
-cd tools\launcher
+cd src\OverTranslate.Launcher
 cargo build --release
 
 # 1. 複製產物到 dist\（版控裡那顆）
@@ -68,6 +68,12 @@ cargo build --release
 
 > **rustc 版本會影響位元組。** 版控裡那顆是用 `dist\build-info.txt` 記錄的那個版本編的；換一個
 > 版本的 rustc 重編，雜湊就會變（等於一次信譽重置）。要驗證版控裡這顆沒被動過手腳，得用同一個版本。
+
+> **`launcher.manifest` 的換行也會影響位元組。** 它是被逐位元組嵌進資源段的，CRLF 與 LF 差 25 個
+> bytes，編出來就是兩顆不同的檔。本倉 `core.autocrlf=true`，所以 `.gitattributes` 把它釘成
+> `-text`（不轉換）—— **那一行拿掉，這裡的雜湊比對就會無聲地失效**。這個坑實際撞過。
+
+建置**不受路徑影響**（已驗證：同一份原始碼在兩個不同目錄編出同一顆），所以不必把倉 clone 到特定位置。
 
 ## 為什麼編好的二進位也進版控
 

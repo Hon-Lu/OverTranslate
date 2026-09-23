@@ -192,7 +192,7 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 
 ### 我們自己的啟動器
 
-原始碼與編好的二進位都在 [`tools/launcher/`](../../tools/launcher/README.md)，它只做一件事：
+原始碼與編好的二進位都在 [`src/OverTranslate.Launcher/`](../../src/OverTranslate.Launcher/README.md)，它只做一件事：
 把 `current\OverTranslate.exe` 叫起來。與 Velopack stub 的差別是整件事的重點：
 
 | | Velopack stub | 我們這顆 |
@@ -208,7 +208,7 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 **同樣的位元組**（已實測）。
 
 > **換應用程式圖示時要記得重編它**，否則它會帶著舊圖示 —— 沒有其他檢查抓得到，因為它的雜湊
-> 不會因為 `app.ico` 被換掉而改變。打包腳本會比對 `app.ico` 與 `tools/launcher/dist/build-info.txt`
+> 不會因為 `app.ico` 被換掉而改變。打包腳本會比對 `app.ico` 與 `src/OverTranslate.Launcher/dist/build-info.txt`
 > 裡記錄的雜湊，對不上就警告。重編步驟見該資料夾的 README。
 
 免安裝包還有一個收尾動作：vpk 是把整個 packDir 複製進 zip 的 `current\`，原本會再把 stub 搬到
@@ -254,7 +254,7 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 | `Update.exe` | 3,973,288 | `ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d` |
 
 會讓它們重算的只有三件事：換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰。
-啟動器還多一個：重編 `tools/launcher`（含換 rustc）。
+啟動器還多一個：重編 `src/OverTranslate.Launcher`（含換 rustc）。
 
 `Setup.exe` 每次都內嵌整包 nupkg，沒辦法穩定化，不在這個範圍內。
 

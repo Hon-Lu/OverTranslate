@@ -11,3 +11,10 @@
 # depend on the heuristic happening to look at the right bytes.
 src/OverTranslate/ocrmodels/**/dict.txt -text
 *.onnx binary
+
+# launcher.manifest is embedded byte for byte into the launcher's resource section, so its
+# line endings decide the hash of a binary we ship. With core.autocrlf it checks out as CRLF
+# on Windows (+25 bytes) and a rebuild no longer matches the binary committed under dist/,
+# which silently breaks "build it yourself and compare the hash" — hit in practice.
+# That binary's whole value is having bytes that never change across releases (#210).
+src/OverTranslate.Launcher/launcher.manifest -text

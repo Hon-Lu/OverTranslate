@@ -26,7 +26,7 @@ fn main() {
     res.set_version_info(winresource::VersionInfo::PRODUCTVERSION, 1 << 48);
 
     // 圖示直接引用主程式那一份，不另外複製一顆進來——兩邊要永遠是同一個圖。
-    res.set_icon("../../src/OverTranslate/icons/app.ico");
+    res.set_icon("../OverTranslate/icons/app.ico");
     res.set_manifest_file("launcher.manifest");
 
     if let Err(err) = res.compile() {

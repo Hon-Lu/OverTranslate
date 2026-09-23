@@ -27,13 +27,13 @@ $ErrorActionPreference = "Stop"
 # 兩個值都是 2026-09-23 在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
 # （見 docs/ops/PUBLISH.md 第七節）。
 #
-# 啟動器   ← 重編 tools/launcher（換圖示、改行為、換 rustc）、換簽章金鑰
+# 啟動器   ← 重編 src/OverTranslate.Launcher（換圖示、改行為、換 rustc）、換簽章金鑰
 # Update.exe ← 換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰
 # 版號與 commit 兩邊都無關。
 $expectedLauncher = "1dd826ad50481ec7bffa57ad9cafe7c6dad79541009129dca2d1e4266a7a76bf"
 $expectedUpdateExe = "ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d"
 
-$launcherHint = "如果沒有重編 tools/launcher，這顆很可能根本不是我們的啟動器，而是 Velopack 的 stub 跑回來了——先確認打包用的是 fork 的 no-stub 分支、旗標還在。"
+$launcherHint = "如果沒有重編 src/OverTranslate.Launcher，這顆很可能根本不是我們的啟動器，而是 Velopack 的 stub 跑回來了——先確認打包用的是 fork 的 no-stub 分支、旗標還在。"
 $updateHint = "確認是預期中的改動（換圖示、換 vpk、換簽章金鑰）。"
 
 function Resolve-FullPath {
