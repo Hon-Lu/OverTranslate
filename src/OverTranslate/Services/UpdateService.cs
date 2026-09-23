@@ -1,5 +1,7 @@
 using System.IO;
 using Velopack;
+using Velopack.Locators;
+using Velopack.Logging;
 using Velopack.Sources;
 using VelopackUpdateInfo = Velopack.UpdateInfo;
 
@@ -11,8 +13,8 @@ public sealed record UpdateInfo(
     VelopackUpdateInfo VelopackInfo);
 
 /// <summary>
-/// Velopack's UpdateManager, with the one thing its download does not say out loud said out loud:
-/// that the deltas were given up on and the full package is coming down instead.
+/// Velopack's UpdateManager, with two changes to how its download treats the deltas: it says out
+/// loud when it gives up on them, and an unfinished download no longer throws away what they need.
 /// </summary>
 /// <remarks>
 /// Velopack catches a failed delta, logs a warning and starts the full package with nothing raised.
@@ -21,8 +23,9 @@ public sealed record UpdateInfo(
 /// spent under a line that still said the patches were being merged. This override sits on the
 /// method Velopack itself falls back from, so the signal arrives the moment the fallback begins.
 /// </remarks>
-public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions? options)
-    : UpdateManager(source, options)
+/// <param name="locator">For tests only, as on Velopack's own constructor; the app leaves it null.</param>
+public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions? options, IVelopackLocator? locator = null)
+    : UpdateManager(source, options, locator)
 {
     /// <summary>
     /// Raised on a worker thread when the deltas are abandoned and the full package is about to be
@@ -30,21 +33,79 @@ public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions?
     /// </summary>
     public Action? FellBackToFull { get; set; }
 
+    // The installed version's full package, for the length of one download; see CleanPackagesExcept.
+    private string? _basePackage;
+
+    public override async Task DownloadUpdatesAsync(
+        VelopackUpdateInfo updates, Action<int>? progress = null, CancellationToken cancelToken = default)
+    {
+        _basePackage = updates.BaseRelease?.FileName is { } name ? BasePackagePath(name) : null;
+        try
+        {
+            await base.DownloadUpdatesAsync(updates, progress, cancelToken);
+        }
+        finally
+        {
+            _basePackage = null;
+        }
+    }
+
+    /// <summary>
+    /// Velopack's clean-up, except that a download which did not finish keeps the installed
+    /// version's full package.
+    /// </summary>
     /// <remarks>
-    /// Refuses up front when the package the deltas apply to is gone. Velopack's clean-up deletes
-    /// every package but the target on the way out of any download, a cancelled one included, yet
-    /// the UpdateInfo from the check still promises deltas — so a retry after 取消更新 downloaded
-    /// every delta again only for the merge to fail on the missing base, and then fetched the full
-    /// package it could have started on. Throwing here lands in the same fallback, minus the waste.
+    /// Velopack runs this on the way out of every download, finished or not, and it deletes every
+    /// package but the target — the base the deltas are merged into included. After a finished
+    /// download that costs nothing: the new full package takes over as the next update's base. After
+    /// 取消更新 it cost the retry its deltas, and the user most likely to cancel and retry is the one
+    /// on a slow link, who is then made to fetch the whole package in place of a few megabytes. So
+    /// when the target is not there the base is spared, and everything else goes as Velopack would
+    /// have it: the deltas are re-fetched anyway, and a ".partial" is never resumed.
+    /// </remarks>
+    protected override void CleanPackagesExcept(string? assetToKeep)
+    {
+        if (_basePackage is null || assetToKeep is null || File.Exists(assetToKeep) || !File.Exists(_basePackage))
+        {
+            base.CleanPackagesExcept(assetToKeep);
+            return;
+        }
+
+        Log.Log(VelopackLogLevel.Information, "Download did not finish; keeping base package for the next attempt: " + _basePackage, null);
+
+        var packagesDir = Locator.PackagesDir!;
+        var leftovers = Directory.EnumerateFiles(packagesDir, "*.nupkg")
+            .Where(path => !string.Equals(Path.GetFullPath(path), Path.GetFullPath(_basePackage), StringComparison.OrdinalIgnoreCase))
+            .Concat(Directory.EnumerateFiles(packagesDir, "*.partial"))
+            .ToArray();
+
+        foreach (var path in leftovers)
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                Log.Log(VelopackLogLevel.Warning, "Failed to delete partial package: " + path, ex);
+            }
+        }
+    }
+
+    /// <remarks>
+    /// Refuses up front when the package the deltas apply to is gone — cleaned up by a version of
+    /// the app from before <see cref="CleanPackagesExcept"/> kept it, or removed by hand. The
+    /// UpdateInfo from the check still promises deltas either way, and left alone Velopack would
+    /// download every one of them only for the merge to fail on the missing base, then fetch the
+    /// full package it could have started on. Throwing here lands in the same fallback, minus the
+    /// waste.
     /// </remarks>
     protected override async Task DownloadAndApplyDeltaUpdates(
         VelopackUpdateInfo updates, string targetFile, Action<int> progress, CancellationToken cancelToken)
     {
         try
         {
-            // Where Velopack itself looks for it (its GetLocalPackagePath is internal). That also
-            // runs the name through a filename sanitiser, which a name from our own feed never needs.
-            var basePackage = Path.Combine(Locator.PackagesDir!, updates.BaseRelease!.FileName);
+            var basePackage = BasePackagePath(updates.BaseRelease!.FileName);
             if (!File.Exists(basePackage))
                 throw new FileNotFoundException("Base package for delta updates is missing.", basePackage);
 
@@ -56,6 +117,10 @@ public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions?
             throw;
         }
     }
+
+    // Where Velopack itself keeps it (its GetLocalPackagePath is internal). That also runs the name
+    // through a filename sanitiser, which a name from our own feed never needs.
+    private string BasePackagePath(string fileName) => Path.Combine(Locator.PackagesDir!, fileName);
 }
 
 public static class UpdateService
