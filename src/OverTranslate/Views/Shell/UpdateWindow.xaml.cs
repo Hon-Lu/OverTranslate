@@ -94,6 +94,11 @@ public partial class UpdateWindow : Window
             return;
         }
 
+        // The button is disabled past this point, but a press that slips through must not start a
+        // second download under the one that is finishing.
+        if (_phase != Phase.Offering)
+            return;
+
         using var cancel = new CancellationTokenSource();
         _cancel = cancel;
 
