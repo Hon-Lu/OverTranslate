@@ -523,8 +523,6 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.Logging">Logging</sys:String>
     <sys:String x:Key="S.Settings.LoggingCheck">Record detailed information</sys:String>
     <sys:String x:Key="S.Settings.LoggingHint">Records more information about the app; only recommended while troubleshooting.</sys:String>
-    <sys:String x:Key="S.Settings.DebugTools">Debug tools</sys:String>
-    <sys:String x:Key="S.Settings.OcrDebug">Show OCR debug information</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR boxes</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">Show the source text regions detected by OCR.</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">Text group boxes</sys:String>

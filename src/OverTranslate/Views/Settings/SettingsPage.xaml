@@ -722,7 +722,7 @@
                                        ToolTip="{DynamicResource S.Settings.AutoTranslate}"
                                        Checked="AutoTranslate_Toggled"
                                        Unchecked="AutoTranslate_Toggled"/>
-                            <TextBlock Grid.Column="1" Text="&#xE945;" Style="{StaticResource OptionGlyph}"/>
+                            <TextBlock Grid.Column="1" Text="&#xE774;" Style="{StaticResource OptionGlyph}"/>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="{DynamicResource S.Settings.AutoTranslate}"
                                            Style="{StaticResource OptionTitle}"/>
@@ -772,7 +772,7 @@
                                        ToolTip="{DynamicResource S.Settings.SaveScreenshot}"
                                        Checked="SaveScreenshotCheckBox_Toggled"
                                        Unchecked="SaveScreenshotCheckBox_Toggled"/>
-                            <TextBlock Grid.Column="1" Grid.Row="0" Text="&#xE91B;" Style="{StaticResource OptionGlyph}"/>
+                            <TextBlock Grid.Column="1" Grid.Row="0" Text="&#xE74E;" Style="{StaticResource OptionGlyph}"/>
                             <StackPanel Grid.Column="2" Grid.Row="0">
                                 <TextBlock Text="{DynamicResource S.Settings.SaveScreenshot}"
                                            Style="{StaticResource OptionTitle}"/>
@@ -1303,7 +1303,7 @@
                                       Unchecked="DebugToolsToggle_Toggled">
                             <StackPanel Style="{StaticResource CardHeaderRow}" Margin="0">
                                 <TextBlock Text="&#xEBE8;" Style="{StaticResource CardHeaderIcon}"/>
-                                <TextBlock Text="{DynamicResource S.Settings.DebugTools}"
+                                <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}"
                                            Style="{StaticResource CardTitle}"/>
                                 <!-- Beside the title rather than pushed to the far edge of a
                                      full-width card, where it would read as belonging to nothing.
@@ -1341,117 +1341,164 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform x:Name="DebugToolsBodyRise" Y="-8"/>
                             </StackPanel.RenderTransform>
-                            <Border Style="{StaticResource ToggleRowBorder}" Margin="0,12,0,0">
-                                <StackPanel>
-                                    <!-- No switch of its own: the two boxes below are the feature,
-                                         and neither ticked draws nothing. A master here would only
-                                         be a way to have this on and see nothing. -->
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0"
-                                                   Text="&#xE890;"
-                                                   Style="{StaticResource OptionGlyph}"
-                                                   Margin="0,1,10,0"/>
-                                        <!-- Two points over the settings under it, because it is the
-                                             heading they hang off rather than a fourth option in the
-                                             list; at the page's body size it read as one of them. -->
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{DynamicResource S.Settings.OcrDebug}"
-                                                   Style="{StaticResource OptionTitle}"
-                                                   FontSize="15"/>
-                                    </Grid>
+                            <!-- Which feature the rows under it belong to. The card is already named
+                                 偵錯輔助, the same words the capture toolbar uses, so all this adds is
+                                 "for 截圖翻譯": a pill holding the name, in the rows' own fill so it
+                                 reads as part of the list, and a rule running from it to the card's
+                                 edge so it heads everything below rather than labelling the first row
+                                 only. Its left edge is the rows' left edge.
 
-                                    <StackPanel Margin="25,14,0,0">
-                                        <!-- Each sentence under the box it explains rather than
-                                             beside it: the pair then reads as two blocks down the
-                                             column instead of a two-column table, and a longer
-                                             translation wraps into the width of the card rather
-                                             than into a narrow second column. -->
-                                        <CheckBox x:Name="TextGroupBoxesCheckBox" Content="{DynamicResource S.Settings.TextGroupBoxes}"
-                                                  Style="{StaticResource ModernCheckBox}"
-                                                  Checked="OcrDebugBoxes_Toggled" Unchecked="OcrDebugBoxes_Toggled"/>
-                                        <!-- Indented past the tick and its gap, so the sentence
-                                             starts under the name it belongs to. -->
-                                        <TextBlock Text="{DynamicResource S.Settings.TextGroupBoxesHint}"
-                                                   Style="{StaticResource OptionDescription}" Margin="24,5,0,0"/>
-                                        <CheckBox x:Name="OcrLineBoxesCheckBox" Content="{DynamicResource S.Settings.OcrLineBoxes}"
-                                                  Style="{StaticResource ModernCheckBox}" Margin="0,14,0,0"
-                                                  Checked="OcrDebugBoxes_Toggled" Unchecked="OcrDebugBoxes_Toggled"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.OcrLineBoxesHint}"
-                                                   Style="{StaticResource OptionDescription}" Margin="24,5,0,0"/>
-                                        <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,1,0,0"
-                                                Margin="0,16,0,0" Padding="0,12,0,0">
-                                            <!-- Disabled while neither box above is ticked: it only
-                                                 says where the boxes go. See UpdateDebugScopeAvailability. -->
-                                            <StackPanel x:Name="DebugScopeRow" Orientation="Horizontal"
-                                                        Style="{StaticResource DimWhenDisabled}">
-                                                <TextBlock Text="{DynamicResource S.Debug.BoxDisplayScope}" Style="{StaticResource OptionTitle}" VerticalAlignment="Center"/>
-                                                <!-- Still answers while the row is off: what the switch
-                                                     means is worth reading before either box is ticked. -->
-                                                <Border Width="15" Height="15" CornerRadius="7.5" BorderThickness="1" Cursor="Help"
-                                                        ToolTipService.ShowOnDisabled="True"
-                                                        ToolTip="{DynamicResource S.Debug.ScopeHint}" BorderBrush="{DynamicResource AppTextSecondary}"
-                                                        VerticalAlignment="Center" Margin="10,0,20,0" Background="Transparent">
-                                                    <TextBlock Text="?" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <!-- One control with two halves rather than two buttons:
-                                                     the pair is a single either/or, and a tray with a
-                                                     marker sliding between the halves says that, where
-                                                     two separately outlined pills say two things that
-                                                     happen to sit side by side. The marker also carries
-                                                     the change - the choice travels from one half to the
-                                                     other instead of being repainted in place. -->
-                                                <Border Background="{DynamicResource AppButtonBg}"
-                                                        BorderBrush="{DynamicResource AppButtonBorder}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="8"
-                                                        Padding="3"
-                                                        VerticalAlignment="Center"
-                                                        Grid.IsSharedSizeScope="True">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <!-- Shared for the reason the capture toolbar's
-                                                                 trays share theirs: an even split is what
-                                                                 lets the marker travel one fixed distance,
-                                                                 and it is the marker's own width. Star would
-                                                                 not do it — the tray is only as wide as it
-                                                                 asks to be, so star columns settle at each
-                                                                 label's own width and the shorter half comes
-                                                                 out narrower than the marker needs. -->
-                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsDebugScopeSegment"/>
-                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsDebugScopeSegment"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <!-- Behind the labels and one half wide. It has to be
-                                                             an element of its own: a background on the checked
-                                                             button can only appear and disappear, and this one
-                                                             has to travel. -->
-                                                        <Border x:Name="DebugScopeThumb"
-                                                                Grid.Column="0"
-                                                                Background="{DynamicResource AppAccent}"
-                                                                CornerRadius="6"
-                                                                SizeChanged="DebugScopeThumb_SizeChanged">
-                                                            <Border.RenderTransform>
-                                                                <TranslateTransform x:Name="DebugScopeThumbShift"/>
-                                                            </Border.RenderTransform>
-                                                        </Border>
-                                                        <RadioButton x:Name="DebugSourceOnlyRadio" Grid.Column="0" GroupName="SettingsDebugScope"
-                                                                     Style="{StaticResource SegmentedTrackRadio}"
-                                                                     Content="{DynamicResource S.Debug.SourceOnly}"
-                                                                     Checked="OcrDebugScope_Changed"/>
-                                                        <RadioButton x:Name="DebugSourceAndTranslationRadio" Grid.Column="1" GroupName="SettingsDebugScope"
-                                                                     Style="{StaticResource SegmentedTrackRadio}"
-                                                                     Content="{DynamicResource S.Debug.SourceAndTranslation}"
-                                                                     Checked="OcrDebugScope_Changed"/>
-                                                    </Grid>
-                                                </Border>
-                                            </StackPanel>
+                                 A plain small label was tried here first and did not hold: at 11px
+                                 bold the CJK name went cramped, and a mark-and-name line looked like
+                                 a fourth row with nothing to switch.
+
+                                 No switch of its own: the two boxes below are the feature, and neither
+                                 on draws nothing. -->
+                            <Grid Margin="0,14,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="{DynamicResource AppSurfaceBg}"
+                                        CornerRadius="12"
+                                        Padding="12,4">
+                                    <TextBlock Text="{DynamicResource S.Shell.CaptureTranslate}"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="{StaticResource AppFontSize}"
+                                               Foreground="{DynamicResource AppTextSecondary}"/>
+                                </Border>
+                                <Border Grid.Column="1"
+                                        Height="1"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource AppSeparator}"/>
+                            </Grid>
+
+                            <!-- One row per setting, in the page's toggle-row form: icon, name, the
+                                 sentence under it, and the control at the far end. The icons are the
+                                 capture toolbar's, and so are the switches - the same two settings
+                                 look the same in both places. The drawn icons sit in the 18px box a
+                                 ToggleRowGlyph takes, so the column lines up with the eye below. -->
+                            <Border Style="{StaticResource ToggleRowBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Width="18" Height="18" Margin="2,0,14,0" VerticalAlignment="Center">
+                                        <Path Style="{StaticResource DrawnMark}"
+                                              Stroke="{DynamicResource AppTextSecondary}"
+                                              StrokeThickness="1.3"
+                                              Data="{StaticResource TextGroupBoxMarkGeometry}"/>
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.Settings.TextGroupBoxes}" Style="{StaticResource OptionTitle}"/>
+                                        <TextBlock Text="{DynamicResource S.Settings.TextGroupBoxesHint}" Style="{StaticResource OptionDescription}" Margin="0,3,12,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="TextGroupBoxesCheckBox" Grid.Column="2"
+                                              Style="{StaticResource ToggleSwitch}"
+                                              AutomationProperties.Name="{DynamicResource S.Settings.TextGroupBoxes}"
+                                              Checked="OcrDebugBoxes_Toggled" Unchecked="OcrDebugBoxes_Toggled"/>
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{StaticResource ToggleRowBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Width="18" Height="18" Margin="2,0,14,0" VerticalAlignment="Center">
+                                        <Path Style="{StaticResource DrawnMark}"
+                                              Stroke="{DynamicResource AppTextSecondary}"
+                                              StrokeThickness="1.3"
+                                              Data="{StaticResource OcrLineBoxMarkGeometry}"/>
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.Settings.OcrLineBoxes}" Style="{StaticResource OptionTitle}"/>
+                                        <TextBlock Text="{DynamicResource S.Settings.OcrLineBoxesHint}" Style="{StaticResource OptionDescription}" Margin="0,3,12,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="OcrLineBoxesCheckBox" Grid.Column="2"
+                                              Style="{StaticResource ToggleSwitch}"
+                                              AutomationProperties.Name="{DynamicResource S.Settings.OcrLineBoxes}"
+                                              Checked="OcrDebugBoxes_Toggled" Unchecked="OcrDebugBoxes_Toggled"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- 框線顯示範圍 as a row of its own rather than a line under the two
+                                 above: it is a third setting, not a footnote to them. The eye says
+                                 "where it is seen". Disabled while neither box is on - it only says
+                                 where the boxes are drawn. See UpdateDebugScopeAvailability. -->
+                            <Border Style="{StaticResource ToggleRowBorder}" Margin="0">
+                                <Grid x:Name="DebugScopeRow" Style="{StaticResource DimWhenDisabled}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="&#xE890;" Style="{StaticResource ToggleRowGlyph}"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.Debug.BoxDisplayScope}" Style="{StaticResource OptionTitle}" VerticalAlignment="Center"/>
+                                        <!-- Still answers while the row is off: what the switch
+                                             means is worth reading before either box is on. -->
+                                        <Border Width="15" Height="15" CornerRadius="7.5" BorderThickness="1" Cursor="Help"
+                                                ToolTipService.ShowOnDisabled="True"
+                                                ToolTip="{DynamicResource S.Debug.ScopeHint}" BorderBrush="{DynamicResource AppTextSecondary}"
+                                                VerticalAlignment="Center" Margin="10,0,12,0" Background="Transparent">
+                                            <TextBlock Text="?" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                     </StackPanel>
-                                </StackPanel>
+                                    <!-- One control with two halves rather than two buttons: the
+                                         pair is a single either/or, and a tray with a marker sliding
+                                         between the halves says that. The marker also carries the
+                                         change - the choice travels from one half to the other
+                                         instead of being repainted in place. -->
+                                    <Border Grid.Column="2"
+                                            Background="{DynamicResource AppButtonBg}"
+                                            BorderBrush="{DynamicResource AppButtonBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="3"
+                                            VerticalAlignment="Center"
+                                            Grid.IsSharedSizeScope="True">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <!-- Shared for the reason the capture toolbar's trays
+                                                     share theirs: an even split is what lets the marker
+                                                     travel one fixed distance, and it is the marker's
+                                                     own width. Star would not do it — the tray is only
+                                                     as wide as it asks to be, so star columns settle at
+                                                     each label's own width and the shorter half comes
+                                                     out narrower than the marker needs. -->
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsDebugScopeSegment"/>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsDebugScopeSegment"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- Behind the labels and one half wide. It has to be an
+                                                 element of its own: a background on the checked button
+                                                 can only appear and disappear, and this one has to
+                                                 travel. -->
+                                            <Border x:Name="DebugScopeThumb"
+                                                    Grid.Column="0"
+                                                    Background="{DynamicResource AppAccent}"
+                                                    CornerRadius="6"
+                                                    SizeChanged="DebugScopeThumb_SizeChanged">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="DebugScopeThumbShift"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                            <RadioButton x:Name="DebugSourceOnlyRadio" Grid.Column="0" GroupName="SettingsDebugScope"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Debug.SourceOnly}"
+                                                         Checked="OcrDebugScope_Changed"/>
+                                            <RadioButton x:Name="DebugSourceAndTranslationRadio" Grid.Column="1" GroupName="SettingsDebugScope"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Debug.SourceAndTranslation}"
+                                                         Checked="OcrDebugScope_Changed"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
                             </Border>
                         </StackPanel>
                         </Border>

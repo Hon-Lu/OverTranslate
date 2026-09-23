@@ -552,7 +552,7 @@
                                 <!-- Takes effect from the next selection: it is read the moment a
                                      selection is finished, and this one already was. -->
                                 <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                          Tag="&#xE8C1;"
+                                          Tag="&#xE774;"
                                           Content="{DynamicResource S.Toolbar.AutoTranslate}"
                                           ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
                                           Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
