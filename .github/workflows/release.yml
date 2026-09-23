@@ -30,7 +30,9 @@ on:
       - 'v[0-9]*'
 
 permissions:
-  contents: write
+  contents: write      # 建立 release、上傳產物
+  id-token: write      # 產生 provenance attestation 時用 OIDC 換 Sigstore 憑證
+  attestations: write  # 把簽好的 attestation 寫回這個 repo
 
 jobs:
   pack:
@@ -41,13 +43,21 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          # 8.0.x 是應用程式自己的目標框架。10.0.x 是下面那個 fork 版 vpk 要的——它的相依套件
+          # 是 10.0 那一代，用 8.0 的 SDK 建不起來。兩個都裝時 dotnet 會挑最新的 SDK 來建 app，
+          # 實測 stub 的雜湊不受 SDK 版本影響（凍結後只剩圖示、資訊清單與那幾個字串會動）。
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: 安裝 Velopack CLI
         shell: pwsh
         run: |
           # 版本鎖死，與 OverTranslate.csproj 的 Velopack 套件一致。
           # CLI 與 runtime 版本不一致時產出的 delta 可能無法套用。
+          #
+          # 這一顆有兩個用途：下一步的 `vpk download github`，以及提供官方的 vendor 二進位
+          # （update.exe / stub.exe / setup.exe）給 fork 版 vpk 用。打包本身不走這顆。
           dotnet tool install -g vpk --version 1.2.0
           "$env:USERPROFILE\.dotnet\tools" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
@@ -93,6 +103,41 @@ jobs:
           }
           Write-Host "版號未被使用，繼續。"
 
+      - name: 建置 fork 版 vpk
+        id: vpkfork
+        shell: pwsh
+        run: |
+          # 打包走自用 fork（asd880921/velopack 的 fork/no-stub-1.2.0），它基於 1.2.0 tag，
+          # 只多了 `--noStub`：完全不產生根目錄那顆未簽章的啟動器 stub。那顆檔是 #210 那個
+          # Wacatac.B!ml 誤判的主要來源。背景與完整說明在 fork 的 FORK-APPS.md。
+          #
+          # 不能用 --depth 1：那個倉用 Nerdbank.GitVersioning 算版號，淺 clone 會讓建置直接失敗
+          # （Shallow clone lacks the objects required to calculate version height）。
+          # --single-branch 只抓這一條分支（17 秒、543 MB），core.longpaths 是防它 test/fixtures
+          # 底下那串超長路徑在 checkout 階段炸掉。
+          $fork = Join-Path $env:RUNNER_TEMP 'velopack-fork'
+          git -c core.longpaths=true clone --single-branch -b fork/no-stub-1.2.0 https://github.com/asd880921/velopack $fork
+          if ($LASTEXITCODE -ne 0) { throw "clone velopack fork 失敗。" }
+
+          # vendor 的 Rust 二進位必須沿用官方 1.2.0 那份，不能自己編：本機或 CI 編出來的
+          # update.exe 不會與官方 CI 的產物位元組相同，Update.exe 的雜湊就會跟著變——
+          # 那正是這件事要避免的。fork 只改 C# 打包工具，vendor 原封不動。
+          $vendor = "$env:USERPROFILE\.dotnet\tools\.store\vpk\1.2.0\vpk\1.2.0\vendor"
+          if (-not (Test-Path "$vendor\update.exe")) { throw "找不到官方 vpk 1.2.0 的 vendor：$vendor" }
+          # 目的地先確保存在。Copy-Item 的萬用字元來源遇到不存在的目的地時，會把 signing\ 與 wix\
+          # 的內容攤平成同一層，攤平後 vpk 仍然打得出包，只是簽章與 wix 那些路徑會悄悄失準。
+          New-Item -ItemType Directory -Force -Path "$fork\vendor" | Out-Null
+          Copy-Item "$vendor\*" "$fork\vendor" -Recurse -Force
+
+          dotnet build "$fork\src\vpk\Velopack.Vpk" -c Release -f net10.0
+          if ($LASTEXITCODE -ne 0) { throw "建置 fork 版 vpk 失敗。" }
+
+          # Release 下 vendor 是從執行檔往上三層找的，所以直接跑 build 輸出的這顆就會看到
+          # 上面複製進去的官方二進位，不必再包成 global tool。
+          $exe = "$fork\build\Release\net10.0\vpk.exe"
+          if (-not (Test-Path $exe)) { throw "建置完成但找不到 $exe。" }
+          "exe=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+
       - name: 抓上一版 full 包（產生 delta 用）
         continue-on-error: true
         shell: pwsh
@@ -109,10 +154,109 @@ jobs:
               --outputDir .\artifacts\releases `
               --token $env:GH_TOKEN
 
+      - name: 匯入自簽憑證
+        id: signcert
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        run: |
+          # 私鑰只活在這個 job 裡：從 secret 還原成暫存 .pfx、匯入憑證存放區、立刻刪檔。
+          # 之後只用指紋叫 signtool，密碼與檔案路徑都不會出現在任何命令列上。
+          #
+          # 缺 secret 就直接失敗，不要安靜地發一包沒簽的出去——那包的雜湊會跟基準值對不上，
+          # 而且使用者拿到的東西會與前一版不一致。
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) {
+              throw "沒有設定 SIGNING_PFX_BASE64。見 docs/ops/PUBLISH.md 第七節。"
+          }
+
+          # 容錯：secret 在來回複製貼上的過程中很容易混進 BOM、引號，或 PEM 的 -----BEGIN----- 標頭。
+          # 換行與空白本來就會被 FromBase64String 忽略，這裡一併清掉，其餘非法字元則讓它照常炸，
+          # 但要炸得看得懂——所以先報長度與開頭，PKCS#12 的 base64 一定是 MII 開頭。
+          $b64 = ($env:PFX_BASE64 -split "`r?`n" |
+              Where-Object { $_ -notmatch '^-{3,}' }) -join ''
+          $b64 = $b64 -replace '[\s"''\uFEFF]', ''
+
+          try {
+              $bytes = [Convert]::FromBase64String($b64)
+          }
+          catch {
+              $head = if ($b64.Length -ge 3) { $b64.Substring(0, 3) } else { '(太短)' }
+              throw "SIGNING_PFX_BASE64 不是合法的 base64（長度 $($b64.Length)，開頭 '$head'，應為 'MII'）。" +
+                    "請用 gh secret set SIGNING_PFX_BASE64 --body `$b64 重設，見 docs/ops/PUBLISH.md 第七節。"
+          }
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfxPath, $bytes)
+          try {
+              $securePwd = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
+              $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePwd
+          }
+          finally { Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue }
+
+          Write-Host "憑證：$($cert.Subject)"
+          Write-Host "指紋：$($cert.Thumbprint)"
+          Write-Host "效期至：$($cert.NotAfter)"
+          "thumbprint=$($cert.Thumbprint)" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+
       - name: 打包
         shell: pwsh
         run: |
-          .\publish-velopack.ps1 -Version ${{ steps.ver.outputs.version }}
+          .\publish-velopack.ps1 -Version ${{ steps.ver.outputs.version }} `
+              -VpkPath '${{ steps.vpkfork.outputs.exe }}' `
+              -CertThumbprint '${{ steps.signcert.outputs.thumbprint }}'
+
+      - name: 檢查 stub 與 Update.exe 的雜湊
+        shell: pwsh
+        run: |
+          # 只提醒、不擋。雜湊變了不是錯誤，是「這一版的 Defender 檔案信譽要重新養」的通知——
+          # 換圖示、改 app.manifest、改組件資訊字串、換 vpk 都會觸發，發版當下就該知道。
+          .\check-release-hashes.ps1
+
+      - name: 取出要證明的檔案
+        shell: pwsh
+        run: |
+          # attestation 簽的是「檔案的雜湊」，所以要證明使用者硬碟上那三顆，就得把那三顆本身
+          # 交給它——證明了 zip 與 nupkg 這兩個容器，不等於證明裡面解出來的檔。
+          # 擺成跟安裝後一樣的相對位置，之後在 attestation 清單上看得出誰是誰。
+          # 根目錄那顆是我們自己的啟動器（不是 Velopack 的 stub），安裝版與免安裝版都有它。
+          $zip = Resolve-Path '.\artifacts\releases\OverTranslate-win-Portable.zip'
+          $dst = '.\artifacts\attest'
+          New-Item -ItemType Directory -Force -Path "$dst\current" | Out-Null
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+              foreach ($name in @('OverTranslate.exe', 'Update.exe', 'current/OverTranslate.exe')) {
+                  $entry = $archive.GetEntry($name)
+                  if ($null -eq $entry) { throw "免安裝包裡找不到 $name" }
+                  $out = Join-Path $dst $name.Replace('/', '\')
+                  [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $out, $true)
+              }
+          }
+          finally { $archive.Dispose() }
+
+          Get-ChildItem $dst -Recurse -File | ForEach-Object {
+              "$($_.FullName)  $($_.Length)  $((Get-FileHash $_.FullName -Algorithm SHA256).Hash)"
+          }
+
+      - name: 產生 provenance attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          # 逐檔對「檔案的 SHA256」簽章，簽章者是 GitHub 的 OIDC 身分，存進 Sigstore 的公開透明
+          # 日誌，檔案本身一個位元組都不會被改到——所以與上面那個雜湊穩定化完全不衝突。
+          # 使用者端驗：gh attestation verify <檔案> --repo ${{ github.repository }}
+          #
+          # 版號寫進 nupkg 的樣式裡，是為了避開「抓上一版 full 包」留在同一個資料夾的那顆舊的；
+          # -delta 不一定存在，用萬用字元讓它可有可無（-full 一定在，所以不會出現零個對象）。
+          subject-path: |
+            artifacts/releases/OverTranslate-${{ steps.ver.outputs.version }}-*.nupkg
+            artifacts/releases/OverTranslate-win-Setup.exe
+            artifacts/releases/OverTranslate-win-Portable.zip
+            artifacts/releases/releases.win.json
+            artifacts/attest/OverTranslate.exe
+            artifacts/attest/Update.exe
+            artifacts/attest/current/OverTranslate.exe
 
       - name: 發布 pre-release
         shell: pwsh
