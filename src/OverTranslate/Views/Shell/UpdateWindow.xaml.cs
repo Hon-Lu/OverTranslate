@@ -94,6 +94,11 @@ public partial class UpdateWindow : Window
             return;
         }
 
+        // The button is disabled past this point, but a press that slips through must not start a
+        // second download under the one that is finishing.
+        if (_phase != Phase.Offering)
+            return;
+
         using var cancel = new CancellationTokenSource();
         _cancel = cancel;
 
@@ -163,10 +168,13 @@ public partial class UpdateWindow : Window
         Downloading,
 
         /// <summary>
-        /// Update.exe merging the deltas. Velopack waits on it without looking at the cancel token,
-        /// so a 取消更新 pressed here would sit unanswered for as long as the merge takes.
+        /// The bytes are in and Velopack is working on them: Update.exe merging the deltas, or the
+        /// new Update.exe being pulled out of the full package. Velopack waits on the merge without
+        /// looking at the cancel token, so a 取消更新 pressed there would sit unanswered for as long
+        /// as it takes; and once a full package is down, throwing it away for the sake of the
+        /// seconds left before the handover is not a choice worth offering.
         /// </summary>
-        Patching,
+        Finishing,
 
         /// <summary>Handing over to Velopack. Not abandonable, and nearly over.</summary>
         Applying,
@@ -250,13 +258,14 @@ public partial class UpdateWindow : Window
     /// Downloading and applying are not the same kind of wait, and treating them as one is what
     /// used to leave a user stranded in front of a window they could not dismiss. The download —
     /// the long half, and the half that stalls when the release CDN is slow — writes to a ".partial"
-    /// file and is abandoned safely at any point, so the way out stays open for all of it. The delta
-    /// merge in between cannot be interrupted, only waited out, so the button goes dead for those
-    /// seconds rather than accept a press it cannot act on. Applying replaces the application's own
-    /// files and restarts the process; there is no way back from half of that, so everything goes
-    /// dead, the title bar's close included. The close button says why rather than simply refusing
-    /// — SetResourceReference rather than a fetched string, so the reason follows a language
-    /// changed in 設定 while this window is still on screen.
+    /// file and is abandoned safely at any point, so the way out stays open for all of it. Once the
+    /// bytes are in — the delta merge, or 準備安裝… after the full package — the button goes dead
+    /// for those seconds rather than accept a press it cannot act on, or one that would only throw
+    /// away a finished download. Applying replaces the application's own files and restarts the
+    /// process; there is no way back from half of that, so everything goes dead, the title bar's
+    /// close included. The close button says why rather than simply refusing — SetResourceReference
+    /// rather than a fetched string, so the reason follows a language changed in 設定 while this
+    /// window is still on screen.
     ///
     /// A cancel already asked for turns the button into 取消中… and takes it away: the press has
     /// been heard, and there is nothing left for a second one to do.
@@ -272,7 +281,7 @@ public partial class UpdateWindow : Window
         var cancelRequested = _cancel?.IsCancellationRequested == true;
         DownloadBtn.IsEnabled = phase == Phase.Offering || (phase == Phase.Downloading && !cancelRequested);
 
-        var cancelling = phase is Phase.Downloading or Phase.Patching;
+        var cancelling = phase is Phase.Downloading or Phase.Finishing;
         DownloadBtnText.Text = LocalizationService.Get(
             !cancelling ? "S.Update.Now" : cancelRequested ? "S.Update.Cancelling" : "S.Update.Cancel");
         DownloadBtnGlyph.Text = cancelling ? "" : "";
@@ -297,10 +306,10 @@ public partial class UpdateWindow : Window
     /// the user can usefully do — and if they take it, 取消更新 is right there to let go of this.
     ///
     /// Counts download time only. The delta merge is not a download and a slow one says nothing
-    /// about the connection, so the timer stops for it; if the merge fails and the full package
-    /// starts, that is a fresh download and gets a fresh delay.
+    /// about the connection, so the timer stops for it, as it does once the full package is in; if
+    /// the merge fails and the full package starts, that is a fresh download and gets a fresh delay.
     /// </remarks>
-    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromSeconds(180);
 
     private void StartSlowHintTimer()
     {
@@ -344,7 +353,7 @@ public partial class UpdateWindow : Window
     /// The two stretches with no progress of their own get their own sentences rather than a frozen
     /// figure: the delta merge at <see cref="DeltaDownloadCeiling"/>, and everything between the
     /// last byte and the handover — Velopack still has to pull the new Update.exe out of the
-    /// package and sweep the directory, and the window can still be cancelled throughout.
+    /// package and sweep the directory.
     ///
     /// The figure is the part that is coloured, in the same accent as the progress bar directly
     /// above it, which is what it is a readout of. The unit travels with the figure: "45" and "%"
@@ -402,11 +411,12 @@ public partial class UpdateWindow : Window
     }
 
     /// <summary>
-    /// The progress callback, and where the delta merge is recognised as it starts.
+    /// The progress callback, and where the end of the download is recognised.
     /// </summary>
     /// <remarks>
     /// <see cref="DeltaDownloadCeiling"/> is only reached once every delta is in, and Velopack goes
-    /// straight from there into the merge.
+    /// straight from there into the merge; 100 on the full package means it is on disk and
+    /// Velopack is preparing the handover.
     /// </remarks>
     private void OnDownloadProgress(int percent)
     {
@@ -415,9 +425,10 @@ public partial class UpdateWindow : Window
             DownloadProgress.Value = percent;
             SetDownloadStatus(percent);
 
-            if (_phase == Phase.Downloading && _fetching == Fetching.Delta && percent >= DeltaDownloadCeiling)
+            var bytesIn = percent >= 100 || (_fetching == Fetching.Delta && percent >= DeltaDownloadCeiling);
+            if (_phase == Phase.Downloading && bytesIn)
             {
-                SetPhase(Phase.Patching);
+                SetPhase(Phase.Finishing);
                 StopSlowHintTimer();
                 SlowHint.Visibility = Visibility.Collapsed;
             }
