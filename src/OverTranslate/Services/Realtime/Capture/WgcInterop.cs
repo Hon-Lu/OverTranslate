@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using NLog;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX.Direct3D11;
 
@@ -22,6 +24,8 @@ namespace OverTranslate.Services.Realtime.Capture;
 [SupportedOSPlatform("windows10.0.18362.0")]
 internal static class WgcInterop
 {
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
     private static readonly Guid IidGraphicsCaptureItem = new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
     private static readonly Guid IidGraphicsCaptureItemInterop = new("3628E81B-3CAC-4C60-B7F4-23CE0E0C3356");
     private static readonly Guid IidDxgiDevice = new("54EC77FA-1377-44E6-8C32-88FD5F44C84C");
@@ -39,16 +43,28 @@ internal static class WgcInterop
 
         try
         {
-            // Not the same question as the build number: capture is also refused on systems where
-            // the graphics stack cannot serve it, and this is the only way to hear that.
-            return GraphicsCaptureSession.IsSupported();
+            return AskGraphicsStack();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // A missing or broken projection reads as unsupported rather than as a crash on startup.
+            Log.Warn(ex, "Windows.Graphics.Capture could not be asked; treating capture as unsupported");
             return false;
         }
     }
+
+    /// <summary>
+    /// Not the same question as the build number: capture is also refused on systems where the
+    /// graphics stack cannot serve it, and this is the only way to hear that.
+    /// </summary>
+    /// <remarks>
+    /// A method of its own so the catch above can see a projection that fails to load. The assembly
+    /// is resolved when a method naming its types is compiled, before any of that method's own
+    /// handlers exist — inlined into the caller, <c>Microsoft.Windows.SDK.NET</c> going missing
+    /// escaped the catch and took the tray click down with it.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool AskGraphicsStack() => GraphicsCaptureSession.IsSupported();
 
     /// <summary>
     /// A capture item for one top-level window, or null when the window cannot be captured — it has
