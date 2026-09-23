@@ -544,7 +544,7 @@ public partial class MainWindow : Window
 
         if (HasActiveSession)
         {
-            CloseAll();
+            CloseAll("shell-button toggle");
             return;
         }
 
@@ -616,7 +616,7 @@ public partial class MainWindow : Window
     {
         if (HasActiveSession)
         {
-            CloseAll();
+            CloseAll($"{origin} toggle");
             return;
         }
 
@@ -689,7 +689,7 @@ public partial class MainWindow : Window
             // orphaned instance would break Esc across the entire desktop, which is far worse
             // than the stuck overlay it exists to prevent.
             DisposeSessionHooks();
-            _escapeHook = GlobalEscapeHook.Install(CloseAll);
+            _escapeHook = GlobalEscapeHook.Install(() => CloseAll("esc hook"));
 
             // Paired with the Esc hook and for the same reason: these windows cover the screen, so
             // both ways out of a session that has gone wrong have to be set up before it can.
@@ -725,7 +725,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Log.Error(ex, "Capture session setup failed — tearing down overlay windows");
-            CloseAll();
+            CloseAll("setup failed");
             screenshot.Dispose();
         }
     }
@@ -776,7 +776,7 @@ public partial class MainWindow : Window
         toolbar.OpenWindowRequested     += OnOpenWindowRequested;
         toolbar.CopyTextRequested       += OnCopyTextRequested;
         toolbar.CopyScreenshotRequested += OnCopyScreenshotRequested;
-        toolbar.CloseAllRequested       += (_, _) => CloseAll();
+        toolbar.CloseAllRequested       += (_, _) => CloseAll("toolbar close");
         toolbar.BubblesVisibilityChanged += (_, visible) => _overlayWindow?.SetBubblesVisible(visible);
         toolbar.SpeakToggleRequested    += OnSpeakToggleRequested;
         toolbar.SpeakStopRequested      += (_, _) => _tts.Stop();
@@ -1367,18 +1367,23 @@ public partial class MainWindow : Window
         var shell = ShellWindow.ShowOrActivate(ShellPage.Translation);
         shell.TranslationPage.SetContent(srcText, tgtText, srcLang, tgtLang);
 
-        CloseAll(); // close overlay, dim background, and toolbar
+        CloseAll("open translation window"); // close overlay, dim background, and toolbar
     }
 
     private static string JoinWithoutLineBreaks(IEnumerable<string> parts) =>
         string.Join(" ", parts.Select(text => text.Replace('\r', ' ').Replace('\n', ' ')));
 
-    private void CloseAll()
+    /// <param name="reason">
+    /// Which way out asked for this, for the log line below. A session that flashes and vanishes has
+    /// several possible causes — Esc, a second press of the key or the button, an exception — and
+    /// without this they all read the same.
+    /// </param>
+    private void CloseAll(string reason)
     {
         // Paired with "Capture session starting": between them they show whether a session the user
         // reports as stuck ever actually ended.
-        Log.Info("Tearing down capture session (overlay={Overlay}, toolbar={Toolbar}, capture={Capture})",
-            _overlayWindow != null, _toolbarWindow != null, _captureWindow != null);
+        Log.Info("Tearing down capture session, reason={Reason} (overlay={Overlay}, toolbar={Toolbar}, capture={Capture})",
+            reason, _overlayWindow != null, _toolbarWindow != null, _captureWindow != null);
         _selectionSessionId++;
         DisposeSessionHooks();
         CancelSession();
@@ -1624,7 +1629,7 @@ public partial class MainWindow : Window
     {
         if (!HasActiveSession) return false;
 
-        CloseAll();
+        CloseAll("unhandled exception");
         return true;
     }
 

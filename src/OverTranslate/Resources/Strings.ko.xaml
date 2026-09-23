@@ -225,7 +225,10 @@
     <!-- ── Capture overlay ── -->
     <sys:String x:Key="S.Capture.CancelTip">캡처 취소</sys:String>
     <sys:String x:Key="S.Capture.DragPrompt">드래그해서 번역할 영역을 선택하세요</sys:String>
-    <sys:String x:Key="S.Capture.PressPrefix"></sys:String>
+    <!-- Nothing goes before the key in this language, but an empty <sys:String></sys:String> cannot
+         stand for that: with no text to convert, XAML falls back to calling a String constructor with
+         no arguments, which does not exist, and the first capture after launch died building it. -->
+    <x:Static x:Key="S.Capture.PressPrefix" Member="sys:String.Empty"/>
     <sys:String x:Key="S.Capture.CancelSuffix">키로 취소</sys:String>
     <sys:String x:Key="S.Overlay.Recognising">인식 중</sys:String>
 
