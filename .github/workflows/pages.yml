@@ -1,0 +1,36 @@
+name: Pages
+
+# 網站就是 docs/ 原封不動（有 .nojekyll，不經 Jekyll）。之前用的是 GitHub 內建的「從分支部署」，
+# 它不看改了什麼，main 上每個 commit 都會重新部署一次；改成這裡只在 docs/ 有變動時才部署。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 部署到一半不取消，免得網站停在半套內容。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 部署網站
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4
