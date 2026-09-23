@@ -21,6 +21,7 @@ internal static class WindowScreenPresence
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     private const int DwmwaTransitionsForcedisabled = 3;
+    private const int DwmwaCloak = 13;
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
@@ -71,6 +72,24 @@ internal static class WindowScreenPresence
         {
             foreach (var hwnd in handles) SetTransitionsEnabled(hwnd, enabled: true);
         }
+    }
+
+    /// <summary>
+    /// Keeps <paramref name="hwnd"/> off the screen while it is otherwise fully shown, or lets it on.
+    /// A cloaked window is still composed — its content is drawn into its surface as usual — only
+    /// DWM leaves it out of what it presents, so uncloaking puts up whatever was drawn last in one
+    /// frame. That is what lets a window paint its first frame before anyone can see it.
+    /// </summary>
+    /// <returns>False when DWM refused, in which case the window is shown as normal.</returns>
+    public static bool SetCloaked(nint hwnd, bool cloaked)
+    {
+        if (hwnd == nint.Zero) return false;
+
+        int value = cloaked ? 1 : 0;
+        int hr = DwmSetWindowAttribute(hwnd, DwmwaCloak, ref value, sizeof(int));
+        if (hr < 0)
+            Log.Warn("Could not {0} the window (0x{1:X8})", cloaked ? "cloak" : "uncloak", hr);
+        return hr >= 0;
     }
 
     private static void SetTransitionsEnabled(nint hwnd, bool enabled)

@@ -32,6 +32,7 @@ public partial class ScreenCaptureWindow : Window
 
     private HwndSource? _hwndSource;
     private bool _inBackgroundMode;
+    private bool _cloaked;
 
     private readonly Bitmap _screenshot;
     private readonly System.Drawing.Rectangle _physBounds;
@@ -67,8 +68,6 @@ public partial class ScreenCaptureWindow : Window
         _physBounds = physBounds;
         InitializeComponent();
 
-        Opacity = 0; // prevent OS white-background flash
-
         // Provisional: OnSourceInitialized replaces this with the pixel rect the screenshot was
         // captured from. Needed only so the window has a size before its handle exists.
         Left   = SystemParameters.VirtualScreenLeft;
@@ -99,12 +98,27 @@ public partial class ScreenCaptureWindow : Window
     protected override void OnContentRendered(EventArgs e)
     {
         base.OnContentRendered(e);
-        DimPath.Data = new RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight));
-        Opacity = 1;
+
+        // The first frame has been drawn behind the cloak, so this puts up the frozen desktop in
+        // one step. See OnSourceInitialized.
+        if (_cloaked)
+        {
+            WindowScreenPresence.SetCloaked(new WindowInteropHelper(this).Handle, cloaked: false);
+            _cloaked = false;
+        }
 
         // Claimed only once the first frame is on screen. Activating before that forces a
         // foreground switch while the window is still empty, which flashes its black background.
         Activate();
+    }
+
+    // The dim layer's outer edge is the window's, so it is laid down with the first layout rather
+    // than after the first frame: that frame is the one uncloaking reveals, and it has to be the
+    // finished picture, dim included.
+    protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+    {
+        base.OnRenderSizeChanged(sizeInfo);
+        if (!_processingStarted) UpdateDimLayer();
     }
 
     // One card per monitor, positioned at each screen's top-left corner. This window spans the whole
@@ -140,6 +154,13 @@ public partial class ScreenCaptureWindow : Window
     {
         base.OnSourceInitialized(e);
         _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+
+        // Hidden from the screen until OnContentRendered. Between being shown and presenting its
+        // first frame a window has nothing to put up but black, for somewhere between 40ms and, on
+        // the first capture after launch, 100ms — the flash users see. Hiding it with Opacity does
+        // not help: this window is not layered, so a transparent one is still a black one. Cloaked,
+        // it goes through all of that off screen and appears already painted.
+        _cloaked = WindowScreenPresence.SetCloaked(_hwndSource.Handle, cloaked: true);
 
         // Before the DPI is read: pinning the window settles which monitor it belongs to, and that
         // is what the DPI below describes.
