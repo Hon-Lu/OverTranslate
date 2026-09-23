@@ -304,7 +304,7 @@ public partial class UpdateWindow : Window
     /// about the connection, so the timer stops for it, as it does once the full package is in; if
     /// the merge fails and the full package starts, that is a fresh download and gets a fresh delay.
     /// </remarks>
-    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromSeconds(180);
 
     private void StartSlowHintTimer()
     {
