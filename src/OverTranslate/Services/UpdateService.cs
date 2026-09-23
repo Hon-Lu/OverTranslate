@@ -1,3 +1,4 @@
+using System.IO;
 using Velopack;
 using Velopack.Sources;
 using VelopackUpdateInfo = Velopack.UpdateInfo;
@@ -6,8 +7,56 @@ namespace OverTranslate.Services;
 
 public sealed record UpdateInfo(
     string LatestVersion,
-    UpdateManager Manager,
+    DeltaAwareUpdateManager Manager,
     VelopackUpdateInfo VelopackInfo);
+
+/// <summary>
+/// Velopack's UpdateManager, with the one thing its download does not say out loud said out loud:
+/// that the deltas were given up on and the full package is coming down instead.
+/// </summary>
+/// <remarks>
+/// Velopack catches a failed delta, logs a warning and starts the full package with nothing raised.
+/// The window used to infer the switch from the first figure lower than the last, but the full
+/// download only reports every 3%, which is several megabytes — a minute or more on a slow link,
+/// spent under a line that still said the patches were being merged. This override sits on the
+/// method Velopack itself falls back from, so the signal arrives the moment the fallback begins.
+/// </remarks>
+public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions? options)
+    : UpdateManager(source, options)
+{
+    /// <summary>
+    /// Raised on a worker thread when the deltas are abandoned and the full package is about to be
+    /// fetched. Not raised for a cancelled attempt, which falls back only to throw straight away.
+    /// </summary>
+    public Action? FellBackToFull { get; set; }
+
+    /// <remarks>
+    /// Refuses up front when the package the deltas apply to is gone. Velopack's clean-up deletes
+    /// every package but the target on the way out of any download, a cancelled one included, yet
+    /// the UpdateInfo from the check still promises deltas — so a retry after 取消更新 downloaded
+    /// every delta again only for the merge to fail on the missing base, and then fetched the full
+    /// package it could have started on. Throwing here lands in the same fallback, minus the waste.
+    /// </remarks>
+    protected override async Task DownloadAndApplyDeltaUpdates(
+        VelopackUpdateInfo updates, string targetFile, Action<int> progress, CancellationToken cancelToken)
+    {
+        try
+        {
+            // Where Velopack itself looks for it (its GetLocalPackagePath is internal). That also
+            // runs the name through a filename sanitiser, which a name from our own feed never needs.
+            var basePackage = Path.Combine(Locator.PackagesDir!, updates.BaseRelease!.FileName);
+            if (!File.Exists(basePackage))
+                throw new FileNotFoundException("Base package for delta updates is missing.", basePackage);
+
+            await base.DownloadAndApplyDeltaUpdates(updates, targetFile, progress, cancelToken);
+        }
+        catch when (!cancelToken.IsCancellationRequested)
+        {
+            FellBackToFull?.Invoke();
+            throw;
+        }
+    }
+}
 
 public static class UpdateService
 {
@@ -54,18 +103,32 @@ public static class UpdateService
     /// the UI reading "downloading" while the update is already being applied. Awaited, so the
     /// caller can repaint before ApplyUpdatesAndRestart takes over the thread and closes the app.
     /// </param>
+    /// <param name="onFellBackToFull">
+    /// Raised on a worker thread when the deltas are abandoned for the full package; see
+    /// <see cref="DeltaAwareUpdateManager"/>. Progress starts again from zero after it.
+    /// </param>
     /// <param name="cancelToken">
-    /// Abandons the download. Safe for the whole of it, the delta merge included: Velopack writes
-    /// to "&lt;package&gt;.partial" and renames it only once the package is complete, so what a
-    /// cancelled attempt leaves behind is a partial file the next attempt deletes. It is not passed
-    /// to the apply step, which does not take one and must not be interrupted — that step replaces
-    /// the application's own files and then restarts the process.
+    /// Abandons the download. Safe for the whole of it: Velopack writes to "&lt;package&gt;.partial"
+    /// and renames it only once the package is complete, so what a cancelled attempt leaves behind
+    /// is a partial file the next attempt deletes. Not honoured during the delta merge, though —
+    /// Velopack waits on Update.exe for up to five minutes without looking at it, and the request
+    /// only takes effect once that returns. It is not passed to the apply step, which does not take
+    /// one and must not be interrupted — that step replaces the application's own files and then
+    /// restarts the process.
     /// </param>
     public static async Task DownloadAndApplyAsync(
-        UpdateInfo info, Action<int>? onProgress = null, Func<Task>? onApplying = null,
-        CancellationToken cancelToken = default)
+        UpdateInfo info, Action<int>? onProgress = null, Action? onFellBackToFull = null,
+        Func<Task>? onApplying = null, CancellationToken cancelToken = default)
     {
-        await info.Manager.DownloadUpdatesAsync(info.VelopackInfo, onProgress, cancelToken);
+        info.Manager.FellBackToFull = onFellBackToFull;
+        try
+        {
+            await info.Manager.DownloadUpdatesAsync(info.VelopackInfo, onProgress, cancelToken);
+        }
+        finally
+        {
+            info.Manager.FellBackToFull = null;
+        }
 
         cancelToken.ThrowIfCancellationRequested();
 
@@ -157,7 +220,7 @@ public static class UpdateService
     /// invents a version with no package behind it: enough to drive the notification UI, never
     /// enough to download.
     /// </remarks>
-    private static UpdateManager CreateManager()
+    private static DeltaAwareUpdateManager CreateManager()
     {
         // 設 OVERTRANSLATE_CHANNEL=beta → 訂閱 beta 先行版管線；未設 → 穩定版 (win)。
         var envChannel = Environment.GetEnvironmentVariable("OVERTRANSLATE_CHANNEL");
@@ -178,6 +241,6 @@ public static class UpdateService
         if (string.IsNullOrWhiteSpace(repoUrl))
             repoUrl = GitHubRepoUrl;
 
-        return new UpdateManager(new GithubSource(repoUrl, token, prerelease: seesPrerelease), options);
+        return new DeltaAwareUpdateManager(new GithubSource(repoUrl, token, prerelease: seesPrerelease), options);
     }
 }

@@ -23,10 +23,8 @@ public partial class UpdateWindow : Window
     // Runs once per download attempt; see StartSlowHintTimer.
     private DispatcherTimer? _slowHintTimer;
 
-    // What the running attempt is fetching, and the last figure it reported. Both are reset per
-    // attempt; see OnDownloadProgress for why the figure has to be remembered.
+    // What the running attempt is fetching. Reset per attempt; see OnFellBackToFull.
     private Fetching _fetching;
-    private int _lastPercent;
 
     /// <summary>
     /// Opens the update window, or brings the open one forward.
@@ -89,7 +87,10 @@ public partial class UpdateWindow : Window
     {
         if (_phase == Phase.Downloading)
         {
+            // Velopack only notices at its next checkpoint, which can be a while off, so the button
+            // says it heard straight away rather than looking as if the press did nothing.
             _cancel?.Cancel();
+            SetPhase(Phase.Downloading);
             return;
         }
 
@@ -102,7 +103,6 @@ public partial class UpdateWindow : Window
             ErrorText.Visibility = Visibility.Collapsed;
             FallbackNote.Visibility = Visibility.Collapsed;
             _fetching = WillFetchDelta() ? Fetching.Delta : Fetching.Full;
-            _lastPercent = 0;
             DownloadProgress.IsIndeterminate = false;
             DownloadProgress.Value = 0;
             DownloadProgress.Visibility = Visibility.Visible;
@@ -110,7 +110,7 @@ public partial class UpdateWindow : Window
             StartSlowHintTimer();
 
             await UpdateService.DownloadAndApplyAsync(
-                _updateInfo, OnDownloadProgress, OnApplyingAsync, cancel.Token);
+                _updateInfo, OnDownloadProgress, OnFellBackToFull, OnApplyingAsync, cancel.Token);
         }
         catch (OperationCanceledException)
         {
@@ -159,8 +159,14 @@ public partial class UpdateWindow : Window
         /// <summary>Nothing is running; the update is being offered.</summary>
         Offering,
 
-        /// <summary>Fetching the package, and merging the delta into it. Abandonable.</summary>
+        /// <summary>Fetching the package. Abandonable.</summary>
         Downloading,
+
+        /// <summary>
+        /// Update.exe merging the deltas. Velopack waits on it without looking at the cancel token,
+        /// so a 取消更新 pressed here would sit unanswered for as long as the merge takes.
+        /// </summary>
+        Patching,
 
         /// <summary>Handing over to Velopack. Not abandonable, and nearly over.</summary>
         Applying,
@@ -168,9 +174,9 @@ public partial class UpdateWindow : Window
 
     /// <summary>Which package the running attempt is fetching.</summary>
     /// <remarks>
-    /// Velopack can start on the delta packages and end up fetching the whole thing anyway, and it
-    /// does not say so. This follows that switch, so the line under the bar always names the file
-    /// actually coming down — which is also the only way its size means anything.
+    /// Velopack can start on the delta packages and end up fetching the whole thing anyway. This
+    /// follows that switch, so the line under the bar always names the file actually coming down —
+    /// which is also the only way its size means anything.
     /// </remarks>
     private enum Fetching
     {
@@ -200,8 +206,8 @@ public partial class UpdateWindow : Window
     /// disk, a delta has to be offered, and the deltas must be neither too many nor larger than the
     /// full package. Duplicated because the library exposes no way to ask. It decides a caption and
     /// a file size and nothing else, so the cost of drifting out of step with a future Velopack is
-    /// a line that names the wrong file for a moment, not a download that misbehaves: the switch in
-    /// <see cref="OnDownloadProgress"/> corrects it the moment the figure contradicts it.
+    /// a line that names the wrong file for a moment, not a download that misbehaves:
+    /// <see cref="OnFellBackToFull"/> corrects it the moment Velopack gives up on the deltas.
     /// </remarks>
     private bool WillFetchDelta()
     {
@@ -244,11 +250,16 @@ public partial class UpdateWindow : Window
     /// Downloading and applying are not the same kind of wait, and treating them as one is what
     /// used to leave a user stranded in front of a window they could not dismiss. The download —
     /// the long half, and the half that stalls when the release CDN is slow — writes to a ".partial"
-    /// file and is abandoned safely at any point, so the way out stays open for all of it. Applying
-    /// replaces the application's own files and restarts the process; there is no way back from
-    /// half of that, so everything goes dead, the title bar's close included. The close button says
-    /// why rather than simply refusing — SetResourceReference rather than a fetched string, so the
-    /// reason follows a language changed in 設定 while this window is still on screen.
+    /// file and is abandoned safely at any point, so the way out stays open for all of it. The delta
+    /// merge in between cannot be interrupted, only waited out, so the button goes dead for those
+    /// seconds rather than accept a press it cannot act on. Applying replaces the application's own
+    /// files and restarts the process; there is no way back from half of that, so everything goes
+    /// dead, the title bar's close included. The close button says why rather than simply refusing
+    /// — SetResourceReference rather than a fetched string, so the reason follows a language
+    /// changed in 設定 while this window is still on screen.
+    ///
+    /// A cancel already asked for turns the button into 取消中… and takes it away: the press has
+    /// been heard, and there is nothing left for a second one to do.
     /// </remarks>
     private void SetPhase(Phase phase)
     {
@@ -257,10 +268,13 @@ public partial class UpdateWindow : Window
         DismissBtn.IsEnabled = phase == Phase.Offering;
         SkipVersionLink.IsEnabled = phase == Phase.Offering;
         CloseBtn.IsEnabled = phase == Phase.Offering;
-        DownloadBtn.IsEnabled = phase != Phase.Applying;
 
-        var cancelling = phase == Phase.Downloading;
-        DownloadBtnText.Text = LocalizationService.Get(cancelling ? "S.Update.Cancel" : "S.Update.Now");
+        var cancelRequested = _cancel?.IsCancellationRequested == true;
+        DownloadBtn.IsEnabled = phase == Phase.Offering || (phase == Phase.Downloading && !cancelRequested);
+
+        var cancelling = phase is Phase.Downloading or Phase.Patching;
+        DownloadBtnText.Text = LocalizationService.Get(
+            !cancelling ? "S.Update.Now" : cancelRequested ? "S.Update.Cancelling" : "S.Update.Cancel");
         DownloadBtnGlyph.Text = cancelling ? "" : "";
 
         if (phase == Phase.Offering) CloseBtn.ToolTip = null;
@@ -281,8 +295,12 @@ public partial class UpdateWindow : Window
     /// update. The link is not touched by <see cref="SetPhase"/>, so it stays live while the
     /// buttons around it are disabled — fetching the installer by hand is the one thing left that
     /// the user can usefully do — and if they take it, 取消更新 is right there to let go of this.
+    ///
+    /// Counts download time only. The delta merge is not a download and a slow one says nothing
+    /// about the connection, so the timer stops for it; if the merge fails and the full package
+    /// starts, that is a fresh download and gets a fresh delay.
     /// </remarks>
-    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan SlowHintDelay = TimeSpan.FromMinutes(2);
 
     private void StartSlowHintTimer()
     {
@@ -384,28 +402,47 @@ public partial class UpdateWindow : Window
     }
 
     /// <summary>
-    /// The progress callback, and the only place the app learns that the deltas were abandoned.
+    /// The progress callback, and where the delta merge is recognised as it starts.
     /// </summary>
     /// <remarks>
-    /// Velopack raises nothing when a delta fails to apply: it logs a warning, deletes the partial
-    /// file and starts the full package over from zero. The figure going backwards is the only sign
-    /// that reaches here, and it cannot mean anything else — each download is scaled on its own
-    /// (0-<see cref="DeltaDownloadCeiling"/> for deltas, 0-100 for the full package) and within one
-    /// the figure only climbs.
+    /// <see cref="DeltaDownloadCeiling"/> is only reached once every delta is in, and Velopack goes
+    /// straight from there into the merge.
     /// </remarks>
     private void OnDownloadProgress(int percent)
     {
         Dispatcher.Invoke(() =>
         {
-            if (_fetching == Fetching.Delta && percent < _lastPercent)
-            {
-                _fetching = Fetching.Full;
-                FallbackNote.Visibility = Visibility.Visible;
-            }
-
-            _lastPercent = percent;
             DownloadProgress.Value = percent;
             SetDownloadStatus(percent);
+
+            if (_phase == Phase.Downloading && _fetching == Fetching.Delta && percent >= DeltaDownloadCeiling)
+            {
+                SetPhase(Phase.Patching);
+                StopSlowHintTimer();
+                SlowHint.Visibility = Visibility.Collapsed;
+            }
+        });
+    }
+
+    /// <summary>
+    /// The deltas were given up on — the merge failed, or there was nothing left to merge them
+    /// into — and the full package is starting from zero.
+    /// </summary>
+    /// <remarks>
+    /// Before this was signalled directly, the switch only showed once the full download reported
+    /// its first figure, and on a slow link that was a minute or more of 套用更新中 at 70% over a
+    /// download that was already running.
+    /// </remarks>
+    private void OnFellBackToFull()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            _fetching = Fetching.Full;
+            FallbackNote.Visibility = Visibility.Visible;
+            DownloadProgress.Value = 0;
+            SetDownloadStatus(0);
+            SetPhase(Phase.Downloading);
+            StartSlowHintTimer();
         });
     }
 
