@@ -293,9 +293,13 @@ $pfxPwd = Read-Host "PFX 密碼" -AsSecureString
 Export-PfxCertificate -Cert $cert -FilePath "$HOME\overtranslate-signing.pfx" -Password $pfxPwd
 
 $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\overtranslate-signing.pfx"))
-$b64 | gh secret set SIGNING_PFX_BASE64 --repo asd880921/OverTranslate
+gh secret set SIGNING_PFX_BASE64 --repo asd880921/OverTranslate --body $b64
 gh secret set SIGNING_PFX_PASSWORD --repo asd880921/OverTranslate
 ```
+
+`--body` 是刻意的：貼進終端機或網頁欄位容易混進 BOM、引號或被截斷，而那顆 secret 有七千多字，
+肉眼看不出哪裡壞了。CI 端會先清掉空白、引號、BOM 與 PEM 標頭再解碼，解不開時會印出長度與開頭
+（PKCS#12 的 base64 一定是 `MII` 開頭）好讓人判斷是哪一種壞法。
 
 CI 會把 secret 還原成暫存 `.pfx`、匯入憑證存放區、立刻刪檔，之後只用**指紋**叫 signtool，
 密碼不會出現在任何命令列上。**缺 secret 時 job 會直接失敗**——不要安靜地發一包沒簽的出去，

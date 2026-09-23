@@ -170,8 +170,25 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) {
               throw "沒有設定 SIGNING_PFX_BASE64。見 docs/ops/PUBLISH.md 第七節。"
           }
+
+          # 容錯：secret 在來回複製貼上的過程中很容易混進 BOM、引號，或 PEM 的 -----BEGIN----- 標頭。
+          # 換行與空白本來就會被 FromBase64String 忽略，這裡一併清掉，其餘非法字元則讓它照常炸，
+          # 但要炸得看得懂——所以先報長度與開頭，PKCS#12 的 base64 一定是 MII 開頭。
+          $b64 = ($env:PFX_BASE64 -split "`r?`n" |
+              Where-Object { $_ -notmatch '^-{3,}' }) -join ''
+          $b64 = $b64 -replace '[\s"''\uFEFF]', ''
+
+          try {
+              $bytes = [Convert]::FromBase64String($b64)
+          }
+          catch {
+              $head = if ($b64.Length -ge 3) { $b64.Substring(0, 3) } else { '(太短)' }
+              throw "SIGNING_PFX_BASE64 不是合法的 base64（長度 $($b64.Length)，開頭 '$head'，應為 'MII'）。" +
+                    "請用 gh secret set SIGNING_PFX_BASE64 --body `$b64 重設，見 docs/ops/PUBLISH.md 第七節。"
+          }
+
           $pfxPath = Join-Path $env:RUNNER_TEMP 'signing.pfx'
-          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
+          [IO.File]::WriteAllBytes($pfxPath, $bytes)
           try {
               $securePwd = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
               $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePwd
