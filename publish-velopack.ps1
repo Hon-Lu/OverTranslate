@@ -226,134 +226,91 @@ if ($LASTEXITCODE -ne 0) {
     throw "vpk pack 失敗，exit code: $LASTEXITCODE"
 }
 
-# 免安裝包的根目錄現在只有 Update.exe 與 current\（--noStub 把啟動器拿掉了），使用者解壓之後
-# 沒有東西可以點。補一個捷徑進去指向 current\ 底下的主程式。
+# 免安裝包的根目錄只有 Update.exe 與 current\（--noStub 把 Velopack 的啟動器 stub 拿掉了），
+# 使用者解壓之後沒有東西可以點。放我們自己的啟動器進去，檔名就叫主程式的名字。
 #
-# 捷徑**必須帶相對路徑欄位**（IShellLink::SetRelativePath）才有意義：捷徑裡存的絕對路徑是打包這台
-# 機器上的位置，使用者機器上不存在，Windows 會退而用相對路徑去找。WScript.Shell 建出來的捷徑
-# 只有絕對路徑，解壓到別的地方就是一個死捷徑。
+# 那顆是 tools\launcher 編出來的，二進位跟著原始碼一起進版控 —— 它的價值就在於位元組永遠不變，
+# 雜湊信譽才累積得起來。相對地，Velopack 的 stub 是打包當下才被塞進主程式資源的未簽章二進位，
+# 那正是 Defender 機器學習盯上的形狀（#210）。細節見 tools\launcher\README.md。
 #
-# 圖示在第一次點開之前是通用的（Shell 取圖示時不走相對路徑），點過一次之後 Windows 會把解析出來的
-# 路徑寫回捷徑，圖示就變成主程式的。這是已知且可接受的代價。
-#
-# 免安裝 zip 不在任何校驗鏈裡（releases.<channel>.json 只記 nupkg 的 SHA256），所以打包後改它是安全的。
-function Add-PortableShortcut {
+# 免安裝 zip 不在任何校驗鏈裡（releases.<channel>.json 只記 nupkg 的 SHA256），打包後改它是安全的。
+function Add-PortableLauncher {
     param(
         [string]$ZipPath,
-        [string]$MainExeName,
-        [string]$LinkName
+        [string]$LauncherPath,
+        [string]$EntryName,
+        [string]$CertThumbprint,
+        [string]$SignToolPath
     )
-
-    if (-not ('OverTranslate.Packaging.Shortcut' -as [type])) {
-        Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-
-namespace OverTranslate.Packaging
-{
-    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
-    internal class ShellLinkCoClass { }
-
-    [ComImport, Guid("000214F9-0000-0000-C000-000000000046"),
-     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IShellLinkW
-    {
-        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszFile, int cch, IntPtr pfd, uint fFlags);
-        void GetIDList(out IntPtr ppidl);
-        void SetIDList(IntPtr pidl);
-        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszName, int cch);
-        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
-        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszDir, int cch);
-        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
-        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszArgs, int cch);
-        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
-        void GetHotkey(out short pwHotkey);
-        void SetHotkey(short wHotkey);
-        void GetShowCmd(out int piShowCmd);
-        void SetShowCmd(int iShowCmd);
-        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszIconPath, int cch, out int piIcon);
-        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
-        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, uint dwReserved);
-        void Resolve(IntPtr hwnd, uint fFlags);
-        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
-    }
-
-    [ComImport, Guid("0000010b-0000-0000-C000-000000000046"),
-     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IPersistFile
-    {
-        void GetClassID(out Guid pClassID);
-        [PreserveSig] int IsDirty();
-        void Load([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);
-        void Save([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, [MarshalAs(UnmanagedType.Bool)] bool fRemember);
-        void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
-        void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string ppszFileName);
-    }
-
-    public static class Shortcut
-    {
-        public static void CreateRelative(string linkPath, string targetPath, string description)
-        {
-            var link = (IShellLinkW)new ShellLinkCoClass();
-            link.SetPath(targetPath);
-            link.SetDescription(description);
-            // 以捷徑自己的位置當基準，讓 shell 算出相對路徑並寫進 RelativePath 欄位。
-            link.SetRelativePath(linkPath, 0);
-            ((IPersistFile)link).Save(linkPath, true);
-        }
-    }
-}
-"@
-    }
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-    $entryName = "$LinkName.lnk"
-    $stagingDir = Join-Path ([System.IO.Path]::GetTempPath()) ("overtranslate-lnk-" + [guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Force -Path (Join-Path $stagingDir "current") | Out-Null
+    # 在暫存處簽章，不要動到版控裡那顆。簽章不加時戳，所以簽出來的位元組也是固定的。
+    $staged = Join-Path ([System.IO.Path]::GetTempPath()) ("overtranslate-launcher-" + [guid]::NewGuid().ToString("N") + ".exe")
+    Copy-Item -LiteralPath $LauncherPath -Destination $staged -Force
     try {
-        # 捷徑要在「與最終位置相同的相對結構」底下建立，相對路徑欄位才會算成 current\<主程式>。
-        $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
-        try {
-            $entry = $archive.GetEntry("current/$MainExeName")
-            if ($null -eq $entry) {
-                throw "免安裝包裡找不到 current/$MainExeName，無法建立捷徑。"
+        if (-not [string]::IsNullOrWhiteSpace($CertThumbprint)) {
+            if (-not (Test-Path $SignToolPath)) {
+                throw "找不到 signtool：$SignToolPath"
             }
-            [System.IO.Compression.ZipFileExtensions]::ExtractToFile(
-                $entry, (Join-Path $stagingDir "current\$MainExeName"), $true)
+            & $SignToolPath sign /sha1 $CertThumbprint /fd SHA256 $staged | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "啟動器簽章失敗，exit code: $LASTEXITCODE"
+            }
         }
-        finally { $archive.Dispose() }
-
-        $linkPath = Join-Path $stagingDir $entryName
-        [OverTranslate.Packaging.Shortcut]::CreateRelative(
-            $linkPath, (Join-Path $stagingDir "current\$MainExeName"), $LinkName)
+        else {
+            Write-Warning "啟動器沒有簽章（沒給 -CertThumbprint）。"
+        }
 
         $zip = [System.IO.Compression.ZipFile]::Open($ZipPath, "Update")
         try {
-            $existing = $zip.GetEntry($entryName)
+            $existing = $zip.GetEntry($EntryName)
             if ($null -ne $existing) { $existing.Delete() }
-            $added = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $linkPath, $entryName)
+            $added = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $staged, $EntryName)
             # 其他成員的時間戳都是 1980（Velopack 正規化過），跟著對齊，免安裝包才不會每次打包都因為
-            # 一個捷徑的時間而長得不一樣。
+            # 一個啟動器的時間而長得不一樣。
             $added.LastWriteTime = [DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
         }
         finally { $zip.Dispose() }
 
-        Write-Host "已在免安裝包根目錄放入捷徑 $entryName（指向 current\$MainExeName）" -ForegroundColor Green
+        $hash = (Get-FileHash -LiteralPath $staged -Algorithm SHA256).Hash.ToLower()
+        Write-Host "已在免安裝包根目錄放入啟動器 $EntryName（$hash）" -ForegroundColor Green
     }
     finally {
-        Remove-Item -LiteralPath $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$launcherPath = Resolve-FullPath ".\tools\launcher\dist\OverTranslate-launcher-unsigned.exe"
+if (-not (Test-Path $launcherPath)) {
+    throw "找不到免安裝包的啟動器：$launcherPath（見 tools\launcher\README.md）"
+}
+
+# 換了應用程式圖示卻忘了重編啟動器，是這裡唯一抓得到的地方 —— 啟動器的雜湊不會因為 app.ico
+# 被換掉而改變（它是版控裡那顆固定的二進位），所以沒有其他檢查會發現它還帶著舊圖示。
+$buildInfoPath = Join-Path (Split-Path $launcherPath) "build-info.txt"
+if (Test-Path $buildInfoPath) {
+    $recordedIconHash = (Select-String -Path $buildInfoPath -Pattern '^icon_sha\s*=\s*(\S+)').Matches.Groups[1].Value
+    $currentIconHash = (Get-FileHash -LiteralPath $iconFullPath -Algorithm SHA256).Hash.ToLower()
+    if ($recordedIconHash -and $recordedIconHash -ne $currentIconHash) {
+        Write-Warning ("應用程式圖示已經換過，但 tools\launcher 還沒重編 —— 免安裝包根目錄那顆啟動器會帶著舊圖示。`n" +
+                       "  目前的 app.ico : $currentIconHash`n" +
+                       "  啟動器編譯時用的: $recordedIconHash`n" +
+                       "  重編步驟見 tools\launcher\README.md。")
     }
 }
 
 $portableZipPath = Join-Path $outputFullPath "$PackId-$Channel-Portable.zip"
 if (Test-Path $portableZipPath) {
-    $linkName = if ([string]::IsNullOrWhiteSpace($PackTitle)) { $PackId } else { $PackTitle }
-    Add-PortableShortcut -ZipPath $portableZipPath -MainExeName $MainExe -LinkName $linkName
+    # signtool 用 vpk 內建那顆，與打包其他檔案時同一支，行為一致。
+    # vpk.exe 在 <fork>\build\Release\net10.0\ 底下，往上四層才是 fork 根目錄。
+    $forkRoot = Split-Path (Split-Path (Split-Path (Split-Path $vpkFullPath)))
+    $signToolPath = Join-Path $forkRoot "vendor\signing\signtool.exe"
+    Add-PortableLauncher -ZipPath $portableZipPath -LauncherPath $launcherPath -EntryName $MainExe `
+        -CertThumbprint $CertThumbprint -SignToolPath $signToolPath
 }
 else {
-    Write-Warning "找不到免安裝包 $portableZipPath，沒有放入捷徑。"
+    Write-Warning "找不到免安裝包 $portableZipPath，沒有放入啟動器。"
 }
 
 Write-Host ""

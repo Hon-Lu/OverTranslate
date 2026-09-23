@@ -1,0 +1,9 @@
+# 版控裡那顆 launcher 是用什麼編出來的。
+# 換圖示或改原始碼之後要重編，並且把這裡的值一起更新（見 README）。
+rustc     = rustc 1.98.1 (48a229cea 2026-09-01)
+host      = x86_64-pc-windows-msvc
+icon      = src\OverTranslate\icons\app.ico
+icon_sha  = a425d8f46f75971fca04b6d6f64f3afd2c0d85fb52ee29d743df5619b74bc9f4
+binary    = OverTranslate-launcher-unsigned.exe
+binary_sha= e8df80c9c73eedc9fe8850be6acb9ba580df89bdd31f52dcf221b14129768466
+size      = 345088

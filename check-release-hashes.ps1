@@ -1,10 +1,13 @@
 <#
-    看緊免安裝包根目錄那兩件事：啟動器 stub 有沒有跑回來，以及 Update.exe 的 SHA256 有沒有變。
+    看緊免安裝包根目錄那兩顆檔的 SHA256：我們自己的啟動器，以及 Update.exe。
 
-    stub 是 #210 那個 Wacatac.B!ml 誤判的主要來源，現在用 `--noStub` 整個拿掉了；它要是再
-    出現，代表旗標掉了或 fork 換了分支，那一版會把誤判帶回來。`Update.exe` 則還在，它帶的是
-    自簽章、沒有受信任 CA 背書，所以累積不到發行者信譽，Defender 能給它的只有**按檔案雜湊**
-    累積的那種——雜湊一換就從零開始。
+    兩顆都帶自簽章，沒有受信任 CA 背書，所以累積不到發行者信譽；Defender 能給它們的只有
+    **按檔案雜湊**累積的那種——雜湊一換就從零開始，而那幾天最容易被報 Wacatac.B!ml（#210）。
+    兩顆的位元組都應該永遠不變：啟動器是版控裡編好的那顆，Update.exe 只跟 vpk 版本與圖示有關。
+
+    啟動器那一行還有第二個用途：**確認 Velopack 的 stub 沒有跑回來**。`--noStub` 要是失效
+    （旗標掉了、fork 換了分支），根目錄那顆就會變成 stub——同樣的檔名、不同的雜湊，而那顆正是
+    誤判的主要來源。
 
     所以這裡**只提醒、不擋**：對不上不代表打包壞了，代表這一版的檔案信譽要重新養 ——
     那是發版的人該當場知道、而不是幾天後從使用者回報裡才發現的事。
@@ -19,12 +22,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# 基準值 —— 是「現在應該長這樣」的紀錄，不是校驗和。改了下面任何一項之後對不上都是正常的，
-# 把這次印出來的新值貼回來即可：應用程式圖示、vendor 的 update.exe（換 vpk 版本就會換）、
-# 簽章金鑰。版號與 commit 都不在裡面，`Update.exe` 與它們無關。
+# 基準值 —— 是「現在應該長這樣」的紀錄，不是校驗和。對不上不代表壞掉，代表信譽要重新養。
+# 兩個值都是 2026-09-23 在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
+# （見 docs/ops/PUBLISH.md 第七節）。
 #
-# 2026-09-23 在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
-# （見 docs/ops/PUBLISH.md 第七節）。自簽之前它停在 9a1e4194… 很久沒動。
+# 啟動器   ← 重編 tools/launcher（換圖示、改行為、換 rustc）、換簽章金鑰
+# Update.exe ← 換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰
+# 版號與 commit 兩邊都無關。
+$expectedLauncher = "1dd826ad50481ec7bffa57ad9cafe7c6dad79541009129dca2d1e4266a7a76bf"
 $expectedUpdateExe = "ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d"
 
 function Resolve-FullPath {
@@ -82,16 +87,18 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
     try {
-        # 一、stub 應該根本不存在。它回來了就是 --noStub 沒生效——旗標掉了、fork 換了分支，
-        #     或是上游改了行為。那一版會把 #210 的誤判一起帶回來，所以這裡要吵。
-        $stubHash = Get-ZipEntryHash -Archive $archive -EntryName $MainExe
+        # 一、根目錄那顆應該是我們自己的啟動器。對不上有兩種可能：tools/launcher 重編過，
+        #     或是 --noStub 失效、Velopack 的 stub 又跑回來佔了這個檔名（那顆就是誤判來源）。
+        $launcherHash = Get-ZipEntryHash -Archive $archive -EntryName $MainExe
         $results += [pscustomobject]@{
-            File   = "$MainExe（啟動器 stub）"
-            Status = if ($null -eq $stubHash) { "absent" } else { "returned" }
-            Actual = if ($null -eq $stubHash) { "—" } else { $stubHash }
+            File   = "$MainExe（啟動器）"
+            Status = if ($null -eq $launcherHash) { "missing" }
+                     elseif ($launcherHash -eq $expectedLauncher) { "same" }
+                     else { "changed" }
+            Actual = if ($null -eq $launcherHash) { "—" } else { $launcherHash }
         }
 
-        # 二、Update.exe 還在，比雜湊。
+        # 二、Update.exe 比雜湊。
         $updateHash = Get-ZipEntryHash -Archive $archive -EntryName "Update.exe"
         $results += [pscustomobject]@{
             File   = "Update.exe"
@@ -110,33 +117,33 @@ catch {
 }
 
 $label = @{
-    absent   = "不存在（預期）"
-    returned = "又出現了"
-    same     = "不變"
-    changed  = "已改變"
-    missing  = "不在包裡"
+    same    = "不變"
+    changed = "已改變"
+    missing = "不在包裡"
 }
 
 Write-Host ""
 Write-Host "免安裝包根目錄：" -ForegroundColor Cyan
 foreach ($r in $results) {
-    $color = if ($r.Status -in @("absent", "same")) { "Green" } else { "Yellow" }
-    Write-Host ("  {0,-26} {1,-16} {2}" -f $r.File, $label[$r.Status], $r.Actual) -ForegroundColor $color
+    $color = if ($r.Status -eq "same") { "Green" } else { "Yellow" }
+    Write-Host ("  {0,-26} {1,-12} {2}" -f $r.File, $label[$r.Status], $r.Actual) -ForegroundColor $color
 }
 Write-Host ""
 
-foreach ($r in $results | Where-Object { $_.Status -eq "returned" }) {
-    Write-CiWarning "啟動器 stub 又出現了" `
-        "免安裝包根目錄多了 $MainExe（$($r.Actual)）。--noStub 應該讓它完全不存在——確認打包用的是 fork 的 no-stub 分支、而且旗標還在。這顆檔是 #210 那個誤判的主要來源。"
-}
-
 foreach ($r in $results | Where-Object { $_.Status -eq "changed" }) {
-    Write-CiWarning "Update.exe 的雜湊變了" `
-        "$($r.Actual)（原本 $expectedUpdateExe）。這顆檔的 Defender 信譽會從零開始累積。確認是預期中的改動（換圖示、換 vpk、換簽章金鑰）之後，把新值更新到 check-release-hashes.ps1。"
+    $expected = if ($r.File -like "$MainExe*") { $expectedLauncher } else { $expectedUpdateExe }
+    $hint = if ($r.File -like "$MainExe*") {
+        "如果沒有重編 tools/launcher，這顆很可能根本不是我們的啟動器，而是 Velopack 的 stub 跑回來了——先確認打包用的是 fork 的 no-stub 分支、旗標還在。"
+    }
+    else {
+        "確認是預期中的改動（換圖示、換 vpk、換簽章金鑰）。"
+    }
+    Write-CiWarning "$($r.File) 的雜湊變了" `
+        "$($r.Actual)（原本 $expected）。這顆檔的 Defender 信譽會從零開始累積。$hint 確認之後把新值更新到 check-release-hashes.ps1。"
 }
 
 foreach ($r in $results | Where-Object { $_.Status -eq "missing" }) {
-    Write-CiWarning "找不到 Update.exe" "免安裝包根目錄沒有這個檔，無法比對雜湊。"
+    Write-CiWarning "找不到 $($r.File)" "免安裝包根目錄沒有這個檔，無法比對雜湊。"
 }
 
 if ($isCi -and $env:GITHUB_STEP_SUMMARY) {
@@ -148,12 +155,12 @@ if ($isCi -and $env:GITHUB_STEP_SUMMARY) {
         "| --- | --- | --- |"
     )
     foreach ($r in $results) {
-        $mark = if ($r.Status -in @("absent", "same")) { "✅ " } else { "⚠️ " }
+        $mark = if ($r.Status -eq "same") { "✅ " } else { "⚠️ " }
         $lines += "| ``$($r.File)`` | $mark$($label[$r.Status]) | ``$($r.Actual)`` |"
     }
-    if ($results | Where-Object { $_.Status -notin @("absent", "same") }) {
+    if ($results | Where-Object { $_.Status -ne "same" }) {
         $lines += ""
-        $lines += "有東西變了。stub 不該存在（#210 的誤判來源），``Update.exe`` 的雜湊一換則代表它的 Defender 檔案信譽要重新累積。確認是預期中的改動後，把新值更新到 ``check-release-hashes.ps1``。"
+        $lines += "有東西變了，這兩顆的 Defender 檔案信譽會從零開始累積（#210）。啟動器那一顆若不是重編造成的，要先確認是不是 Velopack 的 stub 跑回來了。確認之後把新值更新到 ``check-release-hashes.ps1``。"
     }
     $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
 }

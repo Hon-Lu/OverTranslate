@@ -1,0 +1,24 @@
+[package]
+name = "overtranslate-launcher"
+version = "1.0.0"
+edition = "2021"
+publish = false
+
+# 輸出的檔名就是它在免安裝包根目錄的名字。
+[[bin]]
+name = "OverTranslate"
+path = "src/main.rs"
+
+[dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+winresource = "0.1"
+
+[profile.release]
+# 刻意不做極端縮小（不開 opt-level="z"、不 strip）。極小又幾乎沒有匯入的執行檔，
+# 正是 AV 啟發式眼中的 dropper 形狀；這顆的目的是被信任，不是比小。
+opt-level = 2
