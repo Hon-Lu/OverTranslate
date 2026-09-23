@@ -630,8 +630,11 @@
     <sys:String x:Key="S.Lang.Ukrainian">烏克蘭文</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">偵錯輔助</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">顯示翻譯輔助框線，方便確認文字辨識與組合結果。</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">顯示更多</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻譯</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">儲存截圖</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">儲存位置可在設定中變更</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框線顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">僅原文</sys:String>

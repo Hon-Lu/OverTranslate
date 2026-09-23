@@ -512,62 +512,113 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="DebugMoreBtn" Style="{StaticResource ToolbarIconButton}"
+                    <Button x:Name="MoreBtn" Style="{StaticResource ToolbarIconButton}"
                             Width="30" Height="30" Margin="2,0,0,0"
                             ToolTip="{DynamicResource S.Toolbar.ShowMore}"
                             AutomationProperties.Name="{DynamicResource S.Toolbar.ShowMore}"
-                            Click="DebugMoreBtn_Click">
+                            Click="MoreBtn_Click">
                         <TextBlock Text="&#xE712;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20"/>
                     </Button>
-                    <Popup x:Name="DebugPopup" PlacementTarget="{Binding ElementName=BarSurface}"
+                    <!-- What capture translation keeps between captures, as opposed to what the bar
+                         asks for each one. A menu rather than a settings sheet: one line per switch,
+                         the whole line pressable, and what each switch does in its tooltip rather than
+                         in a paragraph under it - the panel opens over the capture being looked at, so
+                         every line it spends is a line of the capture it hides.
+
+                         一般 first because it is what most people come here for; 偵錯輔助 under it.
+                         The switches are the settings page's own keys, so the two places always
+                         agree - see SettingsService.UpdateCaptureOptions.
+
+                         Its right edge is lined up under the button that opens it (MoreBtn_Click), so
+                         it reads as coming out of that button rather than out of the bar. No close
+                         button: it closes on a click anywhere else and on Esc, like any menu. -->
+                    <Popup x:Name="MorePopup" PlacementTarget="{Binding ElementName=BarSurface}"
                            Placement="Bottom" VerticalOffset="6"
                            AllowsTransparency="True" StaysOpen="False"
-                           Opened="DebugPopup_Opened" Closed="DebugPopup_Closed">
-                        <Border x:Name="DebugPanel" Width="580" Background="{DynamicResource ToolbarBg}"
+                           Opened="MorePopup_Opened" Closed="MorePopup_Closed">
+                        <Border x:Name="MorePanel" Width="280" Background="{DynamicResource ToolbarBg}"
                                 BorderBrush="{DynamicResource ToolbarBorder}" BorderThickness="1" CornerRadius="12"
-                                Padding="16" PreviewKeyDown="DebugPopup_KeyDown">
-                            <Grid>
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                <Grid Margin="0,0,0,16">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}" FontSize="16" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center"/>
-                                        <Border x:Name="DebugHelpIcon" Width="26" Height="26" Margin="4,0,0,0" Background="Transparent"
-                                                Cursor="Help" ToolTip="{DynamicResource S.Toolbar.DebugAssistHint}" ToolTipService.ShowDuration="30000">
-                                            <Border Width="15" Height="15" CornerRadius="7.5" BorderThickness="1"
-                                                    BorderBrush="{DynamicResource AppTextSecondary}">
-                                                <TextBlock Text="?" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </Border>
-                                    </StackPanel>
-                                    <Button HorizontalAlignment="Right" Style="{StaticResource ToolbarIconButton}" Content="&#x2715;"
-                                            ToolTip="{DynamicResource S.Common.Close}" Click="DebugClose_Click"/>
-                                </Grid>
-                                <Grid Grid.Row="1">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="1"/><ColumnDefinition Width="210"/></Grid.ColumnDefinitions>
-                                    <StackPanel Margin="6,0,18,0">
-                                        <CheckBox x:Name="DebugGroupsSwitch" Style="{StaticResource ModernCheckBox}"
-                                                  Content="{DynamicResource S.Settings.TextGroupBoxes}"
-                                                  Checked="DebugGroupsSwitch_Changed" Unchecked="DebugGroupsSwitch_Changed"/>
-                                        <TextBlock Margin="24,5,0,14" Text="{DynamicResource S.Settings.TextGroupBoxesHint}" TextWrapping="Wrap"
-                                                   FontSize="12" Foreground="{DynamicResource AppTextSecondary}"/>
-                                        <CheckBox x:Name="DebugLinesSwitch" Style="{StaticResource ModernCheckBox}"
-                                                  Content="{DynamicResource S.Settings.OcrLineBoxes}"
-                                                  Checked="DebugLinesSwitch_Changed" Unchecked="DebugLinesSwitch_Changed"/>
-                                        <TextBlock Margin="24,5,0,0" Text="{DynamicResource S.Settings.OcrLineBoxesHint}" TextWrapping="Wrap"
-                                                   FontSize="12" Foreground="{DynamicResource AppTextSecondary}"/>
-                                    </StackPanel>
-                                    <Border Grid.Column="1" Background="{DynamicResource ToolbarDivider}"/>
-                                    <StackPanel Grid.Column="2" Margin="24,0,0,0">
-                                        <TextBlock Text="{DynamicResource S.Debug.DisplayScope}" Foreground="{DynamicResource AppTextPrimary}" Margin="0,0,0,12"/>
-                                        <RadioButton x:Name="DebugSourceOnly" GroupName="DebugScope" Style="{StaticResource DebugScopeRadio}"
-                                                     Content="{DynamicResource S.Debug.SourceOnly}" Checked="DebugScope_Changed" Margin="0,0,0,12"/>
-                                        <RadioButton x:Name="DebugSourceAndTranslation" GroupName="DebugScope" Style="{StaticResource DebugScopeRadio}"
+                                Padding="6" PreviewKeyDown="MorePopup_KeyDown">
+                            <StackPanel>
+                                <StackPanel.Resources>
+                                    <Style x:Key="MoreSectionHeader" TargetType="TextBlock">
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                        <Setter Property="Margin" Value="10,6,10,4"/>
+                                    </Style>
+                                </StackPanel.Resources>
+
+                                <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeader}"/>
+                                <!-- Takes effect from the next selection: it is read the moment a
+                                     selection is finished, and this one already was. -->
+                                <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                          Tag="&#xE8C1;"
+                                          Content="{DynamicResource S.Toolbar.AutoTranslate}"
+                                          ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
+                                          Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
+                                <!-- Where to change the folder, not the folder itself. A folder picker
+                                     or an Explorer window opened from this bar would land under the
+                                     capture overlay, which is full screen and topmost; and the toast
+                                     after a save already names the file it wrote. -->
+                                <CheckBox x:Name="SaveScreenshotSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                          Tag="&#xE74E;"
+                                          Content="{DynamicResource S.Toolbar.SaveScreenshot}"
+                                          Checked="SaveScreenshotSwitch_Changed" Unchecked="SaveScreenshotSwitch_Changed">
+                                    <CheckBox.ToolTip>
+                                        <StackPanel>
+                                            <TextBlock Text="{DynamicResource S.Settings.SaveScreenshotCheck}"/>
+                                            <TextBlock Text="{DynamicResource S.Toolbar.SavePathInSettings}"/>
+                                        </StackPanel>
+                                    </CheckBox.ToolTip>
+                                </CheckBox>
+
+                                <!-- No rule between the sections: the heading and the gap above it
+                                     already divide them, and a line on top of both read as a seam. -->
+                                <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}" Style="{StaticResource MoreSectionHeader}"
+                                           Margin="10,14,10,4"/>
+                                <CheckBox x:Name="DebugGroupsSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                          Content="{DynamicResource S.Settings.TextGroupBoxes}"
+                                          ToolTip="{DynamicResource S.Settings.TextGroupBoxesHint}"
+                                          Checked="DebugGroupsSwitch_Changed" Unchecked="DebugGroupsSwitch_Changed">
+                                    <CheckBox.Tag>
+                                        <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.3"
+                                              Data="{StaticResource TextGroupBoxMarkGeometry}"/>
+                                    </CheckBox.Tag>
+                                </CheckBox>
+                                <CheckBox x:Name="DebugLinesSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                          Content="{DynamicResource S.Settings.OcrLineBoxes}"
+                                          ToolTip="{DynamicResource S.Settings.OcrLineBoxesHint}"
+                                          Checked="DebugLinesSwitch_Changed" Unchecked="DebugLinesSwitch_Changed">
+                                    <CheckBox.Tag>
+                                        <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.3"
+                                              Data="{StaticResource OcrLineBoxMarkGeometry}"/>
+                                    </CheckBox.Tag>
+                                </CheckBox>
+
+                                <!-- Disabled while neither box is ticked: it only says where the boxes
+                                     are drawn. See SyncDebugSwitches. The heading keeps its tooltip
+                                     while disabled, since what the choice means is worth reading
+                                     before either box is ticked. -->
+                                <StackPanel x:Name="DebugScopePanel" Style="{StaticResource DimWhenDisabled}">
+                                    <TextBlock Text="{DynamicResource S.Debug.DisplayScope}"
+                                               Style="{StaticResource MoreSectionHeader}"
+                                               Margin="10,10,10,8"
+                                               Background="Transparent"
+                                               ToolTip="{DynamicResource S.Debug.ScopeHint}"
+                                               ToolTipService.ShowOnDisabled="True"/>
+                                    <Grid Margin="4,0,4,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <RadioButton x:Name="DebugSourceOnly" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
+                                                     Content="{DynamicResource S.Debug.SourceOnly}" Checked="DebugScope_Changed"/>
+                                        <RadioButton x:Name="DebugSourceAndTranslation" Grid.Column="2" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
                                                      Content="{DynamicResource S.Debug.SourceAndTranslation}" Checked="DebugScope_Changed"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Grid>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
                         </Border>
                     </Popup>
 

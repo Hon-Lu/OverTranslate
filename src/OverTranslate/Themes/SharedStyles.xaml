@@ -230,6 +230,13 @@
          (drag a region), not a camera, which would promise a photo rather than a translation. -->
     <Geometry x:Key="CaptureMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M8,5.4 V10.6 M5.4,8 H10.6</Geometry>
 
+    <!-- 顯示更多's two debug boxes, cut from the 截圖翻譯 mark above so they read as the same family:
+         its four framing corners without the crosshair - a region, which is what a group box
+         outlines - and the same corners with one line across the middle for the OCR box, which
+         outlines a single recognised line of text. -->
+    <Geometry x:Key="TextGroupBoxMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11</Geometry>
+    <Geometry x:Key="OcrLineBoxMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M5,8 H11</Geometry>
+
     <!-- 取詞翻譯: a magnifier with a letter in it. The lens alone reads as search; the letter is
          what makes it "look this word up". -->
     <Geometry x:Key="QuickLookupMarkGeometry">M0.8,6.9 A6.1,6.1 0 1 1 13,6.9 A6.1,6.1 0 1 1 0.8,6.9 Z M11.3,11.3 L15.2,15.2 M4.95,9.3 L6.9,3.9 L8.85,9.3 M5.42,8 H8.38</Geometry>
@@ -1194,39 +1201,20 @@
         </Setter>
     </Style>
 
+    <!-- For a group of controls switched off together because what they set has nothing to act on
+         yet — the 顯示範圍 choice while neither debug box is ticked. Dimmed as one piece rather than
+         each control greying on its own, so the group reads as a single thing that is off. -->
+    <Style x:Key="DimWhenDisabled" TargetType="FrameworkElement">
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ═══════════════════════════════════════════ -->
     <!--  RADIO BUTTON (theme selector pill style)   -->
     <!-- ═══════════════════════════════════════════ -->
-    <Style x:Key="DebugScopeRadio" TargetType="RadioButton">
-        <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="RadioButton">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Grid Width="18" Height="18" Margin="0,0,10,0">
-                            <Ellipse x:Name="Ring" Stroke="{DynamicResource AppInputBorder}" StrokeThickness="1.5"/>
-                            <Ellipse x:Name="Dot" Width="7" Height="7" Fill="{DynamicResource AppAccentFg}" Visibility="Collapsed"/>
-                        </Grid>
-                        <ContentPresenter VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource AppAccent}"/>
-                            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AppAccent}"/>
-                            <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AppAccent}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <Style x:Key="ThemeRadioButton" TargetType="RadioButton">
         <Setter Property="FontFamily"  Value="{DynamicResource AppFont}"/>
         <Setter Property="FontSize"    Value="{StaticResource AppFontSize}"/>
@@ -2028,6 +2016,106 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- One row of the capture toolbar's 顯示更多 menu: icon, name, and a switch at the far end. The
+         whole row is the control, not just the switch - it is a menu, and a menu is pressed anywhere
+         along the line. The switch drawn in it is the settings page's ToggleSwitch, shown rather
+         than used: it takes no input of its own and only follows the row, so there is one control
+         to click and one state, with the same slide the settings page has.
+
+         The icon is the Tag: a string is set in the icon font, anything else - a drawn Path - is
+         shown as it is. The row answers on press, before the release commits it. -->
+    <Style x:Key="ToolbarMenuToggle" TargetType="CheckBox">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"   Value="14"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+        <Setter Property="Cursor"     Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Border x:Name="Root" Background="Transparent" CornerRadius="8" Padding="10,7">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter Content="{TemplateBinding Tag}"
+                                              Width="16" Height="16"
+                                              Margin="0,0,12,0"
+                                              VerticalAlignment="Center"
+                                              TextElement.FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                              TextElement.FontSize="16"/>
+                            <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                            <CheckBox Grid.Column="2"
+                                      Margin="12,0,0,0"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      IsChecked="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
+                                      IsHitTestVisible="False"
+                                      Focusable="False"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- One half of the 顯示範圍 choice in the same menu: a pill with a radio ring, the chosen one
+         filled with the bar's primary blue. Two pills rather than a tray with a sliding marker, which
+         is what the bar's own trays are, because here the two are named choices with a ring each,
+         read as a pair of options rather than a switch. The label wraps, so a long translation grows
+         the pill downwards instead of pushing its neighbour out of the menu. -->
+    <Style x:Key="ToolbarMenuRadio" TargetType="RadioButton">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"   Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+        <Setter Property="Cursor"     Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Root" Background="{DynamicResource ToolbarGroupBg}" CornerRadius="10" Padding="10,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <Ellipse x:Name="Ring" Stroke="{DynamicResource AppInputBorder}" StrokeThickness="1.5"/>
+                                <Ellipse x:Name="Dot" Width="6" Height="6" Fill="{DynamicResource ToolbarPrimaryBg}" Visibility="Collapsed"/>
+                            </Grid>
+                            <ContentPresenter Grid.Column="1" VerticalAlignment="Center">
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarPrimaryBg}"/>
+                            <Setter TargetName="Ring" Property="Fill"       Value="{DynamicResource ToolbarPrimaryFg}"/>
+                            <Setter TargetName="Ring" Property="Stroke"     Value="{DynamicResource ToolbarPrimaryFg}"/>
+                            <Setter TargetName="Dot"  Property="Visibility" Value="Visible"/>
+                            <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

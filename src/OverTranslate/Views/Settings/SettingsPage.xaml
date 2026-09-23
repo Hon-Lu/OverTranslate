@@ -1384,9 +1384,15 @@
                                                    Style="{StaticResource OptionDescription}" Margin="24,5,0,0"/>
                                         <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,1,0,0"
                                                 Margin="0,16,0,0" Padding="0,12,0,0">
-                                            <StackPanel Orientation="Horizontal">
+                                            <!-- Disabled while neither box above is ticked: it only
+                                                 says where the boxes go. See UpdateDebugScopeAvailability. -->
+                                            <StackPanel x:Name="DebugScopeRow" Orientation="Horizontal"
+                                                        Style="{StaticResource DimWhenDisabled}">
                                                 <TextBlock Text="{DynamicResource S.Debug.BoxDisplayScope}" Style="{StaticResource OptionTitle}" VerticalAlignment="Center"/>
+                                                <!-- Still answers while the row is off: what the switch
+                                                     means is worth reading before either box is ticked. -->
                                                 <Border Width="15" Height="15" CornerRadius="7.5" BorderThickness="1" Cursor="Help"
+                                                        ToolTipService.ShowOnDisabled="True"
                                                         ToolTip="{DynamicResource S.Debug.ScopeHint}" BorderBrush="{DynamicResource AppTextSecondary}"
                                                         VerticalAlignment="Center" Margin="10,0,20,0" Background="Transparent">
                                                     <TextBlock Text="?" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"

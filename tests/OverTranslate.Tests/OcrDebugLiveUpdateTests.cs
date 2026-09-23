@@ -63,25 +63,24 @@ public class OcrDebugLiveUpdateTests
     {
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
         var document = XDocument.Load(Path.Combine(StringsParityTests.ProjectDirectory(), "Views", "Capture", "ToolbarWindow.xaml"));
-        var popup = document.Descendants().Single(e => (string?)e.Attribute(x + "Name") == "DebugPopup");
+        var popup = document.Descendants().Single(e => (string?)e.Attribute(x + "Name") == "MorePopup");
         Assert.Equal("False", (string?)popup.Attribute("StaysOpen"));
         Assert.Equal("{Binding ElementName=BarSurface}", (string?)popup.Attribute("PlacementTarget"));
         Assert.Equal("Bottom", (string?)popup.Attribute("Placement"));
         Assert.Equal("6", (string?)popup.Attribute("VerticalOffset"));
         Assert.DoesNotContain(popup.Descendants(), e => (string?)e.Attribute(x + "Name") == "DebugPointer");
-        var more = document.Descendants().Single(e => (string?)e.Attribute(x + "Name") == "DebugMoreBtn");
+        var more = document.Descendants().Single(e => (string?)e.Attribute(x + "Name") == "MoreBtn");
         Assert.Equal("{StaticResource ToolbarIconButton}", (string?)more.Attribute("Style"));
         Assert.Null(more.Attribute("Background"));
         Assert.Equal("30", (string?)more.Attribute("Width"));
         Assert.Equal("30", (string?)more.Attribute("Height"));
         Assert.Equal("{DynamicResource S.Toolbar.ShowMore}", (string?)more.Attribute("ToolTip"));
-        var help = popup.Descendants().Single(e => (string?)e.Attribute(x + "Name") == "DebugHelpIcon");
-        Assert.Equal("Border", help.Name.LocalName);
-        Assert.Equal("Help", (string?)help.Attribute("Cursor"));
-        Assert.Equal("{DynamicResource S.Toolbar.DebugAssistHint}", (string?)help.Attribute("ToolTip"));
-        Assert.Null(help.Attribute("Click"));
-        Assert.Equal(new[] { "DebugGroupsSwitch", "DebugLinesSwitch" },
+        Assert.Equal(new[] { "AutoTranslateSwitch", "SaveScreenshotSwitch", "DebugGroupsSwitch", "DebugLinesSwitch" },
             popup.Descendants().Where(e => e.Name.LocalName == "CheckBox").Select(e => (string?)e.Attribute(x + "Name")));
+        Assert.All(popup.Descendants().Where(e => e.Name.LocalName == "CheckBox"),
+            e => Assert.Equal("{StaticResource ToolbarMenuToggle}", (string?)e.Attribute("Style")));
+        var scope = popup.Descendants().Single(e => (string?)e.Attribute(x + "Name") == "DebugScopePanel");
+        Assert.Equal("{StaticResource DimWhenDisabled}", (string?)scope.Attribute("Style"));
     }
 
     [Fact]

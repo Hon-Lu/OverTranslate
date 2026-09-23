@@ -613,8 +613,11 @@
     <sys:String x:Key="S.Lang.Ukrainian">우크라이나어</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">인식 보조</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">번역 보조 테두리를 표시하여 문자 인식 및 그룹화 결과를 확인합니다.</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">더 보기</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">일반</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">자동 번역</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">스크린샷 저장</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">저장 위치는 설정에서 변경할 수 있습니다</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">표시 범위</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">테두리 표시 범위</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">원문만</sys:String>

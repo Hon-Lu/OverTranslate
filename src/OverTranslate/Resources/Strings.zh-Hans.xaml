@@ -612,8 +612,11 @@
     <sys:String x:Key="S.Lang.Ukrainian">乌克兰语</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">调试辅助</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">显示翻译辅助框线，方便确认文字识别与组合结果。</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">显示更多</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">常规</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">自动翻译</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">保存截图</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">保存位置可在设置中更改</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">显示范围</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框线显示范围</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">仅原文</sys:String>
