@@ -160,7 +160,7 @@ CI 打的是 `win` channel，你測到的就是使用者會拿到的同一批二
 
 ```
 OverTranslate-win-Portable.zip
-├── OverTranslate.exe      ← 啟動器 stub   ← 已移除
+├── OverTranslate.exe      ← Velopack 的啟動器 stub   ← 已換掉
 ├── Update.exe             ← 自動更新
 └── current\
     └── OverTranslate.exe  ← 程式本體
@@ -172,13 +172,23 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 
 ### 現在的樣子
 
-打包帶 `--noStub`，Velopack 不再產生它的 stub；root 是 `Update.exe`、`current\`、`.portable`，
-外加**我們自己的啟動器** `OverTranslate.exe`：
+打包帶 `--noStub`，Velopack 不再產生它的 stub。頂替它位置的是**我們自己的啟動器** ——
+它在 `vpk pack` 之前就以 Velopack 約定的檔名 `OverTranslate_ExecutionStub.exe` 放進 packDir，
+於是拿到那個檔名帶來的三個行為，而這三個剛好都是我們要的：
 
-| 使用情境 | 怎麼啟動 |
+- 它會被打進 `.nupkg`，所以**自動更新送得到它**
+- 安裝與**每一次**套用更新，更新器都會無條件把它解回**安裝根目錄**、改名成 `OverTranslate.exe`
+  （`Bundle.extract_stubs_to_dir`）—— 使用者手上那顆舊的 Velopack stub 會被**直接覆蓋掉**
+- 解 `current\` 的那條路徑會跳過這個檔名（`Bundle.extract_lib_contents_to_path`），
+  所以 `current\` 裡不會多出一份
+
+| 使用情境 | 根目錄那顆 `OverTranslate.exe` 是誰放的 |
 |---|---|
-| 安裝版 | 捷徑指向 `current\OverTranslate.exe`，Velopack 本來就是這樣建的，**不受影響** |
-| 免安裝版 | 點根目錄的 `OverTranslate.exe`（我們自己的啟動器，不是 Velopack 的 stub） |
+| 安裝版（Setup） | 安裝時由更新器從套件裡解出來 |
+| 免安裝版（Portable） | 打包腳本直接放進 zip 根目錄（免安裝包沒有經過更新器） |
+| 更新後（兩者相同） | 更新器每一版都重解一次，等於每次更新都把根目錄那顆校正回我們這顆 |
+
+安裝版的捷徑本來就指向 `current\OverTranslate.exe`，不受這件事影響。
 
 ### 我們自己的啟動器
 
@@ -193,51 +203,58 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 | VirusTotal | —— | **0/71**（含 Microsoft），未簽章版 1/71（SecureAge，那家對任何不認識的未簽章檔都報毒） |
 
 二進位跟著原始碼一起進版控，所以 CI 不需要 Rust 工具鏈；建置是可重現的（`/Brepro`），任何人都能
-自己編一顆對雜湊。`publish-velopack.ps1` 在打包後把它簽章（不加時戳 → 位元組固定）並放進 zip 根目錄。
+自己編一顆對雜湊。`publish-velopack.ps1` 在 `vpk pack` 之前把它複製進 packDir（vpk 會連同其他 PE
+一起簽），打包完再用同一支 signtool 簽一份放進免安裝包根目錄 —— 簽章不加時戳，所以兩邊簽出來是
+**同樣的位元組**（已實測）。
 
 > **換應用程式圖示時要記得重編它**，否則它會帶著舊圖示 —— 沒有其他檢查抓得到，因為它的雜湊
 > 不會因為 `app.ico` 被換掉而改變。打包腳本會比對 `app.ico` 與 `tools/launcher/dist/build-info.txt`
 > 裡記錄的雜湊，對不上就警告。重編步驟見該資料夾的 README。
 
-免安裝 zip 不在任何校驗鏈裡（`releases.<channel>.json` 只記 nupkg 的 SHA256），所以打包後往裡面
-塞檔案是安全的。程式自我更新只換 `current\`，啟動器不歸 Velopack 管，更新後仍然有效。
+免安裝包還有一個收尾動作：vpk 是把整個 packDir 複製進 zip 的 `current\`，原本會再把 stub 搬到
+根目錄，而 `--noStub` 把那個搬移跳掉了，所以打包腳本要把 `current\` 裡那份多餘的刪掉。安裝版
+沒有這個問題（更新器解 `current\` 時本來就會跳過 `*_ExecutionStub.exe`）。
 
-`--noStub` 同時讓 stub **不進 `.nupkg`**，這點是關鍵：更新器每次套用更新都會把套件裡的 stub
-解回根目錄（`Bundle.extract_stubs_to_dir`），套件裡沒有它就沒有東西可以還原 —— 而且**現場的舊版
-`Update.exe` 不必更新也會照這個規則走**，因為它本來就只解套件裡有的東西。
+免安裝 zip 不在任何校驗鏈裡（`releases.<channel>.json` 只記 nupkg 的 SHA256），所以打包後往裡面
+塞檔案是安全的。
 
 ### 實測（2026-09-23 本機）
 
 | 情境 | 結果 |
 |---|---|
-| 打包 | `Skipping launcher stub, --noStub was specified.`，簽章檔數 16 → 15 |
-| 免安裝包 | root 是 `.portable`、`Update.exe`、我們的 `OverTranslate.exe`，整包沒有任何 `_ExecutionStub` |
-| `.nupkg` | 沒有任何 `_ExecutionStub` |
-| 從「有 stub 的舊版」更新上來 | 舊 stub 留在原地沒被動過（時間戳沒變），**沒有產生新的** |
-| 把舊 stub 刪掉再更新一次 | root 仍然只有 `Update.exe`、`current\`、`packages\`、`.portable` |
+| 打包 | `Skipping launcher stub, --noStub was specified.` |
+| `.nupkg` | 有 `lib/app/OverTranslate_ExecutionStub.exe`，347,304 bytes，`1dd826ad…` —— 與免安裝包根目錄那顆**位元組相同** |
+| 免安裝包 | root 是 `.portable`、`Update.exe`、我們的 `OverTranslate.exe`；整包沒有任何 `_ExecutionStub` |
+| 從「根目錄還是舊 Velopack stub」的安裝版更新上來 | log：`Extracting stub 'OverTranslate_ExecutionStub.exe' to '…\OverTranslate.exe'`，根目錄那顆**被換成 `1dd826ad…`**；`current\` 裡沒有 `_ExecutionStub`（log：`Skipped Stub (obsolete)`） |
+| 只換版號（1.6.1 → 1.6.2）再打一次 | 啟動器與 `Update.exe` 的雜湊完全相同 |
 
-> **既有安裝版會留下一顆孤兒 stub**：更新器只會解出套件裡有的 stub，不會刪掉已經在硬碟上的舊
-> 那顆。它還能用（它就是去啟動 `current\` 的主程式），但那顆檔會一直留在使用者的硬碟上，
-> 也就是說**舊使用者的誤判來源不會因為這次改動而消失**。要清掉它得另外想辦法。
+> **舊使用者手上那顆孤兒 stub 會自己消失**：更新器每次套用更新都會把套件裡的啟動器解回根目錄、
+> 覆蓋同名檔案，所以只要更新過一次，那顆誤判來源就不在硬碟上了 —— 不需要使用者自己去刪，也不
+> 需要現場的 `Update.exe` 先更新（這個行為本來就寫在舊版更新器裡）。
 
 ### 還在的那顆：`Update.exe`
 
 它留下來了（自動更新要靠它），內容是「vendor 的 update.exe + 應用程式圖示 + 我們的自簽章」，
-與版號、commit 都無關，所以雜湊很穩定。`check-release-hashes.ps1` 在打包後做兩件事，
+與版號、commit 都無關，所以雜湊很穩定。`check-release-hashes.ps1` 在打包後比對三個值，
 **只提醒、不擋**：
 
-1. 比對根目錄 `OverTranslate.exe` 的 SHA256 —— 對不上要嘛是啟動器重編過，要嘛是
-   `--noStub` 失效、Velopack 的 stub 又跑回來佔了這個檔名
-2. 比對 `Update.exe` 的 SHA256
+1. 免安裝包根目錄 `OverTranslate.exe` —— 對不上要嘛是啟動器重編過，要嘛是 `--noStub` 失效、
+   Velopack 的 stub 又跑回來佔了這個檔名
+2. 免安裝包根目錄 `Update.exe`
+3. 套件裡的 `OverTranslate_ExecutionStub.exe` —— **現有使用者更新後實際拿到的就是它**，
+   要與第 1 項一致
+
+順便檢查免安裝包的 `current\` 裡沒有殘留的 `_ExecutionStub`。
 
 基準值（2026-09-23 本機實測，含自簽章，見[第七節](#七自簽憑證)）：
 
 | 檔案 | 大小 | SHA256 |
 |---|---|---|
-| `OverTranslate.exe`（啟動器） | 347,304 | `1dd826ad50481ec7bffa57ad9cafe7c6dad79541009129dca2d1e4266a7a76bf` |
+| 啟動器（免安裝包根目錄 ＆ 套件內） | 347,304 | `1dd826ad50481ec7bffa57ad9cafe7c6dad79541009129dca2d1e4266a7a76bf` |
 | `Update.exe` | 3,973,288 | `ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d` |
 
-會讓它重算的只有三件事：換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰。
+會讓它們重算的只有三件事：換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰。
+啟動器還多一個：重編 `tools/launcher`（含換 rustc）。
 
 `Setup.exe` 每次都內嵌整包 nupkg，沒辦法穩定化，不在這個範圍內。
 

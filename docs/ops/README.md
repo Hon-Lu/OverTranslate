@@ -20,9 +20,9 @@
 ## 相關檔案
 
 - [`publish-velopack.ps1`](../../publish-velopack.ps1) —— 打包腳本，CI 與手動共用同一份
-- [`check-release-hashes.ps1`](../../check-release-hashes.ps1) —— 比對免安裝包根目錄那兩顆的雜湊，
+- [`check-release-hashes.ps1`](../../check-release-hashes.ps1) —— 比對啟動器（免安裝包根目錄與套件內）與 `Update.exe` 的雜湊，
   只提醒不擋（見 [PUBLISH.md 第五節](PUBLISH.md#五啟動器-stub-已經拿掉了210)）
-- [`tools/launcher/`](../../tools/launcher/README.md) —— 免安裝包根目錄那顆啟動器的原始碼與編好的二進位
+- [`tools/launcher/`](../../tools/launcher/README.md) —— 安裝版與免安裝包根目錄那顆啟動器的原始碼與編好的二進位
 - [`.github/workflows/release.yml`](../../.github/workflows/release.yml) —— 壓 tag 觸發的自動打包
 - `artifacts/releases/` —— 本機打包輸出，未版控。**GitHub Release 才是唯一真相**，
   換機器或誤刪都能用 `vpk download github` 抓回來

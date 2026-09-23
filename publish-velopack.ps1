@@ -178,6 +178,41 @@ if (-not (Test-Path $iconFullPath)) {
     throw "找不到 icon：$iconFullPath"
 }
 
+# 我們自己的啟動器（tools\launcher 編出來的，二進位跟著原始碼一起進版控）。
+#
+# 它在 pack 之前就要放進 packDir，而且檔名必須是 Velopack 約定的
+# <主程式>_ExecutionStub.exe —— 這個名字帶來的三個行為，剛好就是我們要的：
+#   一、它會被打進 .nupkg，所以**自動更新送得到它**；
+#   二、安裝與每一次套用更新，更新器都會無條件把套件裡的它解回**安裝根目錄**、改名成主程式的
+#       名字（Bundle.extract_stubs_to_dir）——於是使用者手上那顆舊的 Velopack stub 會被直接
+#       覆蓋掉，那顆誤判來源不用等使用者自己去刪；
+#   三、解 current\ 的那條路徑會跳過這個檔名（Bundle.extract_lib_contents_to_path），
+#       所以安裝版的 current\ 不會多出一份。
+#
+# 免安裝包是唯一的例外：vpk 是把整個 packDir 複製進 zip 的 current\，原本再把 stub 搬到根目錄，
+# 而 --noStub 把那個搬移跳掉了，所以 zip 的 current\ 會留下一份多餘的。打包後在下面刪掉。
+$launcherPath = Resolve-FullPath ".\tools\launcher\dist\OverTranslate-launcher-unsigned.exe"
+if (-not (Test-Path $launcherPath)) {
+    throw "找不到啟動器：$launcherPath（見 tools\launcher\README.md）"
+}
+
+# 換了應用程式圖示卻忘了重編啟動器，是這裡唯一抓得到的地方 —— 啟動器的雜湊不會因為 app.ico
+# 被換掉而改變（它是版控裡那顆固定的二進位），所以沒有其他檢查會發現它還帶著舊圖示。
+$buildInfoPath = Join-Path (Split-Path $launcherPath) "build-info.txt"
+if (Test-Path $buildInfoPath) {
+    $recordedIconHash = (Select-String -Path $buildInfoPath -Pattern '^icon_sha\s*=\s*(\S+)').Matches.Groups[1].Value
+    $currentIconHash = (Get-FileHash -LiteralPath $iconFullPath -Algorithm SHA256).Hash.ToLower()
+    if ($recordedIconHash -and $recordedIconHash -ne $currentIconHash) {
+        Write-Warning ("應用程式圖示已經換過，但 tools\launcher 還沒重編 —— 出貨的啟動器會帶著舊圖示。`n" +
+                       "  目前的 app.ico : $currentIconHash`n" +
+                       "  啟動器編譯時用的: $recordedIconHash`n" +
+                       "  重編步驟見 tools\launcher\README.md。")
+    }
+}
+
+$stubName = [System.IO.Path]::GetFileNameWithoutExtension($MainExe) + "_ExecutionStub.exe"
+$stagedLauncherPath = Join-Path $publishFullPath $stubName
+
 New-Item -ItemType Directory -Force -Path $outputFullPath | Out-Null
 
 Write-Host "Velopack 打包開始..." -ForegroundColor Cyan
@@ -197,12 +232,9 @@ $packArgs = @(
     "--icon", $iconFullPath,
     "--channel", $Channel,
     "--outputDir", $outputFullPath,
-    # 根本不產生啟動器 stub。那顆未簽章的原生啟動器是 #210 那個 Wacatac.B!ml 誤判的主要來源，
-    # 凍結它的雜湊只是讓信譽累積得起來，拿掉它才是真的解決。使用者改為直接執行 current\ 底下的
-    # 主程式，安裝版的捷徑本來就指向那裡。
-    #
-    # 這個旗標同時讓 stub 不進 .nupkg，這點是關鍵：更新器每次套用更新都會把套件裡的 stub
-    # 解回根目錄（Bundle.extract_stubs_to_dir），套件裡沒有它，就沒有東西可以還原。
+    # 不要產生 Velopack 那顆啟動器 stub。它是打包當下才被塞進主程式資源的未簽章原生二進位，
+    # 也就是 #210 那個 Wacatac.B!ml 誤判的主要來源。上面那顆我們自己編的啟動器會頂替它的位置
+    # ——同樣的檔名約定、同樣被解到根目錄，但身分在編譯期就寫死、位元組跨版本不變。
     "--noStub"
 )
 
@@ -211,8 +243,8 @@ if (-not [string]::IsNullOrWhiteSpace($CertThumbprint)) {
     # 的雜湊就會每版重來一次——Update.exe 的檔案信譽就再也累積不起來。代價是憑證一到期，
     # 過去所有版本的簽章會一起失效，所以那張自簽憑證的效期一次拉到 2049。
     #
-    # vpk 會簽 packDir 裡所有 PE 檔，而這時 Update.exe（以 Squirrel.exe 之名）與 stub 都已經
-    # 在裡面了，所以使用者硬碟上那三顆全都涵蓋。已經被信任簽章的檔（微軟簽的 .NET 執行檔）
+    # vpk 會簽 packDir 裡所有 PE 檔，而這時 Update.exe（以 Squirrel.exe 之名）與我們自己的
+    # 啟動器（以 _ExecutionStub.exe 之名）都已經在裡面了，所以使用者硬碟上那三顆全都涵蓋。已經被信任簽章的檔（微軟簽的 .NET 執行檔）
     # 會自動跳過，不會被我們的自簽蓋掉。
     $packArgs += @("--signParams", "/sha1 $CertThumbprint /fd SHA256")
     Write-Host "簽章      : $CertThumbprint（自簽，不加時戳）"
@@ -221,31 +253,44 @@ else {
     Write-Host "簽章      : 無（沒給 -CertThumbprint）" -ForegroundColor Yellow
 }
 
-& $vpkFullPath @packArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "vpk pack 失敗，exit code: $LASTEXITCODE"
+# 啟動器要跟著 packDir 一起被打進 .nupkg 並被 vpk 簽章，所以現在才複製進去 —— 放太早會被
+# dotnet publish 清掉，放太晚就進不了套件。打包結束後一定要移除：那是 dotnet publish 的輸出
+# 資料夾，留著它，下一次 -SkipPublish 打包會把這份沒簽過的再打進去一次。
+Copy-Item -LiteralPath $launcherPath -Destination $stagedLauncherPath -Force
+Write-Host "啟動器    : $stubName（已放進 Publish 輸出，會被打進套件並簽章）"
+
+try {
+    & $vpkFullPath @packArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "vpk pack 失敗，exit code: $LASTEXITCODE"
+    }
+}
+finally {
+    Remove-Item -LiteralPath $stagedLauncherPath -Force -ErrorAction SilentlyContinue
 }
 
-# 免安裝包的根目錄只有 Update.exe 與 current\（--noStub 把 Velopack 的啟動器 stub 拿掉了），
-# 使用者解壓之後沒有東西可以點。放我們自己的啟動器進去，檔名就叫主程式的名字。
+# 免安裝包的根目錄只有 Update.exe 與 current\，使用者解壓之後沒有東西可以點 —— 安裝版是由
+# 更新器把套件裡的啟動器解到根目錄，免安裝包沒有經過更新器，得自己補上。補的是同一顆檔案、
+# 用同一張憑證簽（不加時戳，所以簽出來的位元組固定），兩邊的雜湊會一模一樣。
 #
-# 那顆是 tools\launcher 編出來的，二進位跟著原始碼一起進版控 —— 它的價值就在於位元組永遠不變，
-# 雜湊信譽才累積得起來。相對地，Velopack 的 stub 是打包當下才被塞進主程式資源的未簽章二進位，
-# 那正是 Defender 機器學習盯上的形狀（#210）。細節見 tools\launcher\README.md。
+# 同時刪掉 current\ 裡那份多餘的：vpk 是把整個 packDir 複製進 zip 的 current\，原本會再把
+# stub 搬到根目錄，而 --noStub 把那個搬移跳掉了。安裝版沒有這個問題 —— 更新器解 current\ 時
+# 本來就會跳過 *_ExecutionStub.exe。
 #
 # 免安裝 zip 不在任何校驗鏈裡（releases.<channel>.json 只記 nupkg 的 SHA256），打包後改它是安全的。
-function Add-PortableLauncher {
+function Set-PortableLauncher {
     param(
         [string]$ZipPath,
         [string]$LauncherPath,
         [string]$EntryName,
+        [string]$StubName,
         [string]$CertThumbprint,
         [string]$SignToolPath
     )
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-    # 在暫存處簽章，不要動到版控裡那顆。簽章不加時戳，所以簽出來的位元組也是固定的。
+    # 在暫存處簽章，不要動到版控裡那顆。
     $staged = Join-Path ([System.IO.Path]::GetTempPath()) ("overtranslate-launcher-" + [guid]::NewGuid().ToString("N") + ".exe")
     Copy-Item -LiteralPath $LauncherPath -Destination $staged -Force
     try {
@@ -270,6 +315,14 @@ function Add-PortableLauncher {
             # 其他成員的時間戳都是 1980（Velopack 正規化過），跟著對齊，免安裝包才不會每次打包都因為
             # 一個啟動器的時間而長得不一樣。
             $added.LastWriteTime = [DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
+
+            # 用檔名比對而不是完整路徑：分隔符號由壓縮實作決定，不值得賭。
+            $redundant = @($zip.Entries | Where-Object { $_.Name -eq $StubName })
+            foreach ($entry in $redundant) {
+                $full = $entry.FullName
+                $entry.Delete()
+                Write-Host "已從免安裝包移除多餘的 $full" -ForegroundColor DarkGray
+            }
         }
         finally { $zip.Dispose() }
 
@@ -281,33 +334,15 @@ function Add-PortableLauncher {
     }
 }
 
-$launcherPath = Resolve-FullPath ".\tools\launcher\dist\OverTranslate-launcher-unsigned.exe"
-if (-not (Test-Path $launcherPath)) {
-    throw "找不到免安裝包的啟動器：$launcherPath（見 tools\launcher\README.md）"
-}
-
-# 換了應用程式圖示卻忘了重編啟動器，是這裡唯一抓得到的地方 —— 啟動器的雜湊不會因為 app.ico
-# 被換掉而改變（它是版控裡那顆固定的二進位），所以沒有其他檢查會發現它還帶著舊圖示。
-$buildInfoPath = Join-Path (Split-Path $launcherPath) "build-info.txt"
-if (Test-Path $buildInfoPath) {
-    $recordedIconHash = (Select-String -Path $buildInfoPath -Pattern '^icon_sha\s*=\s*(\S+)').Matches.Groups[1].Value
-    $currentIconHash = (Get-FileHash -LiteralPath $iconFullPath -Algorithm SHA256).Hash.ToLower()
-    if ($recordedIconHash -and $recordedIconHash -ne $currentIconHash) {
-        Write-Warning ("應用程式圖示已經換過，但 tools\launcher 還沒重編 —— 免安裝包根目錄那顆啟動器會帶著舊圖示。`n" +
-                       "  目前的 app.ico : $currentIconHash`n" +
-                       "  啟動器編譯時用的: $recordedIconHash`n" +
-                       "  重編步驟見 tools\launcher\README.md。")
-    }
-}
-
 $portableZipPath = Join-Path $outputFullPath "$PackId-$Channel-Portable.zip"
 if (Test-Path $portableZipPath) {
-    # signtool 用 vpk 內建那顆，與打包其他檔案時同一支，行為一致。
+    # signtool 用 vpk 內建那顆，與打包其他檔案時同一支，行為一致 —— 這點是必要的，免安裝包
+    # 根目錄這顆與套件裡那顆必須是同樣的位元組。
     # vpk.exe 在 <fork>\build\Release\net10.0\ 底下，往上四層才是 fork 根目錄。
     $forkRoot = Split-Path (Split-Path (Split-Path (Split-Path $vpkFullPath)))
     $signToolPath = Join-Path $forkRoot "vendor\signing\signtool.exe"
-    Add-PortableLauncher -ZipPath $portableZipPath -LauncherPath $launcherPath -EntryName $MainExe `
-        -CertThumbprint $CertThumbprint -SignToolPath $signToolPath
+    Set-PortableLauncher -ZipPath $portableZipPath -LauncherPath $launcherPath -EntryName $MainExe `
+        -StubName $stubName -CertThumbprint $CertThumbprint -SignToolPath $signToolPath
 }
 else {
     Write-Warning "找不到免安裝包 $portableZipPath，沒有放入啟動器。"

@@ -1,8 +1,10 @@
-# 免安裝包的啟動器
+# 根目錄的啟動器
 
-免安裝包的版面是 Velopack 決定的：根目錄放 `Update.exe` 與 `current\`，主程式在 `current\` 裡面。
-打包帶 `--noStub` 之後根目錄沒有可以點的東西（見 [PUBLISH.md 第五節](../../docs/ops/PUBLISH.md)），
-這顆就是補上去的入口 —— 它只做一件事：把 `current\OverTranslate.exe` 叫起來，然後自己結束。
+Velopack 的版面是：安裝根目錄放 `Update.exe` 與 `current\`，主程式在 `current\` 裡面。
+打包帶 `--noStub` 之後 Velopack 不再產生它自己的啟動器 stub（見
+[PUBLISH.md 第五節](../../docs/ops/PUBLISH.md)），這顆就是頂替它的入口 —— 它只做一件事：
+把 `current\OverTranslate.exe` 叫起來，然後自己結束。安裝版與免安裝包都有它，使用者自動更新
+後也會拿到，而且會覆蓋掉舊版留在硬碟上的 Velopack stub。
 
 ## 為什麼不用 Velopack 出廠的 stub
 
@@ -74,6 +76,14 @@ CI 因此不需要 Rust 工具鏈，而且沒有人能在無意間換掉這顆�
 
 ## 出貨
 
-`publish-velopack.ps1` 在 `vpk pack` 之後把 `dist\` 那顆簽章（不加時戳，所以簽出來的位元組也是固定的），
-再放進免安裝包的根目錄，檔名 `OverTranslate.exe`。安裝版不受影響 —— 那邊的捷徑本來就指向
-`current\OverTranslate.exe`。
+`publish-velopack.ps1` 在 `vpk pack` **之前**把 `dist\` 那顆複製進 packDir，用 Velopack 約定的
+檔名 `OverTranslate_ExecutionStub.exe` —— vpk 會連同其他 PE 一起簽（不加時戳，所以簽出來的位元組
+固定），它也因此被打進 `.nupkg`。接下來分兩條路：
+
+- **安裝與每一次更新**：更新器把套件裡的它解回安裝根目錄、改名成 `OverTranslate.exe`，
+  覆蓋掉上一版留在那裡的東西（包含舊的 Velopack stub）。`current\` 不會多一份 —— 解 `current\`
+  的那條路徑會跳過 `*_ExecutionStub.exe`。
+- **免安裝包**：沒有經過更新器，所以打包腳本另外簽一份直接放進 zip 根目錄，並刪掉 `current\`
+  裡那份多餘的（vpk 是把整個 packDir 複製進 `current\` 的）。
+
+兩條路徑簽出來是同樣的位元組，`check-release-hashes.ps1` 會比對這件事。
