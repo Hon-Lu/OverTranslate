@@ -74,6 +74,7 @@
     <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">下载速度较慢？</sys:String>
     <sys:String x:Key="S.Update.SlowLink">前往 GitHub 手动下载</sys:String>
     <sys:String x:Key="S.Update.Cancel">取消更新</sys:String>
+    <sys:String x:Key="S.Update.Cancelling">取消中…</sys:String>
     <sys:String x:Key="S.Update.Retry">重试</sys:String>
     <sys:String x:Key="S.Update.Failed">下载更新失败：{0}</sys:String>
     <sys:String x:Key="S.Update.CloseBlocked">更新进行中，完成后会自动重新启动</sys:String>
