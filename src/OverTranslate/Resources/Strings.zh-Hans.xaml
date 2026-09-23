@@ -521,8 +521,6 @@
     <sys:String x:Key="S.Settings.Logging">应用日志</sys:String>
     <sys:String x:Key="S.Settings.LoggingCheck">记录详细信息</sys:String>
     <sys:String x:Key="S.Settings.LoggingHint">启用后会记录更多应用程序信息，仅建议在排查问题时开启。</sys:String>
-    <sys:String x:Key="S.Settings.DebugTools">调试工具</sys:String>
-    <sys:String x:Key="S.Settings.OcrDebug">显示 OCR 调试信息</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR 识别框</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">显示 OCR 检测到的原文文字范围。</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">文字分组框</sys:String>
@@ -612,8 +610,11 @@
     <sys:String x:Key="S.Lang.Ukrainian">乌克兰语</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">调试辅助</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">显示翻译辅助框线，方便确认文字识别与组合结果。</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">显示更多</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">常规</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">自动翻译</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">保存截图</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">保存位置可在设置中更改</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">显示范围</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框线显示范围</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">仅原文</sys:String>

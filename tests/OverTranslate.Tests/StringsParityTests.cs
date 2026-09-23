@@ -91,6 +91,26 @@ public class StringsParityTests
         Assert.Equal(AllFiles.Order().ToList(), onDisk);
     }
 
+    /// <summary>
+    /// An empty <c>&lt;sys:String&gt;&lt;/sys:String&gt;</c> parses as XML and passes every other
+    /// check here, and then throws the first time WPF builds it: with no text to convert, XAML looks
+    /// for a String constructor taking no arguments, and there is none. The Japanese and Korean
+    /// capture hint had one each, and it took down the first capture after every launch. A string
+    /// that is meant to be empty is written as <c>x:Static sys:String.Empty</c> instead.
+    /// </summary>
+    [Fact]
+    public void No_dictionary_holds_an_empty_string_element()
+    {
+        var empty = AllFiles
+            .SelectMany(file => XDocument.Load(Path.Combine(ResourcesDirectory(), file)).Root!
+                .Elements()
+                .Where(e => e.Name.LocalName == "String" && e.Value.Length == 0)
+                .Select(e => $"{file}: {e.Attribute(X + "Key")?.Value}"))
+            .ToList();
+
+        Assert.Empty(empty);
+    }
+
     [Theory]
     [MemberData(nameof(TranslatedFiles))]
     public void Every_dictionary_defines_exactly_the_keys_the_authored_one_does(string file)

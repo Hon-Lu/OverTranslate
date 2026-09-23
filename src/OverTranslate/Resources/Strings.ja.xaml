@@ -225,7 +225,10 @@
     <!-- ── Capture overlay ── -->
     <sys:String x:Key="S.Capture.CancelTip">キャプチャをキャンセル</sys:String>
     <sys:String x:Key="S.Capture.DragPrompt">ドラッグして翻訳する範囲を選択</sys:String>
-    <sys:String x:Key="S.Capture.PressPrefix"></sys:String>
+    <!-- Nothing goes before the key in this language, but an empty <sys:String></sys:String> cannot
+         stand for that: with no text to convert, XAML falls back to calling a String constructor with
+         no arguments, which does not exist, and the first capture after launch died building it. -->
+    <x:Static x:Key="S.Capture.PressPrefix" Member="sys:String.Empty"/>
     <sys:String x:Key="S.Capture.CancelSuffix">でキャンセル</sys:String>
     <sys:String x:Key="S.Overlay.Recognising">認識中</sys:String>
 
@@ -522,8 +525,6 @@
     <sys:String x:Key="S.Settings.Logging">アプリのログ</sys:String>
     <sys:String x:Key="S.Settings.LoggingCheck">詳細な情報を記録する</sys:String>
     <sys:String x:Key="S.Settings.LoggingHint">アプリの情報をより多く記録します。問題を調べるときだけ有効にすることをおすすめします。</sys:String>
-    <sys:String x:Key="S.Settings.DebugTools">デバッグツール</sys:String>
-    <sys:String x:Key="S.Settings.OcrDebug">OCR デバッグ情報を表示</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR 認識枠</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">OCR が検出した原文の文字範囲を表示します。</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">文字グループ枠</sys:String>
@@ -613,8 +614,11 @@
     <sys:String x:Key="S.Lang.Ukrainian">ウクライナ語</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">認識補助</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">翻訳補助枠を表示して、文字認識とグループ化の結果を確認できます。</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">もっと表示</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻訳</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">スクリーンショットを保存</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">保存先は設定で変更できます</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">表示範囲</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">枠の表示範囲</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">原文のみ</sys:String>

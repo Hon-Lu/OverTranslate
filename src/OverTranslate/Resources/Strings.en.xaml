@@ -523,8 +523,6 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.Logging">Logging</sys:String>
     <sys:String x:Key="S.Settings.LoggingCheck">Record detailed information</sys:String>
     <sys:String x:Key="S.Settings.LoggingHint">Records more information about the app; only recommended while troubleshooting.</sys:String>
-    <sys:String x:Key="S.Settings.DebugTools">Debug tools</sys:String>
-    <sys:String x:Key="S.Settings.OcrDebug">Show OCR debug information</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR boxes</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">Show the source text regions detected by OCR.</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">Text group boxes</sys:String>
@@ -614,8 +612,11 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Lang.Ukrainian">Ukrainian</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">Debug aids</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">Show translation guide boxes to check text recognition and grouping.</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">Show more</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">General</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">Auto-translate</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">Save screenshots</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">Change the location in Settings</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">Display scope</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">Box display scope</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">Source only</sys:String>

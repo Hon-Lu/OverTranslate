@@ -49,7 +49,8 @@ public partial class ToolbarWindow : Window
     private bool _initializingDirection = true;
     private bool _initializingLayoutMode = true;
     private bool _syncingDebug = true;
-    private bool _ignoreDebugClick;
+    private bool _syncingCapture;
+    private bool _ignoreMoreClick;
 
     // Whether there is recognised text to read, and whether it is being read right now. The voice
     // itself lives with the capture session, not here: this window only shows its state.
@@ -92,14 +93,17 @@ public partial class ToolbarWindow : Window
 
         InitializeComponent();
         SyncDebugSwitches(this, EventArgs.Empty);
+        SyncCaptureSwitches(this, EventArgs.Empty);
         SettingsService.Instance.OcrDebugChanged += SyncDebugSwitches;
+        SettingsService.Instance.CaptureOptionsChanged += SyncCaptureSwitches;
         Closed += (_, _) =>
         {
-            DebugPopup.IsOpen = false;
+            MorePopup.IsOpen = false;
             SettingsService.Instance.OcrDebugChanged -= SyncDebugSwitches;
+            SettingsService.Instance.CaptureOptionsChanged -= SyncCaptureSwitches;
         };
-        LocationChanged += (_, _) => DebugPopup.IsOpen = false;
-        DebugMoreBtn.MouseLeave += (_, _) => _ignoreDebugClick = false;
+        LocationChanged += (_, _) => MorePopup.IsOpen = false;
+        MoreBtn.MouseLeave += (_, _) => _ignoreMoreClick = false;
 
         bool verticalText = SettingsService.Instance.Current.Capture.VerticalText;
         HorizontalSeg.IsChecked = !verticalText;
@@ -661,12 +665,16 @@ public partial class ToolbarWindow : Window
 
     private void SyncDebugSwitches(object? sender, EventArgs e)
     {
+        var debug = SettingsService.Instance.Current.OcrDebug;
         _syncingDebug = true;
-        DebugGroupsSwitch.IsChecked = SettingsService.Instance.Current.OcrDebug.ShowGroupBoxes;
-        DebugLinesSwitch.IsChecked = SettingsService.Instance.Current.OcrDebug.ShowLineBoxes;
-        DebugSourceOnly.IsChecked = !SettingsService.Instance.Current.OcrDebug.ShowOnTranslation;
-        DebugSourceAndTranslation.IsChecked = SettingsService.Instance.Current.OcrDebug.ShowOnTranslation;
+        DebugGroupsSwitch.IsChecked = debug.ShowGroupBoxes;
+        DebugLinesSwitch.IsChecked = debug.ShowLineBoxes;
+        DebugSourceOnly.IsChecked = !debug.ShowOnTranslation;
+        DebugSourceAndTranslation.IsChecked = debug.ShowOnTranslation;
         _syncingDebug = false;
+        // 顯示範圍 only says where the boxes are drawn; with neither ticked there is nothing for it
+        // to act on, so it is switched off rather than left to be chosen for no effect.
+        DebugScopePanel.IsEnabled = debug.ShowGroupBoxes || debug.ShowLineBoxes;
     }
 
     private void DebugGroupsSwitch_Changed(object sender, RoutedEventArgs e)
@@ -679,11 +687,31 @@ public partial class ToolbarWindow : Window
         if (!_syncingDebug) SettingsService.Instance.UpdateOcrDebug(showLines: DebugLinesSwitch.IsChecked == true);
     }
 
-    private void DebugMoreBtn_Click(object sender, RoutedEventArgs e)
+    private void SyncCaptureSwitches(object? sender, EventArgs e)
     {
-        if (_ignoreDebugClick) { _ignoreDebugClick = false; return; }
-        DebugPopup.HorizontalOffset = Math.Max(0, BarSurface.ActualWidth - DebugPanel.Width);
-        DebugPopup.IsOpen = !DebugPopup.IsOpen;
+        _syncingCapture = true;
+        AutoTranslateSwitch.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
+        SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
+        _syncingCapture = false;
+    }
+
+    private void AutoTranslateSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingCapture) SettingsService.Instance.UpdateCaptureOptions(autoTranslate: AutoTranslateSwitch.IsChecked == true);
+    }
+
+    private void SaveScreenshotSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingCapture) SettingsService.Instance.UpdateCaptureOptions(saveScreenshot: SaveScreenshotSwitch.IsChecked == true);
+    }
+
+    private void MoreBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ignoreMoreClick) { _ignoreMoreClick = false; return; }
+        // Right edge under the button's right edge, so the menu comes out of what opened it.
+        var buttonRight = MoreBtn.TranslatePoint(new System.Windows.Point(MoreBtn.ActualWidth, 0), BarSurface).X;
+        MorePopup.HorizontalOffset = Math.Max(0, buttonRight - MorePanel.Width);
+        MorePopup.IsOpen = !MorePopup.IsOpen;
     }
 
     private void DebugScope_Changed(object sender, RoutedEventArgs e)
@@ -692,24 +720,23 @@ public partial class ToolbarWindow : Window
             SettingsService.Instance.UpdateOcrDebug(showOnTranslation: ReferenceEquals(sender, DebugSourceAndTranslation));
     }
 
-    private void DebugClose_Click(object sender, RoutedEventArgs e) => DebugPopup.IsOpen = false;
-
-    private void DebugPopup_Opened(object? sender, EventArgs e)
+    private void MorePopup_Opened(object? sender, EventArgs e)
     {
         SyncDebugSwitches(sender, e);
+        SyncCaptureSwitches(sender, e);
     }
 
-    private void DebugPopup_Closed(object? sender, EventArgs e)
+    private void MorePopup_Closed(object? sender, EventArgs e)
     {
-        _ignoreDebugClick = DebugMoreBtn.IsMouseOver &&
+        _ignoreMoreClick = MoreBtn.IsMouseOver &&
             System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed;
     }
 
-    private void DebugPopup_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void MorePopup_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key != System.Windows.Input.Key.Escape) return;
-        DebugPopup.IsOpen = false;
-        DebugMoreBtn.Focus();
+        MorePopup.IsOpen = false;
+        MoreBtn.Focus();
         e.Handled = true;
     }
 

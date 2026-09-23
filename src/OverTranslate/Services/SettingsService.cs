@@ -217,6 +217,24 @@ public class SettingsService
         OcrDebugChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Raised when 自動翻譯 or 儲存截圖 changes. Both are set from two places — the settings page
+    /// and the capture toolbar's 顯示更多 panel — and each has to show what the other just wrote.
+    /// </summary>
+    public event EventHandler? CaptureOptionsChanged;
+
+    public void UpdateCaptureOptions(bool? autoTranslate = null, bool? saveScreenshot = null)
+    {
+        var current = Current;
+        var auto = autoTranslate ?? current.AutoTranslateAfterSelection;
+        var save = saveScreenshot ?? current.SaveScreenshotToDisk;
+        if (auto == current.AutoTranslateAfterSelection && save == current.SaveScreenshotToDisk) return;
+        current.AutoTranslateAfterSelection = auto;
+        current.SaveScreenshotToDisk = save;
+        Save();
+        CaptureOptionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Save()
     {
         try

@@ -225,7 +225,10 @@
     <!-- ── Capture overlay ── -->
     <sys:String x:Key="S.Capture.CancelTip">캡처 취소</sys:String>
     <sys:String x:Key="S.Capture.DragPrompt">드래그해서 번역할 영역을 선택하세요</sys:String>
-    <sys:String x:Key="S.Capture.PressPrefix"></sys:String>
+    <!-- Nothing goes before the key in this language, but an empty <sys:String></sys:String> cannot
+         stand for that: with no text to convert, XAML falls back to calling a String constructor with
+         no arguments, which does not exist, and the first capture after launch died building it. -->
+    <x:Static x:Key="S.Capture.PressPrefix" Member="sys:String.Empty"/>
     <sys:String x:Key="S.Capture.CancelSuffix">키로 취소</sys:String>
     <sys:String x:Key="S.Overlay.Recognising">인식 중</sys:String>
 
@@ -522,8 +525,6 @@
     <sys:String x:Key="S.Settings.Logging">앱 로그</sys:String>
     <sys:String x:Key="S.Settings.LoggingCheck">자세한 정보 기록</sys:String>
     <sys:String x:Key="S.Settings.LoggingHint">앱의 정보를 더 많이 기록합니다. 문제를 확인할 때만 켜는 것을 권장합니다.</sys:String>
-    <sys:String x:Key="S.Settings.DebugTools">디버그 도구</sys:String>
-    <sys:String x:Key="S.Settings.OcrDebug">OCR 디버그 정보 표시</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR 인식 상자</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">OCR이 감지한 원문 텍스트 영역을 표시합니다.</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">텍스트 그룹 상자</sys:String>
@@ -613,8 +614,11 @@
     <sys:String x:Key="S.Lang.Ukrainian">우크라이나어</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">인식 보조</sys:String>
-    <sys:String x:Key="S.Toolbar.DebugAssistHint">번역 보조 테두리를 표시하여 문자 인식 및 그룹화 결과를 확인합니다.</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">더 보기</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">일반</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">자동 번역</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">스크린샷 저장</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">저장 위치는 설정에서 변경할 수 있습니다</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">표시 범위</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">테두리 표시 범위</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">원문만</sys:String>

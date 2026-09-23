@@ -162,12 +162,15 @@ public partial class SettingsPage : UserControl
         {
             LocalizationService.LanguageChanged += OnLanguageChanged;
             SettingsService.Instance.OcrDebugChanged += OnOcrDebugChanged;
+            SettingsService.Instance.CaptureOptionsChanged += OnCaptureOptionsChanged;
             OnOcrDebugChanged(this, EventArgs.Empty);
+            OnCaptureOptionsChanged(this, EventArgs.Empty);
         };
         Unloaded += (_, _) =>
         {
             LocalizationService.LanguageChanged -= OnLanguageChanged;
             SettingsService.Instance.OcrDebugChanged -= OnOcrDebugChanged;
+            SettingsService.Instance.CaptureOptionsChanged -= OnCaptureOptionsChanged;
             StopRecording();
         };
 
@@ -231,6 +234,7 @@ public partial class SettingsPage : UserControl
 
             RefreshServiceTiles();
             UpdateScreenshotPathVisibility();
+            UpdateDebugScopeAvailability();
             UpdateVerboseLoggingAvailability();
             CollapseDebugTools();
         }
@@ -449,7 +453,11 @@ public partial class SettingsPage : UserControl
     // ── General ──────────────────────────────────────────────────────────────
 
     private void AutoTranslate_Toggled(object sender, RoutedEventArgs e)
-        => Persist(s => s.AutoTranslateAfterSelection = AutoTranslateCheckBox.IsChecked == true);
+    {
+        if (_loading) return;
+        SettingsService.Instance.UpdateCaptureOptions(autoTranslate: AutoTranslateCheckBox.IsChecked == true);
+        FlashSaved();
+    }
 
     // Startup lives in the registry rather than the settings file, so it saves on its own path
     private void Startup_Toggled(object sender, RoutedEventArgs e)
@@ -642,7 +650,15 @@ public partial class SettingsPage : UserControl
             DebugSourceAndTranslationRadio.IsChecked = SettingsService.Instance.Current.OcrDebug.ShowOnTranslation;
         }
         finally { _loading = loading; }
+        UpdateDebugScopeAvailability();
     }
+
+    /// <summary>
+    /// 框線顯示範圍 only says where the boxes are drawn, so with neither box ticked it has nothing
+    /// to act on and is disabled rather than left to be chosen for no effect.
+    /// </summary>
+    private void UpdateDebugScopeAvailability() =>
+        DebugScopeRow.IsEnabled = OcrLineBoxesCheckBox.IsChecked == true || TextGroupBoxesCheckBox.IsChecked == true;
 
     private void OcrDebugScope_Changed(object sender, RoutedEventArgs e)
     {
@@ -747,7 +763,25 @@ public partial class SettingsPage : UserControl
     private void SaveScreenshotCheckBox_Toggled(object sender, RoutedEventArgs e)
     {
         UpdateScreenshotPathVisibility();
-        Persist(s => s.SaveScreenshotToDisk = SaveScreenshotCheckBox.IsChecked == true);
+        if (_loading) return;
+        SettingsService.Instance.UpdateCaptureOptions(saveScreenshot: SaveScreenshotCheckBox.IsChecked == true);
+        FlashSaved();
+    }
+
+    /// <summary>
+    /// The capture toolbar's 顯示更多 panel sets the same two switches, and this page may be open
+    /// behind the capture while it does.
+    /// </summary>
+    private void OnCaptureOptionsChanged(object? sender, EventArgs e)
+    {
+        var loading = _loading;
+        _loading = true;
+        try
+        {
+            AutoTranslateCheckBox.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
+            SaveScreenshotCheckBox.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
+        }
+        finally { _loading = loading; }
     }
 
     private void UpdateScreenshotPathVisibility()
