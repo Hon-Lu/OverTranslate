@@ -1,10 +1,10 @@
 <#
-    檢查發布產物裡 stub 與 Update.exe 的 SHA256 有沒有變。
+    看緊免安裝包根目錄那兩件事：啟動器 stub 有沒有跑回來，以及 Update.exe 的 SHA256 有沒有變。
 
-    這兩顆帶的是自簽章，沒有受信任 CA 背書，所以累積不到發行者信譽；Defender 能給它們的
-    只有**按檔案雜湊**累積的信譽（見 #210）。雜湊一換，信譽就從零開始，那幾天最容易被報
-    Trojan:Win32/Wacatac.B!ml。`--stableStub` 讓 stub 不再跟著版號與 commit 變，但圖示、
-    app.manifest、組件資訊字串、vendor 二進位、簽章金鑰這幾項只要改了，它照樣會重算。
+    stub 是 #210 那個 Wacatac.B!ml 誤判的主要來源，現在用 `--noStub` 整個拿掉了；它要是再
+    出現，代表旗標掉了或 fork 換了分支，那一版會把誤判帶回來。`Update.exe` 則還在，它帶的是
+    自簽章、沒有受信任 CA 背書，所以累積不到發行者信譽，Defender 能給它的只有**按檔案雜湊**
+    累積的那種——雜湊一換就從零開始。
 
     所以這裡**只提醒、不擋**：對不上不代表打包壞了，代表這一版的檔案信譽要重新養 ——
     那是發版的人該當場知道、而不是幾天後從使用者回報裡才發現的事。
@@ -20,18 +20,12 @@ param(
 $ErrorActionPreference = "Stop"
 
 # 基準值 —— 是「現在應該長這樣」的紀錄，不是校驗和。改了下面任何一項之後對不上都是正常的，
-# 把這次印出來的新值貼回來即可：
-#   stub        ← 應用程式圖示、app.manifest、AssemblyCompany / Product / Description 等資訊字串、
-#                 vendor 的 stub.exe（換 vpk 版本就會換）、簽章金鑰
-#   Update.exe  ← 應用程式圖示、vendor 的 update.exe、簽章金鑰
-# 版號與 commit 不在上面任何一條裡，那正是 --stableStub 凍掉的東西。
-# 兩個值都是 2026-09-23 在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
-# （見 docs/ops/PUBLISH.md 第七節）。導入 --stableStub 與自簽之前，stub 每次發版都不一樣
-# ——8 次建置量到 8 顆不同雜湊——而 Update.exe 停在 9a1e4194… 沒動過。
-$expected = [ordered]@{
-    $MainExe     = "39ec23561b76c9a0f3237facedb7159b50ee854ab83906da3ecdda408048f9d0"
-    "Update.exe" = "ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d"
-}
+# 把這次印出來的新值貼回來即可：應用程式圖示、vendor 的 update.exe（換 vpk 版本就會換）、
+# 簽章金鑰。版號與 commit 都不在裡面，`Update.exe` 與它們無關。
+#
+# 2026-09-23 在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
+# （見 docs/ops/PUBLISH.md 第七節）。自簽之前它停在 9a1e4194… 很久沒動。
+$expectedUpdateExe = "ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d"
 
 function Resolve-FullPath {
     param([string]$PathValue)
@@ -88,18 +82,23 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
     try {
-        foreach ($name in $expected.Keys) {
-            $actual = Get-ZipEntryHash -Archive $archive -EntryName $name
-            $status = if ($null -eq $actual) { "missing" }
-                      elseif ($actual -eq $expected[$name]) { "same" }
-                      else { "changed" }
+        # 一、stub 應該根本不存在。它回來了就是 --noStub 沒生效——旗標掉了、fork 換了分支，
+        #     或是上游改了行為。那一版會把 #210 的誤判一起帶回來，所以這裡要吵。
+        $stubHash = Get-ZipEntryHash -Archive $archive -EntryName $MainExe
+        $results += [pscustomobject]@{
+            File   = "$MainExe（啟動器 stub）"
+            Status = if ($null -eq $stubHash) { "absent" } else { "returned" }
+            Actual = if ($null -eq $stubHash) { "—" } else { $stubHash }
+        }
 
-            $results += [pscustomobject]@{
-                File     = $name
-                Status   = $status
-                Actual   = $actual
-                Expected = $expected[$name]
-            }
+        # 二、Update.exe 還在，比雜湊。
+        $updateHash = Get-ZipEntryHash -Archive $archive -EntryName "Update.exe"
+        $results += [pscustomobject]@{
+            File   = "Update.exe"
+            Status = if ($null -eq $updateHash) { "missing" }
+                     elseif ($updateHash -eq $expectedUpdateExe) { "same" }
+                     else { "changed" }
+            Actual = if ($null -eq $updateHash) { "—" } else { $updateHash }
         }
     }
     finally { $archive.Dispose() }
@@ -110,39 +109,51 @@ catch {
     return
 }
 
+$label = @{
+    absent   = "不存在（預期）"
+    returned = "又出現了"
+    same     = "不變"
+    changed  = "已改變"
+    missing  = "不在包裡"
+}
+
 Write-Host ""
-Write-Host "免安裝包根目錄那兩顆原生檔：" -ForegroundColor Cyan
+Write-Host "免安裝包根目錄：" -ForegroundColor Cyan
 foreach ($r in $results) {
-    $mark = switch ($r.Status) { "same" { "不變" } "changed" { "已改變" } default { "不在包裡" } }
-    $color = switch ($r.Status) { "same" { "Green" } default { "Yellow" } }
-    Write-Host ("  {0,-18} {1,-8} {2}" -f $r.File, $mark, $r.Actual) -ForegroundColor $color
+    $color = if ($r.Status -in @("absent", "same")) { "Green" } else { "Yellow" }
+    Write-Host ("  {0,-26} {1,-16} {2}" -f $r.File, $label[$r.Status], $r.Actual) -ForegroundColor $color
 }
 Write-Host ""
 
+foreach ($r in $results | Where-Object { $_.Status -eq "returned" }) {
+    Write-CiWarning "啟動器 stub 又出現了" `
+        "免安裝包根目錄多了 $MainExe（$($r.Actual)）。--noStub 應該讓它完全不存在——確認打包用的是 fork 的 no-stub 分支、而且旗標還在。這顆檔是 #210 那個誤判的主要來源。"
+}
+
 foreach ($r in $results | Where-Object { $_.Status -eq "changed" }) {
-    Write-CiWarning "$($r.File) 的雜湊變了" `
-        "$($r.Actual)（原本 $($r.Expected)）。這顆檔的 Defender 信譽會從零開始累積。確認是預期中的改動（換圖示、改 app.manifest、改組件資訊字串、換 vpk）之後，把新值更新到 check-release-hashes.ps1。"
+    Write-CiWarning "Update.exe 的雜湊變了" `
+        "$($r.Actual)（原本 $expectedUpdateExe）。這顆檔的 Defender 信譽會從零開始累積。確認是預期中的改動（換圖示、換 vpk、換簽章金鑰）之後，把新值更新到 check-release-hashes.ps1。"
 }
 
 foreach ($r in $results | Where-Object { $_.Status -eq "missing" }) {
-    Write-CiWarning "找不到 $($r.File)" "免安裝包根目錄沒有這個檔，無法比對雜湊。"
+    Write-CiWarning "找不到 Update.exe" "免安裝包根目錄沒有這個檔，無法比對雜湊。"
 }
 
 if ($isCi -and $env:GITHUB_STEP_SUMMARY) {
     # 沒變也寫進摘要。要能一眼看出「這一版跟上一版是同一顆檔」，不能只在出事時才有東西看。
     $lines = @(
-        "### stub 與 Update.exe 的雜湊"
+        "### 免安裝包根目錄"
         ""
         "| 檔案 | 狀態 | SHA256 |"
         "| --- | --- | --- |"
     )
     foreach ($r in $results) {
-        $mark = switch ($r.Status) { "same" { "✅ 不變" } "changed" { "⚠️ 已改變" } default { "⚠️ 不在包裡" } }
-        $lines += "| ``$($r.File)`` | $mark | ``$($r.Actual)`` |"
+        $mark = if ($r.Status -in @("absent", "same")) { "✅ " } else { "⚠️ " }
+        $lines += "| ``$($r.File)`` | $mark$($label[$r.Status]) | ``$($r.Actual)`` |"
     }
-    if ($results | Where-Object { $_.Status -eq "changed" }) {
+    if ($results | Where-Object { $_.Status -notin @("absent", "same") }) {
         $lines += ""
-        $lines += "改變的檔案，其 Defender 檔案信譽會從零開始累積（#210）。確認是預期中的改動後，把新值更新到 ``check-release-hashes.ps1``。"
+        $lines += "有東西變了。stub 不該存在（#210 的誤判來源），``Update.exe`` 的雜湊一換則代表它的 Defender 檔案信譽要重新累積。確認是預期中的改動後，把新值更新到 ``check-release-hashes.ps1``。"
     }
     $lines -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
 }

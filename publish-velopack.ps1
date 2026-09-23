@@ -14,8 +14,8 @@ param(
     [string]$Configuration = "Release",
     [switch]$SkipPublish,
     [string]$Version,
-    # 打包用的是 fork 版 vpk（asd880921/velopack 的 fork/stable-stub-1.2.0），不是 nuget 上的官方
-    # 版本 —— 只有它認得 --stableStub。取得與建置方式見該倉的 FORK-APPS.md。
+    # 打包用的是 fork 版 vpk（asd880921/velopack 的 fork/no-stub-1.2.0），不是 nuget 上的官方
+    # 版本 —— 只有它認得 --noStub。取得與建置方式見該倉的 FORK-APPS.md。
     # 沒給就用這台機器的慣例位置（fork 與本倉並排 clone），CI 則明確傳進來。
     [string]$VpkPath = $env:OVERTRANSLATE_VPK_PATH,
     # 自簽憑證的指紋。給了才簽，沒給就照常打包不簽——本機隨手打包不需要動到憑證。
@@ -145,13 +145,13 @@ if ([string]::IsNullOrWhiteSpace($VpkPath)) {
 
 $vpkFullPath = Resolve-FullPath $VpkPath
 if (-not (Test-Path $vpkFullPath)) {
-    # 刻意不退回 PATH 上的官方 vpk。官方版不認得 --stableStub 會直接失敗；就算拔掉那個旗標，
-    # 打出來的 stub 也是每次發版換一顆雜湊的那種，檔案信譽永遠從零開始 —— 正是要避免的事。
+    # 刻意不退回 PATH 上的官方 vpk。官方版不認得 --noStub 會直接失敗；就算拔掉那個旗標，
+    # 打出來的包就會夾著那顆未簽章的啟動器 stub —— 正是 #210 要拿掉的東西。
     throw @"
 找不到 fork 版 vpk：$vpkFullPath
 
 取得與建置方式見 fork 的 FORK-APPS.md：裝官方 vpk 1.2.0 取它的 vendor 二進位（必須沿用官方那份，
-自己編的 Rust 產物會連帶換掉 Update.exe 的雜湊）、clone fork/stable-stub-1.2.0、把 vendor 複製進去、
+自己編的 Rust 產物會連帶換掉 Update.exe 的雜湊）、clone fork/no-stub-1.2.0、把 vendor 複製進去、
 dotnet build src/vpk/Velopack.Vpk -c Release -f net10.0。
 
 建好之後用 -VpkPath 指到 build/Release/net10.0/vpk.exe，或設環境變數 OVERTRANSLATE_VPK_PATH。
@@ -197,15 +197,18 @@ $packArgs = @(
     "--icon", $iconFullPath,
     "--channel", $Channel,
     "--outputDir", $outputFullPath,
-    # 根目錄那顆啟動器 stub 沿用主程式的資源（圖示、資訊清單、公司名），但版本欄位凍結成 1.0.0，
-    # 所以它的位元組不再每次發版都變。那顆檔沒有簽章，雜湊一換，Defender 的雲端信譽就重來一次
-    # —— 這正是 #210 那個 Wacatac.B!ml 誤判的溫床。詳見 fork 的 FORK-APPS.md。
-    "--stableStub"
+    # 根本不產生啟動器 stub。那顆未簽章的原生啟動器是 #210 那個 Wacatac.B!ml 誤判的主要來源，
+    # 凍結它的雜湊只是讓信譽累積得起來，拿掉它才是真的解決。使用者改為直接執行 current\ 底下的
+    # 主程式，安裝版的捷徑本來就指向那裡。
+    #
+    # 這個旗標同時讓 stub 不進 .nupkg，這點是關鍵：更新器每次套用更新都會把套件裡的 stub
+    # 解回根目錄（Bundle.extract_stubs_to_dir），套件裡沒有它，就沒有東西可以還原。
+    "--noStub"
 )
 
 if (-not [string]::IsNullOrWhiteSpace($CertThumbprint)) {
     # **刻意不加時戳（/tr）**。時戳會讓同樣的內容每次簽出不同的位元組，stub 與 Update.exe
-    # 的雜湊就會每版重來一次——那正是上面 --stableStub 在解決的事。代價是憑證一到期，
+    # 的雜湊就會每版重來一次——Update.exe 的檔案信譽就再也累積不起來。代價是憑證一到期，
     # 過去所有版本的簽章會一起失效，所以那張自簽憑證的效期一次拉到 2049。
     #
     # vpk 會簽 packDir 裡所有 PE 檔，而這時 Update.exe（以 Squirrel.exe 之名）與 stub 都已經

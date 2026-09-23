@@ -33,7 +33,7 @@ tag **不加 `v` 前綴**（沿用本倉慣例）。觸發條件是 `[0-9]*` 或
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) 會：
 
 - 用 `vpk download github` 抓線上最新**正式版**的 full 包當 delta 基準（runner 每次都是全新的）
-- clone 並建置自用 fork 的 vpk（`--stableStub`，見[五、那兩顆沒有簽章的原生檔](#五那兩顆沒有簽章的原生檔210)）
+- clone 並建置自用 fork 的 vpk（`--noStub`，見[五、啟動器 stub 已經拿掉了](#五啟動器-stub-已經拿掉了210)）
 - `dotnet publish`（自封式）+ `vpk pack`，一併產出 portable
 - 比對 stub 與 `Update.exe` 的雜湊，變了就在 run 摘要頁留一條黃色警示 —— **只提醒，不會擋住發布**
 - 建立 **pre-release**，附上 `releases.win.json`、`-full.nupkg`、`-delta.nupkg`、
@@ -79,7 +79,7 @@ tag **不加 `v` 前綴**（沿用本倉慣例）。觸發條件是 `[0-9]*` 或
 腳本用 `$PSScriptRoot` 解析相對路徑，**不看當前工作目錄**，從哪裡呼叫都可以。
 
 > **先決條件**：打包走的是自用 fork 的 vpk，不是 `dotnet tool install -g vpk` 裝的那顆
-> （為什麼見[五、那兩顆沒有簽章的原生檔](#五那兩顆沒有簽章的原生檔210)）。腳本預設找
+> （為什麼見[五、啟動器 stub 已經拿掉了](#五啟動器-stub-已經拿掉了210)）。腳本預設找
 > `..\velopack\build\Release\net10.0\vpk.exe`，也就是 fork 與本倉並排 clone 的位置；
 > 放在別處就用 `-VpkPath` 指，或設環境變數 `OVERTRANSLATE_VPK_PATH`。找不到會直接失敗，
 > 不會安靜地退回官方版。
@@ -153,67 +153,68 @@ CI 打的是 `win` channel，你測到的就是使用者會拿到的同一批二
 
 ---
 
-## 五、那兩顆沒有簽章的原生檔（#210）
+## 五、啟動器 stub 已經拿掉了（#210）
 
-免安裝包根目錄長這樣，前兩顆是 Velopack 的產物、沒有數位簽章，也是 Defender 會報
-`Trojan:Win32/Wacatac.B!ml` 的那兩顆（程式本體在 `current\` 裡，VirusTotal 0/70）：
+以前免安裝包根目錄長這樣，前兩顆是 Velopack 的產物、沒有受信任 CA 的簽章，也是 Defender 會報
+`Trojan:Win32/Wacatac.B!ml` 的那兩顆：
 
 ```
 OverTranslate-win-Portable.zip
-├── OverTranslate.exe      ← 啟動器 stub
+├── OverTranslate.exe      ← 啟動器 stub   ← 已移除
 ├── Update.exe             ← 自動更新
 └── current\
     └── OverTranslate.exe  ← 程式本體
 ```
 
-Defender 的雲端信譽是**按檔案雜湊**累積的。`Update.exe` 的內容只跟 vpk 版本與應用程式圖示有關，
-本來就很少變；但 stub 的內容是「vendor 的 stub 二進位 + 主程式 exe 的整棵資源樹」，而資源樹裡
-帶著版號與 commit —— 所以**每次發版都是一顆全新的檔**，信譽永遠從零開始（導入前 8 次建置量到
-8 顆不同雜湊）。
+stub 是誤判最集中的地方（實測：公司電腦下載免安裝版、解壓縮當下就被攔）。它的內容是
+「vendor 的 stub 二進位 + 主程式的整棵資源樹」，一顆沒人見過的未簽章原生啟動器 —— 正是
+AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它不存在。
 
-### 怎麼處理的
+### 現在的樣子
 
-打包改用自用 fork 的 vpk（[asd880921/velopack](https://github.com/asd880921/velopack/tree/fork/stable-stub-1.2.0)，
-分支 `fork/stable-stub-1.2.0`，基於官方 1.2.0 tag），多一個 `--stableStub`：stub 照常沿用主程式的
-圖示、資訊清單與公司名等資源，但**所有鍵名含 `version` 的欄位凍結成 `1.0.0`**，位元組不再隨版號變。
-取得與建置方式見該倉的 `FORK-APPS.md`。
+打包帶 `--noStub`，root 只剩 `Update.exe`、`current\` 與 `.portable`：
 
-fork 的 `vendor/` 必須沿用官方 1.2.0 的 Rust 二進位（CI 從 `dotnet tool install -g vpk --version 1.2.0`
-的安裝位置複製）。自己編的 `update.exe` 不會與官方 CI 的產物位元組相同，`Update.exe` 的雜湊會跟著
-變，整件事就白做了。
+| 使用情境 | 怎麼啟動 |
+|---|---|
+| 安裝版 | 捷徑指向 `current\OverTranslate.exe`，Velopack 本來就是這樣建的，**不受影響** |
+| 免安裝版 | 使用者要進 `current\` 執行主程式（以前是點根目錄那顆 stub） |
 
-### 什麼還是會讓雜湊重算
+`--noStub` 同時讓 stub **不進 `.nupkg`**，這點是關鍵：更新器每次套用更新都會把套件裡的 stub
+解回根目錄（`Bundle.extract_stubs_to_dir`），套件裡沒有它就沒有東西可以還原 —— 而且**現場的舊版
+`Update.exe` 不必更新也會照這個規則走**，因為它本來就只解套件裡有的東西。
 
-| 改動 | stub | `Update.exe` |
-|---|---|---|
-| 改版號、改 commit | 否 | 否 |
-| 換應用程式圖示 | **是** | **是** |
-| 改 `app.manifest` | **是** | 否 |
-| 改 `AssemblyCompany` / `AssemblyProduct` / `AssemblyDescription` 等資訊字串 | **是** | 否 |
-| 換 vpk 版本（vendor 二進位） | **是** | **是** |
+### 實測（2026-09-23 本機）
 
-`Setup.exe` 每次都內嵌整包 nupkg，沒辦法穩定化，不在這個範圍內。
+| 情境 | 結果 |
+|---|---|
+| 打包 | `Skipping launcher stub, --noStub was specified.`，簽章檔數 16 → 15 |
+| 免安裝包 | root 只有 `.portable` 與 `Update.exe`，整包沒有任何 `_ExecutionStub` |
+| `.nupkg` | 沒有任何 `_ExecutionStub` |
+| 從「有 stub 的舊版」更新上來 | 舊 stub 留在原地沒被動過（時間戳沒變），**沒有產生新的** |
+| 把舊 stub 刪掉再更新一次 | root 仍然只有 `Update.exe`、`current\`、`packages\`、`.portable` |
 
-### CI 的雜湊檢查
+> **既有安裝版會留下一顆孤兒 stub**：更新器只會解出套件裡有的 stub，不會刪掉已經在硬碟上的舊
+> 那顆。它還能用（它就是去啟動 `current\` 的主程式），但那顆檔會一直留在使用者的硬碟上，
+> 也就是說**舊使用者的誤判來源不會因為這次改動而消失**。要清掉它得另外想辦法。
 
-`check-release-hashes.ps1` 把免安裝包裡那兩顆的 SHA256 跟腳本裡的基準值對一次，
-**只提醒不擋**：雜湊變了不是錯誤，是「這一版的檔案信譽要重新養」的通知。
-上表那幾項改動之後對不上是正常的，把 run 摘要頁印出來的新值更新回腳本即可。
+### 還在的那顆：`Update.exe`
 
-基準值（2026-09-23 本機實測，**含自簽章**，見[第七節](#七自簽憑證)）：
+它留下來了（自動更新要靠它），內容是「vendor 的 update.exe + 應用程式圖示 + 我們的自簽章」，
+與版號、commit 都無關，所以雜湊很穩定。`check-release-hashes.ps1` 在打包後做兩件事，
+**只提醒、不擋**：
+
+1. 確認 stub **沒有**跑回來 —— 回來了代表旗標掉了或 fork 換了分支
+2. 比對 `Update.exe` 的 SHA256
+
+基準值（2026-09-23 本機實測，含自簽章，見[第七節](#七自簽憑證)）：
 
 | 檔案 | 大小 | SHA256 |
 |---|---|---|
-| `OverTranslate.exe`（stub） | 499,880 | `39ec23561b76c9a0f3237facedb7159b50ee854ab83906da3ecdda408048f9d0` |
 | `Update.exe` | 3,973,288 | `ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d` |
 
-導入前的舊值留作對照：stub 每版都不同（8 次建置 8 顆），`Update.exe` 則從 2.2.1-beta.2 起
-一直是 `9a1e4194…`。這次改動讓這兩顆各重置一次，之後才定住。
+會讓它重算的只有三件事：換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰。
 
-> 導入時有一次性過渡：第一個帶旗標＋簽章的版本會讓這兩顆各換一次雜湊，從那之後才定住。
-> 既有使用者不用重裝 —— 更新時 `Update.exe` 照常覆寫根目錄那兩顆，只是這一次寫進去的是新的位元組。
-
----
+`Setup.exe` 每次都內嵌整包 nupkg，沒辦法穩定化，不在這個範圍內。
 
 ## 六、產物的來源證明（provenance attestation）
 
@@ -223,6 +224,8 @@ fork 的 `vendor/` 必須沿用官方 1.2.0 的 Rust 二進位（CI 從 `dotnet 
 - `OverTranslate-win-Setup.exe`
 - `OverTranslate-win-Portable.zip`
 - `releases.win.json`
+- 使用者硬碟上真正會被掃到的那兩顆：`Update.exe` 與 `current\OverTranslate.exe`
+  （從免安裝包裡取出來單獨簽，因為證明了容器不等於證明裡面解出來的檔）
 
 簽的是**檔案的 SHA256**，簽章者是 GitHub 的 OIDC 身分，記錄進 Sigstore 的公開透明日誌。
 任何人下載後都能驗它是不是這個 repo 的這條 workflow 建出來的：
@@ -257,7 +260,7 @@ release 還沒建出來，重跑整個 job 就好；排在後面的話 release �
 
 | 檔案 | 簽？ |
 |---|---|
-| 根目錄 stub、`Update.exe`、`current\OverTranslate.exe` 與其他自家 DLL | 是（約 16 個） |
+| `Update.exe`、`current\OverTranslate.exe` 與其他自家 DLL | 是（15 個） |
 | 微軟簽的 .NET 執行檔 | 否，vpk 會自動跳過已被信任簽章的檔 |
 | `Setup.exe` | 是 |
 | `.zip` / `.nupkg` / `releases.win.json` | 不能簽（非 PE），由 attestation 涵蓋 |
@@ -272,7 +275,7 @@ release 還沒建出來，重跑整個 job 就好；排在後面的話 release �
 ### 為什麼不加時戳
 
 時戳會讓相同內容每次簽出不同的位元組，stub 與 `Update.exe` 的雜湊就會每版重算一次，
-[第五節](#五那兩顆沒有簽章的原生檔210)做的事就全白費。不加時戳的代價是**憑證到期後，
+[第五節](#五啟動器-stub-已經拿掉了210)講的 `Update.exe` 雜湊穩定性就沒了。不加時戳的代價是**憑證到期後，
 過去所有版本的簽章會一起失效**，所以那張憑證的效期一次拉到 2049（X.509 的日期編碼分界，
 再往後有相容性風險）。
 

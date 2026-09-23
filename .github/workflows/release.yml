@@ -107,17 +107,16 @@ jobs:
         id: vpkfork
         shell: pwsh
         run: |
-          # 打包走自用 fork（asd880921/velopack 的 fork/stable-stub-1.2.0），它基於 1.2.0 tag，
-          # 比官方只多一個 `--stableStub`：讓根目錄那顆未簽章的啟動器 stub 不再跟著版號與 commit
-          # 換雜湊。那顆檔的 Defender 雲端信譽是按雜湊累積的，每版換一次就等於每版從零開始（#210）。
-          # 背景與完整說明在 fork 的 FORK-APPS.md。
+          # 打包走自用 fork（asd880921/velopack 的 fork/no-stub-1.2.0），它基於 1.2.0 tag，
+          # 只多了 `--noStub`：完全不產生根目錄那顆未簽章的啟動器 stub。那顆檔是 #210 那個
+          # Wacatac.B!ml 誤判的主要來源。背景與完整說明在 fork 的 FORK-APPS.md。
           #
           # 不能用 --depth 1：那個倉用 Nerdbank.GitVersioning 算版號，淺 clone 會讓建置直接失敗
           # （Shallow clone lacks the objects required to calculate version height）。
           # --single-branch 只抓這一條分支（17 秒、543 MB），core.longpaths 是防它 test/fixtures
           # 底下那串超長路徑在 checkout 階段炸掉。
           $fork = Join-Path $env:RUNNER_TEMP 'velopack-fork'
-          git -c core.longpaths=true clone --single-branch -b fork/stable-stub-1.2.0 https://github.com/asd880921/velopack $fork
+          git -c core.longpaths=true clone --single-branch -b fork/no-stub-1.2.0 https://github.com/asd880921/velopack $fork
           if ($LASTEXITCODE -ne 0) { throw "clone velopack fork 失敗。" }
 
           # vendor 的 Rust 二進位必須沿用官方 1.2.0 那份，不能自己編：本機或 CI 編出來的
@@ -217,9 +216,10 @@ jobs:
       - name: 取出要證明的檔案
         shell: pwsh
         run: |
-          # attestation 簽的是「檔案的雜湊」，所以要證明使用者硬碟上那三顆，就得把那三顆本身
+          # attestation 簽的是「檔案的雜湊」，所以要證明使用者硬碟上那兩顆，就得把那兩顆本身
           # 交給它——證明了 zip 與 nupkg 這兩個容器，不等於證明裡面解出來的檔。
           # 擺成跟安裝後一樣的相對位置，之後在 attestation 清單上看得出誰是誰。
+          # （根目錄的啟動器 stub 已經被 --noStub 拿掉，所以只剩這兩顆。）
           $zip = Resolve-Path '.\artifacts\releases\OverTranslate-win-Portable.zip'
           $dst = '.\artifacts\attest'
           New-Item -ItemType Directory -Force -Path "$dst\current" | Out-Null
@@ -227,7 +227,7 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $archive = [IO.Compression.ZipFile]::OpenRead($zip)
           try {
-              foreach ($name in @('OverTranslate.exe', 'Update.exe', 'current/OverTranslate.exe')) {
+              foreach ($name in @('Update.exe', 'current/OverTranslate.exe')) {
                   $entry = $archive.GetEntry($name)
                   if ($null -eq $entry) { throw "免安裝包裡找不到 $name" }
                   $out = Join-Path $dst $name.Replace('/', '\')
@@ -254,7 +254,6 @@ jobs:
             artifacts/releases/OverTranslate-win-Setup.exe
             artifacts/releases/OverTranslate-win-Portable.zip
             artifacts/releases/releases.win.json
-            artifacts/attest/OverTranslate.exe
             artifacts/attest/Update.exe
             artifacts/attest/current/OverTranslate.exe
 
