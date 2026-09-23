@@ -216,10 +216,10 @@ jobs:
       - name: 取出要證明的檔案
         shell: pwsh
         run: |
-          # attestation 簽的是「檔案的雜湊」，所以要證明使用者硬碟上那兩顆，就得把那兩顆本身
+          # attestation 簽的是「檔案的雜湊」，所以要證明使用者硬碟上那三顆，就得把那三顆本身
           # 交給它——證明了 zip 與 nupkg 這兩個容器，不等於證明裡面解出來的檔。
           # 擺成跟安裝後一樣的相對位置，之後在 attestation 清單上看得出誰是誰。
-          # （根目錄的啟動器 stub 已經被 --noStub 拿掉，所以只剩這兩顆。）
+          # 根目錄那顆是我們自己的啟動器（不是 Velopack 的 stub），安裝版與免安裝版都有它。
           $zip = Resolve-Path '.\artifacts\releases\OverTranslate-win-Portable.zip'
           $dst = '.\artifacts\attest'
           New-Item -ItemType Directory -Force -Path "$dst\current" | Out-Null
@@ -227,7 +227,7 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $archive = [IO.Compression.ZipFile]::OpenRead($zip)
           try {
-              foreach ($name in @('Update.exe', 'current/OverTranslate.exe')) {
+              foreach ($name in @('OverTranslate.exe', 'Update.exe', 'current/OverTranslate.exe')) {
                   $entry = $archive.GetEntry($name)
                   if ($null -eq $entry) { throw "免安裝包裡找不到 $name" }
                   $out = Join-Path $dst $name.Replace('/', '\')
@@ -254,6 +254,7 @@ jobs:
             artifacts/releases/OverTranslate-win-Setup.exe
             artifacts/releases/OverTranslate-win-Portable.zip
             artifacts/releases/releases.win.json
+            artifacts/attest/OverTranslate.exe
             artifacts/attest/Update.exe
             artifacts/attest/current/OverTranslate.exe
 
