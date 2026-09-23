@@ -4,6 +4,8 @@ name: Site
 # 網站上就會出現新舊混雜的內容，而且沒人會發現 —— 所以這裡替人記得。
 on:
   push:
+    # 只看分支。paths 對推 tag 不生效，不寫這行的話每次發版都會白跑一次。
+    branches: ['**']
     paths:
       - 'docs/index.html'
       - 'docs/**/index.html'
