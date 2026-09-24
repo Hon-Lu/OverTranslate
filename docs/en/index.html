@@ -185,14 +185,14 @@
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#quick-translate">
           <span class="card__kbd">Ctrl + Alt + E</span>
           <h3 data-i18n="features.quick.title">Quick Translate</h3>
           <p data-i18n="features.quick.body">Select some text and press the hotkey to translate it and replace it in place.</p>
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#text-translate">
           <span class="card__kbd">Ctrl + Alt + W</span>
           <h3 data-i18n="features.text.title">Text Translation</h3>
           <p data-i18n="features.text.body">The full translation window, with text input, swapping languages and reading aloud.</p>
@@ -396,60 +396,46 @@
 
 <section class="section section--alt" id="lookup">
   <div class="wrap">
-    <header class="sectionhead reveal">
-      <p class="kicker" data-i18n="more.kicker">More ways to translate</p>
-      <h2 class="h2" data-i18n="more.title">Select it or type it — either way it translates</h2>
-    </header>
-
-    <div class="tabs tabs--center reveal" data-tabs>
-      <div class="tabs__bar" role="tablist" aria-label="More ways to translate" data-i18n-attr="aria-label|a11y.tabs.more">
-        <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" data-tab data-i18n="features.lookup.title">Quick Lookup</button>
-        <button type="button" role="tab" id="tab-quick" aria-controls="panel-quick" aria-selected="false" tabindex="-1" data-tab data-i18n="features.quick.title">Quick Translate</button>
-        <button type="button" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false" tabindex="-1" data-tab data-i18n="features.text.title">Text Translation</button>
+    <div class="split reveal">
+      <div class="split__text">
+        <p class="kicker" data-i18n="features.lookup.title">Quick Lookup</p>
+        <h2 class="h2" data-i18n="more.lookup.title">Select text, translate in one keystroke</h2>
+        <ul class="ticks">
+          <li><strong data-i18n="more.lookup.tick1.title">Picks up what you selected</strong><span data-i18n="more.lookup.tick1.body">Select some text and press the hotkey: it is filled in and translated, with no copying and pasting.</span></li>
+          <li><strong data-i18n="more.lookup.tick2.title">Or just type</strong><span data-i18n="more.lookup.tick2.body">Open it with nothing selected and type whatever you want translated.</span></li>
+          <li><strong data-i18n="more.lookup.bilingual.title">Two-way translation</strong><span data-i18n="more.lookup.bilingual.body">Detects the language you type in and translates between the two languages you pick, so there is no need to flip the direction by hand.</span></li>
+          <li><strong data-i18n="more.lookup.tick3.title">Pin it to keep it open</strong><span data-i18n="more.lookup.tick3.body">Once pinned, the window stays on screen so you can look up one thing after another.</span></li>
+        </ul>
       </div>
+      <div class="split__media">
+        <figure class="shot shot--plain">
+          <img src="../images/選詞翻譯.png" width="1632" height="884" alt="The compact Quick Lookup window" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
 
-      <div class="tabs__panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" data-tabpanel>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + Q</span>
-            <p data-i18n="more.lookup.body">Select some text and press the hotkey and it is picked up and translated; with nothing selected you can type it in yourself, and the window can be pinned to stay on screen.</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/選詞翻譯.png" width="1632" height="884" alt="The compact Quick Lookup window" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+    <div class="subsection">
+    <p class="kicker reveal" data-i18n="more.kicker">More ways to translate</p>
+    <div class="grid2 tools">
+      <article class="tool reveal" id="quick-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.quick.title">Quick Translate</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + E</span>
-            <p data-i18n="more.quick.body">Select some text and press the hotkey: the translation is pasted straight over it with no window opening at all, in any field that accepts typed text.</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/快速翻譯.png" width="1672" height="941" alt="Quick Translate replacing the selected text" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+        <p data-i18n="more.quick.body">Select some text and press the hotkey: the translation is pasted straight over it with no window opening at all, in any field that accepts typed text.</p>
+        <figure class="shot shot--plain">
+          <img src="../images/快速翻譯.png" width="1672" height="941" alt="Quick Translate replacing the selected text" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+      <article class="tool reveal" id="text-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.text.title">Text Translation</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + W</span>
-            <p data-i18n="more.text.body">Type or paste text to translate it, swap the source and target languages in one click, and have the original and the translation read aloud.</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/翻譯視窗預覽_en.png" width="1302" height="802" alt="The full text translation window" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
-        </div>
-      </div>
+        <p data-i18n="more.text.body">Type or paste text to translate it, swap the source and target languages in one click, and have the original and the translation read aloud.</p>
+        <figure class="shot shot--plain">
+          <img src="../images/翻譯視窗預覽_en.png" width="1302" height="802" alt="The full text translation window" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+    </div>
     </div>
   </div>
 </section>
