@@ -72,7 +72,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 | ![截图翻译-前.png](images/截圖翻譯-前.png) | ![截图翻译-后.png](images/截圖翻譯-後.png) |
 | ![截图翻译2-前.png](images/截圖翻譯2-前.png) | ![截图翻译2-后.png](images/截圖翻譯2-後.png) |
 
-> 比对图中的四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1)。
+> 比对图中的漫画内容取自 [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1)。
 
 ### 工具栏 - 其他功能
 
@@ -112,7 +112,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 | ![实时翻译1-对话游戏框.png](images/即時翻譯1-對話遊戲框.png) | ![实时翻译1-对话游戏翻译.png](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![实时翻译2-对话游戏框.png](images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 对比图中的漫画内容取自《原神》官方漫画 [第五话－「危険地帯」](https://genshin.hoyoverse.com/ja/manga/detail/104872?mute=1)。
+> 对比图中的四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1)。
 
 #### 游戏 / 界面：
 适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。

@@ -72,7 +72,7 @@ When you need a translation, press the hotkey (default Ctrl + Alt + A) and selec
 | ![截圖翻譯-前.png](images/截圖翻譯-前.png) | ![截圖翻譯-後.png](images/截圖翻譯-後.png) |
 | ![截圖翻譯2-前.png](images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](images/截圖翻譯2-後.png) |
 
-> The four-panel comic in the comparison images is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1).
+> The comic in the comparison images comes from [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1).
 
 ### Toolbar - Other Features
 
@@ -111,7 +111,7 @@ For video subtitles, game story dialogue and comic lettering; use this mode when
 | ![Real-time translation1 - dialogue game selection](images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> The comic pages in the comparison come from the official *Genshin Impact* manga, [Episode 5 －「危険地帯」](https://genshin.hoyoverse.com/ja/manga/detail/104872?mute=1).
+> The four-panel comic in the comparison images is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1).
 
 #### Game / UI
 For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.

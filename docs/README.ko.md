@@ -72,7 +72,7 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 | ![캡처 번역-전](images/截圖翻譯-前.png) | ![캡처 번역-후](images/截圖翻譯-後.png) |
 | ![캡처 번역2-전](images/截圖翻譯2-前.png) | ![캡처 번역2-후](images/截圖翻譯2-後.png) |
 
-> 비교 이미지의 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1) 님의 작품입니다.
+> 비교 이미지의 만화 내용은 [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1)에서 발췌했습니다.
 
 ### 툴바 - 그 외 기능
 
@@ -112,7 +112,7 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 | ![실시간 번역1-대사 영역](images/即時翻譯1-對話遊戲框.png) | ![실시간 번역1-대사 번역문](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![실시간 번역2-대사 영역](images/即時翻譯2-對話遊戲框.png) | ![실시간 번역2-대사 번역문](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 비교 이미지의 만화 내용은 《원신》 공식 만화 [제5화－「危険地帯」](https://genshin.hoyoverse.com/ja/manga/detail/104872?mute=1)에서 발췌했습니다.
+> 비교 이미지의 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1) 님의 작품입니다.
 
 #### 게임 / UI
 게임 화면, 채팅창, 메뉴와 인터페이스 글자 등에 적합합니다. 자막이나 스토리 대사, 만화 글자가 아니라면 이 모드를 사용하세요.
