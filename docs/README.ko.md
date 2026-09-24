@@ -72,7 +72,7 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 | ![캡처 번역-전](images/截圖翻譯-前.png) | ![캡처 번역-후](images/截圖翻譯-後.png) |
 | ![캡처 번역2-전](images/截圖翻譯2-前.png) | ![캡처 번역2-후](images/截圖翻譯2-後.png) |
 
-> 비교 이미지의 만화 내용은 [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1)에서 발췌했습니다.
+> 비교 이미지의 만화 내용은 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)에서 발췌했습니다.
 
 ### 툴바 - 그 외 기능
 

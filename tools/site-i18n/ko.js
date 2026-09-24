@@ -127,7 +127,7 @@ otLocale('ko', {
   'foot.licensefile': '라이선스',
   'foot.language': '언어',
   'src.hero': '화면 출처: <a href="https://godotengine.org/blog/" target="_blank" rel="noopener">Godot Engine Blog</a>',
-  'capture.cap.comic': '만화 출처: <a href="https://note.com/touristship/n/n974b9401acc1" target="_blank" rel="noopener">一般社団法人ツーリストシップ</a>',
+  'capture.cap.comic': '만화 출처: <a href="https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html" target="_blank" rel="noopener">こうしす！＠IT支線</a>',
   'capture.cap.web': '화면 출처: <a href="https://www.naddic.co.kr/ko/cls/index" target="_blank" rel="noopener">Closers 공식 사이트(NADDIC GAMES)</a>',
   'realtime.cap.comic': '만화 출처: <a href="https://x.com/kiyo_mariari/status/1980247239948988588/photo/1" target="_blank" rel="noopener">@kiyo_mariari</a>',
   'realtime.cap.video': '영상 출처: <a href="https://www.youtube.com/watch?v=Tsmf4dkigbw" target="_blank" rel="noopener">BanG Dream! Girls Band Party!☆PICO～OHMORI～</a>',

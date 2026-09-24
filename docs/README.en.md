@@ -72,7 +72,7 @@ When you need a translation, press the hotkey (default Ctrl + Alt + A) and selec
 | ![截圖翻譯-前.png](images/截圖翻譯-前.png) | ![截圖翻譯-後.png](images/截圖翻譯-後.png) |
 | ![截圖翻譯2-前.png](images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](images/截圖翻譯2-後.png) |
 
-> The comic in the comparison images comes from [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1).
+> The comic in the comparison images comes from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html).
 
 ### Toolbar - Other Features
 

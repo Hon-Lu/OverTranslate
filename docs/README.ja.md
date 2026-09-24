@@ -72,7 +72,7 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 | ![キャプチャ翻訳-前](images/截圖翻譯-前.png) | ![キャプチャ翻訳-後](images/截圖翻譯-後.png) |
 | ![キャプチャ翻訳2-前](images/截圖翻譯2-前.png) | ![キャプチャ翻訳2-後](images/截圖翻譯2-後.png) |
 
-> 比較画像のマンガは [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1) から引用しています。
+> 比較画像のマンガは [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html) から引用しています。
 
 ### ツールバー - そのほかの機能
 

@@ -72,7 +72,7 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 | ![截圖翻譯-前.png](docs/images/截圖翻譯-前.png) | ![截圖翻譯-後.png](docs/images/截圖翻譯-後.png) |
 | ![截圖翻譯2-前.png](docs/images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](docs/images/截圖翻譯2-後.png) |
 
-> 比對圖中的漫畫內容取自 [一般社団法人ツーリストシップ](https://note.com/touristship/n/n974b9401acc1)。
+> 比對圖中的漫畫內容取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)。
 
 ### 工具列 - 其他功能
 

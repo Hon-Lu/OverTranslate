@@ -127,7 +127,7 @@ otLocale('en', {
   'foot.licensefile': 'License',
   'foot.language': 'Language',
   'src.hero': 'Screen from <a href="https://godotengine.org/blog/" target="_blank" rel="noopener">Godot Engine Blog</a>',
-  'capture.cap.comic': 'Comic from <a href="https://note.com/touristship/n/n974b9401acc1" target="_blank" rel="noopener">一般社団法人ツーリストシップ</a>',
+  'capture.cap.comic': 'Comic from <a href="https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html" target="_blank" rel="noopener">こうしす！＠IT支線</a>',
   'capture.cap.web': 'Screen from <a href="https://www.naddic.co.kr/ko/cls/index" target="_blank" rel="noopener">the official Closers site (NADDIC GAMES)</a>',
   'realtime.cap.comic': 'Comic by <a href="https://x.com/kiyo_mariari/status/1980247239948988588/photo/1" target="_blank" rel="noopener">@kiyo_mariari</a>',
   'realtime.cap.video': 'Video from <a href="https://www.youtube.com/watch?v=Tsmf4dkigbw" target="_blank" rel="noopener">BanG Dream! Girls Band Party!☆PICO～OHMORI～</a>',
