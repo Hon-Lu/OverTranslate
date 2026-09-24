@@ -29,7 +29,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>icons\app.ico</ApplicationIcon>
     <StartupObject>OverTranslate.App</StartupObject>
-    <Version>2.4.0</Version>
+    <Version>2.5.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!-- WFAC010 tells WinForms apps to declare DPI awareness through Application.SetHighDpiMode.
          This is a WPF app that only references WinForms types; ApplicationConfiguration.Initialize
