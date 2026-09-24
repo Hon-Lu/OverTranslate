@@ -185,14 +185,14 @@
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#quick-translate">
           <span class="card__kbd">Ctrl + Alt + E</span>
           <h3 data-i18n="features.quick.title">빠른 번역</h3>
           <p data-i18n="features.quick.body">텍스트를 선택하고 단축키를 누르면 그 자리에서 번역문으로 바뀝니다.</p>
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#text-translate">
           <span class="card__kbd">Ctrl + Alt + W</span>
           <h3 data-i18n="features.text.title">텍스트 번역</h3>
           <p data-i18n="features.text.body">입력, 언어 바꾸기, 읽어 주기를 지원하는 전체 번역 창입니다.</p>
@@ -396,60 +396,46 @@
 
 <section class="section section--alt" id="lookup">
   <div class="wrap">
-    <header class="sectionhead reveal">
-      <p class="kicker" data-i18n="more.kicker">그 외 번역 기능</p>
-      <h2 class="h2" data-i18n="more.title">선택하든 입력하든, 바로 번역</h2>
-    </header>
-
-    <div class="tabs tabs--center reveal" data-tabs>
-      <div class="tabs__bar" role="tablist" aria-label="그 외 번역 기능" data-i18n-attr="aria-label|a11y.tabs.more">
-        <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" data-tab data-i18n="features.lookup.title">빠른 조회</button>
-        <button type="button" role="tab" id="tab-quick" aria-controls="panel-quick" aria-selected="false" tabindex="-1" data-tab data-i18n="features.quick.title">빠른 번역</button>
-        <button type="button" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false" tabindex="-1" data-tab data-i18n="features.text.title">텍스트 번역</button>
+    <div class="split reveal">
+      <div class="split__text">
+        <p class="kicker" data-i18n="features.lookup.title">빠른 조회</p>
+        <h2 class="h2" data-i18n="more.lookup.title">텍스트를 선택하고 키 하나로 번역</h2>
+        <ul class="ticks">
+          <li><strong data-i18n="more.lookup.tick1.title">선택한 텍스트를 자동으로 불러오기</strong><span data-i18n="more.lookup.tick1.body">텍스트를 선택하고 단축키를 누르면 자동으로 불러와 번역문을 보여 줍니다. 복사해서 붙여 넣을 필요가 없습니다.</span></li>
+          <li><strong data-i18n="more.lookup.tick2.title">선택하지 않고 직접 입력</strong><span data-i18n="more.lookup.tick2.body">아무것도 선택하지 않고 열면 번역할 내용을 바로 입력할 수 있습니다.</span></li>
+          <li><strong data-i18n="more.lookup.bilingual.title">양방향 번역</strong><span data-i18n="more.lookup.bilingual.body">입력한 언어를 자동으로 판별해 지정한 두 언어 사이에서 번역하므로 번역 방향을 직접 바꿀 필요가 없습니다.</span></li>
+          <li><strong data-i18n="more.lookup.tick3.title">고정해서 계속 띄워 두기</strong><span data-i18n="more.lookup.tick3.body">창을 고정하면 화면에 계속 남아 있어 이어서 찾아보기 편합니다.</span></li>
+        </ul>
       </div>
+      <div class="split__media">
+        <figure class="shot shot--plain">
+          <img src="../images/選詞翻譯.png" width="1632" height="884" alt="작은 빠른 조회 창" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
 
-      <div class="tabs__panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" data-tabpanel>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + Q</span>
-            <p data-i18n="more.lookup.body">텍스트를 선택하고 단축키를 누르면 자동으로 불러와 번역합니다. 아무것도 선택하지 않았다면 직접 입력할 수도 있고, 창을 고정해 계속 띄워 둘 수도 있습니다.</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/選詞翻譯.png" width="1632" height="884" alt="작은 빠른 조회 창" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+    <div class="subsection">
+    <p class="kicker reveal" data-i18n="more.kicker">그 외 번역 기능</p>
+    <div class="grid2 tools">
+      <article class="tool reveal" id="quick-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.quick.title">빠른 번역</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + E</span>
-            <p data-i18n="more.quick.body">텍스트를 선택하고 단축키를 누르면 번역 결과가 그대로 붙여넣어져 원문을 대체합니다. 창은 열리지 않으며 글자를 입력할 수 있는 칸에서 동작합니다.</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/快速翻譯.png" width="1672" height="941" alt="선택한 글자를 대체하는 빠른 번역" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+        <p data-i18n="more.quick.body">텍스트를 선택하고 단축키를 누르면 번역 결과가 그대로 붙여넣어져 원문을 대체합니다. 창은 열리지 않으며 글자를 입력할 수 있는 칸에서 동작합니다.</p>
+        <figure class="shot shot--plain">
+          <img src="../images/快速翻譯.png" width="1672" height="941" alt="선택한 글자를 대체하는 빠른 번역" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+      <article class="tool reveal" id="text-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.text.title">텍스트 번역</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + W</span>
-            <p data-i18n="more.text.body">입력하거나 붙여 넣은 텍스트를 바로 번역하고, 원본 언어와 번역할 언어를 빠르게 바꿀 수 있으며, 원문과 번역문 모두 읽어 줍니다.</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/翻譯視窗預覽_ko.png" width="1302" height="802" alt="전체 텍스트 번역 창" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
-        </div>
-      </div>
+        <p data-i18n="more.text.body">입력하거나 붙여 넣은 텍스트를 바로 번역하고, 원본 언어와 번역할 언어를 빠르게 바꿀 수 있으며, 원문과 번역문 모두 읽어 줍니다.</p>
+        <figure class="shot shot--plain">
+          <img src="../images/翻譯視窗預覽_ko.png" width="1302" height="802" alt="전체 텍스트 번역 창" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+    </div>
     </div>
   </div>
 </section>

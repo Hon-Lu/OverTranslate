@@ -185,14 +185,14 @@
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#quick-translate">
           <span class="card__kbd">Ctrl + Alt + E</span>
           <h3 data-i18n="features.quick.title">快速翻译</h3>
           <p data-i18n="features.quick.body">选取文字后按下快捷键，直接翻译并替换原文。</p>
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#text-translate">
           <span class="card__kbd">Ctrl + Alt + W</span>
           <h3 data-i18n="features.text.title">文字翻译</h3>
           <p data-i18n="features.text.body">使用完整翻译窗口，支持文字输入、语言互换与文字朗读。</p>
@@ -396,60 +396,46 @@
 
 <section class="section section--alt" id="lookup">
   <div class="wrap">
-    <header class="sectionhead reveal">
-      <p class="kicker" data-i18n="more.kicker">其他翻译功能</p>
-      <h2 class="h2" data-i18n="more.title">选取、输入，都能直接翻译</h2>
-    </header>
-
-    <div class="tabs tabs--center reveal" data-tabs>
-      <div class="tabs__bar" role="tablist" aria-label="其他翻译功能" data-i18n-attr="aria-label|a11y.tabs.more">
-        <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" data-tab data-i18n="features.lookup.title">取词翻译</button>
-        <button type="button" role="tab" id="tab-quick" aria-controls="panel-quick" aria-selected="false" tabindex="-1" data-tab data-i18n="features.quick.title">快速翻译</button>
-        <button type="button" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false" tabindex="-1" data-tab data-i18n="features.text.title">文字翻译</button>
+    <div class="split reveal">
+      <div class="split__text">
+        <p class="kicker" data-i18n="features.lookup.title">取词翻译</p>
+        <h2 class="h2" data-i18n="more.lookup.title">选取文字，一键翻译</h2>
+        <ul class="ticks">
+          <li><strong data-i18n="more.lookup.tick1.title">自动带入选取的文字</strong><span data-i18n="more.lookup.tick1.body">选取文字后按下快捷键，会自动带入并显示译文，无需复制粘贴。</span></li>
+          <li><strong data-i18n="more.lookup.tick2.title">没选取也能直接输入</strong><span data-i18n="more.lookup.tick2.body">未选取文字时打开，可直接输入想翻译的内容。</span></li>
+          <li><strong data-i18n="more.lookup.bilingual.title">双语互译</strong><span data-i18n="more.lookup.bilingual.body">自动判断输入的语言，在指定的两种语言之间互译，无需手动切换翻译方向。</span></li>
+          <li><strong data-i18n="more.lookup.tick3.title">固定后持续显示</strong><span data-i18n="more.lookup.tick3.body">固定后窗口会留在屏幕上，方便连续查询。</span></li>
+        </ul>
       </div>
+      <div class="split__media">
+        <figure class="shot shot--plain">
+          <img src="../images/選詞翻譯.png" width="1632" height="884" alt="取词翻译的小窗口" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
 
-      <div class="tabs__panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" data-tabpanel>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + Q</span>
-            <p data-i18n="more.lookup.body">选取文字后按下快捷键，即可自动带入并翻译；未选取文字时也可直接输入，窗口亦可固定持续显示。</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/選詞翻譯.png" width="1632" height="884" alt="取词翻译的小窗口" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+    <div class="subsection">
+    <p class="kicker reveal" data-i18n="more.kicker">其他翻译功能</p>
+    <div class="grid2 tools">
+      <article class="tool reveal" id="quick-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.quick.title">快速翻译</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + E</span>
-            <p data-i18n="more.quick.body">选取文字后按下快捷键，翻译结果会自动粘贴并替换原文，无需打开其他窗口；适用于可输入文字的栏位。</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/快速翻譯.png" width="1672" height="941" alt="快速翻译直接替换原文" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+        <p data-i18n="more.quick.body">选取文字后按下快捷键，翻译结果会自动粘贴并替换原文，无需打开其他窗口；适用于可输入文字的栏位。</p>
+        <figure class="shot shot--plain">
+          <img src="../images/快速翻譯.png" width="1672" height="941" alt="快速翻译直接替换原文" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+      <article class="tool reveal" id="text-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.text.title">文字翻译</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + W</span>
-            <p data-i18n="more.text.body">输入或粘贴文字即可翻译，可快速互换源语言与目标语言，并支持原文与译文朗读。</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/翻譯視窗預覽_zh-Hans.png" width="1302" height="802" alt="完整的文字翻译窗口" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
-        </div>
-      </div>
+        <p data-i18n="more.text.body">输入或粘贴文字即可翻译，可快速互换源语言与目标语言，并支持原文与译文朗读。</p>
+        <figure class="shot shot--plain">
+          <img src="../images/翻譯視窗預覽_zh-Hans.png" width="1302" height="802" alt="完整的文字翻译窗口" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+    </div>
     </div>
   </div>
 </section>

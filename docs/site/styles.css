@@ -814,8 +814,6 @@ p:last-child { margin-bottom: 0; }
 .tabs__bar button[aria-selected="true"] { color: var(--ink); }
 .tabs__lede { max-width: 62ch; color: var(--ink-2); margin-bottom: 22px; }
 .tabs__panel[hidden] { display: none; }
-#lookup .tabs__panel img { aspect-ratio: 16 / 9; object-fit: contain; background: var(--bg-2); }
-#lookup .split__text { display: grid; gap: 14px; justify-items: start; align-content: center; }
 
 .grid2 { display: grid; gap: clamp(18px, 3vw, 28px); }
 @media (min-width: 820px) {
@@ -823,6 +821,17 @@ p:last-child { margin-bottom: 0; }
   #panel-prose .grid2 > :nth-child(1) { grid-row: span 2; }
   #panel-prose .grid2 > :nth-child(4) { grid-column: 1 / -1; }
 }
+
+/* 取詞翻譯底下的兩個工具：沒有外框，圖片才能吃滿整欄寬度 */
+@media (min-width: 900px) {
+  #lookup .split { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); }
+}
+.tools { align-items: start; }
+.tool { display: grid; gap: 12px; align-content: start; }
+.tool__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.tool__head .h3 { margin: 0; font-size: 1.3rem; }
+.tool > p { color: var(--ink-2); line-height: 1.8; }
+.tool .shot { margin-top: 6px; }
 
 /* engines */
 .engines {

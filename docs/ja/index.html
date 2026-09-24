@@ -185,14 +185,14 @@
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#quick-translate">
           <span class="card__kbd">Ctrl + Alt + E</span>
           <h3 data-i18n="features.quick.title">クイック翻訳</h3>
           <p data-i18n="features.quick.body">テキストを選んでショートカットキーを押すと、その場で訳文に置き換わります。</p>
         </a>
       </li>
       <li class="card">
-        <a class="card__link" href="#lookup">
+        <a class="card__link" href="#text-translate">
           <span class="card__kbd">Ctrl + Alt + W</span>
           <h3 data-i18n="features.text.title">テキスト翻訳</h3>
           <p data-i18n="features.text.body">入力・言語の入れ替え・読み上げに対応した、通常の翻訳ウィンドウです。</p>
@@ -396,60 +396,46 @@
 
 <section class="section section--alt" id="lookup">
   <div class="wrap">
-    <header class="sectionhead reveal">
-      <p class="kicker" data-i18n="more.kicker">そのほかの翻訳機能</p>
-      <h2 class="h2" data-i18n="more.title">選んでも、入力しても、そのまま翻訳</h2>
-    </header>
-
-    <div class="tabs tabs--center reveal" data-tabs>
-      <div class="tabs__bar" role="tablist" aria-label="そのほかの翻訳機能" data-i18n-attr="aria-label|a11y.tabs.more">
-        <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" data-tab data-i18n="features.lookup.title">クイック辞書</button>
-        <button type="button" role="tab" id="tab-quick" aria-controls="panel-quick" aria-selected="false" tabindex="-1" data-tab data-i18n="features.quick.title">クイック翻訳</button>
-        <button type="button" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false" tabindex="-1" data-tab data-i18n="features.text.title">テキスト翻訳</button>
+    <div class="split reveal">
+      <div class="split__text">
+        <p class="kicker" data-i18n="features.lookup.title">クイック辞書</p>
+        <h2 class="h2" data-i18n="more.lookup.title">テキストを選んで、ワンキーで翻訳</h2>
+        <ul class="ticks">
+          <li><strong data-i18n="more.lookup.tick1.title">選んだテキストをそのまま読み込み</strong><span data-i18n="more.lookup.tick1.body">テキストを選んでショートカットキーを押すと、自動で読み込んで訳文を表示します。コピーや貼り付けは不要です。</span></li>
+          <li><strong data-i18n="more.lookup.tick2.title">選ばずに直接入力も</strong><span data-i18n="more.lookup.tick2.body">何も選んでいないときに開けば、翻訳したい内容をそのまま入力できます。</span></li>
+          <li><strong data-i18n="more.lookup.bilingual.title">二言語間翻訳</strong><span data-i18n="more.lookup.bilingual.body">入力された言語を自動で判別し、指定した 2 つの言語の間で翻訳します。翻訳方向を手動で切り替える必要はありません。</span></li>
+          <li><strong data-i18n="more.lookup.tick3.title">ピン留めで出したままに</strong><span data-i18n="more.lookup.tick3.body">ピン留めするとウィンドウが画面に残り、続けて調べられます。</span></li>
+        </ul>
       </div>
+      <div class="split__media">
+        <figure class="shot shot--plain">
+          <img src="../images/選詞翻譯.png" width="1632" height="884" alt="小さなクイック辞書のウィンドウ" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </div>
+    </div>
 
-      <div class="tabs__panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" data-tabpanel>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + Q</span>
-            <p data-i18n="more.lookup.body">テキストを選んでショートカットキーを押すと、そのまま読み込んで翻訳します。何も選んでいないときは直接入力もでき、ピン留めして出したままにもできます。</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/選詞翻譯.png" width="1632" height="884" alt="小さなクイック辞書のウィンドウ" data-i18n-attr="alt|shot.lookup" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+    <div class="subsection">
+    <p class="kicker reveal" data-i18n="more.kicker">そのほかの翻訳機能</p>
+    <div class="grid2 tools">
+      <article class="tool reveal" id="quick-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.quick.title">クイック翻訳</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + E</span>
-            <p data-i18n="more.quick.body">テキストを選んでショートカットキーを押すと、訳文がそのまま貼り付けられて原文と置き換わります。ウィンドウは開かず、文字を入力できる欄で動作します。</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/快速翻譯.png" width="1672" height="941" alt="選んだ文字を置き換えるクイック翻訳" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
+        <p data-i18n="more.quick.body">テキストを選んでショートカットキーを押すと、訳文がそのまま貼り付けられて原文と置き換わります。ウィンドウは開かず、文字を入力できる欄で動作します。</p>
+        <figure class="shot shot--plain">
+          <img src="../images/快速翻譯.png" width="1672" height="941" alt="選んだ文字を置き換えるクイック翻訳" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+      <article class="tool reveal" id="text-translate">
+        <div class="tool__head">
+          <h3 class="h3" data-i18n="features.text.title">テキスト翻訳</h3>
         </div>
-      </div>
-
-      <div class="tabs__panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text" data-tabpanel hidden>
-        <div class="split">
-          <div class="split__text">
-            <span class="kbd">Ctrl + Alt + W</span>
-            <p data-i18n="more.text.body">入力または貼り付けたテキストをそのまま翻訳でき、翻訳元と翻訳先の言語はすぐ入れ替えられます。原文と訳文のどちらも読み上げられます。</p>
-          </div>
-          <div class="split__media">
-            <figure class="shot shot--plain">
-              <img src="../images/翻譯視窗預覽_jp.png" width="1302" height="802" alt="通常のテキスト翻訳ウィンドウ" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
-            </figure>
-          </div>
-        </div>
-      </div>
+        <p data-i18n="more.text.body">入力または貼り付けたテキストをそのまま翻訳でき、翻訳元と翻訳先の言語はすぐ入れ替えられます。原文と訳文のどちらも読み上げられます。</p>
+        <figure class="shot shot--plain">
+          <img src="../images/翻譯視窗預覽_jp.png" width="1302" height="802" alt="通常のテキスト翻訳ウィンドウ" data-i18n-attr="alt|shot.text" data-loc-img="翻譯視窗預覽" loading="lazy" decoding="async" data-zoom />
+        </figure>
+      </article>
+    </div>
     </div>
   </div>
 </section>
