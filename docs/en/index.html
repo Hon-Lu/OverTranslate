@@ -287,14 +287,14 @@
     </div>
 
     <div class="tabs reveal" data-tabs>
+      <h3 class="tabs__title" data-i18n="realtime.mode.title">Pick the mode that fits what is on screen</h3>
       <div class="tabs__bar" role="tablist" aria-label="Real-time translation modes" data-i18n-attr="aria-label|a11y.tabs">
         <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab data-i18n="realtime.mode.prose">Subtitles / Comics</button>
-        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab data-i18n="realtime.mode.ui">Game / UI</button>
+        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.prose">Subtitles / Comics</span><span class="tabs__hint" data-i18n="realtime.mode.prose.hint">Video subtitles, story dialogue, comics</span></button>
+        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.ui">Game / UI</span><span class="tabs__hint" data-i18n="realtime.mode.ui.hint">Game UI, chat windows, menus</span></button>
       </div>
 
       <div class="tabs__panel" id="panel-prose" role="tabpanel" aria-labelledby="tab-prose" data-tabpanel>
-        <p class="tabs__lede" data-i18n="realtime.prose.body">For video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.</p>
         <div class="grid2">
           <figure class="shot">
             <div class="compare compare--tall" data-compare>
@@ -356,7 +356,6 @@
       </div>
 
       <div class="tabs__panel" id="panel-ui" role="tabpanel" aria-labelledby="tab-ui" data-tabpanel hidden>
-        <p class="tabs__lede" data-i18n="realtime.ui.body">For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.</p>
         <div class="grid2">
           <figure class="shot">
             <div class="compare compare--chat" data-compare>

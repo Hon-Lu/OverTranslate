@@ -6,6 +6,7 @@
 :root {
   --bg: #070c14;
   --bg-2: #0b1220;
+  --mode-card: #111c2d;
   --ink: #e9eef6;
   --ink-2: #9aabc0;
   --ink-3: #6d7f95;
@@ -46,6 +47,7 @@
 :root[data-theme="light"] {
   --bg: #f6f8fc;
   --bg-2: #ffffff;
+  --mode-card: #ffffff;
   --ink: #0f1722;
   --ink-2: #51637a;
   --ink-3: #75879d;
@@ -75,6 +77,7 @@
   :root:not([data-theme="dark"]) {
     --bg: #f6f8fc;
     --bg-2: #ffffff;
+    --mode-card: #ffffff;
     --ink: #0f1722;
     --ink-2: #51637a;
     --ink-3: #75879d;
@@ -734,21 +737,29 @@ p:last-child { margin-bottom: 0; }
 }
 .aside p { margin: 0; }
 
-/* facts */
+/* facts：補充說明，不加框，讓下方的模式卡片成為唯一的容器 */
 .facts {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: clamp(28px, 4vw, 44px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 48px;
+  margin-bottom: clamp(32px, 4.5vw, 48px);
 }
-.fact {
-  padding: 18px 20px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-m);
-  background: var(--surface);
+.fact { position: relative; max-width: 34ch; padding-left: 26px; }
+#realtime .sectionhead { margin-bottom: clamp(26px, 3.8vw, 40px); }
+.fact::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.5em;
+  width: 11px;
+  height: 6px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  rotate: -45deg;
 }
-.fact h3 { font-size: 0.93rem; letter-spacing: -0.01em; margin-bottom: 5px; }
-.fact p { color: var(--ink-2); font-size: 0.85rem; line-height: 1.7; }
+.fact h3 { font-size: 0.93rem; letter-spacing: -0.01em; margin-bottom: 3px; }
+.fact p { color: var(--ink-3); font-size: 0.85rem; line-height: 1.7; }
 
 /* tick lists */
 .ticks { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
@@ -776,44 +787,63 @@ p:last-child { margin-bottom: 0; }
 /* tabs */
 .tabs--center { display: grid; justify-items: center; }
 .tabs--center .tabs__panel { width: 100%; }
+/* 兩張模式卡片就是分頁：名稱＋適用情境寫在卡片上，一眼看出有兩種、各自拿來做什麼 */
+.tabs__title { margin: 0 0 16px; font-size: clamp(1.15rem, 1.8vw, 1.35rem); letter-spacing: -0.018em; }
 .tabs__bar {
   position: relative;
-  display: inline-flex;
-  gap: 2px;
-  padding: 4px;
-  margin-bottom: 22px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: var(--surface);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 28px;
 }
 .tabs__ink {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 0;
-  border-radius: 999px;
-  background: var(--surface-2);
-  box-shadow: var(--shadow-s);
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-2));
+  box-shadow: inset 0 0 0 1.5px var(--accent), 0 10px 24px -18px color-mix(in srgb, var(--accent) 45%, transparent);
   will-change: transform, width;
 }
-:root[data-theme="light"] .tabs__ink { background: #fff; }
 .tabs__bar button {
   position: relative;
   z-index: 1;
-  padding: 9px 20px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--ink-2);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  background: var(--mode-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-s), var(--shadow-m);
+  color: var(--ink);
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
+  text-align: start;
   cursor: pointer;
-  transition: color 200ms ease;
+  transition: border-color 200ms ease, background 200ms ease, transform 100ms ease-out;
 }
-.tabs__bar button[aria-selected="true"] { color: var(--ink); }
-.tabs__lede { max-width: 62ch; color: var(--ink-2); margin-bottom: 22px; }
+.tabs__bar button:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.tabs__bar button:active { transform: scale(0.98); }
+.tabs__bar button[aria-selected="true"] { border-color: transparent; background: none; box-shadow: none; }
+.tabs__bar button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.tabs__radio {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ink-3);
+  border-radius: 999px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.tabs__bar button[aria-selected="true"] .tabs__radio { border-color: var(--accent); box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 9px var(--accent); }
+.tabs__name { font-size: 1rem; font-weight: 650; letter-spacing: -0.01em; }
+.tabs__hint { grid-column: 2; color: var(--ink-2); font-size: 0.86rem; line-height: 1.6; }
+@media (max-width: 520px) {
+  .tabs__bar button { grid-template-columns: 1fr; padding: 14px; }
+  .tabs__radio { display: none; }
+  .tabs__hint { grid-column: 1; }
+}
 .tabs__panel[hidden] { display: none; }
 
 .grid2 { display: grid; gap: clamp(18px, 3vw, 28px); }

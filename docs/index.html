@@ -287,14 +287,14 @@
     </div>
 
     <div class="tabs reveal" data-tabs>
+      <h3 class="tabs__title" data-i18n="realtime.mode.title">依畫面內容選擇翻譯模式</h3>
       <div class="tabs__bar" role="tablist" aria-label="即時翻譯模式" data-i18n-attr="aria-label|a11y.tabs">
         <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab data-i18n="realtime.mode.prose">字幕 / 漫畫</button>
-        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab data-i18n="realtime.mode.ui">遊戲 / 介面</button>
+        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.prose">字幕 / 漫畫</span><span class="tabs__hint" data-i18n="realtime.mode.prose.hint">影片字幕、劇情對話、漫畫文字</span></button>
+        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.ui">遊戲 / 介面</span><span class="tabs__hint" data-i18n="realtime.mode.ui.hint">遊戲介面、聊天室、選單</span></button>
       </div>
 
       <div class="tabs__panel" id="panel-prose" role="tabpanel" aria-labelledby="tab-prose" data-tabpanel>
-        <p class="tabs__lede" data-i18n="realtime.prose.body">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</p>
         <div class="grid2">
           <figure class="shot">
             <div class="compare compare--tall" data-compare>
@@ -356,7 +356,6 @@
       </div>
 
       <div class="tabs__panel" id="panel-ui" role="tabpanel" aria-labelledby="tab-ui" data-tabpanel hidden>
-        <p class="tabs__lede" data-i18n="realtime.ui.body">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</p>
         <div class="grid2">
           <figure class="shot">
             <div class="compare compare--chat" data-compare>

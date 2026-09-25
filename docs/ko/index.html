@@ -287,14 +287,14 @@
     </div>
 
     <div class="tabs reveal" data-tabs>
+      <h3 class="tabs__title" data-i18n="realtime.mode.title">화면 내용에 맞는 모드를 선택하세요</h3>
       <div class="tabs__bar" role="tablist" aria-label="실시간 번역 모드" data-i18n-attr="aria-label|a11y.tabs">
         <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab data-i18n="realtime.mode.prose">자막 / 만화</button>
-        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab data-i18n="realtime.mode.ui">게임 / UI</button>
+        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.prose">자막 / 만화</span><span class="tabs__hint" data-i18n="realtime.mode.prose.hint">영상 자막, 스토리 대사, 만화</span></button>
+        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.ui">게임 / UI</span><span class="tabs__hint" data-i18n="realtime.mode.ui.hint">게임 UI, 채팅창, 메뉴</span></button>
       </div>
 
       <div class="tabs__panel" id="panel-prose" role="tabpanel" aria-labelledby="tab-prose" data-tabpanel>
-        <p class="tabs__lede" data-i18n="realtime.prose.body">영상 자막, 게임 스토리 대사, 만화 글자 등에 적합합니다. 이어서 읽는 문장이 중심이라면 이 모드를 사용하세요.</p>
         <div class="grid2">
           <figure class="shot">
             <div class="compare compare--tall" data-compare>
@@ -356,7 +356,6 @@
       </div>
 
       <div class="tabs__panel" id="panel-ui" role="tabpanel" aria-labelledby="tab-ui" data-tabpanel hidden>
-        <p class="tabs__lede" data-i18n="realtime.ui.body">게임 화면, 채팅창, 메뉴, 인터페이스 문구 등에 적합합니다. 자막이나 스토리 대사, 만화 글자가 아니라면 이 모드를 사용하세요.</p>
         <div class="grid2">
           <figure class="shot">
             <div class="compare compare--chat" data-compare>
