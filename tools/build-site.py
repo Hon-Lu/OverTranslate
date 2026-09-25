@@ -199,6 +199,10 @@ def apply_prefix(html, depth):
     for attr in ('href', 'src'):
         for folder in ('site/', 'images/'):
             html = html.replace('%s="%s' % (attr, folder), '%s="%s%s' % (attr, up, folder))
+    # srcset 裡有多個網址，每一個都要補
+    html = re.sub(r'srcset="([^"]*)"',
+                  lambda m: 'srcset="%s"' % re.sub(r'(^|,\s*)(images/)', r'\g<1>' + up + r'\2', m.group(1)),
+                  html)
     return html
 
 
