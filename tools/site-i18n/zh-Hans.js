@@ -45,6 +45,7 @@ otLocale('zh-Hans', {
   'realtime.fact2.title': '随时暂停与继续',
   'realtime.fact2.body': '暂停时可直接查看原文，不必关闭。',
   'realtime.mode.title': '依画面内容选择翻译模式',
+  'realtime.mode.float': '模式',
   'realtime.mode.prose': '字幕 / 漫画',
   'realtime.mode.prose.hint': '影片字幕、剧情对话、漫画文字',
   'realtime.mode.ui': '游戏 / 界面',

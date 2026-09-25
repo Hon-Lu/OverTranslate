@@ -332,7 +332,8 @@
         if (panel) panel.hidden = !on;
       });
       moveInk(button, animate);
-      if (focus) button.focus();
+      gos.forEach(function (g) { g.classList.toggle('is-on', g.getAttribute('data-tab-go') === button.id); });
+      if (focus) button.focus({ preventScroll: true });
     }
 
     buttons.forEach(function (button, index) {
@@ -344,6 +345,36 @@
         select(buttons[(index + delta + buttons.length) % buttons.length], true, true);
       });
     });
+
+    // 捲過模式卡片後，浮動膠囊讓人不必捲回上方就能切換；切換後回到模式卡片，從新模式的開頭看起
+    // 膠囊放在 .tabs 外面：.tabs 帶淡入的 transform，會讓裡面的 position: fixed 失效
+    var floatBar = wrapper.previousElementSibling && wrapper.previousElementSibling.matches('[data-tabs-float]') ? wrapper.previousElementSibling : null;
+    var gos = floatBar ? Array.prototype.slice.call(floatBar.querySelectorAll('[data-tab-go]')) : [];
+    gos.forEach(function (go) {
+      go.addEventListener('click', function () {
+        var target = document.getElementById(go.getAttribute('data-tab-go'));
+        if (!target || target.getAttribute('aria-selected') === 'true') return;
+        select(target, true, true);
+        (wrapper.querySelector('.tabs__title') || target).scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
+    if (floatBar) {
+      var bar = wrapper.querySelector('.tabs__bar');
+      var ticking = false;
+      var hinted = false;
+      var updateFloat = function () {
+        ticking = false;
+        var chromeH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chrome-h')) || 60;
+        var panel = wrapper.querySelector('[data-tabpanel]:not([hidden])');
+        var shown = bar.getBoundingClientRect().bottom < chromeH && panel && panel.getBoundingClientRect().bottom > chromeH + 160;
+        floatBar.classList.toggle('is-shown', !!shown);
+        if (shown && !hinted) { hinted = true; floatBar.classList.add('is-hint'); }
+      };
+      window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(updateFloat); }
+      }, { passive: true });
+      window.addEventListener('resize', updateFloat);
+    }
 
     var initial = buttons.filter(function (b) { return b.getAttribute('aria-selected') === 'true'; })[0] || buttons[0];
     requestAnimationFrame(function () { select(initial, false, false); });

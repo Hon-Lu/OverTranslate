@@ -45,6 +45,7 @@ otLocale('ko', {
   'realtime.fact2.title': '언제든 일시 정지와 재개',
   'realtime.fact2.body': '일시 정지하면 종료하지 않고 원문을 볼 수 있습니다.',
   'realtime.mode.title': '화면 내용에 맞는 모드를 선택하세요',
+  'realtime.mode.float': '모드',
   'realtime.mode.prose': '자막 / 만화',
   'realtime.mode.prose.hint': '영상 자막, 스토리 대사, 만화',
   'realtime.mode.ui': '게임 / UI',

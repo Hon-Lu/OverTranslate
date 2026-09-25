@@ -45,6 +45,7 @@ otLocale('en', {
   'realtime.fact2.title': 'Pause and resume any time',
   'realtime.fact2.body': 'Pausing shows the original text without shutting it down.',
   'realtime.mode.title': 'Pick the mode that fits what is on screen',
+  'realtime.mode.float': 'Mode',
   'realtime.mode.prose': 'Subtitles / Comics',
   'realtime.mode.prose.hint': 'Video subtitles, story dialogue, comics',
   'realtime.mode.ui': 'Game / UI',

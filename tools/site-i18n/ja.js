@@ -45,6 +45,7 @@ otLocale('ja', {
   'realtime.fact2.title': 'いつでも一時停止・再開',
   'realtime.fact2.body': '一時停止すれば、終了せずに原文をそのまま見られます。',
   'realtime.mode.title': '画面の内容に合わせてモードを選択',
+  'realtime.mode.float': 'モード',
   'realtime.mode.prose': '字幕 / マンガ',
   'realtime.mode.prose.hint': '動画の字幕、ストーリー会話、マンガ',
   'realtime.mode.ui': 'ゲーム / UI',
