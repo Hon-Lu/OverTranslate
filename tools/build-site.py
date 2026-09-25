@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, 'docs')
 SOURCE = os.path.join(DOCS, 'index.html')
 I18N_DIR = os.path.join(ROOT, 'tools', 'site-i18n')
-BASE_URL = 'https://asd880921.github.io/OverTranslate/'
+BASE_URL = 'https://hon-lu.github.io/OverTranslate/'
 
 # 每個語言：輸出目錄、<html lang>、截圖後綴、下載統計圖卡、README 與 Ollama 教學
 LANGS = [
@@ -39,8 +39,8 @@ LANGS = [
 LANG_LABEL = {'en': 'English', 'zh-TW': '繁體中文', 'zh-Hans': '简体中文',
               'ja': '日本語', 'ko': '한국어'}
 MENU_ORDER = ['en', 'zh-TW', 'zh-Hans', 'ja', 'ko']
-REPO_BLOB = 'https://github.com/asd880921/OverTranslate/blob/main/'
-CARDS = 'https://raw.githubusercontent.com/asd880921/github-statcards/main/cards/'
+REPO_BLOB = 'https://github.com/Hon-Lu/OverTranslate/blob/main/'
+CARDS = 'https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/'
 
 
 # ---------------------------------------------------------------- 讀取翻譯
