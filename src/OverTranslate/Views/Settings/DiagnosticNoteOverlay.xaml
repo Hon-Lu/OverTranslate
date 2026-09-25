@@ -145,7 +145,7 @@
                                        MaxWidth="404">
                                 <Run x:Name="FailureRun"/>
                                 <LineBreak/>
-                                <Hyperlink NavigateUri="https://github.com/asd880921/OverTranslate/issues"
+                                <Hyperlink NavigateUri="https://github.com/Hon-Lu/OverTranslate/issues"
                                            RequestNavigate="Hyperlink_RequestNavigate"><Run Text="{DynamicResource S.Settings.NoteReportManually}"/></Hyperlink>
                             </TextBlock>
                         </StackPanel>

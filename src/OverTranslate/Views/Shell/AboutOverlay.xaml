@@ -72,7 +72,7 @@
                                Foreground="{DynamicResource AppTextSecondary}"
                                HorizontalAlignment="Center"
                                Margin="0,6,0,0"/>
-                    <TextBlock Text="Hon.Lu (asd880921)"
+                    <TextBlock Text="Hon.Lu (Hon-Lu)"
                                FontFamily="{DynamicResource AppFont}"
                                FontSize="12.5"
                                Foreground="{DynamicResource AppTextSecondary}"

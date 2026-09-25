@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://asd880921.github.io/OverTranslate/sitemap.xml
+Sitemap: https://hon-lu.github.io/OverTranslate/sitemap.xml

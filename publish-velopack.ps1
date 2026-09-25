@@ -14,7 +14,7 @@ param(
     [string]$Configuration = "Release",
     [switch]$SkipPublish,
     [string]$Version,
-    # 打包用的是 fork 版 vpk（asd880921/velopack 的 fork/no-stub-1.2.0），不是 nuget 上的官方
+    # 打包用的是 fork 版 vpk（Hon-Lu/velopack 的 fork/no-stub-1.2.0），不是 nuget 上的官方
     # 版本 —— 只有它認得 --noStub。取得與建置方式見該倉的 FORK-APPS.md。
     # 沒給就用這台機器的慣例位置（fork 與本倉並排 clone），CI 則明確傳進來。
     [string]$VpkPath = $env:OVERTRANSLATE_VPK_PATH,

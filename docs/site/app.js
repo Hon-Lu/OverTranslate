@@ -558,7 +558,7 @@
     if (cachedStars) {
       paintStars(cachedStars);
     } else if (window.fetch) {
-      fetch('https://api.github.com/repos/asd880921/OverTranslate')
+      fetch('https://api.github.com/repos/Hon-Lu/OverTranslate')
         .then(function (res) { return res.ok ? res.json() : null; })
         .then(function (data) {
           if (!data || typeof data.stargazers_count !== 'number') return;

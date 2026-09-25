@@ -151,7 +151,7 @@ Releases API 列表 → 依 prerelease 旗標過濾選出一個 release
 清掉環境變數（見上），並把測試用的 pre-release 與 tag 刪掉：
 
 ```powershell
-gh release delete 2.0.0-beta.0 --repo asd880921/OverTranslate --cleanup-tag --yes
+gh release delete 2.0.0-beta.0 --repo Hon-Lu/OverTranslate --cleanup-tag --yes
 ```
 
 ---

@@ -6,7 +6,7 @@ CI 發的 pre-release 一般使用者看不到，測到的又是他們之後會�
 這份文件是給一種情況用的：**你要改的是發布流程本身**（asset 命名、feed 結構、workflow 邏輯），
 希望連一個 pre-release 都不要出現在主倉。那就把更新來源整個指到另一個倉。
 
-私有倉 [OverTranslate-Ops](https://github.com/asd880921/OverTranslate-Ops) 沒有任何使用者，
+私有倉 [OverTranslate-Ops](https://github.com/Hon-Lu/OverTranslate-Ops) 沒有任何使用者，
 適合當這個角色。
 
 ---
@@ -15,7 +15,7 @@ CI 發的 pre-release 一般使用者看不到，測到的又是他們之後會�
 
 | 變數 | 值 | 說明 |
 |------|----|------|
-| `OVERTRANSLATE_UPDATE_REPO` | `https://github.com/asd880921/OverTranslate-Ops` | 更新來源改指這個倉。**未設 = 照舊走主倉** |
+| `OVERTRANSLATE_UPDATE_REPO` | `https://github.com/Hon-Lu/OverTranslate-Ops` | 更新來源改指這個倉。**未設 = 照舊走主倉** |
 | `OVERTRANSLATE_UPDATE_TOKEN` | GitHub PAT | 讀私有倉用。公開倉可省略 |
 
 走的仍是正式的 `GithubSource` —— release 列表、asset 查找、HTTP 下載全都是出貨的程式碼，
@@ -41,7 +41,7 @@ $env:OVERTRANSLATE_UPDATE_TOKEN = gh auth token
 .\publish-velopack.ps1 -SkipPublish -Version 1.7.0 -OutputDir D:\ot-staging
 
 # 2. 把「新版」發到測試倉（舊版的 full 不用傳，本機安裝時就有了）
-gh release create staging-1.7.0 --repo asd880921/OverTranslate-Ops `
+gh release create staging-1.7.0 --repo Hon-Lu/OverTranslate-Ops `
     --title "staging 1.7.0（排練用）" --notes "驗證更新流程，與使用者無關。" `
     D:\ot-staging\releases.win.json `
     D:\ot-staging\OverTranslate-1.7.0-full.nupkg `
@@ -51,7 +51,7 @@ gh release create staging-1.7.0 --repo asd880921/OverTranslate-Ops `
 #    Setup.exe 會被第二包覆蓋成新版的，要裝舊版得把 1.6.9 單獨再打一次到別的資料夾
 
 # 4. 開新的 PowerShell，指向測試倉啟動
-$env:OVERTRANSLATE_UPDATE_REPO  = "https://github.com/asd880921/OverTranslate-Ops"
+$env:OVERTRANSLATE_UPDATE_REPO  = "https://github.com/Hon-Lu/OverTranslate-Ops"
 $env:OVERTRANSLATE_UPDATE_TOKEN = gh auth token
 & "$env:LocalAppData\OverTranslate\current\OverTranslate.exe"
 ```
@@ -60,7 +60,7 @@ $env:OVERTRANSLATE_UPDATE_TOKEN = gh auth token
 另外記得把測試倉的 release 刪掉：
 
 ```powershell
-gh release delete staging-1.7.0 --repo asd880921/OverTranslate-Ops --cleanup-tag --yes
+gh release delete staging-1.7.0 --repo Hon-Lu/OverTranslate-Ops --cleanup-tag --yes
 ```
 
 > 用 `$env:` 設在當前視窗就好。設成 User 層級又忘了清，測試倉的 release 一刪，

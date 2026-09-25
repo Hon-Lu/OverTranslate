@@ -198,7 +198,7 @@
                                   Foreground="{DynamicResource AppAccent}"
                                   TextDecorations="None"
                                   RequestNavigate="ReleaseNotesLink_RequestNavigate"
-                                  NavigateUri="https://github.com/asd880921/OverTranslate/releases/latest"><Run Text="{DynamicResource S.Update.NotesLink}"/></Hyperlink>
+                                  NavigateUri="https://github.com/Hon-Lu/OverTranslate/releases/latest"><Run Text="{DynamicResource S.Update.NotesLink}"/></Hyperlink>
                     </TextBlock>
                 </StackPanel>
             </Border>
@@ -244,7 +244,7 @@
                                TextWrapping="Wrap"><Run Text="{DynamicResource S.Update.SlowBefore}"/><Hyperlink x:Name="SlowHintLink"
                                   Foreground="{DynamicResource AppAccent}"
                                   RequestNavigate="ReleaseNotesLink_RequestNavigate"
-                                  NavigateUri="https://github.com/asd880921/OverTranslate/releases/latest"><Run Text="{DynamicResource S.Update.SlowLink}"/><Run Text=" &#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" TextDecorations="None"/></Hyperlink></TextBlock>
+                                  NavigateUri="https://github.com/Hon-Lu/OverTranslate/releases/latest"><Run Text="{DynamicResource S.Update.SlowLink}"/><Run Text=" &#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" TextDecorations="None"/></Hyperlink></TextBlock>
                 </Grid>
             </Border>
 
