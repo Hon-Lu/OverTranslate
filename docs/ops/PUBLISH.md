@@ -101,7 +101,7 @@ powershell -ExecutionPolicy Bypass -File .\publish-velopack.ps1
 產生 delta，換機器或誤刪之後要先抓回來：
 
 ```powershell
-vpk download github --repoUrl https://github.com/asd880921/OverTranslate --channel win --outputDir .\artifacts\releases
+vpk download github --repoUrl https://github.com/Hon-Lu/OverTranslate --channel win --outputDir .\artifacts\releases
 ```
 
 上傳到 GitHub Release 的檔案（**勾選 Set as a pre-release**，確認後再取消）：
@@ -273,10 +273,10 @@ AV 啟發式最愛的形狀。與其想辦法讓它累積信譽，不如讓它�
 任何人下載後都能驗它是不是這個 repo 的這條 workflow 建出來的：
 
 ```powershell
-gh attestation verify .\OverTranslate-win-Portable.zip --repo asd880921/OverTranslate
+gh attestation verify .\OverTranslate-win-Portable.zip --repo Hon-Lu/OverTranslate
 ```
 
-驗得出來的是「這一顆確實由 `asd880921/OverTranslate` 的 `release.yml` 在某個 commit 上產生」，
+驗得出來的是「這一顆確實由 `Hon-Lu/OverTranslate` 的 `release.yml` 在某個 commit 上產生」，
 檔案被動過一個位元組就對不上。
 
 ### 它不是什麼
@@ -339,8 +339,8 @@ $pfxPwd = Read-Host "PFX 密碼" -AsSecureString
 Export-PfxCertificate -Cert $cert -FilePath "$HOME\overtranslate-signing.pfx" -Password $pfxPwd
 
 $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\overtranslate-signing.pfx"))
-gh secret set SIGNING_PFX_BASE64 --repo asd880921/OverTranslate --body $b64
-gh secret set SIGNING_PFX_PASSWORD --repo asd880921/OverTranslate
+gh secret set SIGNING_PFX_BASE64 --repo Hon-Lu/OverTranslate --body $b64
+gh secret set SIGNING_PFX_PASSWORD --repo Hon-Lu/OverTranslate
 ```
 
 `--body` 是刻意的：貼進終端機或網頁欄位容易混進 BOM、引號或被截斷，而那顆 secret 有七千多字，
