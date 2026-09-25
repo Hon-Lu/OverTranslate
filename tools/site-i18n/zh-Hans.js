@@ -155,6 +155,8 @@ otLocale('zh-Hans', {
   'shot.story2.before': '游戏剧情对话框选中的画面',
   'shot.game.after': '游戏界面实时翻译后的画面',
   'shot.game.before': '游戏界面框选中的画面',
+  'shot.chat.after': '游戏聊天室实时翻译后的画面',
+  'shot.chat.before': '游戏聊天室框选中的画面',
   'shot.chat': '聊天室消息实时翻译的前后比对',
   'shot.realtimeapp': 'OverTranslate 实时翻译的外观设置',
   'shot.lookup': '取词翻译的小窗口',

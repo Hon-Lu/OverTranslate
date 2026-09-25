@@ -155,6 +155,8 @@ otLocale('ko', {
   'shot.story2.before': '게임 스토리 대사 영역을 지정한 화면',
   'shot.game.after': '게임 UI를 실시간 번역한 화면',
   'shot.game.before': '게임 UI 영역을 지정한 화면',
+  'shot.chat.after': '게임 채팅을 실시간 번역한 화면',
+  'shot.chat.before': '게임 채팅 영역을 지정한 화면',
   'shot.chat': '채팅 메시지 실시간 번역 전후 비교',
   'shot.realtimeapp': 'OverTranslate 실시간 번역의 표시 설정',
   'shot.lookup': '작은 빠른 조회 창',

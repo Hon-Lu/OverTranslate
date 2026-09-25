@@ -155,6 +155,8 @@ otLocale('en', {
   'shot.story2.before': 'Game story dialogue with the area selected',
   'shot.game.after': 'A game interface after real-time translation',
   'shot.game.before': 'A game interface with the area selected',
+  'shot.chat.after': 'Game chat after real-time translation',
+  'shot.chat.before': 'Game chat with the area selected',
   'shot.chat': 'Chat messages before and after real-time translation',
   'shot.realtimeapp': 'The real-time translation appearance settings in OverTranslate',
   'shot.lookup': 'The compact Quick Lookup window',

@@ -120,6 +120,7 @@ For game screens, chat windows, menus and interface text; use this mode when the
 
 | Selection | Translation result |
 |-----------|--------------------|
+| ![Real-time translation - game chat selection](images/即時翻譯1-遊戲翻譯框.png) | ![Real-time translation - game chat result](images/即時翻譯1-遊戲翻譯.png) |
 | ![Real-time translation - game selection](images/即時翻譯-遊戲翻譯框.png) | ![Real-time translation - game result](images/即時翻譯-遊戲翻譯.png) |
 
 ## Quick Lookup

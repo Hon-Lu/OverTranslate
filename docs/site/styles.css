@@ -640,6 +640,7 @@ p:last-child { margin-bottom: 0; }
 #panel-prose .grid2 > :nth-child(3) .compare,
 #panel-prose .grid2 > :nth-child(4) .compare,
 #panel-ui .compare { aspect-ratio: 16 / 9; }
+#panel-ui .compare--chat { aspect-ratio: 596 / 998; }
 
 /* ---------- sections ---------- */
 
@@ -820,6 +821,9 @@ p:last-child { margin-bottom: 0; }
   .grid2 { grid-template-columns: 1fr 1fr; align-items: start; }
   #panel-prose .grid2 > :nth-child(1) { grid-row: span 2; }
   #panel-prose .grid2 > :nth-child(4) { grid-column: 1 / -1; }
+  /* 聊天室比對框佔左欄兩列，右欄疊聊天室比對圖與 Crab Champions */
+  #panel-ui .grid2 { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); }
+  #panel-ui .grid2 > :nth-child(1) { grid-row: span 2; }
 }
 
 /* 取詞翻譯底下的兩個工具：沒有外框，圖片才能吃滿整欄寬度 */

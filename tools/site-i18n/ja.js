@@ -155,6 +155,8 @@ otLocale('ja', {
   'shot.story2.before': 'ゲームのストーリー会話の範囲を選んだ画面',
   'shot.game.after': 'ゲームの UI をリアルタイム翻訳した画面',
   'shot.game.before': 'ゲームの UI の範囲を選んだ画面',
+  'shot.chat.after': 'ゲームのチャットをリアルタイム翻訳した画面',
+  'shot.chat.before': 'ゲームのチャットの範囲を選んだ画面',
   'shot.chat': 'チャットのメッセージをリアルタイム翻訳した前後の比較',
   'shot.realtimeapp': 'OverTranslate のリアルタイム翻訳の外観設定',
   'shot.lookup': '小さなクイック辞書のウィンドウ',
