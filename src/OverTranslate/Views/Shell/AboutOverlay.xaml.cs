@@ -20,9 +20,9 @@ public partial class AboutOverlay : UserControl
 {
     // The site reads the browser's language and redirects itself, so there is one URL for every
     // interface language rather than a per-locale table like DocumentationLinks keeps.
-    private const string WebsiteUrl = "https://asd880921.github.io/OverTranslate/";
+    private const string WebsiteUrl = "https://hon-lu.github.io/OverTranslate/";
 
-    private const string GitHubUrl = "https://github.com/asd880921/OverTranslate";
+    private const string GitHubUrl = "https://github.com/Hon-Lu/OverTranslate";
 
     private const string SponsorUrl = "https://buymeacoffee.com/hon.lu";
 

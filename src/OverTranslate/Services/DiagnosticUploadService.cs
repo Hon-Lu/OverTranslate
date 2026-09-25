@@ -53,7 +53,7 @@ public sealed class DiagnosticUploadException(DiagnosticUploadFailure reason, st
 ///
 /// The receiving end is a Cloudflare Worker in front of an R2 bucket, kept in its own public
 /// repository so that what happens to the upload can be read rather than promised:
-/// https://github.com/asd880921/OverTranslate-Diag-Worker
+/// https://github.com/Hon-Lu/OverTranslate-Diag-Worker
 /// </remarks>
 public static class DiagnosticUploadService
 {

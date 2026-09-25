@@ -11,7 +11,7 @@ namespace OverTranslate.Services;
 /// </remarks>
 public static class DocumentationLinks
 {
-    private const string Blob = "https://github.com/asd880921/OverTranslate/blob/main/";
+    private const string Blob = "https://github.com/Hon-Lu/OverTranslate/blob/main/";
 
     /// <summary>
     /// Paths under the repository root, one per interface language.

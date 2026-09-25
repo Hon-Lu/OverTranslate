@@ -125,7 +125,7 @@ public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions?
 
 public static class UpdateService
 {
-    private const string GitHubRepoUrl = "https://github.com/asd880921/OverTranslate";
+    private const string GitHubRepoUrl = "https://github.com/Hon-Lu/OverTranslate";
     private const string StableChannel = "win";
     private const string BetaChannel = "beta";
 
