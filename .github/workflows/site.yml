@@ -11,12 +11,17 @@ on:
       - 'docs/**/index.html'
       - 'tools/build-site.py'
       - 'tools/site-i18n/**'
+      # 頁面引用這兩個檔案時帶內容雜湊，改了它們卻沒重新產生，版本號就會停在舊值
+      - 'docs/site/styles.css'
+      - 'docs/site/app.js'
   pull_request:
     paths:
       - 'docs/index.html'
       - 'docs/**/index.html'
       - 'tools/build-site.py'
       - 'tools/site-i18n/**'
+      - 'docs/site/styles.css'
+      - 'docs/site/app.js'
   workflow_dispatch:
 
 jobs:

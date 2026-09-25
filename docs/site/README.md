@@ -20,6 +20,8 @@ python tools/build-site.py
 
 **`docs/index.html` 以外的 `index.html` 都是產生出來的，不要手動編輯**，下次執行產生器就會被覆蓋。忘了跑的話 GitHub Actions（`.github/workflows/site.yml`）會在 push 時擋下來。
 
+**改了 `docs/site/styles.css` 或 `docs/site/app.js` 也要重跑。** 所有頁面（包括正本）引用這兩個檔案時都帶內容雜湊，例如 `styles.css?v=23e5c0037c`，由產生器計算並寫入。GitHub Pages 讓每個檔案各自快取約 10 分鐘，不帶版本號的話，部署後訪客可能拿到新 HTML 配舊 JS；內容沒變時雜湊不變，快取照常有效。雜湊是把換行統一成 LF 之後才算的，Windows 與 CI 會得到同一個值。
+
 本機預覽：直接用瀏覽器開 `docs/index.html`，或在 `docs/` 執行 `python -m http.server`。
 
 ## 為什麼要產生而不是用 JS 換字

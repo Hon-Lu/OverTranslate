@@ -11,6 +11,7 @@
     python tools/build-site.py           產生頁面
     python tools/build-site.py --check   只檢查是否為最新，不寫檔（CI 用）
 """
+import hashlib
 import io
 import os
 import re
@@ -201,10 +202,30 @@ def apply_prefix(html, depth):
     return html
 
 
+# ---------------------------------------------------------------- 快取版本號
+
+# CSS 與 JS 的網址帶上內容雜湊：GitHub Pages 讓每個檔案各自快取約 10 分鐘，
+# 不帶版本號時，部署後可能拿到新 HTML 配舊 JS。內容沒變雜湊就不變，快取照常有效。
+VERSIONED = ('site/styles.css', 'site/app.js')
+
+
+def asset_hash(rel):
+    data = io.open(os.path.join(DOCS, rel), 'rb').read()
+    # 先統一成 LF：Windows 工作目錄是 CRLF、CI checkout 是 LF，兩邊要算出同一個值
+    return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()[:10]
+
+
+def apply_versions(html):
+    for rel in VERSIONED:
+        html = re.sub(r'((?:href|src)="%s)(?:\?v=[0-9a-f]+)?"' % re.escape(rel),
+                      r'\g<1>?v=%s"' % asset_hash(rel), html)
+    return html
+
+
 # ---------------------------------------------------------------- 主流程
 
 def build():
-    src = io.open(SOURCE, encoding='utf-8').read()
+    src = apply_versions(io.open(SOURCE, encoding='utf-8').read())
     zh = source_strings(src)
     pages = {}
     for lang, folder, html_lang, suffix, statcard, readme, ollama in LANGS:
@@ -256,7 +277,9 @@ def main():
             print('  過期    %s' % rel)
             continue
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        io.open(path, 'w', encoding='utf-8', newline='\n').write(content)
+        # 沿用原檔的換行：正本在 Windows 工作目錄是 CRLF，不要因為改了版本號就整份換掉
+        crlf = os.path.exists(path) and b'\r\n' in io.open(path, 'rb').read()
+        io.open(path, 'w', encoding='utf-8', newline='\r\n' if crlf else '\n').write(content)
         print('  已寫入  %s' % rel)
 
     if check and stale:
