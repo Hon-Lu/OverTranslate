@@ -19,8 +19,9 @@ public sealed record EngineUsage(string Summary, string BackupEngine, string Pri
 /// first wins. This turns the per-block latency into roughly the *fastest* engine instead of
 /// being stuck on whichever free endpoint happens to be throttled/slow that moment.
 ///
-/// A hard <see cref="_timeout"/> per block guarantees the UI never hangs indefinitely; if every
-/// engine fails the original text is returned untranslated so the rest of the batch still shows.
+/// A hard <see cref="_timeout"/> per block guarantees the UI never hangs indefinitely. Engines that
+/// all fail before it are given one more round inside it; if that fails too, or the deadline is
+/// hit, the original text is returned untranslated so the rest of the batch still shows.
 /// </summary>
 public class ResilientProvider : ITranslationProvider
 {
@@ -29,6 +30,9 @@ public class ResilientProvider : ITranslationProvider
     private readonly GTranslateProvider[] _engines;
     private readonly TimeSpan _hedgeDelay;
     private readonly TimeSpan _timeout;
+
+    // Stands in for an engine name on a block that every engine failed to translate.
+    private const string NoEngine = "(none)";
 
     /// <summary>
     /// Which engine(s) actually produced the most recent batch. Useful for surfacing the real
@@ -47,7 +51,7 @@ public class ResilientProvider : ITranslationProvider
         "GoogleTranslator2"   => "Google (RPC)",
         "BingTranslator"      => "Bing",
         "MicrosoftTranslator" => "Microsoft",
-        "(none)"              => LocalizationService.Get("S.Error.NotTranslated"),
+        NoEngine              => LocalizationService.Get("S.Error.NotTranslated"),
         _                     => engineName,
     };
 
@@ -84,17 +88,17 @@ public class ResilientProvider : ITranslationProvider
                 langVotes[detLang] = langVotes.GetValueOrDefault(detLang) + 1;
             engineVotes[engine] = engineVotes.GetValueOrDefault(engine) + 1;
             translated.Add(new TranslatedBlock(blocks[i].Text, translation, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
-                { RunsAcross = blocks[i].RunsAcross });
+                { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine });
         }
 
-        string primary   = _engines[0].Name;
+        string primary  = _engines[0].Name;
         var ordered      = engineVotes.OrderByDescending(kv => kv.Value).ToList();
         string summary   = string.Join(", ", ordered.Select(kv => $"{Friendly(kv.Key)}×{kv.Value}"));
 
         // The badge should name the *backup* that stepped in, never the user's own pick — otherwise
         // "selected Bing → ⚡由 Bing" looks self-contradictory. Prefer a real backup over "(none)".
         var backups       = ordered.Where(kv => kv.Key != primary).ToList();
-        var backupEngine  = backups.FirstOrDefault(kv => kv.Key != "(none)").Key
+        var backupEngine  = backups.FirstOrDefault(kv => kv.Key != NoEngine).Key
                             ?? backups.FirstOrDefault().Key;
         bool fallbackUsed = backups.Count > 0;
         LastUsage = new EngineUsage(summary, Friendly(backupEngine ?? ""), Friendly(primary), fallbackUsed);
@@ -111,6 +115,7 @@ public class ResilientProvider : ITranslationProvider
     {
         var pending   = new List<Task<(string Translation, string DetectedLang, string Engine)>>();
         int next      = 0;
+        bool retried  = false;
         // Tied to the token so an abandoned batch does not leave timers armed for the full timeout.
         var deadline  = Task.Delay(_timeout, cancellationToken);
 
@@ -147,11 +152,24 @@ public class ResilientProvider : ITranslationProvider
 
             if (next < _engines.Length)
                 StartNext();      // an engine failed early — bring the next one online
+            else if (pending.Count == 0 && !retried)
+            {
+                // Every engine said no, and did so before the deadline — an error, not a hang, and
+                // errors from these free endpoints are mostly passing ones. One more round, from the
+                // user's own engine first, still under the same deadline: a block that would have
+                // been shown in its original text gets another chance, and the wait can never grow
+                // past what it already was. A deadline hit is not retried; that is the hang case,
+                // where asking again at once would only be waiting again.
+                retried = true;
+                next    = 0;
+                Log.Debug("每個引擎都失敗，於時限內從主力 {Primary} 重試一輪", Friendly(_engines[0].Name));
+                StartNext();
+            }
         }
 
         Observe(pending);
         cancellationToken.ThrowIfCancellationRequested();
-        return (text, "", "(none)"); // every engine failed/timed out — fall back to the original text
+        return (text, "", NoEngine); // every engine failed/timed out — fall back to the original text
 
         void StartNext()
         {

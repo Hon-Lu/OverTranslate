@@ -28,6 +28,16 @@ public record TranslatedBlock(
     /// across unread, which is all a translator can honestly do with it.
     /// </remarks>
     public bool RunsAcross { get; init; }
+
+    /// <summary>
+    /// True when no engine produced a translation and <see cref="TranslatedText"/> is only the
+    /// original text standing in for one.
+    /// </summary>
+    /// <remarks>
+    /// Said outright rather than left to be inferred from the two texts being equal: a number, a
+    /// name or "OK" translates to itself, and a caller that retried those would retry forever.
+    /// </remarks>
+    public bool Untranslated { get; init; }
 }
 
 public class TranslationService
