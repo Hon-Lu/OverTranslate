@@ -388,6 +388,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Provider.GoogleHint">Legacy web interface</sys:String>
     <sys:String x:Key="S.Provider.Google2">Google Translate (RPC)</sys:String>
     <sys:String x:Key="S.Provider.Google2Hint">Newer RPC interface</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google Translate (Chrome)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">The interface behind Chrome's page translation; reads more naturally</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing Translator</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>

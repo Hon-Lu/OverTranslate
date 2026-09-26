@@ -318,7 +318,7 @@ if (args[0] == "--xlate-line")
         return 1;
     }
 
-    // All four, named apart. "Google" is two different endpoints and they need not behave
+    // All five, named apart. "Google" is three different endpoints and they need not behave
     // alike, so a limit measured on one says nothing about the others.
     //
     // There used to be a --raw that bypassed TranslationRequestChunks. Cutting is now each engine's
@@ -332,6 +332,7 @@ if (args[0] == "--xlate-line")
                  ("Microsoft    ", new EngineProvider(new MicrosoftTranslator(http))),
                  ("Google Web   ", new EngineProvider(new GoogleWebTranslator(http))),
                  ("Google RPC   ", new EngineProvider(new GoogleRpcTranslator(http))),
+                 ("Google Chrome", new EngineProvider(new GoogleChromeTranslator(http))),
                  ("Bing         ", new EngineProvider(new BingTranslator(http))),
              })
     {

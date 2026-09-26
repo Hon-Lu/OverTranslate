@@ -388,6 +388,8 @@
     <sys:String x:Key="S.Provider.GoogleHint">传统 Web 接口</sys:String>
     <sys:String x:Key="S.Provider.Google2">Google 翻译 (RPC)</sys:String>
     <sys:String x:Key="S.Provider.Google2Hint">新版 RPC 接口</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 翻译 (Chrome)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">Chrome 整页翻译使用的接口，译文较口语</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻译</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻译</sys:String>

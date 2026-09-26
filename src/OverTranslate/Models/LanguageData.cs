@@ -156,6 +156,7 @@ public static class LanguageData
     [
         new(TranslationProvider.Google,    "S.Provider.Google",    false, "S.Provider.GoogleHint"),
         new(TranslationProvider.Google2,   "S.Provider.Google2",   false, "S.Provider.Google2Hint"),
+        new(TranslationProvider.GoogleChrome, "S.Provider.GoogleChrome", false, "S.Provider.GoogleChromeHint"),
         new(TranslationProvider.Bing,      "S.Provider.Bing",      false),
         new(TranslationProvider.Microsoft, "S.Provider.Microsoft", false),
         new(TranslationProvider.DeepL,     "S.Provider.DeepL",     true,  "S.Provider.DeepLHint"),

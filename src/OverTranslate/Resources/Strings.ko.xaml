@@ -392,6 +392,8 @@
     <sys:String x:Key="S.Provider.GoogleHint">기존 웹 인터페이스</sys:String>
     <sys:String x:Key="S.Provider.Google2">Google 번역 (RPC)</sys:String>
     <sys:String x:Key="S.Provider.Google2Hint">새 RPC 인터페이스</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 번역 (Chrome)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">Chrome 페이지 번역이 쓰는 인터페이스, 더 자연스러운 번역문</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 번역</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>

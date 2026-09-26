@@ -196,6 +196,36 @@ public class EngineProtocolTests
         Assert.Equal(expected, GoogleRpcTranslator.JoinSentences(sentences));
     }
 
+    // ---- Google (Chrome) -----------------------------------------------------------------
+
+    [Fact]
+    public async Task GoogleChrome_EscapesMarkupOnTheWayOutAndDecodesItOnTheWayBack()
+    {
+        var handler = new Canned(_ => Json("""[["按 &lt;A&gt; 鍵並「儲存」"],["en"]]"""));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["Press <A> & \"save\""], "zh-TW"));
+
+        Assert.Contains("Press &lt;A&gt; &amp; &quot;save&quot;", JsonDocument.Parse(handler.Bodies[0]).RootElement[0][0][0].GetString());
+        Assert.Equal("按 <A> 鍵並「儲存」", answer.Text);
+        Assert.Equal("en", answer.DetectedLanguage);
+    }
+
+    [Fact]
+    public async Task GoogleChrome_KeepsTheBlankLineBetweenParagraphs()
+    {
+        var handler = new Canned(request =>
+        {
+            var sent = JsonDocument.Parse(request.Body).RootElement[0][0].EnumerateArray().Select(e => e.GetString()!).ToList();
+            return Json(JsonSerializer.Serialize(new object[] { sent.Select(s => $"<{s}>").ToArray() }));
+        });
+        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["First line\nsame paragraph.\n\nSecond paragraph."], "zh-TW"));
+
+        Assert.Equal("<First line same paragraph.>\n\n<Second paragraph.>", answer.Text);
+    }
+
     // ---- Bing ----------------------------------------------------------------------------
 
     private const string BingPage =

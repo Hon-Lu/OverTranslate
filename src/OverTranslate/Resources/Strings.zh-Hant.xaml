@@ -404,6 +404,8 @@
     <sys:String x:Key="S.Provider.GoogleHint">傳統 Web 介面</sys:String>
     <sys:String x:Key="S.Provider.Google2">Google 翻譯 (RPC)</sys:String>
     <sys:String x:Key="S.Provider.Google2Hint">新版 RPC 介面</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 翻譯 (Chrome)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">Chrome 整頁翻譯使用的介面，譯文較口語</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>

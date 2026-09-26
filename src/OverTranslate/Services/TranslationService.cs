@@ -52,6 +52,7 @@ public class TranslationService
 
     private readonly GoogleWebTranslator    _google       = new(Http);
     private readonly GoogleRpcTranslator    _google2      = new(Http);
+    private readonly GoogleChromeTranslator _googleChrome = new(Http);
     private readonly BingTranslator         _bing         = new(Http);
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
     private readonly DeepLProvider      _deepL     = new();
@@ -66,12 +67,14 @@ public class TranslationService
     // anything else is (see ResilientProvider); the backups are there for when it cannot answer.
     private readonly ResilientProvider _googleR;
     private readonly ResilientProvider _google2R;
+    private readonly ResilientProvider _googleChromeR;
     private readonly ResilientProvider _bingR;
     private readonly ResilientProvider _microsoftR;
 
     // The same engines on their own, for callers that asked for no fallback.
     private readonly EngineProvider _googleS;
     private readonly EngineProvider _google2S;
+    private readonly EngineProvider _googleChromeS;
     private readonly EngineProvider _bingS;
     private readonly EngineProvider _microsoftS;
 
@@ -82,14 +85,16 @@ public class TranslationService
         // 「Google (Web)」 and 「Google (RPC)」 write almost identically — thirteen of fourteen test
         // sentences came back word for word the same — so they back each other up first. Nothing writes like Bing's language model or
         // like Microsoft, so those two get the fast batch engines. Bing is never a backup: it
-        // takes one text per request and is the slowest of the four.
+        // takes one text per request and is the slowest of the five.
         _googleR       = new ResilientProvider([_google, _google2, _microsoft]);
         _google2R      = new ResilientProvider([_google2, _google, _microsoft]);
+        _googleChromeR = new ResilientProvider([_googleChrome, _google2, _microsoft]);
         _bingR         = new ResilientProvider([_bing, _google2, _microsoft]);
         _microsoftR    = new ResilientProvider([_microsoft, _google2, _google]);
 
         _googleS       = new EngineProvider(_google);
         _google2S      = new EngineProvider(_google2);
+        _googleChromeS = new EngineProvider(_googleChrome);
         _bingS         = new EngineProvider(_bing);
         _microsoftS    = new EngineProvider(_microsoft);
     }
@@ -104,6 +109,7 @@ public class TranslationService
     private ITranslationProvider Resilient(TranslationProvider provider) => provider switch
     {
         TranslationProvider.Google    => _googleR,
+        TranslationProvider.GoogleChrome => _googleChromeR,
         TranslationProvider.Bing      => _bingR,
         TranslationProvider.Microsoft => _microsoftR,
         TranslationProvider.DeepL     => _deepL,
@@ -115,6 +121,7 @@ public class TranslationService
     private ITranslationProvider Single(TranslationProvider provider) => provider switch
     {
         TranslationProvider.Google       => _googleS,
+        TranslationProvider.GoogleChrome => _googleChromeS,
         TranslationProvider.Bing         => _bingS,
         TranslationProvider.Microsoft    => _microsoftS,
         TranslationProvider.DeepL        => _deepL,
