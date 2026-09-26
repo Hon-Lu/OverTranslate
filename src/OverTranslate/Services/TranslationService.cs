@@ -1,8 +1,12 @@
 using System.Net.Http;
-using GTranslate.Translators;
+using OverTranslate.Engines;
+using OverTranslate.Engines.Bing;
+using OverTranslate.Engines.Google;
+using OverTranslate.Engines.Microsoft;
 using OverTranslate.Layout;
 using OverTranslate.Models;
 using OverTranslate.Services.Providers;
+using GT = GTranslate.Translators;
 
 namespace OverTranslate.Services;
 
@@ -42,30 +46,52 @@ public record TranslatedBlock(
 
 public class TranslationService
 {
-    // Shared HttpClient so a hung free endpoint fails fast instead of stalling the whole batch.
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    // One client for every free engine, so a hung endpoint fails fast instead of stalling the batch.
+    // Built by the engines library because how it speaks matters: see EngineHttp for why HTTP/2.
+    private static readonly HttpClient Http = EngineHttp.CreateClient(TimeSpan.FromSeconds(10));
 
-    private readonly GTranslateProvider _google    = new(new GoogleTranslator(Http));
-    private readonly GTranslateProvider _google2   = new(new GoogleTranslator2(Http));
-    private readonly GTranslateProvider _bing      = new(new BingTranslator(Http));
-    private readonly GTranslateProvider _microsoft = new(new MicrosoftTranslator(Http));
+    private readonly GoogleWebTranslator    _google       = new(Http);
+    private readonly GoogleRpcTranslator    _google2      = new(Http);
+    private readonly BingTranslator         _bing         = new(Http);
+    private readonly MicrosoftTranslator    _microsoft    = new(Http);
     private readonly DeepLProvider      _deepL     = new();
     private readonly OpenAiCompatibleProvider _openAi = new();
 
-    // Per-engine resilient wrappers: the user's choice is the primary, the other reliable
-    // keyless engines act as hedged backups so one slow/throttled endpoint can't stall the batch.
+    // Dictionary lookups are still GTranslate's; see GTranslateDictionaryProvider.
+    private readonly GTranslateDictionaryProvider _googleDictionary    = new(new GT.GoogleTranslator(Http));
+    private readonly GTranslateDictionaryProvider _bingDictionary      = new(new GT.BingTranslator(Http));
+    private readonly GTranslateDictionaryProvider _microsoftDictionary = new(new GT.MicrosoftTranslator(Http));
+
+    // Per-engine resilient wrappers: the user's choice is the primary and is asked twice before
+    // anything else is (see ResilientProvider); the backups are there for when it cannot answer.
     private readonly ResilientProvider _googleR;
     private readonly ResilientProvider _google2R;
     private readonly ResilientProvider _bingR;
     private readonly ResilientProvider _microsoftR;
 
+    // The same engines on their own, for callers that asked for no fallback.
+    private readonly EngineProvider _googleS;
+    private readonly EngineProvider _google2S;
+    private readonly EngineProvider _bingS;
+    private readonly EngineProvider _microsoftS;
+
     public TranslationService()
     {
-        // Google2/Bing/Microsoft are the most reliable free endpoints — use them as the backup pool.
-        _google2R   = new ResilientProvider([_google2, _bing, _microsoft]);
-        _bingR      = new ResilientProvider([_bing, _google2, _microsoft]);
-        _microsoftR = new ResilientProvider([_microsoft, _google2, _bing]);
-        _googleR    = new ResilientProvider([_google, _google2, _bing]);
+        // Each backup list leads with the engine that writes most like the primary, because a
+        // backup that answers is a screen in two voices and the closer the voices the less it shows.
+        // 「Google (Web)」 and 「Google (RPC)」 write almost identically — thirteen of fourteen test
+        // sentences came back word for word the same — so they back each other up first. Nothing writes like Bing's language model or
+        // like Microsoft, so those two get the fast batch engines. Bing is never a backup: it
+        // takes one text per request and is the slowest of the four.
+        _googleR       = new ResilientProvider([_google, _google2, _microsoft]);
+        _google2R      = new ResilientProvider([_google2, _google, _microsoft]);
+        _bingR         = new ResilientProvider([_bing, _google2, _microsoft]);
+        _microsoftR    = new ResilientProvider([_microsoft, _google2, _google]);
+
+        _googleS       = new EngineProvider(_google);
+        _google2S      = new EngineProvider(_google2);
+        _bingS         = new EngineProvider(_bing);
+        _microsoftS    = new EngineProvider(_microsoft);
     }
 
     /// <summary>
@@ -88,19 +114,19 @@ public class TranslationService
     // Single chosen engine, no hedging/fallback — a timeout/failure surfaces directly to the caller.
     private ITranslationProvider Single(TranslationProvider provider) => provider switch
     {
-        TranslationProvider.Google    => _google,
-        TranslationProvider.Bing      => _bing,
-        TranslationProvider.Microsoft => _microsoft,
-        TranslationProvider.DeepL     => _deepL,
-        TranslationProvider.OpenAI    => _openAi,
-        _                             => _google2,
+        TranslationProvider.Google       => _googleS,
+        TranslationProvider.Bing         => _bingS,
+        TranslationProvider.Microsoft    => _microsoftS,
+        TranslationProvider.DeepL        => _deepL,
+        TranslationProvider.OpenAI       => _openAi,
+        _                                => _google2S,
     };
 
-    private GTranslateProvider? DictionaryProvider(TranslationProvider provider) => provider switch
+    private GTranslateDictionaryProvider? DictionaryProvider(TranslationProvider provider) => provider switch
     {
-        TranslationProvider.Google    => _google,
-        TranslationProvider.Bing      => _bing,
-        TranslationProvider.Microsoft => _microsoft,
+        TranslationProvider.Google    => _googleDictionary,
+        TranslationProvider.Bing      => _bingDictionary,
+        TranslationProvider.Microsoft => _microsoftDictionary,
         _                             => null,
     };
 

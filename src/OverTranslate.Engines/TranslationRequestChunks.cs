@@ -1,4 +1,4 @@
-namespace OverTranslate.Services.Providers;
+namespace OverTranslate.Engines;
 
 /// <summary>Why a piece ended where it did, which is what decides how to put it back together.</summary>
 internal enum TranslationChunkBoundary
@@ -28,8 +28,8 @@ internal readonly record struct TranslationRequestChunk(
 /// boundary each piece can reach.
 /// </summary>
 /// <remarks>
-/// <para>Microsoft and Bing refuse more than a thousand characters, and GTranslate refuses the call
-/// before it leaves the machine. Both Google endpoints accept far more — 3,000 was translated
+/// <para>Microsoft and Bing refuse more than a thousand characters — Microsoft counts it across
+/// every text in one request, Bing per request. Both Google endpoints accept far more — 3,000 was translated
 /// complete and in order, every sentence accounted for. So this exists to keep the two engines that
 /// have a limit usable, not because the other two need protecting from long text.</para>
 ///
@@ -99,6 +99,12 @@ internal static class TranslationRequestChunks
     /// them, encoded bytes, or something else again — so a text measured at 999 here could still be
     /// over on the wire, and the failure mode is losing two of the three engines at once. These are
     /// undocumented endpoints and the number can change without anyone being told.</para>
+    ///
+    /// <para>Since measured: both count UTF-16 units, which is what <see cref="string.Length"/>
+    /// counts, and 1,000 itself passes (<c>.ai/translation-service-analysis/microsoft.md</c> and
+    /// <c>bing.md</c>). The margin stays for the second half of the reason — nobody is told when it
+    /// changes — and a piece is not a request any more: <see cref="BatchTranslator"/> packs pieces
+    /// into requests against each engine's own budget.</para>
     ///
     /// <para>It is deliberately not justified by quality: clean prose came back complete from both
     /// Google endpoints at 3,000 characters, and the sentence that loops does so at 270. Length is

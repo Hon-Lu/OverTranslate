@@ -276,10 +276,10 @@ public class DictionaryLookupTests
     {
         using var http = new HttpClient();
 
-        Assert.True(new GTranslateProvider(new GoogleTranslator(http)).SupportsDictionary);
-        Assert.True(new GTranslateProvider(new BingTranslator(http)).SupportsDictionary);
-        Assert.True(new GTranslateProvider(new MicrosoftTranslator(http)).SupportsDictionary);
-        Assert.False(new GTranslateProvider(new GoogleTranslator2(http)).SupportsDictionary);
+        Assert.True(new GTranslateDictionaryProvider(new GoogleTranslator(http)).SupportsDictionary);
+        Assert.True(new GTranslateDictionaryProvider(new BingTranslator(http)).SupportsDictionary);
+        Assert.True(new GTranslateDictionaryProvider(new MicrosoftTranslator(http)).SupportsDictionary);
+        Assert.False(new GTranslateDictionaryProvider(new GoogleTranslator2(http)).SupportsDictionary);
     }
 
     [Theory]

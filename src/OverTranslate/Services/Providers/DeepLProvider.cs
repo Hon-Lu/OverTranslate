@@ -38,7 +38,7 @@ public class DeepLProvider : ITranslationProvider
         request.Headers.Add("Authorization", $"DeepL-Auth-Key {apiKey}");
         request.Content = new FormUrlEncodedContent(content);
 
-        // Unlike the GTranslate engines, this request really can be aborted mid-flight.
+        // Aborted mid-flight when the token is cancelled, like every engine in OverTranslate.Engines.
         var response = await _http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 

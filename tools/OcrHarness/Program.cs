@@ -1,6 +1,9 @@
 using System.Drawing;
 using System.IO;
-using GTranslate.Translators;
+using OverTranslate.Engines;
+using OverTranslate.Engines.Bing;
+using OverTranslate.Engines.Google;
+using OverTranslate.Engines.Microsoft;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Providers;
@@ -269,6 +272,8 @@ if (detectorFlag >= 0)
     Console.WriteLine($"detector: {detPath}  normalization={normalization}");
 }
 
+var http = EngineHttp.CreateClient(TimeSpan.FromSeconds(10));
+
 // Forced-fallback check: the primary engine gets a 1ms-timeout HttpClient so it always fails,
 // proving the hedge falls back to a backup engine and that the badge data (FallbackUsed/Dominant)
 // is computed correctly. No OCR / screenshot needed.
@@ -280,12 +285,12 @@ if (args[0] == "--fallback-test")
         new("Please restart the application.",        new System.Windows.Rect(0, 0, 100, 20)),
     };
 
-    var brokenHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMilliseconds(1) };
+    var brokenHttp = EngineHttp.CreateClient(TimeSpan.FromMilliseconds(1));
     var resilient = new ResilientProvider(
         [
-            new GTranslateProvider(new MicrosoftTranslator(brokenHttp)), // primary: always times out
-            new GTranslateProvider(new GoogleTranslator2()),             // backup
-            new GTranslateProvider(new BingTranslator()),                // backup
+            new MicrosoftTranslator(brokenHttp), // primary: always times out
+            new GoogleRpcTranslator(http),       // backup
+            new GoogleWebTranslator(http),       // backup
         ],
         hedgeDelay: TimeSpan.FromMilliseconds(200));
 
@@ -313,26 +318,21 @@ if (args[0] == "--xlate-line")
         return 1;
     }
 
-    // All four, named apart. "Google" is two different endpoints and they need not behave alike —
-    // the resilient chains use GoogleTranslator2 as a backup and GoogleTranslator as a primary, so
-    // a limit measured on one says nothing about the other.
+    // All four, named apart. "Google" is two different endpoints and they need not behave
+    // alike, so a limit measured on one says nothing about the others.
     //
-    // --raw hands each engine the whole text, bypassing TranslationRequestChunks. That is what
-    // reproduces the fault the chunking exists to prevent, so it stays available: without it the
-    // only way to see an endpoint's real behaviour past its limit is to delete the fix.
-    var raw = args.Contains("--raw");
-    var line2 = raw ? string.Join(' ', args.Skip(1).Where(a => a != "--raw")) : line;
-    var limit = raw ? int.MaxValue : (int?)null;
+    // There used to be a --raw that bypassed TranslationRequestChunks. Cutting is now each engine's
+    // own business (OverTranslate.Engines.BatchTranslator), so reproducing an endpoint past its
+    // limit means a scratch request of its own rather than a switch here.
+    var block = new List<OcrTextBlock> { new(line, new System.Windows.Rect(0, 0, 100, 20)) };
+    Console.WriteLine($"  input: {line.Length} chars");
 
-    var block = new List<OcrTextBlock> { new(line2, new System.Windows.Rect(0, 0, 100, 20)) };
-    Console.WriteLine($"  input: {line2.Length} chars, chunking {(raw ? "OFF" : "ON")}");
-
-    foreach (var (name, provider) in new (string, GTranslateProvider)[]
+    foreach (var (name, provider) in new (string, EngineProvider)[]
              {
-                 ("Microsoft", new GTranslateProvider(new MicrosoftTranslator(), null, limit)),
-                 ("Google Web", new GTranslateProvider(new GoogleTranslator(), null, limit)),
-                 ("Google RPC", new GTranslateProvider(new GoogleTranslator2(), null, limit)),
-                 ("Bing      ", new GTranslateProvider(new BingTranslator(), null, limit)),
+                 ("Microsoft    ", new EngineProvider(new MicrosoftTranslator(http))),
+                 ("Google Web   ", new EngineProvider(new GoogleWebTranslator(http))),
+                 ("Google RPC   ", new EngineProvider(new GoogleRpcTranslator(http))),
+                 ("Bing         ", new EngineProvider(new BingTranslator(http))),
              })
     {
         try
@@ -351,9 +351,9 @@ if (args[0] == "--xlate-line")
     // printed with it, because "Google looped" and "Google was slow so Bing answered" produce the
     // same good line and are not the same result — the summary is what tells them apart.
     var googleChain = new ResilientProvider([
-        new GTranslateProvider(new GoogleTranslator(), null, limit),
-        new GTranslateProvider(new GoogleTranslator2(), null, limit),
-        new GTranslateProvider(new BingTranslator(), null, limit),
+        new GoogleWebTranslator(http),
+        new GoogleRpcTranslator(http),
+        new MicrosoftTranslator(http),
     ]);
 
     var (chained, _) = await googleChain.TranslateAsync(block, "EN", "ZH-HANT", "");
@@ -376,9 +376,9 @@ if (args[0] == "--xlate-test")
     };
 
     var resilient = new ResilientProvider([
-        new GTranslateProvider(new GoogleTranslator2()),
-        new GTranslateProvider(new BingTranslator()),
-        new GTranslateProvider(new MicrosoftTranslator()),
+        new GoogleRpcTranslator(http),
+        new GoogleWebTranslator(http),
+        new MicrosoftTranslator(http),
     ]);
 
     for (var run = 1; run <= 3; run++)
@@ -2799,7 +2799,7 @@ if (args[0] == "--scale-sweep")
 }
 
 using var ocr = new OcrService();
-var translator = new GTranslateProvider(new MicrosoftTranslator());
+var translator = new EngineProvider(new MicrosoftTranslator(http));
 
 foreach (var path in args)
 {

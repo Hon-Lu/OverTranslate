@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The free online engines the application talks to directly: Google, Microsoft and Bing, each
+       spoken to in the request shape that serves it best rather than the one-text-per-call shape
+       GTranslate offers for all of them. Plain net8.0 and nothing from the application — no WPF,
+       no settings, no OCR types — so what an engine accepts and returns can be read, tested and
+       reasoned about without the rest of the program in the way.
+
+       Named for engines rather than for translation because translation is only what it does
+       today. Dictionary lookups and speech still go through GTranslate and are the natural next
+       tenants; the name should not have to change when they move in. -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>OverTranslate.Engines</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The application's own logger, so a request's timing and outcome land in the same file as
+         everything else that happened around it. -->
+    <PackageReference Include="NLog" Version="5.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OverTranslate.Tests" />
+  </ItemGroup>
+
+</Project>

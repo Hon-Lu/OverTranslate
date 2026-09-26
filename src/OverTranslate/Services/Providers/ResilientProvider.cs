@@ -1,4 +1,5 @@
 using NLog;
+using OverTranslate.Engines;
 
 namespace OverTranslate.Services.Providers;
 
@@ -13,21 +14,43 @@ namespace OverTranslate.Services.Providers;
 public sealed record EngineUsage(string Summary, string BackupEngine, string Primary, bool FallbackUsed);
 
 /// <summary>
-/// Wraps several keyless GTranslate engines and serves each block with a hedged-request
-/// strategy: the primary engine starts first, and if it has not answered within
-/// <see cref="_hedgeDelay"/> a backup engine is launched in parallel — whichever succeeds
-/// first wins. This turns the per-block latency into roughly the *fastest* engine instead of
-/// being stuck on whichever free endpoint happens to be throttled/slow that moment.
-///
-/// A hard <see cref="_timeout"/> per block guarantees the UI never hangs indefinitely. Engines that
-/// all fail before it are given one more round inside it; if that fails too, or the deadline is
-/// hit, the original text is returned untranslated so the rest of the batch still shows.
+/// Serves a batch from the user's engine, and from the others only when it cannot.
 /// </summary>
+/// <remarks>
+/// <para>The unit is a request, not a block. The primary engine says how it would divide the
+/// batch (<see cref="ITextTranslator.Plan"/>) — for every engine but Bing that is the whole screen
+/// in one request — and each of those groups is served as one: by one engine, entirely, or not at
+/// all. That is what keeps a screen in one voice. It used to be each block on its own clock, and a
+/// screen of twenty blocks sent as twenty requests would now and then have one of them answered by
+/// a backup, in a different engine's wording (<c>.ai/translation-service-analysis/README.md</c>).</para>
+///
+/// <para>Per group, in order, each step starting when the one before has failed or been waiting
+/// for <see cref="_hedgeDelay"/>, earlier steps left running and the first answer winning:</para>
+/// <list type="number">
+/// <item>the primary engine;</item>
+/// <item>the primary again, as a fresh request. A slow or failed request is far more often that one
+/// request than the engine as a whole, and asking again keeps the screen in the engine the user
+/// chose — which a backup, however fast, cannot;</item>
+/// <item>each backup in turn.</item>
+/// </list>
+///
+/// <para>Slow and failing are therefore told apart without anyone having to classify an error: a
+/// failure moves to the next step at once, a slow answer only after the hedge delay, and a backup is
+/// two steps away either way. If every step has failed and <see cref="_timeout"/> has not passed,
+/// the whole ladder is climbed once more from the primary — these endpoints' errors are mostly
+/// passing ones. When the deadline is reached, whatever has not been answered is shown in its
+/// original text and marked <see cref="TranslatedBlock.Untranslated"/>, so the rest of the screen
+/// still shows and a caller that can retry knows which lines to.</para>
+///
+/// <para>Whatever is still running when a group is decided is cancelled — the requests really are
+/// aborted now, which GTranslate could not do.</para>
+/// </remarks>
 public class ResilientProvider : ITranslationProvider
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    private readonly GTranslateProvider[] _engines;
+    private readonly ITextTranslator[] _engines;
+    private readonly int[] _ladder;
     private readonly TimeSpan _hedgeDelay;
     private readonly TimeSpan _timeout;
 
@@ -43,25 +66,23 @@ public class ResilientProvider : ITranslationProvider
     /// <summary>Friendly per-engine breakdown of the most recent batch (e.g. "Bing×3, Google×1").</summary>
     public string LastBatchSummary => LastUsage?.Summary ?? "";
 
-    // Friendly names mirror the toolbar provider dropdown (LanguageData.Providers) so the badge
-    // matches what the user actually picked — note the two Google engines are distinct (Web vs RPC).
+    // The engines' own names are the ones the provider dropdown shows (LanguageData.Providers), so
+    // the badge matches what the user actually picked.
     private static string Friendly(string engineName) => engineName switch
     {
-        "GoogleTranslator"    => "Google (Web)",
-        "GoogleTranslator2"   => "Google (RPC)",
-        "BingTranslator"      => "Bing",
-        "MicrosoftTranslator" => "Microsoft",
-        NoEngine              => LocalizationService.Get("S.Error.NotTranslated"),
-        _                     => engineName,
+        NoEngine => LocalizationService.Get("S.Error.NotTranslated"),
+        _        => engineName,
     };
 
+    /// <param name="engines">The user's engine first, then the backups in the order to try them.</param>
     public ResilientProvider(
-        IReadOnlyList<GTranslateProvider> engines,
+        IReadOnlyList<ITextTranslator> engines,
         TimeSpan? hedgeDelay = null,
         TimeSpan? timeout = null)
     {
         if (engines.Count == 0) throw new ArgumentException("At least one engine is required.", nameof(engines));
         _engines    = [.. engines];
+        _ladder     = [0, .. Enumerable.Range(0, engines.Count)];
         _hedgeDelay = hedgeDelay ?? TimeSpan.FromSeconds(2.5);
         _timeout    = timeout    ?? TimeSpan.FromSeconds(12);
     }
@@ -75,19 +96,35 @@ public class ResilientProvider : ITranslationProvider
         if (blocks.Count == 0) return ([], "");
         cancellationToken.ThrowIfCancellationRequested();
 
-        var tasks   = blocks.Select(b => TranslateBlockHedged(b.Text, sourceLang, targetLang, cancellationToken));
-        var results = await Task.WhenAll(tasks);
+        var texts = blocks.Select(block => block.Text).ToList();
+        var to    = EngineLanguage.ToEngine(targetLang);
+        var from  = EngineLanguage.SourceToEngine(sourceLang);
 
-        var langVotes   = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        // One clock for the whole batch, as there always was: every group starts together.
+        // Tied to the token so an abandoned batch does not leave a timer armed for the full timeout.
+        var deadline = Task.Delay(_timeout, cancellationToken);
+
+        var served = new (TextTranslation Answer, string Engine)?[texts.Count];
+        var groups = _engines[0].Plan(texts);
+
+        await Task.WhenAll(groups.Select(async group =>
+        {
+            var result = await TranslateGroupAsync(
+                group.Select(i => texts[i]).ToList(), to, from, deadline, cancellationToken);
+            if (result is not { } answered) return;
+
+            for (var k = 0; k < group.Count; k++)
+                served[group[k]] = (answered.Answers[k], answered.Engine);
+        }));
+
         var engineVotes = new Dictionary<string, int>(StringComparer.Ordinal);
-        var translated  = new List<TranslatedBlock>();
+        var translated  = new List<TranslatedBlock>(blocks.Count);
         for (int i = 0; i < blocks.Count; i++)
         {
-            var (translation, detLang, engine) = results[i];
-            if (!string.IsNullOrEmpty(detLang))
-                langVotes[detLang] = langVotes.GetValueOrDefault(detLang) + 1;
+            // Nobody answered: the original text stands in, and says so.
+            var (answer, engine) = served[i] ?? (new TextTranslation(blocks[i].Text, ""), NoEngine);
             engineVotes[engine] = engineVotes.GetValueOrDefault(engine) + 1;
-            translated.Add(new TranslatedBlock(blocks[i].Text, translation, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
+            translated.Add(new TranslatedBlock(blocks[i].Text, answer.Text, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
                 { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine });
         }
 
@@ -103,90 +140,88 @@ public class ResilientProvider : ITranslationProvider
         bool fallbackUsed = backups.Count > 0;
         LastUsage = new EngineUsage(summary, Friendly(backupEngine ?? ""), Friendly(primary), fallbackUsed);
 
-        Log.Info("翻譯完成：{Count} 個區塊，實際使用引擎 {Engines}（主力 {Primary}）",
-            blocks.Count, summary, Friendly(primary));
+        Log.Info("翻譯完成：{Count} 個區塊分 {Groups} 組送出，實際使用引擎 {Engines}（主力 {Primary}）",
+            blocks.Count, groups.Count, summary, Friendly(primary));
 
-        string detectedLang = langVotes.Count > 0 ? langVotes.MaxBy(kv => kv.Value).Key : "";
-        return (translated, detectedLang);
+        return (translated, DetectedLanguage.Vote(served.Select(s => s?.Answer.DetectedLanguage ?? "")));
     }
 
-    private async Task<(string Translation, string DetectedLang, string Engine)> TranslateBlockHedged(
-        string text, string sourceLang, string targetLang, CancellationToken cancellationToken)
+    /// <summary>One group, up the ladder until something answers or the deadline passes.</summary>
+    /// <returns>The answers and the engine that gave them, or null if nothing did in time.</returns>
+    private async Task<(IReadOnlyList<TextTranslation> Answers, string Engine)?> TranslateGroupAsync(
+        IReadOnlyList<string> texts, string to, string? from, Task deadline, CancellationToken cancellationToken)
     {
-        var pending   = new List<Task<(string Translation, string DetectedLang, string Engine)>>();
-        int next      = 0;
-        bool retried  = false;
-        // Tied to the token so an abandoned batch does not leave timers armed for the full timeout.
-        var deadline  = Task.Delay(_timeout, cancellationToken);
+        // Cancelled the moment this group is decided, so the requests that lost are aborted
+        // rather than left to finish for nobody.
+        using var decided = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var pending = new List<Task<(IReadOnlyList<TextTranslation>, string)>>();
+        int next     = 0;
+        bool retried = false;
 
         StartNext(); // always launch the primary engine immediately
 
-        while (pending.Count > 0)
+        try
         {
-            // Launch a backup once the hedge delay elapses (until engines run out).
-            Task trigger = next < _engines.Length ? Task.Delay(_hedgeDelay, cancellationToken) : deadline;
-
-            var finished = await Task.WhenAny(pending.Cast<Task>().Append(trigger));
-
-            // Checked before interpreting the result: cancellation must propagate rather than be
-            // mistaken for "every engine failed", which would silently return the untranslated text
-            // as if it were a real answer.
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (finished == trigger)
+            while (pending.Count > 0)
             {
-                if (next < _engines.Length) { StartNext(); continue; } // hedge: add a backup
-                break;                                                 // global deadline hit
+                // The next step goes up after the hedge delay, until the ladder runs out.
+                Task hedge = next < _ladder.Length ? Task.Delay(_hedgeDelay, cancellationToken) : deadline;
+
+                var finished = await Task.WhenAny(pending.Cast<Task>().Append(hedge).Append(deadline));
+
+                // Checked before interpreting the result: cancellation must propagate rather than be
+                // mistaken for "every engine failed", which would silently return the untranslated text
+                // as if it were a real answer.
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (finished == deadline) break;
+                if (finished == hedge)
+                {
+                    StartNext();
+                    continue;
+                }
+
+                var t = (Task<(IReadOnlyList<TextTranslation>, string)>)finished;
+                pending.Remove(t);
+
+                if (t.Status == TaskStatus.RanToCompletion)
+                    return t.Result; // first success wins
+
+                _ = t.Exception;     // mark the failed request's exception as observed
+
+                if (next < _ladder.Length)
+                    StartNext();     // failed early — the next step now, not after the delay
+                else if (pending.Count == 0 && !retried)
+                {
+                    // Every step said no, and did so before the deadline — an error, not a hang, and
+                    // errors from these free endpoints are mostly passing ones. Once more from the
+                    // user's own engine, still under the same deadline: a group that would have been
+                    // shown in its original text gets another chance, and the wait can never grow
+                    // past what it already was. A deadline hit is not retried; that is the hang case,
+                    // where asking again at once would only be waiting again.
+                    retried = true;
+                    next    = 0;
+                    Log.Debug("每一步都失敗，於時限內從主力 {Primary} 重試一輪", _engines[0].Name);
+                    StartNext();
+                }
             }
 
-            var t = (Task<(string, string, string)>)finished;
-            pending.Remove(t);
-
-            if (t.Status == TaskStatus.RanToCompletion)
-            {
-                Observe(pending); // let the slower engines die quietly in the background
-                return t.Result;  // first success wins
-            }
-
-            _ = t.Exception;      // mark the failed engine's exception as observed
-
-            if (next < _engines.Length)
-                StartNext();      // an engine failed early — bring the next one online
-            else if (pending.Count == 0 && !retried)
-            {
-                // Every engine said no, and did so before the deadline — an error, not a hang, and
-                // errors from these free endpoints are mostly passing ones. One more round, from the
-                // user's own engine first, still under the same deadline: a block that would have
-                // been shown in its original text gets another chance, and the wait can never grow
-                // past what it already was. A deadline hit is not retried; that is the hang case,
-                // where asking again at once would only be waiting again.
-                retried = true;
-                next    = 0;
-                Log.Debug("每個引擎都失敗，於時限內從主力 {Primary} 重試一輪", Friendly(_engines[0].Name));
-                StartNext();
-            }
+            return null; // nothing answered in time — the caller shows the original text
         }
-
-        Observe(pending);
-        cancellationToken.ThrowIfCancellationRequested();
-        return (text, "", NoEngine); // every engine failed/timed out — fall back to the original text
+        finally
+        {
+            decided.Cancel();
+            foreach (var t in pending)
+                _ = t.ContinueWith(static x => _ = x.Exception, TaskContinuationOptions.OnlyOnFaulted);
+        }
 
         void StartNext()
         {
-            var engine = _engines[next++];
+            var engine = _engines[_ladder[next++]];
             pending.Add(RunAsync(engine));
         }
 
-        async Task<(string, string, string)> RunAsync(GTranslateProvider engine)
-        {
-            var (translation, detLang) = await engine.TranslateOneAsync(text, sourceLang, targetLang, cancellationToken);
-            return (translation, detLang, engine.Name);
-        }
-
-        static void Observe(IEnumerable<Task> tasks)
-        {
-            foreach (var t in tasks)
-                t.ContinueWith(static x => _ = x.Exception, TaskContinuationOptions.OnlyOnFaulted);
-        }
+        async Task<(IReadOnlyList<TextTranslation>, string)> RunAsync(ITextTranslator engine) =>
+            (await engine.TranslateAsync(texts, to, from, decided.Token), engine.Name);
     }
 }

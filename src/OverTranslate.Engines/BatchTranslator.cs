@@ -1,0 +1,287 @@
+using System.Diagnostics;
+using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using NLog;
+
+namespace OverTranslate.Engines;
+
+/// <summary>
+/// What every engine here has in common: cutting long texts, packing the pieces into as few
+/// requests as the engine allows, sending them, and putting the answers back where they belong.
+/// </summary>
+/// <remarks>
+/// <para>An engine only says how much one request may carry and how to send one. Everything
+/// between a list of texts and a list of translations is the same work for all of them, and doing
+/// it once is what makes "one request per screen" a property of the library rather than something
+/// each engine has to get right on its own.</para>
+///
+/// <para>Texts are packed in order and never reordered. Filling requests tighter by shuffling
+/// would save a request now and then, and cost the property that makes a failure easy to reason
+/// about: the texts one request carried are a contiguous run of the screen.</para>
+/// </remarks>
+public abstract class BatchTranslator(HttpClient http) : ITextTranslator
+{
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
+    protected HttpClient Http { get; } = http;
+
+    public abstract string Name { get; }
+
+    /// <summary>The most pieces one request may carry.</summary>
+    protected abstract int MaxItemsPerRequest { get; }
+
+    /// <summary>The most characters (<see cref="string.Length"/>) one request may carry in total.</summary>
+    protected abstract int MaxCharactersPerRequest { get; }
+
+    /// <summary>The longest piece a text is cut into — see <see cref="TranslationRequestChunks"/>.</summary>
+    protected virtual int MaxCharactersPerPiece => TranslationRequestChunks.SafeMaxCharacters;
+
+    /// <summary>Cuts one text into the pieces that are actually sent.</summary>
+    /// <remarks>Never called with a blank text; those are not sent at all.</remarks>
+    private protected virtual IReadOnlyList<TranslationRequestChunk> Split(string text) =>
+        TranslationRequestChunks.Split(text, MaxCharactersPerPiece);
+
+    private static readonly Regex ParagraphBreak = new(@"\r?\n[ \t]*\r?\n\s*", RegexOptions.Compiled);
+    private static readonly Regex LineBreak = new(@"[ \t]*\r?\n[ \t]*", RegexOptions.Compiled);
+
+    /// <summary>
+    /// For an engine that loses blank lines: every paragraph becomes pieces of its own, and the
+    /// blank line between two paragraphs is put back by <see cref="TranslationRequestChunks.Join"/>.
+    /// </summary>
+    /// <param name="joinLines">
+    /// Also turn a lone line break into a space, for an engine that would read it as one anyway.
+    /// </param>
+    private protected IReadOnlyList<TranslationRequestChunk> SplitParagraphs(string text, bool joinLines)
+    {
+        var paragraphs = ParagraphBreak.Split(text.Trim())
+            .Select(paragraph => joinLines ? LineBreak.Replace(paragraph, " ") : paragraph)
+            .Where(paragraph => paragraph.Length > 0)
+            .ToList();
+
+        var pieces = new List<TranslationRequestChunk>();
+        for (var i = 0; i < paragraphs.Count; i++)
+        {
+            var chunks = TranslationRequestChunks.Split(paragraphs[i], MaxCharactersPerPiece);
+
+            // The last piece of a paragraph is followed by the next paragraph, and says so; within
+            // a paragraph the chunker's own boundaries stand.
+            if (i < paragraphs.Count - 1)
+                chunks[^1] = chunks[^1] with { BoundaryAfter = TranslationChunkBoundary.Paragraph };
+
+            pieces.AddRange(chunks);
+        }
+
+        return pieces;
+    }
+
+    /// <summary>Sends one request's worth of pieces.</summary>
+    /// <returns>Exactly one answer per piece, in order — anything else is thrown for the caller.</returns>
+    protected abstract Task<IReadOnlyList<TextTranslation>> SendAsync(
+        IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
+        CancellationToken cancellationToken);
+
+    public IReadOnlyList<IReadOnlyList<int>> Plan(IReadOnlyList<string> texts)
+    {
+        var groups = new List<IReadOnlyList<int>>();
+        var current = new List<int>();
+        int items = 0, characters = 0;
+
+        for (var i = 0; i < texts.Count; i++)
+        {
+            var pieces = IsBlank(texts[i]) ? [] : Split(texts[i]);
+            var length = pieces.Sum(piece => piece.Text.Length);
+
+            // A text that is more than a request on its own still starts a group of its own rather
+            // than being refused: TranslateAsync spreads its pieces over as many requests as it
+            // needs, and they rise and fall together.
+            if (current.Count > 0 &&
+                (items + pieces.Count > MaxItemsPerRequest || characters + length > MaxCharactersPerRequest))
+            {
+                groups.Add(current);
+                current = [];
+                items = characters = 0;
+            }
+
+            current.Add(i);
+            items += pieces.Count;
+            characters += length;
+        }
+
+        if (current.Count > 0) groups.Add(current);
+        return groups;
+    }
+
+    public async Task<IReadOnlyList<TextTranslation>> TranslateAsync(
+        IReadOnlyList<string> texts, string targetLanguage, string? sourceLanguage = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (texts.Count == 0) return [];
+
+        var chunks = texts
+            .Select(text => IsBlank(text) ? [] : Split(text))
+            .ToList();
+
+        // Every piece of every text, in order, remembering whose it is.
+        var pieces = new List<(int Text, int Piece, string Content)>();
+        for (var t = 0; t < texts.Count; t++)
+            for (var p = 0; p < chunks[t].Count; p++)
+                pieces.Add((t, p, chunks[t][p].Text));
+
+        var requests = Pack(pieces.Select(piece => piece.Content).ToList());
+        var answers = await Task.WhenAll(requests.Select(range =>
+            SendMeasuredAsync(pieces.GetRange(range.Start, range.Count).Select(piece => piece.Content).ToList(),
+                targetLanguage, sourceLanguage, cancellationToken)));
+
+        var translated = chunks.Select(c => new string[c.Count]).ToList();
+        var detected = new string[texts.Count];
+        for (var r = 0; r < requests.Count; r++)
+        {
+            for (var k = 0; k < requests[r].Count; k++)
+            {
+                var (text, piece, _) = pieces[requests[r].Start + k];
+                var answer = answers[r][k];
+                translated[text][piece] = answer.Text;
+
+                // The first piece that names a language speaks for the text; the rest are the same
+                // text and a later disagreement is a shorter piece being read with less to go on.
+                if (string.IsNullOrEmpty(detected[text])) detected[text] = answer.DetectedLanguage;
+            }
+        }
+
+        var results = new TextTranslation[texts.Count];
+        for (var t = 0; t < texts.Count; t++)
+        {
+            results[t] = chunks[t].Count switch
+            {
+                // Nothing to translate: the text stands for itself, which is also what every
+                // engine answers when handed one.
+                0 => new TextTranslation(texts[t], ""),
+                1 => new TextTranslation(translated[t][0], detected[t] ?? ""),
+                _ => new TextTranslation(TranslationRequestChunks.Join(chunks[t], translated[t]), detected[t] ?? ""),
+            };
+        }
+
+        if (chunks.Any(c => c.Count > 1))
+        {
+            // Where a long text was cut, because a translation that reads oddly at a seam is
+            // otherwise indistinguishable from one the engine simply got wrong.
+            Log.Debug("{Engine}：{Count} 段文字超過 {Limit} 字，已切段送出",
+                Name, chunks.Count(c => c.Count > 1), MaxCharactersPerPiece);
+        }
+
+        return results;
+    }
+
+    /// <summary>Greedy, in order: each request takes pieces until the next one would not fit.</summary>
+    private List<(int Start, int Count)> Pack(IReadOnlyList<string> pieces)
+    {
+        var requests = new List<(int Start, int Count)>();
+        int start = 0, characters = 0;
+
+        for (var i = 0; i < pieces.Count; i++)
+        {
+            var count = i - start;
+            if (count > 0 &&
+                (count + 1 > MaxItemsPerRequest || characters + pieces[i].Length > MaxCharactersPerRequest))
+            {
+                requests.Add((start, count));
+                start = i;
+                characters = 0;
+            }
+
+            characters += pieces[i].Length;
+        }
+
+        if (pieces.Count > start) requests.Add((start, pieces.Count - start));
+        return requests;
+    }
+
+    /// <summary>
+    /// One request, timed and logged, with whatever it threw turned into something a caller can
+    /// sort without knowing which engine it came from.
+    /// </summary>
+    /// <remarks>
+    /// Logs sizes, timings and outcomes, never the text. What is sent is what the user had on
+    /// screen, and logs travel in diagnostic bundles; how many texts, how long and how it ended is
+    /// what tells a slow engine from a failing one, which is the question these lines are for.
+    /// </remarks>
+    private async Task<IReadOnlyList<TextTranslation>> SendMeasuredAsync(
+        IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
+        CancellationToken cancellationToken)
+    {
+        var started = Stopwatch.GetTimestamp();
+        var characters = pieces.Sum(piece => piece.Length);
+
+        try
+        {
+            var answers = await SendAsync(pieces, targetLanguage, sourceLanguage, cancellationToken);
+
+            // Positional, so a count that does not match cannot be lined up with anything — which
+            // answer belongs to which text is exactly what would be guessed.
+            if (answers.Count != pieces.Count)
+                throw new TranslationEngineException(Name, $"answered {answers.Count} of {pieces.Count} texts");
+
+            Log.Debug("{Engine}：{Items} 格 {Characters} 字，{Elapsed} ms",
+                Name, pieces.Count, characters, Elapsed(started));
+            return answers;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            var failure = ex switch
+            {
+                TranslationEngineException engine => engine,
+                HttpRequestException http => new TranslationEngineException(
+                    Name, $"request failed ({http.HttpRequestError})", http.StatusCode, http),
+
+                // Not the caller's token, so HttpClient's own timeout.
+                OperationCanceledException timeout => new TranslationEngineException(
+                    Name, "timed out", null, timeout),
+
+                JsonException or InvalidOperationException or KeyNotFoundException
+                    or IndexOutOfRangeException or FormatException => new TranslationEngineException(
+                    Name, $"unreadable answer ({ex.GetType().Name})", null, ex),
+
+                _ => null,
+            };
+
+            Log.Info("{Engine} 失敗：{Items} 格 {Characters} 字，{Elapsed} ms，{Status}，{Reason}",
+                Name, pieces.Count, characters, Elapsed(started),
+                failure?.StatusCode is { } status ? (int)status : "-",
+                failure?.Message ?? ex.GetType().Name);
+
+            if (failure is null || ReferenceEquals(failure, ex)) throw;
+            throw failure;
+        }
+    }
+
+    /// <summary>
+    /// Sends a request and hands back the body, or throws with the status when there is none worth
+    /// reading.
+    /// </summary>
+    protected async Task<string> ReadAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        using var response = await Http.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw new TranslationEngineException(Name, $"HTTP {(int)response.StatusCode}", response.StatusCode);
+
+        return body;
+    }
+
+    private static long Elapsed(long started) => (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+
+    private static bool IsBlank(string text) => string.IsNullOrWhiteSpace(text);
+
+    /// <summary>Reads a JSON string that has to be there.</summary>
+    protected static string RequireString(JsonElement element) =>
+        element.ValueKind == JsonValueKind.String
+            ? element.GetString()!
+            : throw new FormatException($"expected a string, found {element.ValueKind}");
+}
