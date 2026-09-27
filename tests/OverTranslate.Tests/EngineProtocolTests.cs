@@ -175,16 +175,52 @@ public class EngineProtocolTests
     }
 
     [Fact]
-    public async Task GoogleRpc_ACallTheServerRefused_FailsTheRequest()
+    public async Task GoogleRpc_ACallTheServerRefused_IsAskedAgainOnItsOwn()
+    {
+        var calls = 0;
+        var handler = new Canned(_ => Text(")]}'\n\n" + JsonSerializer.Serialize(Interlocked.Increment(ref calls) == 1
+            ? new object?[]
+            {
+                new object?[] { "wrb.fr", "MkEWBc", RpcData("一", "ja"), null, null, null, "1" },
+                new object?[] { "wrb.fr", "MkEWBc", null, null, null, new[] { 13 }, "2" },
+            }
+            : new object?[] { new object?[] { "wrb.fr", "MkEWBc", RpcData("二", "ja"), null, null, null, "1" } })));
+        var engine = new GoogleRpcTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["いち", "に"], "zh-TW");
+
+        Assert.Equal(["一", "二"], answers.Select(a => a.Text));
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.DoesNotContain(Uri.EscapeDataString("いち"), handler.Bodies[1]);
+    }
+
+    [Fact]
+    public async Task GoogleRpc_ACallRefusedTwice_FailsTheRequest()
     {
         var handler = new Canned(_ => Text(")]}'\n\n" + JsonSerializer.Serialize(new object?[]
         {
-            new object?[] { "wrb.fr", "MkEWBc", RpcData("一", "ja"), null, null, null, "1" },
-            new object?[] { "wrb.fr", "MkEWBc", null, null, null, new[] { 3 }, "2" },
+            new object?[] { "wrb.fr", "MkEWBc", null, null, null, new[] { 13 }, "1" },
         })));
         var engine = new GoogleRpcTranslator(new HttpClient(handler));
 
-        await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["いち", "に"], "zh-TW"));
+        await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["に"], "zh-TW"));
+    }
+
+    // Seen twice from 「Google (Web)」: one line of a batch answered with nothing. Shown, it is an
+    // empty box; so it is asked again, and only it.
+    [Fact]
+    public async Task AnEmptyAnswerToATextWithWords_IsAskedAgain()
+    {
+        var calls = 0;
+        var handler = new Canned(_ => Json(Interlocked.Increment(ref calls) == 1
+            ? """[["一","en"],["","en"]]"""
+            : """[["二","en"]]"""));
+        var engine = new GoogleWebTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["one", "two"], "zh-TW");
+
+        Assert.Equal(["一", "二"], answers.Select(a => a.Text));
+        Assert.Equal("q=two", handler.Bodies[1]);
     }
 
     [Theory]
@@ -224,6 +260,33 @@ public class EngineProtocolTests
         var answer = Assert.Single(await engine.TranslateAsync(["First line\nsame paragraph.\n\nSecond paragraph."], "zh-TW"));
 
         Assert.Equal("<First line same paragraph.>\n\n<Second paragraph.>", answer.Text);
+    }
+
+    [Fact]
+    public async Task GoogleChrome_A5xxIsTriedOnceMoreOnTheRegionalHost()
+    {
+        var handler = new Canned(request => request.Uri.Contains("translate-pa.googleapis.com")
+            ? new HttpResponseMessage(HttpStatusCode.BadGateway)
+            : Json("""[["好"],["en"]]"""));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["OK"], "zh-TW"));
+
+        Assert.Equal("好", answer.Text);
+        Assert.Equal(["translate-pa.googleapis.com", "translate-pa.us.rep.googleapis.com"],
+            handler.Requests.Select(r => new Uri(r.Uri).Host));
+    }
+
+    [Fact]
+    public async Task GoogleChrome_ARefusalThatIsNotTheServers_IsNotRetriedElsewhere()
+    {
+        var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.Forbidden));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-TW"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, failure.StatusCode);
+        Assert.Single(handler.Requests);
     }
 
     // ---- Bing ----------------------------------------------------------------------------

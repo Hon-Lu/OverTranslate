@@ -63,41 +63,58 @@ public class TranslationService
     private readonly GTranslateDictionaryProvider _bingDictionary      = new(new GT.BingTranslator(Http));
     private readonly GTranslateDictionaryProvider _microsoftDictionary = new(new GT.MicrosoftTranslator(Http));
 
-    // Per-engine resilient wrappers: the user's choice is the primary and is asked twice before
+    // Per-option resilient wrappers: the user's engine is the primary and is asked twice before
     // anything else is (see ResilientProvider); the backups are there for when it cannot answer.
     private readonly ResilientProvider _googleR;
-    private readonly ResilientProvider _google2R;
     private readonly ResilientProvider _googleChromeR;
     private readonly ResilientProvider _bingR;
     private readonly ResilientProvider _microsoftR;
 
     // The same engines on their own, for callers that asked for no fallback.
     private readonly EngineProvider _googleS;
-    private readonly EngineProvider _google2S;
     private readonly EngineProvider _googleChromeS;
     private readonly EngineProvider _bingS;
     private readonly EngineProvider _microsoftS;
 
+    // Which option each engine is part of, so the backup badge names what the dropdown names.
+    private readonly Dictionary<string, TranslationProvider> _optionOf;
+
     public TranslationService()
     {
+        _optionOf = new()
+        {
+            [_google.Name]       = TranslationProvider.Google,
+            [_google2.Name]      = TranslationProvider.Google,
+            [_googleChrome.Name] = TranslationProvider.GoogleChrome,
+            [_bing.Name]         = TranslationProvider.Bing,
+            [_microsoft.Name]    = TranslationProvider.Microsoft,
+        };
+
         // Each backup list leads with the engine that writes most like the primary, because a
         // backup that answers is a screen in two voices and the closer the voices the less it shows.
-        // 「Google (Web)」 and 「Google (RPC)」 write almost identically — thirteen of fourteen test
-        // sentences came back word for word the same — so they back each other up first. Nothing writes like Bing's language model or
-        // like Microsoft, so those two get the fast batch engines. Bing is never a backup: it
-        // takes one text per request and is the slowest of the five.
-        _googleR       = new ResilientProvider([_google, _google2, _microsoft]);
-        _google2R      = new ResilientProvider([_google2, _google, _microsoft]);
-        _googleChromeR = new ResilientProvider([_googleChrome, _google2, _microsoft]);
-        _bingR         = new ResilientProvider([_bing, _google2, _microsoft]);
-        _microsoftR    = new ResilientProvider([_microsoft, _google2, _google]);
+        //
+        // 「Google 翻譯 (標準)」 is two endpoints that write almost identically — thirteen of fourteen
+        // test sentences came back word for word the same — so the second is part of the option
+        // rather than a backup to it: Web first, being faster and never having failed a request in
+        // testing, RPC behind it, whose calls each fail now and then with an internal error. 「(Beta)」
+        // is a different model with nothing that writes like it, so it falls back to 標準. Nothing
+        // writes like Bing's language model or like Microsoft, so those two get the fast batch
+        // engines. Bing is never a backup: it takes one text per request and is the slowest of all.
+        _googleR       = Chain([_google, _google2, _microsoft]);
+        _googleChromeR = Chain([_googleChrome, _google, _google2]);
+        _bingR         = Chain([_bing, _google, _microsoft]);
+        _microsoftR    = Chain([_microsoft, _google, _google2]);
 
         _googleS       = new EngineProvider(_google);
-        _google2S      = new EngineProvider(_google2);
         _googleChromeS = new EngineProvider(_googleChrome);
         _bingS         = new EngineProvider(_bing);
         _microsoftS    = new EngineProvider(_microsoft);
     }
+
+    private ResilientProvider Chain(IReadOnlyList<ITextTranslator> engines) =>
+        new(engines, optionName: engine => _optionOf.TryGetValue(engine, out var option)
+            ? LanguageData.GetProviderDisplay(option)
+            : engine);
 
     /// <summary>
     /// The engine a caller that has not said otherwise gets: whatever the user last chose in the
@@ -114,7 +131,7 @@ public class TranslationService
         TranslationProvider.Microsoft => _microsoftR,
         TranslationProvider.DeepL     => _deepL,
         TranslationProvider.OpenAI    => _openAi,
-        _                             => _google2R,
+        _                             => _googleR,
     };
 
     // Single chosen engine, no hedging/fallback — a timeout/failure surfaces directly to the caller.
@@ -126,7 +143,7 @@ public class TranslationService
         TranslationProvider.Microsoft    => _microsoftS,
         TranslationProvider.DeepL        => _deepL,
         TranslationProvider.OpenAI       => _openAi,
-        _                                => _google2S,
+        _                                => _googleS,
     };
 
     private GTranslateDictionaryProvider? DictionaryProvider(TranslationProvider provider) => provider switch

@@ -53,6 +53,7 @@ public class ResilientProvider : ITranslationProvider
     private readonly int[] _ladder;
     private readonly TimeSpan _hedgeDelay;
     private readonly TimeSpan _timeout;
+    private readonly Func<string, string> _optionName;
 
     // Stands in for an engine name on a block that every engine failed to translate.
     private const string NoEngine = "(none)";
@@ -66,20 +67,26 @@ public class ResilientProvider : ITranslationProvider
     /// <summary>Friendly per-engine breakdown of the most recent batch (e.g. "Bing×3, Google×1").</summary>
     public string LastBatchSummary => LastUsage?.Summary ?? "";
 
-    // The engines' own names are the ones the provider dropdown shows (LanguageData.Providers), so
-    // the badge matches what the user actually picked.
-    private static string Friendly(string engineName) => engineName switch
+    // What the user sees an engine as. The badge speaks in the dropdown's names, so an engine that
+    // is part of the option the user picked — RPC behind 「Google 翻譯 (標準)」 — is not a backup.
+    private string Friendly(string engineName) => engineName switch
     {
         NoEngine => LocalizationService.Get("S.Error.NotTranslated"),
-        _        => engineName,
+        _        => _optionName(engineName),
     };
 
     /// <param name="engines">The user's engine first, then the backups in the order to try them.</param>
+    /// <param name="optionName">
+    /// The name of the option an engine belongs to, as the provider dropdown shows it; engines that
+    /// map to the same name count as one. Null uses the engines' own names.
+    /// </param>
     public ResilientProvider(
         IReadOnlyList<ITextTranslator> engines,
         TimeSpan? hedgeDelay = null,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        Func<string, string>? optionName = null)
     {
+        _optionName = optionName ?? (name => name);
         if (engines.Count == 0) throw new ArgumentException("At least one engine is required.", nameof(engines));
         _engines    = [.. engines];
         _ladder     = [0, .. Enumerable.Range(0, engines.Count)];
@@ -128,20 +135,28 @@ public class ResilientProvider : ITranslationProvider
                 { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine });
         }
 
-        string primary  = _engines[0].Name;
-        var ordered      = engineVotes.OrderByDescending(kv => kv.Value).ToList();
-        string summary   = string.Join(", ", ordered.Select(kv => $"{Friendly(kv.Key)}×{kv.Value}"));
+        // Counted by option, not by engine: two engines behind one option are one voice to the user.
+        string primary  = Friendly(_engines[0].Name);
+        var ordered      = engineVotes
+            .GroupBy(kv => Friendly(kv.Key))
+            .Select(g => new KeyValuePair<string, int>(g.Key, g.Sum(kv => kv.Value)))
+            .OrderByDescending(kv => kv.Value).ToList();
+        string summary   = string.Join(", ", ordered.Select(kv => $"{kv.Key}×{kv.Value}"));
 
         // The badge should name the *backup* that stepped in, never the user's own pick — otherwise
         // "selected Bing → ⚡由 Bing" looks self-contradictory. Prefer a real backup over "(none)".
+        var notTranslated = Friendly(NoEngine);
         var backups       = ordered.Where(kv => kv.Key != primary).ToList();
-        var backupEngine  = backups.FirstOrDefault(kv => kv.Key != NoEngine).Key
+        var backupEngine  = backups.FirstOrDefault(kv => kv.Key != notTranslated).Key
                             ?? backups.FirstOrDefault().Key;
         bool fallbackUsed = backups.Count > 0;
-        LastUsage = new EngineUsage(summary, Friendly(backupEngine ?? ""), Friendly(primary), fallbackUsed);
+        LastUsage = new EngineUsage(summary, backupEngine ?? "", primary, fallbackUsed);
 
+        // The log keeps the engines apart, which is what telling an endpoint's trouble needs.
         Log.Info("翻譯完成：{Count} 個區塊分 {Groups} 組送出，實際使用引擎 {Engines}（主力 {Primary}）",
-            blocks.Count, groups.Count, summary, Friendly(primary));
+            blocks.Count, groups.Count,
+            string.Join(", ", engineVotes.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key}×{kv.Value}")),
+            _engines[0].Name);
 
         return (translated, DetectedLanguage.Vote(served.Select(s => s?.Answer.DetectedLanguage ?? "")));
     }

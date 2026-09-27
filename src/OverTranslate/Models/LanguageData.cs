@@ -155,13 +155,22 @@ public static class LanguageData
     public static readonly List<ProviderItem> Providers =
     [
         new(TranslationProvider.Google,    "S.Provider.Google",    false, "S.Provider.GoogleHint"),
-        new(TranslationProvider.Google2,   "S.Provider.Google2",   false, "S.Provider.Google2Hint"),
         new(TranslationProvider.GoogleChrome, "S.Provider.GoogleChrome", false, "S.Provider.GoogleChromeHint"),
         new(TranslationProvider.Bing,      "S.Provider.Bing",      false),
         new(TranslationProvider.Microsoft, "S.Provider.Microsoft", false),
         new(TranslationProvider.DeepL,     "S.Provider.DeepL",     true,  "S.Provider.DeepLHint"),
         new(TranslationProvider.OpenAI,    "S.Provider.OpenAI",    false, "S.Provider.OpenAIHint"),
     ];
+
+    /// <summary>The option a saved choice stands for today.</summary>
+    /// <remarks>
+    /// 「Google 翻譯 (Web)」 and 「Google 翻譯 (RPC)」 were two options for what is one translator —
+    /// thirteen of fourteen test sentences came back word for word the same — so they became one,
+    /// 「(標準)」, with each backing the other up. Someone who had picked RPC gets the translations
+    /// they are used to, which is why this is not a reset to the default.
+    /// </remarks>
+    public static TranslationProvider CurrentProvider(TranslationProvider provider) =>
+        provider == TranslationProvider.Google2 ? TranslationProvider.Google : provider;
 
     /// <summary>
     /// Display name of a provider as shown in the selectors, for use in user-facing messages.

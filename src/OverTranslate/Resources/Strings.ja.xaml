@@ -388,12 +388,10 @@
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">翻訳が一時的に失敗しました。再試行を続けます：{0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google 翻訳 (Web)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">従来の Web インターフェース</sys:String>
-    <sys:String x:Key="S.Provider.Google2">Google 翻訳 (RPC)</sys:String>
-    <sys:String x:Key="S.Provider.Google2Hint">新しい RPC インターフェース</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChrome">Google 翻訳 (Chrome)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">Chrome のページ翻訳が使うインターフェース。より自然な訳文</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google 翻訳 (標準)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleHint">安定。ほとんどの場合におすすめ</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 翻訳 (Beta)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">より自然な訳文ですが、人名や作品名を省略・誤訳することがあります</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻訳</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻訳</sys:String>

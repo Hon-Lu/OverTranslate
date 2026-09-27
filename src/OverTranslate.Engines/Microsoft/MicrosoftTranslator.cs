@@ -45,7 +45,7 @@ public sealed class MicrosoftTranslator(HttpClient http) : BatchTranslator(http)
 
     protected override int MaxItemsPerRequest => 25;
 
-    protected override async Task<IReadOnlyList<TextTranslation>> SendAsync(
+    protected override async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken)
     {

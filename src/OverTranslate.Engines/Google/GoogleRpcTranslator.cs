@@ -38,7 +38,7 @@ public sealed class GoogleRpcTranslator(HttpClient http) : BatchTranslator(http)
     private protected override IReadOnlyList<TranslationRequestChunk> Split(string text) =>
         SplitParagraphs(text, joinLines: false);
 
-    protected override async Task<IReadOnlyList<TextTranslation>> SendAsync(
+    protected override async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken)
     {
@@ -82,17 +82,17 @@ public sealed class GoogleRpcTranslator(HttpClient http) : BatchTranslator(http)
                 position < 1 || position > pieces.Count)
                 throw new TranslationEngineException(Name, "answer with an unknown tag");
 
-            // A call the server refused comes back with no data and an error code further along.
+            // A call the server refused comes back with no data and an error code further along —
+            // [13], INTERNAL, at random: one or two calls in a hundred, however many share the
+            // envelope, one call alone included (measured 2026-09-27). It is left unanswered and
+            // asked again on its own rather than failing the texts that were answered.
             if (entry[2].ValueKind != JsonValueKind.String)
-                throw new TranslationEngineException(Name, "a text was refused");
+                continue;
 
             answers[position - 1] = Read(entry[2].GetString()!, sourceLanguage);
         }
 
-        if (answers.Any(answer => answer is null))
-            throw new TranslationEngineException(Name, "answered only some of the texts");
-
-        return answers!;
+        return answers;
     }
 
     /// <summary>One call's answer, which is itself JSON inside a string.</summary>

@@ -30,7 +30,7 @@ public sealed class GoogleWebTranslator(HttpClient http) : BatchTranslator(http)
 
     protected override int MaxCharactersPerRequest => 5000;
 
-    protected override async Task<IReadOnlyList<TextTranslation>> SendAsync(
+    protected override async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken)
     {

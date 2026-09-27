@@ -384,12 +384,10 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">Translation failed for now, still retrying: {0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google Translate (Web)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">Legacy web interface</sys:String>
-    <sys:String x:Key="S.Provider.Google2">Google Translate (RPC)</sys:String>
-    <sys:String x:Key="S.Provider.Google2Hint">Newer RPC interface</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChrome">Google Translate (Chrome)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">The interface behind Chrome's page translation; reads more naturally</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google Translate (Standard)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleHint">Stable; recommended for most uses</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google Translate (Beta)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">More natural translations, but may skip or mistranslate names and titles</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing Translator</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>

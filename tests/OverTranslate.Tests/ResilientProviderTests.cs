@@ -95,6 +95,22 @@ public class ResilientProviderTests
         Assert.Equal("Backup", provider.LastUsage.BackupEngine);
     }
 
+    // Two engines behind one option — Web and RPC behind 「Google 翻譯 (標準)」 — are one voice to the
+    // user, and the badge must not call one of them a backup.
+    [Fact]
+    public async Task AnEngineOfTheSameOption_IsNotCountedAsABackup()
+    {
+        var provider = new ResilientProvider(
+            [Engine.Failing(), Engine.Answering(text => "R:" + text, "Rpc"), Engine.Answering(text => "M:" + text, "Microsoft")],
+            optionName: name => name is "Failing" or "Rpc" ? "標準" : name);
+
+        var (blocks, _) = await provider.TranslateAsync(Blocks("a"), "EN", "ZH-HANT", "");
+
+        Assert.Equal("R:a", blocks[0].TranslatedText);
+        Assert.False(provider.LastUsage!.FallbackUsed);
+        Assert.Equal("標準", provider.LastUsage.Primary);
+    }
+
     // Slow is not failing: a stalled primary gets a second request of its own at the hedge delay,
     // and a backup only a hedge delay after that.
     [Fact]

@@ -48,7 +48,7 @@ public sealed class BingTranslator(HttpClient http) : BatchTranslator(http)
     /// <remarks>Measured: 1,000 passes, 1,001 is refused, with or without <c>isVertical</c>.</remarks>
     protected override int MaxCharactersPerRequest => 1000;
 
-    protected override async Task<IReadOnlyList<TextTranslation>> SendAsync(
+    protected override async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken)
     {

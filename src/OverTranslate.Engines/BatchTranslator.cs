@@ -76,8 +76,12 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
     }
 
     /// <summary>Sends one request's worth of pieces.</summary>
-    /// <returns>Exactly one answer per piece, in order — anything else is thrown for the caller.</returns>
-    protected abstract Task<IReadOnlyList<TextTranslation>> SendAsync(
+    /// <returns>
+    /// Exactly one entry per piece, in order — a count that does not match is thrown for the
+    /// caller. An entry may be null when the engine answered the request but refused that one
+    /// piece; those pieces are asked again on their own (see <see cref="SendMeasuredAsync"/>).
+    /// </returns>
+    protected abstract Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken);
 
@@ -216,16 +220,29 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
 
         try
         {
-            var answers = await SendAsync(pieces, targetLanguage, sourceLanguage, cancellationToken);
+            var answers = await SendCheckedAsync(pieces, targetLanguage, sourceLanguage, cancellationToken);
 
-            // Positional, so a count that does not match cannot be lined up with anything — which
-            // answer belongs to which text is exactly what would be guessed.
-            if (answers.Count != pieces.Count)
-                throw new TranslationEngineException(Name, $"answered {answers.Count} of {pieces.Count} texts");
+            // Pieces the engine left unanswered inside an answer that was otherwise fine. A whole
+            // request failing for one of them would take a screen to the next engine for the sake
+            // of a line, so only those are asked again, once, from this same engine.
+            var missing = Enumerable.Range(0, pieces.Count).Where(i => Unanswered(pieces[i], answers[i])).ToList();
+            if (missing.Count > 0)
+            {
+                Log.Debug("{Engine}：{Missing}/{Items} 格沒有答案，只重送這幾格", Name, missing.Count, pieces.Count);
+
+                var retried = await SendCheckedAsync(
+                    missing.Select(i => pieces[i]).ToList(), targetLanguage, sourceLanguage, cancellationToken);
+                for (var k = 0; k < missing.Count; k++)
+                    answers[missing[k]] = retried[k];
+
+                var still = Enumerable.Range(0, pieces.Count).Count(i => Unanswered(pieces[i], answers[i]));
+                if (still > 0)
+                    throw new TranslationEngineException(Name, $"left {still} of {pieces.Count} texts unanswered");
+            }
 
             Log.Debug("{Engine}：{Items} 格 {Characters} 字，{Elapsed} ms",
                 Name, pieces.Count, characters, Elapsed(started));
-            return answers;
+            return answers!;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -259,6 +276,32 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
             throw failure;
         }
     }
+
+    private async Task<TextTranslation?[]> SendCheckedAsync(
+        IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
+        CancellationToken cancellationToken)
+    {
+        var answers = await SendAsync(pieces, targetLanguage, sourceLanguage, cancellationToken);
+
+        // Positional, so a count that does not match cannot be lined up with anything — which
+        // answer belongs to which text is exactly what would be guessed.
+        if (answers.Count != pieces.Count)
+            throw new TranslationEngineException(Name, $"answered {answers.Count} of {pieces.Count} texts");
+
+        return [.. answers];
+    }
+
+    /// <summary>
+    /// No answer, or nothing where there was something to translate.
+    /// </summary>
+    /// <remarks>
+    /// The second is not hypothetical: 「Google 翻譯 (Web)」 has twice answered one line of a batch
+    /// with an empty string — the same line alone, and the same batch again, came back fine. Shown,
+    /// it is a box with nothing in it, and 即時翻譯 would keep it for the whole session. Blank
+    /// pieces are never sent, so a blank answer to a piece is never a real translation.
+    /// </remarks>
+    private static bool Unanswered(string piece, TextTranslation? answer) =>
+        answer is null || (string.IsNullOrWhiteSpace(answer.Text) && !string.IsNullOrWhiteSpace(piece));
 
     /// <summary>
     /// Sends a request and hands back the body, or throws with the status when there is none worth
