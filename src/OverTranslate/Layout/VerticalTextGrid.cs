@@ -1,9 +1,8 @@
 using System.Buffers;
-using System.Collections.Concurrent;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using OverTranslate.Services;
+using FontFamily = System.Windows.Media.FontFamily;
 
 namespace OverTranslate.Layout;
 
@@ -32,171 +31,63 @@ internal static class VerticalTextGrid
     /// <summary>Whether this glyph is drawn turned 90° when the text runs down the page.</summary>
     internal static bool RotatesGlyph(char glyph) => RotatedGlyphs.Contains(glyph);
 
-    // Sentence punctuation, full-width and the half-width forms OCR and some engines hand back.
-    // Only these move: the rest of the punctuation either turns (RotatedGlyphs) or already sits in
-    // the middle of its cell, which is where vertical writing wants it.
-    private static readonly SearchValues<char> ShiftedPunctuation = SearchValues.Create("。、，．｡､");
-
-    // Japanese small kana, including the Ainu katakana extensions at U+31F0–U+31FF.
-    private static readonly SearchValues<char> SmallKana = SearchValues.Create(
-        "ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶ" +
-        "ㇰㇱㇲㇳㇴㇵㇶㇷ" +
-        "ㇸㇹㇺㇻㇼㇽㇾㇿ");
-
-    // Where sentence punctuation's ink is centred once it has moved, as a fraction of the cell: the
-    // upper right quadrant, which is where Japanese and mainland Chinese vertical setting put 。 and
-    // 、. The ink is still pulled back inside the cell by InkShift, so a wide comma ends up hard
-    // against the right edge rather than past it.
-    private const double PunctuationInkX = 0.75;
-    private const double PunctuationInkY = 0.25;
-
-    // How far a small kana moves towards the top right of a full-size kana's ink, as a fraction of
-    // each gap. Across, all the way: its right edge lines up with the column's, as it does in print,
-    // and the gap is only about a tenth of the cell. Down, half: all the way pins it to the top of
-    // the cell, where it reads as belonging to the character above; half is about an eighth of the
-    // cell, which is roughly where vertical fonts put their own small kana.
-    private const double SmallKanaPullRight = 1.0;
-    private const double SmallKanaPullUp = 0.5;
-
-    // Cell-relative ink boxes, measured once per family, weight, glyph and size. The sizes in the key
-    // are rounded to a quarter DIP so a grid that shrinks in half-pixel steps does not fill this with
-    // near-duplicates, and it is cleared outright once it grows past what any one screen could use:
-    // a long live session walks through a lot of sizes, and none of them is worth keeping in
-    // particular.
-    private static readonly ConcurrentDictionary<(string Family, int Weight, char Glyph, double Size, double Cell), Rect>
-        InkCache = new();
-    private const int InkCacheLimit = 4096;
-
-    internal enum GlyphShift
+    // The vertical presentation forms of sentence punctuation, keyed by what the translation holds.
+    // The half-width forms map too: OCR and some engines hand them back in place of the full-width.
+    private static readonly Dictionary<char, char> VerticalForms = new()
     {
-        None,
-        Punctuation,
-        SmallKana,
-    }
+        ['。'] = '︒', // U+3002 → U+FE12
+        ['｡'] = '︒', // U+FF61 → U+FE12
+        ['、'] = '︑', // U+3001 → U+FE11
+        ['､'] = '︑', // U+FF64 → U+FE11
+        ['，'] = '︐', // U+FF0C → U+FE10
+    };
+
+    // JhengHei draws 。、， centred in the cell, which is where Chinese vertical writing is set here.
+    // The Traditional Chinese translation font, so the two Chinese targets share one look.
+    private static readonly FontFamily CentredPunctuationFont = TranslatedTextFont.For("ZH-HANT");
+
+    /// <summary>What one cell of a vertical column draws.</summary>
+    /// <param name="Glyph">The character to draw, which may not be the one in the translation.</param>
+    /// <param name="Font">The family to draw it in, or null for the column's own.</param>
+    internal readonly record struct VerticalGlyph(char Glyph, FontFamily? Font);
 
     /// <summary>
-    /// How a glyph is moved inside its cell when a translation into <paramref name="targetLanguage"/>
-    /// runs down the page.
+    /// What to draw for <paramref name="glyph"/> when a translation into
+    /// <paramref name="targetLanguage"/> runs down the page — only what is drawn; the text itself,
+    /// and what is copied out of the overlay, keeps the original character.
     /// </summary>
     /// <remarks>
-    /// The fonts draw 。、， where horizontal text wants them, and one TextBlock per glyph has no way
-    /// to ask a font for its vertical forms. So the glyph is drawn as it is and then moved — only for
-    /// the targets whose fonts put that punctuation in the bottom left, Japanese and Simplified
-    /// Chinese. Traditional Chinese sets it centred in vertical writing too, and JhengHei already
-    /// draws it centred. Small kana moving is a Japanese convention; every other target is left alone.
+    /// <para>The fonts draw 。、， where horizontal text wants them, and one TextBlock per glyph has
+    /// no way to ask a font for its vertical alternates. What each script wants instead differs, and
+    /// is the user's call:</para>
+    ///
+    /// <para>Japanese sets them in the top right. Unicode's Vertical Forms block (U+FE10–FE19) is the
+    /// font's vertical alternates as characters of their own, drawn there by the people who drew the
+    /// rest of Yu Gothic UI, so the character is swapped and the placement is theirs — it lands in
+    /// the top right of these cells as they are laid out. Small kana have no such forms and stay
+    /// centred; putting them where print does would mean measuring each font's ink by hand, which
+    /// was tried and dropped.</para>
+    ///
+    /// <para>Chinese sets them centred. Traditional Chinese already is: JhengHei draws its own 。
+    /// centred. YaHei's sit in the bottom left, and its vertical forms reach above the top of these
+    /// cells into the character before, so Simplified Chinese borrows JhengHei for just these
+    /// glyphs rather than a form of YaHei's own.</para>
+    ///
+    /// <para>Korean sets its sentences with half-width Latin punctuation, which is not in this at
+    /// all, and every other target is drawn as it is.</para>
     /// </remarks>
-    internal static GlyphShift ShiftFor(char glyph, string? targetLanguage)
+    internal static VerticalGlyph VerticalGlyphFor(char glyph, string? targetLanguage)
     {
         switch (targetLanguage?.Trim().ToUpperInvariant())
         {
             case "JA":
-                if (ShiftedPunctuation.Contains(glyph))
-                    return GlyphShift.Punctuation;
-                return SmallKana.Contains(glyph) ? GlyphShift.SmallKana : GlyphShift.None;
+                return new(VerticalForms.TryGetValue(glyph, out var form) ? form : glyph, null);
             case "ZH":
             case "ZH-HANS":
-                return ShiftedPunctuation.Contains(glyph) ? GlyphShift.Punctuation : GlyphShift.None;
+                return new(glyph, VerticalForms.ContainsKey(glyph) ? CentredPunctuationFont : null);
             default:
-                return GlyphShift.None;
+                return new(glyph, null);
         }
-    }
-
-    /// <summary>How far to move a glyph whose ink sits at <paramref name="ink"/> in a square cell.</summary>
-    /// <param name="ink">The glyph's ink box, relative to its cell.</param>
-    /// <param name="referenceInk">
-    /// A full-size kana's ink box in the same cell, which a small kana is pulled towards. Unused for
-    /// punctuation.
-    /// </param>
-    /// <remarks>
-    /// Never left or down, whatever the font: a face that already draws the glyph where vertical
-    /// writing wants it gets nothing rather than a correction in the wrong direction. And never out
-    /// of the cell — a wide comma aimed at the three-quarter mark would otherwise poke into the
-    /// column beside it.
-    /// </remarks>
-    internal static Vector InkShift(GlyphShift shift, Rect ink, Rect referenceInk, double cellSize)
-    {
-        if (shift == GlyphShift.None || ink.IsEmpty)
-            return default;
-
-        double dx;
-        double dy;
-        if (shift == GlyphShift.Punctuation)
-        {
-            dx = cellSize * PunctuationInkX - (ink.Left + ink.Width / 2);
-            dy = cellSize * PunctuationInkY - (ink.Top + ink.Height / 2);
-        }
-        else
-        {
-            if (referenceInk.IsEmpty)
-                return default;
-            dx = (referenceInk.Right - ink.Right) * SmallKanaPullRight;
-            dy = (referenceInk.Top - ink.Top) * SmallKanaPullUp;
-        }
-
-        dx = Math.Min(dx, cellSize - ink.Right);
-        dy = Math.Max(dy, -ink.Top);
-        return new Vector(Math.Max(0, dx), Math.Min(0, dy));
-    }
-
-    /// <summary>
-    /// Moves <paramref name="cell"/>'s glyph to where vertical writing puts it, if it is one that
-    /// moves. Call it with the TextBlock's font already set: the glyph is measured as it will be drawn.
-    /// </summary>
-    /// <remarks>
-    /// A RenderTransform rather than a different cell: the grid decides how many glyphs a column
-    /// holds, and a period takes a whole cell in vertical writing wherever in it the ink sits.
-    /// </remarks>
-    internal static void ShiftGlyph(TextBlock cell, char glyph, string? targetLanguage, double cellSize)
-    {
-        var shift = ShiftFor(glyph, targetLanguage);
-        if (shift == GlyphShift.None)
-            return;
-
-        var ink = MeasureInk(cell, glyph, cellSize);
-        var reference = shift == GlyphShift.SmallKana
-            ? MeasureInk(cell, glyph <= 'ゖ' ? 'あ' : 'ア', cellSize)
-            : Rect.Empty;
-        var offset = InkShift(shift, ink, reference, cellSize);
-        if (offset.X != 0 || offset.Y != 0)
-            cell.RenderTransform = new TranslateTransform(offset.X, offset.Y);
-    }
-
-    /// <summary>
-    /// Where <paramref name="glyph"/>'s ink lands in a cell laid out by <see cref="PositionGlyph"/>,
-    /// in <paramref name="cell"/>'s font.
-    /// </summary>
-    /// <remarks>
-    /// FormattedText with the cell as its line height, started where a centred TextBlock starts the
-    /// glyph, lands within a pixel of what the TextBlock itself renders — checked by rendering both
-    /// in Yu Gothic UI, YaHei and JhengHei in an 80 DIP cell. That is cheaper than laying out a
-    /// throwaway TextBlock, and it does not need the element to be in a visual tree yet.
-    /// </remarks>
-    internal static Rect MeasureInk(TextBlock cell, char glyph, double cellSize)
-    {
-        double size = Math.Round(cell.FontSize * 4) / 4;
-        double cellKey = Math.Round(cellSize * 4) / 4;
-        var key = (cell.FontFamily.Source, cell.FontWeight.ToOpenTypeWeight(), glyph, size, cellKey);
-        if (InkCache.TryGetValue(key, out var cached))
-            return cached;
-
-        var text = new FormattedText(
-            glyph.ToString(),
-            cell.Language.GetSpecificCulture() ?? CultureInfo.InvariantCulture,
-            System.Windows.FlowDirection.LeftToRight,
-            new Typeface(cell.FontFamily, cell.FontStyle, cell.FontWeight, cell.FontStretch),
-            size,
-            System.Windows.Media.Brushes.Black,
-            1.0)
-        {
-            LineHeight = cellKey,
-        };
-        double left = (cellKey - text.WidthIncludingTrailingWhitespace) / 2;
-        var ink = text.BuildGeometry(new System.Windows.Point(left, 0)).Bounds;
-
-        if (InkCache.Count >= InkCacheLimit)
-            InkCache.Clear();
-        InkCache[key] = ink;
-        return ink;
     }
 
     /// <summary>Returns cells in vertical reading order: downwards, then one column left.</summary>

@@ -86,7 +86,7 @@ public partial class RealtimeBlockWindow : Window
     // not change for as long as its window lives, so it is decided once, and every measurement and
     // every TextBlock below reads this same family.
     private readonly FontFamily _textFont;
-    // Kept for vertical writing, which moves some glyphs within their cells by target language.
+    // Kept for vertical writing, which draws some punctuation differently by target language.
     private readonly string _targetLanguage;
 
     private readonly System.Drawing.Rectangle _physBounds;
@@ -738,10 +738,11 @@ public partial class RealtimeBlockWindow : Window
         foreach (var (glyph, cellBounds) in
                  VerticalTextGrid.Cells(glyphs, new Rect(0, 0, gridWidth, gridHeight), cellSize))
         {
+            var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _targetLanguage);
             var cell = new TextBlock
             {
-                Text = glyph.ToString(),
-                FontFamily = _textFont,
+                Text = drawn.Glyph.ToString(),
+                FontFamily = drawn.Font ?? _textFont,
                 FontSize = cellSize * VerticalGlyphFill,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = foreground,
@@ -754,10 +755,6 @@ public partial class RealtimeBlockWindow : Window
             {
                 cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                 cell.RenderTransform = new RotateTransform(90);
-            }
-            else
-            {
-                VerticalTextGrid.ShiftGlyph(cell, glyph, _targetLanguage, cellSize);
             }
 
             VerticalTextGrid.PositionGlyph(cell, cellBounds);

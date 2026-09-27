@@ -670,9 +670,9 @@ public partial class OverlayWindow : Window
         double selectionTop = (selScreenY - winPhysTop) / _dpiY;
         double selectionRight = selectionLeft + selScreenWidth / _dpiX;
         double selectionBottom = selectionTop + selScreenHeight / _dpiY;
-        // Set in the target's family like the horizontal bubbles. Those fonts draw 。、， in the
-        // bottom left, where horizontal Japanese and Simplified Chinese want them; each cell moves
-        // them to the top right for vertical writing — see VerticalTextGrid.ShiftGlyph.
+        // Set in the target's family like the horizontal bubbles. Those fonts draw 。、， where
+        // horizontal text wants them, so those cells may draw another character or family — see
+        // VerticalTextGrid.VerticalGlyphFor.
         var translatedFont = TranslatedTextFont.For(_currentTargetLanguage);
 
         foreach (var block in blocks)
@@ -749,23 +749,20 @@ public partial class OverlayWindow : Window
             double fontSize = cellSize * 0.92;
             foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, cellSize))
             {
+                var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _currentTargetLanguage);
                 var cell = new TextBlock
                 {
-                    Text = glyph.ToString(),
+                    Text = drawn.Glyph.ToString(),
                     FontSize = fontSize,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = foreground,
                     TextAlignment = TextAlignment.Center,
-                    FontFamily = translatedFont,
+                    FontFamily = drawn.Font ?? translatedFont,
                 };
                 if (RotatesInVerticalText(glyph))
                 {
                     cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                     cell.RenderTransform = new RotateTransform(90);
-                }
-                else
-                {
-                    VerticalTextGrid.ShiftGlyph(cell, glyph, _currentTargetLanguage, cellSize);
                 }
 
                 PositionVerticalGlyph(cell, cellBounds);
