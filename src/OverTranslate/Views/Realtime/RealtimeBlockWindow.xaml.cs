@@ -751,7 +751,7 @@ public partial class RealtimeBlockWindow : Window
 
             // Brackets and dashes are drawn lying down in horizontal text and standing up in
             // vertical: the glyph is the same, the orientation is not.
-            if (VerticalTextGrid.RotatesGlyph(glyph))
+            if (drawn.Rotates)
             {
                 cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                 cell.RenderTransform = new RotateTransform(90);

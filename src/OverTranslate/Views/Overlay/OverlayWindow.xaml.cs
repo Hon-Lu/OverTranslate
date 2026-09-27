@@ -759,7 +759,7 @@ public partial class OverlayWindow : Window
                     TextAlignment = TextAlignment.Center,
                     FontFamily = drawn.Font ?? translatedFont,
                 };
-                if (RotatesInVerticalText(glyph))
+                if (drawn.Rotates)
                 {
                     cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                     cell.RenderTransform = new RotateTransform(90);
