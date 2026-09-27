@@ -228,7 +228,9 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
             var missing = Enumerable.Range(0, pieces.Count).Where(i => Unanswered(pieces[i], answers[i])).ToList();
             if (missing.Count > 0)
             {
-                Log.Debug("{Engine}：{Missing}/{Items} 格沒有答案，只重送這幾格", Name, missing.Count, pieces.Count);
+                // Info: rare, and the only trace of an engine that failed in part and recovered —
+                // when it does not recover, the failure below is logged at Info as well.
+                Log.Info("{Engine}：{Missing}/{Items} 格沒有答案，只重送這幾格", Name, missing.Count, pieces.Count);
 
                 var retried = await SendCheckedAsync(
                     missing.Select(i => pieces[i]).ToList(), targetLanguage, sourceLanguage, cancellationToken);

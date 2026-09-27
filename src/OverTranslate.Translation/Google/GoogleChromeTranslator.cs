@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using NLog;
 
 namespace OverTranslate.Translation.Google;
 
@@ -40,6 +41,8 @@ public sealed class GoogleChromeTranslator(HttpClient http) : BatchTranslator(ht
 
     // The main host, then one of the regional ones Chrome picks between by its data-region setting.
     // Same model, same answers; a second host is only a second way in when the first answers 5xx.
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
     private static readonly string[] Hosts = ["translate-pa.googleapis.com", "translate-pa.us.rep.googleapis.com"];
     private const string ApiKey = "AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520";
 
@@ -77,6 +80,12 @@ public sealed class GoogleChromeTranslator(HttpClient http) : BatchTranslator(ht
             // About one request in sixteen is a 502 on some days and none on others. Trying the
             // same request on the regional host at once costs nothing when it works, and keeps the
             // answer in this engine's voice, which the fallback cannot.
+            //
+            // Debug, not Info: at one request in sixteen it would fill the log on a bad day, and
+            // when the regional host fails too the failure is logged at Info anyway.
+            Log.Debug("{Engine}：{Host} 回 {Status}，改試 {Regional}", Name, Hosts[0],
+                ex is TranslationEngineException { StatusCode: { } status } ? (int)status : ex.GetType().Name,
+                Hosts[1]);
             body = await PostAsync(Hosts[1], payload, cancellationToken);
         }
 

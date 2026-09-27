@@ -192,6 +192,11 @@ public class ResilientProvider : ITranslationProvider
                 if (finished == deadline) break;
                 if (finished == hedge)
                 {
+                    // The one step a failure line cannot explain: nothing failed, it was just slow.
+                    // Rare since the hedge is past every ordinary answer (TranslationTiming), and the
+                    // thing to look for when a screen comes back from a backup with no error before it.
+                    Log.Info("{Waited} ms 沒有回應，送出第 {Step} 步：{Engine}（主力 {Primary}）",
+                        (long)_hedgeDelay.TotalMilliseconds, next + 1, _engines[_ladder[next]].Name, _engines[0].Name);
                     StartNext();
                     continue;
                 }
@@ -216,7 +221,7 @@ public class ResilientProvider : ITranslationProvider
                     // where asking again at once would only be waiting again.
                     retried = true;
                     next    = 0;
-                    Log.Debug("每一步都失敗，於時限內從主力 {Primary} 重試一輪", _engines[0].Name);
+                    Log.Info("每一步都失敗，於時限內從主力 {Primary} 重試一輪", _engines[0].Name);
                     StartNext();
                 }
             }
