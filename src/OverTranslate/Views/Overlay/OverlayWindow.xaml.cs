@@ -321,6 +321,10 @@ public partial class OverlayWindow : Window
         BubbleTextCanvas.Children.Clear();
         BuildDebugBoxes(selScreenX, selScreenY);
 
+        // Chosen per build, not once per window: re-translating into another target reuses this
+        // window, and the bubbles are measured and drawn in whatever that target is set in.
+        var translatedFont = TranslatedTextFont.For(_currentTargetLanguage);
+
         if (_currentVerticalText)
         {
             BuildVerticalOverlay(
@@ -387,7 +391,7 @@ public partial class OverlayWindow : Window
             double minFontSize = SourceFontScale.MinFontSize(sourceFontReferenceHeight);
             double fontSize = SourceFontScale.Calculate(sourceFontReferenceHeight, IsLatinSourceToCjkTarget());
             var typeface = new Typeface(
-                new System.Windows.Media.FontFamily("Microsoft JhengHei, Segoe UI, Sans-Serif"),
+                translatedFont,
                 FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
             double availableWidth = Math.Max(BubbleMinWidth, canvasWidth - OverlayPadding * 2);
             double targetBorderW = borderW;
@@ -636,7 +640,7 @@ public partial class OverlayWindow : Window
                     // swapped. If it comes back, it gets designed then, on a case somebody has
                     // actually looked at.
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontFamily = new System.Windows.Media.FontFamily("Microsoft JhengHei, Segoe UI, Sans-Serif"),
+                    FontFamily = translatedFont,
                 }
             };
 
@@ -666,6 +670,10 @@ public partial class OverlayWindow : Window
         double selectionTop = (selScreenY - winPhysTop) / _dpiY;
         double selectionRight = selectionLeft + selScreenWidth / _dpiX;
         double selectionBottom = selectionTop + selScreenHeight / _dpiY;
+        // Set in the target's family like the horizontal bubbles. Those fonts draw 。、， in the
+        // bottom left, where horizontal Japanese and Simplified Chinese want them; each cell moves
+        // them to the top right for vertical writing — see VerticalTextGrid.ShiftGlyph.
+        var translatedFont = TranslatedTextFont.For(_currentTargetLanguage);
 
         foreach (var block in blocks)
         {
@@ -748,13 +756,16 @@ public partial class OverlayWindow : Window
                     FontWeight = FontWeights.SemiBold,
                     Foreground = foreground,
                     TextAlignment = TextAlignment.Center,
-                    FontFamily = new System.Windows.Media.FontFamily(
-                        "Microsoft JhengHei, Segoe UI, Sans-Serif"),
+                    FontFamily = translatedFont,
                 };
                 if (RotatesInVerticalText(glyph))
                 {
                     cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                     cell.RenderTransform = new RotateTransform(90);
+                }
+                else
+                {
+                    VerticalTextGrid.ShiftGlyph(cell, glyph, _currentTargetLanguage, cellSize);
                 }
 
                 PositionVerticalGlyph(cell, cellBounds);

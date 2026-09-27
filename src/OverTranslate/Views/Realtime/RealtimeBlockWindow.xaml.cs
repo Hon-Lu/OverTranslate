@@ -82,8 +82,12 @@ public partial class RealtimeBlockWindow : Window
     // while one subtitle is on screen — pulsed the text the reader was in the middle of. Swapping
     // outright is the quieter of the two, and the repaints it makes visible are better dealt with
     // by not making them: see RealtimeBlockWindow.SetLines and TextSimilarity.
-    private static readonly FontFamily TextFont =
-        new("Microsoft JhengHei, Segoe UI Variable Text, Segoe UI, Sans-Serif");
+    // Set by the target language rather than fixed: see TranslatedTextFont. A region's target does
+    // not change for as long as its window lives, so it is decided once, and every measurement and
+    // every TextBlock below reads this same family.
+    private readonly FontFamily _textFont;
+    // Kept for vertical writing, which moves some glyphs within their cells by target language.
+    private readonly string _targetLanguage;
 
     private readonly System.Drawing.Rectangle _physBounds;
     private readonly bool _latinSourceToCjkTarget;
@@ -173,6 +177,8 @@ public partial class RealtimeBlockWindow : Window
         _naturalBackground = naturalBackground;
         _sampleTextColor = sampleTextColor;
         _latinSourceToCjkTarget = IsLatinToCjk(sourceLanguage, targetLanguage);
+        _textFont = TranslatedTextFont.For(targetLanguage);
+        _targetLanguage = targetLanguage;
         _textBrush = Freeze(new SolidColorBrush(RealtimeSubtitleColors.Text(textColor)));
         _scrimBrush = Freeze(new SolidColorBrush(
             RealtimeSubtitleColors.Scrim(scrimColor, scrimOpacity)));
@@ -349,7 +355,7 @@ public partial class RealtimeBlockWindow : Window
         // untidy — the part past the edge is not rendered at all. Only the wrapped fallback below
         // needs it; a single line is bounded by its source's own height long before it gets close.
         double maxTextHeight = Math.Max(lineHeight, canvasHeight - ScrimPaddingY * 2);
-        var typeface = new Typeface(TextFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
 
         double textWidth;
         double textHeight;
@@ -502,7 +508,7 @@ public partial class RealtimeBlockWindow : Window
             Child = new TextBlock
             {
                 Text = line.TranslatedText,
-                FontFamily = TextFont,
+                FontFamily = _textFont,
                 FontSize = fontSize,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = foreground,
@@ -542,7 +548,7 @@ public partial class RealtimeBlockWindow : Window
         double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
     {
         using var repairedFrame = _naturalBackground ? RepairNaturalFrame(frame, _lines) : null;
-        var typeface = new Typeface(TextFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         foreach (var block in _lines)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
@@ -735,7 +741,7 @@ public partial class RealtimeBlockWindow : Window
             var cell = new TextBlock
             {
                 Text = glyph.ToString(),
-                FontFamily = TextFont,
+                FontFamily = _textFont,
                 FontSize = cellSize * VerticalGlyphFill,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = foreground,
@@ -748,6 +754,10 @@ public partial class RealtimeBlockWindow : Window
             {
                 cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                 cell.RenderTransform = new RotateTransform(90);
+            }
+            else
+            {
+                VerticalTextGrid.ShiftGlyph(cell, glyph, _targetLanguage, cellSize);
             }
 
             VerticalTextGrid.PositionGlyph(cell, cellBounds);
@@ -813,7 +823,7 @@ public partial class RealtimeBlockWindow : Window
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = line.TranslatedText, FontFamily = TextFont, FontSize = fontSize,
+                    Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,
                     FontWeight = FontWeights.SemiBold, Foreground = foreground,
                     TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.None,
                 },
