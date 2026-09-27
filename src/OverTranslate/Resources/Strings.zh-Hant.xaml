@@ -401,9 +401,8 @@
          Names as well as hints: "Google 翻譯" is the product's Chinese name, not a label we
          invented, and it reads wrong on an English interface. -->
     <sys:String x:Key="S.Provider.Google">Google 翻譯 (標準)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">穩定，建議大多數情況使用</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 翻譯 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">譯文較自然流暢，但可能略過或誤譯人名與作品名</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">新版翻譯介面，翻譯語意會更自然 (偶爾會發生漏譯問題)</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>

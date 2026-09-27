@@ -385,9 +385,8 @@
 
     <!-- ── Translation providers ── -->
     <sys:String x:Key="S.Provider.Google">Google 翻译 (标准)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">稳定，建议大多数情况使用</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 翻译 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">译文较自然流畅，但可能略过或误译人名与作品名</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">新版翻译接口，翻译语意会更自然 (偶尔会发生漏译问题)</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻译</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻译</sys:String>

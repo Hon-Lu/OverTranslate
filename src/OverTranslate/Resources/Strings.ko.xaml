@@ -389,9 +389,8 @@
 
     <!-- ── Translation providers ── -->
     <sys:String x:Key="S.Provider.Google">Google 번역 (표준)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">안정적이며 대부분의 경우에 권장</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 번역 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">더 자연스러운 번역이지만 인명이나 작품명을 빠뜨리거나 잘못 번역할 수 있음</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">새 번역 인터페이스로 더 자연스럽게 번역됩니다 (가끔 일부가 번역되지 않을 수 있음)</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 번역</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>

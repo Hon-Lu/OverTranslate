@@ -154,7 +154,7 @@ public static class LanguageData
 
     public static readonly List<ProviderItem> Providers =
     [
-        new(TranslationProvider.Google,    "S.Provider.Google",    false, "S.Provider.GoogleHint"),
+        new(TranslationProvider.Google,    "S.Provider.Google",    false),
         new(TranslationProvider.GoogleChrome, "S.Provider.GoogleChrome", false, "S.Provider.GoogleChromeHint"),
         new(TranslationProvider.Bing,      "S.Provider.Bing",      false),
         new(TranslationProvider.Microsoft, "S.Provider.Microsoft", false),
