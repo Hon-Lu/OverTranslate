@@ -1,3 +1,4 @@
+using NLog;
 using OverTranslate.Translation;
 
 namespace OverTranslate.Services.Providers;
@@ -12,6 +13,8 @@ namespace OverTranslate.Services.Providers;
 /// </remarks>
 public sealed class EngineProvider(ITextTranslator engine) : ITranslationProvider
 {
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
     public string Name => engine.Name;
 
     public bool RequiresApiKey => false;
@@ -31,7 +34,32 @@ public sealed class EngineProvider(ITextTranslator engine) : ITranslationProvide
             new TranslatedBlock(block.Text, answers[i].Text, block.Bounds, block.Lines, block.RenderGlyphHeight)
                 { RunsAcross = block.RunsAcross }).ToList();
 
+        for (var i = 0; i < blocks.Count; i++)
+            TranslatedTextLog.Write(Log, i, engine.Name, blocks[i].Text, answers[i].Text);
+
         return (translated, DetectedLanguage.Vote(answers.Select(answer => answer.DetectedLanguage)));
+    }
+}
+
+/// <summary>Each block's text and what it came back as, for the verbose log only.</summary>
+/// <remarks>
+/// <para>The half of a report the log could not otherwise show. OCR already writes what it read at
+/// Debug; without the answer beside it, a line that "was not translated" cannot be told apart
+/// between an engine handing the text back unchanged, an engine dropping a name, an empty answer
+/// and the overlay failing to draw — and sending the text again rarely reproduces any of them.</para>
+///
+/// <para>Here in the application, not in OverTranslate.Translation, which promises never to log
+/// text at all. Debug only, like the OCR text it pairs with: this is whatever was on the user's
+/// screen, and it is written only when they turned 記錄詳細資訊 on. Each line carries both sides so
+/// it stands on its own, the way the OpenAI-compatible provider's does.</para>
+/// </remarks>
+internal static class TranslatedTextLog
+{
+    public static void Write(Logger log, int index, string engine, string source, string translation)
+    {
+        if (log.IsDebugEnabled)
+            log.Debug("翻譯結果 index={Index} engine={Engine} in=\"{In}\" out=\"{Out}\"",
+                index, engine, source, translation);
     }
 }
 

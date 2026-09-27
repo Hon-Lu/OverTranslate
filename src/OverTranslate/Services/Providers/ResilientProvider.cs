@@ -133,6 +133,8 @@ public class ResilientProvider : ITranslationProvider
             engineVotes[engine] = engineVotes.GetValueOrDefault(engine) + 1;
             translated.Add(new TranslatedBlock(blocks[i].Text, answer.Text, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
                 { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine });
+
+            TranslatedTextLog.Write(Log, i, engine, blocks[i].Text, answer.Text);
         }
 
         // Counted by option, not by engine: two engines behind one option are one voice to the user.
