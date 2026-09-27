@@ -447,7 +447,7 @@ public sealed class RealtimeTranslationSession
                     //
                     // Debug rather than Info because this fires once per poll that saw the pixels
                     // move: at a 150ms poll that is under 7/s per region, three regions, ~10MB an
-                    // hour against a 12MB archive budget. A session over a video used to evict every
+                    // hour against a 15MB archive budget. A session over a video used to evict every
                     // other line in the log — including the startup snapshot and whatever the user
                     // actually opened the log
                     // for. It sat at Info because Debug needed an environment variable nobody was
