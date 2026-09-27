@@ -10,8 +10,8 @@
        Named for what it does, which is the rule for every project split out of the application:
        one project per job, not one per vendor. Translation in every form belongs here — dictionary
        lookups when they leave GTranslate, and the OpenAI-compatible provider when it leaves the
-       application. Speech is a different job and gets a project of its own
-       (OverTranslate.Speech) rather than a corner of this one. -->
+       application. Reading text aloud is here too, in Speech/: it is the other half of what the
+       translator does with a text, and it talks to the same endpoints with the same credentials. -->
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>

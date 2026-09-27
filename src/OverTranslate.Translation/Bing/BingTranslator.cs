@@ -1,7 +1,5 @@
-using System.Globalization;
 using System.Net;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace OverTranslate.Translation.Bing;
 
@@ -20,26 +18,16 @@ namespace OverTranslate.Translation.Bing;
 /// <para>The same model means the same text can come back worded differently on another request —
 /// two of six test sentences did over five tries. Nothing here can change that.</para>
 ///
-/// <para>Credentials come from the translator page itself — a key and a token it embeds for its own
-/// requests, valid for an hour — and are fetched once and shared by every request until they
-/// expire or are refused. Errors do not use the HTTP status: a refused request is a 200 whose body
-/// is <c>{"statusCode":400}</c>, so the body is what decides.</para>
+/// <para>Credentials come from the translator page itself (<see cref="BingSession"/>). Errors do not
+/// use the HTTP status: a refused request is a 200 whose body is <c>{"statusCode":400}</c>, so the
+/// body is what decides.</para>
 /// </remarks>
 public sealed class BingTranslator(HttpClient http) : BatchTranslator(http)
 {
-    private const string Host = "https://www.bing.com";
+    private const string Host = BingSession.Host;
 
-    private static readonly Regex AbusePrevention = new(
-        @"params_AbusePreventionHelper\s*=\s*\[\s*(\d+)\s*,\s*""([^""]+)""\s*,\s*(\d+)\s*\]",
-        RegexOptions.Compiled);
-    private static readonly Regex ImpressionGuid = new(@"IG:""([0-9A-Fa-f]+)""", RegexOptions.Compiled);
-    private static readonly Regex InstanceId = new(@"data-iid=""(translator\.\d+)""", RegexOptions.Compiled);
-
-    private readonly SemaphoreSlim _credentialsGate = new(1, 1);
-    private Credentials? _credentials;
+    private readonly BingSession _session = new(http, "Bing");
     private int _sequence;
-
-    private sealed record Credentials(string Key, string Token, string Ig, string Iid, DateTimeOffset Expires);
 
     public override string Name => "Bing";
 
@@ -52,7 +40,7 @@ public sealed class BingTranslator(HttpClient http) : BatchTranslator(http)
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken)
     {
-        var credentials = await GetCredentialsAsync(cancellationToken);
+        var credentials = await _session.GetAsync(cancellationToken);
         var sequence = Interlocked.Increment(ref _sequence);
 
         using var request = new HttpRequestMessage(HttpMethod.Post,
@@ -80,7 +68,7 @@ public sealed class BingTranslator(HttpClient http) : BatchTranslator(http)
             // Anything but a refusal of the text itself may be the credentials going stale before
             // their hour is up, and asking the page again is cheap next to failing every request
             // until it runs out.
-            if (status != HttpStatusCode.BadRequest) _credentials = null;
+            if (status != HttpStatusCode.BadRequest) _session.Invalidate();
 
             throw new TranslationEngineException(Name, $"refused ({(int?)status})", status);
         }
@@ -92,46 +80,5 @@ public sealed class BingTranslator(HttpClient http) : BatchTranslator(http)
             : "";
 
         return [new TextTranslation(RequireString(answer.GetProperty("translations")[0].GetProperty("text")), detected)];
-    }
-
-    private async Task<Credentials> GetCredentialsAsync(CancellationToken cancellationToken)
-    {
-        if (_credentials is { } cached && cached.Expires > DateTimeOffset.UtcNow) return cached;
-
-        await _credentialsGate.WaitAsync(cancellationToken);
-        try
-        {
-            // Every request that found them missing queued here; the first one through fetched them.
-            if (_credentials is { } fresh && fresh.Expires > DateTimeOffset.UtcNow) return fresh;
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Host}/translator");
-            var page = await ReadAsync(request, cancellationToken);
-
-            var abuse = AbusePrevention.Match(page);
-            if (!abuse.Success)
-                throw new TranslationEngineException(Name, "translator page has no credentials");
-
-            var lifetime = long.TryParse(abuse.Groups[3].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var ms)
-                ? TimeSpan.FromMilliseconds(ms)
-                : TimeSpan.FromMinutes(10);
-
-            var ig = ImpressionGuid.Match(page);
-            var iid = InstanceId.Match(page);
-
-            _credentials = new Credentials(
-                abuse.Groups[1].Value,
-                abuse.Groups[2].Value,
-                ig.Success ? ig.Groups[1].Value : Guid.NewGuid().ToString("N").ToUpperInvariant(),
-                iid.Success ? iid.Groups[1].Value : "translator.5024",
-
-                // Renewed a little early, so a request is never sent with a token about to lapse.
-                DateTimeOffset.UtcNow + lifetime - TimeSpan.FromMinutes(Math.Min(5, lifetime.TotalMinutes / 2)));
-
-            return _credentials;
-        }
-        finally
-        {
-            _credentialsGate.Release();
-        }
     }
 }
