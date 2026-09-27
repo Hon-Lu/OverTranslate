@@ -1,9 +1,7 @@
 using System.Net.Http;
 using System.Xml.Linq;
-using GTranslate.Translators;
 using OverTranslate.Models;
 using OverTranslate.Services;
-using OverTranslate.Services.Providers;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -274,15 +272,18 @@ public class DictionaryLookupTests
         Assert.False(DictionaryLookupEligibility.IsEligible(text));
     }
 
-    [Fact]
-    public void Provider_capabilities_decide_whether_dictionary_lookup_is_offered()
+    // Google Web, Bing and Microsoft are the engines with a dictionary; RPC, Chrome, DeepL and
+    // OpenAI have none, so whichever of those is chosen, the plan must send the lookup elsewhere.
+    [Theory]
+    [InlineData("EN-US")]
+    [InlineData("ZH-HANT")]
+    public void Lookups_only_go_to_engines_that_have_a_dictionary(string target)
     {
-        using var http = new HttpClient();
+        TranslationProvider[] withDictionary = [TranslationProvider.Google, TranslationProvider.Bing, TranslationProvider.Microsoft];
 
-        Assert.True(new GTranslateDictionaryProvider(new GoogleTranslator(http)).SupportsDictionary);
-        Assert.True(new GTranslateDictionaryProvider(new BingTranslator(http)).SupportsDictionary);
-        Assert.True(new GTranslateDictionaryProvider(new MicrosoftTranslator(http)).SupportsDictionary);
-        Assert.False(new GTranslateDictionaryProvider(new GoogleTranslator2(http)).SupportsDictionary);
+        foreach (var chosen in Enum.GetValues<TranslationProvider>())
+            Assert.All(DictionaryLookupPlan.Build(chosen, "EN", target),
+                step => Assert.Contains(step.Provider, withDictionary));
     }
 
     [Theory]

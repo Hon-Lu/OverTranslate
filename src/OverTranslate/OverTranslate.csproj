@@ -60,8 +60,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Dictionary lookups and speech only; translation goes through OverTranslate.Translation. -->
-    <PackageReference Include="GTranslate" Version="2.4.0" />
     <PackageReference Include="NLog" Version="5.0.4" />
     <!-- CPU morphology/inpainting only; omit full video/DNN runtime and unused WPF adapters. -->
     <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />

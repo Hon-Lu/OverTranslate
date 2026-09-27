@@ -8,8 +8,8 @@ namespace OverTranslate.Services.Providers;
 /// </summary>
 /// <remarks>
 /// One table for every free engine, because <see cref="OverTranslate.Translation"/> takes Google's codes
-/// from all of its callers and translates them for each engine itself — and GTranslate, which still
-/// serves dictionary lookups, speaks the same ones.
+/// from all of its callers — translation, speech and dictionary lookups alike — and translates them
+/// for each engine itself.
 /// </remarks>
 internal static class EngineLanguage
 {

@@ -20,8 +20,8 @@ namespace OverTranslate.Translation;
 /// (<c>.ai/translation-service-analysis/implementation/</c>).</para>
 ///
 /// <para>Applied in a handler rather than through <see cref="HttpClient.DefaultRequestVersion"/>
-/// alone, because that default only reaches requests the client builds itself — every engine
-/// here builds its own, and so does GTranslate for the dictionary lookups it still serves.</para>
+/// alone, because that default only reaches requests the client builds itself, and every engine
+/// here builds its own.</para>
 /// </remarks>
 public static class EngineHttp
 {

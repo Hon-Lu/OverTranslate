@@ -2,11 +2,11 @@ using System.Net.Http;
 using OverTranslate.Translation;
 using OverTranslate.Translation.Bing;
 using OverTranslate.Translation.Google;
+using OverTranslate.Translation.Lookup;
 using OverTranslate.Translation.Microsoft;
 using OverTranslate.Layout;
 using OverTranslate.Models;
 using OverTranslate.Services.Providers;
-using GT = GTranslate.Translators;
 
 namespace OverTranslate.Services;
 
@@ -62,10 +62,10 @@ public class TranslationService
     private readonly DeepLProvider      _deepL     = new(DeepLHttp);
     private readonly OpenAiCompatibleProvider _openAi = new();
 
-    // Dictionary lookups are still GTranslate's; see GTranslateDictionaryProvider.
-    private readonly GTranslateDictionaryProvider _googleDictionary    = new(new GT.GoogleTranslator(Http));
-    private readonly GTranslateDictionaryProvider _bingDictionary      = new(new GT.BingTranslator(Http));
-    private readonly GTranslateDictionaryProvider _microsoftDictionary = new(new GT.MicrosoftTranslator(Http));
+    // Only when asked for, one word at a time; the names are what the dictionary card credits.
+    private readonly DictionaryLookupProvider _googleDictionary    = new(new GoogleDictionary(Http), "Google Web");
+    private readonly DictionaryLookupProvider _bingDictionary      = new(new BingDictionary(Http), "Bing");
+    private readonly DictionaryLookupProvider _microsoftDictionary = new(new MicrosoftDictionary(Http), "Microsoft");
 
     // Per-option resilient wrappers: the user's engine is the primary and is asked twice before
     // anything else is (see ResilientProvider); the backups are there for when it cannot answer.
@@ -150,7 +150,7 @@ public class TranslationService
         _                                => _googleS,
     };
 
-    private GTranslateDictionaryProvider? DictionaryProvider(TranslationProvider provider) => provider switch
+    private DictionaryLookupProvider? DictionaryProvider(TranslationProvider provider) => provider switch
     {
         TranslationProvider.Google    => _googleDictionary,
         TranslationProvider.Bing      => _bingDictionary,
