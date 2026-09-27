@@ -48,17 +48,16 @@ public class TranslationService
 {
     // One client for every free engine, so a hung endpoint fails fast instead of stalling the batch.
     // Built by the engines library because how it speaks matters: see EngineHttp for why HTTP/2.
-    private static readonly HttpClient Http = EngineHttp.CreateClient(TimeSpan.FromSeconds(10));
+    private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request);
 
     private readonly GoogleWebTranslator    _google       = new(Http);
     private readonly GoogleRpcTranslator    _google2      = new(Http);
     private readonly GoogleChromeTranslator _googleChrome = new(Http);
     private readonly BingTranslator         _bing         = new(Http);
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
-    // DeepL's own, because it is an official API spoken to with the user's key: it has no reason to
-    // introduce itself as a browser, and a long screen on a paid plan is given longer than the free
-    // engines get before it counts as hung.
-    private static readonly HttpClient DeepLHttp = new() { Timeout = TimeSpan.FromSeconds(30) };
+    // DeepL's own, because it is an official API spoken to with the user's key and has no reason to
+    // introduce itself as a browser. Its clock is everyone's: see TranslationTiming.
+    private static readonly HttpClient DeepLHttp = new() { Timeout = TranslationTiming.Request };
 
     private readonly DeepLProvider      _deepL     = new(DeepLHttp);
     private readonly OpenAiCompatibleProvider _openAi = new();

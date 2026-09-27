@@ -132,6 +132,34 @@ public class ResilientProviderTests
         Assert.Equal(["primary", "primary"], calls);
     }
 
+    // One figure and two that follow from it: the first backup goes up at twice the hedge, which is
+    // also when a request stuck since the start gives up, and still has a whole hedge before the
+    // deadline.
+    [Fact]
+    public void Timings_StayInProportion()
+    {
+        Assert.Equal(TranslationTiming.Hedge * 2, TranslationTiming.Request);
+        Assert.Equal(TranslationTiming.Hedge * 3, TranslationTiming.Deadline);
+    }
+
+    // The slowest ordinary answer measured was 3.5 s (Google RPC). One that slow is waited for, not
+    // asked for twice.
+    [Fact]
+    public async Task AnAnswerAtTheSlowEndOfNormal_IsNotSentTwice()
+    {
+        var primary = new Engine("Primary", async (texts, _) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3.6));
+            return await Answer(texts, "P:");
+        });
+        var provider = new ResilientProvider([primary, Engine.Answering(text => "B:" + text, "Backup")]);
+
+        var (blocks, _) = await provider.TranslateAsync(Blocks("a"), "EN", "ZH-HANT", "");
+
+        Assert.Equal("P:a", blocks[0].TranslatedText);
+        Assert.Equal(1, primary.Calls);
+    }
+
     // Errors from the free endpoints are mostly passing ones, so engines that all fail quickly get
     // one more round — starting from the user's own engine, not from whichever backup failed last.
     [Fact]

@@ -90,8 +90,8 @@ public class ResilientProvider : ITranslationProvider
         if (engines.Count == 0) throw new ArgumentException("At least one engine is required.", nameof(engines));
         _engines    = [.. engines];
         _ladder     = [0, .. Enumerable.Range(0, engines.Count)];
-        _hedgeDelay = hedgeDelay ?? TimeSpan.FromSeconds(2.5);
-        _timeout    = timeout    ?? TimeSpan.FromSeconds(12);
+        _hedgeDelay = hedgeDelay ?? TranslationTiming.Hedge;
+        _timeout    = timeout    ?? TranslationTiming.Deadline;
     }
 
     public bool RequiresApiKey => false;
