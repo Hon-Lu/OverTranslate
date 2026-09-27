@@ -1,4 +1,5 @@
 using System.Net.Http;
+using NLog;
 using OverTranslate.Translation;
 using OverTranslate.Translation.Bing;
 using OverTranslate.Translation.Google;
@@ -46,6 +47,8 @@ public record TranslatedBlock(
 
 public class TranslationService
 {
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
     // One client for every free engine, so a hung endpoint fails fast instead of stalling the batch.
     // Built by the engines library because how it speaks matters: see EngineHttp for why HTTP/2.
     private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request);
@@ -212,9 +215,30 @@ public class TranslationService
                     var requestText = step.ConvertSourceToSimplified
                         ? DictionarySimplifiedChineseConverter.Convert(lookupText)
                         : lookupText;
-                    var result = await provider.LookupDictionaryAsync(
-                        requestText, step.SourceLanguage, step.TargetLanguage, token);
-                    if (result is null) return null;
+
+                    // Every step, not only the last: DictionaryLookupFallback keeps just the last
+                    // failure, so without these a card that came from the second engine never says
+                    // why the first one did not answer. Debug, because some steps fail on every
+                    // lookup by design — Microsoft and Bing refuse a pair without English with a 400.
+                    DictionaryLookupData? result;
+                    try
+                    {
+                        result = await provider.LookupDictionaryAsync(
+                            requestText, step.SourceLanguage, step.TargetLanguage, token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
+                    {
+                        Log.Debug("字典 {Provider} {Source}→{Target} 失敗：{Error}",
+                            step.Provider, step.SourceLanguage, step.TargetLanguage, ex.Message);
+                        throw;
+                    }
+
+                    if (result is null)
+                    {
+                        Log.Debug("字典 {Provider} {Source}→{Target} 沒有內容",
+                            step.Provider, step.SourceLanguage, step.TargetLanguage);
+                        return null;
+                    }
 
                     return PrepareDictionaryResult(result, lookupText, step.ConvertToTraditional);
                 })

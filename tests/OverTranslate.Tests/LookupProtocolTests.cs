@@ -34,7 +34,7 @@ public class LookupProtocolTests
         var result = await engine.LookupAsync("run", "zh-TW", "en");
 
         var sent = Assert.Single(handler.Requests);
-        Assert.Equal("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dt=rm&dj=1&source=input", sent.Uri);
+        Assert.Equal("https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=en&tl=zh-TW&dt=t&dt=bd&dt=rm&dj=1&source=input", sent.Uri);
         Assert.Equal("q=run", sent.Body);
 
         Assert.Equal("run", result.Headword);
@@ -58,14 +58,52 @@ public class LookupProtocolTests
     }
 
     [Fact]
-    public async Task Google_ABlockedRequest_IsAnEngineFailure()
+    public async Task Google_ABlockedRequest_IsAnEngineFailure_OnceEveryClientIsBlocked()
     {
         var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.TooManyRequests));
         var engine = new GoogleDictionary(new HttpClient(handler));
 
         var ex = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.LookupAsync("run", "ja", "en"));
         Assert.Equal(HttpStatusCode.TooManyRequests, ex.StatusCode);
+        Assert.Equal(["dict-chrome-ex", "gtx"], handler.Requests.Select(ClientOf));
     }
+
+    // Google limits this endpoint per client name, so a 429 on one is asked again under the other —
+    // and the one that answered is asked first from then on, rather than the limited one every time.
+    [Fact]
+    public async Task Google_A429_IsAskedAgainUnderTheOtherClient_WhichIsKept()
+    {
+        var handler = new Canned(sent => ClientOf(sent) == "dict-chrome-ex"
+            ? new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+            : Json(GoogleAnswer));
+        var engine = new GoogleDictionary(new HttpClient(handler));
+
+        var first = await engine.LookupAsync("run", "zh-TW", "en");
+        var second = await engine.LookupAsync("run", "zh-TW", "en");
+
+        Assert.Equal(["dict-chrome-ex", "gtx", "gtx"], handler.Requests.Select(ClientOf));
+        Assert.All(handler.Requests, sent => Assert.Equal("q=run", sent.Body));
+        Assert.Equal(2, first.Groups.Count);
+        Assert.Equal(2, second.Groups.Count);
+    }
+
+    // Only a 429 is a name being limited; anything else would fail the same way under either.
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task Google_OtherRefusals_AreNotAskedAgain(HttpStatusCode status)
+    {
+        var handler = new Canned(_ => new HttpResponseMessage(status));
+        var engine = new GoogleDictionary(new HttpClient(handler));
+
+        var ex = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.LookupAsync("run", "ja", "en"));
+        Assert.Equal(status, ex.StatusCode);
+        Assert.Single(handler.Requests);
+    }
+
+    private static string? ClientOf(SentRequest sent) =>
+        System.Web.HttpUtility.ParseQueryString(new Uri(sent.Uri).Query)["client"];
 
     // ---- Microsoft --------------------------------------------------------------------------
 

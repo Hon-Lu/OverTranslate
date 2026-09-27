@@ -1,4 +1,6 @@
+using System.Net;
 using System.Text.Json;
+using NLog;
 using static OverTranslate.Translation.Lookup.LookupJson;
 
 namespace OverTranslate.Translation.Lookup;
@@ -20,26 +22,81 @@ namespace OverTranslate.Translation.Lookup;
 /// never showed one. Measured 2026-09-27 on nine words: <c>rm</c> adds the reading for every
 /// source language tried (食べる → Taberu, 电脑 → Diànnǎo, 사랑 → salang, дом → dom) and leaves
 /// the entries exactly as they were.</para>
+///
+/// <para>Two <c>client</c> names, and a 429 on one is retried once on the other — see
+/// <see cref="Clients"/>.</para>
 /// </remarks>
 public sealed class GoogleDictionary(HttpClient http) : DictionaryEngine(http)
 {
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
     private const string Endpoint = "https://translate.googleapis.com/translate_a/single";
+
+    /// <summary>The <c>client</c> names asked under, in order of preference.</summary>
+    /// <remarks>
+    /// <para>Google limits this endpoint per client name as well as per address. Measured
+    /// 2026-09-27 on a machine that had worn it out: over IPv6, <c>gtx</c> — GTranslate's name, and
+    /// the Web engine's — answered 429 while <c>dict-chrome-ex</c> or any other unreserved name
+    /// answered 200 with the same entries and reading. Over IPv4 every name was refused, so a
+    /// second name only helps where the limit is on the name. <c>t</c> and <c>webapp</c> are
+    /// Google's own pages and want a <c>tk</c> token (403); no name at all is a 400.</para>
+    ///
+    /// <para><c>dict-chrome-ex</c> first: it is Chrome's dictionary extension, whose everyday traffic
+    /// these requests sit among, where a name only this application used could be singled out.
+    /// <c>gtx</c> second, since it is what answers everywhere it has not been worn out.</para>
+    /// </remarks>
+    internal static readonly string[] Clients = ["dict-chrome-ex", "gtx"];
+
+    /// <summary>Which of <see cref="Clients"/> answered last, and is asked first next time.</summary>
+    /// <remarks>
+    /// Kept rather than starting from the first each time: a name that is being limited would
+    /// otherwise be sent a request it refuses on every lookup, which costs a round trip and keeps
+    /// the limit fresh. Only in memory — a restart begins with the preferred name again.
+    /// </remarks>
+    private int _client;
 
     public override string Name => "GoogleDictionary";
 
     protected override async Task<DictionaryResult> QueryAsync(
         string text, string targetLanguage, string sourceLanguage, CancellationToken cancellationToken)
     {
-        var url = $"{Endpoint}?client=gtx&sl={Uri.EscapeDataString(sourceLanguage)}&tl={Uri.EscapeDataString(targetLanguage)}" +
+        var first = Volatile.Read(ref _client);
+        for (var attempt = 0; ; attempt++)
+        {
+            var index = (first + attempt) % Clients.Length;
+            string json;
+            try
+            {
+                json = await AskAsync(Clients[index], text, targetLanguage, sourceLanguage, cancellationToken);
+            }
+            catch (TranslationEngineException ex) when (
+                ex.StatusCode == HttpStatusCode.TooManyRequests && attempt + 1 < Clients.Length)
+            {
+                // At Info: rare, and the one line that says the card came from elsewhere because
+                // Google was limiting this machine rather than because the word had no entry.
+                var next = Clients[(index + 1) % Clients.Length];
+                Log.Info("GoogleDictionary：client {Client} 回 429，改用 {Next}", Clients[index], next);
+                continue;
+            }
+
+            Volatile.Write(ref _client, index);
+            using var document = JsonDocument.Parse(json);
+            return Read(document.RootElement, text);
+        }
+    }
+
+    /// <remarks>A new message per attempt: one that has been sent cannot be sent again.</remarks>
+    private async Task<string> AskAsync(
+        string client, string text, string targetLanguage, string sourceLanguage, CancellationToken cancellationToken)
+    {
+        var url = $"{Endpoint}?client={client}&sl={Uri.EscapeDataString(sourceLanguage)}&tl={Uri.EscapeDataString(targetLanguage)}" +
                   "&dt=t&dt=bd&dt=rm&dj=1&source=input";
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new FormUrlEncodedContent([new KeyValuePair<string, string>("q", text)]),
         };
-
-        using var document = JsonDocument.Parse(await ReadStringAsync(request, cancellationToken));
-        return Read(document.RootElement, text);
+        return await ReadStringAsync(request, cancellationToken);
     }
 
     internal static DictionaryResult Read(JsonElement root, string text)
