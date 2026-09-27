@@ -2,7 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
-namespace OverTranslate.Engines.Google;
+namespace OverTranslate.Translation.Google;
 
 /// <summary>
 /// 「Google 翻譯 (Beta)」: the endpoint behind Chrome's own "translate this page".

@@ -1,4 +1,4 @@
-namespace OverTranslate.Engines;
+namespace OverTranslate.Translation;
 
 /// <summary>
 /// Translates between the codes this library speaks (Google's) and the ones each engine wants.

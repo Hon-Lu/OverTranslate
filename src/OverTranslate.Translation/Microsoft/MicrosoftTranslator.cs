@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace OverTranslate.Engines.Microsoft;
+namespace OverTranslate.Translation.Microsoft;
 
 /// <summary>
 /// 「Microsoft 翻譯」: the Translator API as Microsoft's own Android app calls it, many texts per

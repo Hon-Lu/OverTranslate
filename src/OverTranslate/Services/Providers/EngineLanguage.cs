@@ -7,7 +7,7 @@ namespace OverTranslate.Services.Providers;
 /// engines are spoken to in (Google's: en, zh-TW, pt).
 /// </summary>
 /// <remarks>
-/// One table for every free engine, because <see cref="OverTranslate.Engines"/> takes Google's codes
+/// One table for every free engine, because <see cref="OverTranslate.Translation"/> takes Google's codes
 /// from all of its callers and translates them for each engine itself — and GTranslate, which still
 /// serves dictionary lookups, speaks the same ones.
 /// </remarks>

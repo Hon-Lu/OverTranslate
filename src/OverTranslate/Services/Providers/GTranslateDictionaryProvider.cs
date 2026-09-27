@@ -7,10 +7,11 @@ namespace OverTranslate.Services.Providers;
 /// Rich dictionary lookups, which are all that is still asked of GTranslate here.
 /// </summary>
 /// <remarks>
-/// Translation moved to <see cref="OverTranslate.Engines"/>, which can send a screen in one request
+/// Translation moved to <see cref="OverTranslate.Translation"/>, which can send a screen in one request
 /// where GTranslate sent one request per line. Dictionary lookups are one word at a time by nature,
-/// so they gained nothing from moving and were left where they work; they, and speech, are what
-/// would go next if GTranslate is to leave the project entirely.
+/// so they gained nothing from moving and were left where they work. They are the next thing to
+/// move into <see cref="OverTranslate.Translation"/>; with speech moved into a project of its own,
+/// GTranslate leaves the project entirely.
 /// </remarks>
 public class GTranslateDictionaryProvider(ITranslator translator)
 {

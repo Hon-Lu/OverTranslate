@@ -1,4 +1,4 @@
-namespace OverTranslate.Engines;
+namespace OverTranslate.Translation;
 
 /// <summary>Why a piece ended where it did, which is what decides how to put it back together.</summary>
 internal enum TranslationChunkBoundary

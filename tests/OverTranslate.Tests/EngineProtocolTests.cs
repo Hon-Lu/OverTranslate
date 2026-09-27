@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using OverTranslate.Engines;
-using OverTranslate.Engines.Bing;
-using OverTranslate.Engines.Google;
-using OverTranslate.Engines.Microsoft;
+using OverTranslate.Translation;
+using OverTranslate.Translation.Bing;
+using OverTranslate.Translation.Google;
+using OverTranslate.Translation.Microsoft;
 using Xunit;
 
 namespace OverTranslate.Tests;

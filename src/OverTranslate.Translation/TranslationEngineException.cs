@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace OverTranslate.Engines;
+namespace OverTranslate.Translation;
 
 /// <summary>
 /// An engine failed, or answered with something that could not be read as a translation.

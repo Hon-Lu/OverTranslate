@@ -3,7 +3,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace OverTranslate.Engines.Bing;
+namespace OverTranslate.Translation.Bing;
 
 /// <summary>
 /// 「Bing 翻譯」: the translator on bing.com, one text per request.

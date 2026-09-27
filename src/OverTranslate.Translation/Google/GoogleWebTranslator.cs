@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace OverTranslate.Engines.Google;
+namespace OverTranslate.Translation.Google;
 
 /// <summary>
 /// 「Google 翻譯 (Web)」: Google's lightweight translation endpoint, many texts per request.

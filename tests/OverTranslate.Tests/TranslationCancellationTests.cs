@@ -1,8 +1,8 @@
 using System.Net.Http;
 using System.Windows;
-using OverTranslate.Engines;
-using OverTranslate.Engines.Bing;
-using OverTranslate.Engines.Google;
+using OverTranslate.Translation;
+using OverTranslate.Translation.Bing;
+using OverTranslate.Translation.Google;
 using OverTranslate.Services;
 using OverTranslate.Services.Providers;
 using Xunit;

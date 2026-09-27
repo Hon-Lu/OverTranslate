@@ -1,4 +1,4 @@
-namespace OverTranslate.Engines;
+namespace OverTranslate.Translation;
 
 /// <summary>One text's translation, and the language the engine read it as.</summary>
 /// <param name="Text">The translation, or the text itself when there was nothing to translate.</param>

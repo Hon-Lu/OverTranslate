@@ -6,15 +6,17 @@
        no settings, no OCR types — so what an engine accepts and returns can be read, tested and
        reasoned about without the rest of the program in the way.
 
-       Named for engines rather than for translation because translation is only what it does
-       today. Dictionary lookups and speech still go through GTranslate and are the natural next
-       tenants; the name should not have to change when they move in. -->
+       Named for what it does, which is the rule for every project split out of the application:
+       one project per job, not one per vendor. Translation in every form belongs here — dictionary
+       lookups when they leave GTranslate, and DeepL and the OpenAI-compatible provider when they
+       leave the application. Speech is a different job and gets a project of its own
+       (OverTranslate.Speech) rather than a corner of this one. -->
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>OverTranslate.Engines</RootNamespace>
+    <RootNamespace>OverTranslate.Translation</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

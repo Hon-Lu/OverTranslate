@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using NLog;
 
-namespace OverTranslate.Engines;
+namespace OverTranslate.Translation;
 
 /// <summary>
 /// What every engine here has in common: cutting long texts, packing the pieces into as few

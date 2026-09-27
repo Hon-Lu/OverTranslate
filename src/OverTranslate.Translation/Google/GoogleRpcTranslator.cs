@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace OverTranslate.Engines.Google;
+namespace OverTranslate.Translation.Google;
 
 /// <summary>
 /// 「Google 翻譯 (RPC)」: the call translate.google.com makes for itself, several to a request.

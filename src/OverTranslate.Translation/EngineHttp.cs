@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace OverTranslate.Engines;
+namespace OverTranslate.Translation;
 
 /// <summary>
 /// The HTTP client every engine is given.

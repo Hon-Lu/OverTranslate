@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using OverTranslate.Engines;
+using OverTranslate.Translation;
 using Xunit;
 
 namespace OverTranslate.Tests;

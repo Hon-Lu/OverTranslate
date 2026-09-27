@@ -1,9 +1,9 @@
 using System.Drawing;
 using System.IO;
-using OverTranslate.Engines;
-using OverTranslate.Engines.Bing;
-using OverTranslate.Engines.Google;
-using OverTranslate.Engines.Microsoft;
+using OverTranslate.Translation;
+using OverTranslate.Translation.Bing;
+using OverTranslate.Translation.Google;
+using OverTranslate.Translation.Microsoft;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Providers;
@@ -322,7 +322,7 @@ if (args[0] == "--xlate-line")
     // alike, so a limit measured on one says nothing about the others.
     //
     // There used to be a --raw that bypassed TranslationRequestChunks. Cutting is now each engine's
-    // own business (OverTranslate.Engines.BatchTranslator), so reproducing an endpoint past its
+    // own business (OverTranslate.Translation.BatchTranslator), so reproducing an endpoint past its
     // limit means a scratch request of its own rather than a switch here.
     var block = new List<OcrTextBlock> { new(line, new System.Windows.Rect(0, 0, 100, 20)) };
     Console.WriteLine($"  input: {line.Length} chars");
