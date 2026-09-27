@@ -34,7 +34,7 @@ public class LookupProtocolTests
         var result = await engine.LookupAsync("run", "zh-TW", "en");
 
         var sent = Assert.Single(handler.Requests);
-        Assert.Equal("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dj=1&source=input", sent.Uri);
+        Assert.Equal("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dt=rm&dj=1&source=input", sent.Uri);
         Assert.Equal("q=run", sent.Body);
 
         Assert.Equal("run", result.Headword);

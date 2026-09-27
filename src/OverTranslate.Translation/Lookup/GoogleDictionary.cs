@@ -14,10 +14,12 @@ namespace OverTranslate.Translation.Lookup;
 /// <see cref="DictionaryResult"/>, with how to ask for it again) and less the <c>tk</c> token:
 /// measured 2026-09-27 with and without it, the answers were the same.</para>
 ///
-/// <para>The parts asked for: <c>bd</c> translations by part of speech, and <c>t</c>, whose
-/// sentences are where the pronunciation (<c>src_translit</c>) is read from. Measured
-/// 2026-09-27, that is only filled in when <c>dt=rm</c> is asked for too, which GTranslate never
-/// did — so the pronunciation has always been empty, and still is.</para>
+/// <para>The parts asked for: <c>bd</c> translations by part of speech, and <c>t</c> with
+/// <c>rm</c>, whose sentences carry the pronunciation (<c>src_translit</c>). GTranslate asked for
+/// <c>t</c> without <c>rm</c>, and without it the reading is never there, so the dictionary card
+/// never showed one. Measured 2026-09-27 on nine words: <c>rm</c> adds the reading for every
+/// source language tried (食べる → Taberu, 电脑 → Diànnǎo, 사랑 → salang, дом → dom) and leaves
+/// the entries exactly as they were.</para>
 /// </remarks>
 public sealed class GoogleDictionary(HttpClient http) : DictionaryEngine(http)
 {
@@ -29,7 +31,7 @@ public sealed class GoogleDictionary(HttpClient http) : DictionaryEngine(http)
         string text, string targetLanguage, string sourceLanguage, CancellationToken cancellationToken)
     {
         var url = $"{Endpoint}?client=gtx&sl={Uri.EscapeDataString(sourceLanguage)}&tl={Uri.EscapeDataString(targetLanguage)}" +
-                  "&dt=t&dt=bd&dj=1&source=input";
+                  "&dt=t&dt=bd&dt=rm&dj=1&source=input";
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
