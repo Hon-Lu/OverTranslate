@@ -59,6 +59,9 @@ public partial class MainWindow : Window
     // Kept alive so toolbar translate can re-run OCR/translation on the current selection
     private List<OcrTextBlock> _lastOcrBlocks = [];
 
+    // Shared by 翻譯 and 複製原文: both recognise the same crop with the same arguments.
+    private readonly CaptureOcrReuse _ocrReuse = new();
+
     // What the translator answered, one entry per group. Copying, the translation window and the
     // toolbar read this, and they must keep reading it: placement below may cut a group up so that
     // each source line gets its own share on screen, and a sentence handed back to the user in
@@ -661,6 +664,7 @@ public partial class MainWindow : Window
                 _toolbarWindow?.FollowSelection(selection);
                 // OCR geometry belongs to the old crop until the user recognises this one.
                 _lastOcrBlocks = [];
+                _ocrReuse.Clear();
                 _overlayWindow?.ShowOcrDebug([], selection.Left, selection.Top);
 
                 // The marks stay where they were drawn; what moves is the window onto them. See
@@ -919,20 +923,15 @@ public partial class MainWindow : Window
             // lifetime match this request instead of the window's.
             using var workBitmap = ClonePixels(requestCaptureWindow.CroppedBitmap!);
 
-            _overlayWindow?.ShowProcessing(
-                _lastSelPhysLeft,
-                _lastSelPhysTop,
-                _lastSelPhysWidth,
-                _lastSelPhysHeight,
-                LocalizationService.Get("S.Main.Recognising"));
-
-            var recognizedBlocks = await AppServices.Ocr.RecognizeAsync(
+            var recognizedBlocks = await RecognizeCropAsync(
+                requestCaptureWindow,
                 workBitmap,
                 req.SourceLang,
-                cancellationToken,
                 req.IsVerticalText,
-                CaptureLayoutPolicy.ForApplication(req.LayoutMode));
-            if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
+                req.LayoutMode,
+                () => IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow),
+                cancellationToken);
+            if (recognizedBlocks is null)
                 return;
 
             _lastOcrBlocks = recognizedBlocks;
@@ -1090,6 +1089,48 @@ public partial class MainWindow : Window
     private static Bitmap ClonePixels(Bitmap source) =>
         source.Clone(new Rectangle(0, 0, source.Width, source.Height), source.PixelFormat);
 
+    /// <summary>
+    /// Recognises the locked crop, or hands back its last recognition when nothing recognition
+    /// sees has changed — see <see cref="CaptureOcrReuse"/>.
+    /// </summary>
+    /// <param name="captureWindow">
+    /// The window the crop was cut from, locked for this request; with its selection, what
+    /// identifies the picture.
+    /// </param>
+    /// <param name="workBitmap">This request's copy of the crop, which is what is actually read.</param>
+    /// <returns>Null when the session this request belongs to has moved on in the meantime.</returns>
+    private async Task<List<OcrTextBlock>?> RecognizeCropAsync(
+        ScreenCaptureWindow captureWindow,
+        Bitmap workBitmap,
+        string sourceLang,
+        bool verticalText,
+        CaptureLayoutMode requestedLayout,
+        Func<bool> stillCurrent,
+        CancellationToken cancellationToken)
+    {
+        var layoutMode = CaptureLayoutPolicy.ForApplication(requestedLayout);
+        var region     = captureWindow.Selection;
+        if (_ocrReuse.TryGet(captureWindow, region, sourceLang, verticalText, layoutMode, out var reused))
+        {
+            Log.Debug("Re-using the last recognition of this crop ({Count} blocks)", reused.Count);
+            return reused;
+        }
+
+        _overlayWindow?.ShowProcessing(
+            _lastSelPhysLeft,
+            _lastSelPhysTop,
+            _lastSelPhysWidth,
+            _lastSelPhysHeight,
+            LocalizationService.Get("S.Main.Recognising"));
+
+        var recognized = await AppServices.Ocr.RecognizeAsync(
+            workBitmap, sourceLang, cancellationToken, verticalText, layoutMode);
+        if (!stillCurrent()) return null;
+
+        _ocrReuse.Remember(captureWindow, region, sourceLang, verticalText, layoutMode, recognized);
+        return recognized;
+    }
+
     private async void OnCopyTextRequested(object? sender, CopyTextRequest req)
     {
         var requestToolbar = sender as ToolbarWindow;
@@ -1141,20 +1182,16 @@ public partial class MainWindow : Window
             selRect = requestCaptureWindow.Selection;
 
             using var workBitmap = ClonePixels(requestCaptureWindow.CroppedBitmap!);
-            _overlayWindow?.ShowProcessing(
-                _lastSelPhysLeft,
-                _lastSelPhysTop,
-                _lastSelPhysWidth,
-                _lastSelPhysHeight,
-                LocalizationService.Get("S.Main.Recognising"));
 
-            var recognizedBlocks = await AppServices.Ocr.RecognizeAsync(
+            var recognizedBlocks = await RecognizeCropAsync(
+                requestCaptureWindow,
                 workBitmap,
                 req.SourceLang,
-                cancellationToken,
                 req.IsVerticalText,
-                CaptureLayoutPolicy.ForApplication(req.LayoutMode));
-            if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
+                req.LayoutMode,
+                () => IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow),
+                cancellationToken);
+            if (recognizedBlocks is null)
                 return;
 
             _lastOcrBlocks = recognizedBlocks;
@@ -1387,6 +1424,7 @@ public partial class MainWindow : Window
         _selectionSessionId++;
         DisposeSessionHooks();
         CancelSession();
+        _ocrReuse.Clear();
 
         // A voice reading a selection that is no longer on screen has nothing left to be about, and
         // nothing would be left to stop it: the button that does is going with the toolbar.
