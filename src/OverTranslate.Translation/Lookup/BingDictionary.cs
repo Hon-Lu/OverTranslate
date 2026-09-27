@@ -12,8 +12,7 @@ namespace OverTranslate.Translation.Lookup;
 /// <para>The request and the reading of the answer are GTranslate's
 /// <c>BingTranslator.LookupDictionaryAsync</c> and <c>BingDictionaryParser</c>
 /// (MIT, d4n3436/GTranslate). The answer is the Translator API's <c>dictionary/lookup</c>, as
-/// <see cref="MicrosoftDictionary"/> gets it, plus a transliteration of each translation; there
-/// are no examples.</para>
+/// <see cref="MicrosoftDictionary"/> gets it, plus a transliteration of each translation.</para>
 ///
 /// <para>Refusals are a 200 with <c>{"statusCode":…}</c>, as with <see cref="BingTranslator"/>.</para>
 /// </remarks>
@@ -58,6 +57,6 @@ public sealed class BingDictionary : DictionaryEngine
             throw new TranslationEngineException(Name, $"refused ({(int?)status})", status);
         }
 
-        return MicrosoftLookupAnswer.Read(MicrosoftLookupAnswer.First(root), text, examplesFor: null, withTransliteration: true);
+        return MicrosoftLookupAnswer.Read(root, text, withTransliteration: true);
     }
 }

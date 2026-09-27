@@ -77,26 +77,22 @@ public class DictionaryLookupTests
         var source = new DictionaryLookupData(
             "cost", "Microsoft", "软件", null,
             [new DictionaryLookupGroupData("noun", [
-                new DictionaryEntryData("多个翻译", null, null, null, [], [
-                    new DictionaryExampleData("source", "这个翻译")
-                ])
-            ], ["多个定义"], ["同义词"])], []);
+                new DictionaryEntryData("多个翻译", null, ["这个翻译"])
+            ])]);
 
         var result = DictionaryTraditionalChineseConverter.Convert(source);
 
         Assert.Equal("Microsoft", result.Service);
         Assert.Equal("軟件", result.Headword);
         Assert.Equal("多個翻譯", result.Groups[0].Entries[0].Text);
-        Assert.Equal("這個翻譯", result.Groups[0].Entries[0].Examples[0].Translation);
-        Assert.Equal("多個定義", result.Groups[0].Definitions[0]);
-        Assert.Equal("同義詞", result.Groups[0].Synonyms[0]);
+        Assert.Equal("這個翻譯", result.Groups[0].Entries[0].BackTranslations[0]);
     }
 
     [Fact]
     public void Simplified_dictionary_results_preserve_the_original_wording()
     {
         var source = new DictionaryLookupData(
-            "software", "Microsoft", "软件", null, [], []);
+            "software", "Microsoft", "软件", null, []);
 
         var result = DictionaryTraditionalChineseConverter.Convert(source);
 
@@ -111,7 +107,7 @@ public class DictionaryLookupTests
         string originalText, string apiHeadword, bool convertToTraditional)
     {
         var source = new DictionaryLookupData(
-            "API source", "Microsoft", apiHeadword, null, [], []);
+            "API source", "Microsoft", apiHeadword, null, []);
 
         var result = TranslationService.PrepareDictionaryResult(
             source, originalText, convertToTraditional);
@@ -123,12 +119,12 @@ public class DictionaryLookupTests
     public void Dictionary_results_expose_only_groups_with_a_part_of_speech()
     {
         var unlabelled = new DictionaryLookupGroupData(null, [
-            new DictionaryEntryData("價錢為", null, null, null, [], [])
-        ], [], []);
+            new DictionaryEntryData("價錢為", null, [])
+        ]);
         var noun = new DictionaryLookupGroupData("noun", [
-            new DictionaryEntryData("成本", null, null, null, [], [])
-        ], [], []);
-        var result = new DictionaryLookupData("cost", "Google Web", "cost", null, [unlabelled, noun], []);
+            new DictionaryEntryData("成本", null, [])
+        ]);
+        var result = new DictionaryLookupData("cost", "Google Web", "cost", null, [unlabelled, noun]);
 
         Assert.Equal([noun], result.DisplayGroups);
         Assert.True(result.HasContent);
@@ -222,8 +218,8 @@ public class DictionaryLookupTests
         var expected = new DictionaryLookupData(
             "cost", "Google Web", "cost", null,
             [new DictionaryLookupGroupData("noun", [
-                new DictionaryEntryData("成本", null, null, null, [], [])
-            ], [], [])], []);
+                new DictionaryEntryData("成本", null, [])
+            ])]);
         var attempts = 0;
 
         var result = await DictionaryLookupFallback.TryAsync([

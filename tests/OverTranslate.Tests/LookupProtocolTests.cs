@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using OverTranslate.Services.Providers;
 using OverTranslate.Translation;
 using OverTranslate.Translation.Lookup;
@@ -20,19 +19,14 @@ public class LookupProtocolTests
         {"sentences":[{"trans":"跑步","orig":"run"},{"src_translit":"rən"}],
          "src":"en",
          "dict":[
-           {"pos":"verb","entry":[{"word":"跑","reverse_translation":["run","go"],"score":0.5,"frequency":1},
+           {"pos":"verb","entry":[{"word":"跑","reverse_translation":["run","go"],"score":0.5},
                                   {"word":"","reverse_translation":["x"]},
                                   {"word":"經營","reverse_translation":["run"]}]},
-           {"pos":"noun","entry":[{"word":"跑步","score":0.1}]}],
-         "alternative_translations":[{"alternative":[{"word_postproc":"跑步","score":1000},{"word_postproc":"奔跑","score":20}]}],
-         "definitions":[{"pos":"Verb","entry":[{"gloss":"move fast"},{"gloss":"move fast"},{"gloss":""}]},
-                        {"pos":"noun","entry":[{"gloss":"an act of running"}]}],
-         "synsets":[{"pos":"verb","entry":[{"synonym":["sprint","race"]},{"synonym":["race","dash"]}]}],
-         "examples":{"example":[{"text":"a <b>run</b> in the park"}]}}
+           {"pos":"noun","entry":[{"word":"跑步"}]}]}
         """;
 
     [Fact]
-    public async Task Google_AsksForTheDictionaryParts_AndReadsThem()
+    public async Task Google_AsksOnlyForWhatTheCardShows_AndReadsIt()
     {
         var handler = new Canned(_ => Json(GoogleAnswer));
         var engine = new GoogleDictionary(new HttpClient(handler));
@@ -40,47 +34,27 @@ public class LookupProtocolTests
         var result = await engine.LookupAsync("run", "zh-TW", "en");
 
         var sent = Assert.Single(handler.Requests);
-        Assert.StartsWith("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW", sent.Uri);
-        foreach (var part in new[] { "t", "bd", "at", "ex", "md", "ss" }) Assert.Contains($"&dt={part}&", sent.Uri + "&");
+        Assert.Equal("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&dj=1&source=input", sent.Uri);
         Assert.Equal("q=run", sent.Body);
 
         Assert.Equal("run", result.Headword);
         Assert.Equal("rən", result.Pronunciation);
-
-        var verb = result.Groups[0];
-        Assert.Equal("verb", verb.PartOfSpeech);
-        Assert.Equal(["跑", "經營"], verb.Entries.Select(e => e.Text));
-        Assert.Equal(["run", "go"], verb.Entries[0].BackTranslations);
-        Assert.Equal(0.5, verb.Entries[0].Confidence);
-        Assert.Equal(1, verb.Entries[0].Frequency);
-        Assert.Equal(["move fast"], verb.Definitions);          // matched regardless of case, repeats and blanks dropped
-        Assert.Equal(["sprint", "race", "dash"], verb.Synonyms);
-
-        Assert.Equal(["an act of running"], result.Groups[1].Definitions);
-        Assert.Empty(result.Groups[1].Synonyms);
-
-        // The other translations of the whole text, less those already listed.
-        var others = result.Groups[2];
-        Assert.Null(others.PartOfSpeech);
-        Assert.Equal(["奔跑"], others.Entries.Select(e => e.Text));
-
-        Assert.Equal("a <b>run</b> in the park", Assert.Single(result.Examples).Source);
+        Assert.Equal(["verb", "noun"], result.Groups.Select(g => g.PartOfSpeech));
+        Assert.Equal(["跑", "經營"], result.Groups[0].Entries.Select(e => e.Text));   // blank words dropped
+        Assert.Equal(["run", "go"], result.Groups[0].Entries[0].BackTranslations);
+        Assert.Empty(result.Groups[1].Entries[0].BackTranslations);
     }
 
     [Fact]
-    public async Task Google_AWordWithNoEntry_HasNoGroups_NotEvenTheOtherTranslations()
+    public async Task Google_AWordWithNoEntry_HasNoGroups()
     {
-        var handler = new Canned(_ => Json("""
-            {"sentences":[{"trans":"xyzzyq","orig":"xyzzyq"}],"src":"en",
-             "alternative_translations":[{"alternative":[{"word_postproc":"xyzzyq"}]}]}
-            """));
+        var handler = new Canned(_ => Json("""{"sentences":[{"trans":"xyzzyq","orig":"xyzzyq"}],"src":"en"}"""));
         var engine = new GoogleDictionary(new HttpClient(handler));
 
         var result = await engine.LookupAsync("xyzzyq", "ja", "en");
 
         Assert.Empty(result.Groups);
         Assert.Null(result.Pronunciation);
-        Assert.Empty(result.Examples);
     }
 
     [Fact]
@@ -105,41 +79,27 @@ public class LookupProtocolTests
         """;
 
     [Fact]
-    public async Task Microsoft_SignsBothRequests_AndPairsTheExamplesWithTheirTranslation()
+    public async Task Microsoft_SignsOneRequest_AndGroupsByPartOfSpeech()
     {
-        var handler = new Canned(request => request.Uri.Contains("/dictionary/lookup")
-            ? Json(MicrosoftLookup)
-            : Json("""
-                [{"normalizedSource":"light","normalizedTarget":"光","examples":[
-                   {"sourcePrefix":"the ","sourceTerm":"light","sourceSuffix":" is on","targetPrefix":"","targetTerm":"光","targetSuffix":"がついている"}]}]
-                """));
+        var handler = new Canned(_ => Json(MicrosoftLookup));
         var engine = new MicrosoftDictionary(new HttpClient(handler));
 
         var result = await engine.LookupAsync("light", "zh-CN", "en");
 
-        Assert.Equal(2, handler.Requests.Count);
-        Assert.All(handler.Requests, r => Assert.StartsWith("MSTranslatorAndroidApp::", r.Headers["X-MT-Signature"]));
-        Assert.All(handler.Requests, r => Assert.Contains("&from=en&to=zh-Hans", r.Uri));
-        Assert.Equal("""[{"Text":"light"}]""", handler.Requests[0].Body);
-
-        // One pair per distinct translation, in the order found.
-        var pairs = JsonDocument.Parse(handler.Requests[1].Body).RootElement.EnumerateArray()
-            .Select(p => (p.GetProperty("Text").GetString(), p.GetProperty("Translation").GetString())).ToList();
-        Assert.Equal([("light", "光"), ("light", "軽い"), ("light", "ライト")], pairs);
+        var sent = Assert.Single(handler.Requests);
+        Assert.StartsWith("MSTranslatorAndroidApp::", sent.Headers["X-MT-Signature"]);
+        Assert.Equal("https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=en&to=zh-Hans", sent.Uri);
+        Assert.Equal("""[{"Text":"light"}]""", sent.Body);
 
         // Grouped by part of speech, whatever case it is written in.
+        Assert.Equal("light", result.Headword);
         Assert.Equal(["NOUN", "ADJ", "VERB"], result.Groups.Select(g => g.PartOfSpeech));
         Assert.Equal(["光", "ライト"], result.Groups[0].Entries.Select(e => e.Text));
         Assert.Equal(["light", "glow"], result.Groups[0].Entries[0].BackTranslations);
-
-        var example = Assert.Single(result.Groups[0].Entries[0].Examples);
-        Assert.Equal("the light is on", example.Source);
-        Assert.Equal("光がついている", example.Translation);
-        Assert.Empty(result.Groups[0].Entries[1].Examples);
     }
 
     [Fact]
-    public async Task Microsoft_AWordWithNoTranslations_AsksForNoExamples()
+    public async Task Microsoft_AWordWithNoTranslations_HasNoGroups()
     {
         var handler = new Canned(_ => Json("""[{"normalizedSource":"xyzzyq","displaySource":"xyzzyq","translations":[]}]"""));
         var engine = new MicrosoftDictionary(new HttpClient(handler));

@@ -18,24 +18,12 @@ internal static class DictionaryTraditionalChineseConverter
                 {
                     Text = ConvertText(entry.Text),
                     BackTranslations = ConvertAll(entry.BackTranslations),
-                    Examples = ConvertExamples(entry.Examples),
                 }).ToList(),
-                Definitions = ConvertAll(group.Definitions),
-                Synonyms = ConvertAll(group.Synonyms),
             }).ToList(),
-            Examples = ConvertExamples(source.Examples),
         };
 
     private static IReadOnlyList<string> ConvertAll(IReadOnlyList<string> values) =>
         values.Select(ConvertText).ToList();
-
-    private static IReadOnlyList<DictionaryExampleData> ConvertExamples(
-        IReadOnlyList<DictionaryExampleData> examples) =>
-        examples.Select(example => example with
-        {
-            Source = ConvertText(example.Source),
-            Translation = ConvertOptional(example.Translation),
-        }).ToList();
 
     private static string? ConvertOptional(string? value) =>
         string.IsNullOrEmpty(value) ? value : ConvertText(value);

@@ -3,8 +3,8 @@ using System.Text.Json;
 namespace OverTranslate.Translation.Lookup;
 
 /// <summary>
-/// Reading the dictionary answers, whose parts are all optional: a word with no synonyms has no
-/// <c>synsets</c> at all, rather than an empty one.
+/// Reading the dictionary answers, whose parts are all optional: a word with no entry has no
+/// <c>dict</c> at all, rather than an empty one.
 /// </summary>
 internal static class LookupJson
 {
@@ -24,12 +24,4 @@ internal static class LookupJson
         value.ValueKind == JsonValueKind.Array
             ? value.EnumerateArray()
             : [];
-
-    /// <summary>A number property, or null when it is missing or not a number.</summary>
-    public static double? OptionalDouble(JsonElement element, string property) =>
-        element.ValueKind == JsonValueKind.Object &&
-        element.TryGetProperty(property, out var value) &&
-        value.ValueKind == JsonValueKind.Number
-            ? value.GetDouble()
-            : null;
 }

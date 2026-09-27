@@ -28,17 +28,7 @@ public class DictionaryLookupProvider(IDictionaryEngine engine, string service)
             result.Groups.Select(group => new DictionaryLookupGroupData(
                 group.PartOfSpeech,
                 group.Entries.Select(entry => new DictionaryEntryData(
-                    entry.Text,
-                    entry.Transliteration,
-                    entry.Confidence,
-                    entry.Frequency,
-                    entry.BackTranslations,
-                    entry.Examples.Select(example => new DictionaryExampleData(
-                        example.Source, example.Translation)).ToList())).ToList(),
-                group.Definitions,
-                group.Synonyms)).ToList(),
-            result.Examples.Select(example => new DictionaryExampleData(
-                example.Source, example.Translation)).ToList());
+                    entry.Text, entry.Transliteration, entry.BackTranslations)).ToList())).ToList());
 
         return mapped.HasContent ? mapped : null;
     }
