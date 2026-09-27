@@ -6,7 +6,19 @@ namespace OverTranslate.Translation;
 /// In the vocabulary described on <see cref="ITextTranslator"/>, or empty when the engine did not
 /// say — which is every engine whenever the source language was given rather than detected.
 /// </param>
-public sealed record TextTranslation(string Text, string DetectedLanguage);
+public sealed record TextTranslation(string Text, string DetectedLanguage)
+{
+    /// <summary>
+    /// The engine answered, but the answer is known to leave part of the text in the original —
+    /// and the attempt to put that right failed. Shown all the same, being the best there is, but
+    /// not an answer to keep: a caller that caches should ask again instead.
+    /// </summary>
+    /// <remarks>
+    /// Set only where it is known, never inferred from a translation that equals its text: names,
+    /// numbers and <c>OK</c> translate to themselves, and asking again for those would never end.
+    /// </remarks>
+    public bool Untranslated { get; init; }
+}
 
 /// <summary>
 /// An engine that translates a list of texts, one answer per text, in order.

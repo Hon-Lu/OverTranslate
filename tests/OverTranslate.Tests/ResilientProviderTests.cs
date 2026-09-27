@@ -50,6 +50,22 @@ public class ResilientProviderTests
         Assert.False(blocks[0].Untranslated);
     }
 
+    // An engine that answered but knows part of a text was left in the original says so, and the
+    // block carries it like one nobody answered — without the rest of the group losing its answers.
+    [Fact]
+    public async Task AnAnswerTheEngineMarkedUntranslated_IsMarkedOnTheBlock()
+    {
+        var provider = new ResilientProvider([new Engine("Primary", (texts, _) =>
+            Task.FromResult<IReadOnlyList<TextTranslation>>(
+                [new("你好", "en"), new("提示：Press any key", "en") { Untranslated = true }]))]);
+
+        var (blocks, _) = await provider.TranslateAsync(Blocks("Hello", "提示：Press any key"), "AUTO", "ZH-HANT", "");
+
+        Assert.False(blocks[0].Untranslated);
+        Assert.True(blocks[1].Untranslated);
+        Assert.Equal("提示：Press any key", blocks[1].TranslatedText);
+    }
+
     // The point of the whole change: a batch engine's screen is answered by one engine, all of it.
     [Fact]
     public async Task AScreenInOneRequest_IsServedByOneEngine()

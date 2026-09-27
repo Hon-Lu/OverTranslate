@@ -128,11 +128,12 @@ public class ResilientProvider : ITranslationProvider
         var translated  = new List<TranslatedBlock>(blocks.Count);
         for (int i = 0; i < blocks.Count; i++)
         {
-            // Nobody answered: the original text stands in, and says so.
+            // Nobody answered: the original text stands in, and says so. So does an answer the
+            // engine itself knows left part of the text in the original.
             var (answer, engine) = served[i] ?? (new TextTranslation(blocks[i].Text, ""), NoEngine);
             engineVotes[engine] = engineVotes.GetValueOrDefault(engine) + 1;
             translated.Add(new TranslatedBlock(blocks[i].Text, answer.Text, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
-                { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine });
+                { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine || answer.Untranslated });
 
             TranslatedTextLog.Write(Log, i, engine, blocks[i].Text, answer.Text);
         }

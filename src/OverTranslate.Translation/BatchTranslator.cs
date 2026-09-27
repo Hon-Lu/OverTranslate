@@ -34,6 +34,12 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
     /// <summary>The most characters (<see cref="string.Length"/>) one request may carry in total.</summary>
     protected abstract int MaxCharactersPerRequest { get; }
 
+    /// <summary>
+    /// Whether this engine's detector leaves a sentence untranslated for the label in front of it,
+    /// so that detected pieces are checked for it and asked again — see <see cref="MixedScriptText"/>.
+    /// </summary>
+    protected virtual bool RescuesMixedScript => false;
+
     /// <summary>The longest piece a text is cut into — see <see cref="TranslationRequestChunks"/>.</summary>
     protected virtual int MaxCharactersPerPiece => TranslationRequestChunks.SafeMaxCharacters;
 
@@ -140,6 +146,7 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
 
         var translated = chunks.Select(c => new string[c.Count]).ToList();
         var detected = new string[texts.Count];
+        var untranslated = new bool[texts.Count];
         for (var r = 0; r < requests.Count; r++)
         {
             for (var k = 0; k < requests[r].Count; k++)
@@ -147,6 +154,7 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
                 var (text, piece, _) = pieces[requests[r].Start + k];
                 var answer = answers[r][k];
                 translated[text][piece] = answer.Text;
+                untranslated[text] |= answer.Untranslated;
 
                 // The first piece that names a language speaks for the text; the rest are the same
                 // text and a later disagreement is a shorter piece being read with less to go on.
@@ -164,7 +172,7 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
                 0 => new TextTranslation(texts[t], ""),
                 1 => new TextTranslation(translated[t][0], detected[t] ?? ""),
                 _ => new TextTranslation(TranslationRequestChunks.Join(chunks[t], translated[t]), detected[t] ?? ""),
-            };
+            } with { Untranslated = untranslated[t] };
         }
 
         if (chunks.Any(c => c.Count > 1))
@@ -242,6 +250,9 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
                     throw new TranslationEngineException(Name, $"left {still} of {pieces.Count} texts unanswered");
             }
 
+            if (sourceLanguage is null && RescuesMixedScript)
+                await RescueMixedScriptAsync(pieces, answers, targetLanguage, cancellationToken);
+
             Log.Debug("{Engine}：{Items} 格 {Characters} 字，{Elapsed} ms",
                 Name, pieces.Count, characters, Elapsed(started));
             return answers!;
@@ -291,6 +302,90 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
             throw new TranslationEngineException(Name, $"answered {answers.Count} of {pieces.Count} texts");
 
         return [.. answers];
+    }
+
+    /// <summary>
+    /// Asks again for the pieces whose sentence was left in the original, in that sentence's
+    /// language — see <see cref="MixedScriptText"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>More requests only when there is such a piece: the sentences on their own, for
+    /// the language each is in — Latin script is English as often as not, but not always — then the
+    /// pieces again, one request per language found.</para>
+    ///
+    /// <para>The first answer was a good one for everything else in the request, so nothing here is
+    /// allowed to fail it. A piece that could not be put right keeps what it had and is marked
+    /// <see cref="TextTranslation.Untranslated"/>, which keeps it out of any cache and asked again.
+    /// One the second answer still leaves as it was is taken as it stands: that is the engine's
+    /// answer, not a failure, and marking it would have it asked for forever.</para>
+    /// </remarks>
+    private async Task RescueMixedScriptAsync(
+        IReadOnlyList<string> pieces, TextTranslation?[] answers, string targetLanguage,
+        CancellationToken cancellationToken)
+    {
+        var suspects = new List<(int Index, string Clause)>();
+        for (var i = 0; i < pieces.Count; i++)
+            if (MixedScriptText.UntranslatedClause(pieces[i], answers[i]!, targetLanguage) is { } clause)
+                suspects.Add((i, clause));
+        if (suspects.Count == 0) return;
+
+        // Taken off as each is settled; whatever is left at the end could not be.
+        var pending = suspects.Select(suspect => suspect.Index).ToHashSet();
+        try
+        {
+            var probed = await SendCheckedAsync(
+                suspects.Select(suspect => suspect.Clause).ToList(), targetLanguage, null, cancellationToken);
+
+            var byLanguage = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+            for (var k = 0; k < suspects.Count; k++)
+            {
+                if (probed[k] is not { } probe) continue;   // refused: stays pending
+
+                // A sentence that is in the language asked for, or in none the engine can name, was
+                // left because there was nothing to do.
+                var language = probe.DetectedLanguage;
+                if (language.Length == 0 || MixedScriptText.SameLanguage(language, targetLanguage))
+                {
+                    pending.Remove(suspects[k].Index);
+                    continue;
+                }
+
+                if (!byLanguage.TryGetValue(language, out var indices))
+                    byLanguage[language] = indices = [];
+                indices.Add(suspects[k].Index);
+            }
+
+            foreach (var (language, indices) in byLanguage)
+            {
+                var again = await SendCheckedAsync(
+                    indices.Select(i => pieces[i]).ToList(), targetLanguage, language, cancellationToken);
+                for (var k = 0; k < indices.Count; k++)
+                {
+                    if (Unanswered(pieces[indices[k]], again[k])) continue;
+                    answers[indices[k]] = again[k]! with { DetectedLanguage = language };
+                    pending.Remove(indices[k]);
+                }
+            }
+
+            Log.Debug("{Engine}：{Count} 格混排文字的句子沒翻，依句子的語言重送",
+                Name, byLanguage.Sum(group => group.Value.Count));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Log.Info("{Engine}：混排文字重送失敗（{Reason}）",
+                Name, ex is TranslationEngineException ? ex.Message : ex.GetType().Name);
+        }
+
+        if (pending.Count > 0)
+        {
+            Log.Info("{Engine}：{Count} 格混排文字沒能重譯，保留首次譯文並標記為未翻譯", Name, pending.Count);
+            foreach (var i in pending)
+                answers[i] = answers[i]! with { Untranslated = true };
+        }
     }
 
     /// <summary>

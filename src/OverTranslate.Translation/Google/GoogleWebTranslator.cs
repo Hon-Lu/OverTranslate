@@ -30,6 +30,9 @@ public sealed class GoogleWebTranslator(HttpClient http) : BatchTranslator(http)
 
     protected override int MaxCharactersPerRequest => 5000;
 
+    /// <remarks>「角色名稱：艾莉絲 She has been waiting…」 into Chinese comes back as it was sent.</remarks>
+    protected override bool RescuesMixedScript => true;
+
     protected override async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
         CancellationToken cancellationToken)

@@ -31,6 +31,9 @@ public sealed class GoogleRpcTranslator(HttpClient http) : BatchTranslator(http)
 
     protected override int MaxCharactersPerRequest => 5000;
 
+    /// <remarks>The same detector as 「Google 翻譯 (Web)」, and the same sentence left.</remarks>
+    protected override bool RescuesMixedScript => true;
+
     /// <remarks>
     /// A text of several sentences comes back as a list of them, and the blank line between two
     /// paragraphs is not in it. Sent apart, they come back apart and are put back with it.

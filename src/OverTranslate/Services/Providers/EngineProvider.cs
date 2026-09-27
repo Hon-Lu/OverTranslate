@@ -32,7 +32,7 @@ public sealed class EngineProvider(ITextTranslator engine) : ITranslationProvide
 
         var translated = blocks.Select((block, i) =>
             new TranslatedBlock(block.Text, answers[i].Text, block.Bounds, block.Lines, block.RenderGlyphHeight)
-                { RunsAcross = block.RunsAcross }).ToList();
+                { RunsAcross = block.RunsAcross, Untranslated = answers[i].Untranslated }).ToList();
 
         for (var i = 0; i < blocks.Count; i++)
             TranslatedTextLog.Write(Log, i, engine.Name, blocks[i].Text, answers[i].Text);
