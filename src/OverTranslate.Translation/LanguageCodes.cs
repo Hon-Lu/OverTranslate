@@ -50,4 +50,39 @@ internal static class LanguageCodes
         "jw" => "jv",
         _    => code,
     };
+
+    /// <summary>A Google-style code as DeepL's <c>target_lang</c>.</summary>
+    /// <remarks>
+    /// English and Portuguese need a variant as a target — the bare codes are only kept for old
+    /// clients — and the application offers American English and Brazilian Portuguese, which is
+    /// also what Google's <c>en</c> and <c>pt</c> are.
+    /// </remarks>
+    public static string ToDeepLTarget(string code) => code switch
+    {
+        "en"    => "EN-US",
+        "pt"    => "PT-BR",
+        "zh-CN" => "ZH-HANS",
+        "zh-TW" => "ZH-HANT",
+        "no"    => "NB",
+        _       => code.ToUpperInvariant(),
+    };
+
+    /// <summary>A Google-style code as DeepL's <c>source_lang</c>, which takes no variants.</summary>
+    /// <remarks>
+    /// Chinese is one source language to DeepL whichever script it is written in: its source list
+    /// has <c>ZH</c> and nothing else, where the target list has <c>ZH-HANS</c> and <c>ZH-HANT</c>.
+    /// </remarks>
+    public static string ToDeepLSource(string code) => code switch
+    {
+        "no" => "NB",
+        _    => code.Split('-')[0].ToUpperInvariant(),
+    };
+
+    /// <summary>A language DeepL detected, as Google would have written it.</summary>
+    public static string FromDeepL(string code) => code.ToUpperInvariant() switch
+    {
+        "ZH" => "zh-CN",
+        "NB" => "no",
+        var other => other.ToLowerInvariant(),
+    };
 }

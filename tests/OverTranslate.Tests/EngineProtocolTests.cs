@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using OverTranslate.Translation;
 using OverTranslate.Translation.Bing;
+using OverTranslate.Translation.DeepL;
 using OverTranslate.Translation.Google;
 using OverTranslate.Translation.Microsoft;
 using Xunit;
@@ -340,6 +341,74 @@ public class EngineProtocolTests
         await engine.TranslateAsync(["OK"], "zh-TW");
 
         Assert.Equal(2, handler.Requests.Count(r => r.Uri.EndsWith("/translator")));
+    }
+
+    // ---- DeepL ---------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("abc:fx", "https://api-free.deepl.com/v2/translate")]
+    [InlineData("abc", "https://api.deepl.com/v2/translate")]
+    public async Task DeepL_SendsTheKeyToTheHostItBelongsTo(string key, string endpoint)
+    {
+        var handler = new Canned(_ => Json("""{"translations":[{"detected_source_language":"EN","text":"你好"}]}"""));
+        var engine = new DeepLTranslator(new HttpClient(handler), key);
+
+        await engine.TranslateAsync(["Hello"], "zh-TW");
+
+        var sent = Assert.Single(handler.Requests);
+        Assert.Equal(endpoint, sent.Uri);
+        Assert.Equal($"DeepL-Auth-Key {key}", sent.Headers["Authorization"]);
+    }
+
+    [Fact]
+    public async Task DeepL_SendsEveryTextInOneRequest_AndReadsTheDetectedLanguageBack()
+    {
+        var handler = new Canned(_ => Json("""
+            {"translations":[
+              {"detected_source_language":"JA","text":"你好"},
+              {"detected_source_language":"ZH","text":"世界"}]}
+            """));
+        var engine = new DeepLTranslator(new HttpClient(handler), "k");
+
+        var answers = await engine.TranslateAsync(["こんにちは", "世界"], "zh-TW");
+
+        Assert.Equal("text=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF&text=%E4%B8%96%E7%95%8C&target_lang=ZH-HANT",
+            Assert.Single(handler.Bodies));
+        Assert.Equal([("你好", "ja"), ("世界", "zh-CN")], answers.Select(a => (a.Text, a.DetectedLanguage)));
+    }
+
+    // The app offers American English and Brazilian Portuguese as targets; DeepL's source list has
+    // one Chinese and no variants at all.
+    [Theory]
+    [InlineData("en", "zh-TW", "source_lang=ZH&target_lang=EN-US")]
+    [InlineData("pt", "zh-CN", "source_lang=ZH&target_lang=PT-BR")]
+    [InlineData("zh-CN", "no", "source_lang=NB&target_lang=ZH-HANS")]
+    public async Task DeepL_WritesLanguagesTheWayItsApiWantsThem(string target, string source, string expected)
+    {
+        var handler = new Canned(_ => Json("""{"translations":[{"text":"x"}]}"""));
+        var engine = new DeepLTranslator(new HttpClient(handler), "k");
+
+        await engine.TranslateAsync(["a"], target, source);
+
+        Assert.EndsWith(expected, Assert.Single(handler.Bodies));
+    }
+
+    [Fact]
+    public void DeepL_PacksAtMostFiftyTextsARequest()
+    {
+        var engine = new DeepLTranslator(new HttpClient(new Canned()), "k");
+
+        Assert.Equal([50, 10], engine.Plan(Enumerable.Range(0, 60).Select(i => $"line {i}").ToArray()).Select(g => g.Count));
+    }
+
+    [Fact]
+    public async Task DeepL_ARefusedKey_IsAnEngineFailureWithItsStatus()
+    {
+        var engine = new DeepLTranslator(new HttpClient(new Canned(_ => new HttpResponseMessage(HttpStatusCode.Forbidden))), "k");
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["a"], "ja"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, failure.StatusCode);
     }
 
     // ---- Transport -----------------------------------------------------------------------

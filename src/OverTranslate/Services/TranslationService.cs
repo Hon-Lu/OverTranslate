@@ -55,7 +55,12 @@ public class TranslationService
     private readonly GoogleChromeTranslator _googleChrome = new(Http);
     private readonly BingTranslator         _bing         = new(Http);
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
-    private readonly DeepLProvider      _deepL     = new();
+    // DeepL's own, because it is an official API spoken to with the user's key: it has no reason to
+    // introduce itself as a browser, and a long screen on a paid plan is given longer than the free
+    // engines get before it counts as hung.
+    private static readonly HttpClient DeepLHttp = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    private readonly DeepLProvider      _deepL     = new(DeepLHttp);
     private readonly OpenAiCompatibleProvider _openAi = new();
 
     // Dictionary lookups are still GTranslate's; see GTranslateDictionaryProvider.

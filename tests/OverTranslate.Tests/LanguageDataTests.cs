@@ -151,13 +151,11 @@ public class LanguageDataTests
     public void AutomaticSource_IsOmittedFromTranslationProviderRequests(string code)
     {
         Assert.Null(EngineLanguage.SourceToEngine(code));
-        Assert.False(DeepLProvider.ShouldSendSourceLanguage(code));
     }
 
     [Fact]
     public void ManualSource_IsStillSentToTranslationProviderRequests()
     {
         Assert.Equal("en", EngineLanguage.SourceToEngine("EN"));
-        Assert.True(DeepLProvider.ShouldSendSourceLanguage("EN"));
     }
 }

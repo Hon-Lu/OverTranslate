@@ -1,15 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The free online engines the application talks to directly: Google, Microsoft and Bing, each
-       spoken to in the request shape that serves it best rather than the one-text-per-call shape
-       GTranslate offers for all of them. Plain net8.0 and nothing from the application — no WPF,
-       no settings, no OCR types — so what an engine accepts and returns can be read, tested and
-       reasoned about without the rest of the program in the way.
+  <!-- The online engines the application talks to directly: the free Google, Microsoft and Bing,
+       each spoken to in the request shape that serves it best rather than the one-text-per-call
+       shape GTranslate offers for all of them, and DeepL with the user's own key. Plain net8.0
+       and nothing from the application — no WPF, no settings, no OCR types — so what an engine
+       accepts and returns can be read, tested and reasoned about without the rest of the program
+       in the way.
 
        Named for what it does, which is the rule for every project split out of the application:
        one project per job, not one per vendor. Translation in every form belongs here — dictionary
-       lookups when they leave GTranslate, and DeepL and the OpenAI-compatible provider when they
-       leave the application. Speech is a different job and gets a project of its own
+       lookups when they leave GTranslate, and the OpenAI-compatible provider when it leaves the
+       application. Speech is a different job and gets a project of its own
        (OverTranslate.Speech) rather than a corner of this one. -->
 
   <PropertyGroup>
