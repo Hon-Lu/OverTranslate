@@ -80,6 +80,7 @@
                                 <TextBlock Text="{DynamicResource S.Realtime.Provider}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
                                 <ComboBox x:Name="ProviderBox"
                                           Style="{StaticResource ModernComboBox}"
+                                          ctl:ComboBoxItemHints.IsEnabled="True"
                                           SelectedValuePath="Provider"/>
                                 <TextBlock x:Name="ProviderHint"
                                            Style="{StaticResource FieldHint}"
