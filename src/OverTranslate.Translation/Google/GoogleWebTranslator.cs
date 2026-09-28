@@ -50,14 +50,41 @@ public sealed class GoogleWebTranslator(HttpClient http) : BatchTranslator(http)
         if (root.ValueKind != JsonValueKind.Array)
             throw new TranslationEngineException(Name, $"unexpected answer ({root.ValueKind})");
 
-        return root.EnumerateArray().Select(Read).ToList();
+        // Paired by position; a count that does not match is the base class's to refuse.
+        return root.EnumerateArray()
+            .Select((answer, i) => Read(answer, i < pieces.Count ? pieces[i] : ""))
+            .ToList();
 
-        static TextTranslation Read(JsonElement answer) => answer.ValueKind == JsonValueKind.Array
+        static TextTranslation Read(JsonElement answer, string piece) => answer.ValueKind == JsonValueKind.Array
             ? new TextTranslation(
                 RequireString(answer[0]),
                 answer.GetArrayLength() > 1 && answer[1].ValueKind == JsonValueKind.String
-                    ? LanguageCodes.FromGoogle(answer[1].GetString()!)
+                    ? Detected(LanguageCodes.FromGoogle(answer[1].GetString()!), piece)
                     : "")
             : new TextTranslation(RequireString(answer), "");
     }
+
+    /// <summary>What the endpoint says the text was in, with the one thing it reliably says wrong put right.</summary>
+    /// <remarks>
+    /// <para>This endpoint reports traditional Chinese as <c>en</c> — every time, whatever the
+    /// target: 「測試」, 「這個問題很難」, 「我們今天去學校」, while 「测试」 comes back <c>zh-CN</c>
+    /// and 「東京」 <c>ja</c>. 「(RPC)」 and 「(Chrome)」 say <c>zh-TW</c> for the same texts
+    /// (measured 2026-09-28; <c>translate_a/single</c>, which GTranslate used, says <c>en</c> as
+    /// well). Believed, it turns 雙語互譯 round on every traditional Chinese word, and tells 文字翻譯
+    /// the text it was given was English.</para>
+    ///
+    /// <para>English written with no Latin letter at all is not a thing, so that answer, beside Han
+    /// characters and no kana, is taken to mean what the other two endpoints say. A text with a
+    /// Latin letter in it keeps whatever it was given: there the answer may well be true.</para>
+    /// </remarks>
+    internal static string Detected(string reported, string piece) =>
+        reported == "en" && piece.Any(IsHan) && !piece.Any(c => IsLatinLetter(c) || IsKana(c)) ? "zh-TW" : reported;
+
+    private static bool IsHan(char c) =>
+        c is >= '㐀' and <= '鿿'    // Han, with Extension A
+            or >= '豈' and <= '﫿';   // compatibility ideographs
+
+    private static bool IsKana(char c) => c is >= '぀' and <= 'ヿ';
+
+    private static bool IsLatinLetter(char c) => c is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
 }

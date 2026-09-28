@@ -155,6 +155,28 @@ public class EngineProtocolTests
         Assert.All(given, a => Assert.Equal("", a.DetectedLanguage));
     }
 
+    // Measured 2026-09-28: this endpoint reports traditional Chinese as en; RPC and Chrome say
+    // zh-TW for the same texts. Believed, 雙語互譯 turned round on every traditional Chinese word.
+    [Theory]
+    [InlineData("測試", "en", "zh-TW")]
+    [InlineData("這個問題很難", "en", "zh-TW")]
+    [InlineData("测试", "zh-CN", "zh-CN")]
+    [InlineData("東京", "ja", "ja")]
+    [InlineData("テスト", "en", "en")]          // kana: whatever this is, it is not Chinese
+    [InlineData("這個 API 要怎麼用", "en", "en")] // a Latin letter: en may be true
+    [InlineData("123", "en", "en")]
+    [InlineData("test", "en", "en")]
+    public async Task GoogleWeb_TraditionalChineseReportedAsEnglish_IsReadAsTraditionalChinese(
+        string text, string reported, string expected)
+    {
+        var handler = new Canned(_ => Json(JsonSerializer.Serialize(new[] { new[] { "x", reported } })));
+        var engine = new GoogleWebTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync([text], "en"));
+
+        Assert.Equal(expected, answer.DetectedLanguage);
+    }
+
     // ---- Google (RPC) --------------------------------------------------------------------
 
     [Fact]
