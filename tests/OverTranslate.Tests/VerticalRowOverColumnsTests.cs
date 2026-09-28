@@ -66,4 +66,63 @@ public class VerticalRowOverColumnsTests
 
         Assert.Equal(2, VerticalColumnGrouping.WithoutRowsOverColumns([one, other]).Count);
     }
+
+    /// <summary>
+    /// A row over columns read in pieces is judged against the pieces, not the groups they make.
+    /// </summary>
+    /// <remarks>
+    /// Figures off <c>zang-songnofuriren-001-147hua/2026-09-28 19 08 58 (2).png</c>: 光 and 降, the
+    /// heads of 光の矢の内の and 降り注いだ, come back as a row over a group that the pieces joined
+    /// into something wider than tall — so the group cannot overrule it, and the column it holds can.
+    /// </remarks>
+    [Fact]
+    public void A_row_over_columns_read_in_pieces_is_dropped()
+    {
+        var group = Block("空からそそりの", new Rect(270, 690, 132, 94), across: false);
+        var heads = Block("光降", new Rect(287, 656, 99, 40), across: true);
+        var column = Block("空から", new Rect(345, 690, 36, 94), across: false);
+        var piece = Block("り", new Rect(300, 700, 30, 28), across: false);
+
+        var kept = VerticalColumnGrouping.WithoutRowsOverColumns([group, heads], [column, piece]);
+
+        Assert.Equal(["空からそそりの"], kept.Select(block => block.Text));
+    }
+
+    /// <summary>
+    /// A row just above the columns its characters were taken from goes, although it touches none.
+    /// </summary>
+    /// <remarks>
+    /// 調 and 画 are gone from the heads of 順調に and 計画は, so what is left of those columns starts
+    /// under the row: MEASURED, 0.7 of the row's height below it.
+    /// </remarks>
+    [Fact]
+    public void A_row_just_above_the_columns_it_was_taken_from_is_dropped()
+    {
+        var plan = Block("画は", new Rect(340, 470, 38, 110), across: false);
+        var heads = Block("調画", new Rect(291, 442, 92, 41), across: true);
+
+        var kept = VerticalColumnGrouping.WithoutRowsOverColumns([plan, heads], [plan]);
+
+        Assert.Equal(["画は"], kept.Select(block => block.Text));
+    }
+
+    /// <summary>The name plate keeps its name when the columns are asked as well.</summary>
+    [Fact]
+    public void A_row_under_a_short_wide_column_is_kept_when_the_columns_are_asked()
+    {
+        var title = Block("剣聖", new Rect(1112, 397, 47, 34), across: false);
+        var name = Block("オリヴァー・カーディフ", new Rect(1021, 416, 228, 44), across: true);
+
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRowsOverColumns([title, name], [title]).Count);
+    }
+
+    /// <summary>A caption more than its own height away from any column is kept.</summary>
+    [Fact]
+    public void A_row_more_than_its_height_from_any_column_is_kept()
+    {
+        var balloon = Block("恨んでくれて構わない", new Rect(1055, 769, 102, 191), across: false);
+        var caption = Block("ギルドカードに記憶させると", new Rect(1028, 609, 263, 36), across: true);
+
+        Assert.Equal(2, VerticalColumnGrouping.WithoutRowsOverColumns([balloon, caption], [balloon]).Count);
+    }
 }

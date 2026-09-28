@@ -87,7 +87,7 @@ internal static class VerticalColumnGrouping
         // The readings go first. What is left is then the page's real writing, which is what the row
         // test has to be asked against: a reading IS a column, and a reading sitting on a sign made
         // the row test drop the sign — 迷宮入り口 thrown away because ぐち lay on it.
-        var groups = WithoutWordlessGroups(WithoutRowsOverColumns(WithoutRuby(merged)));
+        var groups = WithoutWordlessGroups(WithoutRowsOverColumns(WithoutRuby(merged), candidates));
         if (realtime) groups = WithoutUnconvincingGroups(groups);
 
         // The suspected readings join HERE rather than above, and the position is the whole of it.
@@ -289,12 +289,50 @@ internal static class VerticalColumnGrouping
     /// middle of a balloon that already has its own. A row over a column is always one of these two
     /// and never a third thing, so dropping it cannot cost writing that would otherwise be read.</para>
     /// </remarks>
-    internal static List<OcrTextBlock> WithoutRowsOverColumns(List<OcrTextBlock> groups) =>
+    internal static List<OcrTextBlock> WithoutRowsOverColumns(
+        List<OcrTextBlock> groups, IReadOnlyList<OcrTextBlock>? columns = null) =>
         !groups.Any(group => group.RunsAcross) || !groups.Any(group => !group.RunsAcross)
             ? groups
-            : [.. groups.Where(group => !group.RunsAcross || !groups.Any(column =>
-                !column.RunsAcross && RunsDownThePage(column) &&
-                LiesOn(group.Bounds, column.Bounds) >= RowLyingOnColumns))];
+            : [.. groups.Where(group => !group.RunsAcross || !(
+                groups.Any(column =>
+                    !column.RunsAcross && RunsDownThePage(column) &&
+                    LiesOn(group.Bounds, column.Bounds) >= RowLyingOnColumns) ||
+                (columns ?? []).Any(column =>
+                    RunsDownThePage(column) && Near(group.Bounds, column.Bounds))))];
+
+    /// <summary>
+    /// Whether a row reaches a column once it is grown by its own height on every side.
+    /// </summary>
+    /// <remarks>
+    /// <para>Asked of the COLUMNS as they were read, before any of them were joined, because on the
+    /// pages this exists for the joined groups say nothing. MEASURED on
+    /// <c>vertical-image-ja3/zang-songnofuriren-001-147hua</c>: the columns there are read in pieces —
+    /// <c>空から降り注いだ</c> comes back as <c>空から</c> and single-character boxes — and the pieces
+    /// joined make groups WIDER than they are tall (<c>空からそそりの</c> 132x94), so the rule above, which
+    /// lets only a balloon overrule a row, never fires. Seven of the ten rows the screenshot flow
+    /// returned lay on columns, and the page holds no writing across at all.</para>
+    ///
+    /// <para>Grown, because a row made of column heads does not always overlap what is left of those
+    /// columns: the heads are gone from them, so each column's box starts just under the row.
+    /// <c>調画</c> and <c>代遠</c> touch nothing and sit 0.7 of a row's height from the columns they were
+    /// taken from. The whole height and not half: at half, <c>調画</c> and <c>俺流兄</c> stay.</para>
+    ///
+    /// <para>The user's terms: rows may be lost, the columns may not be touched. What it costs, over
+    /// every vertical corpus: none of the eleven real rows on <c>vertical-image-ja2</c> (plates,
+    /// narration boxes, scene labels); a series title on <c>vertical-image-ja3</c>, the magazine's
+    /// cover titles and captions on <c>vertical-manga-web</c> and <c>vertical-image-ja</c>, and the one real
+    /// row on the new pages (<c>次回、三度目の"魔法"</c>, in the realtime flow). No column group changes on
+    /// any of them. Two narrower rules measured and left: touching without growing leaves four of the
+    /// fakes, and "two columns start under it" catches none that growing does not and loses the same
+    /// title.</para>
+    /// </remarks>
+    private static bool Near(Rect row, Rect column)
+    {
+        var grown = new Rect(
+            row.X - row.Height, row.Y - row.Height, row.Width + 2 * row.Height, row.Height * 3);
+        var shared = Rect.Intersect(grown, column);
+        return !shared.IsEmpty && shared.Width > 0 && shared.Height > 0;
+    }
 
     /// <summary>
     /// Whether a group is writing that actually runs down the page, rather than something short
