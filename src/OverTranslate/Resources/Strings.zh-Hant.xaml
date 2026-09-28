@@ -402,7 +402,7 @@
          invented, and it reads wrong on an English interface. -->
     <sys:String x:Key="S.Provider.Google">Google 翻譯 (標準)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 翻譯 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">新版翻譯介面，翻譯語意會更自然 (偶爾會發生漏譯問題)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">完整句子翻得較自然，但人名、作品名可能被意譯或省略</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>

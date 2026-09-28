@@ -390,7 +390,7 @@
     <!-- ── Translation providers ── -->
     <sys:String x:Key="S.Provider.Google">Google 翻訳 (標準)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 翻訳 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">新しい翻訳インターフェースで、より自然な訳文になります (まれに訳抜けが発生することがあります)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">完全な文はより自然に訳されますが、人名や作品名が意訳・省略されることがあります</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻訳</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻訳</sys:String>
