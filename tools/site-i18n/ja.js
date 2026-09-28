@@ -77,7 +77,7 @@ otLocale('ja', {
   'engines.google.suffix': '翻訳',
   'engines.google.body': 'バランスがよく、ふだん使いに向く',
   'engines.fallback.title': '自動フォールバック',
-  'engines.fallback.body': 'ある翻訳サービスが使えない、または応答が遅いときは、使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。',
+  'engines.fallback.body': 'ある翻訳サービスが使えない、または応答が遅いときは、まず同じサービスで再試行し、それでも翻訳できない場合に使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。',
   'engines.advanced.title': '外部の翻訳サービスと AI モデル',
   'engines.advanced.body': '内蔵のサービス以外に、別の翻訳サービスを自分で追加したり、ローカルの AI モデルで翻訳したりできます。どちらも設定しなくてもふだんの利用に支障はありません。',
   'engines.advanced.link': 'ローカル AI モデルの導入ガイド',
