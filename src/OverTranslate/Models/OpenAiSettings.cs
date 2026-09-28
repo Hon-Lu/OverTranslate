@@ -33,7 +33,7 @@ public class OpenAiPromptPair
     /// </summary>
     /// <remarks>
     /// In front of rather than instead of: the text being translated is the rest of that same
-    /// message — see <see cref="Services.Providers.OpenAiCompatibleProvider.BuildMessages"/>. This is
+    /// message — see <c>OpenAiChatTranslator.BuildMessages</c>. This is
     /// why the built-in wording ends in a colon.
     /// </remarks>
     public string UserPrompt { get; set; } = "";

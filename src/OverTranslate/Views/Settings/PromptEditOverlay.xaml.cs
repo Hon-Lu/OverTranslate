@@ -739,7 +739,7 @@ public partial class PromptEditOverlay : UserControl
     /// <remarks>
     /// Normalised but not trimmed. The blank line between the user prompt and the text being
     /// translated is the end of the wording rather than something the provider adds — see
-    /// OpenAiCompatibleProvider.BuildMessages — so trimming here would delete the separator every
+    /// OpenAiChatTranslator.BuildMessages — so trimming here would delete the separator every
     /// time someone opened a setting and saved it again, and the symptom would be a model that
     /// gradually got worse with no edit anyone made on purpose.
     ///

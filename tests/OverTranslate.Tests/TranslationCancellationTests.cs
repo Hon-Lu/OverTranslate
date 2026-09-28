@@ -1,6 +1,8 @@
 using System.Net.Http;
 using System.Windows;
-using GTranslate.Translators;
+using OverTranslate.Translation;
+using OverTranslate.Translation.Bing;
+using OverTranslate.Translation.Google;
 using OverTranslate.Services;
 using OverTranslate.Services.Providers;
 using Xunit;
@@ -11,10 +13,10 @@ namespace OverTranslate.Tests;
 // the ORIGINAL text as the translation so the rest of a batch still renders — if cancellation fell
 // into that path, an abandoned capture would look like a successful translation of untranslated
 // text. These tests pin the distinction. They never reach the network: cancellation is observed
-// before any request is issued.
+// before any request is issued (and, unlike under GTranslate, would also abort one in flight).
 public class TranslationCancellationTests
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(5) };
+    private static readonly HttpClient Http = EngineHttp.CreateClient(TimeSpan.FromSeconds(5));
 
     private static List<OcrTextBlock> SampleBlocks() =>
     [
@@ -27,8 +29,8 @@ public class TranslationCancellationTests
     {
         var provider = new ResilientProvider(
         [
-            new GTranslateProvider(new BingTranslator(Http)),
-            new GTranslateProvider(new GoogleTranslator2(Http)),
+            new BingTranslator(Http),
+            new GoogleRpcTranslator(Http),
         ]);
 
         using var cts = new CancellationTokenSource();
@@ -39,9 +41,9 @@ public class TranslationCancellationTests
     }
 
     [Fact]
-    public async Task GTranslateProvider_WhenCancelled_Throws()
+    public async Task EngineProvider_WhenCancelled_Throws()
     {
-        var provider = new GTranslateProvider(new BingTranslator(Http));
+        var provider = new EngineProvider(new BingTranslator(Http));
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -67,7 +69,7 @@ public class TranslationCancellationTests
     [Fact]
     public async Task EmptyBatch_WithCancelledToken_ReturnsEmptyWithoutThrowing()
     {
-        var provider = new GTranslateProvider(new BingTranslator(Http));
+        var provider = new EngineProvider(new BingTranslator(Http));
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();

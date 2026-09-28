@@ -1,9 +1,7 @@
 using System.Net.Http;
 using System.Xml.Linq;
-using GTranslate.Translators;
 using OverTranslate.Models;
 using OverTranslate.Services;
-using OverTranslate.Services.Providers;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -13,11 +11,13 @@ public class DictionaryLookupTests
     [Theory]
     [InlineData(TranslationProvider.Google, "EN-US", "Google:EN-US:False,Microsoft:EN-US:False,Bing:EN-US:False")]
     [InlineData(TranslationProvider.Google2, "EN-US", "Google:EN-US:False,Microsoft:EN-US:False")]
+    [InlineData(TranslationProvider.GoogleChrome, "EN-US", "Google:EN-US:False,Microsoft:EN-US:False")]
     [InlineData(TranslationProvider.Microsoft, "EN-US", "Microsoft:EN-US:False,Google:EN-US:False,Bing:EN-US:False")]
     [InlineData(TranslationProvider.Bing, "EN-US", "Bing:EN-US:False,Google:EN-US:False,Microsoft:EN-US:False")]
     [InlineData(TranslationProvider.DeepL, "EN-US", "Google:EN-US:False,Microsoft:EN-US:False")]
     [InlineData(TranslationProvider.Google, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True,Bing:ZH-HANS:True")]
     [InlineData(TranslationProvider.Google2, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
+    [InlineData(TranslationProvider.GoogleChrome, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
     [InlineData(TranslationProvider.Microsoft, "ZH-HANT", "Microsoft:ZH-HANS:True,Google:ZH-HANT:False,Bing:ZH-HANS:True")]
     [InlineData(TranslationProvider.Bing, "ZH-HANT", "Bing:ZH-HANS:True,Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
     [InlineData(TranslationProvider.DeepL, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
@@ -34,6 +34,7 @@ public class DictionaryLookupTests
     [Theory]
     [InlineData(TranslationProvider.Google)]
     [InlineData(TranslationProvider.Google2)]
+    [InlineData(TranslationProvider.GoogleChrome)]
     [InlineData(TranslationProvider.Microsoft)]
     [InlineData(TranslationProvider.Bing)]
     [InlineData(TranslationProvider.DeepL)]
@@ -76,26 +77,22 @@ public class DictionaryLookupTests
         var source = new DictionaryLookupData(
             "cost", "Microsoft", "软件", null,
             [new DictionaryLookupGroupData("noun", [
-                new DictionaryEntryData("多个翻译", null, null, null, [], [
-                    new DictionaryExampleData("source", "这个翻译")
-                ])
-            ], ["多个定义"], ["同义词"])], []);
+                new DictionaryEntryData("多个翻译", null, ["这个翻译"])
+            ])]);
 
         var result = DictionaryTraditionalChineseConverter.Convert(source);
 
         Assert.Equal("Microsoft", result.Service);
         Assert.Equal("軟件", result.Headword);
         Assert.Equal("多個翻譯", result.Groups[0].Entries[0].Text);
-        Assert.Equal("這個翻譯", result.Groups[0].Entries[0].Examples[0].Translation);
-        Assert.Equal("多個定義", result.Groups[0].Definitions[0]);
-        Assert.Equal("同義詞", result.Groups[0].Synonyms[0]);
+        Assert.Equal("這個翻譯", result.Groups[0].Entries[0].BackTranslations[0]);
     }
 
     [Fact]
     public void Simplified_dictionary_results_preserve_the_original_wording()
     {
         var source = new DictionaryLookupData(
-            "software", "Microsoft", "软件", null, [], []);
+            "software", "Microsoft", "软件", null, []);
 
         var result = DictionaryTraditionalChineseConverter.Convert(source);
 
@@ -110,7 +107,7 @@ public class DictionaryLookupTests
         string originalText, string apiHeadword, bool convertToTraditional)
     {
         var source = new DictionaryLookupData(
-            "API source", "Microsoft", apiHeadword, null, [], []);
+            "API source", "Microsoft", apiHeadword, null, []);
 
         var result = TranslationService.PrepareDictionaryResult(
             source, originalText, convertToTraditional);
@@ -122,12 +119,12 @@ public class DictionaryLookupTests
     public void Dictionary_results_expose_only_groups_with_a_part_of_speech()
     {
         var unlabelled = new DictionaryLookupGroupData(null, [
-            new DictionaryEntryData("價錢為", null, null, null, [], [])
-        ], [], []);
+            new DictionaryEntryData("價錢為", null, [])
+        ]);
         var noun = new DictionaryLookupGroupData("noun", [
-            new DictionaryEntryData("成本", null, null, null, [], [])
-        ], [], []);
-        var result = new DictionaryLookupData("cost", "Google Web", "cost", null, [unlabelled, noun], []);
+            new DictionaryEntryData("成本", null, [])
+        ]);
+        var result = new DictionaryLookupData("cost", "Google Web", "cost", null, [unlabelled, noun]);
 
         Assert.Equal([noun], result.DisplayGroups);
         Assert.True(result.HasContent);
@@ -221,8 +218,8 @@ public class DictionaryLookupTests
         var expected = new DictionaryLookupData(
             "cost", "Google Web", "cost", null,
             [new DictionaryLookupGroupData("noun", [
-                new DictionaryEntryData("成本", null, null, null, [], [])
-            ], [], [])], []);
+                new DictionaryEntryData("成本", null, [])
+            ])]);
         var attempts = 0;
 
         var result = await DictionaryLookupFallback.TryAsync([
@@ -271,15 +268,18 @@ public class DictionaryLookupTests
         Assert.False(DictionaryLookupEligibility.IsEligible(text));
     }
 
-    [Fact]
-    public void Provider_capabilities_decide_whether_dictionary_lookup_is_offered()
+    // Google Web, Bing and Microsoft are the engines with a dictionary; RPC, Chrome, DeepL and
+    // OpenAI have none, so whichever of those is chosen, the plan must send the lookup elsewhere.
+    [Theory]
+    [InlineData("EN-US")]
+    [InlineData("ZH-HANT")]
+    public void Lookups_only_go_to_engines_that_have_a_dictionary(string target)
     {
-        using var http = new HttpClient();
+        TranslationProvider[] withDictionary = [TranslationProvider.Google, TranslationProvider.Bing, TranslationProvider.Microsoft];
 
-        Assert.True(new GTranslateProvider(new GoogleTranslator(http)).SupportsDictionary);
-        Assert.True(new GTranslateProvider(new BingTranslator(http)).SupportsDictionary);
-        Assert.True(new GTranslateProvider(new MicrosoftTranslator(http)).SupportsDictionary);
-        Assert.False(new GTranslateProvider(new GoogleTranslator2(http)).SupportsDictionary);
+        foreach (var chosen in Enum.GetValues<TranslationProvider>())
+            Assert.All(DictionaryLookupPlan.Build(chosen, "EN", target),
+                step => Assert.Contains(step.Provider, withDictionary));
     }
 
     [Theory]

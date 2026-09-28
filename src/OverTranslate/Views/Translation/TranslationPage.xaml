@@ -49,6 +49,7 @@
                  pickers beside it would be whichever language happens to have the longest name. -->
             <ComboBox x:Name="ProviderBox"
                       Style="{StaticResource ModernComboBox}"
+                      ctl:ComboBoxItemHints.IsEnabled="True"
                       Width="180" Height="32"
                       SelectedValuePath="Provider"
                       VerticalContentAlignment="Center"/>

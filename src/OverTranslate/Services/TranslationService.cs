@@ -1,5 +1,10 @@
 using System.Net.Http;
-using GTranslate.Translators;
+using NLog;
+using OverTranslate.Translation;
+using OverTranslate.Translation.Bing;
+using OverTranslate.Translation.Google;
+using OverTranslate.Translation.Lookup;
+using OverTranslate.Translation.Microsoft;
 using OverTranslate.Layout;
 using OverTranslate.Models;
 using OverTranslate.Services.Providers;
@@ -28,35 +33,95 @@ public record TranslatedBlock(
     /// across unread, which is all a translator can honestly do with it.
     /// </remarks>
     public bool RunsAcross { get; init; }
+
+    /// <summary>
+    /// True when no engine produced a translation and <see cref="TranslatedText"/> is only the
+    /// original text standing in for one.
+    /// </summary>
+    /// <remarks>
+    /// Said outright rather than left to be inferred from the two texts being equal: a number, a
+    /// name or "OK" translates to itself, and a caller that retried those would retry forever.
+    /// </remarks>
+    public bool Untranslated { get; init; }
 }
 
 public class TranslationService
 {
-    // Shared HttpClient so a hung free endpoint fails fast instead of stalling the whole batch.
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    private readonly GTranslateProvider _google    = new(new GoogleTranslator(Http));
-    private readonly GTranslateProvider _google2   = new(new GoogleTranslator2(Http));
-    private readonly GTranslateProvider _bing      = new(new BingTranslator(Http));
-    private readonly GTranslateProvider _microsoft = new(new MicrosoftTranslator(Http));
-    private readonly DeepLProvider      _deepL     = new();
+    // One client for every free engine, so a hung endpoint fails fast instead of stalling the batch.
+    // Built by the engines library because how it speaks matters: see EngineHttp for why HTTP/2.
+    private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request);
+
+    private readonly GoogleWebTranslator    _google       = new(Http);
+    private readonly GoogleRpcTranslator    _google2      = new(Http);
+    private readonly GoogleChromeTranslator _googleChrome = new(Http);
+    private readonly BingTranslator         _bing         = new(Http);
+    private readonly MicrosoftTranslator    _microsoft    = new(Http);
+    // DeepL's own, because it is an official API spoken to with the user's key and has no reason to
+    // introduce itself as a browser. Its clock is everyone's: see TranslationTiming.
+    private static readonly HttpClient DeepLHttp = new() { Timeout = TranslationTiming.Request };
+
+    private readonly DeepLProvider      _deepL     = new(DeepLHttp);
     private readonly OpenAiCompatibleProvider _openAi = new();
 
-    // Per-engine resilient wrappers: the user's choice is the primary, the other reliable
-    // keyless engines act as hedged backups so one slow/throttled endpoint can't stall the batch.
+    // Only when asked for, one word at a time; the names are what the dictionary card credits.
+    private readonly DictionaryLookupProvider _googleDictionary    = new(new GoogleDictionary(Http), "Google Web");
+    private readonly DictionaryLookupProvider _bingDictionary      = new(new BingDictionary(Http), "Bing");
+    private readonly DictionaryLookupProvider _microsoftDictionary = new(new MicrosoftDictionary(Http), "Microsoft");
+
+    // Per-option resilient wrappers: the user's engine is the primary and is asked twice before
+    // anything else is (see ResilientProvider); the backups are there for when it cannot answer.
     private readonly ResilientProvider _googleR;
-    private readonly ResilientProvider _google2R;
+    private readonly ResilientProvider _googleChromeR;
     private readonly ResilientProvider _bingR;
     private readonly ResilientProvider _microsoftR;
 
+    // The same engines on their own, for callers that asked for no fallback.
+    private readonly EngineProvider _googleS;
+    private readonly EngineProvider _googleChromeS;
+    private readonly EngineProvider _bingS;
+    private readonly EngineProvider _microsoftS;
+
+    // Which option each engine is part of, so the backup badge names what the dropdown names.
+    private readonly Dictionary<string, TranslationProvider> _optionOf;
+
     public TranslationService()
     {
-        // Google2/Bing/Microsoft are the most reliable free endpoints — use them as the backup pool.
-        _google2R   = new ResilientProvider([_google2, _bing, _microsoft]);
-        _bingR      = new ResilientProvider([_bing, _google2, _microsoft]);
-        _microsoftR = new ResilientProvider([_microsoft, _google2, _bing]);
-        _googleR    = new ResilientProvider([_google, _google2, _bing]);
+        _optionOf = new()
+        {
+            [_google.Name]       = TranslationProvider.Google,
+            [_google2.Name]      = TranslationProvider.Google,
+            [_googleChrome.Name] = TranslationProvider.GoogleChrome,
+            [_bing.Name]         = TranslationProvider.Bing,
+            [_microsoft.Name]    = TranslationProvider.Microsoft,
+        };
+
+        // Each backup list leads with the engine that writes most like the primary, because a
+        // backup that answers is a screen in two voices and the closer the voices the less it shows.
+        //
+        // 「Google 翻譯 (標準)」 is two endpoints that write almost identically — thirteen of fourteen
+        // test sentences came back word for word the same — so the second is part of the option
+        // rather than a backup to it: Web first, being faster and never having failed a request in
+        // testing, RPC behind it, whose calls each fail now and then with an internal error. 「(Beta)」
+        // is a different model with nothing that writes like it, so it falls back to 標準. Nothing
+        // writes like Bing's language model or like Microsoft, so those two get the fast batch
+        // engines. Bing is never a backup: it takes one text per request and is the slowest of all.
+        _googleR       = Chain([_google, _google2, _microsoft]);
+        _googleChromeR = Chain([_googleChrome, _google, _google2]);
+        _bingR         = Chain([_bing, _google, _microsoft]);
+        _microsoftR    = Chain([_microsoft, _google, _google2]);
+
+        _googleS       = new EngineProvider(_google);
+        _googleChromeS = new EngineProvider(_googleChrome);
+        _bingS         = new EngineProvider(_bing);
+        _microsoftS    = new EngineProvider(_microsoft);
     }
+
+    private ResilientProvider Chain(IReadOnlyList<ITextTranslator> engines) =>
+        new(engines, optionName: engine => _optionOf.TryGetValue(engine, out var option)
+            ? LanguageData.GetProviderDisplay(option)
+            : engine);
 
     /// <summary>
     /// The engine a caller that has not said otherwise gets: whatever the user last chose in the
@@ -68,29 +133,31 @@ public class TranslationService
     private ITranslationProvider Resilient(TranslationProvider provider) => provider switch
     {
         TranslationProvider.Google    => _googleR,
+        TranslationProvider.GoogleChrome => _googleChromeR,
         TranslationProvider.Bing      => _bingR,
         TranslationProvider.Microsoft => _microsoftR,
         TranslationProvider.DeepL     => _deepL,
         TranslationProvider.OpenAI    => _openAi,
-        _                             => _google2R,
+        _                             => _googleR,
     };
 
     // Single chosen engine, no hedging/fallback — a timeout/failure surfaces directly to the caller.
     private ITranslationProvider Single(TranslationProvider provider) => provider switch
     {
-        TranslationProvider.Google    => _google,
-        TranslationProvider.Bing      => _bing,
-        TranslationProvider.Microsoft => _microsoft,
-        TranslationProvider.DeepL     => _deepL,
-        TranslationProvider.OpenAI    => _openAi,
-        _                             => _google2,
+        TranslationProvider.Google       => _googleS,
+        TranslationProvider.GoogleChrome => _googleChromeS,
+        TranslationProvider.Bing         => _bingS,
+        TranslationProvider.Microsoft    => _microsoftS,
+        TranslationProvider.DeepL        => _deepL,
+        TranslationProvider.OpenAI       => _openAi,
+        _                                => _googleS,
     };
 
-    private GTranslateProvider? DictionaryProvider(TranslationProvider provider) => provider switch
+    private DictionaryLookupProvider? DictionaryProvider(TranslationProvider provider) => provider switch
     {
-        TranslationProvider.Google    => _google,
-        TranslationProvider.Bing      => _bing,
-        TranslationProvider.Microsoft => _microsoft,
+        TranslationProvider.Google    => _googleDictionary,
+        TranslationProvider.Bing      => _bingDictionary,
+        TranslationProvider.Microsoft => _microsoftDictionary,
         _                             => null,
     };
 
@@ -148,9 +215,30 @@ public class TranslationService
                     var requestText = step.ConvertSourceToSimplified
                         ? DictionarySimplifiedChineseConverter.Convert(lookupText)
                         : lookupText;
-                    var result = await provider.LookupDictionaryAsync(
-                        requestText, step.SourceLanguage, step.TargetLanguage, token);
-                    if (result is null) return null;
+
+                    // Every step, not only the last: DictionaryLookupFallback keeps just the last
+                    // failure, so without these a card that came from the second engine never says
+                    // why the first one did not answer. Debug, because some steps fail on every
+                    // lookup by design — Microsoft and Bing refuse a pair without English with a 400.
+                    DictionaryLookupData? result;
+                    try
+                    {
+                        result = await provider.LookupDictionaryAsync(
+                            requestText, step.SourceLanguage, step.TargetLanguage, token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
+                    {
+                        Log.Debug("字典 {Provider} {Source}→{Target} 失敗：{Error}",
+                            step.Provider, step.SourceLanguage, step.TargetLanguage, ex.Message);
+                        throw;
+                    }
+
+                    if (result is null)
+                    {
+                        Log.Debug("字典 {Provider} {Source}→{Target} 沒有內容",
+                            step.Provider, step.SourceLanguage, step.TargetLanguage);
+                        return null;
+                    }
 
                     return PrepareDictionaryResult(result, lookupText, step.ConvertToTraditional);
                 })

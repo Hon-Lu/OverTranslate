@@ -183,18 +183,18 @@ built-in text to speech (TTS) reads both the original text and the translation a
 
 | Service | Description |
 |---------|-------------|
-| Google Translate (RPC) | Newer RPC interface |
-| Google Translate (Web) | Traditional web interface |
-| Bing Translator | Good translation quality |
+| Google Translate (Standard) | The same translations as the Google Translate website, with stable responses |
+| Google Translate (Beta) | More natural on full sentences, but names and titles may be translated or left out |
+| Bing Translator | Good translation quality (the service may use an LLM to refine meaning, so the wording can vary slightly between translations) |
 | Microsoft Translator | **(default)** Stable and fast |
 | DeepL | Requires registering on DeepL's site and obtaining an API key |
 | OpenAI | Supports the OpenAI API format; a local LLM is recommended, which you can set up quickly with [Ollama](guides/OLLAMA_GUIDE.en.md) |
   
-An "automatic fallback" mechanism is provided (it applies to both **screenshot translation** and **real-time translation**):
-when a translation service is unavailable or responds too slowly, the app automatically switches to another available translation API, and the engine actually in use is shown in the toolbar.
+An "automatic fallback" mechanism is provided (it applies to **screenshot translation**, **real-time translation**, **Quick Lookup** and **Quick Translate**):
+when a translation fails or responds too slowly, the app first retries the same service, and switches to another available translation service only if it still cannot translate. The engine actually in use is shown in the toolbar.
 ![Fallback](images/備援.png)
 
-> The fallback mechanism is not triggered when using **OpenAI**.
+> The fallback mechanism is not triggered when using **DeepL** or **OpenAI**.
 
 ### OpenAI settings
 

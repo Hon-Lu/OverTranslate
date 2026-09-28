@@ -1,6 +1,9 @@
 using System.IO;
+using System.Net.Http;
 using System.Windows.Media;
-using GTranslate.Translators;
+using OverTranslate.Services.Providers;
+using OverTranslate.Translation;
+using OverTranslate.Translation.Speech;
 using NLog;
 
 namespace OverTranslate.Services;
@@ -9,11 +12,24 @@ public class TtsService : IDisposable
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    private readonly GoogleTranslator2    _google2   = new();
-    private readonly GoogleTranslator     _google    = new();
-    private readonly MicrosoftTranslator  _microsoft = new();
-    private readonly BingTranslator       _bing      = new();
-    private readonly YandexTranslator     _yandex    = new();
+    // Every speaker in the application reads through one set of engines, so the Bing credentials
+    // and the Microsoft token are fetched once rather than once per window. The request timeout is
+    // translation's (TranslationTiming): one slow engine hands over to the next after ten seconds,
+    // where GTranslate's own clients waited a hundred.
+    private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request);
+
+    // Google first, as before; RPC ahead of the old translate_tts address, which is the order the old
+    // service used. Microsoft and Bing are the same Azure voices by two routes, and between them
+    // cover the one language the application offers that Google has no voice for (Slovenian).
+    // Yandex, the old fifth, was dropped: nothing reached it that the four above could not read.
+    private static readonly SpeechSynthesizer Synthesizer = new(
+    [
+        new GoogleRpcSpeech(Http),
+        new GoogleWebSpeech(Http),
+        new MicrosoftSpeech(Http),
+        new BingSpeech(Http),
+    ]);
+
     private MediaPlayer? _player;
     private string? _currentFile;
     private CancellationTokenSource? _cts;
@@ -139,136 +155,51 @@ public class TtsService : IDisposable
 
         SweepStaleFilesOnce();
 
-        var providers = BuildProviders(text, langCode);
-        Exception? lastEx = null;
-
-        foreach (var (name, speak) in providers)
+        // The same codes translation speaks, so every language the pickers offer has its voice —
+        // the old table knew fifteen and read the rest in English. 自動 is no language to read in;
+        // the callers never offer it, and if one ever does, nothing is better than a wrong voice.
+        var language = EngineLanguage.SourceToEngine(langCode);
+        if (language is null)
         {
-            if (token.IsCancellationRequested) return;
-            try
-            {
-                Log.Debug("TTS trying {Provider}, lang={Lang}", name, langCode);
-                var stream = await speak();
-                token.ThrowIfCancellationRequested();
-
-                using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms, token);
-                var file = NewTempFile();
-                await File.WriteAllBytesAsync(file, ms.ToArray(), token);
-
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    DeleteCurrentFile();
-                    _currentFile = file;
-                    var player = EnsurePlayer();
-                    player.Open(new Uri(file));
-                    player.Play();
-                });
-
-                Log.Debug("TTS success via {Provider}", name);
-                return;
-            }
-            catch (OperationCanceledException) { return; }
-            catch (Exception ex)
-            {
-                Log.Warn(ex, "TTS provider {Provider} failed, trying next", name);
-                lastEx = ex;
-            }
+            Log.Debug("TTS skipped: no language to read {Lang} in", langCode);
+            SetActive(false);
+            return;
         }
 
-        // Every provider failed (and we weren't cancelled) — clear state so the button resets.
-        if (!token.IsCancellationRequested) SetActive(false);
-        if (lastEx != null) throw lastEx;
+        try
+        {
+            // The token reaches the request itself, so 停止 aborts the download rather than only
+            // discarding it when it arrives.
+            var (audio, _) = await Synthesizer.SynthesizeAsync(text, language, token);
+
+            var file = NewTempFile();
+            await File.WriteAllBytesAsync(file, audio, token);
+
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                DeleteCurrentFile();
+                _currentFile = file;
+                var player = EnsurePlayer();
+                player.Open(new Uri(file));
+                player.Play();
+            });
+        }
+        catch (Exception) when (token.IsCancellationRequested)
+        {
+            // Stopped, or replaced by a newer press — which owns the button state now.
+        }
+        catch
+        {
+            // Every engine failed — clear state so the button resets, and let the caller say so.
+            SetActive(false);
+            throw;
+        }
     }
-
-    private List<(string name, Func<Task<Stream>> speak)> BuildProviders(string text, string langCode)
-    {
-        var gLang = MapGoogle(langCode);
-        var bLang = MapBing(langCode);
-        var yLang = MapYandex(langCode);
-
-        var mLang = MapMicrosoft(langCode);
-
-        return
-        [
-            ("Google2",    () => _google2.TextToSpeechAsync(text, gLang, false)),
-            ("Google",     () => _google.TextToSpeechAsync(text, gLang)),
-            ("Microsoft",  () => _microsoft.TextToSpeechAsync(text, mLang)),
-            ("Bing",       () => _bing.TextToSpeechAsync(text, bLang)),
-            ("Yandex",     () => _yandex.TextToSpeechAsync(text, yLang)),
-        ];
-    }
-
-    private static string MapGoogle(string code) => code.ToUpperInvariant() switch
-    {
-        "ZH" or "ZH-HANS" or "AUTO" => "zh-CN",
-        "ZH-HANT"                    => "zh-TW",
-        "JA"                         => "ja",
-        "KO"                         => "ko",
-        "EN" or "EN-US" or "EN-GB"   => "en",
-        "DE"                         => "de",
-        "FR"                         => "fr",
-        "ES"                         => "es",
-        "IT"                         => "it",
-        "PT" or "PT-BR"              => "pt",
-        "RU"                         => "ru",
-        "UK"                         => "uk",
-        "PL"                         => "pl",
-        "NL"                         => "nl",
-        "TR"                         => "tr",
-        _                            => "en",
-    };
-
-    private static string MapBing(string code) => code.ToUpperInvariant() switch
-    {
-        "ZH" or "ZH-HANS" or "AUTO" => "zh-Hans",
-        "ZH-HANT"                    => "zh-Hant",
-        "JA"                         => "ja",
-        "KO"                         => "ko",
-        "EN" or "EN-US" or "EN-GB"   => "en",
-        "DE"                         => "de",
-        "FR"                         => "fr",
-        "ES"                         => "es",
-        "IT"                         => "it",
-        "PT" or "PT-BR"              => "pt",
-        "RU"                         => "ru",
-        "UK"                         => "uk",
-        "PL"                         => "pl",
-        "NL"                         => "nl",
-        "TR"                         => "tr",
-        _                            => "en",
-    };
-
-    private static string MapMicrosoft(string code) => MapBing(code);
-
-    private static string MapYandex(string code) => code.ToUpperInvariant() switch
-    {
-        "ZH" or "ZH-HANS" or "ZH-HANT" or "AUTO" => "zh",
-        "JA"                                       => "ja",
-        "KO"                                       => "ko",
-        "EN" or "EN-US" or "EN-GB"                 => "en",
-        "DE"                                       => "de",
-        "FR"                                       => "fr",
-        "ES"                                       => "es",
-        "IT"                                       => "it",
-        "PT" or "PT-BR"                            => "pt",
-        "RU"                                       => "ru",
-        "UK"                                       => "uk",
-        "PL"                                       => "pl",
-        "NL"                                       => "nl",
-        "TR"                                       => "tr",
-        _                                          => "en",
-    };
 
     public void Dispose()
     {
         _cts?.Cancel();
         _cts?.Dispose();
-        _google2.Dispose();
-        _google.Dispose();
-        _microsoft.Dispose();
-        _bing.Dispose();
-        _yandex.Dispose();
         System.Windows.Application.Current.Dispatcher.Invoke(ClosePlayer);
     }
 }

@@ -6,6 +6,7 @@ using System.Windows;
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Providers;
+using OverTranslate.Translation.OpenAi;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -231,7 +232,7 @@ public class OpenAiCompatibleProviderTests
     /// </summary>
     /// <remarks>
     /// The instruction and the text travel in the same user message with nothing inserted between
-    /// them — see <see cref="OpenAiCompatibleProvider.BuildMessages"/> — so both the colon and the
+    /// them — see <see cref="OpenAiChatTranslator.BuildMessages"/> — so both the colon and the
     /// two line feeds after it are doing work: the colon says the next thing is the material, and
     /// the break is the blank line the model was trained to see there.
     ///
@@ -273,7 +274,7 @@ public class OpenAiCompatibleProviderTests
         WithInterfaceLanguage(LocalizationService.English, () =>
         {
             var prompts = BuiltIn("JA");
-            var user = Assert.Single(OpenAiCompatibleProvider.BuildMessages(prompts, "hello"));
+            var user = Assert.Single(OpenAiChatTranslator.BuildMessages(prompts, "hello"));
 
             Assert.Equal(prompts.User + "hello", Content(user));
             Assert.EndsWith("explanation:\n\nhello", Content(user));
@@ -384,7 +385,7 @@ public class OpenAiCompatibleProviderTests
 
         Assert.Equal("", prompts.System);
         Assert.Equal("", prompts.User);
-        Assert.Single(OpenAiCompatibleProvider.BuildMessages(prompts, "hello"));
+        Assert.Single(OpenAiChatTranslator.BuildMessages(prompts, "hello"));
     }
 
     /// <summary>
@@ -571,54 +572,9 @@ public class OpenAiCompatibleProviderTests
         });
     }
 
-    // ── How the two halves become a request ──────────────────────────────────
+    // How the two halves become a request is OpenAiChatProtocolTests'.
 
-    /// <summary>
-    /// The user prompt goes in front of the text, in the same message, with a blank line between.
-    /// </summary>
-    /// <remarks>
-    /// The format the recommended model documents — an instruction, a blank line, then the segment.
-    /// A model trained that way reads two separate user turns as a conversation it is being asked to
-    /// continue rather than as a job, so this is not a free choice of message shape.
-    /// </remarks>
-    [Fact]
-    public void BuildMessages_PutsTheUserPromptInFrontOfTheText()
-    {
-        var messages = OpenAiCompatibleProvider.BuildMessages(("", "翻成中文：\n\n"), "hello");
-
-        var user = Assert.Single(messages);
-        Assert.Equal("user", Role(user));
-        Assert.Equal("翻成中文：\n\nhello", Content(user));
-    }
-
-    /// <summary>A system prompt becomes a message of its own, first.</summary>
-    [Fact]
-    public void BuildMessages_SendsTheSystemPromptAsItsOwnMessage()
-    {
-        var messages = OpenAiCompatibleProvider.BuildMessages(("be terse", "翻成中文：\n\n"), "hello");
-
-        Assert.Equal(2, messages.Length);
-        Assert.Equal("system", Role(messages[0]));
-        Assert.Equal("be terse", Content(messages[0]));
-        Assert.Equal("user", Role(messages[1]));
-        Assert.Equal("翻成中文：\n\nhello", Content(messages[1]));
-    }
-
-    /// <summary>With no prompt at all the model is sent the text and nothing else.</summary>
-    [Fact]
-    public void BuildMessages_SendsTheTextAloneWhenBothHalvesAreEmpty()
-    {
-        var user = Assert.Single(OpenAiCompatibleProvider.BuildMessages(("", ""), "hello"));
-
-        Assert.Equal("user", Role(user));
-        Assert.Equal("hello", Content(user));
-    }
-
-    /// <summary>One message's role, off the anonymous type the payload is built from.</summary>
-    private static string? Role(object message) =>
-        (string?)message.GetType().GetProperty("role")!.GetValue(message);
-
-    /// <inheritdoc cref="Role"/>
+    /// <summary>One message's content, off the anonymous type the payload is built from.</summary>
     private static string? Content(object message) =>
         (string?)message.GetType().GetProperty("content")!.GetValue(message);
 
@@ -720,15 +676,6 @@ public class OpenAiCompatibleProviderTests
             OpenAiCompatibleProvider.BuiltInProfile().Model);
     }
 
-    [Theory]
-    [InlineData("<think>internal reasoning</think>\n正確譯文", "正確譯文")]
-    [InlineData("<THINK mode=\"deep\">hidden</THINK>Visible", "Visible")]
-    [InlineData("保留正常的譯文", "保留正常的譯文")]
-    public void StripThinking_RemovesCommonThinkingBlocks(string response, string expected)
-    {
-        Assert.Equal(expected, OpenAiCompatibleProvider.StripThinking(response));
-    }
-
     [Fact]
     public async Task TranslateAsync_SendsOneRequestPerBlockAndPreservesOrderAndBounds()
     {
@@ -763,44 +710,6 @@ public class OpenAiCompatibleProviderTests
         Assert.Equal(blocks[0].Bounds, translated[0].Bounds);
         Assert.Equal(blocks[1].Bounds, translated[1].Bounds);
         Assert.Equal("EN", detected);
-    }
-
-    [Fact]
-    public async Task TranslateAsync_LimitsIndependentRequestsToEightAtATime()
-    {
-        var handler = new RecordingHandler();
-        using var http = new HttpClient(handler);
-        var provider = new OpenAiCompatibleProvider(
-            http,
-            () => new OpenAiCompatibleOptions("http://localhost:1234/v1", "test-model"));
-        var blocks = Enumerable.Range(0, 23)
-            .Select(index => new OcrTextBlock($"block-{index:D2}", new Rect(index, 0, 10, 10)))
-            .ToList();
-
-        var (translated, _) = await provider.TranslateAsync(
-            blocks, "EN", "ZH-HANT", "");
-
-        Assert.Equal(23, handler.Requests.Count);
-        Assert.Equal(8, handler.MaxConcurrentRequests);
-        Assert.Equal(blocks.Select(block => $"translated:{block.Text}"),
-            translated.Select(block => block.TranslatedText));
-        Assert.Equal(blocks.Select(block => block.Bounds),
-            translated.Select(block => block.Bounds));
-    }
-
-    [Fact]
-    public async Task TranslateAsync_LeavesAuthorizationHeaderOutWhenKeyIsEmpty()
-    {
-        var handler = new RecordingHandler();
-        using var http = new HttpClient(handler);
-        var provider = new OpenAiCompatibleProvider(
-            http,
-            () => new OpenAiCompatibleOptions("http://localhost:11434/v1", "local-model"));
-
-        await provider.TranslateAsync(
-            [new OcrTextBlock("hello", new Rect())], "AUTO", "ZH-HANT", "");
-
-        Assert.Null(Assert.Single(handler.Requests).Authorization);
     }
 
     /// <summary>
@@ -948,22 +857,6 @@ public class OpenAiCompatibleProviderTests
     }
 
     [Fact]
-    public async Task TranslateAsync_ReadsTextContentPartsFromCompatibleServers()
-    {
-        const string response =
-            """{"choices":[{"message":{"content":[{"type":"text","text":"陣列格式譯文"}]}}]}""";
-        using var http = new HttpClient(new StaticResponseHandler(HttpStatusCode.OK, response));
-        var provider = new OpenAiCompatibleProvider(
-            http,
-            () => new OpenAiCompatibleOptions("https://example.test/v1", "test-model"));
-
-        var (translated, _) = await provider.TranslateAsync(
-            [new OcrTextBlock("hello", new Rect())], "EN", "ZH-HANT", "key");
-
-        Assert.Equal("陣列格式譯文", Assert.Single(translated).TranslatedText);
-    }
-
-    [Fact]
     public async Task TranslateAsync_SurfacesCompatibleApiErrorMessage()
     {
         const string response = """{"error":{"message":"model not found"}}""";
@@ -1084,7 +977,7 @@ public class OpenAiCompatibleProviderTests
     public void BuildMessages_SendNoCarriageReturnsAtAll(string name, string prompt)
     {
         var pair = new OpenAiPromptPair { SystemPrompt = prompt, UserPrompt = prompt };
-        var messages = OpenAiCompatibleProvider.BuildMessages(
+        var messages = OpenAiChatTranslator.BuildMessages(
             OpenAiCompatibleProvider.BuildPrompts("JA", "ZH-HANT", pair),
             "first line\r\nsecond line\rthird line");
 
@@ -1227,6 +1120,29 @@ public class OpenAiCompatibleProviderTests
         Assert.Equal(
             LocalizationService.Format("S.Error.OpenAiHttp", 400, "input length exceeds context length"),
             error.Message);
+    }
+
+    /// <summary>
+    /// A refusal with nothing to quote still says so, in words rather than as an empty gap.
+    /// </summary>
+    /// <remarks>
+    /// The server's words now arrive from the library apart from the status, and null and empty are
+    /// its two ways of having none — each has its own message, as before the request moved there.
+    /// </remarks>
+    [Theory]
+    [InlineData("""{"error":{"message":null}}""", "S.Error.UnknownError")]
+    [InlineData("", "S.Error.NoErrorContent")]
+    public async Task ARefusalWithNothingToQuoteSaysSo(string body, string key)
+    {
+        using var http = new HttpClient(new StaticResponseHandler(HttpStatusCode.BadGateway, body));
+        var provider = new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:11434/v1", "local-model"));
+
+        var error = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            provider.TranslateAsync([new OcrTextBlock("hello", new Rect())], "JA", "ZH-HANT", ""));
+
+        Assert.Equal(HttpStatusCode.BadGateway, error.StatusCode);
+        Assert.Equal(LocalizationService.Format("S.Error.OpenAiHttp", 502, LocalizationService.Get(key)), error.Message);
     }
 
     private sealed record RecordedRequest(string Url, string? Authorization, string Body);

@@ -60,7 +60,7 @@ OverTranslate 的 **OCR + 分組 + 翻譯** 離線測試工具。給人或 AI �
 ```
 OnnxOcrEngine（真 ONNX OCR）
   → OcrTextBlockGrouper（同行/換行分組，多數 bug 出在這）
-  → GTranslateProvider(MicrosoftTranslator)（EN → 繁中，免金鑰、走網路）
+  → EngineProvider(MicrosoftTranslator)（EN → 繁中，免金鑰、走網路）
 ```
 
 然後印出：

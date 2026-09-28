@@ -660,6 +660,7 @@
                                 <ComboBox x:Name="ProviderBox"
                                           Grid.Column="1"
                                           Style="{StaticResource ModernComboBox}"
+                                          ctl:ComboBoxItemHints.IsEnabled="True"
                                           Width="180" Height="30"
                                           SelectedValuePath="Provider"/>
                             </Grid>

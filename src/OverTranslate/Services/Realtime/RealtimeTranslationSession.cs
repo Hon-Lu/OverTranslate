@@ -447,7 +447,7 @@ public sealed class RealtimeTranslationSession
                     //
                     // Debug rather than Info because this fires once per poll that saw the pixels
                     // move: at a 150ms poll that is under 7/s per region, three regions, ~10MB an
-                    // hour against a 12MB archive budget. A session over a video used to evict every
+                    // hour against a 15MB archive budget. A session over a video used to evict every
                     // other line in the log — including the startup snapshot and whatever the user
                     // actually opened the log
                     // for. It sat at Info because Debug needed an environment variable nobody was
@@ -894,11 +894,16 @@ public sealed class RealtimeTranslationSession
 
             // Providers answer in request order; pair defensively anyway so a short reply degrades
             // to an untranslated line rather than throwing away the whole pass.
+            //
+            // A line no engine translated is not cached: the cache outlives a pause, so the original
+            // text stored as its answer would be drawn for that line for the rest of the session.
+            // Left out, it is still missing on the next pass and is asked for again.
             for (int i = 0; i < missing.Count && i < results.Count; i++)
-                _translationCache.Set(
-                    cacheKeyPrefix + missing[i].Text,
-                    results[i].TranslatedText,
-                    generation);
+                if (!results[i].Untranslated)
+                    _translationCache.Set(
+                        cacheKeyPrefix + missing[i].Text,
+                        results[i].TranslatedText,
+                        generation);
         }
 
         // A pause may have landed while the provider was answering. Its result belongs to a screen
@@ -906,15 +911,17 @@ public sealed class RealtimeTranslationSession
         if (!_translationCache.IsCurrent(generation)) return null;
 
         return blocks
-            .Select(block => new TranslatedBlock(
-                block.Text,
-                _translationCache.TryGet(
-                    cacheKeyPrefix + block.Text, generation, out var translated)
-                        ? translated
-                        : block.Text,
-                block.Bounds,
-                block.SourceLineBounds,
-                block.RenderGlyphHeight) { RunsAcross = block.RunsAcross })
+            .Select(block =>
+            {
+                var found = _translationCache.TryGet(
+                    cacheKeyPrefix + block.Text, generation, out var translated);
+                return new TranslatedBlock(
+                    block.Text,
+                    found ? translated : block.Text,
+                    block.Bounds,
+                    block.SourceLineBounds,
+                    block.RenderGlyphHeight) { RunsAcross = block.RunsAcross, Untranslated = !found };
+            })
             .ToList();
     }
 
@@ -1007,9 +1014,23 @@ public sealed class RealtimeTranslationSession
                     // Both per pass, so both track the content's rate of change — see the read line
                     // in RunRegionAsync for why that cannot sit at Info.
                     if (Publish(pass, translated, generation))
+                    {
                         Log.Debug(
                             "Realtime pass region={Region} ocr={Ocr}ms translate={Translate}ms lines={Lines}",
                             region.Id, ocrMs, translateMs, translated.Count);
+
+                        // Drawn as it is, since the other lines are real, but a line shown in its
+                        // original text is waiting on a translation. The pixels will not change to ask
+                        // for it again, so the retry has to — and the uncached line is all it sends.
+                        var untranslated = translated.Count(line => line.Untranslated);
+                        if (untranslated > 0)
+                        {
+                            Log.Debug(
+                                "Realtime pass region={Region} left {Count} line(s) untranslated, retrying",
+                                region.Id, untranslated);
+                            RequestRetry();
+                        }
+                    }
                     else
                         // Worth its own line: it means the region changed again before this answer
                         // arrived, which is the shape of a provider too slow for the content.

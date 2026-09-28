@@ -13,6 +13,18 @@ namespace OverTranslate.Tests;
 // and hotkey. These tests pin the rule that only the unreadable field pays.
 public class SettingsParsingTests
 {
+    // 「Google 翻譯 (RPC)」 is no longer an option of its own; whoever picked it gets 「(標準)」, the
+    // option it became part of — the same translations, not the default engine.
+    [Fact]
+    public void RetiredGoogleRpcChoice_IsReadAsTheStandardGoogleOption()
+    {
+        var settings = SettingsService.Parse("""{"Provider":"Google2","Realtime":{"Provider":"Google2"}}""");
+
+        Assert.Equal(TranslationProvider.Google, settings.Provider);
+        Assert.Equal(TranslationProvider.Google, settings.Realtime.Provider);
+        Assert.DoesNotContain(LanguageData.Providers, item => item.Provider == TranslationProvider.Google2);
+    }
+
     [Fact]
     public void QuickTranslateDefaultsToEnglishWithoutChangingOtherDefaults()
     {

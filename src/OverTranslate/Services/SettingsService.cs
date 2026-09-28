@@ -115,6 +115,10 @@ public class SettingsService
 
         Apply(settings, root, "");
 
+        // Retired options, read as the ones that replaced them — the pickers no longer list them.
+        settings.Provider = LanguageData.CurrentProvider(settings.Provider);
+        settings.Realtime.Provider = LanguageData.CurrentProvider(settings.Realtime.Provider);
+
         // The grouped section wins. Older files used flat quick-translation keys, and before
         // that shared the text-translation pair. Migrate only when the group is absent.
         if (!root.ContainsKey(nameof(AppSettings.QuickTranslate)))

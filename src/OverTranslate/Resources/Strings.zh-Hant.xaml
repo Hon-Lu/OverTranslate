@@ -400,10 +400,9 @@
     <!-- ── Translation providers ──
          Names as well as hints: "Google 翻譯" is the product's Chinese name, not a label we
          invented, and it reads wrong on an English interface. -->
-    <sys:String x:Key="S.Provider.Google">Google 翻譯 (Web)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">傳統 Web 介面</sys:String>
-    <sys:String x:Key="S.Provider.Google2">Google 翻譯 (RPC)</sys:String>
-    <sys:String x:Key="S.Provider.Google2Hint">新版 RPC 介面</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google 翻譯 (標準)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 翻譯 (Beta)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">完整句子翻得較自然，但人名、作品名可能被意譯或省略</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>

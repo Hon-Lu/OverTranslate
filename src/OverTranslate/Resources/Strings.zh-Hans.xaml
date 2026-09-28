@@ -384,10 +384,9 @@
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">翻译暂时失败，将持续重试：{0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google 翻译 (Web)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">传统 Web 接口</sys:String>
-    <sys:String x:Key="S.Provider.Google2">Google 翻译 (RPC)</sys:String>
-    <sys:String x:Key="S.Provider.Google2Hint">新版 RPC 接口</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google 翻译 (标准)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 翻译 (Beta)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">完整句子翻得较自然，但人名、作品名可能被意译或省略</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻译</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻译</sys:String>

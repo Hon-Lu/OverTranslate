@@ -114,6 +114,7 @@
                     <!-- Provider -->
                     <ComboBox x:Name="ProviderBox"
                               Style="{StaticResource ToolbarComboBox}"
+                              ctl:ComboBoxItemHints.IsEnabled="True"
                               SelectedValuePath="Provider"
                               VerticalContentAlignment="Center"/>
 

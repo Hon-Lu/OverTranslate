@@ -77,7 +77,7 @@ otLocale('ko', {
   'engines.google.suffix': '번역',
   'engines.google.body': '균형이 좋아 일상적으로 쓰기 좋음',
   'engines.fallback.title': '자동 대체',
-  'engines.fallback.body': '어떤 번역 서비스가 동작하지 않거나 응답이 너무 느리면 사용할 수 있는 다른 서비스로 자동으로 바뀝니다. 직접 다시 시도하거나 설정을 바꿀 필요가 없습니다.',
+  'engines.fallback.body': '어떤 번역 서비스가 동작하지 않거나 응답이 너무 느리면 먼저 다시 시도하고, 그래도 번역할 수 없을 때 사용할 수 있는 다른 서비스로 자동으로 바뀝니다. 직접 다시 시도하거나 설정을 바꿀 필요가 없습니다.',
   'engines.advanced.title': '외부 번역 서비스와 AI 모델',
   'engines.advanced.body': '내장 서비스 외에 다른 번역 서비스를 직접 추가하거나 로컬 AI 모델로 번역할 수 있습니다. 둘 다 설정하지 않아도 일반적인 사용에는 지장이 없습니다.',
   'engines.advanced.link': '로컬 AI 모델 설치 안내',

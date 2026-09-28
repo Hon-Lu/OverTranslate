@@ -388,10 +388,9 @@
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">번역이 일시적으로 실패해 계속 다시 시도합니다: {0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google 번역 (Web)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleHint">기존 웹 인터페이스</sys:String>
-    <sys:String x:Key="S.Provider.Google2">Google 번역 (RPC)</sys:String>
-    <sys:String x:Key="S.Provider.Google2Hint">새 RPC 인터페이스</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google 번역 (표준)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google 번역 (Beta)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">완전한 문장은 더 자연스럽게 번역되지만, 인명이나 작품명이 의역되거나 생략될 수 있습니다</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 번역</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>

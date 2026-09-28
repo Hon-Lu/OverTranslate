@@ -1,12 +1,14 @@
 namespace OverTranslate.Models;
 
+// Only what the dictionary card shows. Definitions, synonyms, example sentences, confidence and
+// frequency were carried here once and never shown, so they were dropped along with the requests
+// for them; OverTranslate.Translation.Lookup.DictionaryResult notes where each one comes from.
 public sealed record DictionaryLookupData(
     string Source,
     string Service,
     string? Headword,
     string? Pronunciation,
-    IReadOnlyList<DictionaryLookupGroupData> Groups,
-    IReadOnlyList<DictionaryExampleData> Examples)
+    IReadOnlyList<DictionaryLookupGroupData> Groups)
 {
     public IReadOnlyList<DictionaryLookupGroupData> DisplayGroups => Groups
         .Where(group => group.HasPartOfSpeech && group.Entries.Count > 0)
@@ -14,38 +16,23 @@ public sealed record DictionaryLookupData(
     public bool HasContent => DisplayGroups.Count > 0;
     public bool HasHeadword => !string.IsNullOrWhiteSpace(Headword);
     public bool HasPronunciation => !string.IsNullOrWhiteSpace(Pronunciation);
-    public bool HasExamples => Examples.Count > 0;
 }
 
 public sealed record DictionaryLookupGroupData(
     string? PartOfSpeech,
-    IReadOnlyList<DictionaryEntryData> Entries,
-    IReadOnlyList<string> Definitions,
-    IReadOnlyList<string> Synonyms)
+    IReadOnlyList<DictionaryEntryData> Entries)
 {
     public bool HasPartOfSpeech => !string.IsNullOrWhiteSpace(PartOfSpeech);
     public string PartOfSpeechLabel => string.IsNullOrWhiteSpace(PartOfSpeech)
         ? "—"
         : PartOfSpeech.ToUpperInvariant();
-    public string DefinitionsText => string.Join(Environment.NewLine, Definitions);
-    public string SynonymsText => string.Join(" · ", Synonyms);
 }
 
 public sealed record DictionaryEntryData(
     string Text,
     string? Transliteration,
-    double? Confidence,
-    long? Frequency,
-    IReadOnlyList<string> BackTranslations,
-    IReadOnlyList<DictionaryExampleData> Examples)
+    IReadOnlyList<string> BackTranslations)
 {
     public string BackTranslationsText => string.Join(" · ", BackTranslations);
     public bool HasTransliteration => !string.IsNullOrWhiteSpace(Transliteration);
-}
-
-public sealed record DictionaryExampleData(string Source, string? Translation)
-{
-    public string DisplayText => string.IsNullOrWhiteSpace(Translation)
-        ? Source
-        : $"{Source}  →  {Translation}";
 }

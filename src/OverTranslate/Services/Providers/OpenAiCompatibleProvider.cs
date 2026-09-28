@@ -1,10 +1,7 @@
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using NLog;
 using OverTranslate.Models;
+using OverTranslate.Translation.OpenAi;
 
 namespace OverTranslate.Services.Providers;
 
@@ -61,26 +58,30 @@ public sealed record OpenAiCompatibleOptions(
 }
 
 /// <summary>
-/// Translates through the OpenAI-compatible Chat Completions contract. Each OCR block is an
-/// independent request so its bounds and ordering stay aligned with the existing provider model.
+/// 「OpenAI 相容」 as the application asks for it: the user's setting, the instruction written from
+/// it, and the chat requests themselves sent by <see cref="OpenAiChatTranslator"/>.
 /// </summary>
+/// <remarks>
+/// What stays here is what needs the application: the settings and the built-in profile, the prompt
+/// templates (language names follow the interface), and the words a failure reaches the user in.
+/// What goes over the wire and how an answer is read is the library's.
+/// </remarks>
 public sealed class OpenAiCompatibleProvider : ITranslationProvider
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-    private static readonly HttpClient DefaultHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
-    private const int MaxConcurrentRequests = 8;
-    private static readonly Regex ThinkingBlock = new(
-        @"<think(?:\s[^>]*)?>.*?</think\s*>",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
-    private readonly HttpClient _http;
+    // Its own client rather than EngineHttp's: a local model can take tens of seconds to load on the
+    // first request, far past what the free engines are given.
+    private static readonly HttpClient DefaultHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
+
+    private readonly OpenAiChatTranslator _chat;
     private readonly Func<OpenAiCompatibleOptions> _options;
 
     public OpenAiCompatibleProvider(
         HttpClient? http = null,
         Func<OpenAiCompatibleOptions>? options = null)
     {
-        _http = http ?? DefaultHttp;
+        _chat = new OpenAiChatTranslator(http ?? DefaultHttp);
         _options = options ?? (() => FromSettings(SettingsService.Instance.Current));
     }
 
@@ -192,8 +193,6 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         if (model.Length == 0)
             throw new InvalidOperationException(LocalizationService.Get("S.Error.OpenAiNoModel"));
 
-        var configuredApiKey = options.ApiKey.Trim();
-
         // Counts and configuration only, so this stays in the shipped log: it is what tells a report
         // of "nothing was translated" apart from a request that never left, and names the model the
         // answer came from — with a local server the model is the variable that explains the output.
@@ -210,32 +209,30 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         Log.Debug("OpenAI 相容翻譯 system=\"{System}\" user=\"{User}\"",
             prompts.System, prompts.User);
 
-        var translations = new string[blocks.Count];
-        await Parallel.ForEachAsync(
-            Enumerable.Range(0, blocks.Count),
-            new ParallelOptions
-            {
-                MaxDegreeOfParallelism = MaxConcurrentRequests,
-                CancellationToken = cancellationToken,
-            },
-            async (index, token) =>
-            {
-                translations[index] = await TranslateOneAsync(
-                    blocks[index].Text,
-                    prompts,
-                    configuredApiKey,
-                    endpoint,
-                    model,
-                    Sampling.From(options),
-                    token);
+        IReadOnlyList<string> translations;
+        try
+        {
+            translations = await _chat.TranslateAsync(
+                blocks.Select(block => block.Text).ToList(),
+                new OpenAiChatRequest(
+                    endpoint, model, options.ApiKey, prompts.System, prompts.User,
+                    options.SendTemperature ? options.Temperature : null,
+                    options.SendTopP ? options.TopP : null,
+                    options.SendSeed ? options.Seed : null),
+                cancellationToken);
+        }
+        catch (OpenAiChatException ex)
+        {
+            throw Localized(ex);
+        }
 
-                // Both sides of one block on one line: a block that came back still in its own
-                // language is the shape this provider fails in, and that is only visible by reading
-                // the request against the reply.
-                if (Log.IsDebugEnabled)
-                    Log.Debug("OpenAI 相容翻譯 index={Index} in=\"{In}\" out=\"{Out}\"",
-                        index, blocks[index].Text, translations[index]);
-            });
+        // Both sides of one block on one line: a block that came back still in its own language is
+        // the shape this provider fails in, and that is only visible by reading the request against
+        // the reply.
+        if (Log.IsDebugEnabled)
+            for (var i = 0; i < blocks.Count; i++)
+                Log.Debug("OpenAI 相容翻譯 index={Index} in=\"{In}\" out=\"{Out}\"",
+                    i, blocks[i].Text, translations[i]);
 
         var results = new List<TranslatedBlock>(blocks.Count);
         for (int i = 0; i < blocks.Count; i++)
@@ -253,81 +250,25 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         return (results, detected);
     }
 
-    private async Task<string> TranslateOneAsync(
-        string text,
-        (string System, string User) prompts,
-        string apiKey,
-        Uri endpoint,
-        string model,
-        Sampling sampling,
-        CancellationToken cancellationToken)
-    {
-        // A dictionary rather than an anonymous type because the sampling fields are conditional: a
-        // server that refuses one of them refuses every value of it, so the only way to say nothing
-        // is to send no such field.
-        var payload = new Dictionary<string, object>
-        {
-            ["model"] = model,
-            ["messages"] = BuildMessages(prompts, text),
-        };
-        if (sampling.Temperature is { } temperature) payload["temperature"] = temperature;
-        if (sampling.TopP is { } topP) payload["top_p"] = topP;
-        if (sampling.Seed is { } seed) payload["seed"] = seed;
-        payload["stream"] = false;
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-        var trimmedKey = apiKey.Trim();
-        if (trimmedKey.Length > 0)
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", trimmedKey);
-
-        using var response = await _http.SendAsync(request, cancellationToken);
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException(
-                LocalizationService.Format(
-                    "S.Error.OpenAiHttp", (int)response.StatusCode, ReadError(json)),
-                null,
-                response.StatusCode);
-
-        string content;
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var message = document.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message");
-            content = ReadContent(message);
-        }
-        catch (Exception ex) when (
-            ex is JsonException or KeyNotFoundException or IndexOutOfRangeException or InvalidOperationException)
-        {
-            throw new InvalidOperationException(LocalizationService.Get("S.Error.OpenAiUnparsable"), ex);
-        }
-
-        var translated = StripThinking(content);
-        if (translated.Length == 0)
-            throw new InvalidOperationException(LocalizationService.Get("S.Error.OpenAiNoTranslation"));
-        return translated;
-    }
-
     /// <summary>
-    /// The sampling parameters for one request: each one a value to send, or null to send no such
-    /// field.
+    /// A failure the server answered with, in the words the capture toast and the translation
+    /// window's status line show — both put <see cref="Exception.Message"/> on screen as it is.
     /// </summary>
-    /// <remarks>
-    /// Three nullables together rather than three arguments, so that adding a fourth parameter is an
-    /// edit to one type instead of to every signature between the options and the payload.
-    /// </remarks>
-    internal readonly record struct Sampling(double? Temperature, double? TopP, int? Seed)
+    private static Exception Localized(OpenAiChatException ex) => ex.Failure switch
     {
-        public static Sampling From(OpenAiCompatibleOptions options) => new(
-            options.SendTemperature ? options.Temperature : null,
-            options.SendTopP ? options.TopP : null,
-            options.SendSeed ? options.Seed : null);
-    }
+        OpenAiChatFailure.Rejected => new HttpRequestException(
+            LocalizationService.Format("S.Error.OpenAiHttp", (int)ex.StatusCode!, ex.ServerMessage switch
+            {
+                null => LocalizationService.Get("S.Error.UnknownError"),
+                "" => LocalizationService.Get("S.Error.NoErrorContent"),
+                var message => message,
+            }),
+            ex,
+            ex.StatusCode),
+        OpenAiChatFailure.Unparsable => new InvalidOperationException(
+            LocalizationService.Get("S.Error.OpenAiUnparsable"), ex),
+        _ => new InvalidOperationException(LocalizationService.Get("S.Error.OpenAiNoTranslation"), ex),
+    };
 
     /// <summary>
     /// The server asked when the settings page's address box is left empty: a local Ollama on its
@@ -335,27 +276,18 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// </summary>
     internal const string DefaultBaseUrl = "http://localhost:11434/v1";
 
+    /// <summary>
+    /// The address the requests go to: <see cref="DefaultBaseUrl"/> for an empty box, otherwise
+    /// whatever <see cref="OpenAiChatEndpoint.Resolve"/> makes of it.
+    /// </summary>
+    /// <remarks>Checked before anything is sent, so a mistyped address is named as that.</remarks>
     internal static Uri BuildEndpoint(string baseUrl)
     {
         baseUrl = baseUrl.Trim();
         if (baseUrl.Length == 0) baseUrl = DefaultBaseUrl;
 
-        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            throw new InvalidOperationException(LocalizationService.Get("S.Error.OpenAiBadUrl"));
-
-        var builder = new UriBuilder(uri);
-        var path = builder.Path.TrimEnd('/');
-        if (path.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.Path = path;
-            return builder.Uri;
-        }
-
-        if (path.Length == 0)
-            path = "/v1";
-        builder.Path = $"{path}/chat/completions";
-        return builder.Uri;
+        return OpenAiChatEndpoint.Resolve(baseUrl)
+            ?? throw new InvalidOperationException(LocalizationService.Get("S.Error.OpenAiBadUrl"));
     }
 
     /// <summary>The placeholder a template uses for the language being translated out of.</summary>
@@ -413,7 +345,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// its documented format at all.
     ///
     /// Not trimmed, only normalised. What a prompt ends with is part of the prompt: the user half is
-    /// followed immediately by the text being translated — see <see cref="BuildMessages"/> — so the
+    /// followed immediately by the text being translated — see <c>OpenAiChatTranslator.BuildMessages</c> — so the
     /// blank line between the two lives at the end of the wording, where whoever wrote it can see it
     /// and a model that wants no blank line can be told so by deleting it.
     ///
@@ -437,47 +369,6 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         }
 
         return (One(prompts.SystemPrompt), One(prompts.UserPrompt));
-    }
-
-    /// <summary>
-    /// The messages for one request: the instruction, and the text to translate under it.
-    /// </summary>
-    /// <remarks>
-    /// The user prompt goes in front of the text in the same message rather than in a message of its
-    /// own. That is the format the recommended model documents — an instruction, a blank line, then
-    /// the segment — and a model trained that way reads two separate user turns as a conversation it
-    /// is being asked to continue rather than as a job.
-    ///
-    /// Joined with nothing at all: the separator belongs to the wording, which is why the built-in
-    /// one ends in a colon and two line feeds. A separator added here would be this application
-    /// deciding the shape of somebody else's documented prompt format, and it could not be turned
-    /// off — the model that wants its segment on the very next character would have no way to say
-    /// so. See <see cref="DefaultUserPrompt"/>.
-    ///
-    /// A system message only when there is one to send. An empty system turn is not nothing — it is
-    /// a turn — and the setting this ships with deliberately has none.
-    ///
-    /// Every line break that leaves here is a bare \n, the text being translated included. The
-    /// prompts were normalised upstream in <see cref="BuildPrompts"/>; the text was not, and it is
-    /// the half that arrives from outside this application — a block the OCR joined, or a line a
-    /// capture carried a \r into. Sending one message written two ways means the same screen reaches
-    /// the model as two different strings depending on where its line breaks came from.
-    /// </remarks>
-    internal static object[] BuildMessages((string System, string User) prompts, string text)
-    {
-        text = OpenAiSettings.NormaliseLineBreaks(text);
-
-        var messages = new List<object>(2);
-        if (prompts.System.Length > 0)
-            messages.Add(new { role = "system", content = prompts.System });
-
-        messages.Add(new
-        {
-            role = "user",
-            content = prompts.User + text,
-        });
-
-        return [.. messages];
     }
 
     /// <summary>
@@ -594,41 +485,5 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             .Replace(TargetPlaceholder, target, StringComparison.OrdinalIgnoreCase)
             .Replace(LegacySourcePlaceholder, source, StringComparison.OrdinalIgnoreCase)
             .Replace(LegacyTargetPlaceholder, target, StringComparison.OrdinalIgnoreCase);
-    }
-
-    internal static string StripThinking(string value) => ThinkingBlock.Replace(value, "").Trim();
-
-    private static string ReadContent(JsonElement message)
-    {
-        var content = message.GetProperty("content");
-        if (content.ValueKind == JsonValueKind.String)
-            return content.GetString() ?? "";
-
-        if (content.ValueKind == JsonValueKind.Array)
-        {
-            return string.Concat(content.EnumerateArray().Select(part =>
-                part.TryGetProperty("text", out var text) ? text.GetString() : ""));
-        }
-
-        return "";
-    }
-
-    private static string ReadError(string json)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (document.RootElement.TryGetProperty("error", out var error) &&
-                error.TryGetProperty("message", out var message))
-                return message.GetString() ?? LocalizationService.Get("S.Error.UnknownError");
-        }
-        catch (JsonException)
-        {
-            // Non-JSON proxies and local servers are common; return a bounded response below.
-        }
-
-        var compact = json.Trim();
-        if (compact.Length == 0) return LocalizationService.Get("S.Error.NoErrorContent");
-        return compact.Length <= 300 ? compact : compact[..300] + "…";
     }
 }

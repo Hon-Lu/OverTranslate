@@ -150,14 +150,12 @@ public class LanguageDataTests
     [InlineData("auto")]
     public void AutomaticSource_IsOmittedFromTranslationProviderRequests(string code)
     {
-        Assert.Null(GTranslateProvider.MapSourceToGTranslate(code));
-        Assert.False(DeepLProvider.ShouldSendSourceLanguage(code));
+        Assert.Null(EngineLanguage.SourceToEngine(code));
     }
 
     [Fact]
     public void ManualSource_IsStillSentToTranslationProviderRequests()
     {
-        Assert.Equal("en", GTranslateProvider.MapSourceToGTranslate("EN"));
-        Assert.True(DeepLProvider.ShouldSendSourceLanguage("EN"));
+        Assert.Equal("en", EngineLanguage.SourceToEngine("EN"));
     }
 }

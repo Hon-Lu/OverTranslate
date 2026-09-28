@@ -77,7 +77,7 @@ otLocale('zh-Hans', {
   'engines.google.suffix': '翻译',
   'engines.google.body': '表现均衡，适合日常使用',
   'engines.fallback.title': '自动备援',
-  'engines.fallback.body': '当某个翻译服务无法使用或响应过慢时，会自动切换到其他可用的服务，不需要自己重试或改设置。',
+  'engines.fallback.body': '当某个翻译服务无法使用或响应过慢时，会先重新尝试，仍无法翻译才自动切换到其他可用的服务，不需要自己重试或改设置。',
   'engines.advanced.title': '外部翻译服务与 AI 模型',
   'engines.advanced.body': '除了内置服务，也能自行加入其他翻译服务，或使用本地 AI 模型进行翻译；不额外设置也不影响一般使用。',
   'engines.advanced.link': '本机 AI 模型搭建教程',

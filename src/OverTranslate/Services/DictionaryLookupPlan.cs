@@ -25,7 +25,7 @@ internal static class DictionaryLookupPlan
                 Native(TranslationProvider.Microsoft, sourceLanguage, targetLanguage),
                 Native(TranslationProvider.Bing, sourceLanguage, targetLanguage),
             ],
-            TranslationProvider.Google2 =>
+            TranslationProvider.Google2 or TranslationProvider.GoogleChrome =>
             [
                 Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
                 Native(TranslationProvider.Microsoft, sourceLanguage, targetLanguage),
@@ -60,7 +60,7 @@ internal static class DictionaryLookupPlan
             Converted(TranslationProvider.Microsoft, sourceLanguage),
             Converted(TranslationProvider.Bing, sourceLanguage),
         ],
-        TranslationProvider.Google2 =>
+        TranslationProvider.Google2 or TranslationProvider.GoogleChrome =>
         [
             Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
             Converted(TranslationProvider.Microsoft, sourceLanguage),

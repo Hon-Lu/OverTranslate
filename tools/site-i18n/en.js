@@ -77,7 +77,7 @@ otLocale('en', {
   'engines.google.suffix': 'Translate',
   'engines.google.body': 'Well-rounded, good for everyday use',
   'engines.fallback.title': 'Automatic fallback',
-  'engines.fallback.body': 'When a translation service is unavailable or responds too slowly, the app switches to another one that works — no retrying or changing settings on your part.',
+  'engines.fallback.body': 'When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part.',
   'engines.advanced.title': 'External services and AI models',
   'engines.advanced.body': 'Beyond the built-in services you can add other translation services of your own, or translate with a local AI model. Neither is required for everyday use.',
   'engines.advanced.link': 'Setting up a local AI model',

@@ -3,7 +3,11 @@ using System.Text.Json.Serialization;
 namespace OverTranslate.Models;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum TranslationProvider { Google, Google2, Bing, Microsoft, DeepL, OpenAI }
+// Stored by name, so a new engine can go where it reads best without moving anyone's saved choice.
+// Google is 「Google 翻譯 (標準)」 — the Web endpoint backed by the RPC one, which write alike.
+// Google2 was 「Google 翻譯 (RPC)」 as a choice of its own; it stays so files that saved it still
+// read, and is read as Google (LanguageData.CurrentProvider). GoogleChrome is 「(Beta)」.
+public enum TranslationProvider { Google, Google2, GoogleChrome, Bing, Microsoft, DeepL, OpenAI }
 
 public class AppSettings
 {

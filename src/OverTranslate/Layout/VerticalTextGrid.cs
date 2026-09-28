@@ -1,6 +1,8 @@
 using System.Buffers;
 using System.Windows;
 using System.Windows.Controls;
+using OverTranslate.Services;
+using FontFamily = System.Windows.Media.FontFamily;
 
 namespace OverTranslate.Layout;
 
@@ -28,6 +30,103 @@ internal static class VerticalTextGrid
 
     /// <summary>Whether this glyph is drawn turned 90° when the text runs down the page.</summary>
     internal static bool RotatesGlyph(char glyph) => RotatedGlyphs.Contains(glyph);
+
+    // The vertical presentation forms of sentence punctuation, keyed by what the translation holds.
+    // The half-width forms map too: OCR and some engines hand them back in place of the full-width.
+    private static readonly Dictionary<char, char> VerticalForms = new()
+    {
+        ['。'] = '︒', // U+3002 → U+FE12
+        ['｡'] = '︒', // U+FF61 → U+FE12
+        ['、'] = '︑', // U+3001 → U+FE11
+        ['､'] = '︑', // U+FF64 → U+FE11
+        ['，'] = '︐', // U+FF0C → U+FE10
+    };
+
+    // What Chinese vertical writing draws in place of a character, in the column's own font.
+    //
+    // Curly quotes have no vertical form a horizontal font will draw: set down the page they stay
+    // two little marks in the top corners of their cells, with nothing to show they are a pair.
+    // Chinese vertical writing quotes with corner brackets instead, which RotatedGlyphs turns.
+    //
+    // The ellipsis … sits on the baseline, so turned it hugs the left of the cell; the midline ⋯
+    // turns into dots down the middle, and two of them make an evenly spaced column of six.
+    private static readonly Dictionary<char, char> ChineseSubstitutes = new()
+    {
+        ['“'] = '「', // U+201C → U+300C
+        ['”'] = '」', // U+201D → U+300D
+        ['‘'] = '『', // U+2018 → U+300E
+        ['’'] = '』', // U+2019 → U+300F
+        ['…'] = '⋯', // U+2026 → U+22EF
+    };
+
+    // The full-width punctuation YaHei draws off to one side — 。、， in the bottom left, ！？：； down
+    // the left half — and JhengHei draws centred, which is where Chinese vertical writing is set here.
+    private static readonly SearchValues<char> SimplifiedBorrowsCentred = SearchValues.Create("。｡、､，！？：；");
+
+    // The Traditional Chinese translation font, so the two Chinese targets share one look.
+    private static readonly FontFamily CentredPunctuationFont = TranslatedTextFont.For("ZH-HANT");
+
+    /// <summary>What one cell of a vertical column draws.</summary>
+    /// <param name="Glyph">The character to draw, which may not be the one in the translation.</param>
+    /// <param name="Font">The family to draw it in, or null for the column's own.</param>
+    internal readonly record struct VerticalGlyph(char Glyph, FontFamily? Font)
+    {
+        /// <summary>
+        /// Whether the cell is turned 90°. Asked of what is drawn, not of the translation's character:
+        /// a curly quote is not turned, the corner bracket drawn for it is.
+        /// </summary>
+        public bool Rotates => RotatesGlyph(Glyph);
+    }
+
+    /// <summary>
+    /// What to draw for <paramref name="glyph"/> when a translation into
+    /// <paramref name="targetLanguage"/> runs down the page — only what is drawn; the text itself,
+    /// and what is copied out of the overlay, keeps the original character.
+    /// </summary>
+    /// <remarks>
+    /// <para>The fonts draw punctuation where horizontal text wants it, and one TextBlock per glyph
+    /// has no way to ask a font for its vertical alternates. What each script wants instead differs,
+    /// and is the user's call:</para>
+    ///
+    /// <para>Japanese sets 。、， in the top right. Unicode's Vertical Forms block (U+FE10–FE19) is
+    /// the font's vertical alternates as characters of their own, drawn there by the people who drew
+    /// the rest of Yu Gothic UI, so the character is swapped and the placement is theirs — it lands
+    /// in the top right of these cells as they are laid out. Small kana have no such forms and stay
+    /// centred; putting them where print does would mean measuring each font's ink by hand, which
+    /// was tried and dropped.</para>
+    ///
+    /// <para>Chinese sets its punctuation centred. Traditional Chinese already is: JhengHei draws it
+    /// centred. YaHei puts 。、， in the bottom left and ！？：； in the left half, and its vertical
+    /// forms reach above the top of these cells into the character before, so Simplified Chinese
+    /// borrows JhengHei for just those glyphs rather than a form of YaHei's own. Both Chinese
+    /// targets draw curly quotes as corner brackets, in the column's own font like the corner
+    /// brackets the translation already had (see ChineseSubstitutes).</para>
+    ///
+    /// <para>Both also draw … as the midline ⋯, still turned and in the column's own font, which
+    /// centres it. ︙ was tried first and rejected on the rendered page: YaHei's reaches above its
+    /// cell into the character before, and JhengHei's leaves a wider gap between two cells than
+    /// between its own dots, so …… reads as two groups of three.</para>
+    ///
+    /// <para>Korean sets its sentences with half-width Latin punctuation, which is not in this at
+    /// all, and every other target is drawn as it is.</para>
+    /// </remarks>
+    internal static VerticalGlyph VerticalGlyphFor(char glyph, string? targetLanguage)
+    {
+        switch (targetLanguage?.Trim().ToUpperInvariant())
+        {
+            case "JA":
+                return new(VerticalForms.TryGetValue(glyph, out var form) ? form : glyph, null);
+            case "ZH":
+            case "ZH-HANS":
+                if (ChineseSubstitutes.TryGetValue(glyph, out var substitute))
+                    return new(substitute, null);
+                return new(glyph, SimplifiedBorrowsCentred.Contains(glyph) ? CentredPunctuationFont : null);
+            case "ZH-HANT":
+                return new(ChineseSubstitutes.TryGetValue(glyph, out var drawn) ? drawn : glyph, null);
+            default:
+                return new(glyph, null);
+        }
+    }
 
     /// <summary>Returns cells in vertical reading order: downwards, then one column left.</summary>
     /// <remarks>
