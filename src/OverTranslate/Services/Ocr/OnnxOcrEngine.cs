@@ -721,10 +721,14 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             };
             using var results = session.Run(inputs);
             var output = results.First();
+            var dense = output.AsTensor<float>() as Microsoft.ML.OnnxRuntime.Tensors.DenseTensor<float>;
+            var map = dense is not null ? dense.Buffer.ToArray() : output.AsEnumerable<float>().ToArray();
+            // Columns first: a row the model lit across the heads of columns is given back to them
+            // before the library frames anything, and the library frames the map as rewritten.
+            if (dense is not null && ColumnsFirst.Carve(map, scale.DstWidth, scale.DstHeight, options.BoxThresh))
+                map.CopyTo(dense.Buffer.Span);
             probability = new DetectorProbability(
-                output.AsTensor<float>() is Microsoft.ML.OnnxRuntime.Tensors.DenseTensor<float> dense
-                    ? dense.Buffer.ToArray()
-                    : output.AsEnumerable<float>().ToArray(),
+                map,
                 scale.DstWidth, scale.DstHeight,
                 scale.ScaleWidth, scale.ScaleHeight,
                 options.BoxThresh, options.BoxScoreThresh, options.UnClipRatio);
