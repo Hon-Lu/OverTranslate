@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows;
@@ -893,6 +894,12 @@ public partial class MainWindow : Window
 
         requestToolbar?.SetBusy(true);
 
+        // Each stage's share of the wait, for the line written when the bubbles are up. Recognition,
+        // the engine and the backdrop repair are each "the slow one" on some machine or screen, and
+        // a report of a slow capture says nothing about which without this.
+        var started = Stopwatch.GetTimestamp();
+        long ocrMs = 0, translateMs = 0, backdropMs = 0;
+
         // Whether the frame may still be handed back: this run is what locked it, and recognition —
         // the one stage a redrawn box would fix — has not got past finding text yet. Cleared the
         // moment there is text to translate, because from there the box is settled for good: the
@@ -923,7 +930,8 @@ public partial class MainWindow : Window
             // lifetime match this request instead of the window's.
             using var workBitmap = ClonePixels(requestCaptureWindow.CroppedBitmap!);
 
-            var recognizedBlocks = await RecognizeCropAsync(
+            var stage = Stopwatch.GetTimestamp();
+            var recognition = await RecognizeCropAsync(
                 requestCaptureWindow,
                 workBitmap,
                 req.SourceLang,
@@ -931,8 +939,9 @@ public partial class MainWindow : Window
                 req.LayoutMode,
                 () => IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow),
                 cancellationToken);
-            if (recognizedBlocks is null)
+            if (recognition is not (var recognizedBlocks, var ocrReused))
                 return;
+            ocrMs = ElapsedMs(stage);
 
             _lastOcrBlocks = recognizedBlocks;
             if (_lastOcrBlocks.Count == 0)
@@ -957,11 +966,13 @@ public partial class MainWindow : Window
             // Recognition is available even while translation is still pending.
             _overlayWindow?.ShowOcrDebug(_lastOcrBlocks, _lastSelPhysLeft, _lastSelPhysTop);
 
+            stage = Stopwatch.GetTimestamp();
             var (translated, _) = await AppServices.Translation.TranslateAsync(
                 _lastOcrBlocks, req.SourceLang, req.TargetLang, settings.ApiKey,
                 cancellationToken: cancellationToken);
             if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
                 return;
+            translateMs = ElapsedMs(stage);
 
             _lastTranslatedBlocks = [.. translated];
 
@@ -1000,11 +1011,13 @@ public partial class MainWindow : Window
 
             // Off the UI thread: this repairs the whole capture once, for every bubble that is
             // about to be drawn over it. Null on failure, and the overlay then paints flat colour.
+            stage = Stopwatch.GetTimestamp();
             var backdrop = await Task.Run(
                 () => CaptureBubbleBackdrop.Create(workBitmap, coloredTranslated, cancellationToken),
                 cancellationToken);
             if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
                 return;
+            backdropMs = ElapsedMs(stage);
 
             _lastColoredBlocks = coloredTranslated;
             _lastVerticalText = req.IsVerticalText;
@@ -1023,6 +1036,12 @@ public partial class MainWindow : Window
             requestToolbar?.SetTranslationState(true);
             requestToolbar?.SetToggleEnabled(coloredTranslated.Count > 0);
             requestToolbar?.SetEngineBadge(AppServices.Translation.LastEngineUsage);
+
+            // Sizes and times only, never the text: this is Info, in every diagnostic bundle.
+            Log.Info("Capture translation done in {Total} ms: {Width}x{Height}, {Blocks} blocks, " +
+                     "ocr {Ocr} ms{Reused:l}, translate {Translate} ms, backdrop {Backdrop} ms",
+                ElapsedMs(started), workBitmap.Width, workBitmap.Height, _lastOcrBlocks.Count,
+                ocrMs, ocrReused ? " (reused)" : "", translateMs, backdropMs);
         }
         // The session was torn down (Esc, re-capture, toolbar close) while this was in flight.
         // Expected and user-initiated — it must stay completely silent, with no error toast.
@@ -1044,8 +1063,10 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Translate request failed (src={Src}, tgt={Tgt}, selection={Sel})",
-                req.SourceLang, req.TargetLang, selRect);
+            // How far it got, and how long that took: a timeout reads differently from a refusal.
+            Log.Error(ex, "Translate request failed after {Elapsed} ms (src={Src}, tgt={Tgt}, selection={Sel}, " +
+                          "ocr {Ocr} ms, translate {Translate} ms)",
+                ElapsedMs(started), req.SourceLang, req.TargetLang, selRect, ocrMs, translateMs);
             if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
                 return;
 
@@ -1098,8 +1119,11 @@ public partial class MainWindow : Window
     /// identifies the picture.
     /// </param>
     /// <param name="workBitmap">This request's copy of the crop, which is what is actually read.</param>
-    /// <returns>Null when the session this request belongs to has moved on in the meantime.</returns>
-    private async Task<List<OcrTextBlock>?> RecognizeCropAsync(
+    /// <returns>
+    /// The blocks, and whether they are the last recognition handed back; null when the session this
+    /// request belongs to has moved on in the meantime.
+    /// </returns>
+    private async Task<(List<OcrTextBlock> Blocks, bool Reused)?> RecognizeCropAsync(
         ScreenCaptureWindow captureWindow,
         Bitmap workBitmap,
         string sourceLang,
@@ -1113,7 +1137,7 @@ public partial class MainWindow : Window
         if (_ocrReuse.TryGet(captureWindow, region, sourceLang, verticalText, layoutMode, out var reused))
         {
             Log.Debug("Re-using the last recognition of this crop ({Count} blocks)", reused.Count);
-            return reused;
+            return (reused, true);
         }
 
         _overlayWindow?.ShowProcessing(
@@ -1128,8 +1152,10 @@ public partial class MainWindow : Window
         if (!stillCurrent()) return null;
 
         _ocrReuse.Remember(captureWindow, region, sourceLang, verticalText, layoutMode, recognized);
-        return recognized;
+        return (recognized, false);
     }
+
+    private static long ElapsedMs(long since) => (long)Stopwatch.GetElapsedTime(since).TotalMilliseconds;
 
     private async void OnCopyTextRequested(object? sender, CopyTextRequest req)
     {
@@ -1183,7 +1209,7 @@ public partial class MainWindow : Window
 
             using var workBitmap = ClonePixels(requestCaptureWindow.CroppedBitmap!);
 
-            var recognizedBlocks = await RecognizeCropAsync(
+            var recognition = await RecognizeCropAsync(
                 requestCaptureWindow,
                 workBitmap,
                 req.SourceLang,
@@ -1191,7 +1217,7 @@ public partial class MainWindow : Window
                 req.LayoutMode,
                 () => IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow),
                 cancellationToken);
-            if (recognizedBlocks is null)
+            if (recognition is not (var recognizedBlocks, _))
                 return;
 
             _lastOcrBlocks = recognizedBlocks;
