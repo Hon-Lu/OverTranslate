@@ -38,6 +38,24 @@ public class VerticalProbabilitySplitTests
     }
 
     /// <summary>
+    /// The reading between two cut columns is not made a part of its own.
+    /// </summary>
+    /// <remarks>
+    /// Made a part, it is read and put into the sentence. MEASURED over the 141 pages of
+    /// <c>vertical-image-ja3</c>: 俺 of the gloss 俺の師匠 went into しかし俺おじいちゃんが.
+    /// </remarks>
+    [Fact]
+    public void The_reading_between_cut_columns_is_left_out()
+    {
+        using var page = BusyPage();
+        var map = Map((40, 20, 15, 161), (70, 20, 15, 101), (60, 30, 5, 10), (60, 60, 5, 10));
+
+        var parts = VerticalColumnDetection.Split(page, [Quad(25, 5, 75, 190)], map);
+
+        Assert.Equal(2, parts.Count);
+    }
+
+    /// <summary>
     /// A column's box is rebuilt as the library would build it around that column alone.
     /// </summary>
     /// <remarks>

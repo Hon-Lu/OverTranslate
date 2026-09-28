@@ -102,8 +102,7 @@ internal sealed class DetectorProbability
     /// Strips are formed along x only: a column the map breaks into one blob per glyph is still one
     /// column, because its pieces overlap across. A strip is a column when it is half again as long as
     /// its core is wide, which keeps a horizontal line broken into glyphs from being cut into single
-    /// characters. Every strip is returned once two columns are found — furigana included, as
-    /// <see cref="VerticalColumnDetection"/> keeps a narrow part rather than dropping it.
+    /// characters. Only the columns are returned; a reading beside one is left unread.
     /// </remarks>
     internal IReadOnlyList<Column> ColumnsIn(int left, int top, int right, int bottom)
     {
@@ -128,6 +127,7 @@ internal sealed class DetectorProbability
             strips.Add(joined);
         }
 
+
         var columns = strips
             .Select(s => (Strip: s, Core: CoreWidth(s), Ink: InkPerRow(s)))
             .Where(s => s.Core > 0 && s.Strip.Height >= s.Core * 1.5 && s.Ink / s.Strip.Width >= ColumnFill)
@@ -138,7 +138,14 @@ internal sealed class DetectorProbability
         if (columns.Count(s => s.Ink >= heaviest * ColumnInkShare) < 2)
             return [];
 
-        return strips
+        // Only the columns become parts. A lighter strip beside them is a reading, and made a part of
+        // its own it is read and put into the sentence: MEASURED over all 141 pages of
+        // vertical-image-ja3, 俺 of the gloss 俺の師匠 went into しかし俺おじいちゃんが and じゅんび came
+        // back as a balloon of its own. Left out, it is not read at all, which is what a reading is
+        // for here — and no sentence on either transcribed corpus scores differently for it.
+        return columns
+            .Where(c => c.Ink >= heaviest * ColumnInkShare)
+            .Select(c => c.Strip)
             .OrderBy(s => s.Left)
             .Select(s =>
             {
