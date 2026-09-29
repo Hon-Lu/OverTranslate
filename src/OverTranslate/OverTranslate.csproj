@@ -35,6 +35,8 @@
          This is a WPF app that only references WinForms types; ApplicationConfiguration.Initialize
          is never called, so the manifest is the only mechanism that takes effect. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- Microsoft.AI.DirectML (pulled in by the DirectML runtime) copies its debug layer and PDBs by default. -->
+    <Microsoft_AI_DirectML_SkipDebugLayerCopy>true</Microsoft_AI_DirectML_SkipDebugLayerCopy>
   </PropertyGroup>
 
   <ItemGroup>
@@ -66,7 +68,20 @@
     <PackageReference Include="OpenCvSharp4.runtime.win.slim" Version="4.13.0.20260627" />
     <PackageReference Include="OpenccNetLib" Version="1.6.2" />
     <PackageReference Include="RapidOcrNet" Version="3.0.0" ExcludeAssets="build" />
+    <!-- One onnxruntime.dll for the whole process, the DirectML build (the vertical manga models run on the GPU).
+         RapidOcrNet 3.0.0 asks for Microsoft.ML.OnnxRuntime 1.27 (CPU native + managed); the DirectML package stops
+         at 1.24.4, so the CPU native package is referenced only to exclude its assets. The managed wrapper stays at
+         1.27 (RapidOcrNet binds to that assembly version); its OrtApi table was checked field by field against the
+         1.24.4 native header. Redo that check whenever RapidOcrNet moves the managed package past 1.27. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" ExcludeAssets="all" />
     <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 
+  <!-- DirectML.pdb has no switch of its own; SkipLibraryCopy would drop DirectML.dll with it. -->
+  <Target Name="DropDirectMLPdb" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <Content Remove="@(Content)" Condition="'%(Filename)%(Extension)' == 'DirectML.pdb'" />
+    </ItemGroup>
+  </Target>
 </Project>
