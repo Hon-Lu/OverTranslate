@@ -1,0 +1,36 @@
+{
+  "version": "1",
+  "baseUrl": "https://github.com/Hon-Lu/OverTranslate/releases/download/manga-models-v1/",
+  "files": [
+    {
+      "role": "detector",
+      "name": "detector.fp16.onnx",
+      "size": 84725998,
+      "sha256": "2ed2ab1f56543d9844025a87a88a96f2ff8fba1f93d5c0c89b55c0f594b29c25"
+    },
+    {
+      "role": "encoder",
+      "name": "ocr-encoder.fp16.onnx",
+      "size": 171785393,
+      "sha256": "d58ead8c0074f6d9f6382abf29188c0ed885e394f9d29260fa86df633da640eb"
+    },
+    {
+      "role": "decoder-cross",
+      "name": "ocr-decoder-cross.fp16.onnx",
+      "size": 4732209,
+      "sha256": "967c31b739ee9cdc11ec40381540efacfc8aca6f2fb83948e0a17fa281b2f045"
+    },
+    {
+      "role": "decoder-step",
+      "name": "ocr-decoder-step.fp16.onnx",
+      "size": 53977443,
+      "sha256": "db6becffe3f1a232299bf6d33d768824ded1430473a0d22668606f77a027b6d1"
+    },
+    {
+      "role": "vocabulary",
+      "name": "vocab.txt",
+      "size": 24072,
+      "sha256": "344fbb6b8bf18c57839e924e2c9365434697e0227fac00b88bb4899b78aa594d"
+    }
+  ]
+}
