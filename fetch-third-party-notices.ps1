@@ -46,6 +46,35 @@ $items = @(
         Files = @(
             @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/LICENSE" }
         )
+    },
+    @{
+        Name = "ONNX Runtime (DirectML)"
+        Version = "1.24.4 (native); Microsoft.ML.OnnxRuntime.Managed 1.27.0"
+        License = "MIT License"
+        Project = "https://github.com/microsoft/onnxruntime"
+        Files = @(
+            @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.24.4/LICENSE" }
+        )
+    },
+    @{
+        Name = "comic-text-and-bubble-detector (manga models, downloaded separately)"
+        Version = "ogkalu/comic-text-and-bubble-detector, RT-DETR-v2 r50vd"
+        License = "Apache License 2.0"
+        Project = "https://huggingface.co/ogkalu/comic-text-and-bubble-detector"
+        Note = "Modified by OverTranslate: the published detector.onnx converted to fp16 (TopK, GatherElements and Cast kept in fp32; duplicate Cast nodes removed). Not included in the installer; downloaded on request as detector.fp16.onnx."
+        Files = @(
+            @{ Label = "LICENSE"; Url = "https://www.apache.org/licenses/LICENSE-2.0.txt" }
+        )
+    },
+    @{
+        Name = "manga-ocr (manga models, downloaded separately)"
+        Version = "kha-white/manga-ocr-base"
+        License = "Apache License 2.0"
+        Project = "https://github.com/kha-white/manga-ocr"
+        Note = "Modified by OverTranslate: exported from the published PyTorch weights to ONNX in fp16, with the decoder split into a cross-attention graph and a single-step graph with a key/value cache. vocab.txt is the upstream file unchanged. Not included in the installer; downloaded on request."
+        Files = @(
+            @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/kha-white/manga-ocr/master/LICENSE" }
+        )
     }
 )
 
@@ -65,6 +94,9 @@ foreach ($item in $items) {
     [void]$builder.AppendLine("Version: $($item.Version)")
     [void]$builder.AppendLine("Project: $($item.Project)")
     [void]$builder.AppendLine("License: $($item.License)")
+    if ($item.Note) {
+        [void]$builder.AppendLine("Note: $($item.Note)")
+    }
     [void]$builder.AppendLine()
 
     foreach ($file in $item.Files) {
