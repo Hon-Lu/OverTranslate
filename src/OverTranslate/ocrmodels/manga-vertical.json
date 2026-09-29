@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "baseUrl": "https://github.com/Hon-Lu/OverTranslate/releases/download/manga-models-v1/",
+  "baseUrl": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v1/",
   "files": [
     {
       "role": "detector",

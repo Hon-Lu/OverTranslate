@@ -164,6 +164,31 @@ public sealed class MangaModelStoreTests : IDisposable
         Assert.InRange(manifest.TotalBytes, 300_000_000, 330_000_000);
     }
 
+    [Fact]
+    public void TheShippedManifest_PointsAtTheAssetsRepositoryRelease_ForItsVersion()
+    {
+        var manifest = MangaModelManifest.Parse(File.ReadAllText(MangaModelManifest.ShippedPath));
+
+        Assert.Equal(
+            $"https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v{manifest.Version}/",
+            manifest.BaseUrl);
+        Assert.Equal(
+            $"https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v{manifest.Version}/vocab.txt",
+            manifest.UrlOf(manifest.File("vocabulary")).ToString());
+    }
+
+    [Fact]
+    public void TheModelsLive_InLocalAppData_OutsideTheInstallFolder()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        Assert.Equal(Path.Combine(local, "OverTranslate-assets", "manga-vertical"), MangaModelStore.DefaultRoot);
+        Assert.False(MangaModelStore.DefaultRoot.StartsWith(
+            Path.Combine(local, "OverTranslate") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+        Assert.False(MangaModelStore.DefaultRoot.StartsWith(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), StringComparison.OrdinalIgnoreCase));
+    }
+
     private sealed class FakeServer : HttpMessageHandler
     {
         public string? Corrupt { get; init; }

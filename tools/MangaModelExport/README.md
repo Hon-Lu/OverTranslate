@@ -75,7 +75,7 @@ onnxconverter-common 的轉法會產生重名節點與重複輸出，已否決�
 模型的輸入輸出是 `MangaTextDetector` 與 `MangaTextRecognizer` 寫死的契約。只要有任何一個檔的內容變了，就要：
 
 - 把清單的 `version` 加一；
-- 上傳到新的託管位置；
+- 在 `Hon-Lu/OverTranslate-assets` 建新的 Release `manga-vertical-v{新版本}` 上傳，並改清單的 `baseUrl`；
 - 用 `OcrHarness` probe 重跑三組抄本，確認分數。
 
 app 只讀自己那一版的清單，舊版目錄會在新版下載完成後刪除。
