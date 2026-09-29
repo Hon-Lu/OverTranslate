@@ -1570,7 +1570,7 @@ ogkalu RT-DETR 偵測（fp16，640，門檻 0.3）＋ manga-ocr（fp16 encoder�
 - **不走 B3 的 CPU 版**：CPU 上每個組合都比本管線慢 1.7–2.7 倍（見 bench 報告）。
 - 載入或推論失敗會被記住（直到模型重新下載或刪除），不會每次輪詢都重試一次。
 - manga-ocr 只讀日文；中文、韓文、AUTO 的直排仍走本管線。
-- 程式在 `Services/Ocr/Manga/`；模型清單 `ocrmodels/manga-vertical.json`，下載到 `%LocalAppData%\OverTranslate-assets\manga-vertical\v{版本}`（不放 `%LocalAppData%\OverTranslate`：那是 Velopack 安裝目錄，解除安裝整個刪；不放 `%AppData%`：會漫遊）。
+- 程式在 `Services/Ocr/Manga/`；模型清單 `ocrmodels/manga-vertical.json`，下載到 `%AppData%\OverTranslate\models\manga-vertical\v{版本}`，和設定、logs 放在一起（不放 `%LocalAppData%\OverTranslate`：那是 Velopack 安裝目錄，解除安裝整個刪；漫遊只發生在公司的漫遊設定檔環境）。
 
 ### 準確度：與 bench 最終配置逐項相同
 

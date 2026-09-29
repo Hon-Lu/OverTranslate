@@ -211,15 +211,13 @@ public sealed class MangaModelStoreTests : IDisposable
     }
 
     [Fact]
-    public void TheModelsLive_InLocalAppData_OutsideTheInstallFolder()
+    public void TheModelsLive_WithTheSettings_OutsideTheInstallFolder()
     {
+        var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-        Assert.Equal(Path.Combine(local, "OverTranslate-assets", "manga-vertical"), MangaModelStore.DefaultRoot);
-        Assert.False(MangaModelStore.DefaultRoot.StartsWith(
-            Path.Combine(local, "OverTranslate") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
-        Assert.False(MangaModelStore.DefaultRoot.StartsWith(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(Path.Combine(roaming, "OverTranslate", "models", "manga-vertical"), MangaModelStore.DefaultRoot);
+        Assert.False(MangaModelStore.DefaultRoot.StartsWith(local, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class FakeServer : HttpMessageHandler

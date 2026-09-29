@@ -35,9 +35,10 @@ internal enum MangaDownloadFailure
 /// The downloaded manga models: whether they are here, getting them, and removing them.
 /// </summary>
 /// <remarks>
-/// <para>Kept under <c>%LocalAppData%\OverTranslate-assets\manga-vertical\v{version}</c>. Not in
-/// <c>%LocalAppData%\OverTranslate</c>, which is the install folder and is removed whole on uninstall,
-/// and not in <c>%AppData%</c>, which roams: 300MB of models is not a setting to sync.</para>
+/// <para>Kept under <c>%AppData%\OverTranslate\models\manga-vertical\v{version}</c>, next to the
+/// settings and logs, so everything the app keeps outside its install folder is in one place. Not in
+/// <c>%LocalAppData%\OverTranslate</c>, which is the install folder and is removed whole on uninstall.
+/// <c>%AppData%</c> roams only on managed roaming profiles, which home machines do not have.</para>
 ///
 /// <para>A file is written to <c>.part</c> and renamed only once its size and SHA-256 match the
 /// manifest, and the folder counts as ready only once every file has been checked that way and a
@@ -81,8 +82,8 @@ internal sealed class MangaModelStore
     }
 
     internal static string DefaultRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "OverTranslate-assets", "manga-vertical");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OverTranslate", "models", "manga-vertical");
 
     internal MangaModelManifest? Manifest { get; }
 
