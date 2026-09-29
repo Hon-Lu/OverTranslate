@@ -513,6 +513,18 @@
     <sys:String x:Key="S.Settings.SavePath">保存先</sys:String>
     <sys:String x:Key="S.Settings.SavePathTip">クリックしてフォルダーを選択</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">フォルダーを開く</sys:String>
+    <sys:String x:Key="S.Settings.MangaModels">マンガ縦書きモデル</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCheck">約 300 MB のモデルを追加でダウンロードすると、日本語の縦書きマンガを GPU で読み取ります。より正確で高速です。使える GPU がない場合は、これまでどおり内蔵の縦書き認識を使います。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownload">ダウンロード（{0} MB）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCancel">キャンセル</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDelete">削除</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDeleteFailed">モデルを削除できませんでした：{0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">未ダウンロード</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownloading">ダウンロード中 {0}%（{1} / {2} MB）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReady">準備完了（{0} を使用）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNoGpu">ダウンロード済みですが、この PC では GPU で実行できないため、縦書きは内蔵の認識を使います（{0}）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFailed">ダウンロードに失敗しました：{0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUnavailable">このバージョンにはモデル一覧がないため、ダウンロードできません</sys:String>
 
     <sys:String x:Key="S.Settings.Appearance">外観</sys:String>
     <sys:String x:Key="S.Settings.Theme">テーマ</sys:String>

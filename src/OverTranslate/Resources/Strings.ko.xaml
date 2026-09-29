@@ -513,6 +513,18 @@
     <sys:String x:Key="S.Settings.SavePath">저장 위치</sys:String>
     <sys:String x:Key="S.Settings.SavePathTip">클릭해서 폴더 선택</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">폴더 열기</sys:String>
+    <sys:String x:Key="S.Settings.MangaModels">만화 세로쓰기 모델</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCheck">약 300MB의 모델을 추가로 내려받으면 일본어 세로쓰기 만화를 그래픽 카드로 인식합니다. 더 정확하고 빠릅니다. 사용할 수 있는 그래픽 카드가 없으면 기존처럼 내장 세로쓰기 인식을 사용합니다.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownload">다운로드 ({0} MB)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCancel">취소</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDelete">삭제</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDeleteFailed">모델을 삭제하지 못했습니다: {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">다운로드하지 않음</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownloading">다운로드 중 {0}% ({1} / {2} MB)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReady">준비됨 ({0} 사용)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNoGpu">다운로드했지만 이 PC에서는 그래픽 카드로 실행할 수 없어 세로쓰기는 내장 인식을 사용합니다 ({0})</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFailed">다운로드 실패: {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUnavailable">이 버전에는 모델 목록이 없어 다운로드할 수 없습니다</sys:String>
 
     <sys:String x:Key="S.Settings.Appearance">외관</sys:String>
     <sys:String x:Key="S.Settings.Theme">테마</sys:String>

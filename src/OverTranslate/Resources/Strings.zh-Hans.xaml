@@ -509,6 +509,18 @@
     <sys:String x:Key="S.Settings.SavePath">保存位置</sys:String>
     <sys:String x:Key="S.Settings.SavePathTip">点击以选择保存文件夹</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">打开文件夹</sys:String>
+    <sys:String x:Key="S.Settings.MangaModels">漫画竖排模型</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCheck">另外下载约 300 MB 的模型，日文竖排漫画改用显卡识别，读得更完整也更快。没有可用的显卡时，照旧使用内置的竖排识别。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownload">下载（{0} MB）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCancel">取消</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDelete">删除</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDeleteFailed">无法删除模型：{0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">尚未下载</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownloading">下载中 {0}%（{1} / {2} MB）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReady">已就绪，使用 {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNoGpu">已下载，但这台电脑无法用显卡运行，竖排照旧使用内置识别（{0}）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFailed">下载失败：{0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUnavailable">此版本未附模型清单，无法下载</sys:String>
 
     <sys:String x:Key="S.Settings.Appearance">外观</sys:String>
     <sys:String x:Key="S.Settings.Theme">主题</sys:String>

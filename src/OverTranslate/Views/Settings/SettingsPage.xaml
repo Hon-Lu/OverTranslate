@@ -813,6 +813,55 @@
                                            Click="OpenScreenshotFolderBtn_Click"/>
                             </Grid>
                         </Grid>
+
+                        <!-- 漫畫直排模型. A download rather than a switch: with the models present and a
+                             GPU that can run them, Japanese vertical text simply reads with them, and
+                             without either it reads the way it always has. So the only things to show
+                             are whether they are here, getting them, and why they would not be used. -->
+                        <Border Height="1" Margin="0,14,0,12"
+                                Background="{DynamicResource AppSeparator}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="&#xE8F1;" Style="{StaticResource OptionGlyph}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{DynamicResource S.Settings.MangaModels}"
+                                           Style="{StaticResource OptionTitle}"/>
+                                <TextBlock Text="{DynamicResource S.Settings.MangaModelsCheck}"
+                                           Style="{StaticResource OptionDescription}"/>
+                                <TextBlock x:Name="MangaModelsStatus"
+                                           Style="{StaticResource FieldHint}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,0"/>
+                                <ProgressBar x:Name="MangaModelsProgress"
+                                             Height="3"
+                                             Margin="0,6,0,0"
+                                             Minimum="0" Maximum="1"
+                                             Visibility="Collapsed"
+                                             BorderThickness="0"
+                                             Background="{DynamicResource AppSeparator}"
+                                             Foreground="{DynamicResource AppAccent}"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button x:Name="MangaModelsDownloadBtn"
+                                            Style="{StaticResource AccentButton}"
+                                            Height="30" Padding="14,0"
+                                            Content="{DynamicResource S.Settings.MangaModelsDownload}"
+                                            Click="MangaModelsDownloadBtn_Click"/>
+                                    <Button x:Name="MangaModelsCancelBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="30" Padding="14,0"
+                                            Content="{DynamicResource S.Settings.MangaModelsCancel}"
+                                            Click="MangaModelsCancelBtn_Click"/>
+                                    <Button x:Name="MangaModelsDeleteBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="30" Padding="14,0"
+                                            Content="{DynamicResource S.Settings.MangaModelsDelete}"
+                                            Click="MangaModelsDeleteBtn_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </Border>
 

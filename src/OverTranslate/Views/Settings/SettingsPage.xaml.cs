@@ -165,12 +165,15 @@ public partial class SettingsPage : UserControl
             SettingsService.Instance.CaptureOptionsChanged += OnCaptureOptionsChanged;
             OnOcrDebugChanged(this, EventArgs.Empty);
             OnCaptureOptionsChanged(this, EventArgs.Empty);
+            AppServices.MangaModels.Changed += OnMangaModelsChanged;
+            UpdateMangaModels();
         };
         Unloaded += (_, _) =>
         {
             LocalizationService.LanguageChanged -= OnLanguageChanged;
             SettingsService.Instance.OcrDebugChanged -= OnOcrDebugChanged;
             SettingsService.Instance.CaptureOptionsChanged -= OnCaptureOptionsChanged;
+            AppServices.MangaModels.Changed -= OnMangaModelsChanged;
             StopRecording();
         };
 
@@ -758,7 +761,11 @@ public partial class SettingsPage : UserControl
     /// labels, the service tiles' state words, and the environment-override notice. LoadSettings
     /// rebuilds all of them, and is already guarded against writing back.
     /// </remarks>
-    private void OnLanguageChanged(object? sender, EventArgs e) => LoadSettings();
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        LoadSettings();
+        UpdateMangaModels();
+    }
 
     private void SaveScreenshotCheckBox_Toggled(object sender, RoutedEventArgs e)
     {
@@ -822,6 +829,96 @@ public partial class SettingsPage : UserControl
         {
             ShowError(LocalizationService.Format("S.Settings.OpenFolderFailed", ex.Message));
         }
+    }
+
+    // The last download's failure, shown until the next attempt or a delete. Null otherwise.
+    private string? _mangaModelsError;
+
+    // Progress arrives from the download's thread, many times a second.
+    private void OnMangaModelsChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(UpdateMangaModels, DispatcherPriority.Background);
+
+    /// <summary>
+    /// The manga model row: one line saying where things stand, and only the buttons that apply.
+    /// </summary>
+    private void UpdateMangaModels()
+    {
+        var store = AppServices.MangaModels;
+        var state = store.State;
+        var total = store.Manifest?.TotalBytes ?? 0;
+        const double megabyte = 1 << 20;
+
+        MangaModelsProgress.Visibility = state == Services.Ocr.Manga.MangaModelState.Downloading
+            ? Visibility.Visible : Visibility.Collapsed;
+        MangaModelsDownloadBtn.Visibility = state == Services.Ocr.Manga.MangaModelState.NotDownloaded
+            ? Visibility.Visible : Visibility.Collapsed;
+        MangaModelsCancelBtn.Visibility = state == Services.Ocr.Manga.MangaModelState.Downloading
+            ? Visibility.Visible : Visibility.Collapsed;
+        MangaModelsDeleteBtn.Visibility = state == Services.Ocr.Manga.MangaModelState.Ready
+            ? Visibility.Visible : Visibility.Collapsed;
+        MangaModelsDownloadBtn.Content = LocalizationService.Format(
+            "S.Settings.MangaModelsDownload", Math.Round(total / megabyte));
+
+        MangaModelsStatus.Text = state switch
+        {
+            Services.Ocr.Manga.MangaModelState.Unavailable =>
+                LocalizationService.Get("S.Settings.MangaModelsUnavailable"),
+            Services.Ocr.Manga.MangaModelState.Downloading => LocalizationService.Format(
+                "S.Settings.MangaModelsDownloading",
+                total > 0 ? (int)(100.0 * store.DownloadedBytes / total) : 0,
+                Math.Round(store.DownloadedBytes / megabyte),
+                Math.Round(total / megabyte)),
+            Services.Ocr.Manga.MangaModelState.Ready =>
+                AppServices.Ocr.Manga?.UnavailableReason is { } reason
+                    ? LocalizationService.Format("S.Settings.MangaModelsNoGpu", reason)
+                    : LocalizationService.Format(
+                        "S.Settings.MangaModelsReady", AppServices.Ocr.Manga?.AdapterName ?? "GPU"),
+            _ => _mangaModelsError is { } error
+                ? LocalizationService.Format("S.Settings.MangaModelsFailed", error)
+                : LocalizationService.Get("S.Settings.MangaModelsNotDownloaded"),
+        };
+
+        if (state == Services.Ocr.Manga.MangaModelState.Downloading && total > 0)
+            MangaModelsProgress.Value = (double)store.DownloadedBytes / total;
+    }
+
+    private async void MangaModelsDownloadBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _mangaModelsError = null;
+        try
+        {
+            await AppServices.MangaModels.DownloadAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled by the button next to it; what arrived is kept for next time.
+        }
+        catch (Exception ex)
+        {
+            _mangaModelsError = ex.Message;
+        }
+
+        UpdateMangaModels();
+    }
+
+    private void MangaModelsCancelBtn_Click(object sender, RoutedEventArgs e) =>
+        AppServices.MangaModels.CancelDownload();
+
+    private void MangaModelsDeleteBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _mangaModelsError = null;
+        try
+        {
+            // Sessions first, so no model file is still open when the folder goes.
+            AppServices.Ocr.Manga?.ReleaseNow();
+            AppServices.MangaModels.Delete();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowError(LocalizationService.Format("S.Settings.MangaModelsDeleteFailed", ex.Message));
+        }
+
+        UpdateMangaModels();
     }
 
     /// <remarks>

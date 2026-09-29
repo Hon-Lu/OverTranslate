@@ -511,6 +511,18 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.SavePath">Location</sys:String>
     <sys:String x:Key="S.Settings.SavePathTip">Click to choose a folder</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">Open folder</sys:String>
+    <sys:String x:Key="S.Settings.MangaModels">Manga vertical-text models</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCheck">Download about 300 MB of models to read vertical Japanese manga on the graphics card — more complete and faster. Without a usable GPU, vertical text is read the built-in way, as before.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownload">Download ({0} MB)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCancel">Cancel</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDelete">Delete</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDeleteFailed">Could not delete the models: {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">Not downloaded</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownloading">Downloading {0}% ({1} / {2} MB)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReady">Ready, using {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNoGpu">Downloaded, but this PC cannot run them on a GPU; vertical text uses the built-in reader ({0})</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFailed">Download failed: {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUnavailable">This build has no model list, so nothing can be downloaded</sys:String>
 
     <sys:String x:Key="S.Settings.Appearance">Appearance</sys:String>
     <sys:String x:Key="S.Settings.Theme">Theme</sys:String>

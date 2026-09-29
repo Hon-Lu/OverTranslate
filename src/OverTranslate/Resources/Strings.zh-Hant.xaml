@@ -529,6 +529,18 @@
     <sys:String x:Key="S.Settings.SavePath">儲存位置</sys:String>
     <sys:String x:Key="S.Settings.SavePathTip">點擊以選擇儲存資料夾</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">開啟資料夾</sys:String>
+    <sys:String x:Key="S.Settings.MangaModels">漫畫直排模型</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCheck">另外下載約 300 MB 的模型，日文直排漫畫改用顯示卡辨識，讀得更完整也更快。沒有可用的顯示卡時，照舊使用內建的直排辨識。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownload">下載（{0} MB）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCancel">取消</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDelete">刪除</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDeleteFailed">無法刪除模型：{0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">尚未下載</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownloading">下載中 {0}%（{1} / {2} MB）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReady">已就緒，使用 {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNoGpu">已下載，但這台電腦無法用顯示卡執行，直排照舊使用內建辨識（{0}）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFailed">下載失敗：{0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUnavailable">這個版本沒有附模型清單，無法下載</sys:String>
 
     <sys:String x:Key="S.Settings.Appearance">外觀</sys:String>
     <sys:String x:Key="S.Settings.Theme">主題</sys:String>
