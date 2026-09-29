@@ -32,7 +32,7 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     ];
 
     private MangaModelStore Store() =>
-        new(new MangaModelManifest("1", "https://models.example/",
+        new(new MangaModelManifest("1", [new MangaModelSource("test", "https://models.example/{name}", null)],
             [.. Roles.Select(role => new MangaModelFile(role, role + ".bin", NotAModel.Length,
                 Convert.ToHexString(SHA256.HashData(NotAModel)).ToLowerInvariant()))]),
             _root, new Serve());

@@ -1,6 +1,28 @@
 {
   "version": "1",
-  "baseUrl": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v1/",
+  "sources": [
+    {
+      "name": "huggingface",
+      "url": "https://huggingface.co/hon-lu/comic-text-and-bubble-detector-onnx-fp16/resolve/v1/{name}",
+      "files": [
+        "detector.fp16.onnx"
+      ]
+    },
+    {
+      "name": "huggingface",
+      "url": "https://huggingface.co/hon-lu/manga-ocr-base-onnx-fp16/resolve/v1/{name}",
+      "files": [
+        "ocr-encoder.fp16.onnx",
+        "ocr-decoder-cross.fp16.onnx",
+        "ocr-decoder-step.fp16.onnx",
+        "vocab.txt"
+      ]
+    },
+    {
+      "name": "github",
+      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v1/{name}"
+    }
+  ],
   "files": [
     {
       "role": "detector",

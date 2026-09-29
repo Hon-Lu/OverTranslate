@@ -74,8 +74,15 @@ onnxconverter-common 的轉法會產生重名節點與重複輸出，已否決�
 
 模型的輸入輸出是 `MangaTextDetector` 與 `MangaTextRecognizer` 寫死的契約。只要有任何一個檔的內容變了，就要：
 
-- 把清單的 `version` 加一；
-- 在 `Hon-Lu/OverTranslate-assets` 建新的 Release `manga-vertical-v{新版本}` 上傳，並改清單的 `baseUrl`；
+- 把清單的 `version` 加一，並更新每個檔的 `size` 與 `sha256`；
+- 上傳到清單 `sources` 列的每個地方，全部上傳完、雜湊都核對過才發版：
+  - Hugging Face（主要來源）：偵測器傳到 `hon-lu/comic-text-and-bubble-detector-onnx-fp16`，辨識器四個檔傳到
+    `hon-lu/manga-ocr-base-onnx-fp16`，各打新的 tag `v{新版本}`（清單的網址用 tag，不用 `main`）；兩個倉的模型卡同步更新
+    （`base_model`、轉檔方式、對應的清單版本）。
+  - GitHub（備援）：在 `Hon-Lu/OverTranslate-assets` 建新的 Release `manga-vertical-v{新版本}` 上傳五個檔。
+- 清單 `sources` 裡的網址改成新 tag／新 Release；來源的順序就是 app 嘗試的順序；
 - 用 `OcrHarness` probe 重跑三組抄本，確認分數。
+
+舊的 HF tag 與 GitHub Release 都不要刪，舊版 app 還指著它們。
 
 app 只讀自己那一版的清單，舊版目錄會在新版下載完成後刪除。
