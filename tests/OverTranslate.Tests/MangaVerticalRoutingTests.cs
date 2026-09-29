@@ -179,7 +179,98 @@ public sealed class MangaVerticalRoutingTests : IDisposable
 
     private sealed class Serve : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(NotAModel) });
+        public int Requests;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref Requests);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(NotAModel) });
+        }
     }
+
+    // ── Before downloading: can this machine run them at all ─────────────────
+
+    private MangaModelStore Store(Serve server) =>
+        new(new MangaModelManifest("1", [new MangaModelSource("test", "https://models.example/{name}", null)],
+            [.. Roles.Select(role => new MangaModelFile(role, role + ".bin", NotAModel.Length,
+                Convert.ToHexString(SHA256.HashData(NotAModel)).ToLowerInvariant()))]),
+            _root, server);
+
+    private static (DirectMlDevice.Adapter?, string?) AGpu() =>
+        (new DirectMlDevice.Adapter(0, "Some GPU", 0x10DE, 1, false, 8L << 30), null);
+
+    private static (DirectMlDevice.Adapter?, string?) NoDirectMl() => (null, DirectMlDevice.NoLibrary);
+
+    [Fact]
+    public async Task WithAGpu_TheModelsCanBeDownloaded()
+    {
+        var server = new Serve();
+        using var manga = new MangaOcrEngine(Store(server), AGpu);
+
+        Assert.Equal(MangaUnavailable.None, manga.DeviceSupport);
+        await manga.DownloadModelsAsync();
+
+        Assert.Equal(Roles.Length, server.Requests);
+    }
+
+    [Fact]
+    public async Task WithoutAGpu_NothingIsDownloaded_AndItIsKnownBeforehand()
+    {
+        var server = new Serve();
+        var store = Store(server);
+        using var manga = new MangaOcrEngine(store, NoGpu);
+
+        // Asked with nothing downloaded: the answer does not wait for 301 MB.
+        Assert.Equal(MangaModelState.NotDownloaded, store.State);
+        Assert.Equal(MangaUnavailable.NoGpu, manga.DeviceSupport);
+
+        await Assert.ThrowsAsync<NotSupportedException>(() => manga.DownloadModelsAsync());
+        Assert.Equal(0, server.Requests);
+        Assert.False(Directory.Exists(Path.Combine(_root, "v1")));
+    }
+
+    [Fact]
+    public async Task WithoutDirectMl_NothingIsDownloadedEither()
+    {
+        var server = new Serve();
+        using var manga = new MangaOcrEngine(Store(server), NoDirectMl);
+
+        Assert.Equal(MangaUnavailable.NoDirectMl, manga.DeviceSupport);
+        await Assert.ThrowsAsync<NotSupportedException>(() => manga.DownloadModelsAsync());
+        Assert.Equal(0, server.Requests);
+    }
+
+    [Fact]
+    public void TheAdapterCheck_RunsOnce()
+    {
+        var asked = 0;
+        using var manga = new MangaOcrEngine(Store(new Serve()), () => { asked++; return NoGpu(); });
+
+        _ = manga.DeviceSupport;
+        _ = manga.DeviceSupport;
+        _ = manga.Unavailable;
+
+        Assert.Equal(1, asked);
+    }
+
+    [Theory]
+    // Nothing downloaded: a GPU means it can be; none means it cannot.
+    [InlineData("NotDownloaded", "None", "NotDownloaded", false, "NotDownloaded")]
+    [InlineData("NotDownloaded", "NoGpu", "NotDownloaded", false, "Unsupported")]
+    [InlineData("NotDownloaded", "NoDirectMl", "NotDownloaded", false, "Unsupported")]
+    [InlineData("NotDownloaded", "None", "NotDownloaded", true, "Failed")]
+    // Downloaded on a machine that no longer has a GPU: not supported, still deletable.
+    [InlineData("Ready", "NoGpu", "NoGpu", false, "Unsupported")]
+    // Downloaded and a GPU, but loading or reading failed: the existing 無法使用.
+    [InlineData("Ready", "None", "LoadFailed", false, "Unusable")]
+    [InlineData("Ready", "None", "ReadFailed", false, "Unusable")]
+    [InlineData("Ready", "None", "None", false, "Ready")]
+    [InlineData("Downloading", "None", "NotDownloaded", false, "Downloading")]
+    [InlineData("Unavailable", "NoGpu", "NotDownloaded", false, "Hidden")]
+    public void TheCard_ShowsWhatTheMachineAndTheStoreSay(
+        string store, string device, string engine, bool failed, string expected) =>
+        Assert.Equal(expected,
+            OverTranslate.Views.Settings.MangaModelCard.StateOf(
+                Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
+                Enum.Parse<MangaUnavailable>(engine), failed).ToString());
 }

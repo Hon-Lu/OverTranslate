@@ -99,14 +99,54 @@ internal sealed class MangaOcrEngine : IDisposable
         lock (_sync)
         {
             if (_failure is { } failure) return failure;
-            _adapter ??= _chooseAdapter();
-            return _adapter.Value.Reason switch
-            {
-                null => (MangaUnavailable.None, null),
-                DirectMlDevice.NoLibrary => (MangaUnavailable.NoDirectMl, DirectMlDevice.NoLibrary),
-                var reason => (MangaUnavailable.NoGpu, reason),
-            };
+            return Device();
         }
+    }
+
+    /// <summary>
+    /// Whether this machine has anything the models could run on — a hardware adapter DirectML can
+    /// use — asked before they are downloaded: <see cref="MangaUnavailable.None"/>, or
+    /// <see cref="MangaUnavailable.NoGpu"/> / <see cref="MangaUnavailable.NoDirectMl"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The same check that decides it after the download (<see cref="DirectMlDevice.Choose"/>:
+    /// DXGI's adapters with WARP and software ones left out, and DirectML.dll to be found), so a
+    /// machine told "not supported" here is one the models would never have run on, and 301 MB are
+    /// not fetched to find that out. It takes milliseconds and is asked once per run.</para>
+    ///
+    /// <para>Video memory is not part of it. Integrated graphics report 128–512 MB of their own and
+    /// borrow the rest from system memory; judged by the number they report, machines that can run
+    /// the models would be turned away. The card only recommends an amount.</para>
+    /// </remarks>
+    internal MangaUnavailable DeviceSupport
+    {
+        get
+        {
+            lock (_sync) return Device().Kind;
+        }
+    }
+
+    // Under _sync.
+    private (MangaUnavailable Kind, string? Reason) Device()
+    {
+        _adapter ??= _chooseAdapter();
+        return _adapter.Value.Reason switch
+        {
+            null => (MangaUnavailable.None, null),
+            DirectMlDevice.NoLibrary => (MangaUnavailable.NoDirectMl, DirectMlDevice.NoLibrary),
+            var reason => (MangaUnavailable.NoGpu, reason),
+        };
+    }
+
+    /// <summary>
+    /// Downloads the models, unless this machine could not run them (<see cref="DeviceSupport"/>), in
+    /// which case nothing is fetched and <see cref="NotSupportedException"/> is thrown.
+    /// </summary>
+    internal Task DownloadModelsAsync(CancellationToken cancellationToken = default)
+    {
+        if (DeviceSupport != MangaUnavailable.None)
+            throw new NotSupportedException("no hardware adapter DirectML can use");
+        return _store.DownloadAsync(cancellationToken);
     }
 
     /// <summary>The adapter the models run on, for the settings page to name.</summary>

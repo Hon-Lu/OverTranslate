@@ -87,6 +87,15 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
                             </Trigger>
+                            <!-- 不支援: the same quiet plate as the status chip, so it reads as a statement
+                                 rather than a button that failed to load. -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource MangaCardChipBg}"/>
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource MangaCardChipBorder}"/>
+                                <Setter TargetName="Bg" Property="BorderThickness" Value="1"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
                             <MultiDataTrigger>
                                 <MultiDataTrigger.Conditions>
                                     <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
@@ -238,7 +247,7 @@
                            Opacity="0.82">
                     <Run Text="{DynamicResource S.Settings.MangaModelsDesc1}"/>
                     <LineBreak/>
-                    <Run Text="{DynamicResource S.Settings.MangaModelsDesc2}"/>
+                    <Run x:Name="MangaCardDesc2" Text="{DynamicResource S.Settings.MangaModelsDesc2}"/>
                 </TextBlock>
 
                 <Border CornerRadius="10"
@@ -289,12 +298,15 @@
 
                 <!-- The foot: one of these three at a time, cross-faded. -->
                 <Grid Margin="0,14,0,0">
+                    <!-- 下載, or 不支援 greyed out; with models already here on a machine that cannot run
+                         them (a graphics card changed since), a way to delete them under it. -->
+                    <StackPanel x:Name="MangaModelsDownloadPanel">
                     <Button x:Name="MangaModelsDownloadBtn"
                             Style="{StaticResource MangaCardButton}"
                             Height="40"
                             Click="MangaModelsDownloadBtn_Click">
                         <StackPanel Orientation="Horizontal">
-                            <Path Width="16" Height="16" VerticalAlignment="Center"
+                            <Path x:Name="MangaModelsDownloadIcon" Width="16" Height="16" VerticalAlignment="Center"
                                   Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                   StrokeThickness="1.8"
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
@@ -303,6 +315,14 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <Button x:Name="MangaModelsUnsupportedDeleteBtn"
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Right"
+                            Visibility="Collapsed"
+                            Style="{StaticResource MangaCardLink}"
+                            Content="{DynamicResource S.Settings.MangaModelsDelete}"
+                            Click="MangaModelsDeleteBtn_Click"/>
+                    </StackPanel>
 
                     <StackPanel x:Name="MangaModelsProgressPanel" Visibility="Collapsed">
                         <Border x:Name="MangaModelsProgressTrack"

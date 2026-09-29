@@ -49,7 +49,36 @@ public partial class MangaModelCard : UserControl
     // a kind rather than as text, so a change of interface language re-words it.
     private (Services.Ocr.Manga.MangaDownloadFailure Kind, int? Status)? _mangaModelsFailure;
 
-    private enum MangaCardState { Hidden, NotDownloaded, Downloading, Ready, NoGpu, Failed }
+    internal enum MangaCardState
+    {
+        /// <summary>No manifest in this build: nothing to offer.</summary>
+        Hidden,
+        NotDownloaded,
+        Downloading,
+        Ready,
+        /// <summary>Downloaded, but they would not load or read here (a driver, a device lost).</summary>
+        Unusable,
+        Failed,
+        /// <summary>No hardware adapter DirectML can use, known before downloading anything.</summary>
+        Unsupported,
+    }
+
+    /// <summary>What the card shows, from the store, the machine and the last download.</summary>
+    /// <param name="device"><see cref="Services.Ocr.Manga.MangaOcrEngine.DeviceSupport"/>.</param>
+    /// <param name="engine"><see cref="Services.Ocr.Manga.MangaOcrEngine.Unavailable"/>.</param>
+    internal static MangaCardState StateOf(
+        Services.Ocr.Manga.MangaModelState store,
+        Services.Ocr.Manga.MangaUnavailable device,
+        Services.Ocr.Manga.MangaUnavailable engine,
+        bool downloadFailed) => store switch
+    {
+        Services.Ocr.Manga.MangaModelState.Unavailable => MangaCardState.Hidden,
+        Services.Ocr.Manga.MangaModelState.Downloading => MangaCardState.Downloading,
+        _ when device != Services.Ocr.Manga.MangaUnavailable.None => MangaCardState.Unsupported,
+        Services.Ocr.Manga.MangaModelState.Ready =>
+            engine == Services.Ocr.Manga.MangaUnavailable.None ? MangaCardState.Ready : MangaCardState.Unusable,
+        _ => downloadFailed ? MangaCardState.Failed : MangaCardState.NotDownloaded,
+    };
 
     // What the card showed last, so that only a change of state fades; progress does not.
     private MangaCardState? _mangaCardShown;
@@ -73,16 +102,12 @@ public partial class MangaModelCard : UserControl
         var total = store.Manifest?.TotalBytes ?? 0;
         const double megabyte = 1 << 20;
 
-        var state = store.State switch
-        {
-            // A build without a manifest has nothing to offer, so there is no card to show.
-            Services.Ocr.Manga.MangaModelState.Unavailable => MangaCardState.Hidden,
-            Services.Ocr.Manga.MangaModelState.Downloading => MangaCardState.Downloading,
-            Services.Ocr.Manga.MangaModelState.Ready =>
-                manga is null || manga.Unavailable == Services.Ocr.Manga.MangaUnavailable.None
-                    ? MangaCardState.Ready : MangaCardState.NoGpu,
-            _ => _mangaModelsFailure is null ? MangaCardState.NotDownloaded : MangaCardState.Failed,
-        };
+        var storeState = store.State;
+        var state = StateOf(
+            storeState,
+            manga?.DeviceSupport ?? Services.Ocr.Manga.MangaUnavailable.None,
+            manga?.Unavailable ?? Services.Ocr.Manga.MangaUnavailable.None,
+            _mangaModelsFailure is not null);
 
         MangaCard.Visibility = state == MangaCardState.Hidden ? Visibility.Collapsed : Visibility.Visible;
         if (state == MangaCardState.Hidden)
@@ -95,16 +120,26 @@ public partial class MangaModelCard : UserControl
         {
             MangaCardState.Downloading => ("S.Settings.MangaModelsDownloading", "#52C4FA"),
             MangaCardState.Ready => ("S.Settings.MangaModelsReady", "#34C759"),
-            MangaCardState.NoGpu => ("S.Settings.MangaModelsNoGpu", "#FFB800"),
+            MangaCardState.Unusable => ("S.Settings.MangaModelsNoGpu", "#FFB800"),
             MangaCardState.Failed => ("S.Settings.MangaModelsFailed", "#FF453A"),
+            MangaCardState.Unsupported => ("S.Settings.MangaModelsUnsupported", "#8E8E93"),
             _ => ("S.Settings.MangaModelsNotDownloaded", "#8E8E93"),
         };
         MangaChipText.Text = LocalizationService.Get(chip);
         PlaceMangaChip();
         MangaChipDot.Fill = (Brush)new BrushConverter().ConvertFromString(dot)!;
 
-        MangaModelsDownloadText.Text = LocalizationService.Format(
-            "S.Settings.MangaModelsDownload", Math.Round(total / megabyte));
+        var unsupported = state == MangaCardState.Unsupported;
+        MangaCardDesc2.SetResourceReference(System.Windows.Documents.Run.TextProperty,
+            unsupported ? "S.Settings.MangaModelsDesc2Unsupported" : "S.Settings.MangaModelsDesc2");
+        MangaModelsDownloadBtn.IsEnabled = !unsupported;
+        MangaModelsDownloadIcon.Visibility = unsupported ? Visibility.Collapsed : Visibility.Visible;
+        MangaModelsDownloadText.Margin = new Thickness(unsupported ? 0 : 8, 0, 0, 0);
+        MangaModelsDownloadText.Text = unsupported
+            ? LocalizationService.Get("S.Settings.MangaModelsUnsupported")
+            : LocalizationService.Format("S.Settings.MangaModelsDownload", Math.Round(total / megabyte));
+        MangaModelsUnsupportedDeleteBtn.Visibility =
+            unsupported && storeState == Services.Ocr.Manga.MangaModelState.Ready ? Visibility.Visible : Visibility.Collapsed;
 
         var fraction = total > 0 ? Math.Clamp((double)store.DownloadedBytes / total, 0, 1) : 0;
         MangaModelsProgressText.Text = LocalizationService.Format(
@@ -114,14 +149,10 @@ public partial class MangaModelCard : UserControl
         var adapter = manga?.AdapterName ?? "GPU";
         MangaModelsStatus.Text = state switch
         {
-            MangaCardState.Ready => LocalizationService.Format("S.Settings.MangaModelsUsing", adapter),
-            MangaCardState.NoGpu => manga!.Unavailable switch
-            {
-                Services.Ocr.Manga.MangaUnavailable.NoDirectMl => LocalizationService.Get("S.Settings.MangaModelsReasonNoDirectMl"),
-                Services.Ocr.Manga.MangaUnavailable.LoadFailed => LocalizationService.Format("S.Settings.MangaModelsReasonLoadFailed", adapter),
-                Services.Ocr.Manga.MangaUnavailable.ReadFailed => LocalizationService.Format("S.Settings.MangaModelsReasonReadFailed", adapter),
-                _ => LocalizationService.Get("S.Settings.MangaModelsReasonNoGpu"),
-            },
+            MangaCardState.Ready => LocalizationService.Get("S.Settings.MangaModelsEnabled"),
+            MangaCardState.Unusable => manga!.Unavailable == Services.Ocr.Manga.MangaUnavailable.ReadFailed
+                ? LocalizationService.Format("S.Settings.MangaModelsReasonReadFailed", adapter)
+                : LocalizationService.Format("S.Settings.MangaModelsReasonLoadFailed", adapter),
             MangaCardState.Failed => _mangaModelsFailure!.Value switch
             {
                 (Services.Ocr.Manga.MangaDownloadFailure.Server, var status) =>
@@ -136,19 +167,19 @@ public partial class MangaModelCard : UserControl
 
         var tone = state switch
         {
-            MangaCardState.NoGpu => "Warn",
+            MangaCardState.Unusable => "Warn",
             MangaCardState.Failed => "Error",
             _ => "Ready",
         };
         MangaModelsStatusBox.SetResourceReference(Border.BackgroundProperty, $"MangaCard{tone}Bg");
         MangaModelsStatusBox.SetResourceReference(Border.BorderBrushProperty, $"MangaCard{tone}Border");
-        MangaModelsDeleteBtn.Visibility = state is MangaCardState.Ready or MangaCardState.NoGpu
+        MangaModelsDeleteBtn.Visibility = state is MangaCardState.Ready or MangaCardState.Unusable
             ? Visibility.Visible : Visibility.Collapsed;
         MangaModelsRetryBtn.Visibility = state == MangaCardState.Failed ? Visibility.Visible : Visibility.Collapsed;
 
         FrameworkElement foot = state switch
         {
-            MangaCardState.NotDownloaded => MangaModelsDownloadBtn,
+            MangaCardState.NotDownloaded or MangaCardState.Unsupported => MangaModelsDownloadPanel,
             MangaCardState.Downloading => MangaModelsProgressPanel,
             _ => MangaModelsStatusBox,
         };
@@ -172,7 +203,7 @@ public partial class MangaModelCard : UserControl
     private void ShowMangaCardFoot(FrameworkElement foot, bool animate)
     {
         _mangaCardFoot = foot;
-        foreach (var part in new FrameworkElement[] { MangaModelsDownloadBtn, MangaModelsProgressPanel, MangaModelsStatusBox })
+        foreach (var part in new FrameworkElement[] { MangaModelsDownloadPanel, MangaModelsProgressPanel, MangaModelsStatusBox })
         {
             if (part == foot)
             {
@@ -281,11 +312,20 @@ public partial class MangaModelCard : UserControl
         _mangaModelsFailure = null;
         try
         {
-            await AppServices.MangaModels.DownloadAsync();
+            // Refused, without a request, on a machine that could not run them; the button is
+            // disabled there, so this is only the backstop.
+            if (AppServices.Ocr.Manga is { } manga)
+                await manga.DownloadModelsAsync();
+            else
+                await AppServices.MangaModels.DownloadAsync();
         }
         catch (OperationCanceledException)
         {
-            // Cancelled by the link under the bar; what arrived is kept for next time.
+            // Cancelled by the link under the bar; the store has removed what arrived.
+        }
+        catch (NotSupportedException)
+        {
+            // Not supported here; the card already says so.
         }
         catch (Exception ex)
         {
