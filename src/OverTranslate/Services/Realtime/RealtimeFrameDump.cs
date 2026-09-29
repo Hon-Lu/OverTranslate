@@ -35,9 +35,7 @@ internal static class RealtimeFrameDump
 
     private const int MaxFrames = 60;
 
-    private static readonly string LogDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OverTranslate", "logs");
+    private static readonly string LogDirectory = AppDataPaths.Logs;
 
     private static readonly string Directory = Path.Combine(LogDirectory, "frames");
 

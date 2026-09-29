@@ -14,8 +14,7 @@ public class SettingsService
     // Velopack installs each version into ...\OverTranslate\current\ and replaces that entire folder
     // on update. Settings used to live in BaseDirectory, i.e. inside current\, so every update wiped
     // them and the app came back up on factory defaults. Roaming AppData sits outside the install.
-    private static readonly string SettingsDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OverTranslate");
+    private static readonly string SettingsDirectory = AppDataPaths.Root;
 
     private static readonly string SettingsPath = Path.Combine(SettingsDirectory, "appsettings.json");
 

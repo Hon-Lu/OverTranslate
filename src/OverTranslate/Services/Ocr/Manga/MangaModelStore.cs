@@ -81,9 +81,7 @@ internal sealed class MangaModelStore
         return new MangaModelStore(manifest, DefaultRoot);
     }
 
-    internal static string DefaultRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OverTranslate", "models", "manga-vertical");
+    internal static string DefaultRoot => Path.Combine(AppDataPaths.Models, "manga-vertical");
 
     internal MangaModelManifest? Manifest { get; }
 

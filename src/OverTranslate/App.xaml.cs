@@ -22,8 +22,11 @@ public partial class App
     [STAThread]
     private static void Main(string[] args)
     {
+        // Uninstalling takes everything the app wrote with it — settings, logs, models — and the
+        // sign-in entry. Runs in a process of its own that exits straight after; see UninstallCleanup.
         VelopackApp.Build()
             .SetAutoApplyOnStartup(false)
+            .OnBeforeUninstallFastCallback(_ => UninstallCleanup.Run())
             .Run();
 
         var app = new App();
