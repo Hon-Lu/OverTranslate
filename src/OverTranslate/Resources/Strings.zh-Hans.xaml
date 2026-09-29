@@ -510,8 +510,8 @@
     <sys:String x:Key="S.Settings.SavePathTip">点击以选择保存文件夹</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">打开文件夹</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">漫画竖排模型</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc1">专为日文漫画的竖排文字设计，漏句更少、识别更快。</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">需要 DirectX 12 显卡；没有时自动改用内置识别。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc1">专为日文漫画竖排设计，漏句更少、更快。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">需要 DirectX 12 显卡，否则使用内置识别。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">日文竖排</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">漏句更少</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">速度更快</sys:String>

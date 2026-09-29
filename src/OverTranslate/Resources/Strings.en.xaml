@@ -512,8 +512,8 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.SavePathTip">Click to choose a folder</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">Open folder</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">Manga vertical-text models</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc1">Built for vertical text in Japanese manga: fewer missed lines, faster reading.</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">Needs a DirectX 12 graphics card; without one, the built-in reader is used.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc1">For vertical Japanese manga: fewer misses, faster.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">Needs a DirectX 12 GPU; else the built-in reader.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">Vertical Japanese</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">Fewer misses</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">Faster</sys:String>

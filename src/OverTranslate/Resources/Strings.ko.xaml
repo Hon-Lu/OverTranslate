@@ -514,8 +514,8 @@
     <sys:String x:Key="S.Settings.SavePathTip">클릭해서 폴더 선택</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">폴더 열기</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">만화 세로쓰기 모델</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc1">일본어 만화의 세로쓰기 텍스트 전용으로, 누락이 적고 인식이 더 빠릅니다.</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">DirectX 12 그래픽 카드가 필요하며, 없으면 내장 인식을 자동으로 사용합니다.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc1">일본어 만화 세로쓰기 전용, 누락은 적고 더 빠름.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">DirectX 12 GPU 필요, 없으면 내장 인식 사용.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">세로쓰기</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">누락 감소</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">더 빠른 속도</sys:String>

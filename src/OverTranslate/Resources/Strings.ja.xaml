@@ -514,8 +514,8 @@
     <sys:String x:Key="S.Settings.SavePathTip">クリックしてフォルダーを選択</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">フォルダーを開く</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">漫画縦書きモデル</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc1">日本語マンガの縦書きテキスト専用。読み漏れが少なく、認識も速くなります。</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">DirectX 12 対応のグラフィックカードが必要です。ない場合は内蔵の認識を自動で使います。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc1">日本語マンガの縦書き専用。漏れが少なく高速。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">DirectX 12 GPU が必要。なければ内蔵認識を使用。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">日本語縦書き</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">漏れが少ない</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">より高速</sys:String>

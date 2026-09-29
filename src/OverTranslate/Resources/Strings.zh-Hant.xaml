@@ -530,8 +530,8 @@
     <sys:String x:Key="S.Settings.SavePathTip">點擊以選擇儲存資料夾</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">開啟資料夾</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">漫畫直排模型</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc1">專為日文漫畫的直排文字設計，漏句更少、辨識更快。</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">需要 DirectX 12 顯示卡；沒有時自動改用內建辨識。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc1">專為日文漫畫直排設計，漏句更少、更快。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">需要 DirectX 12 顯示卡，否則使用內建辨識。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">日文直排</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">漏句更少</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">速度更快</sys:String>
