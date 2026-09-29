@@ -173,22 +173,22 @@
 
     <!-- 漫畫直排模型's card — see DarkTheme.xaml. -->
     <LinearGradientBrush x:Key="MangaCardBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#F1EEFF"/>
-        <GradientStop Offset="1" Color="#EAF2FF"/>
+        <GradientStop Offset="0" Color="#EAF3FF"/>
+        <GradientStop Offset="1" Color="#F3F8FF"/>
     </LinearGradientBrush>
     <RadialGradientBrush x:Key="MangaCardGlow" Center="1,0" GradientOrigin="1,0" RadiusX="1" RadiusY="1">
-        <GradientStop Offset="0"   Color="#387C6CFF"/>
-        <GradientStop Offset="0.7" Color="#007C6CFF"/>
+        <GradientStop Offset="0"   Color="#2E3B82F6"/>
+        <GradientStop Offset="0.7" Color="#003B82F6"/>
     </RadialGradientBrush>
-    <SolidColorBrush x:Key="MangaCardBorder"         Color="#244F46E5"/>
+    <SolidColorBrush x:Key="MangaCardBorder"         Color="#240078D4"/>
     <SolidColorBrush x:Key="MangaCardFg"             Color="#1B1B1F"/>
     <SolidColorBrush x:Key="MangaCardColumn"         Color="#121B1B1F"/>
     <SolidColorBrush x:Key="MangaCardChipBg"         Color="#0D000000"/>
     <SolidColorBrush x:Key="MangaCardChipBorder"     Color="#14000000"/>
     <SolidColorBrush x:Key="MangaCardFeatureBg"      Color="#99FFFFFF"/>
-    <SolidColorBrush x:Key="MangaCardFeatureBorder"  Color="#1A4F46E5"/>
+    <SolidColorBrush x:Key="MangaCardFeatureBorder"  Color="#1A0078D4"/>
     <SolidColorBrush x:Key="MangaCardFeatureDivider" Color="#12000000"/>
-    <SolidColorBrush x:Key="MangaCardFeatureIcon"    Color="#5146E8"/>
+    <SolidColorBrush x:Key="MangaCardFeatureIcon"    Color="#0078D4"/>
     <SolidColorBrush x:Key="MangaCardTrack"          Color="#14000000"/>
     <SolidColorBrush x:Key="MangaCardReadyBg"        Color="#1A34C759"/>
     <SolidColorBrush x:Key="MangaCardReadyBorder"    Color="#4034C759"/>
@@ -196,22 +196,5 @@
     <SolidColorBrush x:Key="MangaCardWarnBorder"     Color="#4DFFB800"/>
     <SolidColorBrush x:Key="MangaCardErrorBg"        Color="#1AFF453A"/>
     <SolidColorBrush x:Key="MangaCardErrorBorder"    Color="#4DFF453A"/>
-    <!-- The card's filled buttons (下載, 重試): the tile's own purple rather than the accent, in both
-         themes, with white text and a purple shadow under them. Hover lifts both ends of the
-         gradient, pressed sinks them. -->
-    <LinearGradientBrush x:Key="MangaCardButtonBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#7C6CFF"/>
-        <GradientStop Offset="1" Color="#5146E8"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="MangaCardButtonHoverBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#8C7EFF"/>
-        <GradientStop Offset="1" Color="#6057F0"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="MangaCardButtonPressedBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#6B5BEE"/>
-        <GradientStop Offset="1" Color="#4439CF"/>
-    </LinearGradientBrush>
-    <SolidColorBrush x:Key="MangaCardButtonFg" Color="#FFFFFF"/>
-    <Color x:Key="MangaCardButtonShadow">#5146E8</Color>
 
 </ResourceDictionary>

@@ -12,8 +12,8 @@
                     <GeometryDrawing>
                         <GeometryDrawing.Brush>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Offset="0" Color="#7C6CFF"/>
-                                <GradientStop Offset="1" Color="#4F46E5"/>
+                                <GradientStop Offset="0" Color="#4FA3F7"/>
+                                <GradientStop Offset="1" Color="#1F6FE5"/>
                             </LinearGradientBrush>
                         </GeometryDrawing.Brush>
                         <GeometryDrawing.Geometry>
@@ -44,7 +44,7 @@
                     <!-- Three columns read right to left. -->
                     <GeometryDrawing Geometry="M 27,18.5 L 27,28.5 M 21,18.5 L 21,26 M 15,18.5 L 15,23.5">
                         <GeometryDrawing.Pen>
-                            <Pen Brush="#5146E8" Thickness="2.6" StartLineCap="Round" EndLineCap="Round"/>
+                            <Pen Brush="#1E63D6" Thickness="2.6" StartLineCap="Round" EndLineCap="Round"/>
                         </GeometryDrawing.Pen>
                     </GeometryDrawing>
                     <!-- The sparkle: a model, not a plain reader. -->
@@ -54,31 +54,23 @@
             </DrawingImage.Drawing>
         </DrawingImage>
 
-        <!-- The card's filled button, in the card's purple (MangaCardButton* in the themes) rather than
-             the accent. Pressing shrinks it a little, at once, so the press is felt before the download
-             has anything to show; with animations off in Windows it simply snaps. -->
+        <!-- The card's filled button, white on the deep blue of the About window's GitHub button
+             (ToolbarPrimary*) rather than the accent, whose dark-theme cyan wants black text. Pressing
+             shrinks it a little, at once, so the press is felt before the download has anything to show;
+             with animations off in Windows it simply snaps. -->
         <Style x:Key="MangaCardButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource MangaCardButtonFg}"/>
-            <Setter Property="Background" Value="{DynamicResource MangaCardButtonBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
+            <Setter Property="Background" Value="{DynamicResource ToolbarPrimaryBg}"/>
             <Setter Property="FontSize"   Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor"     Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <!-- The shadow is a layer of its own under the face: an effect on the face would
-                             turn its text into a bitmap and lose ClearType. -->
                         <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
                             <Grid.RenderTransform>
                                 <ScaleTransform/>
                             </Grid.RenderTransform>
-                            <Border Background="{TemplateBinding Background}" CornerRadius="8">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource MangaCardButtonShadow}"
-                                                      Opacity="0.35" BlurRadius="14"
-                                                      ShadowDepth="4" Direction="270"/>
-                                </Border.Effect>
-                            </Border>
                             <Border x:Name="Bg"
                                     Background="{TemplateBinding Background}"
                                     CornerRadius="8"
@@ -90,10 +82,10 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource MangaCardButtonHoverBg}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource MangaCardButtonPressedBg}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
                             </Trigger>
                             <MultiDataTrigger>
                                 <MultiDataTrigger.Conditions>
@@ -213,7 +205,7 @@
                     <Image Grid.Column="0" Grid.RowSpan="2" Width="44" Height="44"
                            Source="{StaticResource MangaModelIcon}">
                         <Image.Effect>
-                            <DropShadowEffect Color="#4F46E5" Opacity="0.45"
+                            <DropShadowEffect Color="#1F6FE5" Opacity="0.40"
                                               BlurRadius="20" ShadowDepth="4" Direction="270"/>
                         </Image.Effect>
                     </Image>
@@ -321,7 +313,7 @@
                                     HorizontalAlignment="Left" Width="0" CornerRadius="3">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                        <GradientStop Offset="0" Color="#7C6CFF"/>
+                                        <GradientStop Offset="0" Color="#3B82F6"/>
                                         <GradientStop Offset="1" Color="#52C4FA"/>
                                     </LinearGradientBrush>
                                 </Border.Background>

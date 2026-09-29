@@ -184,12 +184,12 @@
          one optional download on the page reads as an offer and not as another row of settings.
          Every value is taken from the design preview (.ai/vertical-ja3-handoff/ui). -->
     <LinearGradientBrush x:Key="MangaCardBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#1F1C3F"/>
-        <GradientStop Offset="1" Color="#182238"/>
+        <GradientStop Offset="0" Color="#16233B"/>
+        <GradientStop Offset="1" Color="#121B2D"/>
     </LinearGradientBrush>
     <RadialGradientBrush x:Key="MangaCardGlow" Center="1,0" GradientOrigin="1,0" RadiusX="1" RadiusY="1">
-        <GradientStop Offset="0"   Color="#597C6CFF"/>
-        <GradientStop Offset="0.7" Color="#007C6CFF"/>
+        <GradientStop Offset="0"   Color="#4D3B82F6"/>
+        <GradientStop Offset="0.7" Color="#003B82F6"/>
     </RadialGradientBrush>
     <SolidColorBrush x:Key="MangaCardBorder"         Color="#14FFFFFF"/>
     <SolidColorBrush x:Key="MangaCardFg"             Color="#F2F2F7"/>
@@ -199,7 +199,7 @@
     <SolidColorBrush x:Key="MangaCardFeatureBg"      Color="#0DFFFFFF"/>
     <SolidColorBrush x:Key="MangaCardFeatureBorder"  Color="#12FFFFFF"/>
     <SolidColorBrush x:Key="MangaCardFeatureDivider" Color="#14FFFFFF"/>
-    <SolidColorBrush x:Key="MangaCardFeatureIcon"    Color="#A99FFF"/>
+    <SolidColorBrush x:Key="MangaCardFeatureIcon"    Color="#7DB8FF"/>
     <SolidColorBrush x:Key="MangaCardTrack"          Color="#1AFFFFFF"/>
     <SolidColorBrush x:Key="MangaCardReadyBg"        Color="#1A34C759"/>
     <SolidColorBrush x:Key="MangaCardReadyBorder"    Color="#4034C759"/>
@@ -207,22 +207,5 @@
     <SolidColorBrush x:Key="MangaCardWarnBorder"     Color="#4DFFB800"/>
     <SolidColorBrush x:Key="MangaCardErrorBg"        Color="#1AFF453A"/>
     <SolidColorBrush x:Key="MangaCardErrorBorder"    Color="#4DFF453A"/>
-    <!-- The card's filled buttons (下載, 重試): the tile's own purple rather than the accent, in both
-         themes, with white text and a purple shadow under them. Hover lifts both ends of the
-         gradient, pressed sinks them. -->
-    <LinearGradientBrush x:Key="MangaCardButtonBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#7C6CFF"/>
-        <GradientStop Offset="1" Color="#5146E8"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="MangaCardButtonHoverBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#8C7EFF"/>
-        <GradientStop Offset="1" Color="#6057F0"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="MangaCardButtonPressedBg" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#6B5BEE"/>
-        <GradientStop Offset="1" Color="#4439CF"/>
-    </LinearGradientBrush>
-    <SolidColorBrush x:Key="MangaCardButtonFg" Color="#FFFFFF"/>
-    <Color x:Key="MangaCardButtonShadow">#5146E8</Color>
 
 </ResourceDictionary>
