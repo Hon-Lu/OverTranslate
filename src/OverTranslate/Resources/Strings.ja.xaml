@@ -515,8 +515,8 @@
     <sys:String x:Key="S.Settings.OpenFolderTip">フォルダーを開く</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">漫画縦書きモデル</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc1">日本語マンガの縦書き専用。より完全に、より速く。</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">VRAM 1&#160;GB 以上が必要、2&#160;GB&#160;推&#x2060;奨。</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">DirectX&#160;12 非対応のため、通常の認識を使います。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">VRAM 1 GB 以上が必要、2 GB 推奨。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">DirectX 12 非対応のため、通常の認識を使います。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">日本語縦書き</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">漏れが少ない</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">より高速</sys:String>

@@ -513,8 +513,8 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.OpenFolderTip">Open folder</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">Manga vertical-text models</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc1">Made for vertical Japanese manga: fuller, faster.</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">Needs 1&#160;GB of VRAM; 2&#160;GB recommended.</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">No DirectX&#160;12 GPU; standard recognition is used.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">Needs 1 GB of VRAM; 2 GB recommended.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">No DirectX 12 GPU; standard recognition is used.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">Vertical Japanese</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">Fewer misses</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">Faster</sys:String>

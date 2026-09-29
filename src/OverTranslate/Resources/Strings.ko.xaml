@@ -515,8 +515,8 @@
     <sys:String x:Key="S.Settings.OpenFolderTip">폴더 열기</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">만화 세로쓰기 모델</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc1">일본어 만화 세로쓰기 전용, 더 정확하고 빠르게.</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2">VRAM 1&#160;GB 이상, 2&#160;GB 권장.</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">DirectX&#160;12 미지원, 일반 인식을 사용합니다.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">VRAM 1 GB 이상 필요, 2 GB 권장.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">DirectX 12 미지원, 일반 인식을 사용합니다.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">세로쓰기</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">누락 감소</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureFast">더 빠른 속도</sys:String>
