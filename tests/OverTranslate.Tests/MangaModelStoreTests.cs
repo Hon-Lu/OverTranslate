@@ -178,6 +178,39 @@ public sealed class MangaModelStoreTests : IDisposable
     }
 
     [Fact]
+    public void DownloadFailures_AreSortedIntoWhatThePersonCanBeTold()
+    {
+        Assert.Equal(MangaDownloadFailure.Server,
+            MangaModelStore.Classify(new HttpRequestException("404", null, HttpStatusCode.NotFound)));
+        Assert.Equal(MangaDownloadFailure.Network, MangaModelStore.Classify(new HttpRequestException("no route")));
+        Assert.Equal(MangaDownloadFailure.Network,
+            MangaModelStore.Classify(new HttpIOException(HttpRequestError.ResponseEnded, "short")));
+        Assert.Equal(MangaDownloadFailure.Network,
+            MangaModelStore.Classify(new IOException("reset", new System.Net.Sockets.SocketException())));
+        Assert.Equal(MangaDownloadFailure.Checksum, MangaModelStore.Classify(new InvalidDataException("hash")));
+        Assert.Equal(MangaDownloadFailure.Disk, MangaModelStore.Classify(new IOException("disk full")));
+        Assert.Equal(MangaDownloadFailure.Disk, MangaModelStore.Classify(new UnauthorizedAccessException()));
+        Assert.Equal(MangaDownloadFailure.Other, MangaModelStore.Classify(new InvalidOperationException()));
+    }
+
+    [Fact]
+    public async Task AServerThatKeepsFailing_EndsAsAServerFailure()
+    {
+        var store = new MangaModelStore(Manifest(), _root, new AlwaysFails()) { RetryDelay = TimeSpan.Zero };
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => store.DownloadAsync());
+
+        Assert.Equal(MangaDownloadFailure.Server, MangaModelStore.Classify(ex));
+        Assert.Equal(MangaModelState.NotDownloaded, store.State);
+    }
+
+    private sealed class AlwaysFails : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+    }
+
+    [Fact]
     public void TheModelsLive_InLocalAppData_OutsideTheInstallFolder()
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);

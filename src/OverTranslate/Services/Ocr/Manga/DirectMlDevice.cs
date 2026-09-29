@@ -28,6 +28,8 @@ internal static class DirectMlDevice
     // Windows 10 1903, the first build with DirectML in System32.
     private const int SystemDirectMlBuild = 18362;
 
+    internal const string NoLibrary = "DirectML.dll is not available on this system";
+
     internal readonly record struct Adapter(
         int Index, string Name, uint VendorId, uint DeviceId, bool Software, ulong DedicatedMemory);
 
@@ -35,7 +37,7 @@ internal static class DirectMlDevice
     internal static (Adapter? Adapter, string? Reason) Choose()
     {
         if (!DirectMlLibraryAvailable(AppContext.BaseDirectory, Environment.OSVersion.Version.Build, File.Exists))
-            return (null, "DirectML.dll is not available on this system");
+            return (null, NoLibrary);
 
         IReadOnlyList<Adapter> adapters;
         try

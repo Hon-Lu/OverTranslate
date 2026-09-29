@@ -15,6 +15,21 @@ internal enum MangaReadOutcome
     Unavailable,
 }
 
+/// <summary>Why the manga models would not read a page, in terms a person can be told.</summary>
+internal enum MangaUnavailable
+{
+    None,
+    NotDownloaded,
+    /// <summary>Neither the app folder nor Windows has DirectML.dll.</summary>
+    NoDirectMl,
+    /// <summary>No graphics adapter, only a software one, or the adapters could not be listed.</summary>
+    NoGpu,
+    /// <summary>The adapter was there but the models would not load on it.</summary>
+    LoadFailed,
+    /// <summary>They loaded, then failed while reading a page.</summary>
+    ReadFailed,
+}
+
 /// <summary>What the models found on a page, before layout.</summary>
 /// <param name="Blocks">Every text block they read, in the order they were read.</param>
 /// <param name="Long">Blocks too long for manga-ocr, for the column pipeline to read instead.</param>
@@ -54,7 +69,7 @@ internal sealed class MangaOcrEngine : IDisposable
     private MangaTextDetector? _detector;
     private MangaTextRecognizer? _recognizer;
     // Guarded by _sync.
-    private string? _failure;
+    private (MangaUnavailable Kind, string Reason)? _failure;
     private bool _keepWarm;
     private bool _disposed;
     private (DirectMlDevice.Adapter? Adapter, string? Reason)? _adapter;
@@ -73,17 +88,24 @@ internal sealed class MangaOcrEngine : IDisposable
     /// Why the models would not be used for a page right now, or null when they would. Answers
     /// without loading anything; a load failure it has not met yet is not known here.
     /// </summary>
-    internal string? UnavailableReason
+    internal string? UnavailableReason => Why().Reason;
+
+    /// <summary><see cref="UnavailableReason"/> as a kind, for the settings page to put into words.</summary>
+    internal MangaUnavailable Unavailable => Why().Kind;
+
+    private (MangaUnavailable Kind, string? Reason) Why()
     {
-        get
+        if (_store.State != MangaModelState.Ready) return (MangaUnavailable.NotDownloaded, "models not downloaded");
+        lock (_sync)
         {
-            if (_store.State != MangaModelState.Ready) return "models not downloaded";
-            lock (_sync)
+            if (_failure is { } failure) return failure;
+            _adapter ??= _chooseAdapter();
+            return _adapter.Value.Reason switch
             {
-                if (_failure is not null) return _failure;
-                _adapter ??= _chooseAdapter();
-                return _adapter.Value.Reason;
-            }
+                null => (MangaUnavailable.None, null),
+                DirectMlDevice.NoLibrary => (MangaUnavailable.NoDirectMl, DirectMlDevice.NoLibrary),
+                var reason => (MangaUnavailable.NoGpu, reason),
+            };
         }
     }
 
@@ -195,7 +217,7 @@ internal sealed class MangaOcrEngine : IDisposable
         {
             // A device lost or out of memory mid-page. This page goes to the column pipeline, and so
             // does every one after it until the models change: a GPU that failed once will fail again.
-            Fail($"inference failed: {ex.Message}", ex);
+            Fail(MangaUnavailable.ReadFailed, $"inference failed: {ex.Message}", ex);
             Unload();
             return (MangaReadOutcome.Unavailable, null);
         }
@@ -257,15 +279,15 @@ internal sealed class MangaOcrEngine : IDisposable
                                        System.IO.InvalidDataException or EntryPointNotFoundException or
                                        DllNotFoundException)
         {
-            Fail($"loading on {adapter.Name} failed: {ex.Message}", ex);
+            Fail(MangaUnavailable.LoadFailed, $"loading on {adapter.Name} failed: {ex.Message}", ex);
             Unload();
             return false;
         }
     }
 
-    private void Fail(string reason, Exception ex)
+    private void Fail(MangaUnavailable kind, string reason, Exception ex)
     {
-        lock (_sync) _failure = reason;
+        lock (_sync) _failure = (kind, reason);
         Log.Warn(ex, "Manga models unavailable, vertical text falls back to the column pipeline: {Reason}", reason);
     }
 

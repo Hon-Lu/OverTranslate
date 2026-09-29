@@ -17,6 +17,20 @@ internal enum MangaModelState
     Ready,
 }
 
+/// <summary>Why a download did not finish, in terms a person can be told.</summary>
+internal enum MangaDownloadFailure
+{
+    /// <summary>The server could not be reached, or the connection dropped mid-file.</summary>
+    Network,
+    /// <summary>The server answered with an error status.</summary>
+    Server,
+    /// <summary>A file arrived whole but did not hash to what the manifest says.</summary>
+    Checksum,
+    /// <summary>The files could not be written: a full disk, or a folder that cannot be written to.</summary>
+    Disk,
+    Other,
+}
+
 /// <summary>
 /// The downloaded manga models: whether they are here, getting them, and removing them.
 /// </summary>
@@ -280,8 +294,19 @@ internal sealed class MangaModelStore
 
         Report(before + have);
         if (have != size)
-            throw new IOException($"{url}: {have} of {size} bytes arrived");
+            throw new HttpIOException(HttpRequestError.ResponseEnded, $"{url}: {have} of {size} bytes arrived");
     }
+
+    /// <summary>What <see cref="DownloadAsync"/>'s exception means to the person who pressed download.</summary>
+    internal static MangaDownloadFailure Classify(Exception ex) => ex switch
+    {
+        HttpRequestException { StatusCode: not null } => MangaDownloadFailure.Server,
+        HttpRequestException or HttpIOException => MangaDownloadFailure.Network,
+        IOException { InnerException: System.Net.Sockets.SocketException } => MangaDownloadFailure.Network,
+        InvalidDataException => MangaDownloadFailure.Checksum,
+        IOException or UnauthorizedAccessException => MangaDownloadFailure.Disk,
+        _ => MangaDownloadFailure.Other,
+    };
 
     private static async Task<string> HashAsync(string path, CancellationToken token)
     {

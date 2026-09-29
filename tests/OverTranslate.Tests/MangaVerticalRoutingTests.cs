@@ -58,6 +58,7 @@ public sealed class MangaVerticalRoutingTests : IDisposable
         using var manga = new MangaOcrEngine(Store(), BrokenGpu);
 
         Assert.Equal("models not downloaded", manga.UnavailableReason);
+        Assert.Equal(MangaUnavailable.NotDownloaded, manga.Unavailable);
         Assert.Equal(Signature(await Columnsread(null)), Signature(await Columnsread(manga)));
     }
 
@@ -69,6 +70,7 @@ public sealed class MangaVerticalRoutingTests : IDisposable
         using var manga = new MangaOcrEngine(store, NoGpu);
 
         Assert.Equal("only a software adapter (WARP)", manga.UnavailableReason);
+        Assert.Equal(MangaUnavailable.NoGpu, manga.Unavailable);
         Assert.Equal(Signature(await Columnsread(null)), Signature(await Columnsread(manga)));
     }
 
@@ -82,11 +84,13 @@ public sealed class MangaVerticalRoutingTests : IDisposable
 
         Assert.Equal(Signature(await Columnsread(null)), Signature(await Columnsread(manga)));
         Assert.StartsWith("loading on broken failed", manga.UnavailableReason);
+        Assert.Equal(MangaUnavailable.LoadFailed, manga.Unavailable);
 
         // Only new files clear it.
         store.Delete();
         await store.DownloadAsync();
         Assert.Null(manga.UnavailableReason);
+        Assert.Equal(MangaUnavailable.None, manga.Unavailable);
     }
 
     [Fact]
