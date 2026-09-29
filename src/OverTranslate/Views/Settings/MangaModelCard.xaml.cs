@@ -268,6 +268,8 @@ public partial class MangaModelCard : UserControl
         Grid.SetColumn(MangaChip, fits ? 2 : 1);
         Grid.SetRow(MangaChip, fits ? 0 : 1);
         Grid.SetRowSpan(MangaChip, fits ? 2 : 1);
+        // Beside it, both centre on the icon; under it, the title takes the first row.
+        Grid.SetRowSpan(MangaCardTitle, fits ? 2 : 1);
         MangaChip.HorizontalAlignment = fits ? System.Windows.HorizontalAlignment.Stretch : System.Windows.HorizontalAlignment.Left;
         MangaChip.Margin = fits ? new Thickness(0) : new Thickness(12, 4, 0, 0);
         // With nothing beside it, the title may use the room the chip left.
