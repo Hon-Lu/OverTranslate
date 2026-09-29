@@ -135,6 +135,31 @@ public sealed class MangaModelStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ASourceWithoutTheFile_IsLeftWithoutAskingAgain()
+    {
+        var server = new FakeServer { ["first.example"] = new() { Status = HttpStatusCode.NotFound } };
+        var store = Store(Manifest("1", First, Second), server);
+
+        await store.DownloadAsync();
+
+        Assert.Equal(1, server.Requests.Count(r => r.Url == "https://first.example/v/detector.onnx"));
+        Assert.Equal(MangaModelState.Ready, store.State);
+    }
+
+    [Fact]
+    public async Task ASourceFoundSlow_IsTriedLastForTheRestOfTheDownload()
+    {
+        var server = new FakeServer { ["first.example"] = new() { BytesPerTick = 1000 } };
+        var store = Store(Manifest("1", First, Second), server);
+
+        await store.DownloadAsync();
+
+        // Judged slow on the detector; vocab.txt goes straight to the second source.
+        Assert.DoesNotContain(server.Requests, r => r.Url == "https://first.example/v/vocab.txt");
+        Assert.Contains(server.Requests, r => r.Url == "https://second.example/v/vocab.txt");
+    }
+
+    [Fact]
     public async Task EverySourceFailing_EndsAsAServerFailure()
     {
         var server = new FakeServer

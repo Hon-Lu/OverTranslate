@@ -55,10 +55,13 @@ internal enum MangaDownloadFailure
 /// <para>Each file is tried from the manifest's sources in order (Hugging Face first, then the GitHub
 /// release). The same source is asked again, a few times, after a connection or server error, and
 /// once more from the first byte if a resumed file does not hash right. The next source is tried when
-/// those run out, when a whole file from this one does not hash right, or when it is too slow: under
-/// <see cref="SlowBytesPerSecond"/> over the last <see cref="SlowWindow"/>. If every source turns out
-/// slow, the fastest of them is used anyway, without the check — a slow line should get the models
-/// slowly, not never. The download fails only when every source has.</para>
+/// those run out, straight away on a client error such as 404 (asking again gets the same answer),
+/// when a whole file from this one does not hash right, or when it is too slow: under
+/// <see cref="SlowBytesPerSecond"/> over the last <see cref="SlowWindow"/>. A source found slow goes to
+/// the back of the queue for the rest of the download, so it is not given another twenty seconds for
+/// every file. If every source turns out slow, the fastest of them is used anyway, without the check —
+/// a slow line should get the models slowly, not never. The download fails only when every source
+/// has.</para>
 ///
 /// <para>Within one download, a transfer that drops is retried from where it stopped, with a range
 /// request to the same source: a connection lost at 150 MB on a slow line should not cost the
@@ -204,9 +207,10 @@ internal sealed class MangaModelStore
             Directory.CreateDirectory(folder);
 
             long before = 0;
+            var slowSources = new HashSet<MangaModelSource>();
             foreach (var file in manifest.Files)
             {
-                await FetchAsync(manifest, file, folder, before, download.Token).ConfigureAwait(false);
+                await FetchAsync(manifest, file, folder, before, slowSources, download.Token).ConfigureAwait(false);
                 before += file.Size;
             }
 
@@ -292,8 +296,10 @@ internal sealed class MangaModelStore
         }
     }
 
+    /// <param name="slowSources">Sources this download has already found slow; tried last.</param>
     private async Task FetchAsync(
-        MangaModelManifest manifest, MangaModelFile file, string folder, long before, CancellationToken token)
+        MangaModelManifest manifest, MangaModelFile file, string folder, long before,
+        HashSet<MangaModelSource> slowSources, CancellationToken token)
     {
         var target = Path.Combine(folder, file.Name);
 
@@ -307,7 +313,7 @@ internal sealed class MangaModelStore
         Exception? last = null;
         var slow = new List<(MangaModelSource Source, Uri Url, double BytesPerSecond)>();
 
-        foreach (var (source, url) in manifest.SourcesOf(file))
+        foreach (var (source, url) in manifest.SourcesOf(file).OrderBy(entry => slowSources.Contains(entry.Source)))
         {
             try
             {
@@ -319,6 +325,7 @@ internal sealed class MangaModelStore
             {
                 // Kept, with what it had fetched, in case nothing else is faster.
                 slow.Add((source, url, ex.BytesPerSecond));
+                slowSources.Add(source);
                 last = ex;
                 Log.Warn("Manga model {File}: {Source} is too slow ({Rate:F0} KB/s), trying the next source",
                     file.Name, source.Name, ex.BytesPerSecond / 1024);
@@ -388,13 +395,20 @@ internal sealed class MangaModelStore
                 Log.Warn(ex, "Manga model {File}: a resumed download did not check out; fetching it whole", file.Name);
             }
             catch (Exception ex) when (attempt < Attempts && !token.IsCancellationRequested &&
-                                       ex is HttpRequestException or IOException)
+                                       ex is HttpRequestException or IOException && !IsFinalAnswer(ex))
             {
                 Log.Warn(ex, "Manga model {File} attempt {Attempt} from {Url} failed; retrying", file.Name, attempt, url);
                 await Task.Delay(RetryDelay * attempt, token).ConfigureAwait(false);
             }
         }
     }
+
+    // 404, 403 and the like: this source does not have the file, and will not on the next request
+    // either. A timeout or a rate limit is worth asking again.
+    private static bool IsFinalAnswer(Exception ex) =>
+        ex is HttpRequestException { StatusCode: { } status } &&
+        (int)status is >= 400 and < 500 &&
+        status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
 
     // <file>.<first 8 hex of the URL's SHA-256>.part: see the remarks on resuming.
     internal static string PartPath(string target, Uri url) =>
