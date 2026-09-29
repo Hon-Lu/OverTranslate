@@ -45,7 +45,7 @@ internal static class MangaVerticalReader
             passedOn.AddRange(read.Select(found => Moved(found, crop.X, crop.Y)));
         }
 
-        return (outcome, MangaPageLayout.Assemble(page.Blocks, page.Bubbles, passedOn));
+        return (outcome, MangaPageLayout.Assemble(page.Blocks, page.Bubbles, passedOn, page.Luma));
     }
 
     private static OcrTextBlock Moved(OcrTextBlock block, double dx, double dy)

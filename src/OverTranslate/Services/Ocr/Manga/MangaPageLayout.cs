@@ -74,26 +74,43 @@ internal static class MangaPageLayout
     }
 
     /// <summary>
-    /// Turns the page's read blocks into what is translated: one block per sentence.
+    /// Turns the page's read blocks into what is translated: one block per group of writing.
     /// </summary>
     /// <remarks>
-    /// <para>Bubbles whose outlines overlap are one run of speech, and their blocks are joined into
-    /// one group, right to left and top to bottom. The transcripts write two or three touching
-    /// bubbles as one sentence — the same speaker carrying on — and the detector, correctly, gives
-    /// each bubble its own box, so without this the sentence is translated in pieces. Checked group by
-    /// group: 58 of 64 joins were the same speaker; the other 5–6 were two speakers whose bubbles
-    /// touch, which the geometry cannot tell apart (raising the overlap bar loses good joins first:
-    /// 15% of the smaller bubble took ja2 from 138 whole sentences to 132). Joining only blocks inside
-    /// one bubble was measured first and never fired — the detector does not split a bubble.</para>
+    /// <para>A group is writing with no clear space inside it: one balloon, one narration box, one
+    /// line lettered onto the artwork — however many blocks the detector gave it. Two groups with a
+    /// clear space between them stay apart even when one person says both: the page separated them,
+    /// and translated apart they still read right. Inside a group it is the other way round — a
+    /// balloon read in two pieces is worse than any wrong join — so blocks in one balloon are always
+    /// joined, however they are laid out.</para>
+    ///
+    /// <para>Blocks in two balloons are joined when the balloons are one shape (see
+    /// <see cref="OneBalloon"/>). The rule this replaced joined any two balloons whose BOXES overlapped,
+    /// which the boxes of two balloons set corner to corner always do, and which a speaker cutting in
+    /// on another does too. MEASURED on the three transcribed corpora, 46 pages, against a
+    /// hand-made grouping of every balloon and caption on them
+    /// (<c>.ai/vertical-ja3-handoff/overmerge/</c>): 9 blocks held two groups; now 2. The count of
+    /// sentences read whole is unchanged — zang 95, ja3 152, ja2 139 — with one sentence now split
+    /// and one caption now whole.</para>
+    ///
+    /// <para>Blocks in no balloon — captions, narration, lettering on the artwork — are joined when
+    /// they are close in the way the columns of one caption are (see <see cref="OneCaption"/>). The
+    /// detector often hands a staircase caption over as two or three blocks; nothing joined them
+    /// before, and 8 captions on those pages came out in pieces. All 8 are whole now.</para>
     ///
     /// <para>Rows (<see cref="AcrossRatio"/>) are kept out of the joins and marked
     /// <see cref="OcrTextBlock.RunsAcross"/>. <paramref name="passedOn"/> — what the column pipeline
     /// read from the long blocks — comes back as it was, already grouped by that pipeline.</para>
     /// </remarks>
+    /// <param name="luma">
+    /// The page in grey. Without it nothing is looked at between the blocks: balloons are then one
+    /// shape whenever they overlap, and no rule stands between two captions.
+    /// </param>
     internal static List<OcrTextBlock> Assemble(
-        IReadOnlyList<MangaBlock> blocks, IReadOnlyList<RectangleF> bubbles, IReadOnlyList<OcrTextBlock> passedOn)
+        IReadOnlyList<MangaBlock> blocks, IReadOnlyList<RectangleF> bubbles, IReadOnlyList<OcrTextBlock> passedOn,
+        LumaPage? luma = null)
     {
-        var owner = new Dictionary<int, List<int>>();
+        var owner = new int?[blocks.Count];
         for (int i = 0; i < blocks.Count; i++)
         {
             var block = blocks[i].Bounds;
@@ -107,40 +124,36 @@ internal static class MangaPageLayout
                     best = j;
             }
 
-            if (best >= 0)
-            {
-                if (!owner.TryGetValue(best, out var members)) owner[best] = members = [];
-                members.Add(i);
-            }
+            owner[i] = best;
         }
 
-        // Bubbles that touch at all are one run of speech.
-        var parent = Enumerable.Range(0, bubbles.Count).ToArray();
+        var parent = Enumerable.Range(0, blocks.Count).ToArray();
         int Root(int a)
         {
             while (parent[a] != a) a = parent[a] = parent[parent[a]];
             return a;
         }
 
-        for (int a = 0; a < bubbles.Count; a++)
-        for (int b = a + 1; b < bubbles.Count; b++)
-            if (Shared(bubbles[a], bubbles[b]) > 0)
-                parent[Root(a)] = Root(b);
-
-        var runs = new Dictionary<int, List<int>>();
-        foreach (var (bubble, members) in owner)
+        for (int a = 0; a < blocks.Count; a++)
+        for (int b = a + 1; b < blocks.Count; b++)
         {
-            var root = Root(bubble);
-            if (!runs.TryGetValue(root, out var run)) runs[root] = run = [];
-            run.AddRange(members);
+            if (owner[a] is not { } inA || owner[b] is not { } inB) continue;
+
+            bool together = (inA, inB) switch
+            {
+                ( >= 0, >= 0) when inA == inB => true,
+                ( >= 0, >= 0) => OneBalloon(blocks[a], blocks[b], bubbles[inA], bubbles[inB], luma),
+                ( < 0, < 0) => OneCaption(blocks[a], blocks[b], luma),
+                _ => false,
+            };
+            if (together) parent[Root(a)] = Root(b);
         }
 
-        var joinedInto = new Dictionary<int, int>();
-        var joined = new List<List<int>>();
-        foreach (var run in runs.Values.Where(run => run.Count >= 2))
+        var runs = new Dictionary<int, List<int>>();
+        for (int i = 0; i < blocks.Count; i++)
         {
-            foreach (var member in run) joinedInto[member] = joined.Count;
-            joined.Add(ReadingOrder(run, blocks));
+            if (!runs.TryGetValue(Root(i), out var run)) runs[Root(i)] = run = [];
+            run.Add(i);
         }
 
         // Each group where its first-read member was; rows and lone blocks where they were.
@@ -148,19 +161,109 @@ internal static class MangaPageLayout
         var emitted = new HashSet<int>();
         for (int i = 0; i < blocks.Count; i++)
         {
-            if (!joinedInto.TryGetValue(i, out var group))
-            {
+            var run = runs[Root(i)];
+            if (run.Count == 1)
                 result.Add(Single(blocks[i]));
-                continue;
-            }
-
-            if (emitted.Add(group))
-                result.Add(Joined([.. joined[group].Select(member => blocks[member])]));
+            else if (emitted.Add(Root(i)))
+                result.Add(Joined([.. ReadingOrder(run, blocks).Select(member => blocks[member])]));
         }
 
         result.AddRange(passedOn);
         return result;
     }
+
+    /// <summary>
+    /// Whether two blocks in two different balloons are in one shape: the balloons overlap, the
+    /// blocks are not set corner to corner, the paper inside one balloon runs on into the other, and
+    /// no panel border lies between them.
+    /// </summary>
+    /// <remarks>
+    /// <para>Balloons one speaker runs on through are drawn as one outline with lobes, and the
+    /// paper runs from lobe to lobe; a balloon laid over another — a speaker cutting in — keeps its
+    /// own outline across the one underneath, and two balloons meeting at a point share a sliver at
+    /// most. MEASURED on the 46 transcribed pages, of the balloon pairs the box rule joined: all 39
+    /// labelled one group are one shape at a grey level of 128, and 7 of the 9 that held two groups
+    /// are not. One more is parted: そうしたら左上の引き出しの／十番と二十一番の薬を… (ja3 ch62/004), whose
+    /// second lobe is drawn over the first with its outline, and whose sentence is now read in two.
+    /// Eroding the paper to cut thin necks changed nothing up to 6px and lost joins from 8px.</para>
+    ///
+    /// <para>Corner to corner is asked of the text, not of the balloons. Two lobes set right-above
+    /// and left-below one another are the layout the user named first — two remarks with a clear
+    /// space between them — and without an outline between the lobes the paper test cannot see it
+    /// (<c>ch50/008</c>, 後宮内のどこか… / 泥水が冷たくて…). Blocks that share half of the narrower
+    /// one's width are one above the other; half of the shorter one's height, side by side;
+    /// neither, corner to corner. Of the one-shape pairs it also parts three that belonged together
+    /// — お姉…／ちゃん… (ja2), the balloons 南側諸国を…／昔は共に、／よく夜空を… (zang) and a caption box
+    /// stepped in two, 最初から…／ぶつかり… (ja3 ch50/012) — each part then read on its own; one
+    /// sentence of the 46 pages is split by it. Blocks whose boxes cross are never corner to
+    /// corner.</para>
+    /// </remarks>
+    private static bool OneBalloon(MangaBlock a, MangaBlock b, RectangleF inA, RectangleF inB, LumaPage? luma)
+    {
+        if (Shared(inA, inB) <= 0) return false;
+        var (x, y) = (Along(a.Bounds.Left, a.Bounds.Right, b.Bounds.Left, b.Bounds.Right),
+                      Along(a.Bounds.Top, a.Bounds.Bottom, b.Bounds.Top, b.Bounds.Bottom));
+        bool cornerToCorner = Shared(a.Bounds, b.Bounds) <= 0 &&
+                              x < Aligned * Math.Min(a.Bounds.Width, b.Bounds.Width) &&
+                              y < Aligned * Math.Min(a.Bounds.Height, b.Bounds.Height);
+        return !cornerToCorner &&
+               (luma is null || (luma.SamePaper(RectangleF.Union(inA, inB), a.Bounds, b.Bounds) &&
+                                 !luma.RuledBetween(a.Bounds, b.Bounds)));
+    }
+
+    /// <summary>
+    /// Whether two blocks outside every balloon are one caption: their type is about one size, and
+    /// their boxes cross, or they stand side by side with a sliver between them, or one above the
+    /// other with at most <see cref="CaptionStackGap"/> characters between them — and no panel
+    /// border lies between.
+    /// </summary>
+    /// <remarks>
+    /// <para>Columns of one caption step down the page as they go left, so their tops are not a
+    /// test. MEASURED over every pair of balloonless blocks within four characters of each other on
+    /// the 46 pages, labelled by hand. Side by side, the pairs of one caption were 0.29 of a
+    /// character apart or less and the nearest two captions 0.43 (a column at the page's edge,
+    /// 次号より休載です): the bar is 0.3. One above the other, one caption had 0.62–1.37 between its
+    /// blocks; the only two captions under 2 apart that share half a width are 1.47 apart across a
+    /// panel border, which the border test parts anyway, so the bar is 1.5. At 1.0, 一度目の“魔法”は、
+    /// and 残ったものは瓦礫の山だけで、 (zang) stayed apart from the rest of their captions.</para>
+    ///
+    /// <para>One size, because a gap measured in the larger of two types is a gap the larger type
+    /// makes small: a sound effect lettered big beside a line of small writing sits a sliver of ITS
+    /// characters away. Over the 175 vertical pages at hand these rules joined 20 pairs the old ones
+    /// did not; the two with the type more than twice the size were both that (遠っ beside
+    /// ならば芳春様や… on ja3 432/010, びっしり… over これでいつでも狩りほうだい！ on mokuro-001b), and the
+    /// transcribed pages lose nothing at twice. At one and a half, どうか／炎をーー！ — one line of
+    /// lettering, set larger as it goes — comes apart.</para>
+    /// </remarks>
+    private static bool OneCaption(MangaBlock a, MangaBlock b, LumaPage? luma)
+    {
+        if (luma is not null && luma.RuledBetween(a.Bounds, b.Bounds)) return false;
+
+        double sizeA = GlyphSize(ToRect(a.Bounds), a.Text, across: false);
+        double sizeB = GlyphSize(ToRect(b.Bounds), b.Text, across: false);
+        if (Math.Max(sizeA, sizeB) > CaptionSizeRatio * Math.Min(sizeA, sizeB)) return false;
+        if (Shared(a.Bounds, b.Bounds) > 0) return true;
+
+        var glyph = Math.Max(sizeA, sizeB);
+        var x = Along(a.Bounds.Left, a.Bounds.Right, b.Bounds.Left, b.Bounds.Right);
+        var y = Along(a.Bounds.Top, a.Bounds.Bottom, b.Bounds.Top, b.Bounds.Bottom);
+        return (y >= Aligned * Math.Min(a.Bounds.Height, b.Bounds.Height) && -x <= CaptionSideGap * glyph) ||
+               (x >= Aligned * Math.Min(a.Bounds.Width, b.Bounds.Width) && -y <= CaptionStackGap * glyph);
+    }
+
+    // How much of the narrower (shorter) of two blocks has to run alongside the other for them to be
+    // one above the other (side by side) rather than corner to corner.
+    private const double Aligned = 0.5;
+
+    // In characters of the larger of the two blocks' type.
+    private const double CaptionSideGap = 0.3;
+    // The larger type of two blocks of one caption is at most this many times the smaller.
+    private const double CaptionSizeRatio = 2;
+    private const double CaptionStackGap = 1.5;
+
+    // Length two spans have in common; negative is the gap between them.
+    private static double Along(double startA, double endA, double startB, double endB) =>
+        Math.Min(endA, endB) - Math.Max(startA, startB);
 
     /// <summary>
     /// Columns right to left; blocks that share most of their width are one band, top to bottom.
@@ -257,3 +360,151 @@ internal static class MangaPageLayout
 
 /// <summary>One block the manga models found and read.</summary>
 internal readonly record struct MangaBlock(RectangleF Bounds, string Text, double Confidence);
+
+/// <summary>A page in grey, one byte a pixel, row after row.</summary>
+internal sealed class LumaPage(byte[] pixels, int width, int height)
+{
+    // Paper is lighter than this and ink darker, on the scale Pillow's convert("L") gives.
+    private const int PaperLevel = 128;
+    // Darker than this counts as a ruled line: the border of a panel.
+    private const int RuleLevel = 100;
+    // How much of one row (or column) between two blocks has to be ruled for the space to be a border.
+    private const double RuleCover = 0.9;
+
+    internal int Width => width;
+    internal int Height => height;
+
+    internal byte this[int x, int y] => pixels[y * width + x];
+
+    /// <summary>
+    /// Whether the paper around block <paramref name="a"/> runs on, inside <paramref name="area"/>, to
+    /// the paper around block <paramref name="b"/>. White text on black is asked the other way round;
+    /// a block on paper and one on black are never on the same paper.
+    /// </summary>
+    internal bool SamePaper(RectangleF area, RectangleF a, RectangleF b)
+    {
+        var region = Clip(area);
+        if (region.Width <= 0 || region.Height <= 0) return false;
+
+        bool light = Median(Rectangle.Intersect(Clip(a), region)) >= PaperLevel;
+        if (light != Median(Rectangle.Intersect(Clip(b), region)) >= PaperLevel) return false;
+
+        // 4-connected regions of paper, labelled inside the area only: a balloon that runs off the
+        // edge of its panel must not reach the next one round the page.
+        var label = new int[region.Width * region.Height];
+        var queue = new Queue<int>();
+        int next = 0;
+        for (int start = 0; start < label.Length; start++)
+        {
+            if (label[start] != 0 || !Paper(region, start, light)) continue;
+            label[start] = ++next;
+            queue.Enqueue(start);
+            while (queue.Count > 0)
+            {
+                int at = queue.Dequeue(), x = at % region.Width, y = at / region.Width;
+                Visit(x - 1, y); Visit(x + 1, y); Visit(x, y - 1); Visit(x, y + 1);
+            }
+        }
+
+        int main = MostOf(a), other = MostOf(b);
+        return main > 0 && main == other;
+
+        void Visit(int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= region.Width || y >= region.Height) return;
+            int at = y * region.Width + x;
+            if (label[at] != 0 || !Paper(region, at, light)) return;
+            label[at] = next;
+            queue.Enqueue(at);
+        }
+
+        // The region that covers most of a block's box: the paper the writing sits on.
+        int MostOf(RectangleF block)
+        {
+            var box = Rectangle.Intersect(Clip(block), region);
+            var counts = new Dictionary<int, int>();
+            for (int y = box.Top; y < box.Bottom; y++)
+            for (int x = box.Left; x < box.Right; x++)
+            {
+                int l = label[(y - region.Top) * region.Width + (x - region.Left)];
+                if (l > 0) counts[l] = counts.GetValueOrDefault(l) + 1;
+            }
+
+            return counts.Count == 0 ? 0 : counts.MaxBy(pair => pair.Value).Key;
+        }
+    }
+
+    /// <summary>
+    /// Whether a panel border runs through the space between two blocks: a row of it (for blocks
+    /// one above the other) or a column (side by side) that is nearly all ruled, over the width (or
+    /// height) the two have in common. On black, a white rule.
+    /// </summary>
+    internal bool RuledBetween(RectangleF a, RectangleF b)
+    {
+        bool dark = Median(Clip(a)) < PaperLevel && Median(Clip(b)) < PaperLevel;
+        double left = Math.Max(a.Left, b.Left), right = Math.Min(a.Right, b.Right);
+        double top = Math.Max(a.Top, b.Top), bottom = Math.Min(a.Bottom, b.Bottom);
+
+        if (right > left && bottom < top)
+        {
+            // One above the other: the rows between the upper one's foot and the lower one's head.
+            var strip = Clip(RectangleF.FromLTRB((float)left, (float)bottom, (float)right, (float)top));
+            for (int y = strip.Top; y < strip.Bottom; y++)
+            {
+                int ruled = 0;
+                for (int x = strip.Left; x < strip.Right; x++) if (Ruled(x, y, dark)) ruled++;
+                if (strip.Width > 0 && ruled >= RuleCover * strip.Width) return true;
+            }
+        }
+        else if (bottom > top && right < left)
+        {
+            var strip = Clip(RectangleF.FromLTRB((float)right, (float)top, (float)left, (float)bottom));
+            for (int x = strip.Left; x < strip.Right; x++)
+            {
+                int ruled = 0;
+                for (int y = strip.Top; y < strip.Bottom; y++) if (Ruled(x, y, dark)) ruled++;
+                if (strip.Height > 0 && ruled >= RuleCover * strip.Height) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool Ruled(int x, int y, bool dark) =>
+        dark ? 255 - this[x, y] < RuleLevel : this[x, y] < RuleLevel;
+
+    private bool Paper(Rectangle region, int at, bool light)
+    {
+        byte value = this[region.Left + at % region.Width, region.Top + at / region.Width];
+        return light ? value >= PaperLevel : value < PaperLevel;
+    }
+
+    // The box in whole pixels as NumPy slices it — [int(top):int(bottom), int(left):int(right)] —
+    // kept inside the page.
+    private Rectangle Clip(RectangleF box)
+    {
+        int left = Math.Clamp((int)box.Left, 0, width), top = Math.Clamp((int)box.Top, 0, height);
+        int right = Math.Clamp((int)box.Right, left, width), bottom = Math.Clamp((int)box.Bottom, top, height);
+        return Rectangle.FromLTRB(left, top, right, bottom);
+    }
+
+    private double Median(Rectangle box)
+    {
+        if (box.Width <= 0 || box.Height <= 0) return 0;
+        var histogram = new int[256];
+        for (int y = box.Top; y < box.Bottom; y++)
+        for (int x = box.Left; x < box.Right; x++)
+            histogram[this[x, y]]++;
+
+        // As NumPy takes it: of an even count, the mean of the two middle values.
+        int count = box.Width * box.Height, seen = 0, low = -1;
+        for (int v = 0; v < 256; v++)
+        {
+            seen += histogram[v];
+            if (low < 0 && seen > (count - 1) / 2) low = v;
+            if (seen > count / 2) return (low + v) / 2.0;
+        }
+
+        return 255;
+    }
+}

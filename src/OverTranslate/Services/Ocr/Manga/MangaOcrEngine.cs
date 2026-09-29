@@ -33,8 +33,10 @@ internal enum MangaUnavailable
 /// <summary>What the models found on a page, before layout.</summary>
 /// <param name="Blocks">Every text block they read, in the order they were read.</param>
 /// <param name="Long">Blocks too long for manga-ocr, for the column pipeline to read instead.</param>
+/// <param name="Luma">The page in grey, for <see cref="MangaPageLayout.Assemble"/> to look between blocks.</param>
 internal sealed record MangaPage(
-    List<MangaBlock> Blocks, List<RectangleF> Long, List<RectangleF> Bubbles, double DetectMs, double ReadMs);
+    List<MangaBlock> Blocks, List<RectangleF> Long, List<RectangleF> Bubbles, double DetectMs, double ReadMs,
+    LumaPage? Luma = null);
 
 /// <summary>
 /// The manga models on the GPU: loaded on first use, one page at a time, and let go when idle.
@@ -251,7 +253,8 @@ internal sealed class MangaOcrEngine : IDisposable
                 bitmap.Width, bitmap.Height, blocks.Count, longBlocks.Count, found.Bubbles.Count, detectMs, readMs);
 
             return (MangaReadOutcome.Read, new MangaPage(
-                blocks, longBlocks, [.. found.Bubbles.Select(box => box.Bounds)], detectMs, readMs));
+                blocks, longBlocks, [.. found.Bubbles.Select(box => box.Bounds)], detectMs, readMs,
+                new LumaPage(PillowImage.Luma(rgb), bitmap.Width, bitmap.Height)));
         }
         catch (OnnxRuntimeException ex)
         {

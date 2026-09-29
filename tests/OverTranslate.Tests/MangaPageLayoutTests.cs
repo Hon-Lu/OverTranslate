@@ -39,7 +39,7 @@ public class MangaPageLayoutTests
     [Fact]
     public void BlocksOfOverlappingBubbles_AreOneSentence_RightToLeft()
     {
-        // Two bubbles that touch; each holds one block. The right-hand one is read first.
+        // Two bubbles that touch, side by side; each holds one block. The right-hand one is read first.
         var left = Block(100, 100, 40, 120, "取り乱さず");
         var right = Block(200, 90, 40, 100, "よいか冬雪");
         RectangleF[] bubbles = [new(90, 90, 70, 150), new(150, 80, 100, 130)];
@@ -103,6 +103,165 @@ public class MangaPageLayoutTests
         var result = MangaPageLayout.Assemble([inside, outside], bubbles, []);
 
         Assert.Equal(["中", "外"], result.Select(block => block.Text));
+    }
+
+    // A page of dark artwork with the given areas painted as paper (255) or ink (0).
+    private static LumaPage Page(int width, int height, params (Rectangle Area, byte Value)[] paint)
+    {
+        var pixels = new byte[width * height];
+        Array.Fill(pixels, (byte)40);
+        foreach (var (area, value) in paint)
+            for (int y = area.Top; y < area.Bottom; y++)
+            for (int x = area.Left; x < area.Right; x++)
+                pixels[y * width + x] = value;
+        return new LumaPage(pixels, width, height);
+    }
+
+    private static Rectangle Whole(RectangleF r) =>
+        Rectangle.FromLTRB((int)r.Left, (int)r.Top, (int)Math.Ceiling(r.Right), (int)Math.Ceiling(r.Bottom));
+
+    [Fact]
+    public void TwoLobesSetCornerToCorner_StayApart_EvenAsOneShape()
+    {
+        // ch50/008: 後宮内のどこか… right above, 泥水が冷たくて… left below, two lobes of one white
+        // shape with no outline between them. Their boxes overlap; the writing sits corner to corner.
+        RectangleF upper = new(333, 746, 168, 281), lower = new(272, 979, 171, 266);
+        var a = Block(364, 774, 121, 234, "後宮内のどこか古井戸に放り込まれてしまいましたの");
+        var b = Block(303, 1013, 109, 197, "泥水が冷たくて少し意識が");
+        var page = Page(600, 1300, (Whole(upper), 255), (Whole(lower), 255));
+
+        var result = MangaPageLayout.Assemble([a, b], [upper, lower], [], page);
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public void TwoBalloonsSideBySide_AsOneShape_AreOneGroup()
+    {
+        RectangleF right = new(200, 80, 100, 160), left = new(120, 90, 100, 150);
+        var a = Block(220, 100, 60, 120, "よいか冬雪");
+        var b = Block(140, 110, 60, 110, "取り乱さず");
+        var page = Page(400, 300, (Whole(right), 255), (Whole(left), 255));
+
+        var joined = Assert.Single(MangaPageLayout.Assemble([a, b], [right, left], [], page));
+
+        Assert.Equal("よいか冬雪取り乱さず", joined.Text);
+    }
+
+    [Fact]
+    public void ABalloonLaidOverAnother_KeepsItsOwnOutline_AndStaysApart()
+    {
+        // The same two balloons, but the left one is drawn over the right with its outline across it:
+        // a speaker cutting in.
+        RectangleF right = new(200, 80, 100, 160), left = new(120, 90, 100, 150);
+        var a = Block(220, 100, 60, 120, "開発して");
+        var b = Block(140, 110, 60, 110, "うるせぇ");
+        var page = Page(400, 300, (Whole(right), 255), (Whole(left), 255), (new Rectangle(210, 80, 3, 160), 0));
+
+        var result = MangaPageLayout.Assemble([a, b], [right, left], [], page);
+
+        Assert.Equal(["開発して", "うるせぇ"], result.Select(block => block.Text));
+    }
+
+    [Fact]
+    public void BalloonsOneAboveTheOther_AsOneShape_AreOneGroup()
+    {
+        RectangleF upper = new(100, 50, 80, 120), lower = new(100, 150, 80, 120);
+        var a = Block(115, 60, 50, 90, "いや、これから");
+        var b = Block(118, 175, 45, 85, "偉業ですら");
+        var page = Page(300, 300, (Whole(upper), 255), (Whole(lower), 255));
+
+        Assert.Single(MangaPageLayout.Assemble([a, b], [upper, lower], [], page));
+    }
+
+    [Fact]
+    public void BalloonsAcrossAPanelBorder_StayApart()
+    {
+        // A balloon breaking out of the panel above touches one in the panel below; the border runs
+        // between the two blocks.
+        RectangleF upper = new(100, 50, 80, 120), lower = new(100, 150, 80, 120);
+        var a = Block(115, 60, 50, 80, "最後になる");
+        var b = Block(118, 180, 45, 80, "俺達の");
+        var page = Page(300, 300, (Whole(upper), 255), (Whole(lower), 255), (new Rectangle(90, 160, 100, 4), 0));
+
+        Assert.Equal(2, MangaPageLayout.Assemble([a, b], [upper, lower], [], page).Count);
+    }
+
+    [Fact]
+    public void ColumnsInOneBalloon_AreOneGroup_HoweverTheyStepDown()
+    {
+        RectangleF balloon = new(90, 40, 200, 260);
+        var right = Block(220, 50, 40, 120, "右の欄");
+        var left = Block(120, 150, 40, 120, "左の欄");   // corner to corner, but the same balloon
+
+        var joined = Assert.Single(MangaPageLayout.Assemble([left, right], [balloon], [], Page(400, 400, (Whole(balloon), 255))));
+
+        Assert.Equal("右の欄左の欄", joined.Text);
+    }
+
+    [Fact]
+    public void AStaircaseCaption_IsOneGroup()
+    {
+        // zang 19 08 58 (2): 俺の生まれた南側諸国は、 and the columns stepping down to its left.
+        var first = Block(868, 965.5f, 103.5f, 206.5f, "俺の生まれた南側諸国は、");
+        var rest = Block(624.5f, 964.5f, 234.5f, 230.5f, "魔族の勢力圏である大陸北部から遠く離れている代わりに、");
+
+        var joined = Assert.Single(MangaPageLayout.Assemble([rest, first], [], [], Page(1100, 1300)));
+
+        Assert.StartsWith("俺の生まれた", joined.Text);
+    }
+
+    [Fact]
+    public void CaptionsOneAboveTheOther_AreOneGroup_WithinACharacterAndAHalf()
+    {
+        // zang 19 08 58 (2): 一度目の“魔法”は、 over 物心が付いたばかりの頃だ。, 39px apart.
+        var upper = Block(840, 432, 120, 153, "一度目の魔法は");
+        var lower = Block(838, 624, 118, 211, "物心が付いたばかりの頃だ");
+
+        Assert.Single(MangaPageLayout.Assemble([upper, lower], [], [], Page(1100, 1300)));
+    }
+
+    [Fact]
+    public void CaptionsWithAPanelBorderBetween_StayApart()
+    {
+        var upper = Block(840, 432, 120, 153, "一度目の魔法は");
+        var lower = Block(838, 624, 118, 211, "物心が付いたばかりの頃だ");
+        // On paper the border is ink; on black it would be a white rule.
+        var page = Page(1100, 1300, (new Rectangle(800, 400, 200, 460), 255), (new Rectangle(820, 600, 180, 5), 0));
+
+        Assert.Equal(2, MangaPageLayout.Assemble([upper, lower], [], [], page).Count);
+    }
+
+    [Fact]
+    public void CaptionsSideBySideWithAClearSpace_StayApart()
+    {
+        // ja3 432/007: わかさぎ釣りなんてどうでしょう and あっ柚子の木！, two people, two characters apart.
+        var a = Block(334, 515, 115, 169, "わかさぎ釣りなんてどうでしょう");
+        var b = Block(186, 610, 84, 133, "あっ柚子の木");
+
+        Assert.Equal(2, MangaPageLayout.Assemble([a, b], [], [], Page(600, 800)).Count);
+    }
+
+    [Fact]
+    public void BigLetteringBesideACaption_StaysApart()
+    {
+        // ja3 432/010: 遠っ lettered big, a sliver of its own characters from the writing beside it.
+        var big = Block(500, 100, 130, 150, "遠");
+        var small = Block(650, 100, 60, 200, "ならば芳春様や清佳様に");
+
+        Assert.Equal(2, MangaPageLayout.Assemble([big, small], [], [], Page(800, 400)).Count);
+    }
+
+    [Fact]
+    public void ACaptionIsNeverJoinedToABalloon()
+    {
+        RectangleF balloon = new(90, 90, 70, 150);
+        var inside = Block(100, 100, 40, 120, "中");
+        var outside = Block(142, 100, 40, 120, "外");   // touching, but in no balloon
+
+        var result = MangaPageLayout.Assemble([inside, outside], [balloon], [], Page(300, 300, (Whole(balloon), 255)));
+
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]
