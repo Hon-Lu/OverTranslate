@@ -180,81 +180,125 @@ public sealed class MangaModelStoreTests : IDisposable
         Assert.Equal(2, server.Requests.Count(r => r.Url.EndsWith("detector.onnx")));
     }
 
-    // ── Resuming ─────────────────────────────────────────────────────────────
+    // ── Keeping nothing short of a whole download ────────────────────────────
 
     [Fact]
-    public async Task AnInterruptedFile_IsResumedWithARangeRequest_FromTheSameSource()
+    public async Task ACancelledDownload_LeavesNothingBehind()
     {
-        var manifest = Manifest("1", First, Second);
-        Directory.CreateDirectory(Path.Combine(_root, "v1"));
-        File.WriteAllBytes(PartFor(manifest, 0, "detector.onnx"), Detector[..1234]);
-        var server = new FakeServer();
-        var store = Store(manifest, server);
+        var server = new FakeServer { ["first.example"] = new() { BytesPerTick = 1000 } };
+        var store = new MangaModelStore(Manifest(), _root, server) { RetryDelay = TimeSpan.Zero };
+        var download = store.DownloadAsync();
+        while (!Directory.Exists(Path.Combine(_root, "v1")) ||
+               Directory.GetFiles(Path.Combine(_root, "v1")).Length == 0)
+            await Task.Delay(10);
 
-        await store.DownloadAsync();
+        store.CancelDownload();
 
-        Assert.Equal(("https://first.example/v/detector.onnx", (long?)1234), server.Requests.First());
-        Assert.Equal(Detector, File.ReadAllBytes(store.PathOf("detector")));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => download);
+        Assert.False(Directory.Exists(Path.Combine(_root, "v1")));
+        Assert.Equal(MangaModelState.NotDownloaded, store.State);
     }
 
     [Fact]
-    public async Task APartFromOneSource_IsNeverResumedFromAnother()
+    public async Task ADownloadGivenUpOn_LeavesNothingBehind_NotEvenTheFilesItFinished()
     {
-        var manifest = Manifest("1", First, Second);
-        Directory.CreateDirectory(Path.Combine(_root, "v1"));
-        File.WriteAllBytes(PartFor(manifest, 0, "detector.onnx"), Detector[..1234]);
-        var server = new FakeServer { ["first.example"] = new() { Status = HttpStatusCode.ServiceUnavailable } };
-        var store = Store(manifest, server);
+        // detector.onnx arrives whole; vocab.txt never does.
+        var server = new FakeServer { ["first.example"] = new() { Status = HttpStatusCode.NotFound, OnlyFor = "vocab.txt" } };
+        var store = Store(Manifest(), server);
 
-        await store.DownloadAsync();
+        await Assert.ThrowsAsync<HttpRequestException>(() => store.DownloadAsync());
 
-        Assert.Null(server.Requests.Single(r => r.Url == "https://second.example/v/detector.onnx").RangeFrom);
-        Assert.Equal(Detector, File.ReadAllBytes(store.PathOf("detector")));
-        Assert.Empty(Directory.GetFiles(Path.Combine(_root, "v1"), "*.part"));
+        Assert.Contains(server.Requests, r => r.Url.EndsWith("detector.onnx"));
+        Assert.False(Directory.Exists(Path.Combine(_root, "v1")));
     }
 
     [Fact]
-    public async Task APartThatDoesNotCheckOut_IsFetchedWholeOnceFromTheSameSource()
+    public async Task WhatAnEarlierDownloadLeft_IsClearedBeforeStartingOver()
     {
         var manifest = Manifest();
-        Directory.CreateDirectory(Path.Combine(_root, "v1"));
-        var wrong = Detector[..1234].ToArray();
-        wrong[0] ^= 0xFF;
-        File.WriteAllBytes(PartFor(manifest, 0, "detector.onnx"), wrong);
+        var folder = Path.Combine(_root, "v1");
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "detector.onnx"), Detector);
+        File.WriteAllBytes(PartFor(manifest, 0, "vocab.txt"), Vocabulary[..3]);
         var server = new FakeServer();
         var store = Store(manifest, server);
 
         await store.DownloadAsync();
 
-        Assert.Equal([(long?)1234, null],
+        // Both fetched again, from the first byte.
+        Assert.Equal([("https://first.example/v/detector.onnx", (long?)null), ("https://first.example/v/vocab.txt", null)],
+            server.Requests);
+        Assert.Equal(MangaModelState.Ready, store.State);
+        Assert.Empty(Directory.GetFiles(folder, "*.part"));
+    }
+
+    [Fact]
+    public void AtStart_AnUnfinishedFolderIsRemoved_AndACompleteOneKept()
+    {
+        var folder = Path.Combine(_root, "v1");
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "detector.onnx"), Detector);
+        var store = Store(Manifest(), new FakeServer());
+
+        store.DiscardIncomplete();
+        Assert.False(Directory.Exists(folder));
+
+        store.DownloadAsync().GetAwaiter().GetResult();
+        store.DiscardIncomplete();
+        Assert.Equal(MangaModelState.Ready, store.State);
+    }
+
+    [Fact]
+    public async Task AlreadyComplete_DownloadingAgainFetchesNothing()
+    {
+        await Store(Manifest(), new FakeServer()).DownloadAsync();
+        var server = new FakeServer();
+
+        await Store(Manifest(), server).DownloadAsync();
+
+        Assert.Empty(server.Requests);
+    }
+
+    // ── Resuming, within one download ────────────────────────────────────────
+
+    [Fact]
+    public async Task ATransferThatDrops_IsResumedFromTheSameSource()
+    {
+        var server = new FakeServer { ["first.example"] = new() { TruncateFirst = true } };
+        var store = Store(Manifest("1", First, Second), server);
+
+        await store.DownloadAsync();
+
+        Assert.Equal([(long?)null, Detector.Length / 2],
             server.Requests.Where(r => r.Url.EndsWith("detector.onnx")).Select(r => r.RangeFrom));
+        Assert.DoesNotContain(server.Requests, r => r.Url.StartsWith("https://second.example"));
+        Assert.Equal(Detector, File.ReadAllBytes(store.PathOf("detector")));
+    }
+
+    [Fact]
+    public async Task AResumedFileThatDoesNotCheckOut_IsFetchedWholeOnceFromTheSameSource()
+    {
+        // The half that arrived before the drop was wrong; the rest, sent on resuming, is right.
+        var server = new FakeServer { ["first.example"] = new() { TruncateFirst = true, CorruptFirst = true } };
+        var store = Store(Manifest("1", First, Second), server);
+
+        await store.DownloadAsync();
+
+        Assert.Equal([(long?)null, Detector.Length / 2, null],
+            server.Requests.Where(r => r.Url.EndsWith("detector.onnx")).Select(r => r.RangeFrom));
+        Assert.DoesNotContain(server.Requests, r => r.Url.StartsWith("https://second.example"));
         Assert.Equal(Detector, File.ReadAllBytes(store.PathOf("detector")));
     }
 
     [Fact]
     public async Task AServerThatIgnoresTheRange_StartsTheFileOver()
     {
-        var manifest = Manifest();
-        Directory.CreateDirectory(Path.Combine(_root, "v1"));
-        File.WriteAllBytes(PartFor(manifest, 0, "detector.onnx"), Detector[..1234]);
-        var server = new FakeServer { ["first.example"] = new() { IgnoreRange = true } };
-        var store = Store(manifest, server);
+        var server = new FakeServer { ["first.example"] = new() { TruncateFirst = true, IgnoreRange = true } };
+        var store = Store(Manifest(), server);
 
         await store.DownloadAsync();
 
         Assert.Equal(Detector, File.ReadAllBytes(store.PathOf("detector")));
-    }
-
-    [Fact]
-    public async Task APartLeftByAnOlderBuild_IsCleanedUp()
-    {
-        Directory.CreateDirectory(Path.Combine(_root, "v1"));
-        File.WriteAllBytes(Path.Combine(_root, "v1", "detector.onnx.part"), Detector[..1234]);
-        var store = Store(Manifest(), new FakeServer());
-
-        await store.DownloadAsync();
-
-        Assert.Empty(Directory.GetFiles(Path.Combine(_root, "v1"), "*.part"));
     }
 
     [Fact]
@@ -441,6 +485,14 @@ public sealed class MangaModelStoreTests : IDisposable
             public bool FailFirst { get; init; }
             public bool StallFirst { get; init; }
             public bool IgnoreRange { get; init; }
+            /// <summary>The first detector response stops halfway.</summary>
+            public bool TruncateFirst { get; init; }
+            /// <summary>The first detector response has a wrong first byte.</summary>
+            public bool CorruptFirst { get; init; }
+            /// <summary>When set, <see cref="Status"/> applies to this file only.</summary>
+            public string? OnlyFor { get; init; }
+            internal bool Truncated;
+            internal bool CorruptedOnce;
             /// <summary>When set, the body trickles out this many bytes every 50ms.</summary>
             public int? BytesPerTick { get; init; }
             internal bool Failed;
@@ -458,7 +510,7 @@ public sealed class MangaModelStoreTests : IDisposable
                 host = this[url.Host];
             }
 
-            if (host.Status is { } status)
+            if (host.Status is { } status && (host.OnlyFor is null || url.AbsolutePath.EndsWith(host.OnlyFor)))
                 return Task.FromResult(new HttpResponseMessage(status));
             if (host.FailFirst && url.AbsolutePath.EndsWith("detector.onnx") && !host.Failed)
             {
@@ -467,14 +519,21 @@ public sealed class MangaModelStoreTests : IDisposable
             }
 
             var data = url.AbsolutePath.EndsWith("detector.onnx") ? Detector : Vocabulary;
-            if (host.Corrupt)
+            var detector = url.AbsolutePath.EndsWith("detector.onnx");
+            if (host.Corrupt || (host.CorruptFirst && detector && !host.CorruptedOnce))
             {
+                host.CorruptedOnce = true;
                 data = [.. data];
                 data[0] ^= 0xFF;
             }
 
             var partial = from is not null && !host.IgnoreRange;
             var body = partial ? data[(int)from!.Value..] : data;
+            if (host.TruncateFirst && detector && !host.Truncated)
+            {
+                host.Truncated = true;
+                body = body[..(body.Length / 2)];
+            }
             Stream stream = new MemoryStream(body);
             if (host.StallFirst && url.AbsolutePath.EndsWith("detector.onnx") && !host.Stalled)
             {

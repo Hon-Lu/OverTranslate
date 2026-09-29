@@ -102,6 +102,11 @@ public partial class App
 
         UpdateNotifier.StartPolling();
         _ = PromptForUpdateAsync();
+
+        // A manga model download the app was closed in the middle of is not kept. Here, past the
+        // single-instance check, rather than when the store is built: a second launch must not clear
+        // the folder the running instance is downloading into.
+        _ = Task.Run(AppServices.MangaModels.DiscardIncomplete);
     }
 
     /// <summary>

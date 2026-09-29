@@ -45,6 +45,13 @@ internal enum MangaDownloadFailure
 /// marker naming the version is written — so a download cut off anywhere leaves "not downloaded",
 /// never a half-read model.</para>
 ///
+/// <para>Nothing short of a whole download is kept. Cancelled, or given up on after every source
+/// failed, the version's folder goes, files already finished included; one left by a download the
+/// app was closed in the middle of goes the next time a download starts, or when the app starts
+/// (<see cref="DiscardIncomplete"/>). Three hundred megabytes of half a model is not worth the
+/// questions it raises — is it still there, is it used, does it resume — and starting over is the
+/// one rule that needs no answer to any of them.</para>
+///
 /// <para>Each file is tried from the manifest's sources in order (Hugging Face first, then the GitHub
 /// release). The same source is asked again, a few times, after a connection or server error, and
 /// once more from the first byte if a resumed file does not hash right. The next source is tried when
@@ -53,10 +60,13 @@ internal enum MangaDownloadFailure
 /// slow, the fastest of them is used anyway, without the check — a slow line should get the models
 /// slowly, not never. The download fails only when every source has.</para>
 ///
-/// <para>A <c>.part</c> belongs to the source it came from (its name carries a hash of the URL) and is
-/// only ever resumed from there. Hugging Face and GitHub serve the same bytes, but nothing checks that
-/// until the whole file is hashed, and a file stitched from two hosts that turned out wrong would
-/// have to be fetched again from nothing; not mixing them costs at most the part already fetched.</para>
+/// <para>Within one download, a transfer that drops is retried from where it stopped, with a range
+/// request to the same source: a connection lost at 150 MB on a slow line should not cost the
+/// 150 MB again, and the part being resumed was written by this download from this source moments
+/// before. The whole file is still hashed at the end, and a resumed file that does not check out is
+/// fetched once more from the first byte. A <c>.part</c> belongs to the source it came from (its
+/// name carries a hash of the URL) and is never continued from another: Hugging Face and GitHub serve
+/// the same bytes, but nothing checks that until the whole file is hashed.</para>
 /// </remarks>
 internal sealed class MangaModelStore
 {
@@ -184,11 +194,14 @@ internal sealed class MangaModelStore
 
         DownloadedBytes = 0;
         RaiseChanged();
+        var folder = Folder!;
         try
         {
-            var folder = Folder!;
+            if (IsComplete())
+                return;
+            // Whatever an earlier download left: see the remarks on keeping nothing.
+            DeleteFolder(folder);
             Directory.CreateDirectory(folder);
-            File.Delete(Path.Combine(folder, ReadyMarker));
 
             long before = 0;
             foreach (var file in manifest.Files)
@@ -204,6 +217,13 @@ internal sealed class MangaModelStore
             RemoveOtherVersions();
             Log.Info("Manga models v{Version} downloaded to {Folder}", manifest.Version, folder);
         }
+        catch (Exception ex)
+        {
+            Log.Info("Manga model download {Outcome}; removing what it fetched",
+                ex is OperationCanceledException ? "cancelled" : "failed");
+            DeleteFolder(folder);
+            throw;
+        }
         finally
         {
             lock (_sync) _download = null;
@@ -212,7 +232,7 @@ internal sealed class MangaModelStore
         }
     }
 
-    /// <summary>Stops a download in progress; what was fetched so far is kept for next time.</summary>
+    /// <summary>Stops a download in progress, and removes everything it had fetched.</summary>
     internal void CancelDownload()
     {
         lock (_sync) _download?.Cancel();
@@ -227,6 +247,35 @@ internal sealed class MangaModelStore
         if (Directory.Exists(Root))
             Directory.Delete(Root, recursive: true);
         RaiseChanged();
+    }
+
+    /// <summary>
+    /// Removes the version's folder if a download was cut off in it — the app closed mid-download.
+    /// For app start; does nothing while a download is running or once the models are complete.
+    /// </summary>
+    internal void DiscardIncomplete()
+    {
+        if (Manifest is null) return;
+        lock (_sync)
+            if (_download is not null) return;
+        if (Directory.Exists(Folder) && !IsComplete())
+        {
+            Log.Info("Removing the unfinished manga model download in {Folder}", Folder);
+            DeleteFolder(Folder!);
+        }
+    }
+
+    private static void DeleteFolder(string folder)
+    {
+        try
+        {
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warn(ex, "The unfinished manga model folder {Folder} could not be removed", folder);
+        }
     }
 
     private void RemoveOtherVersions()
