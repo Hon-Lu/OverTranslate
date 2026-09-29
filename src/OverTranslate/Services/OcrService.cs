@@ -162,10 +162,11 @@ public class OcrService : IDisposable
     {
         if (manga is not null && ReadsWithMangaModels(language))
         {
-            var (outcome, page) = await manga.ReadAsync(bitmap, wait: false, cancellationToken);
+            var (outcome, read) = await MangaVerticalReader.ReadAsync(
+                manga, bitmap, wait: false,
+                (part, token) => ReadColumnsAsync(engine, part, language, token), cancellationToken);
             if (outcome == MangaReadOutcome.Busy) return null;
-            if (outcome == MangaReadOutcome.Read)
-                return await LayOutMangaPageAsync(engine, bitmap, language, page!, cancellationToken);
+            if (outcome == MangaReadOutcome.Read) return read;
         }
 
         var blocks = await engine.TryRecognizeAsync(
@@ -331,11 +332,9 @@ public class OcrService : IDisposable
     /// </summary>
     /// <remarks>
     /// <para>Japanese goes to the manga models (RT-DETR bubble and text detection, manga-ocr
-    /// recognition, on the GPU) when they are downloaded and a hardware GPU can run them. Measured on
-    /// the three transcribed corpora, counting vertical sentences only, they read 95/97, 150/157 and
-    /// 137/143 whole against 72, 130 and 116 for the column pipeline, in about a third of the time.
-    /// Everything else — another language, no models, no GPU, a load that failed — is read with the
-    /// column pipeline, exactly as it was before they existed.</para>
+    /// recognition, on the GPU) when they are downloaded and a hardware GPU can run them — see
+    /// <see cref="MangaVerticalReader"/>. Everything else — another language, no models, no GPU, a
+    /// load that failed — is read with the column pipeline, exactly as it was before they existed.</para>
     ///
     /// <para>manga-ocr reads Japanese only; a Chinese or Korean page stays on the columns.</para>
     /// </remarks>
@@ -348,9 +347,10 @@ public class OcrService : IDisposable
     {
         if (manga is not null && ReadsWithMangaModels(sourceLanguage))
         {
-            var (outcome, page) = await manga.ReadAsync(bitmap, wait: true, cancellationToken);
-            if (outcome == MangaReadOutcome.Read)
-                return await LayOutMangaPageAsync(engine, bitmap, sourceLanguage, page!, cancellationToken);
+            var (outcome, read) = await MangaVerticalReader.ReadAsync(
+                manga, bitmap, wait: true,
+                (part, token) => ReadColumnsAsync(engine, part, sourceLanguage, token), cancellationToken);
+            if (outcome == MangaReadOutcome.Read) return read!;
         }
 
         return await ReadColumnsAsync(engine, bitmap, sourceLanguage, cancellationToken);
@@ -365,42 +365,4 @@ public class OcrService : IDisposable
     }
 
     private static bool ReadsWithMangaModels(string language) => OcrLanguageRouter.Normalize(language) == "JA";
-
-    /// <summary>
-    /// The manga models' page as translatable blocks, with the blocks too long for manga-ocr read by
-    /// the column pipeline from a crop of the page.
-    /// </summary>
-    /// <remarks>
-    /// The long blocks wait for a column engine slot even on the realtime path. They are rare — three
-    /// pages of 46 in the corpora — and the page they are on has already been read; giving that read up
-    /// because a slot was taken would cost more than the wait.
-    /// </remarks>
-    private static async Task<List<OcrTextBlock>> LayOutMangaPageAsync(
-        IOcrEngine engine, Bitmap bitmap, string sourceLanguage, MangaPage page, CancellationToken cancellationToken)
-    {
-        var passedOn = new List<OcrTextBlock>();
-        foreach (var block in page.Long)
-        {
-            var crop = MangaPageLayout.LongBlockCrop(block, bitmap.Width, bitmap.Height);
-            if (crop.Width < 2 || crop.Height < 2) continue;
-            using var part = bitmap.Clone(crop, bitmap.PixelFormat);
-            var read = await ReadColumnsAsync(engine, part, sourceLanguage, cancellationToken);
-            passedOn.AddRange(read.Select(found => Moved(found, crop.X, crop.Y)));
-        }
-
-        return MangaPageLayout.Assemble(page.Blocks, page.Bubbles, passedOn);
-    }
-
-    private static OcrTextBlock Moved(OcrTextBlock block, double dx, double dy)
-    {
-        static System.Windows.Rect Shift(System.Windows.Rect r, double dx, double dy) =>
-            r.IsEmpty ? r : new System.Windows.Rect(r.X + dx, r.Y + dy, r.Width, r.Height);
-
-        return block with
-        {
-            Bounds = Shift(block.Bounds, dx, dy),
-            SourceLineBounds = block.SourceLineBounds?.Select(r => Shift(r, dx, dy)).ToList(),
-            LayoutBounds = Shift(block.LayoutBounds, dx, dy),
-        };
-    }
 }
