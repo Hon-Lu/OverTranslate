@@ -464,7 +464,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             int? maxDetectSize,
             bool releasesRuntime = true,
             bool repairRows = true,
-            bool verticalText = false)
+            bool verticalText = false,
+            bool splitOnProbability = true)
         {
             _owner = owner;
             _verticalText = verticalText;
@@ -480,11 +481,17 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             var scale = (ScaleParam)DetectorInputScaleField.GetValue(_detectorInput)!;
 
             var detector = (TextDetector)TextDetectorField.GetValue(_engine)!;
-            _detectorSpaceBoxes = detector.GetTextBoxes(
-                _detectorBitmap, scale, _options.BoxScoreThresh, _options.BoxThresh, _options.UnClipRatio) ?? [];
+            // A vertical session keeps the probability map, so VerticalColumnDetection can take apart
+            // a box the library merged across columns on artwork; see DetectorProbability. Every
+            // other session goes through the library's own call, untouched.
+            DetectorProbability? probability = null;
+            _detectorSpaceBoxes = (_verticalText && splitOnProbability
+                ? DetectKeepingProbability(detector, _detectorBitmap, scale, _options, out probability)
+                : detector.GetTextBoxes(
+                    _detectorBitmap, scale, _options.BoxScoreThresh, _options.BoxThresh, _options.UnClipRatio)) ?? [];
 
             if (_verticalText)
-                _detectorSpaceBoxes = VerticalColumnDetection.Split(_detectorBitmap, _detectorSpaceBoxes);
+                _detectorSpaceBoxes = VerticalColumnDetection.Split(_detectorBitmap, _detectorSpaceBoxes, probability);
 
             // The caller works in the coordinates of the bitmap it handed in, so every box is
             // reported there. The detector-space originals are what recognition crops with and are
@@ -650,9 +657,11 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         IReadOnlyList<OcrTextBlock> upright)
     {
         using var turned = TurnedFrameDetection.Turn(bitmap);
+        // No map for the turned frame: its columns lie across, so strips taken along x would be the
+        // rows of glyphs, and the merge it answers is the upright pass's to answer.
         using var session = new DetectionSession(
             this, runtime, turned, normalizedLanguage, maxDetectSize,
-            releasesRuntime: false, repairRows: false, verticalText: true);
+            releasesRuntime: false, repairRows: false, verticalText: true, splitOnProbability: false);
 
         var wanted = TurnedFrameDetection.PiecesTheUprightPassMissed(
             [.. upright.Select(box => box.Bounds)],
@@ -674,6 +683,92 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
         return found;
     }
+
+    /// <summary>
+    /// <see cref="TextDetector.GetTextBoxes"/> taken apart at the one seam it hides: the model's
+    /// probability map, which is kept for <see cref="DetectorProbability"/>.
+    /// </summary>
+    /// <remarks>
+    /// The same steps in the same order — resize, normalise, run, and the library's own private
+    /// post-processing on the output — so the boxes are the library's boxes, not a reimplementation
+    /// of them. The map is copied out before the output is disposed. Failure is answered as the
+    /// library answers it, with no boxes.
+    /// </remarks>
+    private static IReadOnlyList<RapidOcrNet.TextBox>? DetectKeepingProbability(
+        TextDetector detector, SKBitmap bitmap, ScaleParam scale, RapidOcrOptions options,
+        out DetectorProbability? probability)
+    {
+        probability = null;
+        try
+        {
+            Microsoft.ML.OnnxRuntime.Tensors.Tensor<float> input;
+            using (var resized = bitmap.Resize(
+                new SKSizeI(scale.DstWidth, scale.DstHeight), (SKSamplingOptions)NetworkSamplingField.GetValue(null)!))
+            {
+                input = (Microsoft.ML.OnnxRuntime.Tensors.Tensor<float>)SubtractMeanNormalizeMethod.Invoke(null, new object[]
+                {
+                    resized,
+                    DetectorMeanField.GetValue(detector)!,
+                    DetectorNormField.GetValue(detector)!,
+                })!;
+            }
+
+            var session = (Microsoft.ML.OnnxRuntime.InferenceSession)DetectorSessionField.GetValue(detector)!;
+            var inputs = new[]
+            {
+                Microsoft.ML.OnnxRuntime.NamedOnnxValue.CreateFromTensor(
+                    (string)DetectorInputNameField.GetValue(detector)!, input),
+            };
+            using var results = session.Run(inputs);
+            var output = results.First();
+            var dense = output.AsTensor<float>() as Microsoft.ML.OnnxRuntime.Tensors.DenseTensor<float>;
+            var map = dense is not null ? dense.Buffer.ToArray() : output.AsEnumerable<float>().ToArray();
+            // Columns first: a row the model lit across the heads of columns is given back to them
+            // before the library frames anything, and the library frames the map as rewritten.
+            if (dense is not null && ColumnsFirst.Carve(map, scale.DstWidth, scale.DstHeight, options.BoxThresh))
+                map.CopyTo(dense.Buffer.Span);
+            probability = new DetectorProbability(
+                map,
+                scale.DstWidth, scale.DstHeight,
+                scale.ScaleWidth, scale.ScaleHeight,
+                options.BoxThresh, options.BoxScoreThresh, options.UnClipRatio);
+            return (IReadOnlyList<RapidOcrNet.TextBox>)DetectorPostProcessMethod.Invoke(detector, new object[]
+            {
+                output, scale.DstHeight, scale.DstWidth, scale,
+                options.BoxScoreThresh, options.BoxThresh, options.UnClipRatio,
+            })!;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "ONNX OCR detection with the probability map kept failed");
+            probability = null;
+            return null;
+        }
+    }
+
+    private static readonly FieldInfo NetworkSamplingField =
+        typeof(RapidOcr).Assembly.GetType("RapidOcrNet.OcrUtils")!
+            .GetField("NetworkSampling", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo SubtractMeanNormalizeMethod =
+        typeof(RapidOcr).Assembly.GetType("RapidOcrNet.OcrUtils")!
+            .GetMethod("SubtractMeanNormalize", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly FieldInfo DetectorSessionField =
+        typeof(TextDetector).GetField("_dbNet", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private static readonly FieldInfo DetectorInputNameField =
+        typeof(TextDetector).GetField("_inputName", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private static readonly FieldInfo DetectorMeanField =
+        typeof(TextDetector).GetField("_meanValues", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private static readonly FieldInfo DetectorNormField =
+        typeof(TextDetector).GetField("_normValues", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private static readonly MethodInfo DetectorPostProcessMethod =
+        typeof(TextDetector).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(m => m.Name == "GetTextBoxes" && m.GetParameters().Length == 7);
 
     private static readonly MethodInfo PrepareDetectorInputMethod =
         typeof(RapidOcr).GetMethod("PrepareDetectorInput", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!;

@@ -3,10 +3,14 @@ using TextBox = RapidOcrNet.TextBox;
 
 namespace OverTranslate.Services.Ocr;
 
-/// <summary>Separates columns swallowed by one detector quad on a flat background.</summary>
+/// <summary>
+/// Separates columns swallowed by one detector quad: by the pixels on a flat background, and by the
+/// detector's own probability map where the pixels cannot say (see <see cref="DetectorProbability"/>).
+/// </summary>
 internal static class VerticalColumnDetection
 {
-    internal static IReadOnlyList<TextBox> Split(SKBitmap image, IReadOnlyList<TextBox> boxes)
+    internal static IReadOnlyList<TextBox> Split(
+        SKBitmap image, IReadOnlyList<TextBox> boxes, DetectorProbability? probability = null)
     {
         var result = new List<TextBox>();
         foreach (var box in boxes)
@@ -18,12 +22,17 @@ internal static class VerticalColumnDetection
             var bottom = Math.Min(image.Height, p.Max(v => v.Y));
             var width = right - left;
             var height = bottom - top;
+            if (width < 16)
+            {
+                result.Add(box);
+                continue;
+            }
             // Projection requires an upright column. Retain perspective quads intact.
-            if (width < 16 || height < width * 1.5 ||
+            if (height < width * 1.5 ||
                 Math.Abs(p[0].X - p[3].X) > 3 || Math.Abs(p[1].X - p[2].X) > 3 ||
                 Math.Abs(p[0].Y - p[1].Y) > 3 || Math.Abs(p[3].Y - p[2].Y) > 3)
             {
-                result.Add(box);
+                result.AddRange(SplitOnProbability(box, boxes, probability, left, top, right, bottom));
                 continue;
             }
 
@@ -34,7 +43,7 @@ internal static class VerticalColumnDetection
             var mode = Array.IndexOf(histogram, histogram.Max()) + 8;
             if (histogram.Max() < width * height * 0.6)
             {
-                result.Add(box);
+                result.AddRange(SplitOnProbability(box, boxes, probability, left, top, right, bottom));
                 continue;
             }
 
@@ -57,7 +66,7 @@ internal static class VerticalColumnDetection
                 .Select(g => (g.Start + g.End) / 2).ToList();
             if (cuts.Count == 0)
             {
-                result.Add(box);
+                result.AddRange(SplitOnProbability(box, boxes, probability, left, top, right, bottom));
                 continue;
             }
 
@@ -108,9 +117,46 @@ internal static class VerticalColumnDetection
                 });
             }
             if (parts.Count >= 2) result.AddRange(parts);
-            else result.Add(box);
+            else result.AddRange(SplitOnProbability(box, boxes, probability, left, top, right, bottom));
         }
         return result;
+    }
+
+    /// <summary>
+    /// The box cut where the probability map shows columns side by side, or the box itself.
+    /// </summary>
+    /// <remarks>
+    /// What is kept out is a part whose KERNEL another of the detector's boxes already holds — the
+    /// ink the map lit, not the box rebuilt around it. MEASURED on
+    /// <c>vertical-manga-web/mit-c.png</c>: a box over the foot of two columns is cut in two, and the
+    /// part for <c>…すだけ</c> shares only 0.6 of its rebuilt box with the box that already reads
+    /// <c>やり過ごすだけ</c>, so the balloon was read as <c>やり過ごすだけ…すだけ</c>. Its kernel lies
+    /// 0.84 inside that box.
+    /// </remarks>
+    private static IEnumerable<TextBox> SplitOnProbability(
+        TextBox box, IReadOnlyList<TextBox> boxes, DetectorProbability? probability,
+        int left, int top, int right, int bottom)
+    {
+        if (probability is null)
+            return [box];
+
+        var columns = probability.ColumnsIn(left, top, right, bottom);
+        if (columns.Count < 2)
+            return [box];
+
+        var parts = columns
+            .Where(c => !boxes.Any(other => !ReferenceEquals(other, box) &&
+                Overlap(other, c.KernelLeft, c.KernelTop, c.KernelRight, c.KernelBottom) > 0.65))
+            .Select(c => new TextBox
+            {
+                Score = box.Score,
+                BoxPoints = [new(c.Left, c.Top), new(c.Right, c.Top),
+                    new(c.Right, c.Bottom), new(c.Left, c.Bottom)],
+            })
+            .ToList();
+        // One part is enough here, unlike the pixel cut: the map has already shown two columns, and
+        // a column missing from the parts is one another box of the detector's already holds.
+        return parts.Count >= 1 ? parts : [box];
     }
 
     /// <summary>

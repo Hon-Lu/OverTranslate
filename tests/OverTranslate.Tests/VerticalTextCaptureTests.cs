@@ -165,7 +165,9 @@ public class VerticalTextCaptureTests
         var blocks = new List<OcrTextBlock>
         {
             new("右", new System.Windows.Rect(80, 10, 10, 60)),
-            new("オルン・ドゥーラ", new System.Windows.Rect(20, 100, 240, 36)),
+            // More than its own height below the columns: a row within that of a column is taken for
+            // the heads of columns misread and dropped (WithoutRowsOverColumns).
+            new("オルン・ドゥーラ", new System.Windows.Rect(20, 150, 240, 36)),
             new("左", new System.Windows.Rect(20, 10, 10, 60)),
         }.AsDetected();
 
