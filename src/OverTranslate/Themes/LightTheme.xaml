@@ -196,5 +196,22 @@
     <SolidColorBrush x:Key="MangaCardWarnBorder"     Color="#4DFFB800"/>
     <SolidColorBrush x:Key="MangaCardErrorBg"        Color="#1AFF453A"/>
     <SolidColorBrush x:Key="MangaCardErrorBorder"    Color="#4DFF453A"/>
+    <!-- The card's filled buttons (下載, 重試): the tile's own purple rather than the accent, in both
+         themes, with white text and a purple shadow under them. Hover lifts both ends of the
+         gradient, pressed sinks them. -->
+    <LinearGradientBrush x:Key="MangaCardButtonBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#7C6CFF"/>
+        <GradientStop Offset="1" Color="#5146E8"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MangaCardButtonHoverBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#8C7EFF"/>
+        <GradientStop Offset="1" Color="#6057F0"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MangaCardButtonPressedBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#6B5BEE"/>
+        <GradientStop Offset="1" Color="#4439CF"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="MangaCardButtonFg" Color="#FFFFFF"/>
+    <Color x:Key="MangaCardButtonShadow">#5146E8</Color>
 
 </ResourceDictionary>

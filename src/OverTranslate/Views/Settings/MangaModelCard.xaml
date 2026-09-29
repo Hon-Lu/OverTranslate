@@ -54,35 +54,46 @@
             </DrawingImage.Drawing>
         </DrawingImage>
 
-        <!-- The card's filled button. Pressing shrinks it a little, at once, so the press is felt before
-             the download has anything to show; with animations off in Windows it simply snaps. -->
+        <!-- The card's filled button, in the card's purple (MangaCardButton* in the themes) rather than
+             the accent. Pressing shrinks it a little, at once, so the press is felt before the download
+             has anything to show; with animations off in Windows it simply snaps. -->
         <Style x:Key="MangaCardButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource AppAccentFg}"/>
-            <Setter Property="Background" Value="{DynamicResource AppAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MangaCardButtonFg}"/>
+            <Setter Property="Background" Value="{DynamicResource MangaCardButtonBg}"/>
             <Setter Property="FontSize"   Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor"     Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                SnapsToDevicePixels="True"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
+                        <!-- The shadow is a layer of its own under the face: an effect on the face would
+                             turn its text into a bitmap and lose ClearType. -->
+                        <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
                                 <ScaleTransform/>
-                            </Border.RenderTransform>
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}"/>
-                        </Border>
+                            </Grid.RenderTransform>
+                            <Border Background="{TemplateBinding Background}" CornerRadius="8">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="{DynamicResource MangaCardButtonShadow}"
+                                                      Opacity="0.35" BlurRadius="14"
+                                                      ShadowDepth="4" Direction="270"/>
+                                </Border.Effect>
+                            </Border>
+                            <Border x:Name="Bg"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="8"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource AppAccentHover}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource MangaCardButtonHoverBg}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource AppAccentPressed}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource MangaCardButtonPressedBg}"/>
                             </Trigger>
                             <MultiDataTrigger>
                                 <MultiDataTrigger.Conditions>
@@ -92,16 +103,16 @@
                                 <MultiDataTrigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="RenderTransform.ScaleX" To="0.97" Duration="0:0:0.1"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="RenderTransform.ScaleY" To="0.97" Duration="0:0:0.1"/>
+                                            <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="RenderTransform.ScaleX" To="0.97" Duration="0:0:0.1"/>
+                                            <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="RenderTransform.ScaleY" To="0.97" Duration="0:0:0.1"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </MultiDataTrigger.EnterActions>
                                 <MultiDataTrigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.1"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.1"/>
+                                            <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.1"/>
+                                            <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.1"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </MultiDataTrigger.ExitActions>
@@ -111,7 +122,7 @@
                                     <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
                                     <Condition Binding="{Binding Source={x:Static SystemParameters.ClientAreaAnimation}}" Value="False"/>
                                 </MultiDataTrigger.Conditions>
-                                <Setter TargetName="Bg" Property="RenderTransform">
+                                <Setter TargetName="Root" Property="RenderTransform">
                                     <Setter.Value>
                                         <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
                                     </Setter.Value>
