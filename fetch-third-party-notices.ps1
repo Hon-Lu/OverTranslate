@@ -57,6 +57,16 @@ $items = @(
         )
     },
     @{
+        Name = "DirectML"
+        Version = "Microsoft.AI.DirectML 1.15.4 (DirectML.dll, pulled in by ONNX Runtime DirectML)"
+        License = "Microsoft Software License Terms (DirectML redistributable)"
+        Project = "https://github.com/microsoft/DirectML"
+        Files = @(
+            @{ Label = "LICENSE.txt"; Url = "https://api.nuget.org/v3-flatcontainer/microsoft.ai.directml/1.15.4/microsoft.ai.directml.1.15.4.nupkg"; Entry = "LICENSE.txt" },
+            @{ Label = "ThirdPartyNotices.txt"; Url = "https://api.nuget.org/v3-flatcontainer/microsoft.ai.directml/1.15.4/microsoft.ai.directml.1.15.4.nupkg"; Entry = "ThirdPartyNotices.txt" }
+        )
+    },
+    @{
         Name = "comic-text-and-bubble-detector (manga models, downloaded separately)"
         Version = "ogkalu/comic-text-and-bubble-detector, RT-DETR-v2 r50vd"
         License = "Apache License 2.0"
@@ -84,7 +94,7 @@ $builder = New-Object System.Text.StringBuilder
 [void]$builder.AppendLine("THIRD-PARTY NOTICES")
 [void]$builder.AppendLine()
 [void]$builder.AppendLine("OverTranslate includes or uses the following third-party software and resources.")
-[void]$builder.AppendLine("The license and notice text below is downloaded directly from the official upstream repositories.")
+[void]$builder.AppendLine("The license and notice text below is downloaded directly from the official upstream repositories and packages.")
 [void]$builder.AppendLine()
 
 foreach ($item in $items) {
@@ -101,11 +111,28 @@ foreach ($item in $items) {
 
     foreach ($file in $item.Files) {
         Write-Host "Downloading $($item.Name) $($file.Label)..."
-        $content = (Invoke-WebRequest -Uri $file.Url -UseBasicParsing).Content
+        if ($file.Entry) {
+            # The license ships inside the NuGet package, not as a file of its own.
+            Add-Type -AssemblyName System.IO.Compression
+            $bytes = (Invoke-WebRequest -Uri $file.Url -UseBasicParsing).Content
+            $zip = New-Object System.IO.Compression.ZipArchive((New-Object System.IO.MemoryStream(, $bytes)))
+            $reader = New-Object System.IO.StreamReader($zip.GetEntry($file.Entry).Open(), [System.Text.Encoding]::UTF8)
+            $content = $reader.ReadToEnd()
+            $reader.Dispose()
+            $zip.Dispose()
+        }
+        else {
+            $content = (Invoke-WebRequest -Uri $file.Url -UseBasicParsing).Content
+        }
         $content = $content -replace "`r?`n", "`r`n"
 
         [void]$builder.AppendLine("[$($file.Label)]")
-        [void]$builder.AppendLine("Source: $($file.Url)")
+        if ($file.Entry) {
+            [void]$builder.AppendLine("Source: $($file.Url) ($($file.Entry))")
+        }
+        else {
+            [void]$builder.AppendLine("Source: $($file.Url)")
+        }
         [void]$builder.AppendLine()
         [void]$builder.Append($content.TrimEnd())
         [void]$builder.AppendLine()
