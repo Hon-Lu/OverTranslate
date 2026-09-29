@@ -1671,5 +1671,5 @@ ORT 自己也拒絕（`C0262002`），同樣乾淨退回。最終 HEAD 對 main 
 ### 還沒做／風險
 
 - 泡泡誤併約 9%、小字漏框（`剣聖`）、單格裁圖的準確度沒有抄本：同 bench 報告，未變。
-- 模型託管在公開倉 `Hon-Lu/OverTranslate-assets` 的 Release `manga-vertical-v1`（tag 規則「資源名-v版本」）。
+- 模型主要從 Hugging Face 下載（`hon-lu/comic-text-and-bubble-detector-onnx-fp16`、`hon-lu/manga-ocr-base-onnx-fp16`，tag `v1`），備援是公開倉 `Hon-Lu/OverTranslate-assets` 的 Release `manga-vertical-v1`；GitHub Release 實測約 40 KB/s，HF 約 10 MB/s（301 MB 30 秒）。
 - RapidOcrNet 升級、讓 Managed ORT 超過 1.27 時，要重做 OrtApi 表的核對（見 csproj 註解）。
