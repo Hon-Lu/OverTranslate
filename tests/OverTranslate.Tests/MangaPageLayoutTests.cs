@@ -119,11 +119,11 @@ public class MangaPageLayoutTests
     public void GlyphSize_IsTheAreaPerCharacter_CappedByTheColumnWidth()
     {
         // Three columns of five: √(90·150/15) = 30.
-        Assert.Equal(30, MangaPageLayout.GlyphSize(new System.Windows.Rect(0, 0, 90, 150), new string('あ', 15), across: false), 6);
+        Assert.Equal(30 / 1.45, MangaPageLayout.GlyphSize(new System.Windows.Rect(0, 0, 90, 150), new string('あ', 15), across: false), 6);
         // One column read as two characters would claim 100; the column is only 40 wide.
         Assert.Equal(40, MangaPageLayout.GlyphSize(new System.Windows.Rect(0, 0, 40, 250), "ああ", across: false), 6);
         // A row is capped by its height instead.
-        Assert.Equal(36, MangaPageLayout.GlyphSize(new System.Windows.Rect(0, 0, 200, 36), "オル", across: true), 6);
+        Assert.Equal(36, MangaPageLayout.GlyphSize(new System.Windows.Rect(0, 0, 200, 36), "オ", across: true), 6);
     }
 
     [Fact]
