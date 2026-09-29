@@ -151,7 +151,7 @@
                  label-then-field, so those stay lined up across cards. -->
             <Grid MaxWidth="1120" Grid.IsSharedSizeScope="True">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.6*"/>
+                    <ColumnDefinition Width="1.4*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
