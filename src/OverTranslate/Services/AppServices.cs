@@ -21,8 +21,14 @@ namespace OverTranslate.Services;
 /// </remarks>
 internal static class AppServices
 {
+    /// <summary>
+    /// The downloadable manga models for vertical Japanese: whether they are here, and fetching them.
+    /// Declared before <see cref="Ocr"/>, which reads them.
+    /// </summary>
+    public static Services.Ocr.Manga.MangaModelStore MangaModels { get; } = Services.Ocr.Manga.MangaModelStore.CreateDefault();
+
     /// <summary>Recognition. Construction is cheap — the model itself is loaded on first use.</summary>
-    public static OcrService Ocr { get; } = new();
+    public static OcrService Ocr { get; } = new(MangaModels);
 
     public static TranslationService Translation { get; } = new();
 }
