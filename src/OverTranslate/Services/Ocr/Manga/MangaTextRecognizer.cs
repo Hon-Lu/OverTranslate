@@ -27,6 +27,15 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// cap and all but the smallest in video memory (773MB at the peak; no cap 1133MB, 2 was 70MB less
 /// and 15–35% slower). Greedy rather than beam: beam 2 and 4 changed only punctuation and took 1.5 to
 /// 2.9 times as long.</para>
+///
+/// <para>Every batch is exactly <see cref="BatchCap"/> rows, a short one padded with rows that are
+/// finished before the first step. A DirectML session is fast only at the batch size it first ran:
+/// MEASURED on this machine, a session that first saw 4 rows took 3.6ms a decoder step and 13ms for the
+/// encoder at 4 rows, and 13ms and 45–50ms at 1, 2 or 3; one that first saw 1 row was fast at 1 and
+/// slow at 4, and the slow path stays slow for the life of the session. The Python bench this was
+/// measured on happened to open with a batch of 4. Here a first page with fewer blocks pinned the fast
+/// path to the wrong size and every page after it ran at twice the time. Padding costs the rows'
+/// compute on the last batch of a page and makes every batch the fast one.</para>
 /// </remarks>
 internal sealed class MangaTextRecognizer : IDisposable
 {
@@ -87,10 +96,12 @@ internal sealed class MangaTextRecognizer : IDisposable
 
     private List<MangaReading> ReadBatch(byte[] rgb, int width, int height, List<Rectangle> blocks)
     {
-        int n = blocks.Count;
+        int real = blocks.Count;
+        int n = BatchCap;
         int plane = InputSize * InputSize;
+        // Padding rows stay 0: mid-grey after normalisation, and never read.
         var pixels = new float[n * 3 * plane];
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < real; i++)
         {
             // Grey first and then resized, as manga-ocr's own preprocessing does; the three channels
             // the encoder takes are the same grey three times.
@@ -133,6 +144,11 @@ internal sealed class MangaTextRecognizer : IDisposable
         var tokens = Enumerable.Range(0, n).Select(_ => new List<long>()).ToArray();
         var certainty = new double[n];
         ids.AsSpan().Fill(StartToken);
+        for (int i = real; i < n; i++)
+        {
+            done[i] = true;
+            ids[i] = 0;
+        }
         try
         {
             for (int step = 0; step < MaxTokens; step++)
@@ -216,6 +232,7 @@ internal sealed class MangaTextRecognizer : IDisposable
         }
 
         return tokens
+            .Take(real)
             .Select((row, i) => new MangaReading(Decode(row), certainty[i] / (row.Count + (done[i] ? 1 : 0))))
             .ToList();
     }
