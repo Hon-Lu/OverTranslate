@@ -455,11 +455,31 @@ internal static class VerticalColumnGrouping
     /// </remarks>
     private const double SideBySideAlongTheColumn = 0.35;
 
+    /// <summary>
+    /// How far apart two columns may be, in characters of the SMALLER type of the two.
+    /// </summary>
+    /// <remarks>
+    /// <para>The distance bar is 1.6 characters of the larger type, which is right inside a balloon —
+    /// a reading or a short column comes back with a pitch that is too small, and the larger one is
+    /// the balloon's — and wrong between a line of big lettering and a balloon beside it. The big
+    /// type stretches the bar to reach the next balloon: on ja3 432/002 the 134px column 火鉢の炭…！
+    /// took in ご心配いただき恐縮ですわ／わたくしは無事です, 26px type, 4.1 of its characters away.</para>
+    ///
+    /// <para>MEASURED, every pair this method joins over the 175 vertical pages at hand, against the
+    /// manga models' grouping of the same page: the pairs of one group are 1.6 of the smaller type
+    /// apart or less in 1701 of 1904 and more than 4 in three: a reading over its word, a misread
+    /// column, and 遠っ lettered beside a balloon, which the models' grouping had wrong. Taking the
+    /// smaller pitch for the whole bar instead split balloons everywhere (zang, ja3 and ja2 lost 14,
+    /// 10 and 17 whole sentences); capping it at 4 changed six pages of the 175, no sentence on the
+    /// transcribed ones, and parted the lettering from the balloons on two.</para>
+    /// </remarks>
+    private const double SmallerTypeReach = 4;
+
     private static bool IsSameGroup(OcrTextBlock a, OcrTextBlock b)
     {
         // Detector padding is not character size. Compare centres and character pitch so
         // a generous quad cannot bridge a gutter into the next balloon or manga panel.
-        double pitch = Math.Max(VerticalOcrGeometry.GlyphPitch(a), VerticalOcrGeometry.GlyphPitch(b));
+        double pa = VerticalOcrGeometry.GlyphPitch(a), pb = VerticalOcrGeometry.GlyphPitch(b);
 
         double shared = Math.Min(a.LayoutBounds.Bottom, b.LayoutBounds.Bottom) -
                         Math.Max(a.LayoutBounds.Top, b.LayoutBounds.Top);
@@ -469,7 +489,7 @@ internal static class VerticalColumnGrouping
 
         double distance = Math.Abs((a.LayoutBounds.Left + a.LayoutBounds.Right) / 2 -
                                    (b.LayoutBounds.Left + b.LayoutBounds.Right) / 2);
-        return distance <= pitch * 1.6;
+        return distance <= Math.Max(pa, pb) * 1.6 && distance <= Math.Min(pa, pb) * SmallerTypeReach;
     }
 
     private static OcrTextBlock CombineColumns(List<OcrTextBlock> group)

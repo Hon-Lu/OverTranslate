@@ -72,4 +72,53 @@ public class VerticalColumnMergeTests
 
         Assert.Single(groups);
     }
+
+    /// <summary>
+    /// Big lettering beside a balloon is its own group: its type must not stretch the distance bar
+    /// over to the balloon's small columns.
+    /// </summary>
+    [Fact]
+    public void Big_lettering_beside_a_balloon_is_not_joined_to_it()
+    {
+        // ja3 432/002: 火鉢の炭 lettered 134px wide, ご心配いただき in the balloon beside it, 26px type.
+        var groups = VerticalColumnGrouping.MergeColumns(
+        [
+            Column("火鉢の炭", new Rect(656, 93, 134, 349)),
+            Column("ご心配いただき", new Rect(593, 180, 48, 180)),
+        ]);
+
+        Assert.Equal(["火鉢の炭", "ご心配いただき"], groups.Select(g => g.Text));
+    }
+
+    /// <summary>
+    /// A short balloon set corner to corner with another shares too little of its length to join.
+    /// </summary>
+    [Fact]
+    public void A_balloon_set_corner_to_corner_with_another_is_not_joined_to_it()
+    {
+        var groups = VerticalColumnGrouping.MergeColumns(
+        [
+            Column("はあ", new Rect(200, 100, 36, 80)),
+            // Left and below: alongside the first for a quarter of its length.
+            Column("何を言うの", new Rect(160, 160, 36, 180)),
+        ]);
+
+        Assert.Equal(2, groups.Count);
+    }
+
+    /// <summary>
+    /// Three columns of one balloon, each set lower than the last, are still one balloon.
+    /// </summary>
+    [Fact]
+    public void Columns_stepping_down_in_one_balloon_are_one_group()
+    {
+        var groups = VerticalColumnGrouping.MergeColumns(
+        [
+            Column("俺の生まれた", new Rect(905, 963, 34, 200)),
+            Column("南側諸国は", new Rect(871, 973, 34, 167)),
+            Column("魔族の勢力圏である", new Rect(837, 981, 34, 189)),
+        ]);
+
+        Assert.Equal(["俺の生まれた南側諸国は魔族の勢力圏である"], groups.Select(g => g.Text));
+    }
 }
