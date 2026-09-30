@@ -286,7 +286,7 @@ public partial class RealtimeBlockWindow : Window
             // nothing to follow, and recording one here would have the refresh below replace it with
             // a patch the user never asked for.
             if (_naturalBackground)
-                patches.Add(new NaturalPatchVisual(background, visual.PatchBounds));
+                patches.Add(new NaturalPatchVisual(background, visual.PatchBounds, visual.Replate));
         }
 
         Volatile.Write(ref _naturalPatches, [.. patches]);
@@ -300,10 +300,16 @@ public partial class RealtimeBlockWindow : Window
     /// the first carries no background: its group's first row draws one patch for all of them.
     /// </summary>
     private readonly record struct LineVisual(
-        Border? Background, Border Text, System.Drawing.Rectangle PatchBounds);
+        Border? Background, Border Text, System.Drawing.Rectangle PatchBounds,
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? Replate = null);
 
+    /// <param name="Replate">
+    /// How a vertical line's plate is painted again from a new repair; null for a patch that is a
+    /// plain crop of it, which is every horizontal one.
+    /// </param>
     private readonly record struct NaturalPatchVisual(
-        Border Surface, System.Drawing.Rectangle PatchBounds);
+        Border Surface, System.Drawing.Rectangle PatchBounds,
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? Replate);
 
     /// <summary>Outlines a background patch when 顯示外觀 → 邊框 is on.</summary>
     /// <remarks>
@@ -541,6 +547,9 @@ public partial class RealtimeBlockWindow : Window
         double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
     {
         using var repairedFrame = _naturalBackground ? RepairNaturalFrame(frame, _lines) : null;
+        // Read out of the repair once, and only when a column is about to ask for a plate.
+        var backdrop = new Lazy<CaptureBubbleBackdrop?>(() =>
+            repairedFrame is null ? null : CaptureBubbleBackdrop.FromRepaired(repairedFrame));
         var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         foreach (var block in _lines)
         {
@@ -555,7 +564,7 @@ public partial class RealtimeBlockWindow : Window
                 // about lines that run across — one wraps a paragraph into rows, the other fits a
                 // band to the row it replaces — and neither question exists for a column. What the
                 // mode still decides for a vertical block is upstream, in how the frame was read.
-                if (BuildVerticalLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } column)
+                if (BuildVerticalLine(block, canvasWidth, canvasHeight, frame, repairedFrame, backdrop) is { } column)
                     yield return column;
             }
             else if (_mode == RealtimeBlockMode.Panel)
@@ -619,7 +628,8 @@ public partial class RealtimeBlockWindow : Window
     /// </remarks>
     private LineVisual? BuildVerticalLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight,
-        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
+        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        Lazy<CaptureBubbleBackdrop?> backdrop)
     {
         double left = line.Bounds.X / _dpiX;
         double top = line.Bounds.Y / _dpiY;
@@ -678,6 +688,21 @@ public partial class RealtimeBlockWindow : Window
         double patchWidth = scrimWidth;
         double patchHeight = scrimHeight;
         ImageBrush? naturalBrush = null;
+        var (foreground, edge) = SampleForeground(frame, line);
+
+        if (_naturalBackground && frame is not null && backdrop.Value is { } plates
+            && Plated(line, plates, frame, cellPreferred, foreground.Color,
+                scrimLeft, scrimTop, scrimWidth, scrimHeight) is { } plated)
+        {
+            // The capture overlay's bubble rather than a repaired patch — see Plated. Its colour for
+            // the text replaces the sampled one, and the outline goes: the text was chosen against
+            // this plate, so it already reads on it.
+            foreground = plated.Text;
+            edge = null;
+            ApplyBorder(plated.Surface, line);
+            return VerticalVisual(line, plated.Surface, plated.Bounds, foreground, edge,
+                glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, plated.Replate);
+        }
 
         if (_naturalBackground)
         {
@@ -717,8 +742,90 @@ public partial class RealtimeBlockWindow : Window
         };
         ApplyBorder(background, line);
 
-        var (foreground, edge) = SampleForeground(frame, line);
+        Canvas.SetLeft(background, patchLeft);
+        Canvas.SetTop(background, patchTop);
+        return VerticalVisual(line, background, patchBounds, foreground, edge,
+            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, null);
+    }
 
+    /// <summary>
+    /// A column's background painted the way the capture overlay paints a bubble: the repair,
+    /// blurred, washed toward the sampled colour and faded out at the edges — or a flat card where
+    /// the surface is flat enough that a plate would only be a blurred card.
+    /// </summary>
+    /// <remarks>
+    /// <para>Vertical only, and only with the background on 自動. A repaired patch on a manga page is
+    /// the page's own screentone and linework with the words taken out, and on black-and-white
+    /// picture what the repair leaves behind still competes with the translation drawn over it; the
+    /// capture overlay's plate is the answer already made for exactly that. Horizontal lines are
+    /// subtitles and game text over moving picture, where the repaired patch is what reads as the
+    /// scene, and they are left as they were.</para>
+    ///
+    /// <para>The decision between plate and card is the backdrop's own
+    /// (<see cref="CaptureBubbleBackdrop.Plate"/> and <see cref="CaptureBubbleBackdrop.Card"/>), made
+    /// on the same repair this window cuts its patches from, so there is one of each rather than a
+    /// realtime copy. The plate is larger than the bubble by its feather on every side and the text
+    /// keeps the bubble's geometry, so the ramp falls outside the translation, as it does there.</para>
+    /// </remarks>
+    private (Border Surface, System.Drawing.Rectangle Bounds, SolidColorBrush Text,
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?> Replate)? Plated(
+        TranslatedBlock line, CaptureBubbleBackdrop backdrop, System.Drawing.Bitmap frame,
+        double glyphSize, System.Windows.Media.Color text,
+        double left, double top, double width, double height)
+    {
+        if (width <= 0 || height <= 0) return null;
+        var bubble = new Rect(left * _dpiX, top * _dpiY, width * _dpiX, height * _dpiY);
+        double glyphPixels = glyphSize * _dpiX;
+        double feather = CaptureBubbleBackdrop.Feather(glyphPixels);
+        var area = new Rect(bubble.X - feather, bubble.Y - feather,
+            bubble.Width + feather * 2, bubble.Height + feather * 2);
+        var wash = SourceTextColorSampler.Sample(frame, line.Bounds)?.Background ?? _scrimBrush.Color;
+
+        // Vertical text fills its grid, so the written part is the whole bubble — as the capture
+        // overlay passes it.
+        if (backdrop.Plate(area, wash, text, glyphPixels, bubble.Height) is { } plate)
+        {
+            var surface = new Border
+            {
+                Background = plate.Brush,
+                Width = width + feather * 2 / _dpiX,
+                Height = height + feather * 2 / _dpiY,
+                ClipToBounds = true,
+            };
+            Canvas.SetLeft(surface, left - feather / _dpiX);
+            Canvas.SetTop(surface, top - feather / _dpiY);
+            return (surface, ToPhysicalPatchBounds(left - feather / _dpiX, top - feather / _dpiY,
+                    width + feather * 2 / _dpiX, height + feather * 2 / _dpiY),
+                Freeze(new SolidColorBrush(plate.Text)),
+                next => next.Plate(area, wash, text, glyphPixels, bubble.Height)?.Brush);
+        }
+
+        if (backdrop.Card(bubble, text) is { } card)
+        {
+            var surface = new Border
+            {
+                Background = Freeze(new SolidColorBrush(card.Background)),
+                Width = width,
+                Height = height,
+                ClipToBounds = true,
+            };
+            Canvas.SetLeft(surface, left);
+            Canvas.SetTop(surface, top);
+            return (surface, ToPhysicalPatchBounds(left, top, width, height),
+                Freeze(new SolidColorBrush(card.Text)),
+                next => next.Card(bubble, text) is { } again ? Freeze(new SolidColorBrush(again.Background)) : null);
+        }
+
+        return null;
+    }
+
+    /// <summary>A column's glyph cells over the background already built and placed for it.</summary>
+    private LineVisual VerticalVisual(
+        TranslatedBlock line, Border background, System.Drawing.Rectangle patchBounds,
+        SolidColorBrush foreground, SolidColorBrush? edge, string glyphs, double cellSize,
+        double gridLeft, double gridTop, double gridWidth, double gridHeight,
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? replate)
+    {
         // One element per glyph, positioned by hand. A TextBlock cannot set type downwards, and the
         // alternatives — a rotated horizontal line, or a font feature — either turn every character
         // on its side or are unavailable on the fallback faces this has to survive on.
@@ -766,12 +873,10 @@ public partial class RealtimeBlockWindow : Window
             Child = cells,
         };
 
-        Canvas.SetLeft(background, patchLeft);
-        Canvas.SetTop(background, patchTop);
         Canvas.SetLeft(textLayer, gridLeft);
         Canvas.SetTop(textLayer, gridTop);
 
-        return new LineVisual(background, textLayer, patchBounds);
+        return new LineVisual(background, textLayer, patchBounds, replate);
     }
 
     private LineVisual? BuildPanelLine(
@@ -891,11 +996,18 @@ public partial class RealtimeBlockWindow : Window
 
                     using var repairedFrame = RepairNaturalFrame(frame, blocks, token);
                     if (repairedFrame is null) continue;
-                    var repainted = new List<(Border Surface, ImageBrush Brush)>(patches.Length);
+                    // A plate is blurred and faded, so it is only made again here, behind the
+                    // fingerprint above: when the picture under it has changed, not every tick.
+                    CaptureBubbleBackdrop? backdrop = null;
+                    var repainted = new List<(Border Surface, System.Windows.Media.Brush Brush)>(patches.Length);
                     foreach (var patch in patches)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (BuildNaturalBrush(repairedFrame, patch.PatchBounds) is { } brush)
+                        System.Windows.Media.Brush? brush = patch.Replate is { } replate
+                            ? (backdrop ??= CaptureBubbleBackdrop.FromRepaired(repairedFrame)) is { } plates
+                                ? replate(plates) : null
+                            : BuildNaturalBrush(repairedFrame, patch.PatchBounds);
+                        if (brush is not null)
                             repainted.Add((patch.Surface, brush));
                     }
 
