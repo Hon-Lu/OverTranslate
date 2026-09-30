@@ -96,11 +96,13 @@ public partial class ToolbarWindow : Window
         SyncCaptureSwitches(this, EventArgs.Empty);
         SettingsService.Instance.OcrDebugChanged += SyncDebugSwitches;
         SettingsService.Instance.CaptureOptionsChanged += SyncCaptureSwitches;
+        SettingsService.Instance.MangaModelOptionsChanged += SyncCaptureSwitches;
         Closed += (_, _) =>
         {
             MorePopup.IsOpen = false;
             SettingsService.Instance.OcrDebugChanged -= SyncDebugSwitches;
             SettingsService.Instance.CaptureOptionsChanged -= SyncCaptureSwitches;
+            SettingsService.Instance.MangaModelOptionsChanged -= SyncCaptureSwitches;
         };
         LocationChanged += (_, _) => MorePopup.IsOpen = false;
         MoreBtn.MouseLeave += (_, _) => _ignoreMoreClick = false;
@@ -124,6 +126,7 @@ public partial class ToolbarWindow : Window
 
         InitializeSelectors(sourceLang, targetLang);
         SizeSelectorsToClosedLabels();
+        RenderMangaHint();
 
         // Attach after initial values are set so initialization doesn't trigger a save
         SrcLangBox.SelectionChanged  += SrcLangBox_SelectionChanged;
@@ -136,6 +139,9 @@ public partial class ToolbarWindow : Window
         {
             RenderDirectionThumb(animate: false);
             RenderLayoutModeThumb(animate: false);
+            // The hint starts where the source picker does, past the speaker tile.
+            LanguageHintRow.Margin = new Thickness(
+                LanguagePickers.TranslatePoint(new System.Windows.Point(0, 0), SettingsHalf).X, 0, 0, 0);
         };
 
         RenderSpeakButton();
@@ -217,7 +223,11 @@ public partial class ToolbarWindow : Window
         // The source language is what decides whether there is a voice to read with — see
         // RenderSpeakButton.
         RenderSpeakButton();
+        RenderMangaHint();
     }
+
+    // Whether this page will go to the manga models; see MangaModelHintText.
+    private void RenderMangaHint() => MangaHint.Show(IsVerticalText, CurrentSourceLang);
 
     private void TgtLangBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
@@ -293,6 +303,7 @@ public partial class ToolbarWindow : Window
             SaveTextDirectionSelection();
 
         RenderDirectionThumb(animate: IsLoaded);
+        RenderMangaHint();
     }
 
     /// <inheritdoc cref="DirectionSegment_PreviewMouseLeftButtonDown"/>
@@ -692,7 +703,14 @@ public partial class ToolbarWindow : Window
         _syncingCapture = true;
         AutoTranslateSwitch.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
         SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
+        MangaHintSwitch.IsChecked = SettingsService.Instance.Current.ShowMangaModelHint;
         _syncingCapture = false;
+    }
+
+    // The hint itself follows through MangaModelOptions, here and on the realtime page.
+    private void MangaHintSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingCapture) SettingsService.Instance.UpdateMangaModelOptions(showHint: MangaHintSwitch.IsChecked == true);
     }
 
     private void AutoTranslateSwitch_Changed(object sender, RoutedEventArgs e)

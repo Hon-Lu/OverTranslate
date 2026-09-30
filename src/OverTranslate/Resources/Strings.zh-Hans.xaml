@@ -524,11 +524,13 @@
     <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">尚未下载</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDownloading">下载中</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReady">已就绪</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDisabled">已停用</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsNoGpu">无法使用</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFailed">下载失败</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">不支持</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">已启用漫画竖排模型</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">已停用，改用一般识别</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonLoadFailed">模型无法在 {0} 上加载，竖排改用一般识别。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonReadFailed">在 {0} 上识别时出错，竖排改用一般识别。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorNetwork">无法连接下载服务器，请检查网络后重试。</sys:String>
@@ -641,6 +643,12 @@
     <sys:String x:Key="S.Toolbar.AutoTranslate">自动翻译</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">保存截图</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">保存位置可在设置中更改</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintSwitch">显示漫画模型提示</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintSwitchTip">竖排时，在源语言下方提示是否套用漫画竖排模型。截图翻译与实时翻译共用。</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">选择日语后，自动套用漫画竖排模型</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintApplied">已套用漫画竖排模型</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫画竖排模型下载中</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">尚未安装漫画竖排模型，可在设置中下载</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">显示范围</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框线显示范围</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">仅原文</sys:String>

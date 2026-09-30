@@ -544,11 +544,13 @@
     <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">尚未下載</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDownloading">下載中</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReady">已就緒</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDisabled">已停用</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsNoGpu">無法使用</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFailed">下載失敗</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">不支援</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">已啟用漫畫直排模型</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">已停用，改用一般辨識</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonLoadFailed">模型無法在 {0} 上載入，直排改用一般辨識。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonReadFailed">在 {0} 上辨識時發生錯誤，直排改用一般辨識。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorNetwork">無法連線到下載伺服器，請確認網路後重試。</sys:String>
@@ -659,6 +661,12 @@
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">儲存截圖</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">儲存位置可在設定中變更</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintSwitch">顯示漫畫模型提示</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintSwitchTip">直排時，在來源語言下方提示是否套用漫畫直排模型。截圖翻譯與即時翻譯共用。</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">選擇日文後，自動套用漫畫直排模型</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintApplied">已套用漫畫直排模型</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫畫直排模型下載中</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">尚未安裝漫畫直排模型，可至設定下載</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框線顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">僅原文</sys:String>

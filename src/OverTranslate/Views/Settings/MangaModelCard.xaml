@@ -350,12 +350,20 @@
                         </Grid>
                     </StackPanel>
 
-                    <!-- 已就緒 in green, 無法使用 in amber, 下載失敗 in red. -->
+                    <!-- 已就緒 in green, 已停用 in grey, 無法使用 in amber, 下載失敗 in red.
+                         With the models here the switch leads the line, and the whole line but
+                         刪除模型 flips it (MangaModelsStatusBox_MouseLeftButtonDown): the sentence
+                         beside the switch is what it switches, so it is part of the target. Where
+                         the models cannot run (無法使用) the switch is there but dimmed, and the
+                         sentence says why, as before. -->
                     <Border x:Name="MangaModelsStatusBox"
                             Visibility="Collapsed"
-                            CornerRadius="8" Padding="12,10" BorderThickness="1">
+                            CornerRadius="8" Padding="12,10" BorderThickness="1"
+                            Background="Transparent"
+                            MouseLeftButtonDown="MangaModelsStatusBox_MouseLeftButtonDown">
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
@@ -363,15 +371,23 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="MangaModelsStatus" Grid.Column="0"
+                            <CheckBox x:Name="MangaModelsSwitch" Grid.Column="0"
+                                      Margin="0,0,10,0"
+                                      VerticalAlignment="Center"
+                                      Visibility="Collapsed"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      AutomationProperties.Name="{DynamicResource S.Settings.MangaModelsEnabled}"
+                                      Checked="MangaModelsSwitch_Changed"
+                                      Unchecked="MangaModelsSwitch_Changed"/>
+                            <TextBlock x:Name="MangaModelsStatus" Grid.Column="1"
                                        FontSize="12.5" TextWrapping="Wrap"
                                        VerticalAlignment="Center"/>
-                            <Button x:Name="MangaModelsDeleteBtn" Grid.Column="1"
+                            <Button x:Name="MangaModelsDeleteBtn" Grid.Column="2"
                                     Margin="12,0,0,0"
                                     Style="{StaticResource MangaCardLink}"
                                     Content="{DynamicResource S.Settings.MangaModelsDelete}"
                                     Click="MangaModelsDeleteBtn_Click"/>
-                            <Button x:Name="MangaModelsRetryBtn" Grid.Column="1"
+                            <Button x:Name="MangaModelsRetryBtn" Grid.Column="2"
                                     Margin="12,0,0,0"
                                     Height="28" Padding="14,0"
                                     FontSize="12.5"

@@ -517,6 +517,8 @@ internal sealed class RealtimeSessionController
             realtime.BlockMode = defaults.Mode;
             realtime.TextOrientation = defaults.Orientation;
             settings.Save();
+            // The realtime page's manga model hint goes by this direction.
+            MangaModelOptions.Invalidate();
         };
         edit.LimitReached += (_, _) =>
             control.ShowMessage(LocalizationService.Format("S.Realtime.TooManyBlocks", request.MaxBlocks));

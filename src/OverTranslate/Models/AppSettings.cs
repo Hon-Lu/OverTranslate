@@ -175,6 +175,24 @@ public class AppSettings
     public string UiLanguage { get; set; } = "";
     public bool AutoTranslateAfterSelection { get; set; } = false;
     public bool SaveScreenshotToDisk { get; set; } = false;
+
+    /// <summary>
+    /// Whether Japanese vertical text is read with the downloaded manga models, when they are here
+    /// and can run. Off sends it to the column pipeline, as though they were not downloaded.
+    /// </summary>
+    /// <remarks>
+    /// Only means anything while the models are downloaded: the card shows the switch then and only
+    /// then, and a delete or a new download puts it back on — see
+    /// <see cref="Services.MangaModelOptions"/>. Turned off mostly to give a game the video memory.
+    /// </remarks>
+    public bool UseMangaModels { get; set; } = true;
+
+    /// <summary>
+    /// Whether the line under the source picker says what vertical text will be read with — on the
+    /// capture toolbar and on the realtime page alike. Set from the toolbar's 顯示更多 menu.
+    /// </summary>
+    public bool ShowMangaModelHint { get; set; } = true;
+
     /// <summary>Empty means "use ScreenshotSaveService.DefaultDirectory" (圖片\OverTranslate).</summary>
     public string ScreenshotSavePath { get; set; } = "";
     /// <summary>Off by default: Debug records the recognised text, i.e. the user's screen contents.</summary>

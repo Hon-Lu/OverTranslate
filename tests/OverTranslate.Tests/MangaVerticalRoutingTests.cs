@@ -265,6 +265,8 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     [InlineData("Ready", "None", "LoadFailed", false, "Unusable")]
     [InlineData("Ready", "None", "ReadFailed", false, "Unusable")]
     [InlineData("Ready", "None", "None", false, "Ready")]
+    // Switched off on the card: its own state, not 無法使用.
+    [InlineData("Ready", "None", "Disabled", false, "Disabled")]
     [InlineData("Downloading", "None", "NotDownloaded", false, "Downloading")]
     [InlineData("Unavailable", "NoGpu", "NotDownloaded", false, "Hidden")]
     public void TheCard_ShowsWhatTheMachineAndTheStoreSay(

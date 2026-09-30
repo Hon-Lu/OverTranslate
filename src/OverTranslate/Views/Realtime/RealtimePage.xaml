@@ -63,6 +63,14 @@
                                                VerticalAlignment="Center"
                                                IsHitTestVisible="False"/>
                                 </Grid>
+                                <!-- Whether vertical text will go to the manga models, as under the
+                                     capture toolbar's source picker. This page has no 直排 of its own
+                                     — each block is set on the edit layer — so it goes by the direction
+                                     the next block starts on, which is the one the user last chose
+                                     (RealtimeSettings.TextOrientation). Its line is always kept, like
+                                     the toolbar's, so the card does not change height under the
+                                     pointer; it wraps rather than clips if the window is narrowed. -->
+                                <ctl:MangaModelHintText x:Name="MangaHint" Margin="1,6,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="7,0,7,0">

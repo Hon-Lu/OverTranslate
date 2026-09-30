@@ -28,6 +28,8 @@ internal enum MangaUnavailable
     LoadFailed,
     /// <summary>They loaded, then failed while reading a page.</summary>
     ReadFailed,
+    /// <summary>Downloaded and able to run, but switched off on the settings page.</summary>
+    Disabled,
 }
 
 /// <summary>What the models found on a page, before layout.</summary>
@@ -74,6 +76,7 @@ internal sealed class MangaOcrEngine : IDisposable
     private (MangaUnavailable Kind, string Reason)? _failure;
     private bool _keepWarm;
     private bool _disposed;
+    private bool _enabled = true;
     private (DirectMlDevice.Adapter? Adapter, string? Reason)? _adapter;
 
     internal MangaOcrEngine(
@@ -101,9 +104,47 @@ internal sealed class MangaOcrEngine : IDisposable
         lock (_sync)
         {
             if (_failure is { } failure) return failure;
-            return Device();
+            var device = Device();
+            if (device.Kind != MangaUnavailable.None) return device;
+            return _enabled ? device : (MangaUnavailable.Disabled, "switched off in settings");
         }
     }
+
+    /// <summary>
+    /// Whether the models may be used at all. Switched off, every page goes to the column pipeline
+    /// and the loaded sessions are let go of straight away — the reason to switch them off is
+    /// usually a game that wants the video memory, and a minute's idle countdown is a minute of it.
+    /// </summary>
+    /// <remarks>
+    /// <para>A page being read when it is switched off finishes on the models and releases them as
+    /// it ends; the next page, realtime or not, is read with the columns. Switched back on, they are
+    /// loaded by the next page that wants them, as on first use.</para>
+    ///
+    /// <para>Only means anything while the models are downloaded. A delete or the start of a new
+    /// download puts it back on (<see cref="EnabledChanged"/>), so models downloaded again start in
+    /// use, as they did the first time, rather than on a choice made about the ones removed.</para>
+    /// </remarks>
+    internal bool Enabled
+    {
+        get
+        {
+            lock (_sync) return _enabled;
+        }
+        set
+        {
+            lock (_sync)
+            {
+                if (_enabled == value) return;
+                _enabled = value;
+            }
+
+            if (!value) UnloadIfIdle();
+            EnabledChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>Raised when <see cref="Enabled"/> changes, including when a delete puts it back on.</summary>
+    internal event EventHandler? EnabledChanged;
 
     /// <summary>
     /// Whether this machine has anything the models could run on — a hardware adapter DirectML can
@@ -214,10 +255,29 @@ internal sealed class MangaOcrEngine : IDisposable
         }
         finally
         {
+            // Switched off while this page was being read: nothing is waiting for the models now.
+            if (!Enabled) Unload();
             _gate.Release();
             lock (_sync)
                 if (!_keepWarm && !_disposed)
                     _idleRelease.Change(IdleReleaseDelay, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    /// <summary>Whether sessions are loaded right now; for tests.</summary>
+    internal bool IsLoaded
+    {
+        get
+        {
+            if (!_gate.Wait(0)) return true;
+            try
+            {
+                return _detector is not null;
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
     }
 
@@ -349,6 +409,15 @@ internal sealed class MangaOcrEngine : IDisposable
     {
         lock (_sync)
             if (_keepWarm || _disposed) return;
+        UnloadIfIdle();
+    }
+
+    // Unlike ReleaseNow, leaves _keepWarm alone: a realtime session switched off and on again is
+    // still running, and still wants the models kept once they are back.
+    private void UnloadIfIdle()
+    {
+        lock (_sync)
+            if (_disposed) return;
         if (!_gate.Wait(0)) return;
         try
         {
@@ -365,6 +434,9 @@ internal sealed class MangaOcrEngine : IDisposable
     private void OnModelsChanged(object? sender, EventArgs e)
     {
         var state = _store.State;
+        // Before the early return: a download starting is the other way new models arrive, and
+        // they start switched on — see Enabled.
+        if (state != MangaModelState.Ready) Enabled = true;
         if (state == MangaModelState.Downloading) return;
         lock (_sync) _failure = null;
         if (state != MangaModelState.Ready) ReleaseNow();

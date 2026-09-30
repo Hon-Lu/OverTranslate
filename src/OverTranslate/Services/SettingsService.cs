@@ -238,6 +238,25 @@ public class SettingsService
         CaptureOptionsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Raised when 使用漫畫直排模型 or 顯示漫畫模型提示 changes. The first is set on the settings
+    /// page's card and put back on by a delete or a download; the second from the capture toolbar's
+    /// menu. The engine and every hint on screen follow both.
+    /// </summary>
+    public event EventHandler? MangaModelOptionsChanged;
+
+    public void UpdateMangaModelOptions(bool? useModels = null, bool? showHint = null)
+    {
+        var current = Current;
+        var use = useModels ?? current.UseMangaModels;
+        var show = showHint ?? current.ShowMangaModelHint;
+        if (use == current.UseMangaModels && show == current.ShowMangaModelHint) return;
+        current.UseMangaModels = use;
+        current.ShowMangaModelHint = show;
+        Save();
+        MangaModelOptionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Save()
     {
         try

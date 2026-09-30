@@ -208,4 +208,9 @@
     <SolidColorBrush x:Key="MangaCardErrorBg"        Color="#1AFF453A"/>
     <SolidColorBrush x:Key="MangaCardErrorBorder"    Color="#4DFF453A"/>
 
+    <!-- 已套用漫畫直排模型 under the source pickers: the card's blue leaning to violet, so the one
+         line that says the models will read the page is recognisably theirs without being
+         mistaken for a link in the accent. 7.1:1 on the toolbar's #2A2A2A, for 11px text. -->
+    <SolidColorBrush x:Key="MangaHintApplied"        Color="#A8B1FF"/>
+
 </ResourceDictionary>
