@@ -123,7 +123,7 @@ internal static class TextLayerReader
         {
             for (int x = outer.Left; x < outer.Right; x += 2)
             {
-                bool near = Distance(window.At(x, y), first) < Near;
+                bool near = window.Distance(x, y, first.R, first.G, first.B) < Near;
                 if (inner.Contains(x, y)) { covered += near ? 1 : 0; total++; }
                 else { around += near ? 1 : 0; ring++; }
             }
@@ -145,11 +145,13 @@ internal static class TextLayerReader
         var other = new bool[width * height];
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
-                other[y * width + x] = Distance(window.At(outer.Left + x, outer.Top + y), outline) >= Near;
+                other[y * width + x] = window.Distance(outer.Left + x, outer.Top + y, outline.R, outline.G, outline.B) >= Near;
 
-        // Everything not the outline that can walk to the ring without crossing it.
+        // Everything not the outline that can walk to the ring without crossing it. Every pixel
+        // enters the queue at most once, so the queue is a plain array the size of the window.
         var reached = new bool[width * height];
-        var queue = new Queue<int>();
+        var queue = new int[width * height];
+        int head = 0, tail = 0;
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -157,23 +159,17 @@ internal static class TextLayerReader
                 int i = y * width + x;
                 if (!other[i] || inner.Contains(outer.Left + x, outer.Top + y)) continue;
                 reached[i] = true;
-                queue.Enqueue(i);
+                queue[tail++] = i;
             }
         }
-        while (queue.Count > 0)
+        while (head < tail)
         {
-            int i = queue.Dequeue();
-            int x = i % width, y = i / width;
-            if (x > 0) Visit(i - 1);
-            if (x < width - 1) Visit(i + 1);
-            if (y > 0) Visit(i - width);
-            if (y < height - 1) Visit(i + width);
-        }
-        void Visit(int j)
-        {
-            if (!other[j] || reached[j]) return;
-            reached[j] = true;
-            queue.Enqueue(j);
+            int i = queue[head++];
+            int x = i % width;
+            if (x > 0 && other[i - 1] && !reached[i - 1]) { reached[i - 1] = true; queue[tail++] = i - 1; }
+            if (x < width - 1 && other[i + 1] && !reached[i + 1]) { reached[i + 1] = true; queue[tail++] = i + 1; }
+            if (i >= width && other[i - width] && !reached[i - width]) { reached[i - width] = true; queue[tail++] = i - width; }
+            if (i + width < other.Length && other[i + width] && !reached[i + width]) { reached[i + width] = true; queue[tail++] = i + width; }
         }
 
         long outlined = 0, enclosed = 0;
@@ -202,7 +198,7 @@ internal static class TextLayerReader
         {
             for (int x = inner.Left; x < inner.Right; x++)
             {
-                if (Distance(window.At(x, y), body) >= Near) continue;
+                if (window.Distance(x, y, body.R, body.G, body.B) >= Near) continue;
                 bodyLike++;
                 int i = (y - outer.Top) * width + (x - outer.Left);
                 if (other[i] && !reached[i]) bodyEnclosed++;
