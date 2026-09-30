@@ -139,9 +139,6 @@ public partial class ToolbarWindow : Window
         {
             RenderDirectionThumb(animate: false);
             RenderLayoutModeThumb(animate: false);
-            // The hint starts where the source picker does, past the speaker tile.
-            LanguageHintRow.Margin = new Thickness(
-                LanguagePickers.TranslatePoint(new System.Windows.Point(0, 0), SettingsHalf).X, 0, 0, 0);
         };
 
         RenderSpeakButton();

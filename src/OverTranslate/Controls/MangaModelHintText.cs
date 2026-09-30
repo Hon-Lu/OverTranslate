@@ -12,9 +12,9 @@ namespace OverTranslate.Controls;
 /// </summary>
 /// <remarks>
 /// <para>One small line, not a card: it sits in a toolbar the user is about to press 翻譯 on, and
-/// all it has to do is say whether the page will go to the models. Its room is always kept and it is
-/// only ever hidden, never collapsed, so choosing 直排 or another language never moves a button the
-/// user is reaching for.</para>
+/// all it has to do is say whether the page will go to the models. Where it has nothing to say it is
+/// hidden with its room kept, or — where the host has arranged that nothing the user reaches for
+/// moves (<see cref="CollapsesWhenHidden"/>) — collapsed.</para>
 ///
 /// <para>Where it stands is the host's to say (<see cref="Show"/>); where the models stand it
 /// watches itself, through <see cref="MangaModelOptions.Changed"/>, so a download finishing or the
@@ -31,10 +31,6 @@ public sealed class MangaModelHintText : TextBlock
     public MangaModelHintText()
     {
         FontSize = 11;
-        // A line of 13 rather than the font's own 14.6: under the capture toolbar's 32px row it is
-        // what keeps the two inside the 46 the stacked actions already make the bar.
-        LineHeight = 13;
-        LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
         TextWrapping = TextWrapping.NoWrap;
         Visibility = Visibility.Hidden;
         IsHitTestVisible = false;
@@ -54,6 +50,13 @@ public sealed class MangaModelHintText : TextBlock
         };
     }
 
+    /// <summary>
+    /// Collapsed rather than hidden when there is nothing to say. The capture toolbar sets it: there
+    /// the hint shares a centred unit with the language pickers only, and collapsing it puts them
+    /// back exactly where they sit without it.
+    /// </summary>
+    public bool CollapsesWhenHidden { get; set; }
+
     /// <summary>What the host's pickers say now.</summary>
     public void Show(bool vertical, string? sourceLanguage)
     {
@@ -72,7 +75,7 @@ public sealed class MangaModelHintText : TextBlock
         Hint = MangaModelOptions.HintFor(_vertical, _sourceLanguage);
         if (Hint == MangaModelHint.None)
         {
-            Visibility = Visibility.Hidden;
+            Visibility = CollapsesWhenHidden ? Visibility.Collapsed : Visibility.Hidden;
             return;
         }
 
