@@ -38,6 +38,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
                             <!-- OCR source languages only: this page recognises text off the screen,
                                  so a language the recogniser cannot read has nothing to offer here.
@@ -63,16 +67,6 @@
                                                VerticalAlignment="Center"
                                                IsHitTestVisible="False"/>
                                 </Grid>
-                                <!-- What Japanese vertical blocks will be read with. Only for
-                                     Japanese, and not by direction: each block sets its own on the
-                                     edit layer, so the line says what vertical ones get and that
-                                     horizontal ones use the default model. Collapsed when there is
-                                     nothing to say, so the card is its old height; it wraps rather
-                                     than clips if the window is narrowed. -->
-                                <ctl:MangaModelHintText x:Name="MangaHint" Margin="1,6,0,0"
-                                                        ForRealtimePage="True"
-                                                        CollapsesWhenHidden="True"
-                                                        TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="7,0,7,0">
@@ -96,6 +90,21 @@
                                            Style="{StaticResource FieldHint}"
                                            Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="16"/>
                             </StackPanel>
+
+                            <!-- What Japanese vertical blocks will be read with. Only for Japanese,
+                                 and not by direction: each block sets its own on the edit layer, so
+                                 the line says what vertical ones get and that horizontal ones use
+                                 the default model. Under the whole row rather than in the source
+                                 column: the sentence is longer than one field is wide, and folded
+                                 into it the line broke in two with the card's width going spare.
+                                 Starts at the source picker's left edge; wraps only when the card
+                                 itself is too narrow. Collapsed when there is nothing to say, so the
+                                 card is its old height. -->
+                            <ctl:MangaModelHintText x:Name="MangaHint" Grid.Row="1" Grid.ColumnSpan="3"
+                                                    Margin="1,6,0,0"
+                                                    ForRealtimePage="True"
+                                                    CollapsesWhenHidden="True"
+                                                    TextWrapping="Wrap"/>
                         </Grid>
                     </StackPanel>
                 </Border>
