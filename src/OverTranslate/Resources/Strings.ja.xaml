@@ -534,7 +534,7 @@
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">非対応</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">漫画モデルを使用中</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">オフ（通常の認識）</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">オフ（標準モデル）</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonLoadFailed">{0} でモデルを読み込めませんでした。縦書きは通常の認識を使います。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonReadFailed">{0} での認識中にエラーが発生しました。縦書きは通常の認識を使います。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorNetwork">ダウンロードサーバーに接続できません。接続を確認して再試行してください。</sys:String>
@@ -647,8 +647,8 @@
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻訳</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">スクリーンショットを保存</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">保存先は設定で変更できます</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintSwitch">漫画モデルのヒントを表示</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintSwitchTip">縦書きのとき、翻訳元の言語の下に漫画縦書きモデルを使うかどうかを表示します。キャプチャ翻訳とリアルタイム翻訳で共通です。</sys:String>
+    <sys:String x:Key="S.Toolbar.ModelHintSwitch">モデルのヒントを表示</sys:String>
+    <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">翻訳元の言語の下に、どのモデルで認識するかを表示します。</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">日本語を選ぶと漫画縦書きモデルを使います</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">漫画縦書きモデルを使用します</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫画縦書きモデルをダウンロード中</sys:String>

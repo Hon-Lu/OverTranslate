@@ -706,14 +706,14 @@ public partial class ToolbarWindow : Window
         _syncingCapture = true;
         AutoTranslateSwitch.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
         SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
-        MangaHintSwitch.IsChecked = SettingsService.Instance.Current.ShowMangaModelHint;
+        ModelHintSwitch.IsChecked = SettingsService.Instance.Current.Capture.ShowModelHint;
         _syncingCapture = false;
     }
 
-    // The hint itself follows through MangaModelOptions, here and on the realtime page.
-    private void MangaHintSwitch_Changed(object sender, RoutedEventArgs e)
+    // The footer follows through MangaModelOptions. This bar only: the realtime page ignores it.
+    private void ModelHintSwitch_Changed(object sender, RoutedEventArgs e)
     {
-        if (!_syncingCapture) SettingsService.Instance.UpdateMangaModelOptions(showHint: MangaHintSwitch.IsChecked == true);
+        if (!_syncingCapture) SettingsService.Instance.UpdateMangaModelOptions(showHint: ModelHintSwitch.IsChecked == true);
     }
 
     private void AutoTranslateSwitch_Changed(object sender, RoutedEventArgs e)

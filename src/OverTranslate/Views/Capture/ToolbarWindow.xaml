@@ -573,13 +573,13 @@
                                             </StackPanel>
                                         </CheckBox.ToolTip>
                                     </CheckBox>
-                                    <!-- The line under the source picker, here and on the realtime page
-                                         alike: one switch for both, since it is one line saying one thing.
+                                    <!-- The model footer under this bar (CaptureSettings.ShowModelHint).
+                                         This bar's own: the realtime page shows its line regardless.
                                          Put positively, like the two above it — ticked turns something on. -->
-                                    <CheckBox x:Name="MangaHintSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                              Content="{DynamicResource S.Toolbar.MangaHintSwitch}"
-                                              ToolTip="{DynamicResource S.Toolbar.MangaHintSwitchTip}"
-                                              Checked="MangaHintSwitch_Changed" Unchecked="MangaHintSwitch_Changed">
+                                    <CheckBox x:Name="ModelHintSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Content="{DynamicResource S.Toolbar.ModelHintSwitch}"
+                                              ToolTip="{DynamicResource S.Toolbar.ModelHintSwitchTip}"
+                                              Checked="ModelHintSwitch_Changed" Unchecked="ModelHintSwitch_Changed">
                                         <CheckBox.Tag>
                                             <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.2"
                                                   Data="M8,1.5 C8.5,5.3 10.7,7.5 14.5,8 C10.7,8.5 8.5,10.7 8,14.5 C7.5,10.7 5.3,8.5 1.5,8 C5.3,7.5 7.5,5.3 8,1.5 Z"/>
@@ -669,6 +669,7 @@
                             ClipToBounds="True">
                         <ctl:MangaModelHintText x:Name="MangaHint"
                                                 CollapsesWhenHidden="True"
+                                                FollowsCaptureHintSwitch="True"
                                                 FontSize="12"
                                                 LineHeight="16" LineStackingStrategy="BlockLineHeight"
                                                 Margin="0,7,0,0"/>

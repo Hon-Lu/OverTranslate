@@ -57,6 +57,13 @@ public sealed class MangaModelHintText : TextBlock
     /// </summary>
     public bool CollapsesWhenHidden { get; set; }
 
+    /// <summary>
+    /// Hidden while 顯示模型提示 (<see cref="Models.CaptureSettings.ShowModelHint"/>) is off. The
+    /// capture toolbar sets it; the realtime page does not, and shows the line whenever there is
+    /// something to say.
+    /// </summary>
+    public bool FollowsCaptureHintSwitch { get; set; }
+
     /// <summary>What the host's pickers say now.</summary>
     public void Show(bool vertical, string? sourceLanguage)
     {
@@ -72,7 +79,7 @@ public sealed class MangaModelHintText : TextBlock
 
     private void Render()
     {
-        Hint = MangaModelOptions.HintFor(_vertical, _sourceLanguage);
+        Hint = MangaModelOptions.HintFor(_vertical, _sourceLanguage, FollowsCaptureHintSwitch);
         if (Hint == MangaModelHint.None)
         {
             Visibility = CollapsesWhenHidden ? Visibility.Collapsed : Visibility.Hidden;

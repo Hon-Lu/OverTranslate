@@ -318,7 +318,9 @@ public partial class MangaModelCard : UserControl
             Grid.SetColumn(action, compact ? 1 : 2);
             Grid.SetRow(action, compact ? 1 : 0);
             action.HorizontalAlignment = compact ? System.Windows.HorizontalAlignment.Left : System.Windows.HorizontalAlignment.Stretch;
-            action.Margin = compact ? new Thickness(0, 8, 0, 0) : new Thickness(12, 0, 0, 0);
+            // 10 and not more: at the default width that is what keeps 已停用（使用預設模型） on one line
+            // beside the switch.
+            action.Margin = compact ? new Thickness(0, 8, 0, 0) : new Thickness(10, 0, 0, 0);
         }
     }
 

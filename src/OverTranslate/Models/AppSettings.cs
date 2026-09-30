@@ -187,12 +187,6 @@ public class AppSettings
     /// </remarks>
     public bool UseMangaModels { get; set; } = true;
 
-    /// <summary>
-    /// Whether the line under the source picker says what vertical text will be read with — on the
-    /// capture toolbar and on the realtime page alike. Set from the toolbar's 顯示更多 menu.
-    /// </summary>
-    public bool ShowMangaModelHint { get; set; } = true;
-
     /// <summary>Empty means "use ScreenshotSaveService.DefaultDirectory" (圖片\OverTranslate).</summary>
     public string ScreenshotSavePath { get; set; } = "";
     /// <summary>Off by default: Debug records the recognised text, i.e. the user's screen contents.</summary>

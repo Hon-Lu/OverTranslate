@@ -372,7 +372,7 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <CheckBox x:Name="MangaModelsSwitch" Grid.Column="0"
-                                      Margin="0,0,10,0"
+                                      Margin="0,0,8,0"
                                       VerticalAlignment="Center"
                                       Visibility="Collapsed"
                                       Style="{StaticResource ToggleSwitch}"
@@ -383,12 +383,12 @@
                                        FontSize="12.5" TextWrapping="Wrap"
                                        VerticalAlignment="Center"/>
                             <Button x:Name="MangaModelsDeleteBtn" Grid.Column="2"
-                                    Margin="12,0,0,0"
+                                    Margin="10,0,0,0"
                                     Style="{StaticResource MangaCardLink}"
                                     Content="{DynamicResource S.Settings.MangaModelsDelete}"
                                     Click="MangaModelsDeleteBtn_Click"/>
                             <Button x:Name="MangaModelsRetryBtn" Grid.Column="2"
-                                    Margin="12,0,0,0"
+                                    Margin="10,0,0,0"
                                     Height="28" Padding="14,0"
                                     FontSize="12.5"
                                     VerticalAlignment="Center"

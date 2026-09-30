@@ -72,7 +72,7 @@ public sealed class MangaModelSwitchTests : IDisposable
     [InlineData(true,  "JA",   "Ready",         "NoGpu", "NoGpu",        true,  "None")]
     [InlineData(true,  "JA",   "Ready",         "None",  "LoadFailed",   true,  "None")]
     [InlineData(true,  "AUTO", "Ready",         "None",  "ReadFailed",   true,  "None")]
-    // 顯示漫畫模型提示 off: nothing, anywhere.
+    // 顯示模型提示 off: nothing, anywhere.
     [InlineData(true,  "JA",   "Ready",         "None",  "None",         false, "None")]
     [InlineData(true,  "AUTO", "Ready",         "None",  "None",         false, "None")]
     [InlineData(true,  "JA",   "NotDownloaded", "None",  "NotDownloaded", false, "None")]
@@ -172,15 +172,15 @@ public sealed class MangaModelSwitchTests : IDisposable
     {
         var fresh = new OverTranslate.Models.AppSettings();
         Assert.True(fresh.UseMangaModels);
-        Assert.True(fresh.ShowMangaModelHint);
+        Assert.True(fresh.Capture.ShowModelHint);
 
         var old = SettingsService.Parse("""{"AutoTranslateAfterSelection":true}""");
         Assert.True(old.UseMangaModels);
-        Assert.True(old.ShowMangaModelHint);
+        Assert.True(old.Capture.ShowModelHint);
 
-        var off = SettingsService.Parse("""{"UseMangaModels":false,"ShowMangaModelHint":false}""");
+        var off = SettingsService.Parse("""{"UseMangaModels":false,"Capture":{"ShowModelHint":false}}""");
         Assert.False(off.UseMangaModels);
-        Assert.False(off.ShowMangaModelHint);
+        Assert.False(off.Capture.ShowModelHint);
     }
 
     // ── Switched off: the loaded models are let go of at once ────────────────

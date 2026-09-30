@@ -532,7 +532,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">Not supported</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">Manga models on</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">Off: standard OCR</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">Off (default model)</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonLoadFailed">The models could not be loaded on {0}; vertical text uses standard recognition.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsReasonReadFailed">Reading on {0} failed; vertical text uses standard recognition.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorNetwork">Could not reach the download server. Check your connection and try again.</sys:String>
@@ -645,8 +645,8 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">Auto-translate</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">Save screenshots</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">Change the location in Settings</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintSwitch">Show manga model hints</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintSwitchTip">With Vertical on, a line under the source language says whether the manga models will read the text. Applies to screen capture and realtime.</sys:String>
+    <sys:String x:Key="S.Toolbar.ModelHintSwitch">Show model hints</sys:String>
+    <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">A line under the source language says which model will read the text.</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">Choose Japanese to use the manga models</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">Using the manga models</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">Manga models downloading</sys:String>

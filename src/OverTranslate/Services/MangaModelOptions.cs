@@ -22,7 +22,7 @@ internal static class MangaModelOptions
 
     /// <summary>
     /// Raised on the UI thread when a hint could read differently: the models arrived, went, or
-    /// started downloading; the switch or 顯示漫畫模型提示 moved; or <see cref="Invalidate"/>.
+    /// started downloading; the switch or 顯示模型提示 moved; or <see cref="Invalidate"/>.
     /// </summary>
     public static event EventHandler? Changed;
 
@@ -65,7 +65,10 @@ internal static class MangaModelOptions
     public static void Invalidate() => OnUi(Raise);
 
     /// <summary>The hint for a picker showing <paramref name="sourceLanguage"/> over text written this way.</summary>
-    internal static MangaModelHint HintFor(bool vertical, string? sourceLanguage)
+    /// <param name="followsCaptureSwitch">
+    /// Whether 顯示模型提示 applies: the capture toolbar's switch, which the realtime page ignores.
+    /// </param>
+    internal static MangaModelHint HintFor(bool vertical, string? sourceLanguage, bool followsCaptureSwitch)
     {
         var manga = AppServices.Ocr.Manga;
         return MangaModelHints.For(
@@ -74,7 +77,7 @@ internal static class MangaModelOptions
             AppServices.MangaModels.State,
             manga?.DeviceSupport ?? MangaUnavailable.None,
             manga?.Unavailable ?? MangaUnavailable.None,
-            SettingsService.Instance.Current.ShowMangaModelHint);
+            !followsCaptureSwitch || SettingsService.Instance.Current.Capture.ShowModelHint);
     }
 
     private static void Raise() => Changed?.Invoke(null, EventArgs.Empty);
