@@ -186,8 +186,14 @@ public partial class ToolbarWindow : Window
         double scale = ScreenGeometry.ScaleAt(centreX, centreY);
 
         // WPF lays out in DIP regardless of DPI, so the DIP size scales straight to target pixels.
+        // The height is always the one with the manga model footer showing, whether it is or not:
+        // the window keeps its top and grows down when the footer appears, so placed for the
+        // shorter bar it would grow over the selection (placed above it) or off the screen (placed
+        // low), and moving it to avoid that would move the row the user is pressing.
+        double footer = MangaFooter.Visibility == Visibility.Visible
+            ? 0 : MangaFooter.Height + MangaFooter.Margin.Top;
         double tbW = (ActualWidth  > 0 ? ActualWidth  : 1090) * scale;
-        double tbH = (ActualHeight > 0 ? ActualHeight : 88)   * scale;
+        double tbH = ((ActualHeight > 0 ? ActualHeight : 88) + footer) * scale;
 
         var wa = System.Windows.Forms.Screen
             .FromPoint(new System.Drawing.Point(centreX, centreY)).WorkingArea;

@@ -47,644 +47,632 @@
                     CornerRadius="16"
                     Padding="8,8"
                     RenderOptions.ClearTypeHint="Enabled">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel>
+                    <StackPanel x:Name="BarRow" Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <!-- At the head of the bar, in front of the source picker, because that picker is
-                         what it reads with and what switches it off: this reads the original, never the
-                         translation. Sat among the actions on the right it was one more thing to do to
-                         the result, and the only way to say which text it meant would have been to spell
-                         it out in the label — four characters for a button on a bar already short of
-                         room. Position says it in none.
+                        <!-- At the head of the bar, in front of the source picker, because that picker is
+                             what it reads with and what switches it off: this reads the original, never the
+                             translation. Sat among the actions on the right it was one more thing to do to
+                             the result, and the only way to say which text it meant would have been to spell
+                             it out in the label — four characters for a button on a bar already short of
+                             room. Position says it in none.
 
-                         Reads the recognised source text as one piece, not block by block: the blocks
-                         are how the picture was cut up for recognition, not how the sentence was
-                         written, and read one at a time they come out as fragments. Same text the
-                         translation window is opened with.
+                             Reads the recognised source text as one piece, not block by block: the blocks
+                             are how the picture was cut up for recognition, not how the sentence was
+                             written, and read one at a time they come out as fragments. Same text the
+                             translation window is opened with.
 
-                         The one action here with no word under it. The rest of the bar keeps its
-                         labels because none of those icons is standard enough to be read cold, but a
-                         speaker and a stop square are — they are the same two shapes every media
-                         control the user has ever pressed uses, and they say start and stop without
-                         help. So the word came off and the bar got its width back. What the word was
-                         doing besides naming the action, telling the user which text would be read,
-                         it was never able to do anyway: 朗讀 alone does not say "the original", and
-                         the button's position in front of the source picker does. The tooltip still
-                         spells all of it out, and so does the name assistive technology reads —
-                         see RenderSpeakButton. -->
-                    <Button x:Name="TtsBtn"
-                            Style="{StaticResource ToolbarTileButton}"
-                            IsEnabled="False"
-                            Margin="0,0,6,0"
-                            Click="TtsBtn_Click">
-                        <!-- Two points larger than the glyphs in the action row, because this one has
-                             no name under it to carry half the weight: at the row's size it read as a
-                             small mark rattling around inside its tile. -->
-                        <TextBlock x:Name="TtsGlyph"
-                                   Text="&#xE767;"
-                                   Style="{StaticResource ToolbarActionGlyph}"
-                                   FontSize="18"/>
-                    </Button>
+                             The one action here with no word under it. The rest of the bar keeps its
+                             labels because none of those icons is standard enough to be read cold, but a
+                             speaker and a stop square are — they are the same two shapes every media
+                             control the user has ever pressed uses, and they say start and stop without
+                             help. So the word came off and the bar got its width back. What the word was
+                             doing besides naming the action, telling the user which text would be read,
+                             it was never able to do anyway: 朗讀 alone does not say "the original", and
+                             the button's position in front of the source picker does. The tooltip still
+                             spells all of it out, and so does the name assistive technology reads —
+                             see RenderSpeakButton. -->
+                        <Button x:Name="TtsBtn"
+                                Style="{StaticResource ToolbarTileButton}"
+                                IsEnabled="False"
+                                Margin="0,0,6,0"
+                                Click="TtsBtn_Click">
+                            <!-- Two points larger than the glyphs in the action row, because this one has
+                                 no name under it to carry half the weight: at the row's size it read as a
+                                 small mark rattling around inside its tile. -->
+                            <TextBlock x:Name="TtsGlyph"
+                                       Text="&#xE767;"
+                                       Style="{StaticResource ToolbarActionGlyph}"
+                                       FontSize="18"/>
+                        </Button>
 
-                    <!-- The language pair and the service, with the manga model hint under the
-                         pair: one unit, centred on the bar like everything else. With the hint
-                         hidden it is collapsed and the unit is exactly the row it used to be, so
-                         the bar is the one it always was; with the hint showing only this unit
-                         grows, and its row moves up by half of that to make room. The tray, 翻譯
-                         and the speaker stay centred where they are: 翻譯 is the next thing pressed
-                         after 直排, and it must not move under the pointer. -->
-                    <Grid x:Name="LanguageGroup" VerticalAlignment="Center">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel Orientation="Horizontal">
-                            <StackPanel x:Name="LanguagePickers" Orientation="Horizontal">
-                                <!-- Source language. Width comes from SizeSelectorsToClosedLabels, not from here:
-                                     what these boxes show when closed depends on the interface language, and a
-                                     number typed in the markup is a guess about a string it cannot see. -->
-                                <ComboBox x:Name="SrcLangBox"
-                                          Style="{StaticResource ToolbarComboBox}"
-                                          SelectedValuePath="Code"
-                                          VerticalContentAlignment="Center"/>
+                        <!-- Source language. Width comes from SizeSelectorsToClosedLabels, not from here:
+                             what these boxes show when closed depends on the interface language, and a
+                             number typed in the markup is a guess about a string it cannot see. -->
+                        <ComboBox x:Name="SrcLangBox"
+                                  Style="{StaticResource ToolbarComboBox}"
+                                  SelectedValuePath="Code"
+                                  VerticalContentAlignment="Center"/>
 
-                                <!-- Swap -->
-                                <Button Content="&#xE8AB;"
-                                        Style="{StaticResource ToolbarIconButton}"
-                                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                        FontSize="14"
-                                        Margin="1,0"
-                                        ToolTip="{DynamicResource S.Toolbar.Swap}"
-                                        AutomationProperties.Name="{DynamicResource S.Toolbar.Swap}"
-                                        Click="SwapBtn_Click"/>
+                        <!-- Swap -->
+                        <Button Content="&#xE8AB;"
+                                Style="{StaticResource ToolbarIconButton}"
+                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                FontSize="14"
+                                Margin="1,0"
+                                ToolTip="{DynamicResource S.Toolbar.Swap}"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.Swap}"
+                                Click="SwapBtn_Click"/>
 
-                                <!-- Target language -->
-                                <ComboBox x:Name="TgtLangBox"
-                                          Style="{StaticResource ToolbarComboBox}"
-                                          ctl:ComboBoxSearch.IsEnabled="True"
-                                          Margin="0,0,6,0"
-                                          SelectedValuePath="Code"
-                                          VerticalContentAlignment="Center"/>
-                            </StackPanel>
-
-                            <!-- Provider -->
-                            <ComboBox x:Name="ProviderBox"
-                                      Style="{StaticResource ToolbarComboBox}"
-                                      ctl:ComboBoxItemHints.IsEnabled="True"
-                                      SelectedValuePath="Provider"
-                                      VerticalContentAlignment="Center"/>
-
-                            <!-- Fallback badge: shown only when a backup engine actually served the batch -->
-                            <Border x:Name="EngineBadge"
-                                    Visibility="Collapsed"
-                                    Background="#33F59E0B"
-                                    BorderBrush="#F59E0B"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="6,1"
-                                    Margin="6,0,0,0"
-                                    VerticalAlignment="Center">
-                                <TextBlock x:Name="EngineBadgeText"
-                                           Foreground="#F59E0B"
-                                           FontSize="12"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                        </StackPanel>
-
-                        <!-- Under the source picker, from its left edge. As wide as the language
-                             pair and no wider: a long line may run on under the swap arrow and the
-                             target, but it may not widen the bar or reach the service picker.
-
-                             Its row counts as 16 in layout, so with the hint showing the unit is
-                             30 + 16 = the 46 the stacked actions already make: the bar stays 64 and
-                             the language row rises by 8. The line itself is placed for where it is
-                             read, not for that row: its text sits midway between the pickers' bottom
-                             edge and the bar's, which puts its last few pixels in the bar's own
-                             padding — hence the row drawn 4 taller than it is laid out (the clip
-                             follows the drawn size). Collapsed with the hint, so without it the unit
-                             is the bare row and the bar is main's to the pixel. -->
-                        <Border x:Name="LanguageHintRow" Grid.Row="1"
-                                HorizontalAlignment="Left"
-                                Width="{Binding ActualWidth, ElementName=LanguagePickers}"
-                                Height="20" Margin="0,0,0,-4"
-                                Visibility="{Binding Visibility, ElementName=MangaHint}"
-                                ClipToBounds="True">
-                            <ctl:MangaModelHintText x:Name="MangaHint"
-                                                    CollapsesWhenHidden="True"
-                                                    LineHeight="12" LineStackingStrategy="BlockLineHeight"
-                                                    Margin="1,6.5,0,0"/>
-                        </Border>
-                    </Grid>
-
-                    <!-- Separate language/provider settings from capture translation settings. -->
-                    <Rectangle Width="1"
-                               Margin="14,9,0,9"
-                               Fill="{DynamicResource ToolbarDivider}"/>
-
-                    <!-- What kind of material the selection holds, which is a different question
-                         from the one beside it: 橫排／直排 says how the source is written, this says
-                         what it is. They are adjacent because they are asked of the same rectangle at
-                         the same moment — the user looks at a page of a comic, sets both, presses
-                         翻譯 — and this one comes first because it is the coarser of the two: it
-                         decides whether the translation is laid back onto the source lines at all,
-                         while the direction only decides which way those lines run.
-
-                         Remembered between sessions for the reason the direction is: someone reading
-                         a comic is reading a comic for more than one capture. A settings file from
-                         before this switch, and one holding a mode a later build named and this one
-                         does not know, both start on 標準.
-
-                         Built exactly like the direction tray beside it — shared columns, a pill that
-                         slides, the click taken on press. -->
-                    <Border Background="{DynamicResource ToolbarGroupBg}"
-                            CornerRadius="10"
-                            Padding="3"
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center"
-                            Grid.IsSharedSizeScope="True"
-                            x:Name="LayoutModeSelector"
-                            Visibility="Collapsed"
-                            AutomationProperties.Name="{DynamicResource S.Toolbar.LayoutMode}">
-                        <Grid>
-                            <!-- Shared for the reason the direction tray's are: an even split is what
-                                 lets the pill travel one fixed distance. -->
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureLayoutSegment"/>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureLayoutSegment"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Border x:Name="LayoutModeThumb"
-                                    Grid.Column="0"
-                                    CornerRadius="7"
-                                    Background="{DynamicResource ToolbarSegmentThumbBg}"
-                                    BorderBrush="{DynamicResource ToolbarSegmentThumbBorder}"
-                                    BorderThickness="1">
-                                <Border.RenderTransform>
-                                    <TranslateTransform x:Name="LayoutModeThumbShift"/>
-                                </Border.RenderTransform>
-                            </Border>
-
-                            <!-- 一般 first, and checked in the markup as well as from the settings:
-                                 it is the default, and a switch whose default half is the right-hand
-                                 one reads backwards. -->
-                            <RadioButton x:Name="GeneralModeSeg"
-                                         Grid.Column="0"
-                                         GroupName="CaptureContentMode"
-                                         IsChecked="True"
-                                         Style="{StaticResource ToolbarSegmentButton}"
-                                         ToolTip="{DynamicResource S.Toolbar.LayoutModeGeneralHint}"
-                                         PreviewMouseLeftButtonDown="LayoutModeSegment_PreviewMouseLeftButtonDown"
-                                         Checked="LayoutModeSegment_Checked">
-                                <StackPanel Orientation="Horizontal">
-                                    <!-- A speech balloon with three dots in it. The unit this mode
-                                         groups and lays out is a passage read in order — a balloon,
-                                         a paragraph, a line of dialogue — rather than a panel of
-                                         separate things. Rounded against the page's square corners,
-                                         so the pair is told apart by silhouette before either
-                                         drawing is read, and the tail hangs from the middle rather
-                                         than a corner — the balloon then reads the same whichever
-                                         half of the switch it sits on.
-
-                                         The dots are degenerate segments taking the round cap as their
-                                         whole shape, so they scale with the stroke instead of being
-                                         three more radii to keep in step with it. -->
-                                    <Path Style="{StaticResource ToolbarSegmentGlyph}"
-                                          StrokeThickness="1.4"
-                                          StrokeLineJoin="Round"
-                                          Data="M4,2 H10 A2.2,2.2 0 0 1 12.2,4.2 V7.2 A2.2,2.2 0 0 1 10,9.4 H8.4 L7,11.6 L5.6,9.4 H4 A2.2,2.2 0 0 1 1.8,7.2 V4.2 A2.2,2.2 0 0 1 4,2 Z M4.7,5.7 L4.71,5.7 M7,5.7 L7.01,5.7 M9.3,5.7 L9.31,5.7"/>
-                                    <TextBlock VerticalAlignment="Center"
-                                               Text="{DynamicResource S.Toolbar.LayoutModeGeneral}"/>
-                                </StackPanel>
-                            </RadioButton>
-
-                            <RadioButton x:Name="InterfaceModeSeg"
-                                         Grid.Column="1"
-                                         GroupName="CaptureContentMode"
-                                         Style="{StaticResource ToolbarSegmentButton}"
-                                         ToolTip="{DynamicResource S.Toolbar.LayoutModeInterfaceHint}"
-                                         PreviewMouseLeftButtonDown="LayoutModeSegment_PreviewMouseLeftButtonDown"
-                                         Checked="LayoutModeSegment_Checked">
-                                <StackPanel Orientation="Horizontal">
-                                    <!-- A page of ruled text with its corner turned: rows of separate
-                                         things laid out on purpose, which is what this mode leaves
-                                         alone. Three rules, the top one short because the fold has
-                                         taken its room. Thinner than the 1.5 the tray's other glyphs
-                                         take and drawn on a page grown to the full 14: at 1.5 on a
-                                         smaller page the lower two rules close up into one bar, and
-                                         it is exactly three rules that says "text" rather than
-                                         "shape". Round joins so the fold's 45° corner does not
-                                         spike. -->
-                                    <Path Style="{StaticResource ToolbarSegmentGlyph}"
-                                          StrokeThickness="1.4"
-                                          StrokeLineJoin="Round"
-                                          Data="M2.5,1.5 H8 L11.5,5 V12.5 H2.5 Z M8,1.5 V5 H11.5 M4.6,6.6 H6.6 M4.6,8.8 H9.4 M4.6,11 H9.4"/>
-                                    <TextBlock VerticalAlignment="Center"
-                                               Text="{DynamicResource S.Toolbar.LayoutModeInterface}"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </Grid>
-                    </Border>
-
-                    <!-- Which way the text in the selection is written. Last of the settings and hard
-                         against the button that consumes it, because that is the order it is used in:
-                         the user looks at a page of vertical Japanese, flips this, presses 翻譯. It is
-                         deliberately not next to the source language picker, near though the two are in
-                         meaning — that picker, the swap arrow and the target picker are one triple that
-                         reads left to right, and dropping a control into the middle of it would cost
-                         more than the adjacency gains.
-
-                         Remembered between sessions because writing direction is normally a property
-                         of the material someone is working through, not of one rectangle they drew.
-                         A first run and every settings file from before this switch still start on
-                         橫排; only an explicit press changes the stored answer.
-
-                         The tray is the realtime bar's tray, for the same reason it has one: two
-                         things the user chooses between are one control, not two more objects on a
-                         crowded bar. -->
-                    <!-- Centred rather than stretched. A child of a horizontal StackPanel defaults
-                         to filling the panel's height, and the panel is now as tall as the stacked
-                         actions at the far end - so this tray, which holds one 26px row, was being
-                         pulled to 46 and reading as the tallest object on a bar where nothing beside
-                         it is tall. -->
-                    <Border Background="{DynamicResource ToolbarGroupBg}"
-                            CornerRadius="10"
-                            Padding="3"
-                            Margin="10,0,0,0"
-                            VerticalAlignment="Center"
-                            Grid.IsSharedSizeScope="True"
-                            AutomationProperties.Name="{DynamicResource S.Toolbar.Direction}">
-                        <Grid>
-                            <!-- Shared, so the two halves are the width of the longer label rather
-                                 than each their own — an even split is what makes the pill below able
-                                 to travel one fixed distance, and it is what a two-way switch looks
-                                 like. The labels are two characters each in Chinese and nothing like
-                                 each other in English, so this cannot be a hardcoded width. -->
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureDirectionSegment"/>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureDirectionSegment"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- The mark for the chosen half, behind both of them and slid between
-                                 them rather than switched on and off. A marker that moves is the whole
-                                 point: it carries the eye from the option that was chosen to the one
-                                 that is now, which two backgrounds appearing and disappearing cannot
-                                 do. See DirectionSegment_Checked for the motion. -->
-                            <Border x:Name="DirectionThumb"
-                                    Grid.Column="0"
-                                    CornerRadius="7"
-                                    Background="{DynamicResource ToolbarSegmentThumbBg}"
-                                    BorderBrush="{DynamicResource ToolbarSegmentThumbBorder}"
-                                    BorderThickness="1">
-                                <Border.RenderTransform>
-                                    <TranslateTransform x:Name="DirectionThumbShift"/>
-                                </Border.RenderTransform>
-                            </Border>
-
-                            <RadioButton x:Name="HorizontalSeg"
-                                         Grid.Column="0"
-                                         GroupName="CaptureTextDirection"
-                                         IsChecked="True"
-                                         Style="{StaticResource ToolbarSegmentButton}"
-                                         ToolTip="{DynamicResource S.Toolbar.DirectionHorizontalHint}"
-                                         PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
-                                         Checked="DirectionSegment_Checked">
-                                <StackPanel Orientation="Horizontal">
-                                    <Path Style="{StaticResource ToolbarSegmentGlyph}"
-                                          Data="M2,3.5 H12 M2,7 H12 M2,10.5 H8"/>
-                                    <TextBlock VerticalAlignment="Center"
-                                               Text="{DynamicResource S.Toolbar.DirectionHorizontal}"/>
-                                </StackPanel>
-                            </RadioButton>
-
-                            <RadioButton x:Name="VerticalSeg"
-                                         Grid.Column="1"
-                                         GroupName="CaptureTextDirection"
-                                         Style="{StaticResource ToolbarSegmentButton}"
-                                         ToolTip="{DynamicResource S.Toolbar.DirectionVerticalHint}"
-                                         PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
-                                         Checked="DirectionSegment_Checked">
-                                <StackPanel Orientation="Horizontal">
-                                    <Path Style="{StaticResource ToolbarSegmentGlyph}"
-                                          Data="M10.5,2 V12 M7,2 V12 M3.5,2 V8"/>
-                                    <TextBlock VerticalAlignment="Center"
-                                               Text="{DynamicResource S.Toolbar.DirectionVertical}"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </Grid>
-                    </Border>
-
-                    <!-- Translate -->
-                    <Button x:Name="TranslateBtn"
-                            Style="{StaticResource ToolbarPrimaryButton}"
-                            Margin="10,0,0,0"
-                            Click="TranslateBtn_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <!-- Drawn rather than typed: there is no sparkle in Segoe MDL2, which is all
-                                 Windows 10 has, and a missing glyph on the primary button is the worst
-                                 place for one. -->
-                            <Path Width="13" Height="13"
-                                  Stretch="None"
-                                  VerticalAlignment="Center"
+                        <!-- Target language -->
+                        <ComboBox x:Name="TgtLangBox"
+                                  Style="{StaticResource ToolbarComboBox}"
+                                  ctl:ComboBoxSearch.IsEnabled="True"
                                   Margin="0,0,6,0"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Data="M7,0.6 C7.7,4.2 9.8,6.3 13.4,7 C9.8,7.7 7.7,9.8 7,13.4 C6.3,9.8 4.2,7.7 0.6,7 C4.2,6.3 6.3,4.2 7,0.6 Z M12.1,9.6 C12.3,10.8 12.6,11.1 13.8,11.3 C12.6,11.5 12.3,11.8 12.1,13 C11.9,11.8 11.6,11.5 10.4,11.3 C11.6,11.1 11.9,10.8 12.1,9.6 Z"/>
-                            <TextBlock x:Name="TranslateLabel"
-                                       VerticalAlignment="Center"
-                                       Text="{DynamicResource S.Toolbar.Translate}"/>
-                        </StackPanel>
-                    </Button>
+                                  SelectedValuePath="Code"
+                                  VerticalContentAlignment="Center"/>
 
-                    <!-- The bar is two halves and this is where they meet: everything left of the
-                         rule is what the translation will be run with, everything right of it is
-                         something to do once it has been. The gap alone used to say that, and it
-                         stopped saying it once the right-hand half grew to five stacked actions -
-                         against a run of five evenly spaced things, one wider gap is not a boundary,
-                         it is a wider gap. Inset top and bottom so it reads as a mark on the bar
-                         rather than as the bar being cut in two. -->
-                    <Rectangle Width="1"
-                               Margin="14,9,10,9"
-                               Fill="{DynamicResource ToolbarDivider}"/>
+                        <!-- Provider -->
+                        <ComboBox x:Name="ProviderBox"
+                                  Style="{StaticResource ToolbarComboBox}"
+                                  ctl:ComboBoxItemHints.IsEnabled="True"
+                                  SelectedValuePath="Provider"
+                                  VerticalContentAlignment="Center"/>
 
-                    <!-- Toggle original / translated bubbles -->
-                    <Button x:Name="ToggleBtn"
-                            Style="{StaticResource ToolbarStackButton}"
-                            IsEnabled="False"
-                            Click="ToggleBtn_Click">
-                        <StackPanel>
-                            <Grid Style="{StaticResource ToolbarActionIcon}">
-                              <Grid Style="{StaticResource ToolbarActionDrawing}">
-                                <!-- A whole eye, both lids. Segoe's E890 draws the upper lid and the
-                                     pupil and nothing under them, which at 16px reads as an eyebrow
-                                     over a dot rather than as an eye. -->
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M0.9,9 C3.3,5.1 5.9,3.2 9,3.2 C12.1,3.2 14.7,5.1 17.1,9
-                                            C14.7,12.9 12.1,14.8 9,14.8 C5.9,14.8 3.3,12.9 0.9,9 Z"/>
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M11.5,9 A2.5,2.5 0 1 1 6.5,9 A2.5,2.5 0 1 1 11.5,9 Z"/>
-                                <!-- The stroke through it, for while the original is the thing on
-                                     screen: pressing then puts it away again. -->
-                                <Path x:Name="ToggleHideSlash"
-                                      Visibility="Collapsed"
-                                      Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M2.4,15.6 L15.6,2.4"/>
-                              </Grid>
-                            </Grid>
-                            <TextBlock x:Name="ToggleLabel"
-                                       Text="{DynamicResource S.Toolbar.ShowSource}"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Copy the text currently represented by the selection. Before translation
-                         this recognises the selection; afterwards it follows the source/translation
-                         toggle and uses the result already held by the session. -->
-                    <Button x:Name="CopyTextBtn"
-                            Style="{StaticResource ToolbarStackButton}"
-                            Click="CopyTextBtn_Click">
-                        <StackPanel>
-                            <Grid Style="{StaticResource ToolbarActionIcon}">
-                              <Grid Style="{StaticResource ToolbarActionDrawing}">
-                                <!-- The double-page outline stays fixed so both states still read
-                                     as copy actions; only the meaning of the copied content changes. -->
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M6,4.7 H14.5 A1.5,1.5 0 0 1 16,6.2 V14.6 A1.5,1.5 0 0 1 14.5,16.1
-                                            H6 A1.5,1.5 0 0 1 4.5,14.6 V6.2 A1.5,1.5 0 0 1 6,4.7 Z
-                                            M4.5,13.3 H3.5 A1.5,1.5 0 0 1 2,11.8 V3.4 A1.5,1.5 0 0 1 3.5,1.9
-                                            H12 A1.5,1.5 0 0 1 13.5,3.4 V4.7"/>
-                                <Path x:Name="CopySourceMark"
-                                      Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M7,8.2 H13.5 M7,10.6 H13.5 M7,13 H11.4"/>
-                                <Path x:Name="CopyTranslationMark"
-                                      Visibility="Collapsed"
-                                      Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M6.9,14 L10.25,7 L13.6,14 M8.35,11 H12.15"/>
-                              </Grid>
-                            </Grid>
-                            <TextBlock x:Name="CopyTextLabel"
-                                       Text="{DynamicResource S.Toolbar.CopyText}"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Draw on the selection. Between the two copies because that is the order
-                         these are reached for: read the result, take the words, mark up what is left,
-                         take the picture. Marking before the picture is also the only order that
-                         makes sense of the picture - a screenshot taken after the marks has the
-                         marks in it. -->
-                    <ToggleButton x:Name="AnnotateBtn"
-                            Style="{StaticResource ToolbarStackToggleButton}"
-                            ToolTip="{DynamicResource S.Toolbar.AnnotateHint}"
-                            Click="AnnotateBtn_Click">
-                        <StackPanel>
-                            <Grid Style="{StaticResource ToolbarActionIcon}">
-                              <Grid Style="{StaticResource ToolbarActionDrawing}">
-                                <!-- A pen, nib down to the left, over the stroke it has just left
-                                     behind. The mark matters as much as the pen does: a pen on its
-                                     own is what every 編輯 button in the app already draws, and this
-                                     one does not edit anything - it draws on top of what is there. -->
-                                <!-- Held at 53°, not 45°, and about four times as long as it is
-                                     wide. Lying at exactly 45 it read as a bar set on the
-                                     diagonal — the one angle in the drawing that is also the
-                                     angle of everything else in it, so nothing said which line
-                                     was the tool. Standing it up a few degrees is what makes it
-                                     a pen resting on the stroke rather than a shape parallel to
-                                     one. Sharpened to a point at the lower left, with the cross
-                                     line where that point begins: the short end is the nib, and
-                                     the line put at the other end instead reads as a cap. -->
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M2.5,16.3 L3,11.85 L10.9,1.35 L14.55,4.1 L6.65,14.55 Z"/>
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M3,11.85 L6.65,14.55"/>
-                                <!-- Level, and starting at the point itself rather than floating
-                                     below it. Drawn on the pen's own diagonal it was a second pen;
-                                     set down clear of it, it was an underline the pen happened to
-                                     be above. Leaving the nib is the only placement that says the
-                                     pen made it. Same weight as the barrel, too — at this size a
-                                     heavier line does not read as more ink, it reads as a
-                                     different drawing. -->
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M2.5,16.3 H15.5"/>
-                              </Grid>
-                            </Grid>
-                            <TextBlock Text="{DynamicResource S.Toolbar.Annotate}"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <!-- Copy current selection screenshot to clipboard -->
-                    <Button x:Name="CopyShotBtn"
-                            Style="{StaticResource ToolbarStackButton}"
-                            Click="CopyShotBtn_Click">
-                        <StackPanel>
-                            <Grid Style="{StaticResource ToolbarActionIcon}">
-                              <Grid Style="{StaticResource ToolbarActionDrawing}">
-                                <!-- A full-size camera keeps the body and lens legible at 18px. -->
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M3.2,5.5 H5.2 L6.5,3.2 H11.5 L12.8,5.5 H14.8
-                                            A1.6,1.6 0 0 1 16.4,7.1 V13.8 A1.6,1.6 0 0 1 14.8,15.4
-                                            H3.2 A1.6,1.6 0 0 1 1.6,13.8 V7.1 A1.6,1.6 0 0 1 3.2,5.5 Z"/>
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M12,10.2 A3,3 0 1 1 6,10.2 A3,3 0 1 1 12,10.2 Z"/>
-                              </Grid>
-                            </Grid>
-                            <TextBlock Text="{DynamicResource S.Toolbar.Screenshot}"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Open translation window. Named for what it opens rather than for the opening:
-                         every button on this bar does something when pressed, so 開啟 was a word spent
-                         on the one thing the user already knows, and it cost the bar the width of two
-                         characters. The tooltip still says the whole sentence for anyone who wants it. -->
-                    <Button x:Name="OpenWindowBtn"
-                            Style="{StaticResource ToolbarStackButton}"
-                            ToolTip="{DynamicResource S.Toolbar.OpenWindowHint}"
-                            Click="OpenWindowBtn_Click">
-                        <StackPanel>
-                            <Grid Style="{StaticResource ToolbarActionIcon}">
-                              <Grid Style="{StaticResource ToolbarActionDrawing}">
-                                <!-- Drawn like the other four rather than typed as E8A7, so the row
-                                     is one set of strokes at one weight and one size. The glyph was
-                                     the largest mark in the row and the drawn ones the smallest,
-                                     which is the sort of difference nobody can name and everybody
-                                     sees. -->
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M16,9.6 V14.4 A1.6,1.6 0 0 1 14.4,16 H3.6 A1.6,1.6 0 0 1 2,14.4
-                                            V3.6 A1.6,1.6 0 0 1 3.6,2 H8.4"/>
-                                <Path Style="{StaticResource ToolbarActionStroke}"
-                                      Data="M9.4,8.6 L15.7,2.3 M11,2.2 H15.8 V7"/>
-                              </Grid>
-                            </Grid>
-                            <TextBlock Text="{DynamicResource S.Toolbar.OpenWindow}"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button x:Name="MoreBtn" Style="{StaticResource ToolbarIconButton}"
-                            Width="30" Height="30" Margin="2,0,0,0"
-                            ToolTip="{DynamicResource S.Toolbar.ShowMore}"
-                            AutomationProperties.Name="{DynamicResource S.Toolbar.ShowMore}"
-                            Click="MoreBtn_Click">
-                        <TextBlock Text="&#xE712;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20"/>
-                    </Button>
-                    <!-- What capture translation keeps between captures, as opposed to what the bar
-                         asks for each one. A menu rather than a settings sheet: one line per switch,
-                         the whole line pressable, and what each switch does in its tooltip rather than
-                         in a paragraph under it - the panel opens over the capture being looked at, so
-                         every line it spends is a line of the capture it hides.
-
-                         一般 first because it is what most people come here for; 偵錯輔助 under it.
-                         The switches are the settings page's own keys, so the two places always
-                         agree - see SettingsService.UpdateCaptureOptions.
-
-                         Its right edge is lined up under the button that opens it (MoreBtn_Click), so
-                         it reads as coming out of that button rather than out of the bar. No close
-                         button: it closes on a click anywhere else and on Esc, like any menu. -->
-                    <Popup x:Name="MorePopup" PlacementTarget="{Binding ElementName=BarSurface}"
-                           Placement="Bottom" VerticalOffset="6"
-                           AllowsTransparency="True" StaysOpen="False"
-                           Opened="MorePopup_Opened" Closed="MorePopup_Closed">
-                        <Border x:Name="MorePanel" Width="280" Background="{DynamicResource ToolbarBg}"
-                                BorderBrush="{DynamicResource ToolbarBorder}" BorderThickness="1" CornerRadius="12"
-                                Padding="6" PreviewKeyDown="MorePopup_KeyDown">
-                            <StackPanel>
-                                <StackPanel.Resources>
-                                    <Style x:Key="MoreSectionHeader" TargetType="TextBlock">
-                                        <Setter Property="FontSize" Value="12"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-                                        <Setter Property="Margin" Value="10,6,10,4"/>
-                                    </Style>
-                                </StackPanel.Resources>
-
-                                <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeader}"/>
-                                <!-- Takes effect from the next selection: it is read the moment a
-                                     selection is finished, and this one already was. -->
-                                <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                          Tag="&#xE774;"
-                                          Content="{DynamicResource S.Toolbar.AutoTranslate}"
-                                          ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
-                                          Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
-                                <!-- Where to change the folder, not the folder itself. A folder picker
-                                     or an Explorer window opened from this bar would land under the
-                                     capture overlay, which is full screen and topmost; and the toast
-                                     after a save already names the file it wrote. -->
-                                <CheckBox x:Name="SaveScreenshotSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                          Tag="&#xE74E;"
-                                          Content="{DynamicResource S.Toolbar.SaveScreenshot}"
-                                          Checked="SaveScreenshotSwitch_Changed" Unchecked="SaveScreenshotSwitch_Changed">
-                                    <CheckBox.ToolTip>
-                                        <StackPanel>
-                                            <TextBlock Text="{DynamicResource S.Settings.SaveScreenshotCheck}"/>
-                                            <TextBlock Text="{DynamicResource S.Toolbar.SavePathInSettings}"/>
-                                        </StackPanel>
-                                    </CheckBox.ToolTip>
-                                </CheckBox>
-                                <!-- The line under the source picker, here and on the realtime page
-                                     alike: one switch for both, since it is one line saying one thing.
-                                     Put positively, like the two above it — ticked turns something on. -->
-                                <CheckBox x:Name="MangaHintSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                          Content="{DynamicResource S.Toolbar.MangaHintSwitch}"
-                                          ToolTip="{DynamicResource S.Toolbar.MangaHintSwitchTip}"
-                                          Checked="MangaHintSwitch_Changed" Unchecked="MangaHintSwitch_Changed">
-                                    <CheckBox.Tag>
-                                        <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.2"
-                                              Data="M8,1.5 C8.5,5.3 10.7,7.5 14.5,8 C10.7,8.5 8.5,10.7 8,14.5 C7.5,10.7 5.3,8.5 1.5,8 C5.3,7.5 7.5,5.3 8,1.5 Z"/>
-                                    </CheckBox.Tag>
-                                </CheckBox>
-
-                                <!-- No rule between the sections: the heading and the gap above it
-                                     already divide them, and a line on top of both read as a seam. -->
-                                <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}" Style="{StaticResource MoreSectionHeader}"
-                                           Margin="10,14,10,4"/>
-                                <CheckBox x:Name="DebugGroupsSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                          Content="{DynamicResource S.Settings.TextGroupBoxes}"
-                                          ToolTip="{DynamicResource S.Settings.TextGroupBoxesHint}"
-                                          Checked="DebugGroupsSwitch_Changed" Unchecked="DebugGroupsSwitch_Changed">
-                                    <CheckBox.Tag>
-                                        <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.3"
-                                              Data="{StaticResource TextGroupBoxMarkGeometry}"/>
-                                    </CheckBox.Tag>
-                                </CheckBox>
-                                <CheckBox x:Name="DebugLinesSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                          Content="{DynamicResource S.Settings.OcrLineBoxes}"
-                                          ToolTip="{DynamicResource S.Settings.OcrLineBoxesHint}"
-                                          Checked="DebugLinesSwitch_Changed" Unchecked="DebugLinesSwitch_Changed">
-                                    <CheckBox.Tag>
-                                        <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.3"
-                                              Data="{StaticResource OcrLineBoxMarkGeometry}"/>
-                                    </CheckBox.Tag>
-                                </CheckBox>
-
-                                <!-- Disabled while neither box is ticked: it only says where the boxes
-                                     are drawn. See SyncDebugSwitches. The heading keeps its tooltip
-                                     while disabled, since what the choice means is worth reading
-                                     before either box is ticked. -->
-                                <StackPanel x:Name="DebugScopePanel" Style="{StaticResource DimWhenDisabled}">
-                                    <TextBlock Text="{DynamicResource S.Debug.DisplayScope}"
-                                               Style="{StaticResource MoreSectionHeader}"
-                                               Margin="10,10,10,8"
-                                               Background="Transparent"
-                                               ToolTip="{DynamicResource S.Debug.ScopeHint}"
-                                               ToolTipService.ShowOnDisabled="True"/>
-                                    <Grid Margin="4,0,4,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="6"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <RadioButton x:Name="DebugSourceOnly" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
-                                                     Content="{DynamicResource S.Debug.SourceOnly}" Checked="DebugScope_Changed"/>
-                                        <RadioButton x:Name="DebugSourceAndTranslation" Grid.Column="2" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
-                                                     Content="{DynamicResource S.Debug.SourceAndTranslation}" Checked="DebugScope_Changed"/>
-                                    </Grid>
-                                </StackPanel>
-                            </StackPanel>
+                        <!-- Fallback badge: shown only when a backup engine actually served the batch -->
+                        <Border x:Name="EngineBadge"
+                                Visibility="Collapsed"
+                                Background="#33F59E0B"
+                                BorderBrush="#F59E0B"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="6,1"
+                                Margin="6,0,0,0"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="EngineBadgeText"
+                                       Foreground="#F59E0B"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
                         </Border>
-                    </Popup>
 
-                    <!-- Close, set apart by the gap: everything left of it acts inside the session. -->
-                    <Button Content="&#x2715;"
-                            Style="{StaticResource ToolbarIconButton}"
-                            Width="30" Height="30"
-                            Margin="6,0,0,0"
-                            ToolTip="{DynamicResource S.Toolbar.Close}"
-                            AutomationProperties.Name="{DynamicResource S.Toolbar.Close}"
-                            Click="CloseBtn_Click"/>
+                        <!-- Separate language/provider settings from capture translation settings. -->
+                        <Rectangle Width="1"
+                                   Margin="14,9,0,9"
+                                   Fill="{DynamicResource ToolbarDivider}"/>
 
+                        <!-- What kind of material the selection holds, which is a different question
+                             from the one beside it: 橫排／直排 says how the source is written, this says
+                             what it is. They are adjacent because they are asked of the same rectangle at
+                             the same moment — the user looks at a page of a comic, sets both, presses
+                             翻譯 — and this one comes first because it is the coarser of the two: it
+                             decides whether the translation is laid back onto the source lines at all,
+                             while the direction only decides which way those lines run.
+
+                             Remembered between sessions for the reason the direction is: someone reading
+                             a comic is reading a comic for more than one capture. A settings file from
+                             before this switch, and one holding a mode a later build named and this one
+                             does not know, both start on 標準.
+
+                             Built exactly like the direction tray beside it — shared columns, a pill that
+                             slides, the click taken on press. -->
+                        <Border Background="{DynamicResource ToolbarGroupBg}"
+                                CornerRadius="10"
+                                Padding="3"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                Grid.IsSharedSizeScope="True"
+                                x:Name="LayoutModeSelector"
+                                Visibility="Collapsed"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.LayoutMode}">
+                            <Grid>
+                                <!-- Shared for the reason the direction tray's are: an even split is what
+                                     lets the pill travel one fixed distance. -->
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureLayoutSegment"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureLayoutSegment"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border x:Name="LayoutModeThumb"
+                                        Grid.Column="0"
+                                        CornerRadius="7"
+                                        Background="{DynamicResource ToolbarSegmentThumbBg}"
+                                        BorderBrush="{DynamicResource ToolbarSegmentThumbBorder}"
+                                        BorderThickness="1">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="LayoutModeThumbShift"/>
+                                    </Border.RenderTransform>
+                                </Border>
+
+                                <!-- 一般 first, and checked in the markup as well as from the settings:
+                                     it is the default, and a switch whose default half is the right-hand
+                                     one reads backwards. -->
+                                <RadioButton x:Name="GeneralModeSeg"
+                                             Grid.Column="0"
+                                             GroupName="CaptureContentMode"
+                                             IsChecked="True"
+                                             Style="{StaticResource ToolbarSegmentButton}"
+                                             ToolTip="{DynamicResource S.Toolbar.LayoutModeGeneralHint}"
+                                             PreviewMouseLeftButtonDown="LayoutModeSegment_PreviewMouseLeftButtonDown"
+                                             Checked="LayoutModeSegment_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- A speech balloon with three dots in it. The unit this mode
+                                             groups and lays out is a passage read in order — a balloon,
+                                             a paragraph, a line of dialogue — rather than a panel of
+                                             separate things. Rounded against the page's square corners,
+                                             so the pair is told apart by silhouette before either
+                                             drawing is read, and the tail hangs from the middle rather
+                                             than a corner — the balloon then reads the same whichever
+                                             half of the switch it sits on.
+
+                                             The dots are degenerate segments taking the round cap as their
+                                             whole shape, so they scale with the stroke instead of being
+                                             three more radii to keep in step with it. -->
+                                        <Path Style="{StaticResource ToolbarSegmentGlyph}"
+                                              StrokeThickness="1.4"
+                                              StrokeLineJoin="Round"
+                                              Data="M4,2 H10 A2.2,2.2 0 0 1 12.2,4.2 V7.2 A2.2,2.2 0 0 1 10,9.4 H8.4 L7,11.6 L5.6,9.4 H4 A2.2,2.2 0 0 1 1.8,7.2 V4.2 A2.2,2.2 0 0 1 4,2 Z M4.7,5.7 L4.71,5.7 M7,5.7 L7.01,5.7 M9.3,5.7 L9.31,5.7"/>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{DynamicResource S.Toolbar.LayoutModeGeneral}"/>
+                                    </StackPanel>
+                                </RadioButton>
+
+                                <RadioButton x:Name="InterfaceModeSeg"
+                                             Grid.Column="1"
+                                             GroupName="CaptureContentMode"
+                                             Style="{StaticResource ToolbarSegmentButton}"
+                                             ToolTip="{DynamicResource S.Toolbar.LayoutModeInterfaceHint}"
+                                             PreviewMouseLeftButtonDown="LayoutModeSegment_PreviewMouseLeftButtonDown"
+                                             Checked="LayoutModeSegment_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- A page of ruled text with its corner turned: rows of separate
+                                             things laid out on purpose, which is what this mode leaves
+                                             alone. Three rules, the top one short because the fold has
+                                             taken its room. Thinner than the 1.5 the tray's other glyphs
+                                             take and drawn on a page grown to the full 14: at 1.5 on a
+                                             smaller page the lower two rules close up into one bar, and
+                                             it is exactly three rules that says "text" rather than
+                                             "shape". Round joins so the fold's 45° corner does not
+                                             spike. -->
+                                        <Path Style="{StaticResource ToolbarSegmentGlyph}"
+                                              StrokeThickness="1.4"
+                                              StrokeLineJoin="Round"
+                                              Data="M2.5,1.5 H8 L11.5,5 V12.5 H2.5 Z M8,1.5 V5 H11.5 M4.6,6.6 H6.6 M4.6,8.8 H9.4 M4.6,11 H9.4"/>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{DynamicResource S.Toolbar.LayoutModeInterface}"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </Grid>
+                        </Border>
+
+                        <!-- Which way the text in the selection is written. Last of the settings and hard
+                             against the button that consumes it, because that is the order it is used in:
+                             the user looks at a page of vertical Japanese, flips this, presses 翻譯. It is
+                             deliberately not next to the source language picker, near though the two are in
+                             meaning — that picker, the swap arrow and the target picker are one triple that
+                             reads left to right, and dropping a control into the middle of it would cost
+                             more than the adjacency gains.
+
+                             Remembered between sessions because writing direction is normally a property
+                             of the material someone is working through, not of one rectangle they drew.
+                             A first run and every settings file from before this switch still start on
+                             橫排; only an explicit press changes the stored answer.
+
+                             The tray is the realtime bar's tray, for the same reason it has one: two
+                             things the user chooses between are one control, not two more objects on a
+                             crowded bar. -->
+                        <!-- Centred rather than stretched. A child of a horizontal StackPanel defaults
+                             to filling the panel's height, and the panel is now as tall as the stacked
+                             actions at the far end - so this tray, which holds one 26px row, was being
+                             pulled to 46 and reading as the tallest object on a bar where nothing beside
+                             it is tall. -->
+                        <Border Background="{DynamicResource ToolbarGroupBg}"
+                                CornerRadius="10"
+                                Padding="3"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                Grid.IsSharedSizeScope="True"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.Direction}">
+                            <Grid>
+                                <!-- Shared, so the two halves are the width of the longer label rather
+                                     than each their own — an even split is what makes the pill below able
+                                     to travel one fixed distance, and it is what a two-way switch looks
+                                     like. The labels are two characters each in Chinese and nothing like
+                                     each other in English, so this cannot be a hardcoded width. -->
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureDirectionSegment"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureDirectionSegment"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- The mark for the chosen half, behind both of them and slid between
+                                     them rather than switched on and off. A marker that moves is the whole
+                                     point: it carries the eye from the option that was chosen to the one
+                                     that is now, which two backgrounds appearing and disappearing cannot
+                                     do. See DirectionSegment_Checked for the motion. -->
+                                <Border x:Name="DirectionThumb"
+                                        Grid.Column="0"
+                                        CornerRadius="7"
+                                        Background="{DynamicResource ToolbarSegmentThumbBg}"
+                                        BorderBrush="{DynamicResource ToolbarSegmentThumbBorder}"
+                                        BorderThickness="1">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="DirectionThumbShift"/>
+                                    </Border.RenderTransform>
+                                </Border>
+
+                                <RadioButton x:Name="HorizontalSeg"
+                                             Grid.Column="0"
+                                             GroupName="CaptureTextDirection"
+                                             IsChecked="True"
+                                             Style="{StaticResource ToolbarSegmentButton}"
+                                             ToolTip="{DynamicResource S.Toolbar.DirectionHorizontalHint}"
+                                             PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
+                                             Checked="DirectionSegment_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Style="{StaticResource ToolbarSegmentGlyph}"
+                                              Data="M2,3.5 H12 M2,7 H12 M2,10.5 H8"/>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{DynamicResource S.Toolbar.DirectionHorizontal}"/>
+                                    </StackPanel>
+                                </RadioButton>
+
+                                <RadioButton x:Name="VerticalSeg"
+                                             Grid.Column="1"
+                                             GroupName="CaptureTextDirection"
+                                             Style="{StaticResource ToolbarSegmentButton}"
+                                             ToolTip="{DynamicResource S.Toolbar.DirectionVerticalHint}"
+                                             PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
+                                             Checked="DirectionSegment_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Style="{StaticResource ToolbarSegmentGlyph}"
+                                              Data="M10.5,2 V12 M7,2 V12 M3.5,2 V8"/>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{DynamicResource S.Toolbar.DirectionVertical}"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </Grid>
+                        </Border>
+
+                        <!-- Translate -->
+                        <Button x:Name="TranslateBtn"
+                                Style="{StaticResource ToolbarPrimaryButton}"
+                                Margin="10,0,0,0"
+                                Click="TranslateBtn_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <!-- Drawn rather than typed: there is no sparkle in Segoe MDL2, which is all
+                                     Windows 10 has, and a missing glyph on the primary button is the worst
+                                     place for one. -->
+                                <Path Width="13" Height="13"
+                                      Stretch="None"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,6,0"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      Data="M7,0.6 C7.7,4.2 9.8,6.3 13.4,7 C9.8,7.7 7.7,9.8 7,13.4 C6.3,9.8 4.2,7.7 0.6,7 C4.2,6.3 6.3,4.2 7,0.6 Z M12.1,9.6 C12.3,10.8 12.6,11.1 13.8,11.3 C12.6,11.5 12.3,11.8 12.1,13 C11.9,11.8 11.6,11.5 10.4,11.3 C11.6,11.1 11.9,10.8 12.1,9.6 Z"/>
+                                <TextBlock x:Name="TranslateLabel"
+                                           VerticalAlignment="Center"
+                                           Text="{DynamicResource S.Toolbar.Translate}"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- The bar is two halves and this is where they meet: everything left of the
+                             rule is what the translation will be run with, everything right of it is
+                             something to do once it has been. The gap alone used to say that, and it
+                             stopped saying it once the right-hand half grew to five stacked actions -
+                             against a run of five evenly spaced things, one wider gap is not a boundary,
+                             it is a wider gap. Inset top and bottom so it reads as a mark on the bar
+                             rather than as the bar being cut in two. -->
+                        <Rectangle Width="1"
+                                   Margin="14,9,10,9"
+                                   Fill="{DynamicResource ToolbarDivider}"/>
+
+                        <!-- Toggle original / translated bubbles -->
+                        <Button x:Name="ToggleBtn"
+                                Style="{StaticResource ToolbarStackButton}"
+                                IsEnabled="False"
+                                Click="ToggleBtn_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <!-- A whole eye, both lids. Segoe's E890 draws the upper lid and the
+                                         pupil and nothing under them, which at 16px reads as an eyebrow
+                                         over a dot rather than as an eye. -->
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M0.9,9 C3.3,5.1 5.9,3.2 9,3.2 C12.1,3.2 14.7,5.1 17.1,9
+                                                C14.7,12.9 12.1,14.8 9,14.8 C5.9,14.8 3.3,12.9 0.9,9 Z"/>
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M11.5,9 A2.5,2.5 0 1 1 6.5,9 A2.5,2.5 0 1 1 11.5,9 Z"/>
+                                    <!-- The stroke through it, for while the original is the thing on
+                                         screen: pressing then puts it away again. -->
+                                    <Path x:Name="ToggleHideSlash"
+                                          Visibility="Collapsed"
+                                          Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M2.4,15.6 L15.6,2.4"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock x:Name="ToggleLabel"
+                                           Text="{DynamicResource S.Toolbar.ShowSource}"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Copy the text currently represented by the selection. Before translation
+                             this recognises the selection; afterwards it follows the source/translation
+                             toggle and uses the result already held by the session. -->
+                        <Button x:Name="CopyTextBtn"
+                                Style="{StaticResource ToolbarStackButton}"
+                                Click="CopyTextBtn_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <!-- The double-page outline stays fixed so both states still read
+                                         as copy actions; only the meaning of the copied content changes. -->
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M6,4.7 H14.5 A1.5,1.5 0 0 1 16,6.2 V14.6 A1.5,1.5 0 0 1 14.5,16.1
+                                                H6 A1.5,1.5 0 0 1 4.5,14.6 V6.2 A1.5,1.5 0 0 1 6,4.7 Z
+                                                M4.5,13.3 H3.5 A1.5,1.5 0 0 1 2,11.8 V3.4 A1.5,1.5 0 0 1 3.5,1.9
+                                                H12 A1.5,1.5 0 0 1 13.5,3.4 V4.7"/>
+                                    <Path x:Name="CopySourceMark"
+                                          Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M7,8.2 H13.5 M7,10.6 H13.5 M7,13 H11.4"/>
+                                    <Path x:Name="CopyTranslationMark"
+                                          Visibility="Collapsed"
+                                          Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M6.9,14 L10.25,7 L13.6,14 M8.35,11 H12.15"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock x:Name="CopyTextLabel"
+                                           Text="{DynamicResource S.Toolbar.CopyText}"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Draw on the selection. Between the two copies because that is the order
+                             these are reached for: read the result, take the words, mark up what is left,
+                             take the picture. Marking before the picture is also the only order that
+                             makes sense of the picture - a screenshot taken after the marks has the
+                             marks in it. -->
+                        <ToggleButton x:Name="AnnotateBtn"
+                                Style="{StaticResource ToolbarStackToggleButton}"
+                                ToolTip="{DynamicResource S.Toolbar.AnnotateHint}"
+                                Click="AnnotateBtn_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <!-- A pen, nib down to the left, over the stroke it has just left
+                                         behind. The mark matters as much as the pen does: a pen on its
+                                         own is what every 編輯 button in the app already draws, and this
+                                         one does not edit anything - it draws on top of what is there. -->
+                                    <!-- Held at 53°, not 45°, and about four times as long as it is
+                                         wide. Lying at exactly 45 it read as a bar set on the
+                                         diagonal — the one angle in the drawing that is also the
+                                         angle of everything else in it, so nothing said which line
+                                         was the tool. Standing it up a few degrees is what makes it
+                                         a pen resting on the stroke rather than a shape parallel to
+                                         one. Sharpened to a point at the lower left, with the cross
+                                         line where that point begins: the short end is the nib, and
+                                         the line put at the other end instead reads as a cap. -->
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M2.5,16.3 L3,11.85 L10.9,1.35 L14.55,4.1 L6.65,14.55 Z"/>
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M3,11.85 L6.65,14.55"/>
+                                    <!-- Level, and starting at the point itself rather than floating
+                                         below it. Drawn on the pen's own diagonal it was a second pen;
+                                         set down clear of it, it was an underline the pen happened to
+                                         be above. Leaving the nib is the only placement that says the
+                                         pen made it. Same weight as the barrel, too — at this size a
+                                         heavier line does not read as more ink, it reads as a
+                                         different drawing. -->
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M2.5,16.3 H15.5"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Toolbar.Annotate}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <!-- Copy current selection screenshot to clipboard -->
+                        <Button x:Name="CopyShotBtn"
+                                Style="{StaticResource ToolbarStackButton}"
+                                Click="CopyShotBtn_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <!-- A full-size camera keeps the body and lens legible at 18px. -->
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M3.2,5.5 H5.2 L6.5,3.2 H11.5 L12.8,5.5 H14.8
+                                                A1.6,1.6 0 0 1 16.4,7.1 V13.8 A1.6,1.6 0 0 1 14.8,15.4
+                                                H3.2 A1.6,1.6 0 0 1 1.6,13.8 V7.1 A1.6,1.6 0 0 1 3.2,5.5 Z"/>
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M12,10.2 A3,3 0 1 1 6,10.2 A3,3 0 1 1 12,10.2 Z"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Toolbar.Screenshot}"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Open translation window. Named for what it opens rather than for the opening:
+                             every button on this bar does something when pressed, so 開啟 was a word spent
+                             on the one thing the user already knows, and it cost the bar the width of two
+                             characters. The tooltip still says the whole sentence for anyone who wants it. -->
+                        <Button x:Name="OpenWindowBtn"
+                                Style="{StaticResource ToolbarStackButton}"
+                                ToolTip="{DynamicResource S.Toolbar.OpenWindowHint}"
+                                Click="OpenWindowBtn_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <!-- Drawn like the other four rather than typed as E8A7, so the row
+                                         is one set of strokes at one weight and one size. The glyph was
+                                         the largest mark in the row and the drawn ones the smallest,
+                                         which is the sort of difference nobody can name and everybody
+                                         sees. -->
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M16,9.6 V14.4 A1.6,1.6 0 0 1 14.4,16 H3.6 A1.6,1.6 0 0 1 2,14.4
+                                                V3.6 A1.6,1.6 0 0 1 3.6,2 H8.4"/>
+                                    <Path Style="{StaticResource ToolbarActionStroke}"
+                                          Data="M9.4,8.6 L15.7,2.3 M11,2.2 H15.8 V7"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Toolbar.OpenWindow}"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="MoreBtn" Style="{StaticResource ToolbarIconButton}"
+                                Width="30" Height="30" Margin="2,0,0,0"
+                                ToolTip="{DynamicResource S.Toolbar.ShowMore}"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.ShowMore}"
+                                Click="MoreBtn_Click">
+                            <TextBlock Text="&#xE712;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20"/>
+                        </Button>
+                        <!-- What capture translation keeps between captures, as opposed to what the bar
+                             asks for each one. A menu rather than a settings sheet: one line per switch,
+                             the whole line pressable, and what each switch does in its tooltip rather than
+                             in a paragraph under it - the panel opens over the capture being looked at, so
+                             every line it spends is a line of the capture it hides.
+
+                             一般 first because it is what most people come here for; 偵錯輔助 under it.
+                             The switches are the settings page's own keys, so the two places always
+                             agree - see SettingsService.UpdateCaptureOptions.
+
+                             Its right edge is lined up under the button that opens it (MoreBtn_Click), so
+                             it reads as coming out of that button rather than out of the bar. No close
+                             button: it closes on a click anywhere else and on Esc, like any menu. -->
+                        <Popup x:Name="MorePopup" PlacementTarget="{Binding ElementName=BarSurface}"
+                               Placement="Bottom" VerticalOffset="6"
+                               AllowsTransparency="True" StaysOpen="False"
+                               Opened="MorePopup_Opened" Closed="MorePopup_Closed">
+                            <Border x:Name="MorePanel" Width="280" Background="{DynamicResource ToolbarBg}"
+                                    BorderBrush="{DynamicResource ToolbarBorder}" BorderThickness="1" CornerRadius="12"
+                                    Padding="6" PreviewKeyDown="MorePopup_KeyDown">
+                                <StackPanel>
+                                    <StackPanel.Resources>
+                                        <Style x:Key="MoreSectionHeader" TargetType="TextBlock">
+                                            <Setter Property="FontSize" Value="12"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                            <Setter Property="Margin" Value="10,6,10,4"/>
+                                        </Style>
+                                    </StackPanel.Resources>
+
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeader}"/>
+                                    <!-- Takes effect from the next selection: it is read the moment a
+                                         selection is finished, and this one already was. -->
+                                    <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE774;"
+                                              Content="{DynamicResource S.Toolbar.AutoTranslate}"
+                                              ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
+                                              Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
+                                    <!-- Where to change the folder, not the folder itself. A folder picker
+                                         or an Explorer window opened from this bar would land under the
+                                         capture overlay, which is full screen and topmost; and the toast
+                                         after a save already names the file it wrote. -->
+                                    <CheckBox x:Name="SaveScreenshotSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE74E;"
+                                              Content="{DynamicResource S.Toolbar.SaveScreenshot}"
+                                              Checked="SaveScreenshotSwitch_Changed" Unchecked="SaveScreenshotSwitch_Changed">
+                                        <CheckBox.ToolTip>
+                                            <StackPanel>
+                                                <TextBlock Text="{DynamicResource S.Settings.SaveScreenshotCheck}"/>
+                                                <TextBlock Text="{DynamicResource S.Toolbar.SavePathInSettings}"/>
+                                            </StackPanel>
+                                        </CheckBox.ToolTip>
+                                    </CheckBox>
+                                    <!-- The line under the source picker, here and on the realtime page
+                                         alike: one switch for both, since it is one line saying one thing.
+                                         Put positively, like the two above it — ticked turns something on. -->
+                                    <CheckBox x:Name="MangaHintSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Content="{DynamicResource S.Toolbar.MangaHintSwitch}"
+                                              ToolTip="{DynamicResource S.Toolbar.MangaHintSwitchTip}"
+                                              Checked="MangaHintSwitch_Changed" Unchecked="MangaHintSwitch_Changed">
+                                        <CheckBox.Tag>
+                                            <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.2"
+                                                  Data="M8,1.5 C8.5,5.3 10.7,7.5 14.5,8 C10.7,8.5 8.5,10.7 8,14.5 C7.5,10.7 5.3,8.5 1.5,8 C5.3,7.5 7.5,5.3 8,1.5 Z"/>
+                                        </CheckBox.Tag>
+                                    </CheckBox>
+
+                                    <!-- No rule between the sections: the heading and the gap above it
+                                         already divide them, and a line on top of both read as a seam. -->
+                                    <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}" Style="{StaticResource MoreSectionHeader}"
+                                               Margin="10,14,10,4"/>
+                                    <CheckBox x:Name="DebugGroupsSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Content="{DynamicResource S.Settings.TextGroupBoxes}"
+                                              ToolTip="{DynamicResource S.Settings.TextGroupBoxesHint}"
+                                              Checked="DebugGroupsSwitch_Changed" Unchecked="DebugGroupsSwitch_Changed">
+                                        <CheckBox.Tag>
+                                            <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.3"
+                                                  Data="{StaticResource TextGroupBoxMarkGeometry}"/>
+                                        </CheckBox.Tag>
+                                    </CheckBox>
+                                    <CheckBox x:Name="DebugLinesSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Content="{DynamicResource S.Settings.OcrLineBoxes}"
+                                              ToolTip="{DynamicResource S.Settings.OcrLineBoxesHint}"
+                                              Checked="DebugLinesSwitch_Changed" Unchecked="DebugLinesSwitch_Changed">
+                                        <CheckBox.Tag>
+                                            <Path Style="{StaticResource DrawnMark}" StrokeThickness="1.3"
+                                                  Data="{StaticResource OcrLineBoxMarkGeometry}"/>
+                                        </CheckBox.Tag>
+                                    </CheckBox>
+
+                                    <!-- Disabled while neither box is ticked: it only says where the boxes
+                                         are drawn. See SyncDebugSwitches. The heading keeps its tooltip
+                                         while disabled, since what the choice means is worth reading
+                                         before either box is ticked. -->
+                                    <StackPanel x:Name="DebugScopePanel" Style="{StaticResource DimWhenDisabled}">
+                                        <TextBlock Text="{DynamicResource S.Debug.DisplayScope}"
+                                                   Style="{StaticResource MoreSectionHeader}"
+                                                   Margin="10,10,10,8"
+                                                   Background="Transparent"
+                                                   ToolTip="{DynamicResource S.Debug.ScopeHint}"
+                                                   ToolTipService.ShowOnDisabled="True"/>
+                                        <Grid Margin="4,0,4,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="6"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <RadioButton x:Name="DebugSourceOnly" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
+                                                         Content="{DynamicResource S.Debug.SourceOnly}" Checked="DebugScope_Changed"/>
+                                            <RadioButton x:Name="DebugSourceAndTranslation" Grid.Column="2" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
+                                                         Content="{DynamicResource S.Debug.SourceAndTranslation}" Checked="DebugScope_Changed"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+
+                        <!-- Close, set apart by the gap: everything left of it acts inside the session. -->
+                        <Button Content="&#x2715;"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Width="30" Height="30"
+                                Margin="6,0,0,0"
+                                ToolTip="{DynamicResource S.Toolbar.Close}"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.Close}"
+                                Click="CloseBtn_Click"/>
+
+                    </StackPanel>
+
+                    <!-- The manga model hint, as a line of its own under the bar rather than in
+                         it: when there is something to say the bar grows a footer, and when there
+                         is not it is exactly the bar it always was. Nothing in the row above moves
+                         either way — the window keeps its top and grows down, and it is placed as
+                         though the footer were there (PositionNearSelection), so it never grows
+                         over the selection or off the screen.
+
+                         The rule runs the width of the row, inset from the rounded ends by the
+                         bar's own padding, so the footer reads as part of the one bar. The text
+                         starts at the row's left edge, under the speaker, one size up from the
+                         stacked labels: it is a sentence to be read, not a caption. Spacing:
+                         4 under the row, the rule, 7, a 16px line, then the bar's padding of 8. -->
+                    <Border x:Name="MangaFooter"
+                            HorizontalAlignment="Left"
+                            Width="{Binding ActualWidth, ElementName=BarRow}"
+                            Height="24" Margin="0,4,0,0"
+                            BorderThickness="0,1,0,0"
+                            BorderBrush="{DynamicResource ToolbarDivider}"
+                            Visibility="{Binding Visibility, ElementName=MangaHint}"
+                            ClipToBounds="True">
+                        <ctl:MangaModelHintText x:Name="MangaHint"
+                                                CollapsesWhenHidden="True"
+                                                FontSize="12"
+                                                LineHeight="16" LineStackingStrategy="BlockLineHeight"
+                                                Margin="0,7,0,0"/>
+                    </Border>
                 </StackPanel>
             </Border>
         </Grid>
