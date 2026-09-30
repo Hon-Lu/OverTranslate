@@ -96,11 +96,13 @@ public partial class ToolbarWindow : Window
         SyncCaptureSwitches(this, EventArgs.Empty);
         SettingsService.Instance.OcrDebugChanged += SyncDebugSwitches;
         SettingsService.Instance.CaptureOptionsChanged += SyncCaptureSwitches;
+        SettingsService.Instance.MangaModelOptionsChanged += SyncCaptureSwitches;
         Closed += (_, _) =>
         {
             MorePopup.IsOpen = false;
             SettingsService.Instance.OcrDebugChanged -= SyncDebugSwitches;
             SettingsService.Instance.CaptureOptionsChanged -= SyncCaptureSwitches;
+            SettingsService.Instance.MangaModelOptionsChanged -= SyncCaptureSwitches;
         };
         LocationChanged += (_, _) => MorePopup.IsOpen = false;
         MoreBtn.MouseLeave += (_, _) => _ignoreMoreClick = false;
@@ -124,6 +126,7 @@ public partial class ToolbarWindow : Window
 
         InitializeSelectors(sourceLang, targetLang);
         SizeSelectorsToClosedLabels();
+        RenderMangaHint();
 
         // Attach after initial values are set so initialization doesn't trigger a save
         SrcLangBox.SelectionChanged  += SrcLangBox_SelectionChanged;
@@ -183,8 +186,14 @@ public partial class ToolbarWindow : Window
         double scale = ScreenGeometry.ScaleAt(centreX, centreY);
 
         // WPF lays out in DIP regardless of DPI, so the DIP size scales straight to target pixels.
+        // The height is always the one with the manga model footer showing, whether it is or not:
+        // the window keeps its top and grows down when the footer appears, so placed for the
+        // shorter bar it would grow over the selection (placed above it) or off the screen (placed
+        // low), and moving it to avoid that would move the row the user is pressing.
+        double footer = MangaFooter.Visibility == Visibility.Visible
+            ? 0 : MangaFooter.Height + MangaFooter.Margin.Top;
         double tbW = (ActualWidth  > 0 ? ActualWidth  : 1090) * scale;
-        double tbH = (ActualHeight > 0 ? ActualHeight : 88)   * scale;
+        double tbH = ((ActualHeight > 0 ? ActualHeight : 88) + footer) * scale;
 
         var wa = System.Windows.Forms.Screen
             .FromPoint(new System.Drawing.Point(centreX, centreY)).WorkingArea;
@@ -217,7 +226,11 @@ public partial class ToolbarWindow : Window
         // The source language is what decides whether there is a voice to read with — see
         // RenderSpeakButton.
         RenderSpeakButton();
+        RenderMangaHint();
     }
+
+    // Whether this page will go to the manga models; see MangaModelHintText.
+    private void RenderMangaHint() => MangaHint.Show(IsVerticalText, CurrentSourceLang);
 
     private void TgtLangBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
@@ -293,6 +306,7 @@ public partial class ToolbarWindow : Window
             SaveTextDirectionSelection();
 
         RenderDirectionThumb(animate: IsLoaded);
+        RenderMangaHint();
     }
 
     /// <inheritdoc cref="DirectionSegment_PreviewMouseLeftButtonDown"/>
@@ -692,7 +706,14 @@ public partial class ToolbarWindow : Window
         _syncingCapture = true;
         AutoTranslateSwitch.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
         SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
+        ModelHintSwitch.IsChecked = SettingsService.Instance.Current.Capture.ShowModelHint;
         _syncingCapture = false;
+    }
+
+    // The footer follows through MangaModelOptions. This bar only: the realtime page ignores it.
+    private void ModelHintSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingCapture) SettingsService.Instance.UpdateMangaModelOptions(showHint: ModelHintSwitch.IsChecked == true);
     }
 
     private void AutoTranslateSwitch_Changed(object sender, RoutedEventArgs e)

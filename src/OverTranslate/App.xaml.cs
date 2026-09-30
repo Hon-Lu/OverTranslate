@@ -96,6 +96,10 @@ public partial class App
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        // Past the single-instance check for the reason given below, and before any window: the
+        // card and the hints read the switch this puts in step.
+        MangaModelOptions.Attach();
+
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
         mainWindow.InitializeApp();

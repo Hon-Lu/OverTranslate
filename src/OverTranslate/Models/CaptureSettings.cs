@@ -29,6 +29,17 @@ public class CaptureSettings
     /// </remarks>
     public CaptureLayoutMode LayoutMode { get; set; } = CaptureLayoutMode.General;
 
+    /// <summary>
+    /// Whether the capture toolbar grows its footer saying which model will read the selection.
+    /// On by default; set from the toolbar's 顯示更多 menu.
+    /// </summary>
+    /// <remarks>
+    /// The capture toolbar's alone. The line under the source picker on the realtime page is always
+    /// shown when it has something to say: that page is where a session is set up, not a bar laid
+    /// over what is being read.
+    /// </remarks>
+    public bool ShowModelHint { get; set; } = true;
+
     // 標記 deliberately keeps nothing here. Which pen is in hand lasts exactly as long as the
     // capture it was picked up for: every new capture starts on the black pen at the middle width,
     // and the choice only has to survive closing and reopening the panel inside that one session —

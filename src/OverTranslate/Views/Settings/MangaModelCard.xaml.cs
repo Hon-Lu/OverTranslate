@@ -31,12 +31,14 @@ public partial class MangaModelCard : UserControl
         {
             LocalizationService.LanguageChanged += OnLanguageChanged;
             AppServices.MangaModels.Changed += OnMangaModelsChanged;
+            MangaModelOptions.Changed += OnLanguageChanged;
             UpdateMangaModels();
         };
         Unloaded += (_, _) =>
         {
             LocalizationService.LanguageChanged -= OnLanguageChanged;
             AppServices.MangaModels.Changed -= OnMangaModelsChanged;
+            MangaModelOptions.Changed -= OnLanguageChanged;
         };
     }
 
@@ -56,6 +58,8 @@ public partial class MangaModelCard : UserControl
         NotDownloaded,
         Downloading,
         Ready,
+        /// <summary>Downloaded and able to run, but switched off here.</summary>
+        Disabled,
         /// <summary>Downloaded, but they would not load or read here (a driver, a device lost).</summary>
         Unusable,
         Failed,
@@ -75,8 +79,12 @@ public partial class MangaModelCard : UserControl
         Services.Ocr.Manga.MangaModelState.Unavailable => MangaCardState.Hidden,
         Services.Ocr.Manga.MangaModelState.Downloading => MangaCardState.Downloading,
         _ when device != Services.Ocr.Manga.MangaUnavailable.None => MangaCardState.Unsupported,
-        Services.Ocr.Manga.MangaModelState.Ready =>
-            engine == Services.Ocr.Manga.MangaUnavailable.None ? MangaCardState.Ready : MangaCardState.Unusable,
+        Services.Ocr.Manga.MangaModelState.Ready => engine switch
+        {
+            Services.Ocr.Manga.MangaUnavailable.None => MangaCardState.Ready,
+            Services.Ocr.Manga.MangaUnavailable.Disabled => MangaCardState.Disabled,
+            _ => MangaCardState.Unusable,
+        },
         _ => downloadFailed ? MangaCardState.Failed : MangaCardState.NotDownloaded,
     };
 
@@ -120,6 +128,7 @@ public partial class MangaModelCard : UserControl
         {
             MangaCardState.Downloading => ("S.Settings.MangaModelsDownloading", "#52C4FA"),
             MangaCardState.Ready => ("S.Settings.MangaModelsReady", "#34C759"),
+            MangaCardState.Disabled => ("S.Settings.MangaModelsDisabled", "#8E8E93"),
             MangaCardState.Unusable => ("S.Settings.MangaModelsNoGpu", "#FFB800"),
             MangaCardState.Failed => ("S.Settings.MangaModelsFailed", "#FF453A"),
             MangaCardState.Unsupported => ("S.Settings.MangaModelsUnsupported", "#8E8E93"),
@@ -127,7 +136,12 @@ public partial class MangaModelCard : UserControl
         };
         MangaChipText.Text = LocalizationService.Get(chip);
         PlaceMangaChip();
-        MangaChipDot.Fill = (Brush)new BrushConverter().ConvertFromString(dot)!;
+        var dotBrush = (Brush)new BrushConverter().ConvertFromString(dot)!;
+        // 已停用 is the one state drawn as a ring: a switch that is off, not a light that is out.
+        var hollow = state == MangaCardState.Disabled;
+        MangaChipDot.Fill = hollow ? null : dotBrush;
+        MangaChipDot.Stroke = hollow ? dotBrush : null;
+        MangaChipDot.StrokeThickness = hollow ? 1.3 : 0;
 
         var unsupported = state == MangaCardState.Unsupported;
         MangaCardDesc2.SetResourceReference(System.Windows.Documents.Run.TextProperty,
@@ -150,6 +164,7 @@ public partial class MangaModelCard : UserControl
         MangaModelsStatus.Text = state switch
         {
             MangaCardState.Ready => LocalizationService.Get("S.Settings.MangaModelsEnabled"),
+            MangaCardState.Disabled => LocalizationService.Get("S.Settings.MangaModelsSwitchedOff"),
             MangaCardState.Unusable => manga!.Unavailable == Services.Ocr.Manga.MangaUnavailable.ReadFailed
                 ? LocalizationService.Format("S.Settings.MangaModelsReasonReadFailed", adapter)
                 : LocalizationService.Format("S.Settings.MangaModelsReasonLoadFailed", adapter),
@@ -169,12 +184,29 @@ public partial class MangaModelCard : UserControl
         {
             MangaCardState.Unusable => "Warn",
             MangaCardState.Failed => "Error",
+            // Grey, the chip's own plate: off is a choice, not a fault.
+            MangaCardState.Disabled => "Chip",
             _ => "Ready",
         };
         MangaModelsStatusBox.SetResourceReference(Border.BackgroundProperty, $"MangaCard{tone}Bg");
         MangaModelsStatusBox.SetResourceReference(Border.BorderBrushProperty, $"MangaCard{tone}Border");
-        MangaModelsDeleteBtn.Visibility = state is MangaCardState.Ready or MangaCardState.Unusable
+        if (state == MangaCardState.Disabled)
+            MangaModelsStatus.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
+        else
+            MangaModelsStatus.ClearValue(TextBlock.ForegroundProperty);
+        MangaModelsDeleteBtn.Visibility = state is MangaCardState.Ready or MangaCardState.Disabled or MangaCardState.Unusable
             ? Visibility.Visible : Visibility.Collapsed;
+
+        // The switch: whenever the models are here and there is a status line to put it on. On a
+        // machine where they would not load it is shown dimmed, still saying on, with the reason
+        // beside it — turning it off there would change nothing.
+        var switchable = state is MangaCardState.Ready or MangaCardState.Disabled;
+        MangaModelsSwitch.Visibility = switchable || state == MangaCardState.Unusable ? Visibility.Visible : Visibility.Collapsed;
+        MangaModelsSwitch.IsEnabled = switchable;
+        _syncingSwitch = true;
+        MangaModelsSwitch.IsChecked = state != MangaCardState.Disabled;
+        _syncingSwitch = false;
+        MangaModelsStatusBox.Cursor = switchable ? System.Windows.Input.Cursors.Hand : null;
         MangaModelsRetryBtn.Visibility = state == MangaCardState.Failed ? Visibility.Visible : Visibility.Collapsed;
 
         FrameworkElement foot = state switch
@@ -190,7 +222,11 @@ public partial class MangaModelCard : UserControl
         var changed = _mangaCardShown != state;
         if (changed)
         {
-            ShowMangaCardFoot(foot, animate);
+            // On and off are the same line with the switch moved: the switch animates itself, and
+            // fading the line in around it would flash the thing the user just pressed.
+            var flipped = _mangaCardShown is MangaCardState.Ready or MangaCardState.Disabled &&
+                          state is MangaCardState.Ready or MangaCardState.Disabled;
+            ShowMangaCardFoot(foot, animate && !flipped);
             FadeIn(MangaChip, animate);
         }
 
@@ -279,10 +315,12 @@ public partial class MangaModelCard : UserControl
             feature.Margin = new Thickness(compact ? 0 : 4, 5, compact ? 0 : 4, 0);
         foreach (var action in new FrameworkElement[] { MangaModelsDeleteBtn, MangaModelsRetryBtn })
         {
-            Grid.SetColumn(action, compact ? 0 : 1);
+            Grid.SetColumn(action, compact ? 1 : 2);
             Grid.SetRow(action, compact ? 1 : 0);
             action.HorizontalAlignment = compact ? System.Windows.HorizontalAlignment.Left : System.Windows.HorizontalAlignment.Stretch;
-            action.Margin = compact ? new Thickness(0, 8, 0, 0) : new Thickness(12, 0, 0, 0);
+            // 10 and not more: at the default width that is what keeps 已停用（使用預設模型） on one line
+            // beside the switch.
+            action.Margin = compact ? new Thickness(0, 8, 0, 0) : new Thickness(10, 0, 0, 0);
         }
     }
 
@@ -335,6 +373,25 @@ public partial class MangaModelCard : UserControl
         }
 
         UpdateMangaModels();
+    }
+
+    private bool _syncingSwitch;
+
+    private void MangaModelsSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingSwitch) return;
+        // The engine follows the setting and lets go of the loaded models at once when it goes off;
+        // see MangaModelOptions and MangaOcrEngine.Enabled.
+        SettingsService.Instance.UpdateMangaModelOptions(useModels: MangaModelsSwitch.IsChecked == true);
+    }
+
+    // The rest of the line: the sentence and the padding around it. The switch and 刪除模型 handle
+    // their own presses, so only a press that neither took arrives here.
+    private void MangaModelsStatusBox_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (MangaModelsSwitch.Visibility != Visibility.Visible || !MangaModelsSwitch.IsEnabled) return;
+        MangaModelsSwitch.IsChecked = MangaModelsSwitch.IsChecked != true;
+        e.Handled = true;
     }
 
     private void MangaModelsCancelBtn_Click(object sender, RoutedEventArgs e) =>
