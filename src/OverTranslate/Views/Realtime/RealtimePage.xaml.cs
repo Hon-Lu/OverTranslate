@@ -364,10 +364,8 @@ public partial class RealtimePage : UserControl
         RenderMangaHint();
     }
 
-    // No 自動 here, so anything but Japanese gets the line that says to pick it.
-    private void RenderMangaHint() => MangaHint.Show(
-        SettingsService.Instance.Current.Realtime.TextOrientation == RealtimeTextOrientation.Vertical,
-        SrcLangBox.SelectedValue as string);
+    // Japanese only, whatever direction the blocks turn out to be; see MangaModelHints.ForRealtimePage.
+    private void RenderMangaHint() => MangaHint.Show(vertical: true, SrcLangBox.SelectedValue as string);
 
     private void TgtLangBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

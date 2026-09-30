@@ -651,6 +651,8 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">Using the manga models</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">Manga models downloading</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">Manga models not installed; see Settings</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintApplied">Using the manga models (horizontal uses the default model)</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintNotInstalled">Manga models not installed; see Settings (horizontal uses the default model, no download needed)</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">Display scope</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">Box display scope</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">Source only</sys:String>

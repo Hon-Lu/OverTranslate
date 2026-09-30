@@ -85,6 +85,30 @@ public sealed class MangaModelSwitchTests : IDisposable
             vertical, language, Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
             Enum.Parse<MangaUnavailable>(engine), showHint).ToString());
 
+    [Theory]
+    // Japanese: where the models stand, whatever direction the blocks will be.
+    [InlineData("JA",      "Ready",         "None",       "None",          "Applied")]
+    [InlineData("ja",      "Ready",         "None",       "None",          "Applied")]
+    [InlineData("JA",      "Downloading",   "None",       "NotDownloaded", "Downloading")]
+    [InlineData("JA",      "NotDownloaded", "None",       "NotDownloaded", "NotInstalled")]
+    // Anything else: nothing — no 選擇日文 line on this page.
+    [InlineData("EN",      "Ready",         "None",       "None",          "None")]
+    [InlineData("ZH-HANT", "NotDownloaded", "None",       "NotDownloaded", "None")]
+    [InlineData("KO",      "Downloading",   "None",       "NotDownloaded", "None")]
+    [InlineData(null,      "Ready",         "None",       "None",          "None")]
+    // Switched off, cannot run, failed, or no models in this build: nothing.
+    [InlineData("JA",      "Ready",         "None",       "Disabled",      "None")]
+    [InlineData("JA",      "NotDownloaded", "NoGpu",      "NotDownloaded", "None")]
+    [InlineData("JA",      "NotDownloaded", "NoDirectMl", "NotDownloaded", "None")]
+    [InlineData("JA",      "Ready",         "None",       "LoadFailed",    "None")]
+    [InlineData("JA",      "Ready",         "None",       "ReadFailed",    "None")]
+    [InlineData("JA",      "Unavailable",   "None",       "NotDownloaded", "None")]
+    public void TheRealtimePageHint_IsForJapaneseOnly_WhateverTheDirection(
+        string? language, string store, string device, string engine, string expected) =>
+        Assert.Equal(expected, MangaModelHints.ForRealtimePage(
+            language, Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
+            Enum.Parse<MangaUnavailable>(engine)).ToString());
+
     // ── Switched off: the column pipeline, without touching the models ──────
 
     [Fact]

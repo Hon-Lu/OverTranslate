@@ -51,9 +51,8 @@ public sealed class MangaModelHintText : TextBlock
     }
 
     /// <summary>
-    /// Collapsed rather than hidden when there is nothing to say. The capture toolbar sets it: there
-    /// the hint shares a centred unit with the language pickers only, and collapsing it puts them
-    /// back exactly where they sit without it.
+    /// Collapsed rather than hidden when there is nothing to say, so whatever holds it is only as
+    /// tall as it was without it: the capture toolbar's footer, the realtime page's card.
     /// </summary>
     public bool CollapsesWhenHidden { get; set; }
 
@@ -63,6 +62,12 @@ public sealed class MangaModelHintText : TextBlock
     /// something to say.
     /// </summary>
     public bool FollowsCaptureHintSwitch { get; set; }
+
+    /// <summary>
+    /// The realtime page's rule and wording: Japanese only, whatever the direction, and saying that
+    /// horizontal blocks use the default model — see <see cref="MangaModelHints.ForRealtimePage"/>.
+    /// </summary>
+    public bool ForRealtimePage { get; set; }
 
     /// <summary>What the host's pickers say now.</summary>
     public void Show(bool vertical, string? sourceLanguage)
@@ -79,7 +84,9 @@ public sealed class MangaModelHintText : TextBlock
 
     private void Render()
     {
-        Hint = MangaModelOptions.HintFor(_vertical, _sourceLanguage, FollowsCaptureHintSwitch);
+        Hint = ForRealtimePage
+            ? MangaModelOptions.RealtimePageHintFor(_sourceLanguage)
+            : MangaModelOptions.HintFor(_vertical, _sourceLanguage, FollowsCaptureHintSwitch);
         if (Hint == MangaModelHint.None)
         {
             Visibility = CollapsesWhenHidden ? Visibility.Collapsed : Visibility.Hidden;
@@ -88,8 +95,8 @@ public sealed class MangaModelHintText : TextBlock
 
         var (key, brush) = Hint switch
         {
-            MangaModelHint.Applied => ("S.Toolbar.MangaHintApplied", "MangaHintApplied"),
-            MangaModelHint.NotInstalled => ("S.Toolbar.MangaHintNotInstalled", "AppWarning"),
+            MangaModelHint.Applied => (ForRealtimePage ? "S.Realtime.MangaHintApplied" : "S.Toolbar.MangaHintApplied", "MangaHintApplied"),
+            MangaModelHint.NotInstalled => (ForRealtimePage ? "S.Realtime.MangaHintNotInstalled" : "S.Toolbar.MangaHintNotInstalled", "AppWarning"),
             MangaModelHint.Downloading => ("S.Toolbar.MangaHintDownloading", "AppTextSecondary"),
             _ => ("S.Toolbar.MangaHintChooseJapanese", "AppTextSecondary"),
         };

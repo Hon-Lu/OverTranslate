@@ -52,4 +52,21 @@ internal static class MangaModelHints
             _ => MangaModelHint.NotInstalled,
         };
     }
+
+    /// <summary>
+    /// The line under the realtime page's source picker: only for Japanese, whatever the direction.
+    /// </summary>
+    /// <remarks>
+    /// The direction is set block by block on the edit layer, so the page cannot know it; the line
+    /// says what vertical blocks will be read with, and its own wording says horizontal ones use the
+    /// default model. Nothing for another language — there is no 自動 here to steer away from — and,
+    /// as on the toolbar, nothing when the models are switched off, cannot run, or failed.
+    /// </remarks>
+    internal static MangaModelHint ForRealtimePage(
+        string? sourceLanguage,
+        MangaModelState store,
+        MangaUnavailable device,
+        MangaUnavailable engine) =>
+        For(vertical: true, sourceLanguage, store, device, engine, showHint: true) is var hint &&
+        hint == MangaModelHint.ChooseJapanese ? MangaModelHint.None : hint;
 }

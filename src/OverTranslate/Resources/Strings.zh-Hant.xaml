@@ -667,6 +667,8 @@
     <sys:String x:Key="S.Toolbar.MangaHintApplied">已套用漫畫直排模型</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫畫直排模型下載中</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">尚未安裝漫畫直排模型，可至設定下載</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintApplied">已套用漫畫直排模型（橫排為預設模型）</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintNotInstalled">尚未安裝漫畫直排模型，可至設定下載（橫排為預設模型，不需要額外下載）</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框線顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">僅原文</sys:String>
