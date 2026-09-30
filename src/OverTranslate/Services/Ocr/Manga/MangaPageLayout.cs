@@ -74,29 +74,25 @@ internal static class MangaPageLayout
     }
 
     /// <summary>
-    /// Turns the page's read blocks into what is translated: one block per group of writing.
+    /// Turns the page's read blocks into what is translated: one block per piece of writing that is
+    /// read as one — a reading block.
     /// </summary>
     /// <remarks>
-    /// <para>A group is writing with no clear space inside it: one balloon, one narration box, one
-    /// line lettered onto the artwork — however many blocks the detector gave it. Two groups with a
-    /// clear space between them stay apart even when one person says both: the page separated them,
-    /// and translated apart they still read right. Inside a group it is the other way round — a
-    /// balloon read in two pieces is worse than any wrong join — so blocks in one balloon are always
-    /// joined, however they are laid out.</para>
+    /// <para>A reading block is what a reader takes in as one run of text, the way a paragraph is:
+    /// columns set side by side, read right to left. One balloon may hold several — the page sets a
+    /// second remark below the first, or steps it down and to the left, and even when one person
+    /// says both the reader reads them as two. Each is translated on its own. Joining two blocks
+    /// one above the other is the worst a join can do: the columns of the joined block are read
+    /// right to left across both, so the first column of the upper block is followed by the first
+    /// column of the lower one and the sentences are shuffled together.</para>
     ///
-    /// <para>Blocks in two balloons are joined when the balloons are one shape (see
-    /// <see cref="OneBalloon"/>). The rule this replaced joined any two balloons whose BOXES overlapped,
-    /// which the boxes of two balloons set corner to corner always do, and which a speaker cutting in
-    /// on another does too. MEASURED on the three transcribed corpora, 46 pages, against a
-    /// hand-made grouping of every balloon and caption on them
-    /// (<c>.ai/vertical-ja3-handoff/overmerge/</c>): 9 blocks held two groups; now 2. The count of
-    /// sentences read whole is unchanged — zang 95, ja3 152, ja2 139 — with one sentence now split
-    /// and one caption now whole.</para>
-    ///
-    /// <para>Blocks in no balloon — captions, narration, lettering on the artwork — are joined when
-    /// they are close in the way the columns of one caption are (see <see cref="OneCaption"/>). The
-    /// detector often hands a staircase caption over as two or three blocks; nothing joined them
-    /// before, and 8 captions on those pages came out in pieces. All 8 are whole now.</para>
+    /// <para>So two blocks are only ever joined when they run side by side
+    /// (<see cref="SideBySide"/>) — and then when they are in one balloon, in two balloons that are
+    /// one shape (<see cref="OneBalloon"/>), or both outside every balloon and close
+    /// (<see cref="OneCaption"/>). The detector already gives each reading block a box of its own:
+    /// labelling the 58 vertical pages at hand block by block
+    /// (<c>.ai/vertical-ja3-handoff/overmerge/blocks-*.json</c>), no box held two, and only four
+    /// pairs of boxes were one block — every one of them side by side.</para>
     ///
     /// <para>Rows (<see cref="AcrossRatio"/>) are kept out of the joins and marked
     /// <see cref="OcrTextBlock.RunsAcross"/>. <paramref name="passedOn"/> — what the column pipeline
@@ -104,7 +100,7 @@ internal static class MangaPageLayout
     /// </remarks>
     /// <param name="luma">
     /// The page in grey. Without it nothing is looked at between the blocks: balloons are then one
-    /// shape whenever they overlap, and no rule stands between two captions.
+    /// shape whenever they overlap, and no panel border stands between two captions.
     /// </param>
     internal static List<OcrTextBlock> Assemble(
         IReadOnlyList<MangaBlock> blocks, IReadOnlyList<RectangleF> bubbles, IReadOnlyList<OcrTextBlock> passedOn,
@@ -138,6 +134,7 @@ internal static class MangaPageLayout
         for (int b = a + 1; b < blocks.Count; b++)
         {
             if (owner[a] is not { } inA || owner[b] is not { } inB) continue;
+            if (!SideBySide(blocks[a].Bounds, blocks[b].Bounds)) continue;
 
             bool together = (inA, inB) switch
             {
@@ -173,9 +170,34 @@ internal static class MangaPageLayout
     }
 
     /// <summary>
+    /// How much of the shorter of two blocks' height the two must share to be side by side, the only
+    /// way two blocks are ever one reading block.
+    /// </summary>
+    /// <remarks>
+    /// <para>MEASURED on the 58 vertical pages labelled block by block, over every pair of boxes
+    /// within three characters of each other. The four pairs that are one block share 0.79–0.93 of
+    /// the shorter one's height: a first column set a little higher than the rest. What the user
+    /// named as two blocks shares less: 空から降り注いだ…／兄の命を… (zang), one sentence stepped down
+    /// and to the left, shares 0.59; いや、これから…／偉業ですら… and 一度目の“魔法”は、／物心が付いた…,
+    /// one above the other, share nothing. Asked of every join on those pages, it takes the blocks
+    /// that held two blocks one above the other from 38 to none and two blocks stepped or corner to
+    /// corner from 7 to none, and parts nothing that was one block. It is the only bar that does
+    /// both: at 0.7 one stepped pair is still joined, at 0.8 one of the four comes apart.</para>
+    ///
+    /// <para>Side by side it decides nothing, and nothing here does: two remarks side by side in one
+    /// balloon, or in two lobes of one shape, are as close as the columns of one remark — ただ、 and
+    /// それだけのことだ。 share 0.86 of a height and stand 0.4 of a character apart, the columns of one
+    /// block 0.2–0.7. Joined, they still read in the right order, which is why they are left to the
+    /// rules below: 12 such joins remain on the 58 pages.</para>
+    /// </remarks>
+    internal const double SideBySideShare = 0.75;
+
+    internal static bool SideBySide(RectangleF a, RectangleF b) =>
+        Along(a.Top, a.Bottom, b.Top, b.Bottom) >= SideBySideShare * Math.Min(a.Height, b.Height);
+
+    /// <summary>
     /// Whether two blocks in two different balloons are in one shape: the balloons overlap, the
-    /// blocks are not set corner to corner, the paper inside one balloon runs on into the other, and
-    /// no panel border lies between them.
+    /// paper inside one balloon runs on into the other, and no panel border lies between them.
     /// </summary>
     /// <remarks>
     /// <para>Balloons one speaker runs on through are drawn as one outline with lobes, and the
@@ -183,57 +205,33 @@ internal static class MangaPageLayout
     /// own outline across the one underneath, and two balloons meeting at a point share a sliver at
     /// most. MEASURED on the 46 transcribed pages, of the balloon pairs the box rule joined: all 39
     /// labelled one group are one shape at a grey level of 128, and 7 of the 9 that held two groups
-    /// are not. One more is parted: そうしたら左上の引き出しの／十番と二十一番の薬を… (ja3 ch62/004), whose
-    /// second lobe is drawn over the first with its outline, and whose sentence is now read in two.
-    /// Eroding the paper to cut thin necks changed nothing up to 6px and lost joins from 8px.</para>
+    /// are not. Eroding the paper to cut thin necks changed nothing up to 6px and lost joins from
+    /// 8px.</para>
     ///
-    /// <para>Corner to corner is asked of the text, not of the balloons. Two lobes set right-above
-    /// and left-below one another are the layout the user named first — two remarks with a clear
-    /// space between them — and without an outline between the lobes the paper test cannot see it
-    /// (<c>ch50/008</c>, 後宮内のどこか… / 泥水が冷たくて…). Blocks that share half of the narrower
-    /// one's width are one above the other; half of the shorter one's height, side by side;
-    /// neither, corner to corner. Of the one-shape pairs it also parts three that belonged together
-    /// — お姉…／ちゃん… (ja2), the balloons 南側諸国を…／昔は共に、／よく夜空を… (zang) and a caption box
-    /// stepped in two, 最初から…／ぶつかり… (ja3 ch50/012) — each part then read on its own; one
-    /// sentence of the 46 pages is split by it. Blocks whose boxes cross are never corner to
-    /// corner.</para>
+    /// <para>Lobes set corner to corner or one above the other — ch50/008's 後宮内のどこか… over
+    /// 泥水が冷たくて…, with no outline between them for the paper test to find — are kept apart by
+    /// <see cref="SideBySide"/> before this is asked.</para>
     /// </remarks>
-    private static bool OneBalloon(MangaBlock a, MangaBlock b, RectangleF inA, RectangleF inB, LumaPage? luma)
-    {
-        if (Shared(inA, inB) <= 0) return false;
-        var (x, y) = (Along(a.Bounds.Left, a.Bounds.Right, b.Bounds.Left, b.Bounds.Right),
-                      Along(a.Bounds.Top, a.Bounds.Bottom, b.Bounds.Top, b.Bounds.Bottom));
-        bool cornerToCorner = Shared(a.Bounds, b.Bounds) <= 0 &&
-                              x < Aligned * Math.Min(a.Bounds.Width, b.Bounds.Width) &&
-                              y < Aligned * Math.Min(a.Bounds.Height, b.Bounds.Height);
-        return !cornerToCorner &&
-               (luma is null || (luma.SamePaper(RectangleF.Union(inA, inB), a.Bounds, b.Bounds) &&
-                                 !luma.RuledBetween(a.Bounds, b.Bounds)));
-    }
+    private static bool OneBalloon(MangaBlock a, MangaBlock b, RectangleF inA, RectangleF inB, LumaPage? luma) =>
+        Shared(inA, inB) > 0 &&
+        (luma is null || (luma.SamePaper(RectangleF.Union(inA, inB), a.Bounds, b.Bounds) &&
+                          !luma.RuledBetween(a.Bounds, b.Bounds)));
 
     /// <summary>
-    /// Whether two blocks outside every balloon are one caption: their type is about one size, and
-    /// their boxes cross, or they stand side by side with a sliver between them, or one above the
-    /// other with at most <see cref="CaptionStackGap"/> characters between them — and no panel
-    /// border lies between.
+    /// Whether two blocks outside every balloon — already side by side — are one caption: their
+    /// type is about one size, their boxes cross or stand a sliver apart, and no panel border lies
+    /// between.
     /// </summary>
     /// <remarks>
-    /// <para>Columns of one caption step down the page as they go left, so their tops are not a
-    /// test. MEASURED over every pair of balloonless blocks within four characters of each other on
-    /// the 46 pages, labelled by hand. Side by side, the pairs of one caption were 0.29 of a
-    /// character apart or less and the nearest two captions 0.43 (a column at the page's edge,
-    /// 次号より休載です): the bar is 0.3. One above the other, one caption had 0.62–1.37 between its
-    /// blocks; the only two captions under 2 apart that share half a width are 1.47 apart across a
-    /// panel border, which the border test parts anyway, so the bar is 1.5. At 1.0, 一度目の“魔法”は、
-    /// and 残ったものは瓦礫の山だけで、 (zang) stayed apart from the rest of their captions.</para>
+    /// <para>MEASURED over every pair of balloonless blocks within four characters of each other on
+    /// the 46 transcribed pages, labelled by hand. Side by side, the pairs of one caption were 0.29
+    /// of a character apart or less and the nearest two captions 0.43 (a column at the page's edge,
+    /// 次号より休載です): the bar is 0.3.</para>
     ///
     /// <para>One size, because a gap measured in the larger of two types is a gap the larger type
     /// makes small: a sound effect lettered big beside a line of small writing sits a sliver of ITS
-    /// characters away. Over the 175 vertical pages at hand these rules joined 20 pairs the old ones
-    /// did not; the two with the type more than twice the size were both that (遠っ beside
-    /// ならば芳春様や… on ja3 432/010, びっしり… over これでいつでも狩りほうだい！ on mokuro-001b), and the
-    /// transcribed pages lose nothing at twice. At one and a half, どうか／炎をーー！ — one line of
-    /// lettering, set larger as it goes — comes apart.</para>
+    /// characters away: 遠っ beside ならば芳春様や… on ja3 432/010. The transcribed pages lose
+    /// nothing at twice.</para>
     /// </remarks>
     private static bool OneCaption(MangaBlock a, MangaBlock b, LumaPage? luma)
     {
@@ -244,22 +242,14 @@ internal static class MangaPageLayout
         if (Math.Max(sizeA, sizeB) > CaptionSizeRatio * Math.Min(sizeA, sizeB)) return false;
         if (Shared(a.Bounds, b.Bounds) > 0) return true;
 
-        var glyph = Math.Max(sizeA, sizeB);
-        var x = Along(a.Bounds.Left, a.Bounds.Right, b.Bounds.Left, b.Bounds.Right);
-        var y = Along(a.Bounds.Top, a.Bounds.Bottom, b.Bounds.Top, b.Bounds.Bottom);
-        return (y >= Aligned * Math.Min(a.Bounds.Height, b.Bounds.Height) && -x <= CaptionSideGap * glyph) ||
-               (x >= Aligned * Math.Min(a.Bounds.Width, b.Bounds.Width) && -y <= CaptionStackGap * glyph);
+        var gap = -Along(a.Bounds.Left, a.Bounds.Right, b.Bounds.Left, b.Bounds.Right);
+        return gap <= CaptionSideGap * Math.Max(sizeA, sizeB);
     }
-
-    // How much of the narrower (shorter) of two blocks has to run alongside the other for them to be
-    // one above the other (side by side) rather than corner to corner.
-    private const double Aligned = 0.5;
 
     // In characters of the larger of the two blocks' type.
     private const double CaptionSideGap = 0.3;
     // The larger type of two blocks of one caption is at most this many times the smaller.
     private const double CaptionSizeRatio = 2;
-    private const double CaptionStackGap = 1.5;
 
     // Length two spans have in common; negative is the gap between them.
     private static double Along(double startA, double endA, double startB, double endB) =>
