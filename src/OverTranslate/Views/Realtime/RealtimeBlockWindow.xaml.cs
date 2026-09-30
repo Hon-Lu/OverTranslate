@@ -488,14 +488,7 @@ public partial class RealtimeBlockWindow : Window
         };
         ApplyBorder(background, line);
 
-        // Sampling is its own switch: with it off the reader's chosen colour is what gets drawn, and
-        // with it on that colour is still what an unconvincing sample falls back to.
-        var foreground = _textBrush;
-        if (_sampleTextColor && frame is not null)
-        {
-            var sampled = RealtimeNaturalBackground.SampleTextColor(frame, line.Bounds, _textBrush.Color);
-            foreground = Freeze(new SolidColorBrush(sampled));
-        }
+        var (foreground, edge) = SampleForeground(frame, line);
 
         // Same geometry, no background: the two are stacked in separate layers, so the text has to
         // carry its own box to land in exactly the place the repaired background covers.
@@ -505,7 +498,7 @@ public partial class RealtimeBlockWindow : Window
             Height = scrimHeight,
             Padding = new Thickness(ScrimPaddingX, ScrimPaddingY, ScrimPaddingX, ScrimPaddingY),
             ClipToBounds = true,
-            Child = new TextBlock
+            Child = Outlined(edge, fontSize, () => new TextBlock
             {
                 Text = line.TranslatedText,
                 FontFamily = _textFont,
@@ -533,7 +526,7 @@ public partial class RealtimeBlockWindow : Window
                 HorizontalAlignment = wrapped
                     ? System.Windows.HorizontalAlignment.Center
                     : System.Windows.HorizontalAlignment.Stretch,
-            }
+            })
         };
 
         Canvas.SetLeft(background, patchLeft);
@@ -724,12 +717,7 @@ public partial class RealtimeBlockWindow : Window
         };
         ApplyBorder(background, line);
 
-        var foreground = _textBrush;
-        if (_sampleTextColor && frame is not null)
-        {
-            var sampled = RealtimeNaturalBackground.SampleTextColor(frame, line.Bounds, _textBrush.Color);
-            foreground = Freeze(new SolidColorBrush(sampled));
-        }
+        var (foreground, edge) = SampleForeground(frame, line);
 
         // One element per glyph, positioned by hand. A TextBlock cannot set type downwards, and the
         // alternatives — a rotated horizontal line, or a font feature — either turn every character
@@ -739,26 +727,35 @@ public partial class RealtimeBlockWindow : Window
                  VerticalTextGrid.Cells(glyphs, new Rect(0, 0, gridWidth, gridHeight), cellSize))
         {
             var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _targetLanguage);
-            var cell = new TextBlock
+            TextBlock Cell(System.Windows.Media.Brush brush, double dx, double dy)
             {
-                Text = drawn.Glyph.ToString(),
-                FontFamily = drawn.Font ?? _textFont,
-                FontSize = cellSize * VerticalGlyphFill,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = foreground,
-                TextAlignment = TextAlignment.Center,
-            };
+                var cell = new TextBlock
+                {
+                    Text = drawn.Glyph.ToString(),
+                    FontFamily = drawn.Font ?? _textFont,
+                    FontSize = cellSize * VerticalGlyphFill,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = brush,
+                    TextAlignment = TextAlignment.Center,
+                };
 
-            // Brackets and dashes are drawn lying down in horizontal text and standing up in
-            // vertical: the glyph is the same, the orientation is not.
-            if (drawn.Rotates)
-            {
-                cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-                cell.RenderTransform = new RotateTransform(90);
+                // Brackets and dashes are drawn lying down in horizontal text and standing up in
+                // vertical: the glyph is the same, the orientation is not.
+                if (drawn.Rotates)
+                {
+                    cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+                    cell.RenderTransform = new RotateTransform(90);
+                }
+
+                VerticalTextGrid.PositionGlyph(cell, new Rect(
+                    cellBounds.X + dx, cellBounds.Y + dy, cellBounds.Width, cellBounds.Height));
+                return cell;
             }
 
-            VerticalTextGrid.PositionGlyph(cell, cellBounds);
-            cells.Children.Add(cell);
+            if (edge is not null)
+                foreach (var (dx, dy) in OutlineOffsets(cellSize * VerticalGlyphFill))
+                    cells.Children.Add(Cell(edge, dx, dy));
+            cells.Children.Add(Cell(foreground, 0, 0));
         }
 
         var textLayer = new Border
@@ -786,10 +783,7 @@ public partial class RealtimeBlockWindow : Window
         if (cell.IsEmpty || cell.Width <= 0 || cell.Height <= 0) return null;
         double left = cell.X / _dpiX, top = cell.Y / _dpiY;
         double width = cell.Width / _dpiX, height = cell.Height / _dpiY;
-        var foreground = _textBrush;
-        if (_sampleTextColor && frame is not null)
-            foreground = Freeze(new SolidColorBrush(
-                RealtimeNaturalBackground.SampleTextColor(frame, line.Bounds, _textBrush.Color)));
+        var (foreground, edge) = SampleForeground(frame, line);
         Border? background = null;
         var patchBounds = default(System.Drawing.Rectangle);
         if (scrim is { } scrimBounds && Rect.Intersect(scrimBounds, canvas) is { IsEmpty: false } patch)
@@ -818,12 +812,12 @@ public partial class RealtimeBlockWindow : Window
                 StretchDirection = StretchDirection.DownOnly,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock
+                Child = Outlined(edge, fontSize, () => new TextBlock
                 {
                     Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,
                     FontWeight = FontWeights.SemiBold, Foreground = foreground,
                     TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.None,
-                },
+                }),
             },
         };
         Canvas.SetLeft(text, left);
@@ -1105,6 +1099,67 @@ public partial class RealtimeBlockWindow : Window
         (targetLanguage.StartsWith("ZH", StringComparison.OrdinalIgnoreCase) ||
          targetLanguage.Equals("JA", StringComparison.OrdinalIgnoreCase) ||
          targetLanguage.Equals("KO", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The colour a line is written in, and the outline drawn around it when the source had one.
+    /// </summary>
+    /// <remarks>
+    /// Sampling is its own switch: with it off the reader's chosen colour is what gets drawn, and
+    /// with it on that colour is still what an unconvincing sample falls back to. Only a sampled
+    /// colour brings an outline; the reader's own colour is drawn the way they chose it.
+    /// </remarks>
+    private (SolidColorBrush Text, SolidColorBrush? Edge) SampleForeground(
+        System.Drawing.Bitmap? frame, TranslatedBlock line)
+    {
+        if (!_sampleTextColor || frame is null) return (_textBrush, null);
+        var sampled = RealtimeNaturalBackground.SampleText(frame, line.Bounds, _textBrush.Color);
+        return (Freeze(new SolidColorBrush(sampled.Text)),
+            sampled.Outline is { } outline ? Freeze(new SolidColorBrush(outline)) : null);
+    }
+
+    /// <summary>
+    /// The text as <paramref name="make"/> builds it, with an outline under it when there is one.
+    /// </summary>
+    /// <remarks>
+    /// <para>The outline is there because the source had one, and because it is what keeps the text
+    /// legible wherever it lands: a subtitle's white body with its black edge reads on a bright scene
+    /// and a dark one alike, and a realtime line is drawn over a repaired picture this window never
+    /// measured the contrast of. Without it, the white the source was written in would be white on
+    /// whatever bright picture the erase left behind, which is why, before the body could be told
+    /// from its edge, the edge's colour was what got drawn.</para>
+    ///
+    /// <para>Eight copies in the outline's colour, offset round a circle, under the text. A
+    /// <c>TextBlock</c> has no stroke; drawing its geometry with a pen would mean re-implementing
+    /// the wrapping and alignment it already does, and an effect renders the text through a bitmap,
+    /// which softens it. The copies are laid out exactly as the text is, so they cannot drift from
+    /// it, and there are at most a few lines in a window.</para>
+    /// </remarks>
+    private static UIElement Outlined(System.Windows.Media.Brush? edge, double fontSize, Func<TextBlock> make)
+    {
+        var text = make();
+        if (edge is null) return text;
+        var layers = new Grid();
+        foreach (var (dx, dy) in OutlineOffsets(fontSize))
+        {
+            var copy = make();
+            copy.Foreground = edge;
+            copy.RenderTransform = new TranslateTransform(dx, dy);
+            layers.Children.Add(copy);
+        }
+        layers.Children.Add(text);
+        return layers;
+    }
+
+    /// <summary>Where the outline's copies go: round a circle of 7% of the type size, 1-3px.</summary>
+    private static IEnumerable<(double X, double Y)> OutlineOffsets(double fontSize)
+    {
+        double radius = Math.Clamp(fontSize * .07, 1, 3);
+        for (int k = 0; k < 8; k++)
+        {
+            double angle = k * Math.PI / 4;
+            yield return (Math.Round(Math.Cos(angle) * radius, 2), Math.Round(Math.Sin(angle) * radius, 2));
+        }
+    }
 
     private static SolidColorBrush Freeze(SolidColorBrush brush)
     {

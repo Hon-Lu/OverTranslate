@@ -219,19 +219,33 @@ internal static class RealtimeNaturalBackground
     /// the original. Falls back to the configured realtime text colour when no convincing foreground
     /// pixels can be separated from the local background.
     /// </summary>
-    public static MediaColor SampleTextColor(Bitmap frame, WpfRect bounds, MediaColor fallback)
+    public static MediaColor SampleTextColor(Bitmap frame, WpfRect bounds, MediaColor fallback) =>
+        SampleText(frame, bounds, fallback).Text;
+
+    /// <summary>
+    /// The source text's colour as <see cref="SampleTextColor"/> reads it, and the outline drawn
+    /// around it when there is one — see <see cref="TextLayers"/>.
+    /// </summary>
+    /// <remarks>
+    /// An outlined source is tuned against its own outline rather than against the scene. The
+    /// outline is what the glyphs were drawn on, and it is drawn again around the translation, so
+    /// the scene behind is not what the text has to be read against: tuned against a bright scene,
+    /// the white body of a subtitle with a black edge would be pulled down to grey for a contrast
+    /// the edge already provides.
+    /// </remarks>
+    public static SampledText SampleText(Bitmap frame, WpfRect bounds, MediaColor fallback)
     {
         if (SourceTextColorSampler.Sample(frame, bounds) is not { Text: { } sampled } sample)
-            return fallback;
+            return new(fallback, null);
 
-        var background = sample.Background;
+        var background = sample.Outline ?? sample.Background;
 
         // Nothing is corrected until it is known to be worth keeping: the fallback is the colour the
         // user chose, and tuning that would be overruling them rather than repairing a measurement.
         if (!SeparatesFrom(sampled, background))
-            return fallback;
+            return new(fallback, null);
 
-        return OverlayTextColor.Tune(sampled, background);
+        return new(OverlayTextColor.Tune(sampled, background), sample.Outline);
     }
 
     /// <summary>The area a line's fill covers: its glyphs, and the padding this repair adds.</summary>
@@ -491,3 +505,6 @@ internal static class RealtimeNaturalBackground
     private static byte Lerp(byte a, byte b, double t) =>
         (byte)Math.Clamp((int)Math.Round(a + (b - a) * t), 0, 255);
 }
+
+/// <summary>A sampled source colour, and the outline drawn around the source when it had one.</summary>
+internal readonly record struct SampledText(MediaColor Text, MediaColor? Outline);
