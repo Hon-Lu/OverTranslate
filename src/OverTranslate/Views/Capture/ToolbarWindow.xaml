@@ -40,17 +40,12 @@
             <!-- ClearTypeHint on top of an opaque background: the window itself is layered
                  (AllowsTransparency), which is the other thing that turns ClearType off. The hint is
                  how WPF is told this particular surface really is opaque. -->
-            <!-- 12 above and below rather than 8: with the manga model hint showing, the language
-                 unit fills the whole 46 the stacked actions make (picker 30, gap 4, line 12), and
-                 at 8 the hint's text sat 8px off the bar's bottom edge — closer than anything else
-                 on it. 12 puts it 12-13.5px off, level with the rest; the bar is 72 tall in every
-                 state, hint or no hint. -->
             <Border x:Name="BarSurface"
                     Background="{DynamicResource ToolbarBg}"
                     BorderBrush="{DynamicResource ToolbarBorder}"
                     BorderThickness="1"
                     CornerRadius="16"
-                    Padding="8,12"
+                    Padding="8,8"
                     RenderOptions.ClearTypeHint="Enabled">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
@@ -158,17 +153,25 @@
                         <!-- Under the source picker, from its left edge. As wide as the language
                              pair and no wider: a long line may run on under the swap arrow and the
                              target, but it may not widen the bar or reach the service picker.
-                             The gap above it is its own top margin, so it goes with it when the
-                             hint is collapsed. A 12px line for 11px text: 30 + 4 + 12 is the 46
-                             the bar already has, so showing it moves nothing but this unit. -->
+
+                             Its row counts as 16 in layout, so with the hint showing the unit is
+                             30 + 16 = the 46 the stacked actions already make: the bar stays 64 and
+                             the language row rises by 8. The line itself is placed for where it is
+                             read, not for that row: its text sits midway between the pickers' bottom
+                             edge and the bar's, which puts its last few pixels in the bar's own
+                             padding — hence the row drawn 4 taller than it is laid out (the clip
+                             follows the drawn size). Collapsed with the hint, so without it the unit
+                             is the bare row and the bar is main's to the pixel. -->
                         <Border x:Name="LanguageHintRow" Grid.Row="1"
                                 HorizontalAlignment="Left"
                                 Width="{Binding ActualWidth, ElementName=LanguagePickers}"
+                                Height="20" Margin="0,0,0,-4"
+                                Visibility="{Binding Visibility, ElementName=MangaHint}"
                                 ClipToBounds="True">
                             <ctl:MangaModelHintText x:Name="MangaHint"
                                                     CollapsesWhenHidden="True"
                                                     LineHeight="12" LineStackingStrategy="BlockLineHeight"
-                                                    Margin="1,4,0,0"/>
+                                                    Margin="1,6.5,0,0"/>
                         </Border>
                     </Grid>
 
