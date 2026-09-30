@@ -563,16 +563,30 @@ public sealed class RealtimeTranslationSession
         // the size of its input and not smoothly, so the same picture read again at another size
         // puts balloons together that the first size left in pieces — and this read was happening
         // anyway, reading the identical picture at the identical size for the identical answer.
+        //
+        // Not when the manga models read the page. Their detector sees the whole frame at 640×640
+        // whatever size is asked for, so there is no other geometry to ask with: MEASURED, reading
+        // the same frame twice returned the identical page on all 46 transcribed pages, and merging
+        // the two changed nothing. The previous reading is the answer, without a second GPU pass.
         var readingAgain = false;
-        if (region.Orientation == RealtimeTextOrientation.Vertical && state.ReadingAgain &&
-            Ocr.VerticalSecondLook.OtherSize(frame.Width, frame.Height, primarySize) is { } otherSize)
+        var sameAsLastRead = false;
+        if (region.Orientation == RealtimeTextOrientation.Vertical && state.ReadingAgain)
         {
-            primarySize = otherSize;
-            readingAgain = true;
+            if (_ocr.ReadsVerticalWithMangaModels(sourceLanguage))
+            {
+                sameAsLastRead = true;
+            }
+            else if (Ocr.VerticalSecondLook.OtherSize(frame.Width, frame.Height, primarySize) is { } otherSize)
+            {
+                primarySize = otherSize;
+                readingAgain = true;
+            }
         }
 
-        var recognized = await _ocr.TryRecognizeAsync(
-            frame, sourceLanguage, primarySize, token, region.Mode, region.Orientation);
+        List<OcrTextBlock>? recognized = sameAsLastRead
+            ? [.. state.LastRead]
+            : await _ocr.TryRecognizeAsync(
+                frame, sourceLanguage, primarySize, token, region.Mode, region.Orientation);
         if (recognized is null)
         {
             state.Dialogue.RecognitionUnavailable();

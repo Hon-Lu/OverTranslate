@@ -171,4 +171,30 @@
     <SolidColorBrush x:Key="AppScrollThumbPressed" Color="#5F5F5F"/>
     <SolidColorBrush x:Key="AppScrollTrack"        Color="#0A000000"/>
 
+    <!-- 漫畫直排模型's card — see DarkTheme.xaml. -->
+    <LinearGradientBrush x:Key="MangaCardBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#EAF3FF"/>
+        <GradientStop Offset="1" Color="#F3F8FF"/>
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="MangaCardGlow" Center="1,0" GradientOrigin="1,0" RadiusX="1" RadiusY="1">
+        <GradientStop Offset="0"   Color="#2E3B82F6"/>
+        <GradientStop Offset="0.7" Color="#003B82F6"/>
+    </RadialGradientBrush>
+    <SolidColorBrush x:Key="MangaCardBorder"         Color="#240078D4"/>
+    <SolidColorBrush x:Key="MangaCardFg"             Color="#1B1B1F"/>
+    <SolidColorBrush x:Key="MangaCardColumn"         Color="#121B1B1F"/>
+    <SolidColorBrush x:Key="MangaCardChipBg"         Color="#0D000000"/>
+    <SolidColorBrush x:Key="MangaCardChipBorder"     Color="#14000000"/>
+    <SolidColorBrush x:Key="MangaCardFeatureBg"      Color="#99FFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardFeatureBorder"  Color="#1A0078D4"/>
+    <SolidColorBrush x:Key="MangaCardFeatureDivider" Color="#12000000"/>
+    <SolidColorBrush x:Key="MangaCardFeatureIcon"    Color="#0078D4"/>
+    <SolidColorBrush x:Key="MangaCardTrack"          Color="#14000000"/>
+    <SolidColorBrush x:Key="MangaCardReadyBg"        Color="#1A34C759"/>
+    <SolidColorBrush x:Key="MangaCardReadyBorder"    Color="#4034C759"/>
+    <SolidColorBrush x:Key="MangaCardWarnBg"         Color="#1AFFB800"/>
+    <SolidColorBrush x:Key="MangaCardWarnBorder"     Color="#4DFFB800"/>
+    <SolidColorBrush x:Key="MangaCardErrorBg"        Color="#1AFF453A"/>
+    <SolidColorBrush x:Key="MangaCardErrorBorder"    Color="#4DFF453A"/>
+
 </ResourceDictionary>

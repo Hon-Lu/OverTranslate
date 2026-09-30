@@ -180,4 +180,32 @@
     <SolidColorBrush x:Key="AppScrollThumbPressed" Color="#BFBFBF"/>
     <SolidColorBrush x:Key="AppScrollTrack"        Color="#14FFFFFF"/>
 
+    <!-- 漫畫直排模型's card in the settings page: its own tinted surface rather than AppCardBg, so the
+         one optional download on the page reads as an offer and not as another row of settings.
+         Every value is taken from the design preview (.ai/vertical-ja3-handoff/ui). -->
+    <LinearGradientBrush x:Key="MangaCardBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#16233B"/>
+        <GradientStop Offset="1" Color="#121B2D"/>
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="MangaCardGlow" Center="1,0" GradientOrigin="1,0" RadiusX="1" RadiusY="1">
+        <GradientStop Offset="0"   Color="#4D3B82F6"/>
+        <GradientStop Offset="0.7" Color="#003B82F6"/>
+    </RadialGradientBrush>
+    <SolidColorBrush x:Key="MangaCardBorder"         Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardFg"             Color="#F2F2F7"/>
+    <SolidColorBrush x:Key="MangaCardColumn"         Color="#0DF2F2F7"/>
+    <SolidColorBrush x:Key="MangaCardChipBg"         Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardChipBorder"     Color="#1AFFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardFeatureBg"      Color="#0DFFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardFeatureBorder"  Color="#12FFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardFeatureDivider" Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardFeatureIcon"    Color="#7DB8FF"/>
+    <SolidColorBrush x:Key="MangaCardTrack"          Color="#1AFFFFFF"/>
+    <SolidColorBrush x:Key="MangaCardReadyBg"        Color="#1A34C759"/>
+    <SolidColorBrush x:Key="MangaCardReadyBorder"    Color="#4034C759"/>
+    <SolidColorBrush x:Key="MangaCardWarnBg"         Color="#1AFFB800"/>
+    <SolidColorBrush x:Key="MangaCardWarnBorder"     Color="#4DFFB800"/>
+    <SolidColorBrush x:Key="MangaCardErrorBg"        Color="#1AFF453A"/>
+    <SolidColorBrush x:Key="MangaCardErrorBorder"    Color="#4DFF453A"/>
+
 </ResourceDictionary>

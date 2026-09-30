@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:OverTranslate.Views.Controls"
              xmlns:ctl="clr-namespace:OverTranslate.Controls"
+             xmlns:local="clr-namespace:OverTranslate.Views.Settings"
              PreviewMouseDown="SettingsPage_PreviewMouseDown">
 
     <UserControl.Resources>
@@ -150,7 +151,7 @@
                  label-then-field, so those stay lined up across cards. -->
             <Grid MaxWidth="1120" Grid.IsSharedSizeScope="True">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.6*"/>
+                    <ColumnDefinition Width="1.4*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
@@ -813,6 +814,14 @@
                                            Click="OpenScreenshotFolderBtn_Click"/>
                             </Grid>
                         </Grid>
+
+                        <!-- 漫畫直排模型. A download rather than a switch: with the models present and a
+                             GPU that can run them, Japanese vertical text simply reads with them, and
+                             without either it reads the way it always has. So the card only says what
+                             they are, whether they are here, and why they would not be used; what it
+                             shows at the foot changes with that (MangaModelCard). -->
+                        <local:MangaModelCard Margin="0,16,0,0"
+                                              ErrorRaised="MangaModelCard_ErrorRaised"/>
                     </StackPanel>
                 </Border>
 

@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OverTranslate\OverTranslate.csproj" />
+    <!-- RapidOcrNet brings the CPU onnxruntime 1.27 back in transitively; keep only the DirectML one. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" ExcludeAssets="all" />
   </ItemGroup>
 
 </Project>

@@ -75,8 +75,7 @@ public static class DiagnosticBundleService
     }
 
     /// <summary>What NLog.config resolves to when nothing has moved it.</summary>
-    private static string DefaultLogDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OverTranslate", "logs");
+    private static string DefaultLogDirectory => AppDataPaths.Logs;
 
     /// <summary>
     /// Opens the folder the exports are written to, creating it first so the button works on a
@@ -481,9 +480,7 @@ public static class DiagnosticBundleService
     /// a feature they end up tidying up after. Here they sit beside the logs they were made from,
     /// and Explorer opens with the file already selected either way, so nothing is harder to find.
     /// </remarks>
-    private static string DefaultExportDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OverTranslate", "diagnostics");
+    private static string DefaultExportDirectory => AppDataPaths.Diagnostics;
 
     private static string ResolveDestination(string? requested) =>
         string.IsNullOrWhiteSpace(requested) ? DefaultExportDirectory : requested;

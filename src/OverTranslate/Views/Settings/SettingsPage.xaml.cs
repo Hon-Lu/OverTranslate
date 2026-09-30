@@ -758,7 +758,10 @@ public partial class SettingsPage : UserControl
     /// labels, the service tiles' state words, and the environment-override notice. LoadSettings
     /// rebuilds all of them, and is already guarded against writing back.
     /// </remarks>
-    private void OnLanguageChanged(object? sender, EventArgs e) => LoadSettings();
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        LoadSettings();
+    }
 
     private void SaveScreenshotCheckBox_Toggled(object sender, RoutedEventArgs e)
     {
@@ -823,6 +826,8 @@ public partial class SettingsPage : UserControl
             ShowError(LocalizationService.Format("S.Settings.OpenFolderFailed", ex.Message));
         }
     }
+
+    private void MangaModelCard_ErrorRaised(object? sender, string message) => ShowError(message);
 
     /// <remarks>
     /// The diagnostics folder rather than the log folder, because the export is what a person coming

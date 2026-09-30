@@ -385,10 +385,93 @@ internal static class VerticalColumnGrouping
                 }
             }
 
-            merged.Add(CombineColumns(group));
+            merged.AddRange(ReadingBlocks(group).Select(CombineColumns));
         }
 
         return merged;
+    }
+
+    /// <summary>
+    /// How much of the shorter of two runs of columns has to lie alongside the other for the two to
+    /// be one block, when a group is cut into the blocks a reader reads it as.
+    /// </summary>
+    /// <remarks>
+    /// <para>A group of columns joined pair by pair can hold two blocks the page set apart: a remark
+    /// and, stepped down to its left, the next one — 最後だからこそだ。 and 俺はロベルーア領総督の…
+    /// (zang), だが、 and 誰かじゃ駄目なんだな。 Every column of the one runs alongside a column of the
+    /// other, so the pairs join; the two RUNS, right and left of the step, hardly overlap. So each
+    /// group is cut where the columns to the right of a cut and the columns to the left of it share
+    /// least of their height, if they share less than this, and each side is asked again.</para>
+    ///
+    /// <para>MEASURED on the 58 vertical pages labelled block by block
+    /// (<c>.ai/vertical-ja3-handoff/overmerge/blocks-*.json</c>), the best cut of every group: the
+    /// ones between two blocks share 0.27–0.63 of the shorter run, and the ones through a block 0.71
+    /// and more — a first column set higher than the rest, ちょっと悪いんだけど beside
+    /// そこの魔法陣に入って頂戴 at 0.72, and ragged detections. The bar sits in the gap. One cut
+    /// under it, at 0.46, goes through a column the detector ran across two blocks (below), which
+    /// was two blocks in one group before it was cut. The manga
+    /// models' bar for the same question (<see cref="Manga.MangaPageLayout.SideBySideShare"/>) is
+    /// higher because it compares whole blocks the detector boxed, not columns with their ruby and
+    /// fragments.</para>
+    ///
+    /// <para>No cut is made across the columns, for blocks one above the other. Pairs of columns
+    /// one above the other do not join in the first place (<see cref="SideBySideAlongTheColumn"/>);
+    /// where two such blocks came back as one group on those pages, the detector had read a column
+    /// of the one and a column of the other as a single column (魔力を over この, 4px apart on zang
+    /// 19 08 58), which no cut between columns can part.</para>
+    /// </remarks>
+    private const double RunsAlongside = 0.65;
+
+    private static IEnumerable<List<OcrTextBlock>> ReadingBlocks(List<OcrTextBlock> group)
+    {
+        if (group.Count < 2)
+        {
+            yield return group;
+            yield break;
+        }
+
+        // Right to left, as they are read.
+        var ordered = group.OrderByDescending(column => (column.LayoutBounds.Left + column.LayoutBounds.Right) / 2).ToList();
+        int cut = 0;
+        double least = RunsAlongside;
+        for (int k = 1; k < ordered.Count; k++)
+        {
+            var (rightTop, rightBottom) = Span(ordered.Take(k));
+            var (leftTop, leftBottom) = Span(ordered.Skip(k));
+            if (OneAboveTheOther(ordered.Take(k), ordered.Skip(k))) continue;
+
+            double shared = Math.Min(rightBottom, leftBottom) - Math.Max(rightTop, leftTop);
+            double shorter = Math.Min(rightBottom - rightTop, leftBottom - leftTop);
+            if (shorter > 0 && shared < least * shorter)
+            {
+                least = shared / shorter;
+                cut = k;
+            }
+        }
+
+        if (cut == 0)
+        {
+            yield return group;
+            yield break;
+        }
+
+        foreach (var part in ReadingBlocks(ordered.Take(cut).ToList())) yield return part;
+        foreach (var part in ReadingBlocks(ordered.Skip(cut).ToList())) yield return part;
+
+        static (double Top, double Bottom) Span(IEnumerable<OcrTextBlock> columns) =>
+            (columns.Min(column => column.LayoutBounds.Top), columns.Max(column => column.LayoutBounds.Bottom));
+
+        // Runs sharing more than half the narrower one's width are one above the other, not a step to
+        // the left: a word whose column came back as two pieces, 霊 over 麻？ (ja3 432/002), 歌 over 吹
+        // (472/007), their readings beside them nudging the pieces' centres apart. Parted, they were
+        // two bubbles of half a word each; no cut between two blocks on the 58 labelled pages is lost.
+        static bool OneAboveTheOther(IEnumerable<OcrTextBlock> right, IEnumerable<OcrTextBlock> left)
+        {
+            double rightLeft = right.Min(column => column.LayoutBounds.Left), rightRight = right.Max(column => column.LayoutBounds.Right);
+            double leftLeft = left.Min(column => column.LayoutBounds.Left), leftRight = left.Max(column => column.LayoutBounds.Right);
+            double shared = Math.Min(rightRight, leftRight) - Math.Max(rightLeft, leftLeft);
+            return shared > 0.5 * Math.Min(rightRight - rightLeft, leftRight - leftLeft);
+        }
     }
 
     private static bool IsColumnCandidate(OcrTextBlock column)
@@ -455,11 +538,31 @@ internal static class VerticalColumnGrouping
     /// </remarks>
     private const double SideBySideAlongTheColumn = 0.35;
 
+    /// <summary>
+    /// How far apart two columns may be, in characters of the SMALLER type of the two.
+    /// </summary>
+    /// <remarks>
+    /// <para>The distance bar is 1.6 characters of the larger type, which is right inside a balloon —
+    /// a reading or a short column comes back with a pitch that is too small, and the larger one is
+    /// the balloon's — and wrong between a line of big lettering and a balloon beside it. The big
+    /// type stretches the bar to reach the next balloon: on ja3 432/002 the 134px column 火鉢の炭…！
+    /// took in ご心配いただき恐縮ですわ／わたくしは無事です, 26px type, 4.1 of its characters away.</para>
+    ///
+    /// <para>MEASURED, every pair this method joins over the 175 vertical pages at hand, against the
+    /// manga models' grouping of the same page: the pairs of one group are 1.6 of the smaller type
+    /// apart or less in 1701 of 1904 and more than 4 in three: a reading over its word, a misread
+    /// column, and 遠っ lettered beside a balloon, which the models' grouping had wrong. Taking the
+    /// smaller pitch for the whole bar instead split balloons everywhere (zang, ja3 and ja2 lost 14,
+    /// 10 and 17 whole sentences); capping it at 4 changed six pages of the 175, no sentence on the
+    /// transcribed ones, and parted the lettering from the balloons on two.</para>
+    /// </remarks>
+    private const double SmallerTypeReach = 4;
+
     private static bool IsSameGroup(OcrTextBlock a, OcrTextBlock b)
     {
         // Detector padding is not character size. Compare centres and character pitch so
         // a generous quad cannot bridge a gutter into the next balloon or manga panel.
-        double pitch = Math.Max(VerticalOcrGeometry.GlyphPitch(a), VerticalOcrGeometry.GlyphPitch(b));
+        double pa = VerticalOcrGeometry.GlyphPitch(a), pb = VerticalOcrGeometry.GlyphPitch(b);
 
         double shared = Math.Min(a.LayoutBounds.Bottom, b.LayoutBounds.Bottom) -
                         Math.Max(a.LayoutBounds.Top, b.LayoutBounds.Top);
@@ -469,7 +572,7 @@ internal static class VerticalColumnGrouping
 
         double distance = Math.Abs((a.LayoutBounds.Left + a.LayoutBounds.Right) / 2 -
                                    (b.LayoutBounds.Left + b.LayoutBounds.Right) / 2);
-        return distance <= pitch * 1.6;
+        return distance <= Math.Max(pa, pb) * 1.6 && distance <= Math.Min(pa, pb) * SmallerTypeReach;
     }
 
     private static OcrTextBlock CombineColumns(List<OcrTextBlock> group)
