@@ -28,7 +28,7 @@ internal static unsafe class OpenCvReference
     }
 
     /// <summary>Which families run on OpenCV.</summary>
-    public static Families Use = Families.All;
+    public static Families Use = Families.None;
 
     public static bool Handles(Families family) => (Use & family) != 0;
 
