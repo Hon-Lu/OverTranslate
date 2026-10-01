@@ -649,7 +649,7 @@
     <sys:String x:Key="S.Toolbar.SavePathInSettings">保存先は設定で変更できます</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitch">モデルのヒントを表示</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">翻訳元の言語の下に、どのモデルで認識するかを表示します。</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">日本語を選ぶと漫画縦書きモデルを使います</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">現在は標準モデル。日本語を指定すると漫画縦書きモデルに切り替わります</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">漫画縦書きモデルを使用します</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫画縦書きモデルをダウンロード中</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">漫画縦書きモデル未導入（設定から入手）</sys:String>

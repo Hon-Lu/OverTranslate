@@ -645,7 +645,7 @@
     <sys:String x:Key="S.Toolbar.SavePathInSettings">保存位置可在设置中更改</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitch">显示模型提示</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">在源语言下方提示当前将使用哪个模型。</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">选择日语后，自动套用漫画竖排模型</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">当前为默认模型，指定日语后将自动切换为漫画竖排模型</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">已套用漫画竖排模型</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫画竖排模型下载中</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">尚未安装漫画竖排模型，可在设置中下载</sys:String>
