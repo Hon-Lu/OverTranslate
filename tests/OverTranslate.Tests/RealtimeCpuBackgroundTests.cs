@@ -1,4 +1,5 @@
 using System.Drawing;
+using OverTranslate.Imaging;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
 using Xunit;
@@ -184,20 +185,34 @@ public class RealtimeCpuBackgroundTests
     {
         // Striped, so the picture reads as structure and the tiles are inpainted rather than
         // handed to the smooth fill, which fills every hole whatever is around it.
-        using var source = new OpenCvSharp.Mat(400, 400, OpenCvSharp.MatType.CV_8UC3, new OpenCvSharp.Scalar(80, 60, 40));
+        using var source = ImageBuffer.Solid(new Size(400, 400), 80, 60, 40);
         for (int x = 0; x < 400; x += 8)
-            source[new OpenCvSharp.Rect(x, 0, 4, 400)].SetTo(new OpenCvSharp.Scalar(20, 10, 0));
-        using var mask = new OpenCvSharp.Mat(400, 400, OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.Black);
-        var hole = new OpenCvSharp.Rect(20, 50, 360, 300);
-        source[hole].SetTo(OpenCvSharp.Scalar.White);
-        mask[hole].SetTo(OpenCvSharp.Scalar.White);
+            Paint(source, new Rectangle(x, 0, 4, 400), 20, 10, 0);
+        using var mask = new ImageBuffer(400, 400, PixelType.U8C1);
+        var hole = new Rectangle(20, 50, 360, 300);
+        Paint(source, hole, 255, 255, 255);
+        using (var masked = new ImageBuffer(mask, hole)) masked.SetTo(255);
 
         using var repaired = CpuHoleRepair.Repair(source, mask);
 
         // The tile at (96, 96) is masked for a whole guard around it.
-        var middle = repaired.Image.At<OpenCvSharp.Vec3b>(144, 144);
-        Assert.InRange(middle.Item0, 0, 120);
-        Assert.InRange(middle.Item2, 0, 80);
+        var middle = repaired.Image.RowSpan(144).Slice(144 * 3, 3);
+        Assert.InRange(middle[0], 0, 120);
+        Assert.InRange(middle[2], 0, 80);
+    }
+
+    private static void Paint(ImageBuffer image, Rectangle area, byte blue, byte green, byte red)
+    {
+        for (int y = area.Top; y < area.Bottom; y++)
+        {
+            var row = image.RowSpan(y);
+            for (int x = area.Left; x < area.Right; x++)
+            {
+                row[x * 3] = blue;
+                row[x * 3 + 1] = green;
+                row[x * 3 + 2] = red;
+            }
+        }
     }
 
     [Fact]

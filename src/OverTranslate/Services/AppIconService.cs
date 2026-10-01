@@ -24,7 +24,7 @@ public static class AppIconService
     {
         using var stream = GetStream(relativeName);
         using var icon   = new System.Drawing.Icon(stream, size, size);
-        var src = Imaging.CreateBitmapSourceFromHIcon(
+        var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
             icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
         src.Freeze();
         return src;

@@ -2,12 +2,12 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using OpenCvSharp;
+using OverTranslate.Imaging;
 using OverTranslate.Layout;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
-using CvRect = OpenCvSharp.Rect;
-using CvSize = OpenCvSharp.Size;
+using PixelRect = System.Drawing.Rectangle;
+using PixelSize = System.Drawing.Size;
 using MediaColor = System.Windows.Media.Color;
 using Sd = System.Drawing;
 using WpfRect = System.Windows.Rect;
@@ -51,15 +51,15 @@ internal static class Program
     private sealed record CachedBlock(string Text, double[] Bounds, double[][] Lines, double? GlyphHeight);
     /// <param name="Wash">What the capture sampled: the old flat card, and the tint on a plate.</param>
     /// <param name="Flat">What the overlay paints when no plate was built — see CaptureBubbleBackdrop.Card.</param>
-    private sealed record Card(CvRect Rect, MediaColor Wash, MediaColor Text, double GlyphHeight,
-        double FontSize, string Content, CvRect PlateRect, byte[]? Plate, MediaColor Flat, MediaColor FlatText);
+    private sealed record Card(PixelRect Rect, MediaColor Wash, MediaColor Text, double GlyphHeight,
+        double FontSize, string Content, PixelRect PlateRect, byte[]? Plate, MediaColor Flat, MediaColor FlatText);
 
     private static OcrService? _ocr;
 
     [STAThread]
     private static void Main(string[] args)
     {
-        Cv2.SetNumThreads(4);
+        ParallelRows.Threads = 4;
         string root = FindRoot();
         string output = Path.Combine(root, "artifacts/capture-bubble");
         Directory.CreateDirectory(output);
@@ -106,7 +106,7 @@ internal static class Program
         if (blocks.Count == 0) { Console.WriteLine("  no text"); return; }
         Console.WriteLine($"  {blocks.Count} blocks");
 
-        using var source = ToMat(frame);
+        using var source = ToImage(frame);
         var regions = blocks
             .SelectMany(b => b.Lines.Select(l => new CpuTextRegion(l.X, l.Y, l.Width, l.Height, b.GlyphHeight)))
             .ToArray();
@@ -134,7 +134,7 @@ internal static class Program
         Sd.Bitmap frame, ProbeBlock block, CaptureBubbleBackdrop? backdrop, int width, int height)
     {
         var b = block.Bounds;
-        var size = new CvSize(width, height);
+        var size = new PixelSize(width, height);
         var rect = Clip(b.X - BubbleExpand, b.Y - BubbleExpand,
             b.X + b.Width * _overflow + BubbleExpand, b.Bottom + BubbleExpand, size);
         var (wash, text) = SourceTextColorSampler.ForCaptureOverlay(frame, b, block.Lines, false);
@@ -145,7 +145,7 @@ internal static class Program
         // was; this mirrors that. Not clipped to the frame: a plate comes back at the size asked
         // for even where the capture does not reach, so the paste below is what has to cope.
         double feather = CaptureBubbleBackdrop.Feather(glyph);
-        var plateRect = new CvRect(
+        var plateRect = new PixelRect(
             (int)Math.Floor(rect.X - feather), (int)Math.Floor(rect.Y - feather),
             (int)Math.Ceiling(rect.Right + feather) - (int)Math.Floor(rect.X - feather),
             (int)Math.Ceiling(rect.Bottom + feather) - (int)Math.Floor(rect.Y - feather));
@@ -157,7 +157,7 @@ internal static class Program
             var image = (System.Windows.Media.Imaging.BitmapSource)built.Brush.ImageSource;
             plate = new byte[image.PixelWidth * image.PixelHeight * 4];
             image.CopyPixels(plate, image.PixelWidth * 4, 0);
-            plateRect = new CvRect(plateRect.X, plateRect.Y, image.PixelWidth, image.PixelHeight);
+            plateRect = new PixelRect(plateRect.X, plateRect.Y, image.PixelWidth, image.PixelHeight);
         }
         var flat = backdrop?.Card(new WpfRect(rect.X, rect.Y, rect.Width, rect.Height), text);
 
@@ -174,11 +174,11 @@ internal static class Program
         return builder.ToString(0, count);
     }
 
-    private static void Paint(Mat canvas, Card card, Variant variant)
+    private static void Paint(ImageBuffer canvas, Card card, Variant variant)
     {
         if (variant.Mode == "solid")
         {
-            Cv2.Rectangle(canvas, card.Rect, new Scalar(card.Wash.B, card.Wash.G, card.Wash.R), -1);
+            Fill(canvas, card.Rect, card.Wash);
             return;
         }
 
@@ -190,7 +190,7 @@ internal static class Program
         if (card.Plate is not { } plate)
         {
             var flat = variant.Mode == "solid" ? card.Wash : card.Flat;
-            Cv2.Rectangle(canvas, card.Rect, new Scalar(flat.B, flat.G, flat.R), -1);
+            Fill(canvas, card.Rect, flat);
             return;
         }
         var rect = card.PlateRect;
@@ -201,11 +201,8 @@ internal static class Program
                 int i = (y * rect.Width + x) * 4;
                 double alpha = plate[i + 3] / 255.0;
                 if (alpha <= 0) continue;
-                var pixel = canvas.At<Vec3b>(rect.Y + y, rect.X + x);
-                canvas.Set(rect.Y + y, rect.X + x, new Vec3b(
-                    (byte)Math.Round(pixel.Item0 * (1 - alpha) + plate[i] * alpha),
-                    (byte)Math.Round(pixel.Item1 * (1 - alpha) + plate[i + 1] * alpha),
-                    (byte)Math.Round(pixel.Item2 * (1 - alpha) + plate[i + 2] * alpha)));
+                var pixel = canvas.RowSpan(rect.Y + y).Slice((rect.X + x) * 3, 3);
+                for (int c = 0; c < 3; c++) pixel[c] = (byte)Math.Round(pixel[c] * (1 - alpha) + plate[i + c] * alpha);
             }
         }
     }
@@ -253,7 +250,7 @@ internal static class Program
         new WpfRect(block.Bounds[0], block.Bounds[1], block.Bounds[2], block.Bounds[3]),
         [.. block.Lines.Select(l => new WpfRect(l[0], l[1], l[2], l[3]))], block.GlyphHeight);
 
-    private static CvRect Clip(double left, double top, double right, double bottom, CvSize size)
+    private static PixelRect Clip(double left, double top, double right, double bottom, PixelSize size)
     {
         int x = (int)Math.Clamp(Math.Floor(left), 0, size.Width);
         int y = (int)Math.Clamp(Math.Floor(top), 0, size.Height);
@@ -262,25 +259,41 @@ internal static class Program
             (int)Math.Clamp(Math.Ceiling(bottom), y, size.Height) - y);
     }
 
-    private static Mat ToMat(Sd.Bitmap bitmap)
+    /// <summary>A solid rectangle, clipped to the canvas.</summary>
+    private static void Fill(ImageBuffer canvas, PixelRect area, MediaColor colour)
     {
-        var mat = new Mat(bitmap.Height, bitmap.Width, MatType.CV_8UC3);
-        Transfer(bitmap, mat, toMat: true);
-        return mat;
+        var clipped = PixelRect.Intersect(area, new PixelRect(0, 0, canvas.Width, canvas.Height));
+        for (int y = clipped.Top; y < clipped.Bottom; y++)
+        {
+            var row = canvas.RowSpan(y);
+            for (int x = clipped.Left; x < clipped.Right; x++)
+            {
+                row[x * 3] = colour.B;
+                row[x * 3 + 1] = colour.G;
+                row[x * 3 + 2] = colour.R;
+            }
+        }
     }
 
-    private static Sd.Bitmap ToBitmap(Mat mat)
+    private static ImageBuffer ToImage(Sd.Bitmap bitmap)
     {
-        var bitmap = new Sd.Bitmap(mat.Width, mat.Height, Sd.Imaging.PixelFormat.Format24bppRgb);
-        Transfer(bitmap, mat, toMat: false);
+        var image = new ImageBuffer(bitmap.Width, bitmap.Height, PixelType.U8C3);
+        Transfer(bitmap, image, toImage: true);
+        return image;
+    }
+
+    private static Sd.Bitmap ToBitmap(ImageBuffer image)
+    {
+        var bitmap = new Sd.Bitmap(image.Width, image.Height, Sd.Imaging.PixelFormat.Format24bppRgb);
+        Transfer(bitmap, image, toImage: false);
         return bitmap;
     }
 
-    private static void Transfer(Sd.Bitmap bitmap, Mat mat, bool toMat)
+    private static void Transfer(Sd.Bitmap bitmap, ImageBuffer image, bool toImage)
     {
         var bounds = new Sd.Rectangle(0, 0, bitmap.Width, bitmap.Height);
         var data = bitmap.LockBits(bounds,
-            toMat ? Sd.Imaging.ImageLockMode.ReadOnly : Sd.Imaging.ImageLockMode.WriteOnly,
+            toImage ? Sd.Imaging.ImageLockMode.ReadOnly : Sd.Imaging.ImageLockMode.WriteOnly,
             Sd.Imaging.PixelFormat.Format24bppRgb);
         try
         {
@@ -288,8 +301,16 @@ internal static class Program
             for (int y = 0; y < bounds.Height; y++)
             {
                 var pixels = IntPtr.Add(data.Scan0, y * data.Stride);
-                System.Runtime.InteropServices.Marshal.Copy(toMat ? pixels : mat.Ptr(y), row, 0, row.Length);
-                System.Runtime.InteropServices.Marshal.Copy(row, 0, toMat ? mat.Ptr(y) : pixels, row.Length);
+                if (toImage)
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(pixels, row, 0, row.Length);
+                    row.CopyTo(image.RowSpan(y));
+                }
+                else
+                {
+                    image.RowSpan(y).CopyTo(row);
+                    System.Runtime.InteropServices.Marshal.Copy(row, 0, pixels, row.Length);
+                }
             }
         }
         finally { bitmap.UnlockBits(data); }
