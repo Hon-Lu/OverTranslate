@@ -42,7 +42,6 @@ internal static unsafe class Resize
     {
         if (target.Type != source.Type) throw new ArgumentException("Resizing keeps the pixel type.");
         if (source.IsEmpty || target.IsEmpty) throw new ArgumentException("Nothing to resize.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Resize)) { OpenCvReference.Resize(source, target, interpolation); return; }
         if (target.Width == source.Width && target.Height == source.Height)
         {
             source.CopyTo(target);

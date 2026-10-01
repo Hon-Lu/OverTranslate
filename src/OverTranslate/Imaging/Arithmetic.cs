@@ -25,7 +25,6 @@ internal static unsafe class Arithmetic
     /// <summary><c>a / b</c>, or <c>(a * scale) / b</c> with the scale rounded to float first.</summary>
     public static void Divide(ImageBuffer a, ImageBuffer b, ImageBuffer target, double scale = 1)
     {
-        if (OpenCvReference.Handles("divide")) { OpenCvReference.Binary("divide", a, b, 0, target, scale); return; }
         float s = (float)scale;
         if (s == 1) Binary<DivideOp>(a, b, target);
         else
@@ -48,7 +47,6 @@ internal static unsafe class Arithmetic
     {
         RequireBytes(a);
         ImageBuffer.RequireSameShape(a, target);
-        if (OpenCvReference.Handles("not")) { OpenCvReference.Binary("not", a, null, 0, target); return; }
         int n = a.RowBytes;
         for (int y = 0; y < a.Height; y++)
         {
@@ -64,7 +62,6 @@ internal static unsafe class Arithmetic
     {
         RequireFloats(a);
         ImageBuffer.RequireSameShape(a, target);
-        if (OpenCvReference.Handles("abs")) { OpenCvReference.Binary("abs", a, null, 0, target); return; }
         int n = a.Width * a.Channels;
         for (int y = 0; y < a.Height; y++)
         {
@@ -100,7 +97,6 @@ internal static unsafe class Arithmetic
         if (bytes.Size != floats.Size || bytes.Channels != floats.Channels)
             throw new ArgumentException("Mismatched shapes.");
         ImageBuffer.RequireSameShape(bytes, target);
-        if (OpenCvReference.Handles("addbytes")) { OpenCvReference.Binary("addbytes", bytes, floats, 0, target); return; }
         int n = bytes.Width * bytes.Channels;
         for (int y = 0; y < bytes.Height; y++)
         {
@@ -116,7 +112,6 @@ internal static unsafe class Arithmetic
         RequireBytes(a);
         ImageBuffer.RequireSameShape(a, b);
         ImageBuffer.RequireSameShape(a, target);
-        if (OpenCvReference.Handles("addweighted")) { OpenCvReference.AddWeighted(a, alpha, b, beta, gamma, target); return; }
         float fa = (float)alpha, fb = (float)beta, fg = (float)gamma;
         int n = a.RowBytes;
         for (int y = 0; y < a.Height; y++)
@@ -130,7 +125,6 @@ internal static unsafe class Arithmetic
     {
         ImageBuffer.RequireSameShape(a, b);
         ImageBuffer.RequireSameShape(a, target);
-        if (OpenCvReference.Handles(TOp.Name)) { OpenCvReference.Binary(TOp.Name, a, b, 0, target); return; }
         int n = a.Width * a.Channels;
         if (a.Type.IsFloat())
         {
@@ -147,7 +141,6 @@ internal static unsafe class Arithmetic
     private static void Scalar<TOp>(ImageBuffer a, double value, ImageBuffer target) where TOp : IOperation
     {
         ImageBuffer.RequireSameShape(a, target);
-        if (OpenCvReference.Handles(TOp.Name + "-scalar")) { OpenCvReference.Binary(TOp.Name, a, null, value, target); return; }
         int n = a.Width * a.Channels;
         if (a.Type.IsFloat())
         {
@@ -208,9 +201,6 @@ internal static unsafe class Arithmetic
         /// <summary>Whether the operation is defined on bytes; floats always are.</summary>
         static abstract bool Bytes { get; }
 
-        /// <summary>Transitional: the operation's name for <see cref="OpenCvReference.Binary"/>.</summary>
-        static abstract string Name { get; }
-
         static abstract T Apply<T>(T a, T b) where T : unmanaged;
 
         static abstract Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged;
@@ -233,7 +223,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct AddOp : IOperation
     {
-        public static string Name => "add";
         public static bool Bytes => false;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>(F(a) + F(b));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a + b;
@@ -242,7 +231,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct SubtractOp : IOperation
     {
-        public static string Name => "subtract";
         public static bool Bytes => false;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>(F(a) - F(b));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a - b;
@@ -251,7 +239,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct ReverseSubtractOp : IOperation
     {
-        public static string Name => "rsubtract";
         public static bool Bytes => false;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>(F(b) - F(a));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => b - a;
@@ -260,7 +247,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct SubtractSaturatedOp : IOperation
     {
-        public static string Name => "subtract";
         public static bool Bytes => true;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>((byte)Math.Max(0, B(a) - B(b)));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a - Vector128.Min(a, b);
@@ -269,7 +255,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct MultiplyOp : IOperation
     {
-        public static string Name => "multiply";
         public static bool Bytes => false;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>(F(a) * F(b));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a * b;
@@ -278,7 +263,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct DivideOp : IOperation
     {
-        public static string Name => "divide";
         public static bool Bytes => false;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>(F(a) / F(b));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a / b;
@@ -287,7 +271,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct MinOp : IOperation
     {
-        public static string Name => "min";
         public static bool Bytes => true;
         public static T Apply<T>(T a, T b) where T : unmanaged =>
             typeof(T) == typeof(float) ? As<T>(F(a) <= F(b) ? F(a) : F(b)) : As<T>(Math.Min(B(a), B(b)));
@@ -297,7 +280,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct MaxOp : IOperation
     {
-        public static string Name => "max";
         public static bool Bytes => true;
         public static T Apply<T>(T a, T b) where T : unmanaged =>
             typeof(T) == typeof(float) ? As<T>(F(a) >= F(b) ? F(a) : F(b)) : As<T>(Math.Max(B(a), B(b)));
@@ -307,7 +289,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct AndOp : IOperation
     {
-        public static string Name => "and";
         public static bool Bytes => true;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>((byte)(B(a) & B(b)));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a & b;
@@ -316,7 +297,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct OrOp : IOperation
     {
-        public static string Name => "or";
         public static bool Bytes => true;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>((byte)(B(a) | B(b)));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => a | b;
@@ -325,7 +305,6 @@ internal static unsafe class Arithmetic
 
     private readonly struct AbsoluteDifferenceOp : IOperation
     {
-        public static string Name => "absdiff";
         public static bool Bytes => true;
         public static T Apply<T>(T a, T b) where T : unmanaged => As<T>((byte)Math.Abs(B(a) - B(b)));
         public static Vector128<T> Apply<T>(Vector128<T> a, Vector128<T> b) where T : unmanaged => Vector128.Max(a, b) - Vector128.Min(a, b);

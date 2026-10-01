@@ -11,7 +11,6 @@ internal static unsafe class Threshold
     {
         if (source.Channels != 1) throw new NotSupportedException($"Threshold on {source.Type}.");
         ImageBuffer.RequireSameShape(source, target);
-        if (OpenCvReference.Handles(OpenCvReference.Families.Threshold)) { OpenCvReference.Threshold(source, target, threshold, maximum); return; }
         int width = source.Width;
         if (source.Type == PixelType.U8C1)
         {
@@ -46,7 +45,6 @@ internal static unsafe class Threshold
     public static double Otsu(ImageBuffer source)
     {
         if (source.Type != PixelType.U8C1) throw new NotSupportedException($"Otsu on {source.Type}.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Threshold)) return OpenCvReference.Otsu(source);
         var histogram = stackalloc int[256];
         new Span<int>(histogram, 256).Clear();
         for (int y = 0; y < source.Height; y++)

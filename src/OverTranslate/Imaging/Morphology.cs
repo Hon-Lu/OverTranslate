@@ -93,20 +93,17 @@ internal static unsafe class Morphology
 {
     public static void Dilate(ImageBuffer source, ImageBuffer target, StructuringElement element, int iterations = 1)
     {
-        if (OpenCvReference.Handles(OpenCvReference.Families.Morphology)) { OpenCvReference.Morph(source, target, element, OpenCvSharp.MorphTypes.Dilate, iterations); return; }
         Run(source, target, element, iterations, max: true);
     }
 
     public static void Erode(ImageBuffer source, ImageBuffer target, StructuringElement element, int iterations = 1)
     {
-        if (OpenCvReference.Handles(OpenCvReference.Families.Morphology)) { OpenCvReference.Morph(source, target, element, OpenCvSharp.MorphTypes.Erode, iterations); return; }
         Run(source, target, element, iterations, max: false);
     }
 
     /// <summary>What stands out brighter than its surroundings: the source less its opening.</summary>
     public static void TopHat(ImageBuffer source, ImageBuffer target, StructuringElement element)
     {
-        if (OpenCvReference.Handles(OpenCvReference.Families.Morphology)) { OpenCvReference.Morph(source, target, element, OpenCvSharp.MorphTypes.TopHat, 1); return; }
         using var opened = ImageBuffer.Uninitialized(source.Size, source.Type);
         Run(source, opened, element, 1, max: false);
         Run(opened, opened, element, 1, max: true);
@@ -116,7 +113,6 @@ internal static unsafe class Morphology
     /// <summary>What stands out darker than its surroundings: the closing less the source.</summary>
     public static void BlackHat(ImageBuffer source, ImageBuffer target, StructuringElement element)
     {
-        if (OpenCvReference.Handles(OpenCvReference.Families.Morphology)) { OpenCvReference.Morph(source, target, element, OpenCvSharp.MorphTypes.BlackHat, 1); return; }
         using var closed = ImageBuffer.Uninitialized(source.Size, source.Type);
         Run(source, closed, element, 1, max: true);
         Run(closed, closed, element, 1, max: false);

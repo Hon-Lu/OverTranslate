@@ -23,7 +23,6 @@ internal static unsafe class DistanceTransform
     public static ImageBuffer Chamfer3(ImageBuffer mask)
     {
         if (mask.Type != PixelType.U8C1) throw new NotSupportedException($"Distance transform of {mask.Type}.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Distance)) return OpenCvReference.DistanceTransform(mask);
         int width = mask.Width, height = mask.Height;
         var target = ImageBuffer.Uninitialized(mask.Size, PixelType.F32C1);
         if (mask.IsEmpty) return target;

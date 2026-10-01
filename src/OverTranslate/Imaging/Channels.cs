@@ -11,7 +11,6 @@ internal static unsafe class Channels
         if (first.Type != PixelType.F32C1) throw new NotSupportedException($"Merging {first.Type}.");
         ImageBuffer.RequireSameShape(first, second);
         ImageBuffer.RequireSameShape(first, third);
-        if (OpenCvReference.Handles(OpenCvReference.Families.Channels)) return OpenCvReference.Merge(first, second, third);
         var target = ImageBuffer.Uninitialized(first.Size, PixelType.F32C3);
         int width = first.Width;
         ParallelRows.For(first.Height, width * 3, y =>

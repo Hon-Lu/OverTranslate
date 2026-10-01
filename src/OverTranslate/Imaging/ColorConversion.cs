@@ -23,7 +23,6 @@ internal static unsafe class ColorConversion
     {
         if (source.Channels != 3) throw new NotSupportedException($"Grey from {source.Type}.");
         ImageBuffer.RequireSize(target, source.Size, source.Type.WithChannels(1));
-        if (OpenCvReference.Handles(OpenCvReference.Families.Color)) { OpenCvReference.Gray(source, target); return; }
         int width = source.Width;
         if (source.Type == PixelType.U8C3)
         {

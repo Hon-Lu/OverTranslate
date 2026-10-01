@@ -23,7 +23,6 @@ internal static unsafe class Conversion
     public static void Convert(ImageBuffer source, ImageBuffer target, double scale = 1)
     {
         if (target.Size != source.Size || target.Channels != source.Channels) throw new ArgumentException("Mismatched shapes.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Conversion)) { OpenCvReference.Convert(source, target, scale); return; }
         int n = source.Width * source.Channels;
         float s = (float)scale;
         bool scaled = scale != 1;

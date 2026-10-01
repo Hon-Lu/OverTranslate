@@ -43,7 +43,6 @@ internal static unsafe class Inpaint
     {
         if (source.Type != PixelType.U8C3) throw new NotSupportedException($"Inpainting {source.Type}.");
         ImageBuffer.RequireMask(mask, source.Size);
-        if (OpenCvReference.Handles(OpenCvReference.Families.Inpaint)) return OpenCvReference.Inpaint(source, mask, radius);
         var target = source.Clone();
         try
         {

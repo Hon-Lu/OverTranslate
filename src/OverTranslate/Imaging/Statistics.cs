@@ -8,7 +8,6 @@ internal static unsafe class Statistics
     public static int CountNonZero(ImageBuffer image)
     {
         RequireSingle(image);
-        if (OpenCvReference.Handles(OpenCvReference.Families.Statistics)) return OpenCvReference.CountNonZero(image);
         int count = 0;
         for (int y = 0; y < image.Height; y++)
         {
@@ -30,7 +29,6 @@ internal static unsafe class Statistics
     public static Rectangle BoundingRect(ImageBuffer mask)
     {
         if (mask.Type != PixelType.U8C1) throw new NotSupportedException($"Bounds of {mask.Type}.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Statistics)) return OpenCvReference.BoundingRect(mask);
         int left = int.MaxValue, top = -1, right = -1, bottom = -1;
         for (int y = 0; y < mask.Height; y++)
         {
@@ -51,7 +49,6 @@ internal static unsafe class Statistics
     {
         RequireSingle(image);
         if (mask is not null) ImageBuffer.RequireMask(mask, image.Size);
-        if (OpenCvReference.Handles(OpenCvReference.Families.Statistics)) return OpenCvReference.MinMax(image, mask);
         double least = double.MaxValue, most = double.MinValue;
         bool any = false;
         for (int y = 0; y < image.Height; y++)
@@ -93,7 +90,6 @@ internal static unsafe class Statistics
     {
         if (image.Type != PixelType.U8C1) throw new NotSupportedException($"Mean of {image.Type}.");
         if (mask is not null) ImageBuffer.RequireMask(mask, image.Size);
-        if (OpenCvReference.Handles(OpenCvReference.Families.Statistics)) return OpenCvReference.Mean(image, mask);
         long sum = 0, count = 0;
         for (int y = 0; y < image.Height; y++)
         {

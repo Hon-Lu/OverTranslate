@@ -39,7 +39,6 @@ internal static unsafe class Filters
         ImageBuffer.RequireSameShape(source, target);
         if (size % 2 == 0) throw new ArgumentException("Odd box sizes only.");
         if (source.IsEmpty) return;
-        if (OpenCvReference.Handles(OpenCvReference.Families.Filters)) { OpenCvReference.Blur(source, target, size); return; }
         int r = size / 2, width = source.Width, height = source.Height;
         using var padded = Neighbourhood(source, r, r, Border.Reflect101);
         int rows = padded.Height;
@@ -111,7 +110,6 @@ internal static unsafe class Filters
     {
         if (source.Type != PixelType.U8C1) throw new NotSupportedException($"Box sum of {source.Type}.");
         if (size % 2 == 0) throw new ArgumentException("Odd box sizes only.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Filters)) return OpenCvReference.BoxSum(source, size);
         var target = ImageBuffer.Uninitialized(source.Size, PixelType.F32C1);
         if (source.IsEmpty) return target;
         int r = size / 2, width = source.Width, height = source.Height;
@@ -197,7 +195,6 @@ internal static unsafe class Filters
     public static ImageBuffer Laplacian(ImageBuffer source)
     {
         if (source.Type != PixelType.F32C1) throw new NotSupportedException($"Laplacian of {source.Type}.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Filters)) return OpenCvReference.Laplacian(source);
         var target = ImageBuffer.Uninitialized(source.Size, PixelType.F32C1);
         if (source.IsEmpty) return target;
         using var padded = Neighbourhood(source, 1, 1, Border.Reflect101);
@@ -236,7 +233,6 @@ internal static unsafe class Filters
     public static ImageBuffer GaussianBlur(ImageBuffer source, double sigma)
     {
         if (source.Type is not (PixelType.U8C1 or PixelType.U8C3)) throw new NotSupportedException($"Gaussian blur of {source.Type}.");
-        if (OpenCvReference.Handles(OpenCvReference.Families.Filters)) return OpenCvReference.GaussianBlur(source, sigma);
         int size = Saturate.ToInt(sigma * 3 * 2 + 1) | 1;
         var target = ImageBuffer.Uninitialized(source.Size, source.Type);
         if (source.IsEmpty) return target;
