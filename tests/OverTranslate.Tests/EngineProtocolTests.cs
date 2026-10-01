@@ -261,7 +261,7 @@ public class EngineProtocolTests
     public async Task GoogleChrome_EscapesMarkupOnTheWayOutAndDecodesItOnTheWayBack()
     {
         var handler = new Canned(_ => Json("""[["按 &lt;A&gt; 鍵並「儲存」"],["en"]]"""));
-        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => StoredKey);
 
         var answer = Assert.Single(await engine.TranslateAsync(["Press <A> & \"save\""], "zh-TW"));
 
@@ -278,7 +278,7 @@ public class EngineProtocolTests
             var sent = JsonDocument.Parse(request.Body).RootElement[0][0].EnumerateArray().Select(e => e.GetString()!).ToList();
             return Json(JsonSerializer.Serialize(new object[] { sent.Select(s => $"<{s}>").ToArray() }));
         });
-        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => StoredKey);
 
         var answer = Assert.Single(await engine.TranslateAsync(["First line\nsame paragraph.\n\nSecond paragraph."], "zh-TW"));
 
@@ -291,7 +291,7 @@ public class EngineProtocolTests
         var handler = new Canned(request => request.Uri.Contains("translate-pa.googleapis.com")
             ? new HttpResponseMessage(HttpStatusCode.BadGateway)
             : Json("""[["好"],["en"]]"""));
-        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => StoredKey);
 
         var answer = Assert.Single(await engine.TranslateAsync(["OK"], "zh-TW"));
 
@@ -303,13 +303,135 @@ public class EngineProtocolTests
     [Fact]
     public async Task GoogleChrome_ARefusalThatIsNotTheServers_IsNotRetriedElsewhere()
     {
-        var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.Forbidden));
-        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+        var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.TooManyRequests));
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => StoredKey);
 
         var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-TW"));
 
-        Assert.Equal(HttpStatusCode.Forbidden, failure.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, failure.StatusCode);
         Assert.Single(handler.Requests);
+    }
+
+    // ---- Google (Chrome): the key ----------------------------------------------------------
+
+    // Shaped like the real ones, made up: the loader names the main script in JavaScript-escaped
+    // settings, and the main script holds two keys, only one of them next to translateHtml.
+    //
+    // Put together at run time because a key written out whole is one GitHub's secret scanning
+    // reports, made up or not.
+    private static readonly string StoredKey = FakeKey('S');
+    private static readonly string HtmlKey   = FakeKey('H');
+    private static readonly string OtherKey  = FakeKey('O');
+
+    private static string FakeKey(char fill) => "AI" + "za" + new string(fill, 35);
+
+    private const string Loader =
+        """c._ctkk='x';c._pas='https://';c._pbi='';c._cac='';c._cam='';c._ctlu='',c._ps="\x22translate-pa.googleapis.com\x22,\x22https:\/\/translate.googleapis.com\/_\/translate_http\/_\/js\/k\\u003dtranslate_http.tr.en.abc.O\/m\\u003del_main\x22,\x22TE_20260929\x22";""";
+
+    private const string MainScriptUrl =
+        "https://translate.googleapis.com/_/translate_http/_/js/k=translate_http.tr.en.abc.O/m=el_main";
+
+    private static readonly string MainScript =
+        "_.n.Lc=function(a,b){this.h.A.send({display_language:b,key:\"" + OtherKey + "\"},a)};" +
+        "d={host:b,path:\"/v1/translateHtml\",method:\"POST\",headers:{\"X-goog-api-key\":\"" + HtmlKey +
+        "\",\"Content-Type\":\"application/json+protobuf\"}};";
+
+    private static HttpResponseMessage RefusedKey() =>
+        new(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(
+                """[3,"API key not valid. Please pass a valid API key.",[["type.googleapis.com/google.rpc.ErrorInfo",["API_KEY_INVALID","googleapis.com"]]]]"""),
+        };
+
+    /// <summary>The scripts, and a translateHtml that answers only <paramref name="accepted"/>.</summary>
+    private static Canned ChromeWithScripts(string accepted, string? mainScript = null) => new(request =>
+        request.Uri == GoogleChromeKeySource.LoaderUrl ? Text(Loader) :
+        request.Uri == MainScriptUrl ? Text(mainScript ?? MainScript) :
+        request.Headers.GetValueOrDefault("X-Goog-API-Key") == accepted ? Json("""[["好"],["en"]]""") :
+        RefusedKey());
+
+    [Fact]
+    public void GoogleChromeKeySource_FindsTheMainScriptInTheLoader()
+    {
+        Assert.Equal(MainScriptUrl, GoogleChromeKeySource.FindMainScript(Loader));
+    }
+
+    [Fact]
+    public void GoogleChromeKeySource_PutsTheKeyNextToTranslateHtmlFirst()
+    {
+        // The other key comes first in the script and is refused by translateHtml with a 403, so
+        // taking keys in the order they are written would pick the wrong one.
+        Assert.Equal([HtmlKey, OtherKey], GoogleChromeKeySource.FindKeys(MainScript));
+    }
+
+    [Fact]
+    public async Task GoogleChrome_AStoredKeyIsUsedWithoutLookingAnythingUp()
+    {
+        var handler = ChromeWithScripts(StoredKey);
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => StoredKey);
+
+        Assert.Equal("好", Assert.Single(await engine.TranslateAsync(["OK"], "zh-TW")).Text);
+
+        var sent = Assert.Single(handler.Requests);
+        Assert.Equal(StoredKey, sent.Headers["X-Goog-API-Key"]);
+    }
+
+    [Fact]
+    public async Task GoogleChrome_WithNoKey_LooksItUpAndKeepsIt()
+    {
+        var handler = ChromeWithScripts(HtmlKey);
+        var kept = "";
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => kept, key => kept = key);
+
+        Assert.Equal("好", Assert.Single(await engine.TranslateAsync(["OK"], "zh-TW")).Text);
+        Assert.Equal(HtmlKey, kept);
+
+        // Kept, so the second screen goes straight to translateHtml.
+        await engine.TranslateAsync(["OK again"], "zh-TW");
+        Assert.Equal(
+            [GoogleChromeKeySource.LoaderUrl, MainScriptUrl, "translateHtml", "translateHtml"],
+            handler.Requests.Select(r => r.Uri.Contains("/v1/translateHtml") ? "translateHtml" : r.Uri));
+    }
+
+    [Fact]
+    public async Task GoogleChrome_ARefusedKey_IsLookedUpAgainAndTheRequestSentOnceMore()
+    {
+        var handler = ChromeWithScripts(HtmlKey);
+        var kept = StoredKey;
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => kept, key => kept = key);
+
+        Assert.Equal("好", Assert.Single(await engine.TranslateAsync(["OK"], "zh-TW")).Text);
+        Assert.Equal(HtmlKey, kept);
+        Assert.Equal(HtmlKey, handler.Requests[^1].Headers["X-Goog-API-Key"]);
+    }
+
+    [Fact]
+    public async Task GoogleChrome_ABadRequestThatIsNotAboutTheKey_LooksNothingUp()
+    {
+        var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""[3,"Invalid JSON payload received."]"""),
+        });
+        var engine = new GoogleChromeTranslator(new HttpClient(handler), () => StoredKey);
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-TW"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, failure.StatusCode);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task GoogleChrome_AFailedLookup_IsNotRepeatedOnEveryRequest()
+    {
+        // The scripts no longer have a key in them: what Google rewriting them would look like.
+        var handler = ChromeWithScripts(HtmlKey, mainScript: "nothing here");
+        var engine = new GoogleChromeTranslator(new HttpClient(handler));
+
+        await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-TW"));
+        await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-TW"));
+
+        // Realtime translation sends a request every few seconds, and each lookup is 300 KB.
+        Assert.Equal([GoogleChromeKeySource.LoaderUrl, MainScriptUrl], handler.Requests.Select(r => r.Uri));
     }
 
     // ---- Bing ----------------------------------------------------------------------------

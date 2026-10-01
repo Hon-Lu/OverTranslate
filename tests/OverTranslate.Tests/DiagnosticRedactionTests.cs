@@ -27,6 +27,18 @@ public class DiagnosticRedactionTests
     }
 
     [Fact]
+    public void GoogleChromeKey_IsRedactedLikeTheUsersOwn()
+    {
+        // Put together at run time: written out whole, it is a key GitHub's secret scanning reports.
+        var key = "AI" + "za" + new string('0', 35);
+        var json = DiagnosticBundleService.RedactSettings($$"""{"GoogleChromeApiKey":"{{key}}"}""");
+
+        // Not the user's, and Google's to begin with, but a key in a bundle is still a key handed to
+        // whoever reads it.
+        Assert.Equal("<redacted:39>", (string?)JsonNode.Parse(json)!.AsObject()["GoogleChromeApiKey"]);
+    }
+
+    [Fact]
     public void UnsetKey_StaysEmptyRatherThanLookingSet()
     {
         var json = DiagnosticBundleService.RedactSettings("""{"ApiKey":""}""");

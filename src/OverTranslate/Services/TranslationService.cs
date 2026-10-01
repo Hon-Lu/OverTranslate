@@ -55,7 +55,13 @@ public class TranslationService
 
     private readonly GoogleWebTranslator    _google       = new(Http);
     private readonly GoogleRpcTranslator    _google2      = new(Http);
-    private readonly GoogleChromeTranslator _googleChrome = new(Http);
+    private readonly GoogleChromeTranslator _googleChrome = new(Http,
+        loadKey: () => SettingsService.Instance.Current.GoogleChromeApiKey,
+        saveKey: key =>
+        {
+            SettingsService.Instance.Current.GoogleChromeApiKey = key;
+            SettingsService.Instance.Save();
+        });
     private readonly BingTranslator         _bing         = new(Http);
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
     // DeepL's own, because it is an official API spoken to with the user's key and has no reason to
