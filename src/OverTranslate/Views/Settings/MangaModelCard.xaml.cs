@@ -107,7 +107,7 @@ public partial class MangaModelCard : UserControl
     {
         var store = AppServices.MangaModels;
         var manga = AppServices.Ocr.Manga;
-        var total = store.Manifest?.TotalBytes ?? 0;
+        var total = store.TotalBytes;
         const double megabyte = 1 << 20;
 
         var storeState = store.State;
@@ -296,7 +296,7 @@ public partial class MangaModelCard : UserControl
     // The track only has a width once it is laid out, which is after the first update.
     private void MangaModelsProgressTrack_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        var total = AppServices.MangaModels.Manifest?.TotalBytes ?? 0;
+        var total = AppServices.MangaModels.TotalBytes;
         SetMangaProgress(total > 0 ? Math.Clamp((double)AppServices.MangaModels.DownloadedBytes / total, 0, 1) : 0, false);
     }
 
