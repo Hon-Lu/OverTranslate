@@ -153,6 +153,53 @@ public class RealtimeCpuBackgroundTests
         }
     }
 
+    /// <summary>
+    /// Display type — a manga shout, a title card — has strokes wider than the widest element the
+    /// hats are measured with, and the middle of each one used to be left behind as a black blot.
+    /// </summary>
+    [Fact]
+    public void Repair_ErasesTheMiddleOfAStrokeWiderThanTheWidestElement()
+    {
+        using var frame = new Bitmap(260, 200);
+        using (var graphics = Graphics.FromImage(frame))
+        {
+            graphics.Clear(Color.White);
+            graphics.FillRectangle(Brushes.Black, 70, 40, 34, 120);   // a stroke 34px wide
+            graphics.FillRectangle(Brushes.Black, 50, 84, 150, 32);   // and one across it
+        }
+
+        using var result = RealtimeCpuBackground.Repair(frame,
+            [new TranslatedBlock("大", "big", new(44, 36, 162, 128), RenderGlyphHeight: 120)]);
+
+        foreach (var (x, y) in new[] { (87, 60), (87, 100), (150, 100), (87, 140) })
+            Assert.True(result.GetPixel(x, y).R > 200, $"({x},{y}) left at {result.GetPixel(x, y).R}");
+    }
+
+    /// <summary>
+    /// A tile whose whole neighbourhood is masked has nothing of its own to fill from. It used to be
+    /// skipped, and the source stayed there as a square in the middle of the erase.
+    /// </summary>
+    [Fact]
+    public void Repair_FillsATileWhoseWholeNeighbourhoodIsMasked()
+    {
+        // Striped, so the picture reads as structure and the tiles are inpainted rather than
+        // handed to the smooth fill, which fills every hole whatever is around it.
+        using var source = new OpenCvSharp.Mat(400, 400, OpenCvSharp.MatType.CV_8UC3, new OpenCvSharp.Scalar(80, 60, 40));
+        for (int x = 0; x < 400; x += 8)
+            source[new OpenCvSharp.Rect(x, 0, 4, 400)].SetTo(new OpenCvSharp.Scalar(20, 10, 0));
+        using var mask = new OpenCvSharp.Mat(400, 400, OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.Black);
+        var hole = new OpenCvSharp.Rect(20, 50, 360, 300);
+        source[hole].SetTo(OpenCvSharp.Scalar.White);
+        mask[hole].SetTo(OpenCvSharp.Scalar.White);
+
+        using var repaired = CpuHoleRepair.Repair(source, mask);
+
+        // The tile at (96, 96) is masked for a whole guard around it.
+        var middle = repaired.Image.At<OpenCvSharp.Vec3b>(144, 144);
+        Assert.InRange(middle.Item0, 0, 120);
+        Assert.InRange(middle.Item2, 0, 80);
+    }
+
     [Fact]
     public void Repair_EmptyTranslationReturnsIndependentUnchangedFrame()
     {

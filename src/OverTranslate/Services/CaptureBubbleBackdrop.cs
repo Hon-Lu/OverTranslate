@@ -165,6 +165,28 @@ internal sealed class CaptureBubbleBackdrop
         try
         {
             using var repaired = RealtimeCpuBackground.Repair(frame, blocks, token);
+            return FromRepaired(repaired);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception)
+        {
+            // Never the reason a translation fails to appear: the flat colour is still a bubble.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A backdrop over a frame the source text has already been repaired out of.
+    /// </summary>
+    /// <remarks>
+    /// For the realtime overlay, which repairs its frame anyway for its own patches: the plates are
+    /// cut from that same repair rather than a second one. Null when the pixels cannot be read.
+    /// </remarks>
+    public static CaptureBubbleBackdrop? FromRepaired(Bitmap repaired)
+    {
+        if (repaired.Width <= 0 || repaired.Height <= 0) return null;
+        try
+        {
             var bgr = new byte[repaired.Width * repaired.Height * 3];
             var data = repaired.LockBits(new Rectangle(0, 0, repaired.Width, repaired.Height),
                 System.Drawing.Imaging.ImageLockMode.ReadOnly,
@@ -179,10 +201,8 @@ internal sealed class CaptureBubbleBackdrop
 
             return new CaptureBubbleBackdrop(bgr, repaired.Width, repaired.Height);
         }
-        catch (OperationCanceledException) { throw; }
         catch (Exception)
         {
-            // Never the reason a translation fails to appear: the flat colour is still a bubble.
             return null;
         }
     }

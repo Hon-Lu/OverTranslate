@@ -40,6 +40,14 @@ internal readonly struct PixelWindow(byte[] pixels, int stride, Rectangle area)
         }
     }
 
+    /// <summary>Summed channel distance from the pixel at (x, y) to a colour, without building a colour.</summary>
+    /// <param name="x">In the source bitmap's coordinates, not the window's.</param>
+    public int Distance(int x, int y, byte r, byte g, byte b)
+    {
+        int i = (y - area.Top) * stride + (x - area.Left) * 4;
+        return Math.Abs(pixels[i + 2] - r) + Math.Abs(pixels[i + 1] - g) + Math.Abs(pixels[i] - b);
+    }
+
     /// <param name="x">In the source bitmap's coordinates, not the window's.</param>
     public GdiColor At(int x, int y)
     {

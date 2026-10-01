@@ -83,6 +83,32 @@ public class CaptureBubbleBackdropTests
         return MediaColor.FromArgb(pixels[i + 3], pixels[i + 2], pixels[i + 1], pixels[i]);
     }
 
+    /// <summary>
+    /// The realtime overlay hands over the repair it already made; what it gets back has to be the
+    /// backdrop the capture overlay would have built from the same frame.
+    /// </summary>
+    [Fact]
+    public void FromRepaired_AnswersAsCreateDoesForTheSameRepair()
+    {
+        using var frame = new Bitmap(320, 120);
+        using (var g = Graphics.FromImage(frame))
+        {
+            g.Clear(System.Drawing.Color.FromArgb(200, 120, 40));
+            Glyphs(g);
+        }
+        var bubble = new WpfRect(30, 30, 220, 44);
+        var text = MediaColor.FromRgb(0, 0, 0);
+
+        var created = CaptureBubbleBackdrop.Create(frame, [Block()]);
+        using var repaired = OverTranslate.Services.Realtime.RealtimeCpuBackground.Repair(frame, [Block()]);
+        var handed = CaptureBubbleBackdrop.FromRepaired(repaired);
+
+        Assert.NotNull(created);
+        Assert.NotNull(handed);
+        Assert.Equal(created!.Card(bubble, text), handed!.Card(bubble, text));
+        Assert.Equal(created.Uniformity(bubble, 24), handed.Uniformity(bubble, 24));
+    }
+
     [Fact]
     public void Create_IsNullWithNoBlocksToRepair()
     {

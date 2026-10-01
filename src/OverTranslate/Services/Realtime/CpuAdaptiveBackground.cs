@@ -147,10 +147,7 @@ internal static class CpuTextMask
                 using var roi = new Mat(gray, box);
                 using var light = new Mat();
                 using var dark = new Mat();
-                int size = Math.Clamp((int)Math.Round(height * .55) | 1, 5, 25);
-                using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(size, size));
-                Cv2.MorphologyEx(roi, light, MorphTypes.TopHat, kernel);
-                Cv2.MorphologyEx(roi, dark, MorphTypes.BlackHat, kernel);
+                Hats(roi, height, light, dark);
                 using var seed = new Mat();
                 using var darker = new Mat();
                 Body(light, seed);   // What stands out brighter than its surroundings,
@@ -179,6 +176,59 @@ internal static class CpuTextMask
             return mask;
         }
         catch { mask.Dispose(); throw; }
+    }
+
+    /// <summary>The widest structuring element the hats are computed with, in pixels.</summary>
+    private const int WidestKernel = 25;
+
+    /// <summary>The element a glyph has to ask for before it is measured scaled down.</summary>
+    /// <remarks>
+    /// Not <see cref="WidestKernel"/> itself. The subtitle corpora sit just past it — burnt-in
+    /// Japanese subtitles measure 45-63 pixels, so they ask for 25-35 — and their strokes are a
+    /// fifth of that, well inside the element they already get; measured with the scaled path from
+    /// the old limit, those masks grew by up to seven tenths of a point of the frame for no stroke
+    /// left behind before. The strokes that do outgrow the element belong to display type: a manga
+    /// shout at 110 pixels, a title card.
+    /// </remarks>
+    private const int ScaledFrom = 41;
+
+    /// <summary>
+    /// Both hats of <paramref name="roi"/>, with an element a little over half the glyph height.
+    /// </summary>
+    /// <remarks>
+    /// <para>A hat only answers for what is narrower than its element, so a stroke wider than the
+    /// element is found at its ends and edges and missed in the middle. The element stopped at
+    /// <see cref="WidestKernel"/> because an ellipse costs its own area per pixel; above a 45-pixel
+    /// glyph that left the middle of the thickest strokes behind — a manga shout set at 110 pixels
+    /// came back as a row of black blots where the junctions of its strokes had been.</para>
+    ///
+    /// <para>So a glyph far too big for the widest element is measured on the box scaled down until
+    /// it fits, and the answers are scaled back up. The cost stays that of the widest element over a
+    /// smaller box, and nothing under <see cref="ScaledFrom"/> changes.</para>
+    /// </remarks>
+    private static void Hats(Mat roi, double height, Mat light, Mat dark)
+    {
+        int wanted = (int)Math.Round(height * .55) | 1;
+        if (wanted < ScaledFrom || roi.Width < 4 || roi.Height < 4)
+        {
+            int size = Math.Clamp(wanted, 5, WidestKernel);
+            using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(size, size));
+            Cv2.MorphologyEx(roi, light, MorphTypes.TopHat, kernel);
+            Cv2.MorphologyEx(roi, dark, MorphTypes.BlackHat, kernel);
+            return;
+        }
+
+        double scale = WidestKernel / (double)wanted;
+        var reduced = new Size(Math.Max(2, (int)Math.Round(roi.Width * scale)), Math.Max(2, (int)Math.Round(roi.Height * scale)));
+        using var small = new Mat();
+        Cv2.Resize(roi, small, reduced, interpolation: InterpolationFlags.Area);
+        using var widest = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(WidestKernel, WidestKernel));
+        using var smallLight = new Mat();
+        using var smallDark = new Mat();
+        Cv2.MorphologyEx(small, smallLight, MorphTypes.TopHat, widest);
+        Cv2.MorphologyEx(small, smallDark, MorphTypes.BlackHat, widest);
+        Cv2.Resize(smallLight, light, roi.Size(), interpolation: InterpolationFlags.Linear);
+        Cv2.Resize(smallDark, dark, roi.Size(), interpolation: InterpolationFlags.Linear);
     }
 
     /// <summary>
@@ -580,10 +630,14 @@ internal static class CpuHoleRepair
                     Math.Min(height, area.Bottom + guard) - Math.Max(0, y - guard));
                 using var frame = new Mat(source, context);
                 using var holes = new Mat(mask, context);
-                // Refuse an unconstrained fill: this crop contains no observation at all.
-                if (Cv2.CountNonZero(holes) == holes.Rows * holes.Cols) continue;
+                // A crop with nothing observed in it cannot be filled from itself, so it is filled
+                // from the reduced repair, which reads the whole frame. It used to be skipped, which
+                // left the tile as it was: in the middle of a wide enough mask — a column of manga
+                // text over dark hair, where the mask had taken the texture too — a square of the
+                // source text stood untouched inside the erase.
+                bool blind = Cv2.CountNonZero(holes) == holes.Rows * holes.Cols;
                 using var filled = new Mat();
-                if (radius <= 5 || Math.Min(context.Width, context.Height) < 8)
+                if (!blind && (radius <= 5 || Math.Min(context.Width, context.Height) < 8))
                 {
                     Cv2.Inpaint(frame, holes, filled, FillRadius, Fill);
                     full++;
