@@ -77,34 +77,40 @@
                                           SelectedValuePath="Code"/>
                             </StackPanel>
 
-                            <!-- The hint stays under its own field rather than under the row: it is
-                                 about the service and nothing else, and a warning about a missing
-                                 API key is worth the uneven card it makes. -->
                             <StackPanel Grid.Column="2" Margin="7,0,0,0">
                                 <TextBlock Text="{DynamicResource S.Realtime.Provider}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
                                 <ComboBox x:Name="ProviderBox"
                                           Style="{StaticResource ModernComboBox}"
                                           ctl:ComboBoxItemHints.IsEnabled="True"
                                           SelectedValuePath="Provider"/>
-                                <TextBlock x:Name="ProviderHint"
-                                           Style="{StaticResource FieldHint}"
-                                           Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="16"/>
                             </StackPanel>
+
+                            <!-- The row under the pickers is two blocks side by side: the model line
+                                 under the two languages, the service's own hint under the service.
+                                 Stacked one above the other they cost the card a line apiece, and
+                                 the model line sat under the service hint looking like part of it.
+                                 Each keeps to its own columns, so a long line in one wraps inside
+                                 its block rather than running into the other. -->
 
                             <!-- What Japanese vertical blocks will be read with. Only for Japanese,
                                  and not by direction: each block sets its own on the edit layer, so
                                  the line says what vertical ones get and that horizontal ones use
-                                 the default model. Under the whole row rather than in the source
-                                 column: the sentence is longer than one field is wide, and folded
-                                 into it the line broke in two with the card's width going spare.
-                                 Starts at the source picker's left edge; wraps only when the card
-                                 itself is too narrow. Collapsed when there is nothing to say, so the
-                                 card is its old height. -->
-                            <ctl:MangaModelHintText x:Name="MangaHint" Grid.Row="1" Grid.ColumnSpan="3"
-                                                    Margin="1,6,0,0"
+                                 the default model. Across both language columns: the sentence is
+                                 longer than one field is wide. Starts at the source picker's left
+                                 edge; wraps only when its block is too narrow. Collapsed when there
+                                 is nothing to say, so the card is its old height. -->
+                            <ctl:MangaModelHintText x:Name="MangaHint" Grid.Row="1" Grid.ColumnSpan="2"
+                                                    Margin="1,6,7,0"
                                                     ForRealtimePage="True"
                                                     CollapsesWhenHidden="True"
                                                     TextWrapping="Wrap"/>
+
+                            <!-- The hint stays under its own field rather than under the row: it is
+                                 about the service and nothing else, and a warning about a missing
+                                 API key is worth the uneven card it makes. -->
+                            <TextBlock x:Name="ProviderHint" Grid.Row="1" Grid.Column="2"
+                                       Style="{StaticResource FieldHint}"
+                                       Margin="7,6,0,0" TextWrapping="Wrap" LineHeight="16"/>
                         </Grid>
                     </StackPanel>
                 </Border>
