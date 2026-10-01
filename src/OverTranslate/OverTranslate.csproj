@@ -15,7 +15,7 @@
          one feature wanted a newer API would take the whole application away from those users to
          pay for something only realtime capture uses. The price is that every call newer than 1809
          must be guarded — CA1416 will say so — which is the right conversation to be forced into. -->
-    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -31,10 +31,11 @@
     <StartupObject>OverTranslate.App</StartupObject>
     <Version>2.5.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <!-- WFAC010 tells WinForms apps to declare DPI awareness through Application.SetHighDpiMode.
-         This is a WPF app that only references WinForms types; ApplicationConfiguration.Initialize
-         is never called, so the manifest is the only mechanism that takes effect. -->
-    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- WFO0003 (called WFAC010 before .NET 9) tells WinForms apps to declare DPI awareness through
+         Application.SetHighDpiMode. This is a WPF app that only references WinForms types;
+         ApplicationConfiguration.Initialize is never called, so the manifest is the only mechanism
+         that takes effect. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <!-- Microsoft.AI.DirectML (pulled in by the DirectML runtime) copies DirectML.dll, its PDB and its debug
          layer by default. None of them ship: DirectML.dll is downloaded with the manga models, the only thing
          that uses it (ocrmodels/manga-vertical.json, DirectMlDevice). onnxruntime.dll imports it delay-loaded,

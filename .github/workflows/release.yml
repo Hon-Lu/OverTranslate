@@ -43,12 +43,9 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          # 8.0.x 是應用程式自己的目標框架。10.0.x 是下面那個 fork 版 vpk 要的——它的相依套件
-          # 是 10.0 那一代，用 8.0 的 SDK 建不起來。兩個都裝時 dotnet 會挑最新的 SDK 來建 app，
+          # 應用程式自己的目標框架與下面那個 fork 版 vpk 都是 10.0 那一代，一個 SDK 就夠了。
           # 實測 stub 的雜湊不受 SDK 版本影響（凍結後只剩圖示、資訊清單與那幾個字串會動）。
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: 安裝 Velopack CLI
         shell: pwsh

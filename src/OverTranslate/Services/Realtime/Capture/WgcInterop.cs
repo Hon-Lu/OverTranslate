@@ -207,7 +207,7 @@ internal static class WgcInterop
         try
         {
             var dxgiIid = IidDxgiDevice;
-            Marshal.ThrowExceptionForHR(Marshal.QueryInterface(device, ref dxgiIid, out dxgi));
+            Marshal.ThrowExceptionForHR(Marshal.QueryInterface(device, in dxgiIid, out dxgi));
             Marshal.ThrowExceptionForHR(CreateDirect3D11DeviceFromDXGIDevice(dxgi, out abi));
 
             rawDevice = device;

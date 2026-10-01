@@ -2,7 +2,7 @@
 
   <!-- The online engines the application talks to directly: the free Google, Microsoft and Bing,
        each spoken to in the request shape that serves it best rather than the one-text-per-call
-       shape GTranslate offers for all of them, and DeepL with the user's own key. Plain net8.0
+       shape GTranslate offers for all of them, and DeepL with the user's own key. Plain net10.0
        and nothing from the application — no WPF, no settings, no OCR types — so what an engine
        accepts and returns can be read, tested and reasoned about without the rest of the program
        in the way.
@@ -14,7 +14,7 @@
        text, and it talks to the same endpoints with the same credentials. -->
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>OverTranslate.Translation</RootNamespace>

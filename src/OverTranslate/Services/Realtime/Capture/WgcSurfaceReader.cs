@@ -215,7 +215,7 @@ internal sealed unsafe class WgcSurfaceReader : IDisposable
         try
         {
             var accessIid = IidDxgiInterfaceAccess;
-            Marshal.ThrowExceptionForHR(Marshal.QueryInterface(inspectable, ref accessIid, out access));
+            Marshal.ThrowExceptionForHR(Marshal.QueryInterface(inspectable, in accessIid, out access));
 
             var textureIid = IidTexture2D;
             IntPtr texture;

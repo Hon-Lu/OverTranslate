@@ -100,17 +100,18 @@ if (-not $SkipPublish) {
     Write-Host "Config     : $Configuration"
     Write-Host "PublishDir : $publishFullPath"
 
-    # 自封式設定明寫在這裡，不依賴 publish profile。
-    # FolderProfile.pubxml 被 .gitignore 排除（PublishProfiles/），所以任何拿不到它的環境
-    # —— CI checkout、git worktree、新 clone —— 都沒有 <SelfContained>true</SelfContained>。
-    # 而 -p:PublishProfile=... 指向不存在的檔案時 dotnet 不會報錯，只會安靜地退回框架相依建置，
-    # 產出一個看起來正常、但在沒裝 .NET 8 Runtime 的機器上根本開不起來的安裝包。
+    # 框架相依設定明寫在這裡，不依賴 publish profile。.NET Runtime 不再跟著包走，改由 Velopack
+    # 在安裝與套用更新前檢查並下載（見下面 vpk pack 的 --framework）。
+    # FolderProfile.pubxml 被 .gitignore 排除（PublishProfiles/），所以每台機器上的那份各自為政
+    # —— 有的人本機還留著舊的 <SelfContained>true</SelfContained>，CI checkout、git worktree、
+    # 新 clone 則根本沒有。命令列的 -p: 是全域屬性，會蓋過 profile 裡寫的值，所以這裡明寫才算數；
+    # 不寫的話，誰的 profile 寫了什麼就安靜地打出什麼，包會無聲地變回 140 MB 的自封式。
     $publishArgs = @(
         "publish",
         $projectFullPath,
         "-c", $Configuration,
         "-r", "win-x64",
-        "-p:SelfContained=true",
+        "-p:SelfContained=false",
         "-p:PublishDir=$publishFullPath"
     )
 
@@ -121,7 +122,7 @@ if (-not $SkipPublish) {
         $publishArgs += "-p:PublishProfile=$PublishProfile"
     }
     else {
-        Write-Host "找不到 publish profile '$PublishProfile'，改用腳本內建的自封式設定。" -ForegroundColor Yellow
+        Write-Host "找不到 publish profile '$PublishProfile'，改用腳本內建的框架相依設定。" -ForegroundColor Yellow
     }
 
     & dotnet @publishArgs
@@ -129,10 +130,11 @@ if (-not $SkipPublish) {
         throw "dotnet publish 失敗，exit code: $LASTEXITCODE"
     }
 
-    # 上面那個坑安靜到 build 會成功、打包會成功、大小也只是「比較小」而已。
-    # 寧可在這裡炸掉，也不要把跑不起來的東西發出去。
-    if (-not (Test-Path (Join-Path $publishFullPath "coreclr.dll"))) {
-        throw "Publish 輸出不是自封式（找不到 coreclr.dll）。這種包在沒有 .NET Runtime 的機器上開不起來。"
+    # 上面那個坑安靜到 build 會成功、打包會成功、程式也開得起來，只是包「比較大」而已——
+    # 而初次下載的大小正是改框架相依要省的東西。coreclr.dll 只有自封式才會出現在輸出裡，
+    # 寧可在這裡炸掉，也不要把多帶一份 runtime 的包發出去。
+    if (Test-Path (Join-Path $publishFullPath "coreclr.dll")) {
+        throw "Publish 輸出變回自封式了（出現 coreclr.dll）。確認上面的 dotnet publish 參數仍是 -p:SelfContained=false。"
     }
 
     Write-Host ""
@@ -232,6 +234,11 @@ $packArgs = @(
     "--icon", $iconFullPath,
     "--channel", $Channel,
     "--outputDir", $outputFullPath,
+    # 包是框架相依的（見上面 dotnet publish）。寫進套件的 runtime 相依會讓 Setup 安裝前、以及
+    # 自動更新套用前（安裝版與免安裝版同一條路）檢查這台機器有沒有 .NET 10 Desktop Runtime，
+    # 缺的話先問使用者再下載安裝。免安裝 zip 第一次解壓執行不經過這裡，沒有 runtime 只會看到
+    # .NET 自己的錯誤框。跟著 csproj 的 TargetFramework 一起改。
+    "--framework", "net10.0-x64-desktop",
     # 不要產生 Velopack 那顆啟動器 stub。它是打包當下才被塞進主程式資源的未簽章原生二進位，
     # 也就是 #210 那個 Wacatac.B!ml 誤判的主要來源。上面那顆我們自己編的啟動器會頂替它的位置
     # ——同樣的檔名約定、同樣被解到根目錄，但身分在編譯期就寫死、位元組跨版本不變。

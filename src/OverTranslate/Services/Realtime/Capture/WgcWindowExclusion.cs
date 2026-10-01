@@ -17,9 +17,9 @@ namespace OverTranslate.Services.Realtime.Capture;
 /// <see cref="GraphicsCaptureSession"/> as implementing — a session gets it only when its item is a
 /// display, and only by asking for it at runtime. And the C# projection this project compiles
 /// against (Windows SDK 10.0.26100) does not have the interface at all: the first projection that
-/// does ships for net9.0 upwards, so reaching it from net8.0 means going to the ABI by hand. The
-/// system underneath has it regardless — <see cref="WgcCapability.SupportsWindowExclusion"/> asks
-/// the machine, not the projection.
+/// does ships for net9.0 upwards, and the .NET SDK still resolves 10.0.26100.57 for net10.0 — so
+/// reaching it means going to the ABI by hand. The system underneath has it regardless —
+/// <see cref="WgcCapability.SupportsWindowExclusion"/> asks the machine, not the projection.
 ///
 /// Two things travel back from the ABI that the whole design rests on. The set call returns a
 /// <i>configuration iteration</i>, and every frame carries the iteration it was produced under
@@ -60,7 +60,7 @@ internal static class WgcWindowExclusion
         {
             sessionAbi = MarshalInspectable<GraphicsCaptureSession>.FromManaged(session);
             var iid = IidDisplayGraphicsCaptureSession;
-            var hr = Marshal.QueryInterface(sessionAbi, ref iid, out display);
+            var hr = Marshal.QueryInterface(sessionAbi, in iid, out display);
             if (hr < 0)
             {
                 detail = $"no display capture session (0x{hr:X8})";
@@ -114,7 +114,7 @@ internal static class WgcWindowExclusion
         {
             sessionAbi = MarshalInspectable<GraphicsCaptureSession>.FromManaged(session);
             var iid = IidDisplayGraphicsCaptureSession;
-            if (Marshal.QueryInterface(sessionAbi, ref iid, out display) < 0) return [];
+            if (Marshal.QueryInterface(sessionAbi, in iid, out display) < 0) return [];
 
             var vtable = *(void***)display;
             var hr = ((delegate* unmanaged[Stdcall]<IntPtr, IntPtr*, int>)vtable[SlotGetWindowExclusionList])(
@@ -148,7 +148,7 @@ internal static class WgcWindowExclusion
         {
             frameAbi = MarshalInspectable<Direct3D11CaptureFrame>.FromManaged(frame);
             var iid = IidDirect3D11CaptureFrame3;
-            if (Marshal.QueryInterface(frameAbi, ref iid, out frame3) < 0) return null;
+            if (Marshal.QueryInterface(frameAbi, in iid, out frame3) < 0) return null;
 
             ulong iteration;
             var vtable = *(void***)frame3;
