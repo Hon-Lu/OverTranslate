@@ -54,5 +54,30 @@
       "size": 24072,
       "sha256": "344fbb6b8bf18c57839e924e2c9365434697e0227fac00b88bb4899b78aa594d"
     }
-  ]
+  ],
+  "directml": {
+    "version": "1.15.4",
+    "sources": [
+      {
+        "name": "nuget",
+        "url": "https://api.nuget.org/v3-flatcontainer/microsoft.ai.directml/1.15.4/microsoft.ai.directml.1.15.4.nupkg",
+        "entry": "bin/x64-win/DirectML.dll",
+        "files": [
+          "DirectML.dll"
+        ]
+      },
+      {
+        "name": "github",
+        "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/directml-1.15.4/{name}"
+      }
+    ],
+    "files": [
+      {
+        "role": "directml",
+        "name": "DirectML.dll",
+        "size": 18527776,
+        "sha256": "9c9e6d822561c6c41b90e6994b3e8857cf1d66dbfb1e0c4c799c7c89b4e92da1"
+      }
+    ]
+  }
 }

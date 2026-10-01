@@ -69,6 +69,21 @@ internal enum MangaDownloadFailure
 /// fetched once more from the first byte. A <c>.part</c> belongs to the source it came from (its
 /// name carries a hash of the URL) and is never continued from another: Hugging Face and GitHub serve
 /// the same bytes, but nothing checks that until the whole file is hashed.</para>
+///
+/// <para>The DirectML runtime (<see cref="MangaModelManifest.DirectMl"/>) is part of the same
+/// download — fetched first, counted in the same progress, and "ready" means the models and it — but
+/// kept in a folder of its own, <c>runtimes\directml\{version}</c>, because its version is the
+/// library's, not the models'. A folder per version, because a loaded DLL is locked and could not
+/// be overwritten by a newer one; the others are removed at the next start, before anything could
+/// load them (<see cref="RemoveOtherRuntimeVersions"/>). Its first source is the NuGet package, of
+/// which only the DLL's compressed bytes are fetched (<see cref="ZipEntryLocator"/>); a zip source's
+/// <c>.part</c> holds those compressed bytes, and the file is inflated and hashed once they are all
+/// here. Once hashed it must also carry Microsoft's Authenticode signature
+/// (<see cref="CheckRuntime"/>), or the download fails.</para>
+///
+/// <para>Deleting the models leaves the runtime where it is: the next download uses it again if it
+/// still hashes right, and a DLL the app has loaded this run could not be deleted anyway. Only
+/// uninstalling removes it, with the rest of the assets folder.</para>
 /// </remarks>
 internal sealed class MangaModelStore
 {
@@ -79,11 +94,19 @@ internal sealed class MangaModelStore
     private readonly HttpClient _http;
     private readonly object _sync = new();
     private CancellationTokenSource? _download;
+    // While downloading: how many bytes each file still to fetch will take over the wire. The
+    // runtime's is its inflated size until the package has been looked into.
+    private Dictionary<MangaModelFile, long>? _transfers;
 
-    internal MangaModelStore(MangaModelManifest? manifest, string root, HttpMessageHandler? handler = null)
+    /// <param name="runtimeRoot">Where the DirectML runtime's version folders go; needed when the manifest has one.</param>
+    internal MangaModelStore(
+        MangaModelManifest? manifest, string root, HttpMessageHandler? handler = null, string? runtimeRoot = null)
     {
+        if (manifest?.DirectMl is not null && runtimeRoot is null)
+            throw new ArgumentNullException(nameof(runtimeRoot), "the manifest has a DirectML runtime");
         Manifest = manifest;
         Root = root;
+        RuntimeRoot = runtimeRoot;
         _http = handler is null ? new HttpClient() : new HttpClient(handler);
         // Per request, not overall: a 170MB file on a slow line is not a hung request.
         _http.Timeout = Timeout.InfiniteTimeSpan;
@@ -102,21 +125,55 @@ internal sealed class MangaModelStore
             Log.Warn(ex, "Manga model manifest could not be read; vertical text stays on the column pipeline");
         }
 
-        return new MangaModelStore(manifest, DefaultRoot);
+        return new MangaModelStore(manifest, DefaultRoot, runtimeRoot: DefaultRuntimeRoot);
     }
 
     internal static string DefaultRoot => Path.Combine(AppDataPaths.Models, "manga-vertical");
+
+    internal static string DefaultRuntimeRoot => Path.Combine(AppDataPaths.Runtimes, "directml");
 
     internal MangaModelManifest? Manifest { get; }
 
     internal string Root { get; }
 
+    internal string? RuntimeRoot { get; }
+
     internal string? Folder => Manifest is null ? null : Path.Combine(Root, "v" + Manifest.Version);
+
+    /// <summary>This build's DirectML version folder, or null when it downloads no runtime.</summary>
+    internal string? RuntimeFolder => Manifest?.DirectMl is { } runtime ? Path.Combine(RuntimeRoot!, runtime.Version) : null;
+
+    /// <summary>The downloaded DirectML.dll, or null when this build downloads no runtime.</summary>
+    internal string? RuntimePath => Manifest?.DirectMl is { } runtime ? Path.Combine(RuntimeFolder!, runtime.Files[0].Name) : null;
+
+    /// <summary>
+    /// Why a downloaded runtime may not be used, or null when it may; asked once it has hashed right.
+    /// Microsoft's Authenticode signature, unless a test says otherwise.
+    /// </summary>
+    internal Func<string, string?> CheckRuntime { get; init; } = path => Authenticode.Problem(path, "Microsoft Corporation");
 
     /// <summary>Raised on any change of <see cref="State"/>, and as a download makes progress.</summary>
     internal event EventHandler? Changed;
 
+    /// <summary>Bytes received so far by the download in progress, as they came over the wire.</summary>
     internal long DownloadedBytes { get; private set; }
+
+    /// <summary>
+    /// What <see cref="DownloadedBytes"/> will come to: while downloading, the bytes the files still
+    /// missing take over the wire — the DirectML package's share is its compressed bytes once it has
+    /// been looked into; before that, and when idle, what is missing at full size.
+    /// </summary>
+    internal long TotalBytes
+    {
+        get
+        {
+            lock (_sync)
+                if (_transfers is { } transfers) return transfers.Values.Sum();
+            if (Manifest is not { } manifest) return 0;
+            return (IsComplete(Folder!, manifest) ? 0 : manifest.TotalBytes) +
+                   (manifest.DirectMl is { } runtime && !IsComplete(RuntimeFolder!, runtime) ? runtime.TotalBytes : 0);
+        }
+    }
 
     /// <summary>How long to wait before the first retry of a file; doubled for the next.</summary>
     internal TimeSpan RetryDelay { get; init; } = TimeSpan.FromSeconds(2);
@@ -160,18 +217,21 @@ internal sealed class MangaModelStore
         Path.Combine(Folder ?? throw new InvalidOperationException("no manga model manifest"),
             Manifest!.File(role).Name);
 
+    private bool IsComplete() =>
+        IsComplete(Folder!, Manifest!) &&
+        (Manifest!.DirectMl is not { } runtime || IsComplete(RuntimeFolder!, runtime));
+
     // The marker is written after every hash was checked; the sizes are asked again because a file
     // can be deleted or truncated by hand afterwards, and hashing 315MB on every question is not free.
-    private bool IsComplete()
+    private static bool IsComplete(string folder, MangaModelManifest manifest)
     {
-        var folder = Folder!;
         try
         {
             var marker = Path.Combine(folder, ReadyMarker);
             if (!File.Exists(marker)) return false;
             using var json = JsonDocument.Parse(File.ReadAllText(marker));
-            if (json.RootElement.GetProperty("version").GetString() != Manifest!.Version) return false;
-            return Manifest.Files.All(file =>
+            if (json.RootElement.GetProperty("version").GetString() != manifest.Version) return false;
+            return manifest.Files.All(file =>
                 new FileInfo(Path.Combine(folder, file.Name)) is { Exists: true } info && info.Length == file.Size);
         }
         catch (Exception ex) when (ex is IOException or JsonException or KeyNotFoundException or UnauthorizedAccessException)
@@ -179,6 +239,12 @@ internal sealed class MangaModelStore
             return false;
         }
     }
+
+    private static Task WriteReadyMarkerAsync(string folder, MangaModelManifest manifest) =>
+        File.WriteAllTextAsync(
+            Path.Combine(folder, ReadyMarker),
+            JsonSerializer.Serialize(new { version = manifest.Version, files = manifest.Files }),
+            CancellationToken.None);
 
     /// <summary>
     /// Fetches every file this build needs. Completes normally when they are all in place and
@@ -197,39 +263,78 @@ internal sealed class MangaModelStore
         DownloadedBytes = 0;
         RaiseChanged();
         var folder = Folder!;
+        var runtime = manifest.DirectMl;
+        bool modelsDone = false, fetchingRuntime = false;
         try
         {
-            if (IsComplete())
+            modelsDone = IsComplete(folder, manifest);
+            // The runtime outlives a delete of the models; it is used again if it still hashes right.
+            bool runtimeDone = runtime is null ||
+                               (IsComplete(RuntimeFolder!, runtime) &&
+                                await HashAsync(RuntimePath!, download.Token).ConfigureAwait(false) ==
+                                runtime.Files[0].Sha256.ToLowerInvariant());
+            if (modelsDone && runtimeDone)
                 return;
-            // Whatever an earlier download left: see the remarks on keeping nothing.
-            DeleteFolder(folder);
-            Directory.CreateDirectory(folder);
+
+            lock (_sync)
+            {
+                _transfers = [];
+                if (!runtimeDone) _transfers[runtime!.Files[0]] = runtime.Files[0].Size;
+                if (!modelsDone)
+                    foreach (var file in manifest.Files)
+                        _transfers[file] = file.Size;
+            }
+            RaiseChanged();
 
             long before = 0;
             var slowSources = new HashSet<MangaModelSource>();
-            foreach (var file in manifest.Files)
+            if (!runtimeDone)
             {
-                await FetchAsync(manifest, file, folder, before, slowSources, download.Token).ConfigureAwait(false);
-                before += file.Size;
+                fetchingRuntime = true;
+                var runtimeFolder = RuntimeFolder!;
+                DeleteFolder(runtimeFolder);
+                Directory.CreateDirectory(runtimeFolder);
+                var dll = runtime!.Files[0];
+                await FetchAsync(runtime, dll, runtimeFolder, before, slowSources, download.Token).ConfigureAwait(false);
+                if (CheckRuntime(Path.Combine(runtimeFolder, dll.Name)) is { } problem)
+                    throw new InvalidDataException($"{dll.Name}: {problem}");
+                await WriteReadyMarkerAsync(runtimeFolder, runtime).ConfigureAwait(false);
+                fetchingRuntime = false;
+                lock (_sync) before = _transfers![dll];
+                Log.Info("DirectML {Version} downloaded to {Folder}", runtime.Version, runtimeFolder);
             }
 
-            await File.WriteAllTextAsync(
-                Path.Combine(folder, ReadyMarker),
-                JsonSerializer.Serialize(new { version = manifest.Version, files = manifest.Files }),
-                CancellationToken.None).ConfigureAwait(false);
-            RemoveOtherVersions();
-            Log.Info("Manga models v{Version} downloaded to {Folder}", manifest.Version, folder);
+            if (!modelsDone)
+            {
+                // Whatever an earlier download left: see the remarks on keeping nothing.
+                DeleteFolder(folder);
+                Directory.CreateDirectory(folder);
+                foreach (var file in manifest.Files)
+                {
+                    await FetchAsync(manifest, file, folder, before, slowSources, download.Token).ConfigureAwait(false);
+                    before += file.Size;
+                }
+
+                await WriteReadyMarkerAsync(folder, manifest).ConfigureAwait(false);
+                RemoveOtherVersions();
+                Log.Info("Manga models v{Version} downloaded to {Folder}", manifest.Version, folder);
+            }
         }
         catch (Exception ex)
         {
             Log.Info("Manga model download {Outcome}; removing what it fetched",
                 ex is OperationCanceledException ? "cancelled" : "failed");
-            DeleteFolder(folder);
+            if (!modelsDone) DeleteFolder(folder);
+            if (fetchingRuntime) DeleteFolder(RuntimeFolder!);
             throw;
         }
         finally
         {
-            lock (_sync) _download = null;
+            lock (_sync)
+            {
+                _download = null;
+                _transfers = null;
+            }
             download.Dispose();
             RaiseChanged();
         }
@@ -241,7 +346,10 @@ internal sealed class MangaModelStore
         lock (_sync) _download?.Cancel();
     }
 
-    /// <summary>Removes the downloaded models, every version of them.</summary>
+    /// <summary>
+    /// Removes the downloaded models, every version of them. The DirectML runtime stays, for the next
+    /// download to use again; only uninstalling removes it (see the remarks).
+    /// </summary>
     internal void Delete()
     {
         lock (_sync)
@@ -253,18 +361,60 @@ internal sealed class MangaModelStore
     }
 
     /// <summary>
-    /// Removes the version's folder if a download was cut off in it — the app closed mid-download.
-    /// For app start; does nothing while a download is running or once the models are complete.
+    /// For app start, before anything could load the runtime: removes the version's folder if a
+    /// download was cut off in it — the app closed mid-download — and likewise an unfinished runtime
+    /// folder, and the DirectML versions other than this build's (<see cref="RemoveOtherRuntimeVersions"/>).
+    /// Does nothing while a download is running or to what is complete.
     /// </summary>
     internal void DiscardIncomplete()
     {
         if (Manifest is null) return;
         lock (_sync)
             if (_download is not null) return;
-        if (Directory.Exists(Folder) && !IsComplete())
+        if (Directory.Exists(Folder) && !IsComplete(Folder!, Manifest))
         {
             Log.Info("Removing the unfinished manga model download in {Folder}", Folder);
             DeleteFolder(Folder!);
+        }
+
+        if (Manifest.DirectMl is not { } runtime || !Directory.Exists(RuntimeRoot)) return;
+        if (Directory.Exists(RuntimeFolder) && !IsComplete(RuntimeFolder!, runtime))
+        {
+            Log.Info("Removing the unfinished DirectML download in {Folder}", RuntimeFolder);
+            DeleteFolder(RuntimeFolder!);
+        }
+
+        RemoveOtherRuntimeVersions();
+    }
+
+    /// <summary>
+    /// Removes the DirectML versions other than this build's — left by an older build. Only before
+    /// any of them could have been loaded, at app start; one that cannot be removed is left for the
+    /// next start.
+    /// </summary>
+    internal void RemoveOtherRuntimeVersions()
+    {
+        if (RuntimeFolder is not { } current || !Directory.Exists(RuntimeRoot)) return;
+        try
+        {
+            foreach (var folder in Directory.EnumerateDirectories(RuntimeRoot!))
+            {
+                if (string.Equals(Path.GetFullPath(folder), Path.GetFullPath(current), StringComparison.OrdinalIgnoreCase))
+                    continue;
+                try
+                {
+                    Directory.Delete(folder, recursive: true);
+                    Log.Info("Removed the older DirectML in {Folder}", folder);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Log.Info("The older DirectML in {Folder} could not be removed yet: {Message}", folder, ex.Message);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warn(ex, "The DirectML runtime folder {Folder} could not be listed", RuntimeRoot);
         }
     }
 
@@ -316,7 +466,7 @@ internal sealed class MangaModelStore
         {
             try
             {
-                await FetchFromAsync(file, url, target, before, judgeSpeed: true, token).ConfigureAwait(false);
+                await FetchFromAsync(file, source, url, target, before, judgeSpeed: true, token).ConfigureAwait(false);
                 Finished(file, source, target);
                 return;
             }
@@ -341,7 +491,7 @@ internal sealed class MangaModelStore
             Log.Info("Manga model {File}: every source was slow or failed; going on with {Source}", file.Name, source.Name);
             try
             {
-                await FetchFromAsync(file, url, target, before, judgeSpeed: false, token).ConfigureAwait(false);
+                await FetchFromAsync(file, source, url, target, before, judgeSpeed: false, token).ConfigureAwait(false);
                 Finished(file, source, target);
                 return;
             }
@@ -367,25 +517,62 @@ internal sealed class MangaModelStore
     }
 
     /// <summary>One file from one source, retried there on errors; throws when this source is done.</summary>
+    /// <remarks>
+    /// From a zip source, the entry is looked up first and the <c>.part</c> holds its compressed
+    /// bytes; they are inflated into a second <c>.part</c>, which is what is hashed and kept.
+    /// </remarks>
     private async Task FetchFromAsync(
-        MangaModelFile file, Uri url, string target, long before, bool judgeSpeed, CancellationToken token)
+        MangaModelFile file, MangaModelSource source, Uri url, string target, long before, bool judgeSpeed,
+        CancellationToken token)
     {
         var part = PartPath(target, url);
+        var inflated = target + ".inflated.part";
+        ZipEntrySpan? span = null;
         for (int attempt = 1; ; attempt++)
         {
             bool resumed = false;
             try
             {
-                resumed = await StreamToAsync(url, part, file.Size, before, judgeSpeed, token).ConfigureAwait(false);
+                if (source.Entry is { } entry && span is null)
+                {
+                    span = await LocateAsync(url, entry, token).ConfigureAwait(false);
+                    if (span.Value.Size != file.Size)
+                        throw new InvalidDataException(
+                            $"{file.Name}: {entry} in {url} is {span.Value.Size} bytes, not {file.Size}");
+                }
 
-                var hash = await HashAsync(part, token).ConfigureAwait(false);
+                var transfer = span?.CompressedSize ?? file.Size;
+                Expect(file, transfer);
+                resumed = await StreamToAsync(url, part, transfer, before, judgeSpeed, token, span?.DataOffset)
+                    .ConfigureAwait(false);
+
+                var verified = part;
+                if (span is { } zip)
+                {
+                    try
+                    {
+                        await ZipEntryLocator.ExtractAsync(part, inflated, zip, token).ConfigureAwait(false);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        TryDelete(part);
+                        TryDelete(inflated);
+                        throw;
+                    }
+
+                    verified = inflated;
+                }
+
+                var hash = await HashAsync(verified, token).ConfigureAwait(false);
                 if (hash != file.Sha256.ToLowerInvariant())
                 {
                     File.Delete(part);
+                    TryDelete(inflated);
                     throw new InvalidDataException($"{file.Name}: SHA-256 {hash} does not match the manifest");
                 }
 
-                File.Move(part, target, overwrite: true);
+                File.Move(verified, target, overwrite: true);
+                if (span is not null) TryDelete(part);
                 return;
             }
             catch (InvalidDataException ex) when (resumed && attempt < Attempts && !token.IsCancellationRequested)
@@ -402,6 +589,72 @@ internal sealed class MangaModelStore
         }
     }
 
+    // What this file will take over the wire from the source being tried, for TotalBytes.
+    private void Expect(MangaModelFile file, long transfer)
+    {
+        lock (_sync)
+        {
+            if (_transfers is null || _transfers.TryGetValue(file, out var known) && known == transfer) return;
+            _transfers[file] = transfer;
+        }
+
+        RaiseChanged();
+    }
+
+    /// <summary>Where <paramref name="entry"/> sits in the zip at <paramref name="url"/>, from a few range requests.</summary>
+    private Task<ZipEntrySpan> LocateAsync(Uri url, string entry, CancellationToken token) =>
+        ZipEntryLocator.LocateAsync(
+            async (count, t) =>
+            {
+                var (bytes, range) = await RangeAsync(url, new RangeHeaderValue(null, count), count, t).ConfigureAwait(false);
+                return (bytes, range.Length ?? throw new InvalidDataException($"{url}: the server did not say how long the file is"));
+            },
+            async (offset, count, t) =>
+            {
+                var (bytes, range) = await RangeAsync(url, new RangeHeaderValue(offset, offset + count - 1), count, t)
+                    .ConfigureAwait(false);
+                if (range.From != offset)
+                    throw new InvalidDataException($"{url}: asked for bytes from {offset}, sent from {range.From}");
+                return bytes;
+            },
+            entry, token);
+
+    // A small ranged GET: refused, without reading the body, unless the server answers with that range.
+    private async Task<(byte[] Bytes, ContentRangeHeaderValue Range)> RangeAsync(
+        Uri url, RangeHeaderValue range, int most, CancellationToken token)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(StallTimeout);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Range = range;
+            using var response = await _http
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            if (response.StatusCode != HttpStatusCode.PartialContent || response.Content.Headers.ContentRange is not { } served)
+                throw new InvalidDataException($"{url}: the server does not serve byte ranges");
+
+            await using var input = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
+            var bytes = new MemoryStream();
+            var buffer = new byte[1 << 16];
+            while (true)
+            {
+                int read = await input.ReadAsync(buffer, timeout.Token).ConfigureAwait(false);
+                if (read == 0) break;
+                if (bytes.Length + read > most)
+                    throw new InvalidDataException($"{url}: more bytes than the range asked for");
+                bytes.Write(buffer, 0, read);
+            }
+
+            return (bytes.ToArray(), served);
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            throw new HttpIOException(HttpRequestError.ResponseEnded, $"{url}: no answer in {StallTimeout.TotalSeconds:F0}s");
+        }
+    }
+
     // 404, 403 and the like: this source does not have the file, and will not on the next request
     // either. A timeout or a rate limit is worth asking again.
     private static bool IsFinalAnswer(Exception ex) =>
@@ -413,9 +666,13 @@ internal sealed class MangaModelStore
     internal static string PartPath(string target, Uri url) =>
         $"{target}.{Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url.AbsoluteUri)))[..8].ToLowerInvariant()}.part";
 
+    /// <param name="offset">
+    /// For a zip entry, where its bytes start in the zip: they are asked for as a range, and only a
+    /// server that answers with that range is accepted. Null for a whole file.
+    /// </param>
     /// <returns>Whether it carried on from a part already there.</returns>
     private async Task<bool> StreamToAsync(
-        Uri url, string part, long size, long before, bool judgeSpeed, CancellationToken token)
+        Uri url, string part, long size, long before, bool judgeSpeed, CancellationToken token, long? offset = null)
     {
         long have = File.Exists(part) ? new FileInfo(part).Length : 0;
         if (have > size)
@@ -434,14 +691,30 @@ internal sealed class MangaModelStore
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            if (have > 0) request.Headers.Range = new RangeHeaderValue(have, null);
+            if (offset is { } start)
+                request.Headers.Range = new RangeHeaderValue(start + have, start + size - 1);
+            else if (have > 0)
+                request.Headers.Range = new RangeHeaderValue(have, null);
             using var response = await _http
                 .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, watch.Token).ConfigureAwait(false);
 
-            // A server that ignores the range sends the whole file again, from the first byte.
-            bool resumed = have > 0 && response.StatusCode == HttpStatusCode.PartialContent;
-            if (!resumed) have = 0;
-            response.EnsureSuccessStatusCode();
+            bool resumed;
+            if (offset is { } from)
+            {
+                response.EnsureSuccessStatusCode();
+                // Anything but the range asked for would be the wrong bytes, or the whole package.
+                if (response.StatusCode != HttpStatusCode.PartialContent ||
+                    response.Content.Headers.ContentRange?.From != from + have)
+                    throw new InvalidDataException($"{url}: the server did not send the range asked for");
+                resumed = have > 0;
+            }
+            else
+            {
+                // A server that ignores the range sends the whole file again, from the first byte.
+                resumed = have > 0 && response.StatusCode == HttpStatusCode.PartialContent;
+                if (!resumed) have = 0;
+                response.EnsureSuccessStatusCode();
+            }
 
             await using var input = await response.Content.ReadAsStreamAsync(watch.Token).ConfigureAwait(false);
             await using var output = new FileStream(
