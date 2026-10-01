@@ -28,7 +28,7 @@ otLocale('zh-Hans', {
   'features.note': '网站中的应用程序画面统一以繁体中文显示，实际界面可切换为繁體中文、简体中文、English、日本語、한국어。',
   'capture.kicker': '截图翻译',
   'capture.title': '框选画面，译文直接覆盖原文',
-  'capture.body1': '按下快捷键框选需要翻译的区域，即可识别并翻译画面文字。支持网页、PDF、图片、漫画、影音与游戏，并可自动识别繁体中文、简体中文、英文、日文与韩文。',
+  'capture.body1': '按下快捷键框选需要翻译的区域，即可通过 OCR 识别并翻译画面文字。支持网页、PDF、图片、漫画、影音与游戏，并可自动识别繁体中文、简体中文、英文、日文与韩文。',
   'capture.tray': '主窗口可以直接关闭，程序常驻系统托盘，平时不需要一直开着。',
   'capture.tools.title': '工具栏还能做这些',
   'capture.tool1.title': '复制文字',
@@ -170,5 +170,5 @@ otLocale('zh-Hans', {
   'a11y.coffee': '通过 Buy Me a Coffee 赞助',
   'a11y.close': '关闭',
   'meta.title': 'OverTranslate — Windows 屏幕即时翻译工具',
-  'meta.description': 'OverTranslate 是一款免费 Windows 屏幕翻译工具，适用于网页、漫画、影音与游戏等场景，支持截图翻译与实时翻译等多种翻译功能。'
+  'meta.description': 'OverTranslate 是一款免费的 Windows 屏幕即时翻译工具，内置 OCR 识别游戏、漫画、影音与网页上的文字，译文直接覆盖在原文上，支持截图翻译与实时翻译。'
 });
