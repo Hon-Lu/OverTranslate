@@ -41,6 +41,10 @@
          so nothing else ever asks for it. -->
     <Microsoft_AI_DirectML_SkipLibraryCopy>true</Microsoft_AI_DirectML_SkipLibraryCopy>
     <Microsoft_AI_DirectML_SkipDebugLayerCopy>true</Microsoft_AI_DirectML_SkipDebugLayerCopy>
+    <!-- The self-contained runtime brings WPF/WinForms resource satellites for 13 cultures (built-in dialog text,
+         exception messages). Keep the ones matching the UI languages the app ships (Resources\Strings.*.xaml);
+         anyone else gets the neutral English built into the framework assemblies. About 4 MB compressed. -->
+    <SatelliteResourceLanguages>en;ja;ko;zh-Hans;zh-Hant</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
