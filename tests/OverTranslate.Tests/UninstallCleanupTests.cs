@@ -100,6 +100,47 @@ public sealed class UninstallCleanupTests : IDisposable
         }
     }
 
+    // ── Which folder ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void TheAssetsFolder_IsRemoved_WhereverItIs()
+    {
+        var assets = Path.Combine(_root, AppDataPaths.AssetsFolderName);
+        Write(Path.Combine(AppDataPaths.AssetsFolderName, @"models\manga-vertical\v1\vocab.txt"));
+        Write(Path.Combine(AppDataPaths.AssetsFolderName, @"runtimes\directml\1.15.4\DirectML.dll"));
+        var settings = Write("appsettings.json");
+
+        Assert.Equal(0, UninstallCleanup.RemoveAssets(assets + Path.DirectorySeparatorChar));
+
+        Assert.False(Directory.Exists(assets));
+        // What sits beside it, as the settings folder does, is not touched.
+        Assert.True(File.Exists(settings));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("OverTranslate")]
+    [InlineData("OverTranslate-assets-old")]
+    public void AFolderByAnyOtherName_IsRefused_AndKept(string name)
+    {
+        var kept = Write(Path.Combine(name, "keep.txt"));
+
+        Assert.Equal(-1, UninstallCleanup.RemoveAssets(Path.Combine(_root, name)));
+        Assert.True(File.Exists(kept));
+    }
+
+    [Fact]
+    public void TheDefaultAssetsFolder_IsItsOwnFolderInLocalAppData_NotLocalAppDataNorTheInstallRoot()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        Assert.Equal(Path.Combine(local, "OverTranslate-assets"), AppDataPaths.DefaultAssetsRoot);
+        Assert.Equal(-1, UninstallCleanup.RemoveAssets(local));
+        Assert.Equal(-1, UninstallCleanup.RemoveAssets(Path.Combine(local, "OverTranslate")));
+        // Settings and logs are not under it, so uninstalling leaves them.
+        Assert.False(AppDataPaths.Root.StartsWith(AppDataPaths.DefaultAssetsRoot, StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(@"C:\Users\u\AppData\Local\OverTranslate\current\", @"C:\Users\u\AppData\Local\OverTranslate")]
     [InlineData(@"C:\Users\u\AppData\Local\OverTranslate\current", @"C:\Users\u\AppData\Local\OverTranslate")]

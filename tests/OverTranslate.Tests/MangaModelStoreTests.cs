@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using OverTranslate.Services;
 using OverTranslate.Services.Ocr.Manga;
 using Xunit;
 
@@ -478,13 +479,21 @@ public sealed class MangaModelStoreTests : IDisposable
     }
 
     [Fact]
-    public void TheModelsLive_WithTheSettings_OutsideTheInstallFolder()
+    public void TheModelsLive_InTheLocalAssetsFolder_NotRoamingNorTheInstallFolder()
     {
         var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var assets = Environment.GetEnvironmentVariable(AppDataPaths.AssetsOverride) is { Length: > 0 } overridden
+            ? Path.GetFullPath(overridden)
+            : Path.Combine(local, "OverTranslate-assets");
 
-        Assert.Equal(Path.Combine(roaming, "OverTranslate", "models", "manga-vertical"), MangaModelStore.DefaultRoot);
-        Assert.False(MangaModelStore.DefaultRoot.StartsWith(local, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(assets, AppDataPaths.AssetsRoot);
+        Assert.Equal(Path.Combine(assets, "models", "manga-vertical"), MangaModelStore.DefaultRoot);
+        Assert.Equal(Path.Combine(assets, "runtimes"), AppDataPaths.Runtimes);
+        Assert.False(MangaModelStore.DefaultRoot.StartsWith(roaming, StringComparison.OrdinalIgnoreCase));
+        // Velopack's install root, emptied by a reinstall: see AppDataPaths.
+        Assert.False(MangaModelStore.DefaultRoot.StartsWith(
+            Path.Combine(local, "OverTranslate") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
