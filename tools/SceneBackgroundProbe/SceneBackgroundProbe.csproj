@@ -11,6 +11,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/OverTranslate/OverTranslate.csproj" />
+    <!-- The app no longer ships OpenCV; this bench still uses it for its own reading, drawing and
+         scoring, and converts to the app's image type only where it calls the repair. -->
+    <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />
+    <PackageReference Include="OpenCvSharp4.runtime.win.slim" Version="4.13.0.20260627" />
     <!-- RapidOcrNet brings the CPU onnxruntime 1.27 back in transitively; keep only the DirectML one. -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" ExcludeAssets="all" />
   </ItemGroup>

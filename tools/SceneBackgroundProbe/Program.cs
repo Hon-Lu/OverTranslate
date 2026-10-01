@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using OpenCvSharp;
+using OverTranslate.Imaging;
 using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Realtime;
 using TextRegion = OverTranslate.Services.Realtime.CpuTextRegion;
@@ -47,7 +48,7 @@ internal static class Program
         finally { ocr?.Dispose(); }
     }
 
-    internal static Mat RepairReduced(Mat source, Mat mask) => CpuHoleRepair.RepairReduced(source, mask);
+    internal static Mat RepairReduced(Mat source, Mat mask) => Repaired.Reduced(source, mask);
 
     internal static int ChangedOutside(Mat source, Mat result, Mat mask)
     {
@@ -62,6 +63,64 @@ internal static class Program
         return Cv2.CountNonZero(channels);
     }
 
+}
+
+/// <summary>The app's repair, called with this bench's OpenCV images: copied across at the boundary.</summary>
+internal static class Repaired
+{
+    public static Mat Mask(Mat source, IReadOnlyList<TextRegion> regions)
+    {
+        using var image = In(source);
+        using var mask = CpuTextMask.Build(image, regions);
+        return Out(mask);
+    }
+
+    public static ProbeRepair Repair(Mat source, Mat mask, CancellationToken token = default)
+    {
+        using var image = In(source);
+        using var holes = In(mask);
+        using var repaired = CpuHoleRepair.Repair(image, holes, token);
+        return new(Out(repaired.Image), repaired.FullTiles, repaired.ReducedTiles);
+    }
+
+    public static Mat Reduced(Mat source, Mat mask)
+    {
+        using var image = In(source);
+        using var holes = In(mask);
+        using var repaired = CpuHoleRepair.RepairReduced(image, holes);
+        return Out(repaired);
+    }
+
+    private static ImageBuffer In(Mat mat)
+    {
+        var type = mat.Type() == MatType.CV_8UC3 ? PixelType.U8C3 : mat.Type() == MatType.CV_8UC1 ? PixelType.U8C1
+            : throw new NotSupportedException(mat.Type().ToString());
+        var image = new ImageBuffer(mat.Width, mat.Height, type);
+        var row = new byte[image.RowBytes];
+        for (int y = 0; y < mat.Height; y++)
+        {
+            System.Runtime.InteropServices.Marshal.Copy(mat.Ptr(y), row, 0, row.Length);
+            row.CopyTo(image.RowSpan(y));
+        }
+        return image;
+    }
+
+    private static Mat Out(ImageBuffer image)
+    {
+        var mat = new Mat(image.Height, image.Width, image.Type == PixelType.U8C3 ? MatType.CV_8UC3 : MatType.CV_8UC1);
+        var row = new byte[image.RowBytes];
+        for (int y = 0; y < image.Height; y++)
+        {
+            image.RowSpan(y).CopyTo(row);
+            System.Runtime.InteropServices.Marshal.Copy(row, 0, mat.Ptr(y), row.Length);
+        }
+        return mat;
+    }
+}
+
+internal sealed record ProbeRepair(Mat Image, int FullTiles, int ReducedTiles) : IDisposable
+{
+    public void Dispose() => Image.Dispose();
 }
 
 internal static class GlyphMask

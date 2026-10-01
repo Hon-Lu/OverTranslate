@@ -70,7 +70,7 @@ internal static class CpuAdaptiveProbe
                     new System.Windows.Rect(r.X, r.Y, r.Width, r.Height), r.GlyphHeight)).ToArray()))
                 legacy?.Save(prefix + "-legacy.png");
             using var oldMask = GlyphMask.Build(source, regions);
-            using var mask = CpuTextMask.Build(source, regions);
+            using var mask = Repaired.Mask(source, regions);
             Preview(mask, "mask-preview"); Preview(oldMask, "old-mask-preview");
             foreach (string method in new[] { "baseline", "new-half", "adaptive" })
             {
@@ -94,7 +94,7 @@ internal static class CpuAdaptiveProbe
                     }
                     else
                     {
-                        using var rebuilt = CpuTextMask.Build(source, regions);
+                        using var rebuilt = Repaired.Mask(source, regions);
                         using var repaired = Repair(method, source, rebuilt, oldMask);
                     }
                     timings.Add(clock.Elapsed.TotalMilliseconds);
@@ -165,11 +165,11 @@ internal static class CpuAdaptiveProbe
         finally { foreach (var plane in planes) plane.Dispose(); }
     }
 
-    private static CpuRepair Repair(string method, Mat source, Mat mask, Mat oldMask) => method switch
+    private static ProbeRepair Repair(string method, Mat source, Mat mask, Mat oldMask) => method switch
     {
         "baseline" => new(Program.RepairReduced(source, oldMask), 0, 0),
         "new-half" => new(Program.RepairReduced(source, mask), 0, 0),
-        _ => CpuHoleRepair.Repair(source, mask),
+        _ => Repaired.Repair(source, mask),
     };
 
     internal static void Verify()
@@ -181,7 +181,7 @@ internal static class CpuAdaptiveProbe
         Cv2.Rectangle(mask, new Rect(92, 15, 8, 110), Scalar.White, -1); // Crosses a tile boundary.
         using var covered = slope.Clone();
         covered.SetTo(Scalar.White, mask);
-        using var carried = CpuHoleRepair.Repair(covered, mask);
+        using var carried = Repaired.Repair(covered, mask);
         if (carried.FullTiles != 0 || carried.ReducedTiles != 0) throw new Exception("A slope must not be inpainted.");
         if (Program.ChangedOutside(covered, carried.Image, mask) != 0) throw new Exception("Smooth writes escaped mask.");
         using var error = new Mat();
@@ -193,7 +193,7 @@ internal static class CpuAdaptiveProbe
         using var detailed = Scene(143, 213, speckle: 40);
         using var speckled = detailed.Clone();
         speckled.SetTo(Scalar.White, mask);
-        using var thin = CpuHoleRepair.Repair(speckled, mask);
+        using var thin = Repaired.Repair(speckled, mask);
         if (thin.FullTiles == 0 || thin.ReducedTiles != 0) throw new Exception("Thin holes must use full resolution.");
         if (Program.ChangedOutside(speckled, thin.Image, mask) != 0) throw new Exception("Tile writes escaped mask.");
 
@@ -201,20 +201,20 @@ internal static class CpuAdaptiveProbe
         Cv2.Rectangle(mixedMask, new Rect(145, 30, 25, 50), Scalar.White, -1);
         using var mixedSource = detailed.Clone();
         mixedSource.SetTo(Scalar.White, mixedMask);
-        using var mixed = CpuHoleRepair.Repair(mixedSource, mixedMask);
+        using var mixed = Repaired.Repair(mixedSource, mixedMask);
         if (mixed.FullTiles == 0 || mixed.ReducedTiles == 0) throw new Exception("Mixed holes must exercise both resolutions.");
         if (Program.ChangedOutside(mixedSource, mixed.Image, mixedMask) != 0) throw new Exception("Mixed writes escaped mask.");
 
         using var empty = new Mat(slope.Size(), MatType.CV_8UC1, Scalar.Black);
-        using var untouched = CpuHoleRepair.Repair(covered, empty);
+        using var untouched = Repaired.Repair(covered, empty);
         if (Cv2.Norm(covered, untouched.Image, NormTypes.INF) != 0) throw new Exception("Empty mask changed scene.");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        try { using var cancelled = CpuHoleRepair.Repair(covered, mask, cancellation.Token); throw new Exception("Cancellation ignored."); }
+        try { using var cancelled = Repaired.Repair(covered, mask, cancellation.Token); throw new Exception("Cancellation ignored."); }
         catch (OperationCanceledException) { }
         using var tiny = new Mat(1, 1, MatType.CV_8UC3, Scalar.White);
-        using var tinyMask = CpuTextMask.Build(tiny, [new(0, 0, 1, 1, null)]);
-        using var tinyRepair = CpuHoleRepair.Repair(tiny, tinyMask);
+        using var tinyMask = Repaired.Mask(tiny, [new(0, 0, 1, 1, null)]);
+        using var tinyRepair = Repaired.Repair(tiny, tinyMask);
         Console.WriteLine("PASS slope carried, full/reduced routing, mixed resolution boundary, outside-mask isolation, empty mask, cancellation, 1px input.");
     }
 

@@ -1,5 +1,5 @@
-using OpenCvSharp;
-using Size = OpenCvSharp.Size;
+using System.Drawing;
+using OverTranslate.Imaging;
 
 namespace OverTranslate.Services.Realtime;
 
@@ -123,14 +123,13 @@ internal static class CpuTextMask
     /// fade this follows. Both were judged the better trade against a picture the erase leaves
     /// alone.</para>
     /// </remarks>
-    public static Mat Build(Mat source, IReadOnlyList<CpuTextRegion> lines)
+    public static ImageBuffer Build(ImageBuffer source, IReadOnlyList<CpuTextRegion> lines)
     {
-        var mask = new Mat(source.Size(), MatType.CV_8UC1, Scalar.Black);
+        var mask = new ImageBuffer(source.Size, PixelType.U8C1);
         try
         {
-            using var gray = new Mat();
-            Cv2.CvtColor(source, gray, ColorConversionCodes.BGR2GRAY);
-            using var one = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
+            using var gray = ColorConversion.ToGray(source);
+            var one = StructuringElement.Ellipse(3, 3);
             foreach (var line in lines)
             {
                 if (!double.IsFinite(line.X + line.Y + line.Width + line.Height) || line.Width <= 0 || line.Height <= 0) continue;
@@ -142,21 +141,21 @@ internal static class CpuTextMask
                 int halo = Math.Clamp((int)Math.Round(allowance * .3), 1, FurthestHalo);
                 int growth = Math.Max(0, allowance - 1 - halo);
                 var box = Clip(line.X - padding, line.Y - padding, line.X + line.Width + padding,
-                    line.Y + line.Height + padding, source.Size());
+                    line.Y + line.Height + padding, source.Size);
                 if (box.Width == 0 || box.Height == 0) continue;
-                using var roi = new Mat(gray, box);
-                using var light = new Mat();
-                using var dark = new Mat();
+                using var roi = new ImageBuffer(gray, box);
+                using var light = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
+                using var dark = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
                 Hats(roi, height, light, dark);
-                using var seed = new Mat();
-                using var darker = new Mat();
+                using var seed = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
+                using var darker = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
                 Body(light, seed);   // What stands out brighter than its surroundings,
                 Body(dark, darker);  // and what stands out darker. Either one can be the text.
-                Cv2.BitwiseOr(seed, darker, seed);
-                using var strongest = new Mat();
-                Cv2.Max(light, dark, strongest);
+                Arithmetic.Or(seed, darker, seed);
+                using var strongest = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
+                Arithmetic.Max(light, dark, strongest);
                 if (growth > 0) GrowAlongTail(seed, strongest, one, growth);
-                Cv2.Dilate(seed, seed, one); // The antialiased end of whatever the growth stopped on.
+                Morphology.Dilate(seed, seed, one); // The antialiased end of whatever the growth stopped on.
 
                 // The blind margin, in a box widened to hold it. Two pixels at a subtitle's size:
                 // one was tried when the growth was new, on the reasoning that the growth reaches the
@@ -165,13 +164,13 @@ internal static class CpuTextMask
                 // measures the same way — dropping it leaves more behind on every corpus, 32.6%
                 // against 28.9% on the panel corpus and 22.3% against 17.6% on the game corpus, to
                 // disturb between a tenth and a quarter of a point less of the picture.
-                var wide = Clip(box.X - halo, box.Y - halo, box.Right + halo, box.Bottom + halo, source.Size());
-                using var spread = new Mat(wide.Height, wide.Width, MatType.CV_8UC1, Scalar.Black);
-                using (var inner = new Mat(spread, new Rect(box.X - wide.X, box.Y - wide.Y, box.Width, box.Height)))
+                var wide = Clip(box.X - halo, box.Y - halo, box.Right + halo, box.Bottom + halo, source.Size);
+                using var spread = new ImageBuffer(wide.Width, wide.Height, PixelType.U8C1);
+                using (var inner = new ImageBuffer(spread, new Rectangle(box.X - wide.X, box.Y - wide.Y, box.Width, box.Height)))
                     seed.CopyTo(inner);
-                Cv2.Dilate(spread, spread, one, iterations: halo);
-                using var target = new Mat(mask, wide);
-                Cv2.BitwiseOr(target, spread, target);
+                Morphology.Dilate(spread, spread, one, iterations: halo);
+                using var target = new ImageBuffer(mask, wide);
+                Arithmetic.Or(target, spread, target);
             }
             return mask;
         }
@@ -206,29 +205,28 @@ internal static class CpuTextMask
     /// it fits, and the answers are scaled back up. The cost stays that of the widest element over a
     /// smaller box, and nothing under <see cref="ScaledFrom"/> changes.</para>
     /// </remarks>
-    private static void Hats(Mat roi, double height, Mat light, Mat dark)
+    private static void Hats(ImageBuffer roi, double height, ImageBuffer light, ImageBuffer dark)
     {
         int wanted = (int)Math.Round(height * .55) | 1;
         if (wanted < ScaledFrom || roi.Width < 4 || roi.Height < 4)
         {
             int size = Math.Clamp(wanted, 5, WidestKernel);
-            using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(size, size));
-            Cv2.MorphologyEx(roi, light, MorphTypes.TopHat, kernel);
-            Cv2.MorphologyEx(roi, dark, MorphTypes.BlackHat, kernel);
+            var kernel = StructuringElement.Ellipse(size, size);
+            Morphology.TopHat(roi, light, kernel);
+            Morphology.BlackHat(roi, dark, kernel);
             return;
         }
 
         double scale = WidestKernel / (double)wanted;
         var reduced = new Size(Math.Max(2, (int)Math.Round(roi.Width * scale)), Math.Max(2, (int)Math.Round(roi.Height * scale)));
-        using var small = new Mat();
-        Cv2.Resize(roi, small, reduced, interpolation: InterpolationFlags.Area);
-        using var widest = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(WidestKernel, WidestKernel));
-        using var smallLight = new Mat();
-        using var smallDark = new Mat();
-        Cv2.MorphologyEx(small, smallLight, MorphTypes.TopHat, widest);
-        Cv2.MorphologyEx(small, smallDark, MorphTypes.BlackHat, widest);
-        Cv2.Resize(smallLight, light, roi.Size(), interpolation: InterpolationFlags.Linear);
-        Cv2.Resize(smallDark, dark, roi.Size(), interpolation: InterpolationFlags.Linear);
+        using var small = Resize.To(roi, reduced, Interpolation.Area);
+        var widest = StructuringElement.Ellipse(WidestKernel, WidestKernel);
+        using var smallLight = ImageBuffer.Uninitialized(reduced, PixelType.U8C1);
+        using var smallDark = ImageBuffer.Uninitialized(reduced, PixelType.U8C1);
+        Morphology.TopHat(small, smallLight, widest);
+        Morphology.BlackHat(small, smallDark, widest);
+        Resize.To(smallLight, light, Interpolation.Linear);
+        Resize.To(smallDark, dark, Interpolation.Linear);
     }
 
     /// <summary>
@@ -251,29 +249,29 @@ internal static class CpuTextMask
     /// that are real, and the trade belongs to a round that can weigh the residue it costs against
     /// the picture it saves rather than to this one.</para>
     /// </remarks>
-    private static void Body(Mat response, Mat into)
+    private static void Body(ImageBuffer response, ImageBuffer into)
     {
-        double otsu = Cv2.Threshold(response, into, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-        Cv2.Threshold(response, into, Math.Max(18, otsu * .8), 255, ThresholdTypes.Binary);
+        double otsu = Threshold.Otsu(response);
+        Threshold.Binary(response, into, Math.Max(18, otsu * .8), 255);
     }
 
     /// <summary>Extends the seed along the text's own fade — see <see cref="Build"/>.</summary>
     /// <remarks>
     /// A geodesic dilation: grow by a pixel, keep only what the tail threshold allows, put the seed
-    /// back so a step can never lose ground. Both mats are the recognition box, not the frame, and
+    /// back so a step can never lose ground. Both images are the recognition box, not the frame, and
     /// the loop runs a fixed number of times rather than to stability — the point is a bounded reach,
     /// and a run to stability would follow a scene edge for as far as that edge happens to be dark.
     /// </remarks>
-    private static void GrowAlongTail(Mat seed, Mat response, Mat one, int steps)
+    private static void GrowAlongTail(ImageBuffer seed, ImageBuffer response, StructuringElement one, int steps)
     {
-        using var tail = new Mat();
-        Cv2.Threshold(response, tail, OutlineTail, 255, ThresholdTypes.Binary);
-        using var grown = new Mat();
+        using var tail = ImageBuffer.Uninitialized(response.Size, PixelType.U8C1);
+        Threshold.Binary(response, tail, OutlineTail, 255);
+        using var grown = ImageBuffer.Uninitialized(seed.Size, PixelType.U8C1);
         for (int step = 0; step < steps; step++)
         {
-            Cv2.Dilate(seed, grown, one);
-            Cv2.BitwiseAnd(grown, tail, grown);
-            Cv2.BitwiseOr(grown, seed, seed);
+            Morphology.Dilate(seed, grown, one);
+            Arithmetic.And(grown, tail, grown);
+            Arithmetic.Or(grown, seed, seed);
         }
     }
 
@@ -299,7 +297,7 @@ internal static class CpuTextMask
         return nearest == double.MaxValue ? int.MaxValue : (int)Math.Floor(nearest / 2);
     }
 
-    private static Rect Clip(double left, double top, double right, double bottom, Size size)
+    private static Rectangle Clip(double left, double top, double right, double bottom, Size size)
     {
         int x = (int)Math.Clamp(Math.Floor(left), 0, size.Width);
         int y = (int)Math.Clamp(Math.Floor(top), 0, size.Height);
@@ -309,13 +307,13 @@ internal static class CpuTextMask
     }
 }
 
-internal sealed record CpuRepair(Mat Image, int FullTiles, int ReducedTiles) : IDisposable
+internal sealed record CpuRepair(ImageBuffer Image, int FullTiles, int ReducedTiles) : IDisposable
 {
     public void Dispose() => Image.Dispose();
 }
 
 /// <summary>What was seen of the picture, averaged down, and how much of each cell that was.</summary>
-internal sealed record Reduction(Mat Sum, Mat Seen) : IDisposable
+internal sealed record Reduction(ImageBuffer Sum, ImageBuffer Seen) : IDisposable
 {
     public void Dispose() { Sum.Dispose(); Seen.Dispose(); }
 }
@@ -340,14 +338,14 @@ internal sealed record Reduction(Mat Sum, Mat Seen) : IDisposable
 /// </remarks>
 internal static class CpuHoleRepair
 {
-    /// <summary>Which inpainting fills a tile, and how far around a pixel it reads to do it.</summary>
+    /// <summary>How far around a pixel the inpainting that fills a tile reads — Navier–Stokes, see <see cref="Inpaint.NavierStokes"/>.</summary>
     /// <remarks>
     /// <para>Both were the tutorial's defaults rather than a choice. They were swept against clean
     /// picture: eight 1824x223 bands of real frames the shipped detector finds no text anywhere in,
     /// a subtitle drawn over each, and the repair scored inside its own mask against the band it was
     /// cut from. Forty smaller crops of the same kind, at 640x220, answer the same way.</para>
     ///
-    /// <para><see cref="InpaintTypes.Telea"/> is the cheaper of the two and buys nothing with it.
+    /// <para>Telea's method is the cheaper of the two and buys nothing with it.
     /// Over the eight bands the whole repair goes from 34.4ms to 32.0ms — the inpainting call itself
     /// from 15.3 to 13.0 — while the error goes from 19.47 to 19.54 levels, and over the forty
     /// smaller crops Navier–Stokes is the better of the two in 30. Two milliseconds of a hundred is
@@ -364,9 +362,6 @@ internal static class CpuHoleRepair
     /// choice sits on — see <see cref="RepairReduced"/> — and it fails the same way: mean error is
     /// blind to it, so it cannot be the thing that decides.</para>
     /// </remarks>
-    private const InpaintTypes Fill = InpaintTypes.NS;
-
-    /// <inheritdoc cref="Fill"/>
     private const int FillRadius = 3;
 
     /// <summary>Departure from a local slope, in levels, at which the smooth fill is fully trusted.</summary>
@@ -392,32 +387,32 @@ internal static class CpuHoleRepair
     /// <summary>The square the structured fill is computed in, one at a time.</summary>
     private const int Tile = 96;
 
-    public static CpuRepair Repair(Mat source, Mat mask, CancellationToken token = default)
+    public static CpuRepair Repair(ImageBuffer source, ImageBuffer mask, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        if (source.Type() != MatType.CV_8UC3 || mask.Type() != MatType.CV_8UC1 || source.Size() != mask.Size())
+        if (source.Type != PixelType.U8C3 || mask.Type != PixelType.U8C1 || source.Size != mask.Size)
             throw new ArgumentException("Expected matching BGR image and byte mask.");
-        var holes = Cv2.BoundingRect(mask);
+        var holes = Statistics.BoundingRect(mask);
         if (holes.Width == 0 || holes.Height == 0) return new(source.Clone(), 0, 0);
 
-        var area = Clip(holes, Margin, source.Size());
-        using var frame = new Mat(source, area);
-        using var within = new Mat(mask, area);
+        var area = Clip(holes, Margin, source.Size);
+        using var frame = new ImageBuffer(source, area);
+        using var within = new ImageBuffer(mask, area);
         using var reduced = Reduce(frame, within);
-        using var slope = SlopeShare(reduced, frame.Size());
-        Cv2.MinMaxLoc(slope, out double least, out double most, out _, out _, within);
+        using var slope = SlopeShare(reduced, frame.Size);
+        var (least, most) = Statistics.MinMax(slope, within);
         least /= 255;
         most /= 255;
         token.ThrowIfCancellationRequested();
 
         if (most <= .02) return Grained(Structured(source, mask, token), source, mask, area);
 
-        using var smooth = SmoothFill(reduced, frame.Size());
+        using var smooth = SmoothFill(reduced, frame.Size);
         token.ThrowIfCancellationRequested();
         if (least >= .98)
         {
             var only = source.Clone();
-            using (var target = new Mat(only, area)) smooth.CopyTo(target, within);
+            using (var target = new ImageBuffer(only, area)) smooth.CopyTo(target, within);
             return Grained(new(only, 0, 0), source, mask, area);
         }
 
@@ -476,12 +471,12 @@ internal static class CpuHoleRepair
     /// self-limiting — where the surroundings are smooth the measurement is near zero and nothing is
     /// added, so a clear sky stays a clear sky.</para>
     /// </remarks>
-    private static CpuRepair Grained(CpuRepair repair, Mat source, Mat mask, Rect area)
+    private static CpuRepair Grained(CpuRepair repair, ImageBuffer source, ImageBuffer mask, Rectangle area)
     {
         try
         {
-            using var outside = new Mat();
-            Cv2.BitwiseNot(mask, outside);
+            using var outside = ImageBuffer.Uninitialized(mask.Size, PixelType.U8C1);
+            Arithmetic.Not(mask, outside);
             // What the fill wrote, before any of it is grained. A tile reads its neighbours for
             // context, and a neighbour that has already been grained would report the grain as
             // detail it already had and be shortchanged for it — a seam along every tile edge.
@@ -495,33 +490,32 @@ internal static class CpuHoleRepair
             for (int y = area.Y; y < area.Bottom; y += span)
             for (int x = area.X; x < area.Right; x += span)
             {
-                var block = new Rect(x, y, Math.Min(span, area.Right - x), Math.Min(span, area.Bottom - y));
-                using var covered = new Mat(mask, block);
-                if (Cv2.CountNonZero(covered) == 0) continue;
+                var block = new Rectangle(x, y, Math.Min(span, area.Right - x), Math.Min(span, area.Bottom - y));
+                using var covered = new ImageBuffer(mask, block);
+                if (Statistics.CountNonZero(covered) == 0) continue;
 
-                var crop = Clip(block, guard, source.Size());
-                using var frame = new Mat(source, crop);
-                using var filled = new Mat(smoothed, crop);
-                using var beyond = new Mat(outside, crop);
-                using var within = new Mat(mask, crop);
+                var crop = Clip(block, guard, source.Size);
+                using var frame = new ImageBuffer(source, crop);
+                using var filled = new ImageBuffer(smoothed, crop);
+                using var beyond = new ImageBuffer(outside, crop);
+                using var within = new ImageBuffer(mask, crop);
                 using var ambient = Energy(frame, beyond);
                 using var present = Energy(filled, within);
 
-                using var strength = new Mat();
-                Cv2.Subtract(ambient, present, strength);
-                Cv2.Max(strength, 0.0, strength);
-                Cv2.Min(strength, GrainCeiling * GrainExpectation, strength);
-                Cv2.Divide(strength, Scalar.All(GrainExpectation), strength);
+                using var strength = ImageBuffer.Uninitialized(crop.Size, PixelType.F32C1);
+                Arithmetic.Subtract(ambient, present, strength);
+                Arithmetic.Max(strength, 0.0, strength);
+                Arithmetic.Min(strength, GrainCeiling * GrainExpectation, strength);
+                Arithmetic.Divide(strength, GrainExpectation, strength);
 
                 using var noise = Noise(crop);
-                Cv2.Multiply(noise, strength, noise);
-                using var grain = new Mat();
-                Cv2.Merge([noise, noise, noise], grain);
-                using var grained = new Mat();
-                Cv2.Add(filled, grain, grained, dtype: MatType.CV_8UC3.Value);
+                Arithmetic.Multiply(noise, strength, noise);
+                using var grain = Channels.Spread(noise);
+                using var grained = ImageBuffer.Uninitialized(crop.Size, PixelType.U8C3);
+                Arithmetic.AddToBytes(filled, grain, grained);
 
-                using var interior = new Mat(grained, new Rect(block.X - crop.X, block.Y - crop.Y, block.Width, block.Height));
-                using var target = new Mat(repair.Image, block);
+                using var interior = new ImageBuffer(grained, new Rectangle(block.X - crop.X, block.Y - crop.Y, block.Width, block.Height));
+                using var target = new ImageBuffer(repair.Image, block);
                 interior.CopyTo(target, covered);
             }
             return repair;
@@ -530,36 +524,32 @@ internal static class CpuHoleRepair
     }
 
     /// <summary>How far the picture departs from its own local average, where it was seen.</summary>
-    private static Mat Energy(Mat image, Mat where)
+    private static ImageBuffer Energy(ImageBuffer image, ImageBuffer where)
     {
         // Whole levels throughout: the reading is an average of departures already bounded at
         // twelve, so carrying it in floating point would be carrying precision that was thrown
         // away two lines earlier, at four times the memory traffic on the largest images.
-        using var gray = new Mat();
-        Cv2.CvtColor(image, gray, ColorConversionCodes.BGR2GRAY);
-        using var average = new Mat();
-        Cv2.Blur(gray, average, new Size(5, 5));
-        using var detail = new Mat();
-        Cv2.Absdiff(gray, average, detail);
-        Cv2.Min(detail, GrainQuiet, detail);
+        using var gray = ColorConversion.ToGray(image);
+        using var average = ImageBuffer.Uninitialized(gray.Size, PixelType.U8C1);
+        Filters.Blur(gray, average, 5);
+        using var detail = ImageBuffer.Uninitialized(gray.Size, PixelType.U8C1);
+        Arithmetic.AbsoluteDifference(gray, average, detail);
+        Arithmetic.Min(detail, GrainQuiet, detail);
 
         // A plain average would read the calm of the hole as the calm of the scene, so only the
         // pixels that answered are counted — the same weighted reduction the fill itself is built on.
-        using var answered = new Mat(detail.Size(), MatType.CV_8UC1, Scalar.Black);
+        using var answered = new ImageBuffer(detail.Size, PixelType.U8C1);
         detail.CopyTo(answered, where);
-        var span = new Size(GrainWindow, GrainWindow);
-        using var carried = new Mat();
-        using var seen = new Mat();
-        Cv2.BoxFilter(answered, carried, MatType.CV_32F, span, normalize: false, borderType: BorderTypes.Constant);
-        Cv2.BoxFilter(where, seen, MatType.CV_32F, span, normalize: false, borderType: BorderTypes.Constant);
-        Cv2.Max(seen, 1e-3, seen);
-        var energy = new Mat();
-        Cv2.Divide(carried, seen, energy, 255); // The weights arrived as bytes, so undo their scale.
+        using var carried = Filters.BoxSum(answered, GrainWindow);
+        using var seen = Filters.BoxSum(where, GrainWindow);
+        Arithmetic.Max(seen, 1e-3, seen);
+        var energy = ImageBuffer.Uninitialized(seen.Size, PixelType.F32C1);
+        Arithmetic.Divide(carried, seen, energy, 255); // The weights arrived as bytes, so undo their scale.
         return energy;
     }
 
     /// <summary>A fixed field of unit noise, so the same picture grains the same way every frame.</summary>
-    private static readonly Lazy<Mat> Speckle = new(() =>
+    private static readonly Lazy<float[]> Speckle = new(() =>
     {
         const int side = 256;
         var values = new float[side * side];
@@ -574,34 +564,40 @@ internal static class CpuHoleRepair
             values[i] = (float)(radius * Math.Cos(2 * Math.PI * second));
             if (i + 1 < values.Length) values[i + 1] = (float)(radius * Math.Sin(2 * Math.PI * second));
         }
-        var field = new Mat(side, side, MatType.CV_32F);
-        field.SetArray(values);
-        return field;
+        return values;
     });
 
+    /// <summary>The side of the square <see cref="Speckle"/> is tiled from.</summary>
+    private const int SpeckleSide = 256;
+
     /// <remarks>Taken at the crop's own place in the field, so neighbouring crops agree.</remarks>
-    private static Mat Noise(Rect crop)
+    private static unsafe ImageBuffer Noise(Rectangle crop)
     {
+        // Read straight off the tiled field rather than by tiling it out first: the same values,
+        // without a field the size of the crop rounded up to whole tiles.
         var field = Speckle.Value;
-        int left = ((crop.X % field.Cols) + field.Cols) % field.Cols;
-        int top = ((crop.Y % field.Rows) + field.Rows) % field.Rows;
-        using var tiled = new Mat();
-        Cv2.Repeat(field, (top + crop.Height + field.Rows - 1) / field.Rows,
-            (left + crop.Width + field.Cols - 1) / field.Cols, tiled);
-        return new Mat(tiled, new Rect(left, top, crop.Width, crop.Height)).Clone();
+        int left = ((crop.X % SpeckleSide) + SpeckleSide) % SpeckleSide;
+        int top = ((crop.Y % SpeckleSide) + SpeckleSide) % SpeckleSide;
+        var noise = ImageBuffer.Uninitialized(crop.Size, PixelType.F32C1);
+        for (int y = 0; y < crop.Height; y++)
+        {
+            float* row = noise.Row<float>(y);
+            int from = ((top + y) % SpeckleSide) * SpeckleSide;
+            for (int x = 0; x < crop.Width; x++) row[x] = field[from + (left + x) % SpeckleSide];
+        }
+        return noise;
     }
 
     /// <summary>Inpainting, tile by tile, at the resolution each tile's holes are thin enough for.</summary>
-    private static CpuRepair Structured(Mat source, Mat mask, CancellationToken token,
-        Mat? smooth = null, Mat? share = null, Rect within = default)
+    private static CpuRepair Structured(ImageBuffer source, ImageBuffer mask, CancellationToken token,
+        ImageBuffer? smooth = null, ImageBuffer? share = null, Rectangle within = default)
     {
         var holeBounds = within;
         var result = source.Clone();
-        Mat? coarse = null;
+        ImageBuffer? coarse = null;
         try
         {
-            using var distance = new Mat();
-            Cv2.DistanceTransform(mask, distance, DistanceTypes.L2, DistanceTransformMasks.Mask3);
+            using var distance = DistanceTransform.Chamfer3(mask);
             int full = 0, reduced = 0;
             const int tile = Tile, guard = 24;
             int width = source.Width, height = source.Height;
@@ -609,44 +605,43 @@ internal static class CpuHoleRepair
             for (int x = 0; x < width; x += tile)
             {
                 token.ThrowIfCancellationRequested();
-                var area = new Rect(x, y, Math.Min(tile, width - x), Math.Min(tile, height - y));
-                using var tileMask = new Mat(mask, area);
-                if (Cv2.CountNonZero(tileMask) == 0) continue;
+                var area = new Rectangle(x, y, Math.Min(tile, width - x), Math.Min(tile, height - y));
+                using var tileMask = new ImageBuffer(mask, area);
+                if (Statistics.CountNonZero(tileMask) == 0) continue;
                 // A fill about to be weighted to nothing is not computed. Where the picture under
                 // this tile is a slope the smooth solve answers alone, which also keeps a tile of
                 // slope from being the reason the whole frame is inpainted at half resolution.
-                if (smooth is not null && share is not null
-                    && Cv2.Mean(new Mat(share, Local(area, holeBounds)), tileMask).Val0 >= 250)
+                if (smooth is not null && share is not null && Covered(share, Local(area, holeBounds), tileMask) >= 250)
                 {
-                    using var only = new Mat(smooth, Local(area, holeBounds));
-                    using var onlyTarget = new Mat(result, area);
+                    using var only = new ImageBuffer(smooth, Local(area, holeBounds));
+                    using var onlyTarget = new ImageBuffer(result, area);
                     only.CopyTo(onlyTarget, tileMask);
                     continue;
                 }
-                using var tileDistance = new Mat(distance, area);
-                Cv2.MinMaxLoc(tileDistance, out _, out double radius);
-                var context = new Rect(Math.Max(0, x - guard), Math.Max(0, y - guard),
+                using var tileDistance = new ImageBuffer(distance, area);
+                var (_, radius) = Statistics.MinMax(tileDistance);
+                var context = new Rectangle(Math.Max(0, x - guard), Math.Max(0, y - guard),
                     Math.Min(width, area.Right + guard) - Math.Max(0, x - guard),
                     Math.Min(height, area.Bottom + guard) - Math.Max(0, y - guard));
-                using var frame = new Mat(source, context);
-                using var holes = new Mat(mask, context);
+                using var frame = new ImageBuffer(source, context);
+                using var holes = new ImageBuffer(mask, context);
                 // A crop with nothing observed in it cannot be filled from itself, so it is filled
                 // from the reduced repair, which reads the whole frame. It used to be skipped, which
                 // left the tile as it was: in the middle of a wide enough mask — a column of manga
                 // text over dark hair, where the mask had taken the texture too — a square of the
                 // source text stood untouched inside the erase.
-                bool blind = Cv2.CountNonZero(holes) == holes.Rows * holes.Cols;
-                using var filled = new Mat();
+                bool blind = Statistics.CountNonZero(holes) == holes.Height * holes.Width;
+                ImageBuffer filled;
                 if (!blind && (radius <= 5 || Math.Min(context.Width, context.Height) < 8))
                 {
-                    Cv2.Inpaint(frame, holes, filled, FillRadius, Fill);
+                    filled = Inpaint.NavierStokes(frame, holes, FillRadius);
                     full++;
                 }
                 else
                 {
                     coarse ??= RepairReduced(source, mask);
-                    using var coarseTile = new Mat(coarse, area);
-                    using var coarseTarget = new Mat(result, area);
+                    using var coarseTile = new ImageBuffer(coarse, area);
+                    using var coarseTarget = new ImageBuffer(result, area);
                     using var coarseFill = Blend(coarseTile, smooth, share, area, within);
                     coarseFill.CopyTo(coarseTarget, tileMask);
                     reduced++;
@@ -654,11 +649,14 @@ internal static class CpuHoleRepair
                 }
                 // Every tile reads original pixels; only its own interior is published. The guard
                 // makes neighbouring glyphs unavailable as donors without duplicating writes.
-                var local = new Rect(x - context.X, y - context.Y, area.Width, area.Height);
-                using var interior = new Mat(filled, local);
-                using var target = new Mat(result, area);
-                using var fill = Blend(interior, smooth, share, area, within);
-                fill.CopyTo(target, tileMask);
+                using (filled)
+                {
+                    var local = new Rectangle(x - context.X, y - context.Y, area.Width, area.Height);
+                    using var interior = new ImageBuffer(filled, local);
+                    using var target = new ImageBuffer(result, area);
+                    using var fill = Blend(interior, smooth, share, area, within);
+                    fill.CopyTo(target, tileMask);
+                }
             }
             token.ThrowIfCancellationRequested();
             return new(result, full, reduced);
@@ -671,19 +669,26 @@ internal static class CpuHoleRepair
     /// <remarks>The two fills cover <paramref name="within"/> rather than the frame, so the tile is
     /// looked up relative to it. Every tile the loop reaches lies inside the mask's own bounds, and
     /// those are what <paramref name="within"/> was cut around.</remarks>
-    private static Mat Blend(Mat structured, Mat? smooth, Mat? share, Rect area, Rect within)
+    private static ImageBuffer Blend(ImageBuffer structured, ImageBuffer? smooth, ImageBuffer? share, Rectangle area, Rectangle within)
     {
         if (smooth is null || share is null) return structured.Clone();
         var local = Local(area, within);
-        using var shareTile = new Mat(share, local);
+        using var shareTile = new ImageBuffer(share, local);
         // Nothing of the smooth fill belongs here, so nothing of it is computed.
-        if (Cv2.Mean(shareTile).Val0 <= 2) return structured.Clone();
-        using var smoothTile = new Mat(smooth, local);
+        if (Statistics.Mean(shareTile) <= 2) return structured.Clone();
+        using var smoothTile = new ImageBuffer(smooth, local);
         return Mix(structured, smoothTile, shareTile);
     }
 
+    /// <summary>The average share over the part of a tile the mask covers.</summary>
+    private static double Covered(ImageBuffer share, Rectangle local, ImageBuffer tileMask)
+    {
+        using var shareTile = new ImageBuffer(share, local);
+        return Statistics.Mean(shareTile, tileMask);
+    }
+
     /// <summary>Where a tile of the frame lands in the two fills, which cover the mask's bounds.</summary>
-    private static Rect Local(Rect area, Rect within) =>
+    private static Rectangle Local(Rectangle area, Rectangle within) =>
         new(area.X - within.X, area.Y - within.Y, area.Width, area.Height);
 
     /// <summary>The picture averaged down, carrying how much of each cell was actually observed.</summary>
@@ -694,30 +699,26 @@ internal static class CpuHoleRepair
     /// the same resize of the mask is how much of the cell that was; the cell's colour is one divided
     /// by the other, and every level of the solve below is that pair again.
     /// </remarks>
-    private static Reduction Reduce(Mat source, Mat mask)
+    private static Reduction Reduce(ImageBuffer source, ImageBuffer mask)
     {
         // The ring just outside the mask is where whatever survived the erase lives — the last pixel
         // of an outline, the end of a fade. It is not asked what the picture there is: a fill
         // anchored on it inherits the thing it was meant to remove, and a slope measured through it
         // is measured through a contour. What gets replaced is still only what the mask covers.
-        using var spread = new Mat();
-        using var ring = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(DonorGuard * 2 + 1, DonorGuard * 2 + 1));
-        Cv2.Dilate(mask, spread, ring);
-        using var known = new Mat();
-        Cv2.BitwiseNot(spread, known);
+        using var spread = ImageBuffer.Uninitialized(mask.Size, PixelType.U8C1);
+        var ring = StructuringElement.Ellipse(DonorGuard * 2 + 1, DonorGuard * 2 + 1);
+        Morphology.Dilate(mask, spread, ring);
+        using var known = ImageBuffer.Uninitialized(mask.Size, PixelType.U8C1);
+        Arithmetic.Not(spread, known);
         using var held = source.Clone();
-        held.SetTo(Scalar.All(0), spread);
+        held.SetTo(0, spread);
 
         var size = new Size(Math.Max(1, source.Width / SlopeScale), Math.Max(1, source.Height / SlopeScale));
-        using var heldSmall = new Mat();
-        using var knownSmall = new Mat();
-        Cv2.Resize(held, heldSmall, size, interpolation: InterpolationFlags.Area);
-        Cv2.Resize(known, knownSmall, size, interpolation: InterpolationFlags.Area);
-        var sum = new Mat();
-        var seen = new Mat();
-        heldSmall.ConvertTo(sum, MatType.CV_32FC3);
-        knownSmall.ConvertTo(seen, MatType.CV_32F, 1.0 / 255);
-        return new(sum, seen);
+        using var heldSmall = Resize.To(held, size, Interpolation.Area);
+        using var knownSmall = Resize.To(known, size, Interpolation.Area);
+        var sum = Conversion.Convert(heldSmall, PixelType.F32C3);
+        try { return new(sum, Conversion.Convert(knownSmall, PixelType.F32C1, 1.0 / 255)); }
+        catch { sum.Dispose(); throw; }
     }
 
     /// <summary>
@@ -744,11 +745,10 @@ internal static class CpuHoleRepair
     /// while a smooth background still answers 1 almost everywhere and a stack of erased lines stops
     /// reading as a staircase.</para>
     /// </remarks>
-    private static Mat SlopeShare(Reduction reduced, Size full)
+    private static ImageBuffer SlopeShare(Reduction reduced, Size full)
     {
         using var colour = Average(reduced.Sum, reduced.Seen);
-        using var value = new Mat();
-        Cv2.CvtColor(colour, value, ColorConversionCodes.BGR2GRAY);
+        using var value = ColorConversion.ToGray(colour);
 
         // A plane's second difference is zero wherever it is measured, so this is how far the picture
         // departs from a slope — and it is a three-cell question, which is what makes it usable next
@@ -757,19 +757,17 @@ internal static class CpuHoleRepair
         // the average shifts off the plane it was meant to reproduce: every glyph would be ringed by
         // structure that is not there. Measured on a bare ramp, that reads five levels of departure
         // beside the hole; this reads none.
-        using var departure = new Mat();
-        Cv2.Laplacian(value, departure, MatType.CV_32F, ksize: 3);
-        Cv2.Abs(departure).ToMat().CopyTo(departure);
+        using var departure = Filters.Laplacian(value);
+        Arithmetic.Absolute(departure, departure);
 
         // Only cells the picture was seen right through, and whose neighbours were too, can answer.
-        using var whole = new Mat();
-        Cv2.Threshold(reduced.Seen, whole, .9, 1, ThresholdTypes.Binary);
-        using var weight = new Mat();
-        using var neighbourhood = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
-        Cv2.Erode(whole, weight, neighbourhood);
+        using var whole = ImageBuffer.Uninitialized(reduced.Seen.Size, PixelType.F32C1);
+        Threshold.Binary(reduced.Seen, whole, .9, 1);
+        using var weight = ImageBuffer.Uninitialized(whole.Size, PixelType.F32C1);
+        Morphology.Erode(whole, weight, StructuringElement.Rectangle(3, 3));
 
-        Cv2.Multiply(departure, weight, departure);
-        Cv2.Blur(departure, departure, new Size(3, 3)); // One cell of noise is not an edge.
+        Arithmetic.Multiply(departure, weight, departure);
+        Filters.Blur(departure, departure, 3); // One cell of noise is not an edge.
 
         // The strongest departure anywhere within reach, not the average of them: a fill that has an
         // edge near it will be carried across that edge whether or not the rest of the window is
@@ -779,27 +777,21 @@ internal static class CpuHoleRepair
         // over the reach. A rectangular dilation costs its own width, so asking it for the reach in
         // one go is four times the work for the same answer.
         int side = Math.Max(3, DepartureWindow / SlopeScale / 4 | 1);
-        using var step = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(5, 5));
-        using var span = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(side, side));
-        using var strongest = new Mat();
-        Cv2.Dilate(departure, strongest, step);
+        using var strongest = ImageBuffer.Uninitialized(departure.Size, PixelType.F32C1);
+        Morphology.Dilate(departure, strongest, StructuringElement.Rectangle(5, 5));
         var coarse = new Size(Math.Max(1, departure.Width / 4), Math.Max(1, departure.Height / 4));
-        using var reach = new Mat();
-        Cv2.Resize(strongest, reach, coarse, interpolation: InterpolationFlags.Nearest);
-        Cv2.Dilate(reach, reach, span);
+        using var reach = Resize.To(strongest, coarse, Interpolation.Nearest);
+        Morphology.Dilate(reach, reach, StructuringElement.Rectangle(side, side));
 
         // The answer is one number per neighbourhood, so it is turned into a share while it is still
         // one number per neighbourhood, and grown to the frame once at the end.
-        Cv2.Subtract(reach, Scalar.All(SlopeDeparture), reach);
-        Cv2.Divide(reach, Scalar.All(StructureDeparture - SlopeDeparture), reach);
-        Cv2.Min(reach, 1.0, reach);
-        Cv2.Max(reach, 0.0, reach);
-        Cv2.Subtract(Scalar.All(1), reach, reach);
-        using var levels = new Mat();
-        reach.ConvertTo(levels, MatType.CV_8U, 255);
-        var share = new Mat();
-        Cv2.Resize(levels, share, full, interpolation: InterpolationFlags.Linear);
-        return share;
+        Arithmetic.Subtract(reach, SlopeDeparture, reach);
+        Arithmetic.Divide(reach, StructureDeparture - SlopeDeparture, reach);
+        Arithmetic.Min(reach, 1.0, reach);
+        Arithmetic.Max(reach, 0.0, reach);
+        Arithmetic.Subtract(1.0, reach, reach);
+        using var levels = Conversion.Convert(reach, PixelType.U8C1, 255);
+        return Resize.To(levels, full, Interpolation.Linear);
     }
 
     /// <summary>The divisor the picture is judged a slope or not at.</summary>
@@ -838,54 +830,42 @@ internal static class CpuHoleRepair
     /// this one, and on a scene with a hard edge across it, running to the top costs 40% more error
     /// than stopping here.</para>
     /// </remarks>
-    private static Mat SmoothFill(Reduction reduced, Size full)
+    private static ImageBuffer SmoothFill(Reduction reduced, Size full)
     {
-        var sums = new List<Mat>();
-        var seen = new List<Mat>();
+        var sums = new List<ImageBuffer>();
+        var seen = new List<ImageBuffer>();
         try
         {
             // The fill is carried on a coarser grid than the judgement above, which is free: the
             // reduction it starts from is already made, and halving it again is a small image.
             var start = new Size(Math.Max(1, reduced.Sum.Width * SlopeScale / SmoothScale),
                 Math.Max(1, reduced.Sum.Height * SlopeScale / SmoothScale));
-            var first = new Mat();
-            var firstSeen = new Mat();
-            Cv2.Resize(reduced.Sum, first, start, interpolation: InterpolationFlags.Area);
-            Cv2.Resize(reduced.Seen, firstSeen, start, interpolation: InterpolationFlags.Area);
-            sums.Add(first);
-            seen.Add(firstSeen);
+            sums.Add(Resize.To(reduced.Sum, start, Interpolation.Area));
+            seen.Add(Resize.To(reduced.Seen, start, Interpolation.Area));
             while (sums[^1].Width > 2 && sums[^1].Height > 2)
             {
-                Cv2.MinMaxLoc(seen[^1], out double observed, out _);
+                var (observed, _) = Statistics.MinMax(seen[^1]);
                 if (observed > 0) break;
                 var size = new Size(Math.Max(1, sums[^1].Width / 2), Math.Max(1, sums[^1].Height / 2));
-                var sum = new Mat();
-                var count = new Mat();
-                Cv2.Resize(sums[^1], sum, size, interpolation: InterpolationFlags.Area);
-                Cv2.Resize(seen[^1], count, size, interpolation: InterpolationFlags.Area);
-                sums.Add(sum);
-                seen.Add(count);
+                sums.Add(Resize.To(sums[^1], size, Interpolation.Area));
+                seen.Add(Resize.To(seen[^1], size, Interpolation.Area));
             }
 
             var estimate = Average(sums[^1], seen[^1]);
             for (int level = sums.Count - 2; level >= 0; level--)
             {
                 using var previous = estimate;
-                using var up = new Mat();
-                Cv2.Resize(previous, up, sums[level].Size(), interpolation: InterpolationFlags.Linear);
+                using var up = Resize.To(previous, sums[level].Size, Interpolation.Linear);
                 using var own = Average(sums[level], seen[level]);
-                using var share = new Mat();
-                Cv2.Min(seen[level], 1.0, share);
+                using var share = ImageBuffer.Uninitialized(seen[level].Size, PixelType.F32C1);
+                Arithmetic.Min(seen[level], 1.0, share);
                 estimate = Mix(up, own, share);
             }
 
             using (estimate)
             {
-                using var levels = new Mat();
-                estimate.ConvertTo(levels, MatType.CV_8UC3);
-                var filled = new Mat();
-                Cv2.Resize(levels, filled, full, interpolation: InterpolationFlags.Linear);
-                return filled;
+                using var levels = Conversion.Convert(estimate, PixelType.U8C3);
+                return Resize.To(levels, full, Interpolation.Linear);
             }
         }
         finally
@@ -896,54 +876,42 @@ internal static class CpuHoleRepair
     }
 
     /// <summary>A level's own colour where it was observed, and whatever the sum divides to where not.</summary>
-    private static Mat Average(Mat sum, Mat seen)
+    private static ImageBuffer Average(ImageBuffer sum, ImageBuffer seen)
     {
-        using var safe = new Mat();
-        Cv2.Max(seen, 1e-6, safe);
-        using var spread = new Mat();
-        Cv2.Merge([safe, safe, safe], spread);
-        var average = new Mat();
-        Cv2.Divide(sum, spread, average);
+        using var safe = ImageBuffer.Uninitialized(seen.Size, PixelType.F32C1);
+        Arithmetic.Max(seen, 1e-6, safe);
+        using var spread = Channels.Spread(safe);
+        var average = ImageBuffer.Uninitialized(sum.Size, PixelType.F32C3);
+        Arithmetic.Divide(sum, spread, average);
         return average;
     }
 
     /// <summary><paramref name="second"/> where the share is 1, <paramref name="first"/> where it is 0.</summary>
-    private static Mat Mix(Mat first, Mat second, Mat share)
+    private static ImageBuffer Mix(ImageBuffer first, ImageBuffer second, ImageBuffer share)
     {
-        using var scale = new Mat();
-        if (share.Type() == MatType.CV_8UC1) share.ConvertTo(scale, MatType.CV_32F, 1.0 / 255);
-        else share.CopyTo(scale);
-        using var towards = new Mat();
-        Cv2.Merge([scale, scale, scale], towards);
-        using var away = new Mat();
-        Cv2.Subtract(Scalar.All(1), towards, away);
+        using var scale = share.Type == PixelType.U8C1 ? Conversion.Convert(share, PixelType.F32C1, 1.0 / 255) : share.Clone();
+        using var towards = Channels.Spread(scale);
+        using var away = ImageBuffer.Uninitialized(towards.Size, PixelType.F32C3);
+        Arithmetic.Subtract(1.0, towards, away);
         using var a = Float(first);
         using var b = Float(second);
-        Cv2.Multiply(a, away, a);
-        Cv2.Multiply(b, towards, b);
-        Cv2.Add(a, b, a);
-        var mixed = new Mat();
-        if (first.Type() == MatType.CV_8UC3) a.ConvertTo(mixed, MatType.CV_8UC3);
-        else a.CopyTo(mixed);
-        return mixed;
+        Arithmetic.Multiply(a, away, a);
+        Arithmetic.Multiply(b, towards, b);
+        Arithmetic.Add(a, b, a);
+        return first.Type == PixelType.U8C3 ? Conversion.Convert(a, PixelType.U8C3) : a.Clone();
     }
 
-    private static Mat Float(Mat image)
-    {
-        if (image.Type() == MatType.CV_32FC3) return image.Clone();
-        var value = new Mat();
-        image.ConvertTo(value, MatType.CV_32FC3);
-        return value;
-    }
+    private static ImageBuffer Float(ImageBuffer image) =>
+        image.Type == PixelType.F32C3 ? image.Clone() : Conversion.Convert(image, PixelType.F32C3);
 
-    private static Rect Clip(Rect area, int margin, Size size)
+    private static Rectangle Clip(Rectangle area, int margin, Size size)
     {
         int x = Math.Max(0, area.X - margin), y = Math.Max(0, area.Y - margin);
         return new(x, y, Math.Min(size.Width, area.Right + margin) - x,
             Math.Min(size.Height, area.Bottom + margin) - y);
     }
 
-    internal static Mat RepairReduced(Mat source, Mat mask)
+    internal static ImageBuffer RepairReduced(ImageBuffer source, ImageBuffer mask)
     {
         // Compute only the missing content at half resolution; composite at native resolution.
         // Expanding before area resampling prevents a thin masked stroke from disappearing.
@@ -954,19 +922,14 @@ internal static class CpuHoleRepair
         // antialiased edge of the glyph, and a fill anchored there inherits the thing it was meant
         // to remove. The backdrop plate's guard test reads that directly, as a gradient it cut from
         // the repaired frame going four levels flatter. One level of error is not worth it.
-        using var expanded = new Mat();
-        using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3));
-        Cv2.Dilate(mask, expanded, kernel);
+        using var expanded = ImageBuffer.Uninitialized(mask.Size, PixelType.U8C1);
+        Morphology.Dilate(mask, expanded, StructuringElement.Ellipse(3, 3));
         var size = new Size(Math.Max(1, source.Width / 2), Math.Max(1, source.Height / 2));
-        using var small = new Mat();
-        using var smallMask = new Mat();
-        Cv2.Resize(source, small, size, interpolation: InterpolationFlags.Area);
-        Cv2.Resize(expanded, smallMask, size, interpolation: InterpolationFlags.Area);
-        Cv2.Threshold(smallMask, smallMask, 0, 255, ThresholdTypes.Binary);
-        using var filled = new Mat();
-        Cv2.Inpaint(small, smallMask, filled, FillRadius, Fill);
-        using var full = new Mat();
-        Cv2.Resize(filled, full, source.Size(), interpolation: InterpolationFlags.Linear);
+        using var small = Resize.To(source, size, Interpolation.Area);
+        using var smallMask = Resize.To(expanded, size, Interpolation.Area);
+        Threshold.Binary(smallMask, smallMask, 0, 255);
+        using var filled = Inpaint.NavierStokes(small, smallMask, FillRadius);
+        using var full = Resize.To(filled, source.Size, Interpolation.Linear);
         var result = source.Clone();
         full.CopyTo(result, mask);
         return result;
