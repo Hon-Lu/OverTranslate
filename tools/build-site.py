@@ -13,6 +13,7 @@
 """
 import hashlib
 import io
+import json
 import os
 import re
 import sys
@@ -160,6 +161,31 @@ def apply_head(html, lang, html_lang, canonical, og_url, og_image, is_root=False
     return html
 
 
+def apply_jsonld(html, html_lang, url, description):
+    """結構化資料：讓搜尋引擎知道這頁介紹的是一個 Windows 免費軟體。"""
+    data = {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        'name': 'OverTranslate',
+        'applicationCategory': 'UtilitiesApplication',
+        'operatingSystem': 'Windows 10, Windows 11',
+        'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'USD'},
+        'downloadUrl': 'https://github.com/Hon-Lu/OverTranslate/releases/latest',
+        'url': url,
+        'description': description,
+        'inLanguage': html_lang,
+        'sameAs': ['https://github.com/Hon-Lu/OverTranslate'],
+    }
+    # 內容放在 <script> 裡，"</" 要拆開才不會提早結束標籤
+    body = json.dumps(data, ensure_ascii=False).replace('</', '<\\/')
+    tag = '<script type="application/ld+json">%s</script>' % body
+    html, n = re.subn(r'<script type="application/ld\+json">.*?</script>',
+                      lambda _: tag, html, count=1, flags=re.S)
+    if not n:
+        raise SystemExit('正本 <head> 裡找不到 application/ld+json 的 <script>')
+    return html
+
+
 def apply_lang_links(html, depth, current):
     """語言切換改成實際連結：各語言一個目錄，不再靠 JS 換字。"""
     up = '../' * depth
@@ -256,12 +282,15 @@ def build():
         page = re.sub(r'<meta property="og:title" content="[^"]*" />',
                       '<meta property="og:title" content="%s" />' % strings['meta.title'],
                       page, count=1)
+        page = apply_jsonld(page, html_lang, '%s%s/' % (BASE_URL, folder),
+                            strings['meta.description'])
         pages[os.path.join(DOCS, folder, 'index.html')] = page
 
     # 根目錄仍是繁中內容，但 canonical 指向 /zh-TW/，避免兩個網址互搶
     root = apply_head(src, 'zh-TW', 'zh-Hant', BASE_URL + 'zh-TW/', BASE_URL,
                       BASE_URL + 'images/og/og.png', is_root=True)
     root = apply_lang_links(root, 0, 'zh-TW')
+    root = apply_jsonld(root, 'zh-Hant', BASE_URL + 'zh-TW/', zh['meta.description'])
     pages[SOURCE] = root
     return pages
 

@@ -28,7 +28,7 @@ otLocale('en', {
   'features.note': 'The app screenshots on this site all show the Traditional Chinese interface. In the app itself you can switch between 繁體中文, 简体中文, English, 日本語 and 한국어.',
   'capture.kicker': 'Screenshot Translation',
   'capture.title': 'Select an area, and the translation covers the original',
-  'capture.body1': 'Press the hotkey, select the area you want translated, and the text on screen is recognised and translated. Works on web pages, PDFs, images, comics, video and games, and recognises Traditional Chinese, Simplified Chinese, English, Japanese and Korean automatically.',
+  'capture.body1': 'Press the hotkey, select the area you want translated, and the text on screen is read with OCR and translated. Works on web pages, PDFs, images, manga, video and games, and recognises Traditional Chinese, Simplified Chinese, English, Japanese and Korean automatically.',
   'capture.tray': 'The main window can be closed — the app stays in the system tray, so there is no need to keep it open.',
   'capture.tools.title': 'The toolbar can do more',
   'capture.tool1.title': 'Copy text',
@@ -39,7 +39,7 @@ otLocale('en', {
   'capture.tool3.body': 'Mark up the capture with the pen tools, then copy or save what you drew.',
   'realtime.kicker': 'Real-time Translation',
   'realtime.title': 'When the text changes, the translation updates',
-  'realtime.lede': 'Select the area to translate and the text on screen is recognised continuously, with the translation updating on its own. Made for video subtitles, game screens and reading comics, and shown right where the original was.',
+  'realtime.lede': 'Select the area to translate and the text on screen is recognised continuously, with the translation updating on its own. Made for video subtitles, game screens and reading manga, with the translation shown as an overlay right where the original was.',
   'realtime.fact1.title': 'Two capture sources',
   'realtime.fact1.body': 'Capture the whole screen, or just one window.',
   'realtime.fact2.title': 'Pause and resume any time',
@@ -169,6 +169,6 @@ otLocale('en', {
   'a11y.star': 'Star it on GitHub',
   'a11y.coffee': 'Support via Buy Me a Coffee',
   'a11y.close': 'Close',
-  'meta.title': 'OverTranslate — Real-time Screen Translator for Windows',
-  'meta.description': 'OverTranslate is a free screen translator for Windows. It works on web pages, comics, video and games, with screenshot translation, real-time translation and more.'
+  'meta.title': 'OverTranslate — Real-time Screen Translator Overlay for Windows',
+  'meta.description': 'Real-time screen translator overlay for Windows. Built-in OCR reads text in games, manga, video and web pages and shows the translation right on top of the original. Free and open source.'
 });
