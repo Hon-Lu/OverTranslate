@@ -68,7 +68,6 @@ public sealed class MangaModelSwitchTests : IDisposable
     [InlineData(true,  "AUTO", "Ready",         "None",  "Disabled",     true,  "None")]
     // A machine that cannot run them, or models that would not load or read: nothing.
     [InlineData(true,  "JA",   "NotDownloaded", "NoGpu", "NotDownloaded", true, "None")]
-    [InlineData(true,  "AUTO", "NotDownloaded", "NoDirectMl", "NotDownloaded", true, "None")]
     [InlineData(true,  "JA",   "Ready",         "NoGpu", "NoGpu",        true,  "None")]
     [InlineData(true,  "JA",   "Ready",         "None",  "LoadFailed",   true,  "None")]
     [InlineData(true,  "AUTO", "Ready",         "None",  "ReadFailed",   true,  "None")]
@@ -99,7 +98,6 @@ public sealed class MangaModelSwitchTests : IDisposable
     // Switched off, cannot run, failed, or no models in this build: nothing.
     [InlineData("JA",      "Ready",         "None",       "Disabled",      "None")]
     [InlineData("JA",      "NotDownloaded", "NoGpu",      "NotDownloaded", "None")]
-    [InlineData("JA",      "NotDownloaded", "NoDirectMl", "NotDownloaded", "None")]
     [InlineData("JA",      "Ready",         "None",       "LoadFailed",    "None")]
     [InlineData("JA",      "Ready",         "None",       "ReadFailed",    "None")]
     [InlineData("JA",      "Unavailable",   "None",       "NotDownloaded", "None")]

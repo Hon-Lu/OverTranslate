@@ -20,8 +20,6 @@ internal enum MangaUnavailable
 {
     None,
     NotDownloaded,
-    /// <summary>Neither the app folder nor Windows has DirectML.dll.</summary>
-    NoDirectMl,
     /// <summary>No graphics adapter, only a software one, or the adapters could not be listed.</summary>
     NoGpu,
     /// <summary>The adapter was there but the models would not load on it.</summary>
@@ -45,8 +43,8 @@ internal sealed record MangaPage(
 /// </summary>
 /// <remarks>
 /// <para>Everything runs on DirectML, on the adapter <see cref="DirectMlDevice"/> picks. When it
-/// picks none — no GPU, only WARP, no DirectML — or the models are not downloaded, or loading them
-/// fails, the answer is <see cref="MangaReadOutcome.Unavailable"/> and the caller reads the page with
+/// picks none — no GPU, only WARP — or the models are not downloaded, or loading them or the
+/// DirectML runtime fails, the answer is <see cref="MangaReadOutcome.Unavailable"/> and the caller reads the page with
 /// the column pipeline instead. Not with these models on the CPU: every CPU configuration measured was
 /// 1.7–2.7 times slower than the column pipeline it would replace.</para>
 ///
@@ -149,11 +147,11 @@ internal sealed class MangaOcrEngine : IDisposable
     /// <summary>
     /// Whether this machine has anything the models could run on — a hardware adapter DirectML can
     /// use — asked before they are downloaded: <see cref="MangaUnavailable.None"/>, or
-    /// <see cref="MangaUnavailable.NoGpu"/> / <see cref="MangaUnavailable.NoDirectMl"/>.
+    /// <see cref="MangaUnavailable.NoGpu"/>.
     /// </summary>
     /// <remarks>
     /// <para>The same check that decides it after the download (<see cref="DirectMlDevice.Choose"/>:
-    /// DXGI's adapters with WARP and software ones left out, and DirectML.dll to be found), so a
+    /// DXGI's adapters with WARP and software ones left out; DirectML.dll is not needed to ask), so a
     /// machine told "not supported" here is one the models would never have run on, and 301 MB are
     /// not fetched to find that out. It takes milliseconds and is asked once per run.</para>
     ///
@@ -176,7 +174,6 @@ internal sealed class MangaOcrEngine : IDisposable
         return _adapter.Value.Reason switch
         {
             null => (MangaUnavailable.None, null),
-            DirectMlDevice.NoLibrary => (MangaUnavailable.NoDirectMl, DirectMlDevice.NoLibrary),
             var reason => (MangaUnavailable.NoGpu, reason),
         };
     }
@@ -340,6 +337,13 @@ internal sealed class MangaOcrEngine : IDisposable
         }
 
         var timer = Stopwatch.StartNew();
+        // Before any DirectML session, and none at all without it: see DirectMlDevice.
+        if (DirectMlDevice.Load(_store.RuntimePath, _store.Manifest?.DirectMl?.Files[0]) is { } runtimeProblem)
+        {
+            Fail(MangaUnavailable.LoadFailed, $"DirectML could not be loaded: {runtimeProblem}", null);
+            return false;
+        }
+
         try
         {
             SessionOptions Options()
@@ -388,7 +392,7 @@ internal sealed class MangaOcrEngine : IDisposable
         }
     }
 
-    private void Fail(MangaUnavailable kind, string reason, Exception ex)
+    private void Fail(MangaUnavailable kind, string reason, Exception? ex)
     {
         lock (_sync) _failure = (kind, reason);
         Log.Warn(ex, "Manga models unavailable, vertical text falls back to the column pipeline: {Reason}", reason);

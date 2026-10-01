@@ -647,7 +647,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">Change the location in Settings</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitch">Show model hints</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">A line under the source language says which model will read the text.</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">Choose Japanese to use the manga models</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">Default model for now; set Japanese to switch to the manga models</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">Using the manga models</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">Manga models downloading</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">Manga models not installed; see Settings</sys:String>

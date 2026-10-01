@@ -4,17 +4,20 @@ using Microsoft.Win32;
 namespace OverTranslate.Services;
 
 /// <summary>
-/// What uninstalling removes besides the install folder: everything under
-/// <see cref="AppDataPaths.Root"/> — settings, logs, models — and the sign-in entry pointing at the
-/// executable that is about to go.
+/// What uninstalling removes besides the install folder: the large downloads under
+/// <see cref="AppDataPaths.DefaultAssetsRoot"/> — models, the DirectML runtime — and the sign-in
+/// entry pointing at the executable that is about to go.
 /// </summary>
 /// <remarks>
+/// <para>Settings and logs under <see cref="AppDataPaths.Root"/> are left alone: a reinstall picks
+/// them up again, and they are a few kilobytes. The downloads are hundreds of megabytes that nothing
+/// else will ever use.</para>
+///
 /// <para>Run from Velopack's before-uninstall hook (see App.Main), which starts this executable with
 /// an argument, waits for it, and ends the process straight after: before WPF, before settings are
-/// loaded, with no window to show anything in. So this does nothing but delete: no UI, no logging —
-/// NLog opens its file on the first line written, and that file is one of the things being
-/// removed — and never an exception, since an uninstall that stopped here would leave the app half
-/// removed. A file something else still holds open is left where it is.</para>
+/// loaded, with no window to show anything in. So this does nothing but delete: no UI, no logging,
+/// and never an exception, since an uninstall that stopped here would leave the app half removed.
+/// A file something else still holds open is left where it is.</para>
 ///
 /// <para>The portable build has no uninstall and never gets here.</para>
 /// </remarks>
@@ -24,7 +27,7 @@ internal static class UninstallCleanup
     {
         try
         {
-            RemoveAll(AppDataPaths.Root);
+            RemoveAssets(AppDataPaths.DefaultAssetsRoot);
         }
         catch
         {
@@ -41,6 +44,19 @@ internal static class UninstallCleanup
         {
             // As above.
         }
+    }
+
+    /// <summary>
+    /// Removes the assets folder, and only a folder by that name: whatever path it is handed, this
+    /// never deletes <c>%LocalAppData%</c> or anything else that is not ours. Returns how many files
+    /// and folders had to be left behind, or -1 when the path was refused.
+    /// </summary>
+    internal static int RemoveAssets(string assetsRoot)
+    {
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(assetsRoot));
+        if (!string.Equals(Path.GetFileName(full), AppDataPaths.AssetsFolderName, StringComparison.OrdinalIgnoreCase))
+            return -1;
+        return RemoveAll(full);
     }
 
     /// <summary>

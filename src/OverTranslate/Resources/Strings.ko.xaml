@@ -649,7 +649,7 @@
     <sys:String x:Key="S.Toolbar.SavePathInSettings">저장 위치는 설정에서 변경할 수 있습니다</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitch">모델 안내 표시</sys:String>
     <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">원본 언어 아래에 어떤 모델로 인식할지 표시합니다.</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">일본어를 선택하면 만화 세로쓰기 모델 적용</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">현재 기본 모델, 일본어를 지정하면 만화 세로쓰기 모델로 자동 전환</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">만화 세로쓰기 모델 적용됨</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">만화 세로쓰기 모델 다운로드 중</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">만화 세로쓰기 모델 미설치, 설정에서 다운로드</sys:String>

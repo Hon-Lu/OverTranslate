@@ -35,7 +35,11 @@
          This is a WPF app that only references WinForms types; ApplicationConfiguration.Initialize
          is never called, so the manifest is the only mechanism that takes effect. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
-    <!-- Microsoft.AI.DirectML (pulled in by the DirectML runtime) copies its debug layer and PDBs by default. -->
+    <!-- Microsoft.AI.DirectML (pulled in by the DirectML runtime) copies DirectML.dll, its PDB and its debug
+         layer by default. None of them ship: DirectML.dll is downloaded with the manga models, the only thing
+         that uses it (ocrmodels/manga-vertical.json, DirectMlDevice). onnxruntime.dll imports it delay-loaded,
+         so nothing else ever asks for it. -->
+    <Microsoft_AI_DirectML_SkipLibraryCopy>true</Microsoft_AI_DirectML_SkipLibraryCopy>
     <Microsoft_AI_DirectML_SkipDebugLayerCopy>true</Microsoft_AI_DirectML_SkipDebugLayerCopy>
   </PropertyGroup>
 
@@ -74,11 +78,4 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" ExcludeAssets="all" />
     <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
-
-  <!-- DirectML.pdb has no switch of its own; SkipLibraryCopy would drop DirectML.dll with it. -->
-  <Target Name="DropDirectMLPdb" BeforeTargets="AssignTargetPaths">
-    <ItemGroup>
-      <Content Remove="@(Content)" Condition="'%(Filename)%(Extension)' == 'DirectML.pdb'" />
-    </ItemGroup>
-  </Target>
 </Project>

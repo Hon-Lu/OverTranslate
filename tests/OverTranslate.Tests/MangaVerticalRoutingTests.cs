@@ -83,7 +83,8 @@ public sealed class MangaVerticalRoutingTests : IDisposable
         Assert.Null(manga.UnavailableReason);
 
         Assert.Equal(Signature(await Columnsread(null)), Signature(await Columnsread(manga)));
-        Assert.StartsWith("loading on broken failed", manga.UnavailableReason);
+        // This store downloads no DirectML, so no session is even tried: see DirectMlDevice.
+        Assert.StartsWith("DirectML could not be loaded", manga.UnavailableReason);
         Assert.Equal(MangaUnavailable.LoadFailed, manga.Unavailable);
 
         // Only new files clear it.
@@ -91,6 +92,35 @@ public sealed class MangaVerticalRoutingTests : IDisposable
         await store.DownloadAsync();
         Assert.Null(manga.UnavailableReason);
         Assert.Equal(MangaUnavailable.None, manga.Unavailable);
+    }
+
+    [Fact]
+    public async Task ADownloadedDirectMlThatIsNotTheRightFile_IsNotLoaded_AndSaysWhy()
+    {
+        var dll = Convert.ToHexString(SHA256.HashData(NotAModel)).ToLowerInvariant();
+        var manifest = new MangaModelManifest("1", [new MangaModelSource("test", "https://models.example/{name}", null)],
+            [.. Roles.Select(role => new MangaModelFile(role, role + ".bin", NotAModel.Length, dll))])
+        {
+            DirectMl = new MangaModelManifest("9.9.9", [new MangaModelSource("test", "https://runtime.example/{name}", null)],
+                [new MangaModelFile("directml", "DirectML.dll", NotAModel.Length, dll)]),
+        };
+        // Hashes right — it is what this manifest pins — but carries no signature at all.
+        var store = new MangaModelStore(manifest, Path.Combine(_root, "models"), new Serve(), Path.Combine(_root, "runtimes"))
+        {
+            CheckRuntime = _ => null,
+        };
+        await store.DownloadAsync();
+        using var manga = new MangaOcrEngine(store, BrokenGpu);
+
+        Assert.Equal(Signature(await Columnsread(null)), Signature(await Columnsread(manga)));
+        Assert.Equal(MangaUnavailable.LoadFailed, manga.Unavailable);
+        Assert.Contains("Authenticode", manga.UnavailableReason);
+
+        // Changed after the download: the hash says so before the signature is asked.
+        File.WriteAllBytes(store.RuntimePath!, [8, 7, 6, 5, 4, 3, 2, 1]);
+        Assert.Contains("does not hash", DirectMlDevice.Load(store.RuntimePath, manifest.DirectMl.Files[0]));
+        File.Delete(store.RuntimePath!);
+        Assert.Contains("not been downloaded", DirectMlDevice.Load(store.RuntimePath, manifest.DirectMl.Files[0]));
     }
 
     [Fact]
@@ -153,13 +183,6 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     public void NoAdapters_SaysSo() =>
         Assert.Equal("no graphics adapter", DirectMlDevice.Choose([]).Reason);
 
-    [Theory]
-    [InlineData(true, 17763, true)]      // 1809 with the copy the app ships
-    [InlineData(false, 17763, false)]    // 1809 without it: no system copy to fall back on
-    [InlineData(false, 18362, true)]     // 1903 has DirectML in System32
-    public void DirectMlIsOnlyUsedWhereItCanLoad(bool shipped, int build, bool available) =>
-        Assert.Equal(available, DirectMlDevice.DirectMlLibraryAvailable("app", build, _ => shipped));
-
     private sealed class FixedEngine : IOcrEngine
     {
         public Task<List<OcrTextBlock>> RecognizeAsync(
@@ -199,8 +222,6 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     private static (DirectMlDevice.Adapter?, string?) AGpu() =>
         (new DirectMlDevice.Adapter(0, "Some GPU", 0x10DE, 1, false, 8L << 30), null);
 
-    private static (DirectMlDevice.Adapter?, string?) NoDirectMl() => (null, DirectMlDevice.NoLibrary);
-
     [Fact]
     public async Task WithAGpu_TheModelsCanBeDownloaded()
     {
@@ -230,17 +251,6 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     }
 
     [Fact]
-    public async Task WithoutDirectMl_NothingIsDownloadedEither()
-    {
-        var server = new Serve();
-        using var manga = new MangaOcrEngine(Store(server), NoDirectMl);
-
-        Assert.Equal(MangaUnavailable.NoDirectMl, manga.DeviceSupport);
-        await Assert.ThrowsAsync<NotSupportedException>(() => manga.DownloadModelsAsync());
-        Assert.Equal(0, server.Requests);
-    }
-
-    [Fact]
     public void TheAdapterCheck_RunsOnce()
     {
         var asked = 0;
@@ -257,7 +267,6 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     // Nothing downloaded: a GPU means it can be; none means it cannot.
     [InlineData("NotDownloaded", "None", "NotDownloaded", false, "NotDownloaded")]
     [InlineData("NotDownloaded", "NoGpu", "NotDownloaded", false, "Unsupported")]
-    [InlineData("NotDownloaded", "NoDirectMl", "NotDownloaded", false, "Unsupported")]
     [InlineData("NotDownloaded", "None", "NotDownloaded", true, "Failed")]
     // Downloaded on a machine that no longer has a GPU: not supported, still deletable.
     [InlineData("Ready", "NoGpu", "NoGpu", false, "Unsupported")]
