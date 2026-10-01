@@ -155,6 +155,17 @@ public class AppSettings
     public string OpenAiBaseUrl { get; set; } = "";
     public string OpenAiApiKey { get; set; } = "";
 
+    /// <summary>
+    /// The key 「Google 翻譯 (Beta)」 sends, read from Google's translate element the first time it
+    /// is used and again only when Google refuses it. Empty until then.
+    /// </summary>
+    /// <remarks>
+    /// Kept here rather than written into the program, and kept at all so that a key that works is
+    /// never looked up twice — see <c>GoogleChromeKeySource</c>.
+    /// Named to end in ApiKey so the diagnostic bundle hides it like the user's own keys.
+    /// </remarks>
+    public string GoogleChromeApiKey { get; set; } = "";
+
     public string Theme { get; set; } = "Dark";
     /// <summary>
     /// The interface language — one of the codes in
