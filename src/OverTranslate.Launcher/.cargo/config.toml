@@ -1,4 +1,8 @@
 ﻿[build]
 # /Brepro 讓連結器以「內容雜湊」取代時間戳，產物才會是可重現的。
 # 這顆的重點就是位元組跨版本不變，不可重現的建置會讓這件事無從驗證。
-rustflags = ["-C", "link-arg=/Brepro"]
+#
+# +crt-static 把 C 執行階段靜態連進來。msvc 目標預設是動態連結 VCRUNTIME140.dll，而這顆在
+# 安裝根目錄，旁邊沒有 current\ 裡附的那幾顆 VC++ DLL —— 沒裝過 VC++ 可轉散發套件的電腦上，
+# 一點捷徑就是「找不到 VCRUNTIME140.dll」，連主程式都叫不起來。
+rustflags = ["-C", "link-arg=/Brepro", "-C", "target-feature=+crt-static"]
