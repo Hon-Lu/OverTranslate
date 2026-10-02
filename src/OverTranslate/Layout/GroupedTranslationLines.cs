@@ -35,7 +35,10 @@ internal static class GroupedTranslationLines
 
         foreach (var block in blocks)
         {
-            if (block.SourceLineBounds is { Count: > 1 } lines)
+            // A group off a tilted card is drawn whole, along the card — see Ocr.TiltedText. Its
+            // source lines are upright boxes that overlap one another, and a piece put back on each
+            // would be a level line laid across its neighbours.
+            if (block.SourceLineBounds is { Count: > 1 } lines && block.Tilt is null)
                 split.AddRange(SplitOntoSourceLines(block, lines));
             else
                 split.Add(block);

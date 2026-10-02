@@ -13,6 +13,7 @@ using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
 using FlowDirection = System.Windows.FlowDirection;
 using FontFamily = System.Windows.Media.FontFamily;
+using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
 namespace OverTranslate.Views.Realtime;
@@ -327,6 +328,9 @@ public partial class RealtimeBlockWindow : Window
     private LineVisual? BuildLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
     {
+        if (line.Tilt is { } tilt)
+            return BuildTiltedLine(line, tilt, canvasWidth, canvasHeight, frame, repairedFrame);
+
         double left = line.Bounds.X / _dpiX;
         double sourceWidth = line.Bounds.Width / _dpiX;
         double sourceHeight = line.Bounds.Height / _dpiY;
@@ -549,6 +553,136 @@ public partial class RealtimeBlockWindow : Window
         return new LineVisual(background, text, patchBounds);
     }
 
+    /// <summary>
+    /// A group read off a tilted card: set level in the card's own frame, and turned or sheared back
+    /// onto the card with the band or the repaired patch under it — see <see cref="Services.Ocr.TiltedText"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The same two looks as a level line, in the card's shape. The band is the level box
+    /// with this window's padding and corners, transformed with the text; the repaired patch is cut
+    /// from the same repair as every other patch, its upright crop clipped to the band grown by a
+    /// guard and to the quadrilaterals the repair erased, so nothing it erased is left uncovered
+    /// and nothing beside the card is pasted over.</para>
+    ///
+    /// <para>Sized as a level group is, against the level box rather than the upright one: the
+    /// width is the length of the card's lines, and the height its comment's lines, so a
+    /// translation that wraps stays inside the comment it stands in for.</para>
+    /// </remarks>
+    private LineVisual? BuildTiltedLine(
+        TranslatedBlock line, Services.Ocr.TiltedText tilt, double canvasWidth, double canvasHeight,
+        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
+    {
+        Point ToCanvas(Point pixel) => new(pixel.X / _dpiX, pixel.Y / _dpiY);
+
+        var level = tilt.Box;
+        double boxLeft = level.X / _dpiX, boxTop = level.Y / _dpiY;
+        double boxWidth = level.Width / _dpiX, boxHeight = level.Height / _dpiY;
+        if (boxWidth <= 0 || boxHeight <= 0) return null;
+
+        bool isGrouped = line.SourceLineBounds is { Count: > 1 };
+        double fontGlyphHeight = GetFontGlyphHeight(line, boxHeight);
+        double fontSize = SourceFontScale.Calculate(fontGlyphHeight, _latinSourceToCjkTarget);
+        // A single line is held to the height of the line it replaces, as a level one is.
+        if (!isGrouped)
+            fontSize = Math.Max(MinFontSize, Math.Min(fontSize, fontGlyphHeight * MaxHeightOverSource));
+
+        var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        double textWidth = Math.Max(20, boxWidth);
+        bool wrapped = isGrouped;
+        if (!isGrouped)
+        {
+            // One line stays one line while it can, shrinking to the readability floor first — a
+            // wrap inside the height of one line is two lines cut in half.
+            double measured = Measure(line.TranslatedText, typeface, fontSize, null).Width;
+            if (measured > textWidth)
+                fontSize = Math.Max(MinFontSize, fontSize * textWidth / measured);
+            wrapped = Measure(line.TranslatedText, typeface, fontSize, null).Width > textWidth;
+        }
+        if (wrapped)
+            fontSize = FitWrapped(line.TranslatedText, typeface, fontSize, textWidth, boxHeight * MaxHeightOverSource);
+        double textHeight = Measure(line.TranslatedText, typeface, fontSize, wrapped ? textWidth : null).Height;
+
+        double bandWidth = textWidth + ScrimPaddingX * 2;
+        double bandHeight = Math.Max(boxHeight, textHeight) + ScrimPaddingY * 2;
+        double bandLeft = boxLeft - ScrimPaddingX;
+        double bandTop = boxTop + boxHeight / 2 - bandHeight / 2;
+        var turn = TiltedPlacement.For(tilt, ToCanvas, bandLeft, bandTop);
+
+        Border? background = null;
+        var patchBounds = default(System.Drawing.Rectangle);
+        if (_naturalBackground)
+        {
+            // The band in capture pixels, grown by the same guard a level patch has, and every
+            // quadrilateral the repair erased: a patch is a copy of the repair, and anything erased
+            // outside it would show the source again.
+            double guardX = Math.Clamp(fontGlyphHeight * 0.20, MinNaturalGuardX, 20) * _dpiX;
+            double guardY = Math.Clamp(fontGlyphHeight * 0.40, MinNaturalGuardY, 26) * _dpiY;
+            var band = new Rect(bandLeft * _dpiX, bandTop * _dpiY, bandWidth * _dpiX, bandHeight * _dpiY);
+            Point[][] shape = [TiltedPlacement.Outline(tilt, band, guardX, guardY), .. tilt.EraseQuads];
+            var reach = Services.Ocr.TiltedText.Enclosing(shape.SelectMany(polygon => polygon));
+            var crop = ToPhysicalPatchBounds(reach.X / _dpiX, reach.Y / _dpiY, reach.Width / _dpiX, reach.Height / _dpiY);
+
+            // Upright, unlike the band: the refresh repaints it with a fresh crop of this same
+            // rectangle, so it is the clip and not the element that takes the card's shape. Where
+            // the capture failed it is the scrim's colour in that shape until a refresh succeeds.
+            double patchLeft = crop.X / _dpiX, patchTop = crop.Y / _dpiY;
+            patchBounds = crop;
+            background = new Border
+            {
+                Width = crop.Width / _dpiX,
+                Height = crop.Height / _dpiY,
+                Background = (System.Windows.Media.Brush?)BuildNaturalBrush(repairedFrame, crop) ?? _scrimBrush,
+                Clip = TiltedPlacement.Shape(shape, ToCanvas, patchLeft, patchTop),
+            };
+            Canvas.SetLeft(background, patchLeft);
+            Canvas.SetTop(background, patchTop);
+        }
+        else
+        {
+            background = new Border
+            {
+                Width = bandWidth,
+                Height = bandHeight,
+                Background = _scrimBrush,
+                CornerRadius = new CornerRadius(BandCornerRadius),
+                RenderTransform = turn,
+            };
+            Canvas.SetLeft(background, bandLeft);
+            Canvas.SetTop(background, bandTop);
+            patchBounds = ToPhysicalPatchBounds(bandLeft, bandTop, bandWidth, bandHeight);
+        }
+        ApplyBorder(background, line);
+
+        var (foreground, edge) = SampleForeground(frame, line);
+        var text = new Border
+        {
+            Width = bandWidth,
+            Height = bandHeight,
+            Padding = new Thickness(ScrimPaddingX, ScrimPaddingY, ScrimPaddingX, ScrimPaddingY),
+            ClipToBounds = true,
+            RenderTransform = turn,
+            Child = Outlined(edge, fontSize, () => new TextBlock
+            {
+                Text = line.TranslatedText,
+                FontFamily = _textFont,
+                FontSize = fontSize,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = foreground,
+                TextWrapping = wrapped ? TextWrapping.Wrap : TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.None,
+                VerticalAlignment = VerticalAlignment.Center,
+                // Against the card's margin, where its lines begin: a comment on a card is set
+                // ragged right, and the box's left edge is that margin.
+                TextAlignment = TextAlignment.Left,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+            })
+        };
+        Canvas.SetLeft(text, bandLeft);
+        Canvas.SetTop(text, bandTop);
+
+        return new LineVisual(background, text, patchBounds);
+    }
+
     private IEnumerable<LineVisual> BuildVisuals(
         double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
     {
@@ -572,6 +706,14 @@ public partial class RealtimeBlockWindow : Window
                 // mode still decides for a vertical block is upstream, in how the frame was read.
                 if (BuildVerticalLine(block, canvasWidth, canvasHeight, frame, repairedFrame, backdrop) is { } column)
                     yield return column;
+            }
+            else if (block.Tilt is not null)
+            {
+                // Before the mode, for the same reason a column is: a group off a tilted card is
+                // set along the card, and splitting it into level rows would lay each row across the
+                // comments either side of it — see Ocr.TiltedText.
+                if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } tilted)
+                    yield return tilted;
             }
             else if (_mode == RealtimeBlockMode.Panel)
             {
@@ -1241,7 +1383,9 @@ public partial class RealtimeBlockWindow : Window
         System.Drawing.Bitmap? frame, TranslatedBlock line)
     {
         if (!_sampleTextColor || frame is null) return (_textBrush, null);
-        var sampled = RealtimeNaturalBackground.SampleText(frame, line.Bounds, _textBrush.Color);
+        // On a tilted card, from inside the card: the upright box's ring is the page beside it.
+        var sampled = RealtimeNaturalBackground.SampleText(
+            frame, line.Tilt?.SampleArea ?? line.Bounds, _textBrush.Color);
         return (Freeze(new SolidColorBrush(sampled.Text)),
             sampled.Outline is { } outline ? Freeze(new SolidColorBrush(outline)) : null);
     }

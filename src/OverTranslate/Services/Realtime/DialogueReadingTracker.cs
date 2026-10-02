@@ -106,7 +106,8 @@ internal sealed class DialogueReadingTracker
                         Bounds = Translate(held.Bounds, dx, dy),
                         LayoutBounds = held.LayoutBounds.IsEmpty || held.LayoutBounds == default
                             ? held.LayoutBounds : Translate(held.LayoutBounds, dx, dy),
-                        SourceLineBounds = held.SourceLineBounds?.Select(r => Translate(r, dx, dy)).ToArray()
+                        SourceLineBounds = held.SourceLineBounds?.Select(r => Translate(r, dx, dy)).ToArray(),
+                        Tilt = held.Tilt?.Offset(dx, dy),
                     };
                     moved = true;
                 }

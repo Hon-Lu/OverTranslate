@@ -11,9 +11,15 @@ internal static class RealtimeCpuBackground
     public static Bitmap Repair(Bitmap frame, IReadOnlyList<TranslatedBlock> blocks, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
+        // A group off a tilted card is erased inside its lines' own quadrilaterals only: its upright
+        // boxes reach off the card and into the comments either side — see Ocr.TiltedText.
         var regions = blocks.Where(b => !string.IsNullOrWhiteSpace(b.TranslatedText))
-            .SelectMany(b => (b.SourceLineBounds is { Count: > 0 } lines ? lines : [b.Bounds])
-                .Select(r => new CpuTextRegion(r.X, r.Y, r.Width, r.Height, b.RenderGlyphHeight))).ToArray();
+            .SelectMany(b =>
+            {
+                var within = b.Tilt?.EraseQuads;
+                return (b.SourceLineBounds is { Count: > 0 } lines ? lines : [b.Bounds])
+                    .Select(r => new CpuTextRegion(r.X, r.Y, r.Width, r.Height, b.RenderGlyphHeight, within));
+            }).ToArray();
         if (regions.Length == 0) return (Bitmap)frame.Clone();
         using var bitmap = frame.Clone(new Rectangle(0, 0, frame.Width, frame.Height), PixelFormat.Format24bppRgb);
         using var source = ImageBuffer.Uninitialized(frame.Width, frame.Height, PixelType.U8C3);

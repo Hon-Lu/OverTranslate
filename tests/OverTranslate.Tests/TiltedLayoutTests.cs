@@ -108,7 +108,8 @@ public class TiltedLayoutTests
 
     /// <summary>
     /// A cluster needs two long lines at one angle whose boxes meet. A lone slanted caption, or two
-    /// lines turned different ways, keep their upright boxes.
+    /// lines turned different ways, keep their upright boxes — each is only marked to be drawn along
+    /// its own slope, see TiltedTextOverlayTests.
     /// </summary>
     [Theory]
     [InlineData(20, 20, false)] // one line only: the second is level
@@ -123,7 +124,9 @@ public class TiltedLayoutTests
                 : Upright("A LEVEL LINE BESIDE IT", 120, 310, 400, 36),
         };
 
-        Assert.Same(blocks, TiltedLayout.Straighten(blocks));
+        var straightened = TiltedLayout.Straighten(blocks);
+        Assert.Equal(blocks.Select(block => block.LayoutBounds), straightened.Select(block => block.LayoutBounds));
+        Assert.All(straightened, block => Assert.Null(block.UprightLayoutBounds));
     }
 
     /// <summary>A level page goes through untouched, down to the list instance.</summary>
@@ -144,7 +147,7 @@ public class TiltedLayoutTests
     }
 
     /// <summary>A line turned about its centre, as a rotated card draws it.</summary>
-    private static OcrTextBlock Rotated(
+    internal static OcrTextBlock Rotated(
         string text, double centreX, double centreY, double length, double thickness, double degrees)
     {
         var radians = degrees * Math.PI / 180;
@@ -159,7 +162,7 @@ public class TiltedLayoutTests
     /// A line sloping from a left end on an upright margin, letters upright: its quadrilateral is
     /// still the rectangle around the slope, which is what the detector returns.
     /// </summary>
-    private static OcrTextBlock Sloped(
+    internal static OcrTextBlock Sloped(
         string text, double leftX, double leftY, double length, double thickness, double degrees)
     {
         var radians = degrees * Math.PI / 180;
@@ -168,7 +171,7 @@ public class TiltedLayoutTests
         return Rotated(text, centre.X, centre.Y, length, thickness, degrees);
     }
 
-    private static OcrTextBlock Upright(string text, double x, double y, double width, double height) =>
+    internal static OcrTextBlock Upright(string text, double x, double y, double width, double height) =>
         Detected(text, [new Point(x, y), new Point(x + width, y), new Point(x, y + height), new Point(x + width, y + height)],
             new OcrLineGeometry(Math.Max(width, height), Math.Min(width, height), width >= height ? 0 : 90));
 

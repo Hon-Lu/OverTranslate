@@ -66,6 +66,19 @@ public record OcrTextBlock(
     internal System.Windows.Rect? UprightLayoutBounds { get; init; }
 
     /// <summary>
+    /// The tilted lines this block was made of, as <see cref="Ocr.TiltedLayout"/> levelled them —
+    /// held while grouping runs, and turned into <see cref="Tilt"/> once it is done. Null on every
+    /// level line, and on a group any of whose pieces was level.
+    /// </summary>
+    internal IReadOnlyList<Ocr.TiltedLine>? TiltedLines { get; init; }
+
+    /// <summary>
+    /// How a group read off a tilted card is to be drawn — see <see cref="Ocr.TiltedText"/>. Null on
+    /// everything else, which is drawn exactly as it always was.
+    /// </summary>
+    internal Ocr.TiltedText? Tilt { get; init; }
+
+    /// <summary>
     /// This block's own text runs across the page rather than down it.
     /// </summary>
     /// <remarks>

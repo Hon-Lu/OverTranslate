@@ -1,6 +1,7 @@
 using System.Windows;
 using Point = System.Windows.Point;
 using Rect = System.Windows.Rect;
+using Size = System.Windows.Size;
 using Vector = System.Windows.Vector;
 
 namespace OverTranslate.Services.Ocr;
@@ -28,6 +29,10 @@ namespace OverTranslate.Services.Ocr;
 /// line keeps its upright box. That is what keeps level pages exactly as they were, more than the
 /// angle floor: across 84 level English captures and 233 Japanese ones, lines between 3° and 7.5°
 /// do occur — a name plate, a slanted caption — but never two of them together.</para>
+///
+/// <para>A lone line long and tilted enough to be sure of — see <see cref="LoneMinDegrees"/> — is
+/// still drawn along its slope, so its band does not leave both of its ends showing; its box is
+/// never changed, and grouping does not see it.</para>
 /// </remarks>
 internal static class TiltedLayout
 {
@@ -53,19 +58,39 @@ internal static class TiltedLayout
     /// <summary>How many nearby lines a line's own angle is averaged over.</summary>
     private const int LocalAngleLines = 3;
 
+    /// <summary>The tilt from which a line on its own is drawn tilted.</summary>
+    /// <remarks>
+    /// Above <see cref="MinDegrees"/>, which only has to keep a line from seeding a cluster: a lone
+    /// line has no neighbour to agree with it, and a level line drawn tilted is far more visible than
+    /// a tilted one drawn level. Across the 84 English and 233 Japanese level captures, a long line's
+    /// box came out tilted by up to 3.4° — an italic subtitle, 4.28° at worst across 60 perturbed
+    /// frames — while the lone line on region-comic-en-3's second card never went below 6.85°.
+    /// </remarks>
+    private const double LoneMinDegrees = 6;
+
+    /// <summary>How much longer than thick a line on its own has to be to be drawn tilted.</summary>
+    /// <remarks>
+    /// Stricter than <see cref="MinLengthToThickness"/>. A short box's angle is the detector's fit to
+    /// a blob: a level name plate measured 3.0–4.6 times as long as thick and came out at up to 9.7°.
+    /// A real slanted line close to this ratio — a sign at 20°, 4.2–8.4 across the same perturbations
+    /// — is drawn tilted in some frames and level in others.
+    /// </remarks>
+    private const double LoneMinLengthToThickness = 5;
+
     /// <summary>
-    /// Level boxes for the lines of every tilted cluster, the rest untouched. Returns
-    /// <paramref name="blocks"/> itself when there is nothing to straighten.
+    /// Level boxes for the lines of every tilted cluster, the rest untouched. A long, clearly tilted
+    /// line that is no cluster's keeps its box and is only marked to be drawn along its slope.
+    /// Returns <paramref name="blocks"/> itself when there is nothing to straighten or mark.
     /// </summary>
     internal static List<OcrTextBlock> Straighten(List<OcrTextBlock> blocks)
     {
         var count = blocks.Count;
-        if (count < 2)
+        if (count == 0)
             return blocks;
 
         var reliable = blocks.Select(IsReliable).ToArray();
         if (reliable.Count(r => r) < 2)
-            return blocks;
+            return MarkLone(blocks, blocks, Enumerable.Repeat(-1, count).ToArray(), 0);
 
         var parent = Enumerable.Range(0, count).ToArray();
         int Find(int i) => parent[i] == i ? i : parent[i] = Find(parent[i]);
@@ -85,8 +110,6 @@ internal static class TiltedLayout
             .Where(cluster => cluster.Count() >= 2)
             .Select(cluster => cluster.ToList())
             .ToList();
-        if (clusters.Count == 0)
-            return blocks;
 
         // What is not a trusted line of its own — a short word, a username whose box is too square
         // to give an angle, a mark — rides with the cluster whose line it sits on.
@@ -122,9 +145,8 @@ internal static class TiltedLayout
             // card (sheared) and 0.03 against 0.17 on the 9.4° one (rotated).
             Rect Rotated(int i) => RotatedBox(blocks[i], reliable[i], -angles[i], pivot);
             Rect Sheared(int i) => ShearedBox(blocks[i], angles[i], pivot);
-            var place = LeftMisalignment(lines, Sheared) < LeftMisalignment(lines, Rotated)
-                ? (Func<int, Rect>)Sheared
-                : Rotated;
+            var sheared = LeftMisalignment(lines, Sheared) < LeftMisalignment(lines, Rotated);
+            var place = sheared ? (Func<int, Rect>)Sheared : Rotated;
             var boxes = all.ToDictionary(i => i, place);
 
             // Level, the boxes can still overlap: with the letters upright on a sloped line, each
@@ -146,29 +168,87 @@ internal static class TiltedLayout
                     LayoutBounds = box,
                     LayoutGlyphHeight = OnnxOcrEngine.LayoutGlyphHeightFor(block.LayoutScript, box, block.Text),
                     UprightLayoutBounds = block.UprightLayoutBounds ?? block.LayoutBounds,
+                    // What the overlays need to draw the group this line ends up in along the
+                    // card rather than across it — see TiltedText.
+                    TiltedLines =
+                    [
+                        new TiltedLine(c, sheared, angles[i], reliable[i] ? Length(block) : 0,
+                            Centre(block.LayoutBounds), LevelSize(block, box, sheared), Outline(block)),
+                    ],
                 };
             }
         }
 
-        return result;
+        return MarkLone(blocks, clusters.Count == 0 ? blocks : result, member, clusters.Count);
+    }
+
+    /// <summary>
+    /// <paramref name="current"/> with every long, clearly tilted line of <paramref name="blocks"/>
+    /// that is no cluster's marked as one of its own, numbered on from
+    /// <paramref name="nextCluster"/>; <paramref name="current"/> itself when there is none.
+    /// </summary>
+    /// <remarks>
+    /// Only marked: its box stays the upright one, so grouping sees exactly what it saw before, and
+    /// what changes is how the group it ends up alone in is drawn — along the line, as a rotated card
+    /// is, since one line cannot say whether its card was turned or seen in perspective. A group that
+    /// takes in anything else is drawn level, as before; see <see cref="CombineTilted"/>.
+    /// </remarks>
+    private static List<OcrTextBlock> MarkLone(
+        List<OcrTextBlock> blocks, List<OcrTextBlock> current, int[] member, int nextCluster)
+    {
+        List<OcrTextBlock>? result = null;
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (member[i] >= 0 || !IsLone(block)) continue;
+
+            var line = block.LineGeometry!.Value;
+            result ??= current.ToList();
+            result[i] = current[i] with
+            {
+                TiltedLines =
+                [
+                    new TiltedLine(nextCluster++, false, line.AngleDegrees, line.Length,
+                        Centre(block.LayoutBounds), new Size(line.Length, line.Thickness), Outline(block)),
+                ],
+            };
+        }
+        return result ?? current;
     }
 
     /// <summary>
     /// Puts back the box the detector drew on everything <see cref="Straighten"/> touched, once the
-    /// grouping that needed the level one is done. Returns <paramref name="groups"/> itself when
-    /// nothing was straightened.
+    /// grouping that needed the level one is done, and says how each group made wholly of tilted
+    /// lines is to be drawn — see <see cref="TiltedText"/>. Returns <paramref name="groups"/> itself
+    /// when nothing was straightened or marked.
     /// </summary>
     internal static List<OcrTextBlock> Restore(List<OcrTextBlock> groups)
     {
-        if (!groups.Any(group => group.UprightLayoutBounds.HasValue))
+        if (!groups.Any(group => group.UprightLayoutBounds.HasValue || group.TiltedLines is not null))
             return groups;
 
         return groups
-            .Select(group => group.UprightLayoutBounds is { } upright
-                ? group with { LayoutBounds = upright, UprightLayoutBounds = null }
+            .Select(group => group.UprightLayoutBounds.HasValue || group.TiltedLines is not null
+                ? group with
+                {
+                    // A lone line was only marked, and kept its own box throughout.
+                    LayoutBounds = group.UprightLayoutBounds ?? group.LayoutBounds,
+                    UprightLayoutBounds = null,
+                    TiltedLines = null,
+                    Tilt = group.TiltedLines is { } lines ? TiltedText.From(lines) : null,
+                }
                 : group)
             .ToList();
     }
+
+    /// <summary>
+    /// The tilted lines several blocks were made of, for a group built from them: null unless every
+    /// one of them was tilted, so a group with a level piece in it is drawn as level text is.
+    /// </summary>
+    internal static IReadOnlyList<TiltedLine>? CombineTilted(IReadOnlyList<OcrTextBlock> blocks) =>
+        blocks.All(block => block.TiltedLines is not null)
+            ? [.. blocks.SelectMany(block => block.TiltedLines!)]
+            : null;
 
     /// <summary>
     /// The upright box several lines cover between them, for a group built from them: null when
@@ -183,6 +263,11 @@ internal static class TiltedLayout
         block.LineGeometry is { } line &&
         line.Length >= line.Thickness * MinLengthToThickness &&
         Math.Abs(line.AngleDegrees) is >= MinDegrees and <= MaxDegrees;
+
+    private static bool IsLone(OcrTextBlock block) =>
+        block.LineGeometry is { } line &&
+        line.Length >= line.Thickness * LoneMinLengthToThickness &&
+        Math.Abs(line.AngleDegrees) is >= LoneMinDegrees and <= MaxDegrees;
 
     private static double Angle(OcrTextBlock block) => block.LineGeometry!.Value.AngleDegrees;
 
@@ -283,6 +368,35 @@ internal static class TiltedLayout
         var along = new Vector(Math.Cos(radians), Math.Sin(radians)) * (line.Length / 2);
         var across = new Vector(-Math.Sin(radians), Math.Cos(radians)) * (line.Thickness / 2);
         return [centre + along + across, centre + along - across, centre - along + across, centre - along - across];
+    }
+
+    /// <summary>
+    /// How much room a line takes on the level card, for drawing: the box grouping measured, except
+    /// that a sheared line is only as long as its run across the card.
+    /// </summary>
+    /// <remarks>
+    /// Sheared level, the detector's rectangle becomes a parallelogram with slanted ends, and the
+    /// box round it reaches past the text at both ends by half the line's thickness times the sine
+    /// of the slope — 8px each side on the 30° card, which put the first comment's translation off
+    /// the card's edge. The letters are upright, so the text's own ends are the middles of those
+    /// slanted ends: its length times the cosine of its angle apart.
+    /// </remarks>
+    private static Size LevelSize(OcrTextBlock block, Rect box, bool sheared) =>
+        sheared && block.LineGeometry is { } line
+            ? new Size(line.Length * Math.Cos(line.AngleDegrees * Math.PI / 180), box.Height)
+            : box.Size;
+
+    /// <summary>The quadrilateral of <see cref="Corners"/>, corner after corner round its edge.</summary>
+    private static Point[] Outline(OcrTextBlock block)
+    {
+        if (block.LineGeometry is null)
+        {
+            var box = block.LayoutBounds;
+            return [box.TopLeft, box.TopRight, box.BottomRight, box.BottomLeft];
+        }
+
+        var corners = Corners(block);
+        return [corners[3], corners[1], corners[0], corners[2]];
     }
 
     private static Rect Enclosing(IEnumerable<Point> points)

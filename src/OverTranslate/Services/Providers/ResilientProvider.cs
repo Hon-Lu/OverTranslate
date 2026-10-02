@@ -136,6 +136,7 @@ public class ResilientProvider : ITranslationProvider
                 {
                     RunsAcross = blocks[i].RunsAcross,
                     FontGlyphHeight = blocks[i].FontGlyphHeight,
+                    Tilt = blocks[i].Tilt,
                     Untranslated = engine == NoEngine || answer.Untranslated,
                 });
 

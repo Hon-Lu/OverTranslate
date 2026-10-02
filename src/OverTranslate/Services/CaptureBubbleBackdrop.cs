@@ -331,8 +331,16 @@ internal sealed class CaptureBubbleBackdrop
     /// read: a subtitle line over a dark scrim used to be darkened further because the bright
     /// scenery above and below the line was being counted as background for it.
     /// </param>
+    /// <param name="shape">
+    /// The bubble's own outline, as polygons in the captured frame's pixels, for a bubble that is
+    /// not the upright rectangle inside <paramref name="area"/> — a group off a tilted card (see
+    /// <see cref="Ocr.TiltedText"/>). The plate then fades out over the feather beyond that outline
+    /// rather than beyond the rectangle, and only what lies inside it chooses the text colour. Null
+    /// for every other bubble, which is made exactly as before.
+    /// </param>
     public CaptureBubblePlate? Plate(
-        WpfRect area, MediaColor wash, MediaColor text, double glyphHeight, double writtenHeight)
+        WpfRect area, MediaColor wash, MediaColor text, double glyphHeight, double writtenHeight,
+        IReadOnlyList<System.Windows.Point[]>? shape = null)
     {
         var requested = Round(area);
         if (requested.Width < 2 || requested.Height < 2) return null;
@@ -372,8 +380,9 @@ internal sealed class CaptureBubbleBackdrop
             // the picture nothing; washing the whole plate toward black or white costs exactly
             // what this class exists to preserve, so it is the fallback and not the first answer.
             int ring = (int)Math.Round(Feather(glyphHeight));
-            var palette = Palette(plate, ring,
-                Math.Max(ring, (int)Math.Round((plate.Height - writtenHeight) / 2)));
+            var palette = shape is null
+                ? Palette(plate, ring, Math.Max(ring, (int)Math.Round((plate.Height - writtenHeight) / 2)))
+                : ShapePalette(plate, requested.X, requested.Y, shape);
 
             var legible = Legible(palette, text, ComfortableContrast);
             if (!Clears(palette, legible, Colors.Black, 0, PlateContrast))
@@ -403,7 +412,10 @@ internal sealed class CaptureBubbleBackdrop
                     text, ComfortableContrast);
             }
 
-            var brush = new ImageBrush(Fade(plate, Feather(glyphHeight))) { Stretch = Stretch.Fill };
+            var faded = shape is null
+                ? Fade(plate, Feather(glyphHeight))
+                : Fade(plate, Feather(glyphHeight), requested.X, requested.Y, shape);
+            var brush = new ImageBrush(faded) { Stretch = Stretch.Fill };
             brush.Freeze();
             return new CaptureBubblePlate(brush, legible);
         }
@@ -446,6 +458,30 @@ internal sealed class CaptureBubbleBackdrop
                 colours[y * sample.Width + x] = MediaColor.FromRgb(row[x * 3 + 2], row[x * 3 + 1], row[x * 3]);
         }
         return colours;
+    }
+
+    /// <summary>
+    /// The colours of the part of the plate inside <paramref name="shape"/>, which is where the
+    /// text is written. <paramref name="left"/> and <paramref name="top"/> are where the plate's
+    /// first pixel lies in the frame.
+    /// </summary>
+    private static unsafe MediaColor[] ShapePalette(
+        ImageBuffer plate, int left, int top, IReadOnlyList<System.Windows.Point[]> shape)
+    {
+        int stepX = Math.Max(1, plate.Width / 48);
+        int stepY = Math.Max(1, plate.Height / 16);
+        var colours = new List<MediaColor>();
+        for (int y = stepY / 2; y < plate.Height; y += stepY)
+        {
+            byte* row = plate.Row(y);
+            for (int x = stepX / 2; x < plate.Width; x += stepX)
+            {
+                if (!shape.Any(polygon => Ocr.TiltedText.Inside(polygon, left + x + .5, top + y + .5))) continue;
+                colours.Add(MediaColor.FromRgb(row[x * 3 + 2], row[x * 3 + 1], row[x * 3]));
+            }
+        }
+        // A shape too thin for the grid to land in: the whole plate, rather than nothing.
+        return colours.Count > 0 ? [.. colours] : Palette(plate, 0, 0);
     }
 
     /// <summary>
@@ -536,6 +572,40 @@ internal sealed class CaptureBubbleBackdrop
         image.Freeze();
         return image;
     }
+
+    /// <summary>
+    /// The plate as a bitmap that is opaque inside <paramref name="shape"/> and fades out over
+    /// <paramref name="feather"/> pixels beyond it, by the same smoothstep as the rectangular one.
+    /// </summary>
+    private static unsafe BitmapSource Fade(
+        ImageBuffer plate, double feather, int left, int top, IReadOnlyList<System.Windows.Point[]> shape)
+    {
+        int width = plate.Width;
+        int height = plate.Height;
+        var pixels = new byte[width * height * 4];
+
+        for (int y = 0; y < height; y++)
+        {
+            byte* row = plate.Row(y);
+            for (int x = 0; x < width; x++)
+            {
+                int i = (y * width + x) * 4;
+                pixels[i] = row[x * 3];
+                pixels[i + 1] = row[x * 3 + 1];
+                pixels[i + 2] = row[x * 3 + 2];
+                double depth = shape.Max(polygon => Ocr.TiltedText.Depth(polygon, left + x + .5, top + y + .5));
+                pixels[i + 3] = depth >= 0 ? (byte)255
+                    : feather <= 0 || -depth >= feather ? (byte)0
+                    : Smoothstep((feather + depth) / feather);
+            }
+        }
+
+        var image = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, pixels, width * 4);
+        image.Freeze();
+        return image;
+    }
+
+    private static byte Smoothstep(double t) => (byte)Math.Round(255 * t * t * (3 - 2 * t));
 
     /// <summary>
     /// Smoothstep rather than a straight ramp: a linear fade leaves a visible crease where it
