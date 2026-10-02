@@ -338,7 +338,8 @@ public partial class RealtimeBlockWindow : Window
         bool isGrouped = line.SourceLineBounds is { Count: > 1 };
 
         double glyphHeight = GetGlyphHeight(line, sourceHeight);
-        double fontSize = SourceFontScale.Calculate(glyphHeight, _latinSourceToCjkTarget);
+        double fontGlyphHeight = GetFontGlyphHeight(line, sourceHeight);
+        double fontSize = SourceFontScale.Calculate(fontGlyphHeight, _latinSourceToCjkTarget);
 
         // How tall the line being replaced actually is, which is not the same as how tall its
         // detection box is. A Latin source arrives with the full box — deliberately, because the
@@ -351,6 +352,11 @@ public partial class RealtimeBlockWindow : Window
         // exactly what this overlay's whole approach is meant to avoid — everything outside it is
         // supposed to stay picture the user is watching.
         double lineHeight = Math.Min(sourceHeight, glyphHeight * LineHeightRatio);
+
+        // The same line measured by its letters, which is what caps the font below. On a level line
+        // this is lineHeight again. On a tilted one lineHeight is the band that covers the slant,
+        // and capping the font against it capped nothing: the band is mostly tilt.
+        double fontLineHeight = Math.Min(sourceHeight, fontGlyphHeight * LineHeightRatio);
 
         // The whole block, not just the room to the right of the source's left edge: a band centred
         // on its source grows in both directions, so what bounds it is the block, and RealtimeBandPlacement
@@ -383,7 +389,7 @@ public partial class RealtimeBlockWindow : Window
             // translation is welcome; here the scrim it forces is a band across live content the
             // user is trying to watch, so a translation half again as tall as the line underneath
             // buys legibility with the picture.
-            fontSize = Math.Max(MinFontSize, Math.Min(fontSize, lineHeight * MaxHeightOverSource / LineHeightRatio));
+            fontSize = Math.Max(MinFontSize, Math.Min(fontSize, fontLineHeight * MaxHeightOverSource / LineHeightRatio));
 
             // Kept because the wrapped fallback searches from here, not from whatever the width
             // shrink below left behind: wrapping buys width back, so a size that was too wide for
@@ -570,7 +576,7 @@ public partial class RealtimeBlockWindow : Window
             else if (_mode == RealtimeBlockMode.Panel)
             {
                 double fontSize = Math.Max(1, Math.Min(
-                    SourceFontScale.Calculate(GetGlyphHeight(block, block.Bounds.Height / _dpiY),
+                    SourceFontScale.Calculate(GetFontGlyphHeight(block, block.Bounds.Height / _dpiY),
                         _latinSourceToCjkTarget),
                     (block.SourceLineBounds ?? [block.Bounds]).Min(r => r.Height) / _dpiY / LineHeightRatio));
                 var rows = RealtimePanelLines.Split(block,
@@ -1185,6 +1191,17 @@ public partial class RealtimeBlockWindow : Window
         var heights = lineBounds.Select(bounds => bounds.Height / _dpiY).OrderBy(height => height).ToList();
         return heights[heights.Count / 2];
     }
+
+    /// <summary>
+    /// The glyph height the translation's font is sized from. The same as
+    /// <see cref="GetGlyphHeight"/> except on a tilted Latin line, where that one is the height the
+    /// slanted letters cover and this one is the height of the letters themselves — see
+    /// <see cref="OcrTextBlock.FontGlyphHeight"/>.
+    /// </summary>
+    private double GetFontGlyphHeight(TranslatedBlock line, double fallbackHeight) =>
+        line.FontGlyphHeight is { } glyphHeight && glyphHeight > 0
+            ? glyphHeight / _dpiY
+            : GetGlyphHeight(line, fallbackHeight);
 
     private Size Measure(string text, Typeface typeface, double fontSize, double? maxWidth)
     {

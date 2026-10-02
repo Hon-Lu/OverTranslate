@@ -38,6 +38,27 @@ public record OcrTextBlock(
     public double? LayoutInkHeight { get; init; }
 
     /// <summary>
+    /// The glyph height (physical px) the overlay font is sized from, where that differs in meaning
+    /// from <see cref="RenderGlyphHeight"/>.
+    /// </summary>
+    /// <remarks>
+    /// The two are the same number on a level line. On a tilted one they part: the font wants the
+    /// height of the letters, measured along the line (see <see cref="Ocr.OcrLineGeometry"/>), while
+    /// <see cref="RenderGlyphHeight"/> is also what the realtime overlay erases and covers with, and
+    /// a tilted line's letters reach the full height of its upright box. So this one carries the
+    /// letters and that one keeps the coverage. Null wherever no font height was estimated; the
+    /// overlays then size from <see cref="RenderGlyphHeight"/>, as they always did.
+    /// </remarks>
+    public double? FontGlyphHeight { get; init; }
+
+    /// <summary>
+    /// The detector's own box measured along and across the line — see <see cref="Ocr.OcrLineGeometry"/>.
+    /// Set on conversion, read by normalisation, and not carried through grouping: a group has no
+    /// single quadrilateral.
+    /// </summary>
+    internal Ocr.OcrLineGeometry? LineGeometry { get; init; }
+
+    /// <summary>
     /// This block's own text runs across the page rather than down it.
     /// </summary>
     /// <remarks>

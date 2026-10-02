@@ -1262,7 +1262,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             blocks.Add(new OcrTextBlock(
                 text,
                 new System.Windows.Rect(left, top, right - left, bottom - top),
-                Confidence: confidence));
+                Confidence: confidence)
+            {
+                LineGeometry = OcrLineGeometry.FromQuad(block.BoxPoints),
+            });
         }
 
         return blocks
@@ -1665,9 +1668,24 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         // Too few glyphs for the pitch clamp above to have run leaves that height at 0.82
         // of the box, which is 1.7x the truth — a one- or two-character line rendered
         // enormously. See ShortTextGlyphHeight for the measurements.
+        var renderGlyphHeight = ShortTextGlyphHeight.For(glyphHeight, bounds.Height, glyphCount);
+
+        // The same estimate again for the font alone, on a tilted line measured along itself: its
+        // upright box is mostly tilt, and 0.82 of that sized the translation up to ten times the
+        // source. RenderGlyphHeight keeps the upright figure, because the realtime overlay also
+        // erases and covers with it and the tilted letters do reach that far. See OcrLineGeometry.
+        var fontGlyphHeight = renderGlyphHeight;
+        if (block.LineGeometry is { IsTilted: true } line)
+        {
+            var alongLine = new System.Windows.Rect(0, 0, line.Length, line.Thickness);
+            fontGlyphHeight = ShortTextGlyphHeight.For(
+                EstimateGlyphHeight(alongLine, glyphCount, glyphHeightFromPitch), line.Thickness, glyphCount);
+        }
+
         return block with
         {
-            RenderGlyphHeight = ShortTextGlyphHeight.For(glyphHeight, bounds.Height, glyphCount)
+            RenderGlyphHeight = renderGlyphHeight,
+            FontGlyphHeight = fontGlyphHeight,
         };
     }
 

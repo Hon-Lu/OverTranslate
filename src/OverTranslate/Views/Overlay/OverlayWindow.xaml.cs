@@ -367,6 +367,7 @@ public partial class OverlayWindow : Window
             double wpfW = physW / _dpiX;
             double wpfH = physH / _dpiY;
             double sourceFontReferenceHeight = GetSourceFontReferenceHeight(block, wpfH);
+            double sourceFontSizingHeight = GetSourceFontSizingHeight(block, wpfH);
 
             // Expand coverage 2px beyond OCR bounds on every side to eliminate edge bleed
             double borderW = Math.Max(wpfW + BubbleExpand * 2, BubbleMinWidth);
@@ -385,11 +386,11 @@ public partial class OverlayWindow : Window
                 textColor = lum > 0.5 ? Colors.Black : Colors.White;
             }
 
-            bool isSingleLineSource = IsSingleLineSource(block.OriginalText, sourceFontReferenceHeight);
+            bool isSingleLineSource = IsSingleLineSource(block.OriginalText, sourceFontSizingHeight);
             bool isGroupedMultiLineSource = block.SourceLineBounds is { Count: > 1 };
             bool reflowGroup = block.LayoutIntent == OverlayLayoutIntent.GroupReflow;
-            double minFontSize = SourceFontScale.MinFontSize(sourceFontReferenceHeight);
-            double fontSize = SourceFontScale.Calculate(sourceFontReferenceHeight, IsLatinSourceToCjkTarget());
+            double minFontSize = SourceFontScale.MinFontSize(sourceFontSizingHeight);
+            double fontSize = SourceFontScale.Calculate(sourceFontSizingHeight, IsLatinSourceToCjkTarget());
             var typeface = new Typeface(
                 translatedFont,
                 FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
@@ -976,6 +977,17 @@ public partial class OverlayWindow : Window
             .ToList();
         return lineHeights[lineHeights.Count / 2];
     }
+
+    /// <summary>
+    /// The glyph height the translation's font is sized from. The same as
+    /// <see cref="GetSourceFontReferenceHeight"/> except on a tilted Latin line, where that one
+    /// still describes the area the slanted letters cover — which the backdrop is fitted to — and
+    /// this one the letters themselves. See <see cref="OcrTextBlock.FontGlyphHeight"/>.
+    /// </summary>
+    private double GetSourceFontSizingHeight(TranslatedBlock block, double fallbackHeight) =>
+        block.FontGlyphHeight is { } glyphHeight && glyphHeight > 0
+            ? glyphHeight / _dpiY
+            : GetSourceFontReferenceHeight(block, fallbackHeight);
 
     // No height test of its own — SourceFontScale fades the boost out with height, so gating it
     // here too would put back a step at whatever height the gate used.

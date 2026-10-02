@@ -39,6 +39,26 @@ public class ResilientProviderTests
         Assert.True(blocks[1].Untranslated);
     }
 
+    // The font height a tilted line was measured with travels with its translation, for both the
+    // chain and a single engine. Dropped here, the overlay would quietly size from the coverage
+    // height again and draw the line ten times too large.
+    [Fact]
+    public async Task TheFontGlyphHeight_IsCarriedOntoTheTranslation()
+    {
+        List<OcrTextBlock> source =
+            [new("TILTED", new Rect(0, 0, 300, 180), RenderGlyphHeight: 150) { FontGlyphHeight = 17 }];
+
+        var (chained, _) = await new ResilientProvider([Engine.Answering(text => "傾斜")])
+            .TranslateAsync(source, "EN", "ZH-HANT", "");
+        var (single, _) = await new EngineProvider(Engine.Answering(text => "傾斜"))
+            .TranslateAsync(source, "EN", "ZH-HANT", "");
+
+        Assert.Equal(17, chained[0].FontGlyphHeight);
+        Assert.Equal(150, chained[0].RenderGlyphHeight);
+        Assert.Equal(17, single[0].FontGlyphHeight);
+        Assert.Equal(150, single[0].RenderGlyphHeight);
+    }
+
     // A text that translates to itself is still a translation, and must not be retried forever.
     [Fact]
     public async Task ATranslationIdenticalToTheSource_IsNotUntranslated()
