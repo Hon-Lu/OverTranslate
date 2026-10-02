@@ -934,7 +934,12 @@ public sealed class RealtimeTranslationSession
                     found ? translated : block.Text,
                     block.Bounds,
                     block.SourceLineBounds,
-                    block.RenderGlyphHeight) { RunsAcross = block.RunsAcross, Untranslated = !found };
+                    block.RenderGlyphHeight)
+                {
+                    RunsAcross = block.RunsAcross,
+                    FontGlyphHeight = block.FontGlyphHeight,
+                    Untranslated = !found,
+                };
             })
             .ToList();
     }

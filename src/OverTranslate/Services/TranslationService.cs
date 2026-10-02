@@ -35,6 +35,11 @@ public record TranslatedBlock(
     public bool RunsAcross { get; init; }
 
     /// <summary>
+    /// Carried over from the block this was read from — see <see cref="OcrTextBlock.FontGlyphHeight"/>.
+    /// </summary>
+    public double? FontGlyphHeight { get; init; }
+
+    /// <summary>
     /// True when no engine produced a translation and <see cref="TranslatedText"/> is only the
     /// original text standing in for one.
     /// </summary>

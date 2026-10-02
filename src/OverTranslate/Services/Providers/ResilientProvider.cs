@@ -133,7 +133,11 @@ public class ResilientProvider : ITranslationProvider
             var (answer, engine) = served[i] ?? (new TextTranslation(blocks[i].Text, ""), NoEngine);
             engineVotes[engine] = engineVotes.GetValueOrDefault(engine) + 1;
             translated.Add(new TranslatedBlock(blocks[i].Text, answer.Text, blocks[i].Bounds, blocks[i].Lines, blocks[i].RenderGlyphHeight)
-                { RunsAcross = blocks[i].RunsAcross, Untranslated = engine == NoEngine || answer.Untranslated });
+                {
+                    RunsAcross = blocks[i].RunsAcross,
+                    FontGlyphHeight = blocks[i].FontGlyphHeight,
+                    Untranslated = engine == NoEngine || answer.Untranslated,
+                });
 
             TranslatedTextLog.Write(Log, i, engine, blocks[i].Text, answer.Text);
         }

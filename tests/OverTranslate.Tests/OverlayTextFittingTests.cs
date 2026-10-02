@@ -106,6 +106,34 @@ public class OverlayTextFittingTests
         Assert.True(drawn.Wrapped);
     }
 
+    /// <summary>
+    /// A Latin line set at a slant: its upright box is mostly tilt, so the glyph height that covers
+    /// it is far larger than the letters. The font follows the letters; the band still covers the
+    /// slant. Measured on region-comic-en-3, where this line was drawn at a 147px font over 17px
+    /// capitals.
+    /// </summary>
+    [Fact]
+    public void A_tilted_line_is_sized_by_its_letters_but_still_covered_whole()
+    {
+        var tilted = new TranslatedBlock(
+            "I THINK THAT GUY'S A PLAYER TOO.",
+            "我覺得那傢伙也是個花花公子。",
+            new Rect(100, 50, 322, 211),
+            RenderGlyphHeight: 173) { FontGlyphHeight = 17.8 };
+        var block = new System.Drawing.Rectangle(0, 0, 650, 400);
+
+        var drawn = Draw(tilted, block);
+
+        Assert.False(drawn.Wrapped);
+        Assert.True(drawn.FontSize <= 17.8 * 1.15 + 0.01, $"font {drawn.FontSize:0.##}");
+        Assert.True(drawn.BandHeight >= 211, $"band {drawn.BandHeight:0.##}");
+
+        // The same line with no separate font height is sized from the coverage figure, as every
+        // level line and every non-Latin source still is.
+        var unchanged = Draw(tilted with { FontGlyphHeight = null }, block);
+        Assert.True(unchanged.FontSize > 40, $"font {unchanged.FontSize:0.##}");
+    }
+
     private readonly record struct DrawnLine(bool Wrapped, double FontSize, double BandHeight);
 
     /// <summary>

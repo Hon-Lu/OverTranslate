@@ -480,7 +480,10 @@ internal static class OcrTextBlockGrouper
             Confidence: CombineConfidence([previous, current]),
             LayoutScript: layoutScript,
             LayoutBounds: Rect.Union(previous.LayoutBounds, current.LayoutBounds),
-            LayoutGlyphHeight: CombineLayoutGlyphHeight(layoutScript, [previous, current]));
+            LayoutGlyphHeight: CombineLayoutGlyphHeight(layoutScript, [previous, current]))
+        {
+            FontGlyphHeight = CombineGlyphHeight(previous.FontGlyphHeight, current.FontGlyphHeight),
+        };
     }
 
     internal static string JoinInlineText(string left, string right)
@@ -1528,6 +1531,15 @@ internal static class OcrTextBlockGrouper
             .ToList();
         double? groupGlyphHeight = glyphHeights.Count > 0 ? glyphHeights[glyphHeights.Count / 2] : null;
 
+        // The font's own height, aggregated the same way. On level lines it is the same list, so the
+        // same median.
+        var fontGlyphHeights = blocks
+            .Where(block => block.FontGlyphHeight.HasValue)
+            .Select(block => block.FontGlyphHeight!.Value)
+            .OrderBy(height => height)
+            .ToList();
+        double? groupFontGlyphHeight = fontGlyphHeights.Count > 0 ? fontGlyphHeights[fontGlyphHeights.Count / 2] : null;
+
         var layoutScript = LayoutScriptDetection.For(text);
 
         return new OcrTextBlock(
@@ -1541,7 +1553,10 @@ internal static class OcrTextBlockGrouper
             // that the joined text reports.
             layoutScript,
             blocks.Select(block => block.LayoutBounds).Aggregate(Rect.Union),
-            CombineLayoutGlyphHeight(layoutScript, blocks));
+            CombineLayoutGlyphHeight(layoutScript, blocks))
+        {
+            FontGlyphHeight = groupFontGlyphHeight,
+        };
     }
 
     /// <summary>
