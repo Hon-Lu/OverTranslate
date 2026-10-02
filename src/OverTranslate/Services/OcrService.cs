@@ -59,6 +59,13 @@ public record OcrTextBlock(
     internal Ocr.OcrLineGeometry? LineGeometry { get; init; }
 
     /// <summary>
+    /// The box the detector drew, held aside while <see cref="LayoutBounds"/> carries a level one for
+    /// the grouping rules — see <see cref="Ocr.TiltedLayout"/>. Null on every level line, and null
+    /// again once grouping is done and the upright box is back.
+    /// </summary>
+    internal System.Windows.Rect? UprightLayoutBounds { get; init; }
+
+    /// <summary>
     /// This block's own text runs across the page rather than down it.
     /// </summary>
     /// <remarks>
@@ -226,6 +233,17 @@ public class OcrService : IDisposable
         Realtime.RealtimeBlockMode mode, GroupingTrace? trace = null,
         List<OcrTextBlockGrouper.NextLineDecision>? decisions = null)
     {
+        // Tilted cards are levelled for the grouping rules and given back upright afterwards — see
+        // Ocr.TiltedLayout. Before the filters, which read only text, confidence and Bounds, so that
+        // the harness trace below registers the same instances the groupers then see.
+        blocks = TiltedLayout.Straighten(blocks);
+        return TiltedLayout.Restore(GroupStraightened(blocks, frameHeight, mode, trace, decisions));
+    }
+
+    private static List<OcrTextBlock> GroupStraightened(List<OcrTextBlock> blocks, double frameHeight,
+        Realtime.RealtimeBlockMode mode, GroupingTrace? trace,
+        List<OcrTextBlockGrouper.NextLineDecision>? decisions)
+    {
         var filtered = RejectUnconvincingBlocks(blocks);
         if (mode != Realtime.RealtimeBlockMode.Subtitle)
             return OcrTextBlockGrouper.Group(filtered, GroupingProfile.Realtime, decisions, trace);
@@ -338,7 +356,8 @@ public class OcrService : IDisposable
     {
         var blocks = await engine.RecognizeAsync(bitmap, sourceLanguage, cancellationToken);
         blocks = PrepareScreenshotGrouping(bitmap, blocks, profile);
-        return OcrTextBlockGrouper.Group(blocks, profile);
+        // After the ink is measured, which has to read the picture inside the upright box.
+        return TiltedLayout.Restore(OcrTextBlockGrouper.Group(TiltedLayout.Straighten(blocks), profile));
     }
 
     internal static List<OcrTextBlock> PrepareScreenshotGrouping(

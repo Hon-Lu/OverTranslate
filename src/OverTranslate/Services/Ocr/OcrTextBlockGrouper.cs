@@ -483,6 +483,7 @@ internal static class OcrTextBlockGrouper
             LayoutGlyphHeight: CombineLayoutGlyphHeight(layoutScript, [previous, current]))
         {
             FontGlyphHeight = CombineGlyphHeight(previous.FontGlyphHeight, current.FontGlyphHeight),
+            UprightLayoutBounds = TiltedLayout.CombineUpright([previous, current]),
         };
     }
 
@@ -1556,6 +1557,7 @@ internal static class OcrTextBlockGrouper
             CombineLayoutGlyphHeight(layoutScript, blocks))
         {
             FontGlyphHeight = groupFontGlyphHeight,
+            UprightLayoutBounds = TiltedLayout.CombineUpright(blocks),
         };
     }
 
