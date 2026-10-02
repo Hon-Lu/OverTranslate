@@ -23,6 +23,7 @@ DOCS = os.path.join(ROOT, 'docs')
 SOURCE = os.path.join(DOCS, 'index.html')
 I18N_DIR = os.path.join(ROOT, 'tools', 'site-i18n')
 BASE_URL = 'https://hon-lu.github.io/OverTranslate/'
+MAX_DESCRIPTION = 160
 
 # 每個語言：輸出目錄、<html lang>、截圖後綴、下載統計圖卡、README 與 Ollama 教學
 LANGS = [
@@ -263,6 +264,11 @@ def build():
         missing = [k for k in zh if k not in strings]
         if missing:
             raise SystemExit('%s 缺少 %d 個 key：%s' % (lang, len(missing), missing[:5]))
+        # Bing 會把超過 160 字的 description 標成錯誤
+        desc_len = len(strings['meta.description'])
+        if desc_len > MAX_DESCRIPTION:
+            raise SystemExit('%s 的 meta.description 有 %d 字，上限 %d'
+                             % (lang, desc_len, MAX_DESCRIPTION))
 
         page = apply_text(src, strings)
         page = apply_assets(page, suffix, statcard, readme, ollama)
