@@ -41,20 +41,21 @@ public class GlyphHeightTraceTests(ITestOutputHelper output)
                 $"pitch={trace.PitchCandidate:0.0000}  glyph={height:0.0000}  src={trace.Source}"));
         }
 
-        // Every width up to and including twice the height gives the same answer — the box's own
-        // height — because the pitch is not consulted at all. The estimate does not vary with the
-        // width there, so it cannot be said to be measuring the text.
+        // Every width up to and including twice the height gives the same answer, because the pitch
+        // is not consulted at all. The estimate does not vary with the width there, so it cannot be
+        // said to be measuring the text. It used to be 0.82 of the box; the short-line correction
+        // now takes over exactly where the clamp refuses, and it is half the box.
         var refused = ladder.Where(step => step.Width <= ShortLineBoxHeight * 2).ToList();
-        Assert.Equal(ShortLineBoxHeight * 0.82, Assert.Single(refused.Select(step => step.Height).Distinct()));
+        Assert.Equal(ShortLineBoxHeight * 0.5, Assert.Single(refused.Select(step => step.Height).Distinct()));
 
-        // One ten-thousandth of a pixel past it, the answer falls by more than a third. That is the
-        // step: two lines of one paragraph either side of it are compared on quantities that are
-        // not the same measurement, whichever of the two is the better estimate.
+        // One ten-thousandth of a pixel past it, the answer used to fall by more than a third: two
+        // lines of one paragraph either side were compared on quantities that were not the same
+        // measurement. Both sides now estimate the glyph itself, and agree to within a tenth.
         var lastRefused = refused[^1].Height;
         var firstAccepted = ladder.First(step => step.Width > ShortLineBoxHeight * 2).Height;
         Assert.True(
-            lastRefused - firstAccepted > lastRefused / 3,
-            $"expected a step at twice the box height, got {lastRefused:0.0000} -> {firstAccepted:0.0000}");
+            Math.Abs(lastRefused - firstAccepted) < lastRefused / 10,
+            $"expected no step at twice the box height, got {lastRefused:0.0000} -> {firstAccepted:0.0000}");
 
         static IEnumerable<double> Widths() =>
             [58, 59, 60, 61, 61.5, 61.9, 61.99, 62, 62.0001, 62.01, 62.1, 62.5, 63, 64, 65, 66];
@@ -74,11 +75,14 @@ public class GlyphHeightTraceTests(ITestOutputHelper output)
 
         // Entering the branch and the min then choosing the pitch are two different events, and
         // this line is stopped at the first of them: the pitch it would have used is lower than the
-        // box estimate that stands instead.
+        // box estimate. That estimate no longer stands — the short-line correction takes the
+        // line wherever the clamp refuses it.
         Assert.False(trace.PitchBranchEntered);
         Assert.False(trace.PitchSelected);
         Assert.True(trace.PitchCandidate < trace.BoxEstimate);
-        Assert.Equal(GlyphHeightSource.Box, trace.Source);
+        Assert.True(trace.ShortTextApplied);
+        Assert.True(trace.ShortTextSelected);
+        Assert.Equal(GlyphHeightSource.ShortText, trace.Source);
     }
 
     [Fact]

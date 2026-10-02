@@ -45,6 +45,10 @@ public class GlyphHeightEstimateGridTests(ITestOutputHelper output)
         // Either side of the four-glyph clamp, at one width.
         ("abc", new Rect(0, 0, 200, 40)),
         ("abcd", new Rect(0, 0, 200, 40)),
+        // Four glyphs but not twice as wide as tall: the clamp refuses, so the short-line
+        // correction takes it on the Latin side; CJK keeps its box on both.
+        ("TOO.", new Rect(0, 0, 55, 32)),
+        ("日本語です", new Rect(0, 0, 80, 50)),
         // CJK takes the other pitch coefficient and no short-line correction.
         ("設定", new Rect(0, 0, 80, 40)),
         ("日本語のテキストです", new Rect(0, 0, 400, 40)),
@@ -99,8 +103,8 @@ public class GlyphHeightEstimateGridTests(ITestOutputHelper output)
 
     private static readonly string[] ExpectedRows =
     [
-        "cost. | 62.0000x31.0000 | Latin | layout=25.4200 | renderLatin=25.4200 0.0000,0.0000,62.0000,31.0000 | renderCjk=null 0.0000,2.7900,62.0000,25.4200",
-        "cost. | 61.0000x31.0000 | Latin | layout=25.4200 | renderLatin=25.4200 0.0000,0.0000,61.0000,31.0000 | renderCjk=null 0.0000,2.7900,61.0000,25.4200",
+        "cost. | 62.0000x31.0000 | Latin | layout=15.5000 | renderLatin=15.5000 0.0000,0.0000,62.0000,31.0000 | renderCjk=null 0.0000,2.7900,62.0000,25.4200",
+        "cost. | 61.0000x31.0000 | Latin | layout=15.5000 | renderLatin=15.5000 0.0000,0.0000,61.0000,31.0000 | renderCjk=null 0.0000,2.7900,61.0000,25.4200",
         "cost. | 63.0000x31.0000 | Latin | layout=16.3800 | renderLatin=16.3800 0.0000,0.0000,63.0000,31.0000 | renderCjk=null 0.0000,8.0660,63.0000,14.8680",
         "continues to use PP-DocLayoutV3 for layout analysis | 1737.0000x33.0000 | Latin | layout=27.0600 | renderLatin=27.0600 0.0000,0.0000,1737.0000,33.0000 | renderCjk=null 0.0000,2.9700,1737.0000,27.0600",
         "YA | 40.0000x95.0000 | Latin | layout=47.5000 | renderLatin=47.5000 0.0000,0.0000,40.0000,95.0000 | renderCjk=null 0.0000,8.5500,40.0000,77.9000",
@@ -108,10 +112,12 @@ public class GlyphHeightEstimateGridTests(ITestOutputHelper output)
         "Hello there friend | 300.0000x86.0000 | Latin | layout=24.3750 | renderLatin=24.3750 0.0000,0.0000,300.0000,86.0000 | renderCjk=null 0.0000,31.9375,300.0000,22.1250",
         "abc | 200.0000x40.0000 | Latin | layout=20.0000 | renderLatin=20.0000 0.0000,0.0000,200.0000,40.0000 | renderCjk=null 0.0000,3.6000,200.0000,32.8000",
         "abcd | 200.0000x40.0000 | Latin | layout=32.8000 | renderLatin=32.8000 0.0000,0.0000,200.0000,40.0000 | renderCjk=null 0.0000,3.6000,200.0000,32.8000",
+        "TOO. | 55.0000x32.0000 | Latin | layout=16.0000 | renderLatin=16.0000 0.0000,0.0000,55.0000,32.0000 | renderCjk=null 0.0000,2.8800,55.0000,26.2400",
+        "日本語です | 80.0000x50.0000 | Cjk | layout=41.0000 | renderLatin=25.0000 0.0000,0.0000,80.0000,50.0000 | renderCjk=null 0.0000,4.5000,80.0000,41.0000",
         "設定 | 80.0000x40.0000 | Cjk | layout=32.8000 | renderLatin=20.0000 0.0000,0.0000,80.0000,40.0000 | renderCjk=null 0.0000,3.6000,80.0000,32.8000",
         "日本語のテキストです | 400.0000x40.0000 | Cjk | layout=32.8000 | renderLatin=32.8000 0.0000,0.0000,400.0000,40.0000 | renderCjk=null 0.0000,3.6000,400.0000,32.8000",
         "BanG Dream! アニメ | 300.0000x30.0000 | Mixed | layout=null | renderLatin=24.6000 0.0000,0.0000,300.0000,30.0000 | renderCjk=null 0.0000,2.7000,300.0000,24.6000",
-        "test | 4.0000x2.0000 | Latin | layout=1.6400 | renderLatin=1.6400 0.0000,0.0000,4.0000,2.0000 | renderCjk=null 0.0000,0.1800,4.0000,1.6400",
+        "test | 4.0000x2.0000 | Latin | layout=1.0000 | renderLatin=1.0000 0.0000,0.0000,4.0000,2.0000 | renderCjk=null 0.0000,0.1800,4.0000,1.6400",
         "test | 40.0000x0.0000 | Latin | layout=1.0000 | renderLatin=1.0000 0.0000,0.0000,40.0000,0.0000 | renderCjk=null 0.0000,-0.5000,40.0000,1.0000",
     ];
 

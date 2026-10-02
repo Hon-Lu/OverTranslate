@@ -14,7 +14,7 @@ internal enum GlyphHeightSource
     /// <summary>The average glyph pitch, which came out lower than the box and replaced it.</summary>
     Pitch,
 
-    /// <summary>The short-line correction, applied where too few glyphs exist to average a pitch over.</summary>
+    /// <summary>The short-line correction, applied wherever the pitch clamp does not reach.</summary>
     ShortText,
 
     /// <summary>The floor, reached only by a degenerate box.</summary>

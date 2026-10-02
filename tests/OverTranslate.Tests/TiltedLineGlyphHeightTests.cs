@@ -92,6 +92,30 @@ public class TiltedLineGlyphHeightTests
         Assert.True(tilted.RenderGlyphHeight > 100, $"render glyph {tilted.RenderGlyphHeight:0.#}");
     }
 
+    [Fact]
+    public void ATiltedLinesUprightBoxIsNotTakenForANarrowShortLine()
+    {
+        // The upright box of a slanted line is not twice as wide as tall, which on a level line
+        // would hand it to the short-line correction. Here the narrowness is the tilt, so the
+        // coverage height stays the full 0.82 of the upright box rather than half of it.
+        var tilted = Normalize(Detected(Line, Quad(357, 33, degrees: 30)), automatic: false);
+
+        Assert.True(tilted.Bounds.Width <= tilted.Bounds.Height * 2, $"upright box {tilted.Bounds}");
+        Assert.Equal(tilted.Bounds.Height * 0.82, tilted.RenderGlyphHeight!.Value, tolerance: 0.01);
+    }
+
+    [Fact]
+    public void ALevelNarrowLineIsSizedFromHalfItsBoxOnEverySide()
+    {
+        // "TOO." on region-comic-en-3 (2): four glyphs in a 55x32 box, too narrow for the pitch
+        // clamp. The font, the coverage and the grouping all read the same corrected height.
+        var block = Normalize(Detected("TOO.", Quad(55, 32, degrees: 0)), automatic: false);
+
+        Assert.Equal(block.Bounds.Height * 0.5, block.RenderGlyphHeight!.Value, tolerance: 0.01);
+        Assert.Equal(block.RenderGlyphHeight, block.FontGlyphHeight);
+        Assert.Equal(block.RenderGlyphHeight, block.LayoutGlyphHeight);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(10)]

@@ -1529,10 +1529,12 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         var glyphHeight = box.Height * verticalScale;
         var boxEstimate = glyphHeight;
 
+        // The two halves are kept apart for the trace; the decision is the shared one, because
+        // ShortTextGlyphHeight takes over exactly where this does not.
         var hasEnoughGlyphs = glyphCount >= ShortTextGlyphHeight.PitchCorrectedFromGlyphs;
         var isWideEnough = box.Width > box.Height * 2;
 
-        if (hasEnoughGlyphs && isWideEnough)
+        if (ShortTextGlyphHeight.PitchClampApplies(box.Width, box.Height, glyphCount))
         {
             var estimatedGlyphPitch = box.Width / glyphCount;
             glyphHeight = Math.Min(glyphHeight, estimatedGlyphPitch * glyphHeightFromPitch);
@@ -1574,8 +1576,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     /// <remarks>
     /// Mixed and Unknown get nothing: there is no single glyph body to estimate, and grouping
     /// falls back to the raw detection box for them. Latin carries the short-line correction the
-    /// overlay's own height carries, because too few glyphs for the pitch clamp leaves 0.82 of the
-    /// box standing, which is 1.7x the truth. CJK does not, matching how its box is normalised.
+    /// overlay's own height carries, because wherever the pitch clamp does not reach — too few
+    /// glyphs, or a box not twice as wide as tall — 0.82 of the box stands, which is 1.7x the truth. CJK does not, matching how its box is normalised.
     /// </remarks>
     internal static double? LayoutGlyphHeightFor(OcrLayoutScript script, System.Windows.Rect box, string text)
         => LayoutGlyphHeightFor(script, box, text, out _);
@@ -1603,7 +1605,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         if (script == OcrLayoutScript.Cjk)
             return glyphHeight;
 
-        var corrected = ShortTextGlyphHeight.For(glyphHeight, box.Height, glyphCount, out var correction);
+        var corrected = ShortTextGlyphHeight.For(glyphHeight, box.Width, box.Height, glyphCount, out var correction);
         trace = trace with
         {
             ShortTextApplied = correction.Applied,
@@ -1665,21 +1667,30 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         // full box as the bubble's coverage area (so it still hides the taller original
         // Latin glyphs) and carry the reduced glyph height separately for font sizing.
         //
-        // Too few glyphs for the pitch clamp above to have run leaves that height at 0.82
-        // of the box, which is 1.7x the truth — a one- or two-character line rendered
+        // Wherever the pitch clamp above did not run that height is still 0.82 of the box, which
+        // is 1.7x the truth — a one- or two-character line, or a narrow "TOO.", rendered
         // enormously. See ShortTextGlyphHeight for the measurements.
-        var renderGlyphHeight = ShortTextGlyphHeight.For(glyphHeight, bounds.Height, glyphCount);
+        //
+        // Not on a tilted line, whose upright box is narrow because of the tilt rather than the
+        // text: RenderGlyphHeight keeps the upright figure there, because the realtime overlay also
+        // erases and covers with it and the tilted letters do reach that far. Only the glyph count
+        // decides for it, as before; the font is sized from the line itself below. See
+        // OcrLineGeometry.
+        var tilted = block.LineGeometry is { IsTilted: true };
+        var renderGlyphHeight = ShortTextGlyphHeight.For(
+            glyphHeight, tilted ? double.PositiveInfinity : bounds.Width, bounds.Height, glyphCount);
 
         // The same estimate again for the font alone, on a tilted line measured along itself: its
         // upright box is mostly tilt, and 0.82 of that sized the translation up to ten times the
-        // source. RenderGlyphHeight keeps the upright figure, because the realtime overlay also
-        // erases and covers with it and the tilted letters do reach that far. See OcrLineGeometry.
+        // source.
         var fontGlyphHeight = renderGlyphHeight;
-        if (block.LineGeometry is { IsTilted: true } line)
+        if (tilted)
         {
+            var line = block.LineGeometry!.Value;
             var alongLine = new System.Windows.Rect(0, 0, line.Length, line.Thickness);
             fontGlyphHeight = ShortTextGlyphHeight.For(
-                EstimateGlyphHeight(alongLine, glyphCount, glyphHeightFromPitch), line.Thickness, glyphCount);
+                EstimateGlyphHeight(alongLine, glyphCount, glyphHeightFromPitch),
+                line.Length, line.Thickness, glyphCount);
         }
 
         return block with
