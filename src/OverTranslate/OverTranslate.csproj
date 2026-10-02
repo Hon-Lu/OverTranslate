@@ -60,6 +60,17 @@
     <None Update="NLog.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- onnxruntime.dll links the Visual C++ runtime dynamically (MSVCP140, MSVCP140_1, VCRUNTIME140, VCRUNTIME140_1)
+         and nothing else in the package brings it: the self-contained .NET runtime only carries its own renamed
+         vcruntime140_cor3.dll. Most machines have the VC++ Redistributable from some game or driver, a clean Windows
+         does not, and there every OCR call dies in the NativeMethods type initializer. App-local deployment from
+         VS's redist folder (VC\Redist\MSVC\<version>\x64\Microsoft.VC145.CRT, 14.51 here); it has to be at least the
+         toolset onnxruntime.dll was linked with (14.44 for 1.24.4). Placed next to onnxruntime.dll, which is the
+         first place the loader looks. -->
+    <None Include="vcruntime\*.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <EmbeddedResource Include="icons\app.ico" />
     <EmbeddedResource Include="icons\app-compact.ico" />
     <Resource Include="Resources\Cursors\capture_crosshair.cur" />
