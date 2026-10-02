@@ -209,6 +209,83 @@ public class TiltedTextOverlayTests
     }
 
     /// <summary>
+    /// 顯示外觀 → 邊框 on a tilted group outlines the band the card's shape takes. With the band drawn
+    /// in colour that is the band's own edge, turned with it; over a repaired patch — upright, and cut
+    /// to the band by its clip — it used to be the patch's upright edge, of which the clip left only
+    /// the corners, and is now the same band drawn as a stroke inside the patch.
+    /// </summary>
+    [Fact]
+    public void ATiltedGroupsBorderRunsRoundItsBandInBothLooks()
+    {
+        var group = Assert.Single(
+            OcrService.GroupRealtime(TurnedParagraph(), 1298, RealtimeBlockMode.Subtitle),
+            group => group.Text.Contains("SINGLE MISTRESS"));
+        var line = Translated(group);
+        var thickness = RealtimeSubtitleColors.BorderThickness;
+
+        var (band, outline) = OnStaThread(() =>
+        {
+            var scrim = (Canvas)Window([line], natural: false, border: true).FindName("ScrimCanvas");
+            var drawn = Assert.IsType<Border>(Assert.Single(scrim.Children));
+            Assert.IsType<RotateTransform>(drawn.RenderTransform);
+            Assert.Equal(new Thickness(thickness), drawn.BorderThickness);
+            Assert.Equal(BorderColour, Assert.IsType<SolidColorBrush>(drawn.BorderBrush).Color);
+
+            var patches = (Canvas)Window([line], natural: true, border: true).FindName("ScrimCanvas");
+            var patch = Assert.IsType<Border>(Assert.Single(patches.Children));
+            // Not the patch's upright edge.
+            Assert.Equal(new Thickness(0), patch.BorderThickness);
+            Assert.True(patch.RenderTransform.Value.IsIdentity);
+            var path = Assert.IsType<System.Windows.Shapes.Path>(patch.Child);
+            Assert.Equal(thickness, path.StrokeThickness);
+            Assert.Equal(BorderColour, Assert.IsType<SolidColorBrush>(path.Stroke).Color);
+
+            var at = new Vector(Canvas.GetLeft(patch), Canvas.GetTop(patch));
+            var figure = Assert.Single(Assert.IsType<PathGeometry>(
+                Assert.Single(Assert.IsType<GeometryGroup>(path.Data).Children)).Figures);
+            Assert.All(figure.Segments, segment => Assert.True(segment.IsStroked));
+            Point[] corners = [figure.StartPoint + at, .. figure.Segments.Cast<LineSegment>().Select(s => s.Point + at)];
+            return (Placed(drawn), corners);
+        });
+
+        // The same quadrilateral, the stroke inset by half its width as a Border's lies inside its
+        // box: each corner half a stroke in along both sides, so √2 / 2 of one away at most.
+        Assert.Equal(4, outline.Length);
+        for (int i = 0; i < 4; i++)
+            Assert.InRange((outline[i] - band[i]).Length, 0, thickness / Math.Sqrt(2) + 0.01);
+    }
+
+    /// <summary>
+    /// A level group's border is what it was before tilted text was drawn at all: the band's or
+    /// patch's own upright edge, at the border's width, with nothing drawn inside it and no turn.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ALevelGroupsBorderIsTheBackgroundsOwnEdge(bool natural)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            TiltedLayoutTests.Rotated("IF YOU'D SEEN HIM CRAWLING FORWARD AFTER", 450, 150, 495, 36, 0.3),
+            TiltedLayoutTests.Rotated("GETTING COMPLETELY WRECKED AT THE END,", 440, 181, 472, 33, 0.2),
+        };
+        var lines = OcrService.GroupRealtime(blocks, 1296, RealtimeBlockMode.Subtitle).Select(Translated).ToList();
+
+        OnStaThread(() =>
+        {
+            var scrim = (Canvas)Window(lines, natural, border: true).FindName("ScrimCanvas");
+            var background = Assert.IsType<Border>(Assert.Single(scrim.Children));
+            Assert.Equal(new Thickness(RealtimeSubtitleColors.BorderThickness), background.BorderThickness);
+            Assert.Equal(BorderColour, Assert.IsType<SolidColorBrush>(background.BorderBrush).Color);
+            Assert.Null(background.Child);
+            Assert.True(background.RenderTransform.Value.IsIdentity);
+            return 0;
+        });
+    }
+
+    private static readonly Color BorderColour = RealtimeSubtitleColors.Border("#E0A030");
+
+    /// <summary>
     /// A bright patch in the upright box but off the line — on the 30° card, the page beside the
     /// card and the card's lit bevel — is something the mask finds standing out. Inside the line's
     /// quadrilaterals only, nothing outside them is touched.
@@ -350,13 +427,20 @@ public class TiltedTextOverlayTests
         };
 
     /// <summary>The block window over a 1296px page, built for real with both 進階選項 off.</summary>
-    private static RealtimeBlockWindow Window(IReadOnlyList<TranslatedBlock> lines)
+    /// <param name="natural">進階選項 → 自然背景; with nothing to capture, the patch falls back to the
+    /// band's colour in its own shape.</param>
+    /// <param name="border">顯示外觀 → 邊框, in one fixed colour.</param>
+    private static RealtimeBlockWindow Window(
+        IReadOnlyList<TranslatedBlock> lines, bool natural = false, bool border = false)
     {
         var window = new RealtimeBlockWindow(
             0, new System.Drawing.Rectangle(0, 0, 900, 1296), _ => null, "EN", "ZH-TW",
             RealtimeSubtitleColors.DefaultText,
             RealtimeSubtitleColors.DefaultScrim,
-            RealtimeSubtitleColors.DefaultScrimOpacity);
+            RealtimeSubtitleColors.DefaultScrimOpacity,
+            naturalBackground: natural,
+            border: border,
+            borderColor: border ? "#E0A030" : null);
         typeof(RealtimeBlockWindow)
             .GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!
             .SetValue(window, true);

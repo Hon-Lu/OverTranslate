@@ -52,8 +52,9 @@ internal static class TiltedPlacement
                 .Select(point => new Point(point.X - elementLeft, point.Y - elementTop))
                 .ToList();
             var figure = new PathFigure { StartPoint = points[0], IsClosed = true, IsFilled = true };
+            // Stroked, so the same shape can be drawn as an outline as well as cut out.
             foreach (var point in points.Skip(1))
-                figure.Segments.Add(new LineSegment(point, false));
+                figure.Segments.Add(new LineSegment(point, true));
             shape.Children.Add(new PathGeometry([figure]));
         }
         shape.Freeze();

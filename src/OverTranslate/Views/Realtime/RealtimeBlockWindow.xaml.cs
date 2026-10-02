@@ -320,10 +320,12 @@ public partial class RealtimeBlockWindow : Window
     private void ApplyBorder(Border background, TranslatedBlock line)
     {
         if (!_border) return;
-        background.BorderBrush = _fixedBorderBrush ??
-            Freeze(new SolidColorBrush(RealtimeSubtitleColors.RandomBorder(line.OriginalText)));
+        background.BorderBrush = BorderBrushFor(line);
         background.BorderThickness = new Thickness(RealtimeSubtitleColors.BorderThickness);
     }
+
+    private SolidColorBrush BorderBrushFor(TranslatedBlock line) =>
+        _fixedBorderBrush ?? Freeze(new SolidColorBrush(RealtimeSubtitleColors.RandomBorder(line.OriginalText)));
 
     private LineVisual? BuildLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
@@ -636,6 +638,24 @@ public partial class RealtimeBlockWindow : Window
             };
             Canvas.SetLeft(background, patchLeft);
             Canvas.SetTop(background, patchTop);
+
+            // Round the band, as with the band drawn in colour, rather than round the patch: the
+            // patch's own edge is upright and the clip left only its corners, and the guarded band
+            // it is cut to reaches into the comments either side, so on the 30° card every outline
+            // crossed its neighbours'. Inset by half the stroke, as a Border's lies inside its box.
+            if (_border)
+            {
+                double inset = RealtimeSubtitleColors.BorderThickness / 2;
+                background.Child = new System.Windows.Shapes.Path
+                {
+                    Data = TiltedPlacement.Shape(
+                        [TiltedPlacement.Outline(tilt, band, -inset * _dpiX, -inset * _dpiY)],
+                        ToCanvas, patchLeft, patchTop),
+                    Stroke = BorderBrushFor(line),
+                    StrokeThickness = RealtimeSubtitleColors.BorderThickness,
+                    StrokeLineJoin = PenLineJoin.Miter,
+                };
+            }
         }
         else
         {
@@ -650,8 +670,9 @@ public partial class RealtimeBlockWindow : Window
             Canvas.SetLeft(background, bandLeft);
             Canvas.SetTop(background, bandTop);
             patchBounds = ToPhysicalPatchBounds(bandLeft, bandTop, bandWidth, bandHeight);
+            // Turned with the band, so the band's own outline is already the card's shape.
+            ApplyBorder(background, line);
         }
-        ApplyBorder(background, line);
 
         var (foreground, edge) = SampleForeground(frame, line);
         var text = new Border
