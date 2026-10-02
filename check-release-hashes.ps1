@@ -24,13 +24,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 # 基準值 —— 是「現在應該長這樣」的紀錄，不是校驗和。對不上不代表壞掉，代表信譽要重新養。
-# Update.exe 是 2026-09-23、啟動器是 2026-10-02（改靜態連結 C 執行階段後重編）在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
+# Update.exe 是 2026-09-23、啟動器是 2026-10-02（改 Hybrid CRT 後重編）在本機量的，用的是憑證 5817F971FCC333251C488FC90C4AF8F9208E9E1C
 # （見 docs/ops/PUBLISH.md 第七節）。
 #
 # 啟動器   ← 重編 src/OverTranslate.Launcher（換圖示、改行為、換 rustc）、換簽章金鑰
 # Update.exe ← 換應用程式圖示、換 vpk 版本（vendor 二進位）、換簽章金鑰
 # 版號與 commit 兩邊都無關。
-$expectedLauncher = "bb741fca4c0955664c78345a23f34046cf48aea2ec4937d81ed16dcaa6e77b17"
+$expectedLauncher = "9db5150b8e456c4388b72ef7c6c89bc6cf62e4bcc18b8dd29adb12de39b04d5f"
 $expectedUpdateExe = "ae4a116a15e5cda0e423e8fca5f1b02326b502553397d709fc6a7090bc958e9d"
 
 $launcherHint = "如果沒有重編 src/OverTranslate.Launcher，這顆很可能根本不是我們的啟動器，而是 Velopack 的 stub 跑回來了——先確認打包用的是 fork 的 no-stub 分支、旗標還在。"
