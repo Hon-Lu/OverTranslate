@@ -42,8 +42,12 @@ internal static class RealtimeNaturalBackground
     [
         .. blocks
             .Where(block => !string.IsNullOrWhiteSpace(block.TranslatedText))
-            .SelectMany(block => (block.SourceLineBounds is { Count: > 0 } lines ? lines : [block.Bounds])
-                .Select(line => GlyphBounds(line, block.RenderGlyphHeight)))
+            .SelectMany(block => block.Tilt is { } tilt
+                // Not shrunk: a tilted line's letters reach the full height of its upright box at
+                // one end or the other, and a band through the middle left both ends standing.
+                ? tilt.EraseQuads.Select(Ocr.TiltedText.Enclosing)
+                : (block.SourceLineBounds is { Count: > 0 } lines ? lines : [block.Bounds])
+                    .Select(line => GlyphBounds(line, block.RenderGlyphHeight)))
     ];
 
     /// <summary>The part of a line rectangle its glyphs actually occupy.</summary>

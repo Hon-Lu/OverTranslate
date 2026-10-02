@@ -35,6 +35,7 @@ public sealed class EngineProvider(ITextTranslator engine) : ITranslationProvide
                 {
                     RunsAcross = block.RunsAcross,
                     FontGlyphHeight = block.FontGlyphHeight,
+                    Tilt = block.Tilt,
                     Untranslated = answers[i].Untranslated,
                 }).ToList();
 

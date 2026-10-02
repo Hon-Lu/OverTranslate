@@ -3,7 +3,14 @@ using OverTranslate.Imaging;
 
 namespace OverTranslate.Services.Realtime;
 
-internal record CpuTextRegion(double X, double Y, double Width, double Height, double? GlyphHeight);
+/// <param name="Within">
+/// Where the mask may land, as quadrilaterals in frame pixels; null for anywhere in the box. A line
+/// off a tilted card has an upright box that takes in the page beside the card and the comments
+/// either side of it, and the hats find all of that standing out — see Ocr.TiltedText.
+/// </param>
+internal record CpuTextRegion(
+    double X, double Y, double Width, double Height, double? GlyphHeight,
+    IReadOnlyList<System.Windows.Point[]>? Within = null);
 
 /// <summary>Stateless CPU segmentation: the text, and the outline and antialiasing drawn with it.</summary>
 internal static class CpuTextMask
@@ -169,6 +176,7 @@ internal static class CpuTextMask
                 using (var inner = new ImageBuffer(spread, new Rectangle(box.X - wide.X, box.Y - wide.Y, box.Width, box.Height)))
                     seed.CopyTo(inner);
                 Morphology.Dilate(spread, spread, one, iterations: halo);
+                if (line.Within is { } within) KeepInside(spread, wide, within);
                 using var target = new ImageBuffer(mask, wide);
                 Arithmetic.Or(target, spread, target);
             }
@@ -273,6 +281,65 @@ internal static class CpuTextMask
             Arithmetic.And(grown, tail, grown);
             Arithmetic.Or(grown, seed, seed);
         }
+    }
+
+    /// <summary>
+    /// Clears every pixel of <paramref name="spread"/>, which covers <paramref name="area"/> of the
+    /// frame, whose centre lies in none of <paramref name="quads"/>.
+    /// </summary>
+    /// <remarks>
+    /// A row at a time: a convex polygon meets a row of pixel centres in one run, so what is kept is
+    /// those runs and the rest of the row is cleared whole. Testing each pixel against each polygon
+    /// instead cost a group off the 30° card of region-comic-en-3 more than the repair it fed.
+    /// </remarks>
+    private static void KeepInside(ImageBuffer spread, Rectangle area, IReadOnlyList<System.Windows.Point[]> quads)
+    {
+        var runs = new List<(int From, int To)>(quads.Count);
+        for (int y = 0; y < spread.Height; y++)
+        {
+            double py = area.Y + y + .5;
+            runs.Clear();
+            foreach (var quad in quads)
+                if (Across(quad, py) is { } across)
+                {
+                    // The pixels whose centres, area.X + x + .5, lie within the run.
+                    int from = Math.Max(0, (int)Math.Ceiling(across.Left - area.X - .5));
+                    int to = Math.Min(spread.Width - 1, (int)Math.Floor(across.Right - area.X - .5));
+                    if (from <= to) runs.Add((from, to));
+                }
+            var row = spread.RowSpan(y);
+            if (runs.Count == 0) { row.Clear(); continue; }
+            runs.Sort();
+            int kept = 0;
+            foreach (var (from, to) in runs)
+            {
+                if (from > kept) row[kept..from].Clear();
+                kept = Math.Max(kept, to + 1);
+            }
+            if (kept < row.Length) row[kept..].Clear();
+        }
+    }
+
+    /// <summary>Where the row at <paramref name="y"/> crosses a convex polygon, if it does.</summary>
+    private static (double Left, double Right)? Across(System.Windows.Point[] polygon, double y)
+    {
+        double left = double.MaxValue, right = double.MinValue;
+        for (int i = 0; i < polygon.Length; i++)
+        {
+            var a = polygon[i];
+            var b = polygon[(i + 1) % polygon.Length];
+            if ((a.Y > y && b.Y > y) || (a.Y < y && b.Y < y)) continue;
+            if (a.Y == b.Y)
+            {
+                left = Math.Min(left, Math.Min(a.X, b.X));
+                right = Math.Max(right, Math.Max(a.X, b.X));
+                continue;
+            }
+            double x = a.X + (y - a.Y) / (b.Y - a.Y) * (b.X - a.X);
+            left = Math.Min(left, x);
+            right = Math.Max(right, x);
+        }
+        return left <= right ? (left, right) : null;
     }
 
     /// <summary>Half the clear space between this line and the nearest one over or under it.</summary>

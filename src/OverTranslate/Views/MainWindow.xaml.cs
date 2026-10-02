@@ -1003,8 +1003,12 @@ public partial class MainWindow : Window
                         };
                     }
 
-                    var (bg, fg) = SourceTextColorSampler.ForCaptureOverlay(
-                        workBitmap, b.Bounds, b.SourceLineBounds, req.IsVerticalText);
+                    // A group off a tilted card is read from inside the card: its upright box and
+                    // the gaps between its upright lines are mostly the page beside it.
+                    var (bg, fg) = b.Tilt is { } tilt
+                        ? SourceTextColorSampler.ForCaptureOverlay(workBitmap, tilt.SampleArea)
+                        : SourceTextColorSampler.ForCaptureOverlay(
+                            workBitmap, b.Bounds, b.SourceLineBounds, req.IsVerticalText);
                     return b with { BackgroundColor = bg, TextColor = fg };
                 })
                 .ToList();

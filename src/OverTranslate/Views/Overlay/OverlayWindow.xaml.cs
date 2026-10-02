@@ -21,6 +21,9 @@ public partial class OverlayWindow : Window
     private const double WrappedAbsoluteMinFontSize = 11.0;
     private const double GroupedEmergencyMinFontSize = 7.0;
 
+    /// <summary>How much taller than its own lines a group off a tilted card may be set.</summary>
+    private const double TiltedHeightAllowance = 1.15;
+
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
 
@@ -355,6 +358,12 @@ public partial class OverlayWindow : Window
             // Drawn as a column already; here only to be counted as a neighbour.
             if (_currentVerticalText && !block.RunsAcross) continue;
 
+            if (block.Tilt is { } tilt)
+            {
+                BuildTiltedBubble(block, tilt, translatedFont, selScreenX, selScreenY);
+                continue;
+            }
+
             // Physical pixel position on screen
             double physX = selScreenX + block.Bounds.X;
             double physY = selScreenY + block.Bounds.Y;
@@ -650,6 +659,142 @@ public partial class OverlayWindow : Window
             BubbleBackgroundCanvas.Children.Add(backgroundBorder);
             BubbleTextCanvas.Children.Add(textContainer);
         }
+    }
+
+    /// <summary>
+    /// A group read off a tilted card: set level in the card's own frame and turned or sheared back
+    /// onto it, on the same plate or card any other bubble gets, in the card's shape — see
+    /// <see cref="Services.Ocr.TiltedText"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Nothing here grows the bubble. A level bubble may reach right into empty page and down
+    /// over nothing, and both are measured from upright boxes; on a card, the room to the right is
+    /// the end of the line and the room below is the next comment. So the translation is fitted to
+    /// the box its own lines make, as a reflowed group is to its balloon.</para>
+    ///
+    /// <para>The plate is cut over the upright box round the bubble, and fades out beyond the
+    /// bubble's outline rather than beyond that box; the flat card that stands in where a plate
+    /// would only be a blurred card is the bubble itself, turned with the text.</para>
+    /// </remarks>
+    private void BuildTiltedBubble(
+        TranslatedBlock block, Services.Ocr.TiltedText tilt, System.Windows.Media.FontFamily translatedFont,
+        double selScreenX, double selScreenY)
+    {
+        System.Windows.Point ToCanvas(System.Windows.Point pixel) => new(
+            (selScreenX + pixel.X - _physBounds.Left) / _dpiX,
+            (selScreenY + pixel.Y - _physBounds.Top) / _dpiY);
+
+        var level = tilt.Box;
+        double boxWidth = level.Width / _dpiX;
+        double boxHeight = level.Height / _dpiY;
+        if (boxWidth <= 0 || boxHeight <= 0) return;
+
+        double sizingHeight = GetSourceFontSizingHeight(block, boxHeight);
+        double referenceHeight = GetSourceFontReferenceHeight(block, boxHeight);
+        var typeface = new Typeface(translatedFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        double bubbleWidth = Math.Max(boxWidth + BubbleExpand * 2, BubbleMinWidth);
+        double innerWidth = Math.Max(1, bubbleWidth - BubbleHorizontalPadding);
+        double fontSize = FindLargestGroupedFontSize(
+            block.TranslatedText,
+            typeface,
+            SourceFontScale.Calculate(sizingHeight, IsLatinSourceToCjkTarget()),
+            SingleLineAbsoluteMinFontSize,
+            innerWidth,
+            int.MaxValue,
+            // As tall as the comment's lines, with the leeway a realtime line gets over the line it
+            // replaces: a translation that wraps one line more than its source would otherwise be
+            // set at the size that keeps it to one.
+            boxHeight * TiltedHeightAllowance + BubbleExpand * 2);
+        double writtenHeight = MeasureText(block.TranslatedText, typeface, fontSize, innerWidth).Height;
+        double bubbleHeight = Math.Max(boxHeight + BubbleExpand * 2, writtenHeight + BubbleVerticalPadding);
+
+        // The bubble in the level frame, in captured pixels — centred on the box across the lines,
+        // from just before the card's margin along them.
+        var bubble = new Rect(
+            level.X - BubbleExpand * _dpiX,
+            level.Y + level.Height / 2 - bubbleHeight * _dpiY / 2,
+            bubbleWidth * _dpiX,
+            bubbleHeight * _dpiY);
+        var corner = ToCanvas(bubble.TopLeft);
+        var turn = TiltedPlacement.For(tilt, ToCanvas, corner.X, corner.Y);
+        var outline = tilt.Corners(bubble);
+
+        var background = block.BackgroundColor.A == 0 ? Colors.White : block.BackgroundColor;
+        var textColor = block.TextColor.A != 0
+            ? block.TextColor
+            : (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255.0 > 0.5
+                ? Colors.Black
+                : Colors.White;
+
+        Border? surface = null;
+        if (_backdrop is { } backdrop)
+        {
+            double glyphPixels = referenceHeight * _dpiY;
+            double feather = CaptureBubbleBackdrop.Feather(glyphPixels);
+            var area = Services.Ocr.TiltedText.Enclosing(outline);
+            area.Inflate(feather, feather);
+
+            if (backdrop.Plate(area, background, textColor, glyphPixels, writtenHeight * _dpiY, [outline]) is { } plate)
+            {
+                var at = ToCanvas(area.TopLeft);
+                surface = new Border
+                {
+                    Background = plate.Brush,
+                    Width = area.Width / _dpiX,
+                    Height = area.Height / _dpiY,
+                    ClipToBounds = true,
+                };
+                Canvas.SetLeft(surface, at.X);
+                Canvas.SetTop(surface, at.Y);
+                textColor = plate.Text;
+            }
+            // Read from inside the card: the upright box round the bubble is partly the page.
+            else if (backdrop.Card(tilt.SampleArea, textColor) is { } card)
+            {
+                background = card.Background;
+                textColor = card.Text;
+            }
+        }
+
+        if (surface is null)
+        {
+            surface = new Border
+            {
+                Background = new SolidColorBrush(background),
+                Width = bubbleWidth,
+                Height = bubbleHeight,
+                RenderTransform = turn,
+            };
+            Canvas.SetLeft(surface, corner.X);
+            Canvas.SetTop(surface, corner.Y);
+        }
+
+        var text = new Border
+        {
+            Padding = new Thickness(3, 2, 3, 2),
+            Width = bubbleWidth,
+            Height = bubbleHeight,
+            ClipToBounds = true,
+            Background = System.Windows.Media.Brushes.Transparent,
+            RenderTransform = turn,
+            Child = new TextBlock
+            {
+                Text = block.TranslatedText,
+                FontSize = fontSize,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(textColor),
+                TextWrapping = TextWrapping.Wrap,
+                TextTrimming = TextTrimming.None,
+                // Against the card's margin, where its lines begin.
+                TextAlignment = TextAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontFamily = translatedFont,
+            },
+        };
+        Canvas.SetLeft(text, corner.X);
+        Canvas.SetTop(text, corner.Y);
+        BubbleBackgroundCanvas.Children.Add(surface);
+        BubbleTextCanvas.Children.Add(text);
     }
 
     private void BuildVerticalOverlay(

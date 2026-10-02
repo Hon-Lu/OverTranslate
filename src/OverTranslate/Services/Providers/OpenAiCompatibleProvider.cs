@@ -243,7 +243,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
                 translations[i],
                 block.Bounds,
                 block.Lines,
-                block.RenderGlyphHeight) { RunsAcross = block.RunsAcross, FontGlyphHeight = block.FontGlyphHeight });
+                block.RenderGlyphHeight) { RunsAcross = block.RunsAcross, FontGlyphHeight = block.FontGlyphHeight, Tilt = block.Tilt });
         }
 
         var detected = LanguageData.IsAutomaticSource(sourceLang) ? "" : sourceLang.ToUpperInvariant();

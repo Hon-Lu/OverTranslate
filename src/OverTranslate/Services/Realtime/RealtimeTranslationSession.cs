@@ -938,6 +938,7 @@ public sealed class RealtimeTranslationSession
                 {
                     RunsAcross = block.RunsAcross,
                     FontGlyphHeight = block.FontGlyphHeight,
+                    Tilt = block.Tilt,
                     Untranslated = !found,
                 };
             })
