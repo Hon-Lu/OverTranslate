@@ -72,7 +72,8 @@ When you need a translation, press the hotkey (default Ctrl + Alt + A) and selec
 | ![截圖翻譯1-前.png](images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](images/截圖翻譯1-後.png) |
 | ![截圖翻譯-前.png](images/截圖翻譯-前.png) | ![截圖翻譯-後.png](images/截圖翻譯-後.png) |
 
-> Image sources: the first comic is AI-generated; the second comic is from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html); the third is from [Godot Engine Blog](https://godotengine.org/blog/).
+> All translation comparisons above are real results from running OverTranslate.  
+> Image sources: the first comic's original artwork is AI-generated; the second comic is from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html); the third is from [Godot Engine Blog](https://godotengine.org/blog/).
 
 ### Toolbar - Other Features
 
@@ -111,7 +112,8 @@ For video subtitles, game story dialogue and comic lettering; use this mode when
 | ![Real-time translation - video selection](images/即時翻譯-影片框.png) | ![Real-time translation - video result](images/即時翻譯-影片翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> Image sources: the first comic is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third video is from [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw); the fourth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
+> All translation comparisons above are real results from running OverTranslate.  
+> Image sources: the first comic's original artwork is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third video is from [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw); the fourth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
 
 #### Game / UI
 For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.

@@ -72,7 +72,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 | ![截圖翻譯1-前.png](docs/images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](docs/images/截圖翻譯1-後.png) |
 | ![截圖翻譯-前.png](docs/images/截圖翻譯-前.png) | ![截圖翻譯-後.png](docs/images/截圖翻譯-後.png) |
 
-> 圖片來源：第一組漫畫為 AI 生成圖；第二組漫畫取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三組取自 [Godot Engine Blog](https://godotengine.org/blog/)。
+> 以上翻譯對比皆為 OverTranslate 實機執行結果。  
+> 圖片來源：第一組漫畫原圖為 AI 生成；第二組漫畫取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三組取自 [Godot Engine Blog](https://godotengine.org/blog/)。
 
 ### 工具列 - 其他功能
 
@@ -112,7 +113,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 | ![即時翻譯-影片框.png](docs/images/即時翻譯-影片框.png) | ![即時翻譯-影片翻譯.png](docs/images/即時翻譯-影片翻譯.png) |
 | ![即時翻譯2-對話遊戲框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![即時翻譯2-對話遊戲翻譯.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 圖片來源：第一組漫畫為 AI 生成圖；第二組四格漫畫原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三組影片來源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四組遊戲畫面來源：[《魔法少女的魔女審判》](https://store.steampowered.com/app/3101040)。
+> 以上翻譯對比皆為 OverTranslate 實機執行結果。  
+> 圖片來源：第一組漫畫原圖為 AI 生成；第二組四格漫畫原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三組影片來源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四組遊戲畫面來源：[《魔法少女的魔女審判》](https://store.steampowered.com/app/3101040)。
 
 #### 遊戲 / 介面：
 適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。
