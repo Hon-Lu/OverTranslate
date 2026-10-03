@@ -15,6 +15,12 @@ namespace OverTranslate.Translation.OpenAi;
 /// the only way to say nothing is to send no such field. <paramref name="TopP"/> and
 /// <paramref name="Seed"/> are the same.
 /// </param>
+/// <param name="Timeout">
+/// How long each request may take, from sending it to reading the whole answer; null leaves it to
+/// the <see cref="HttpClient"/>. Per request rather than per batch: a batch of many blocks is
+/// rightly slower than one, while a single request that runs past this is a server that is not
+/// coming back.
+/// </param>
 public sealed record OpenAiChatRequest(
     Uri Endpoint,
     string Model,
@@ -23,7 +29,8 @@ public sealed record OpenAiChatRequest(
     string UserPrompt,
     double? Temperature = null,
     double? TopP = null,
-    int? Seed = null);
+    int? Seed = null,
+    TimeSpan? Timeout = null);
 
 /// <summary>
 /// Translates through an OpenAI-compatible Chat Completions endpoint: one request per text, each
@@ -36,10 +43,10 @@ public sealed record OpenAiChatRequest(
 /// of memory. And the instruction is written by the application — in the user's words, naming
 /// languages the way the interface does — so there is no language code for this to be given.</para>
 ///
-/// <para>Failures the server answers with are <see cref="OpenAiChatException"/>. A request that
-/// never got an answer — refused connection, timeout, cancellation — goes up as the
-/// <see cref="HttpClient"/> threw it: which of those it was is what the user needs to hear, and the
-/// application already words them.</para>
+/// <para>Failures the server answers with are <see cref="OpenAiChatException"/>, and so is a request
+/// that ran past <see cref="OpenAiChatRequest.Timeout"/>. One that never got an answer otherwise —
+/// refused connection, cancellation — goes up as the <see cref="HttpClient"/> threw it: which of
+/// those it was is what the user needs to hear, and the application already words them.</para>
 /// </remarks>
 public sealed class OpenAiChatTranslator(HttpClient http)
 {
@@ -91,8 +98,31 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         if (key.Length > 0)
             message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
 
-        using var response = await http.SendAsync(message, cancellationToken);
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        // A timeout of our own rather than the HttpClient's: that one surfaces as a cancellation,
+        // which every caller rightly takes for the user walking away and says nothing about.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (request.Timeout is { } limit) timeout.CancelAfter(limit);
+
+        HttpResponseMessage? response = null;
+        string json;
+        try
+        {
+            response = await http.SendAsync(message, timeout.Token);
+            json = await response.Content.ReadAsStringAsync(timeout.Token);
+        }
+        catch (OperationCanceledException ex) when (
+            timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            response?.Dispose();
+            throw new OpenAiChatException(OpenAiChatFailure.TimedOut, inner: ex);
+        }
+        catch
+        {
+            response?.Dispose();
+            throw;
+        }
+
+        using var _ = response;
         if (!response.IsSuccessStatusCode)
             throw new OpenAiChatException(OpenAiChatFailure.Rejected, response.StatusCode, ReadError(json));
 

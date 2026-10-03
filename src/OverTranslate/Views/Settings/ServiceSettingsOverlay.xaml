@@ -275,6 +275,44 @@
                                                 Margin="0,10,0,0"
                                                 SecretChanged="OpenAiSecret_SecretChanged"/>
 
+                            <!-- Digits only, empty for the default the placeholder shows. Narrow
+                                 because it holds a few digits: a full-width box reads as a place
+                                 for an address. The IME is off so a CJK keyboard types digits
+                                 here rather than composing. -->
+                            <TextBlock Grid.Column="0" Grid.Row="3" Text="{DynamicResource S.Settings.OpenAiTimeout}"
+                                       Margin="0,10,0,0"
+                                       Style="{StaticResource FieldLabel}"/>
+                            <StackPanel Grid.Column="1" Grid.Row="3" Margin="0,10,0,0"
+                                        Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Grid Width="120">
+                                    <TextBox x:Name="OpenAiTimeoutBox"
+                                             Style="{StaticResource ModernTextBox}"
+                                             MaxLength="4"
+                                             InputMethod.IsInputMethodEnabled="False"
+                                             PreviewTextInput="OpenAiTimeoutBox_PreviewTextInput"
+                                             PreviewKeyDown="OpenAiTimeoutBox_PreviewKeyDown"
+                                             DataObject.Pasting="OpenAiTimeoutBox_Pasting"
+                                             TextChanged="OpenAiTimeoutBox_TextChanged"
+                                             LostKeyboardFocus="OpenAiTimeoutBox_LostKeyboardFocus"/>
+                                    <TextBlock x:Name="OpenAiTimeoutPlaceholder"
+                                               IsHitTestVisible="False"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="{StaticResource AppFontSize}"
+                                               Foreground="{DynamicResource AppTextSecondary}"
+                                               Opacity="0.7"
+                                               Margin="10,0,10,0"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                                <!-- The unit after the number rather than in the label: "Timeout (s)"
+                                     reads oddly, and every language puts the unit after the value. -->
+                                <TextBlock Text="{DynamicResource S.Settings.OpenAiTimeoutUnit}"
+                                           Margin="8,0,0,0"
+                                           Style="{StaticResource FieldLabel}"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Grid.Row="4" x:Name="OpenAiTimeoutError"
+                                       Style="{StaticResource FieldHint}"
+                                       Foreground="{DynamicResource AppError}"/>
+
 
 
                             <!-- Everything above is the server; everything below is the model. The

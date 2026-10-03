@@ -41,7 +41,8 @@ public sealed record OpenAiCompatibleOptions(
     bool SendTopP = false,
     double TopP = 0,
     bool SendSeed = false,
-    int Seed = 0)
+    int Seed = 0,
+    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds)
 {
     /// <summary>
     /// The pair for one case. Empty rather than the built-in wording when nothing was supplied.
@@ -71,8 +72,22 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     // Its own client rather than EngineHttp's: a local model can take tens of seconds to load on the
-    // first request, far past what the free engines are given.
-    private static readonly HttpClient DefaultHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
+    // first request, far past what the free engines are given. No timeout of the client's own — each
+    // request carries the user's, see TimeoutSeconds.
+    private static readonly HttpClient DefaultHttp = new() { Timeout = Timeout.InfiniteTimeSpan };
+
+    /// <summary>How long one request may take when the timeout box is left empty.</summary>
+    internal const int DefaultTimeoutSeconds = 60;
+
+    /// <summary>
+    /// The shortest timeout the box accepts. Below this a local model that is still loading on the
+    /// first request is cut off every time.
+    /// </summary>
+    internal const int MinTimeoutSeconds = 10;
+
+    /// <summary>The timeout a saved setting stands for: empty is the default, too short is the minimum.</summary>
+    internal static int TimeoutSecondsFor(int? saved) =>
+        saved is { } seconds ? Math.Max(MinTimeoutSeconds, seconds) : DefaultTimeoutSeconds;
 
     private readonly OpenAiChatTranslator _chat;
     private readonly Func<OpenAiCompatibleOptions> _options;
@@ -123,7 +138,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             profile.TopPEnabled,
             profile.TopP,
             profile.SeedEnabled,
-            profile.Seed);
+            profile.Seed,
+            TimeoutSecondsFor(settings.OpenAiTimeoutSeconds));
     }
 
     /// <summary>
@@ -218,12 +234,13 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
                     endpoint, model, options.ApiKey, prompts.System, prompts.User,
                     options.SendTemperature ? options.Temperature : null,
                     options.SendTopP ? options.TopP : null,
-                    options.SendSeed ? options.Seed : null),
+                    options.SendSeed ? options.Seed : null,
+                    TimeSpan.FromSeconds(options.TimeoutSeconds)),
                 cancellationToken);
         }
         catch (OpenAiChatException ex)
         {
-            throw Localized(ex);
+            throw Localized(ex, options.TimeoutSeconds);
         }
 
         // Both sides of one block on one line: a block that came back still in its own language is
@@ -254,8 +271,13 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// A failure the server answered with, in the words the capture toast and the translation
     /// window's status line show — both put <see cref="Exception.Message"/> on screen as it is.
     /// </summary>
-    private static Exception Localized(OpenAiChatException ex) => ex.Failure switch
+    private static Exception Localized(OpenAiChatException ex, int timeoutSeconds) => ex.Failure switch
     {
+        // A TimeoutException, not the cancellation it started as: the capture and the realtime
+        // loop both treat a cancellation as the user leaving and stay silent, which is how a server
+        // that never answered used to look like nothing had happened at all.
+        OpenAiChatFailure.TimedOut => new TimeoutException(
+            LocalizationService.Format("S.Error.OpenAiTimeout", timeoutSeconds), ex),
         OpenAiChatFailure.Rejected => new HttpRequestException(
             LocalizationService.Format("S.Error.OpenAiHttp", (int)ex.StatusCode!, ex.ServerMessage switch
             {

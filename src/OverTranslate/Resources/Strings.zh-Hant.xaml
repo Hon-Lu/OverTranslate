@@ -83,6 +83,7 @@
     <sys:String x:Key="S.Error.OpenAiHttp">OpenAI Compatible API 回傳 {0}：{1}</sys:String>
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI Compatible API 回應格式無法解析。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI Compatible API 未回傳譯文。</sys:String>
+    <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI Compatible API 在 {0} 秒內沒有回應。可在「翻譯服務設定」調整逾時秒數。</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">OpenAI Compatible API 位址必須是有效的 HTTP 或 HTTPS 網址。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">尚未指定模型名稱。請在「翻譯服務設定」中填入要使用的模型。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">未知錯誤</sys:String>
@@ -454,6 +455,9 @@
     <sys:String x:Key="S.Settings.ServiceDefault">使用預設</sys:String>
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0}設定</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API 位址</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeout">逾時</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutMin">最少 {0} 秒</sys:String>
     <sys:String x:Key="S.Settings.ModelName">模型名稱</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">複製模型名稱</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">必填</sys:String>

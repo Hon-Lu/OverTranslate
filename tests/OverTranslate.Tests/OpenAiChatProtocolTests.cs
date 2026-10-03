@@ -244,6 +244,45 @@ public class OpenAiChatProtocolTests
         Assert.Equal(OpenAiChatFailure.NoTranslation, Assert.IsType<OpenAiChatException>(error).Failure);
     }
 
+    /// <summary>
+    /// A request past its timeout is a failure of its own, not the cancellation it starts as:
+    /// callers stay silent on a cancellation, taking it for the user having walked away.
+    /// </summary>
+    [Fact]
+    public async Task ARequestPastItsTimeoutFailsAsTimedOut()
+    {
+        using var http = new HttpClient(new NeverAnsweringHandler());
+        var request = Request() with { Timeout = TimeSpan.FromMilliseconds(50) };
+
+        var error = await Assert.ThrowsAsync<OpenAiChatException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(["hello"], request));
+
+        Assert.Equal(OpenAiChatFailure.TimedOut, error.Failure);
+    }
+
+    /// <summary>The caller's own cancellation still comes out as a cancellation.</summary>
+    [Fact]
+    public async Task CancellingByTheCallerIsNotATimeout()
+    {
+        using var http = new HttpClient(new NeverAnsweringHandler());
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+        var request = Request() with { Timeout = TimeSpan.FromMinutes(5) };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(["hello"], request, cancel.Token));
+    }
+
+    /// <summary>Waits until the request is cancelled, as a server that never answers does.</summary>
+    private sealed class NeverAnsweringHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException("unreachable");
+        }
+    }
+
     private sealed record RecordedRequest(string Url, string? Authorization, string Body);
 
     /// <summary>Answers every request with its own user message, and counts how many overlap.</summary>

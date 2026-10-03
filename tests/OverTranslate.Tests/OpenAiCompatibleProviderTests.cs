@@ -1147,6 +1147,45 @@ public class OpenAiCompatibleProviderTests
 
     private sealed record RecordedRequest(string Url, string? Authorization, string Body);
 
+    [Theory]
+    [InlineData(null, 60)]
+    [InlineData(5, 10)]
+    [InlineData(10, 10)]
+    [InlineData(90, 90)]
+    public void TimeoutSecondsFor_EmptyIsTheDefaultAndTooShortIsTheMinimum(int? saved, int expected)
+    {
+        Assert.Equal(expected, OpenAiCompatibleProvider.TimeoutSecondsFor(saved));
+    }
+
+    /// <summary>
+    /// A server that does not answer in time reaches the user as a timeout naming the seconds, not
+    /// as a cancellation — the capture and the realtime loop both swallow those in silence.
+    /// </summary>
+    [Fact]
+    public async Task TranslateAsync_ReportsATimeoutRatherThanACancellation()
+    {
+        using var http = new HttpClient(new NeverAnsweringHandler());
+        var provider = new OpenAiCompatibleProvider(
+            http,
+            () => new OpenAiCompatibleOptions("http://localhost:1234/v1", "test-model", TimeoutSeconds: 1));
+
+        var error = await Assert.ThrowsAsync<TimeoutException>(() =>
+            provider.TranslateAsync([new OcrTextBlock("hello", new Rect())], "EN", "ZH-HANT", ""));
+
+        Assert.Contains("1", error.Message);
+        Assert.IsType<OpenAiChatException>(error.InnerException);
+    }
+
+    private sealed class NeverAnsweringHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException("unreachable");
+        }
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
         private int _activeRequests;

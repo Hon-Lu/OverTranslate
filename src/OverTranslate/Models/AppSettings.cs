@@ -156,6 +156,17 @@ public class AppSettings
     public string OpenAiApiKey { get; set; } = "";
 
     /// <summary>
+    /// How long one OpenAI-compatible request may take, in seconds, or null for
+    /// <see cref="Services.Providers.OpenAiCompatibleProvider.DefaultTimeoutSeconds"/>.
+    /// </summary>
+    /// <remarks>
+    /// Null rather than a copy of the default, for the same reason as <see cref="OpenAiBaseUrl"/>.
+    /// A value under the minimum — a hand-edited file — is read as the minimum, see
+    /// <see cref="Services.Providers.OpenAiCompatibleProvider.TimeoutSecondsFor"/>.
+    /// </remarks>
+    public int? OpenAiTimeoutSeconds { get; set; }
+
+    /// <summary>
     /// The key 「Google 翻譯 (Beta)」 sends, read from Google's translate element the first time it
     /// is used and again only when Google refuses it. Empty until then.
     /// </summary>
