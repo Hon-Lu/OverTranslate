@@ -123,26 +123,6 @@ For game screens, chat windows, menus and interface text; use this mode when the
 | ![Real-time translation - game chat selection](images/即時翻譯1-遊戲翻譯框.png) | ![Real-time translation - game chat result](images/即時翻譯1-遊戲翻譯.png) |
 | ![Real-time translation - game selection](images/即時翻譯-遊戲翻譯框.png) | ![Real-time translation - game result](images/即時翻譯-遊戲翻譯.png) |
 
----
-
-## Vertical and Tilted Text
-
-Both Screenshot Translation and Real-time Translation handle vertical and tilted text:
-
-- **Vertical text**: in Screenshot Translation, switch "Writing direction of the source" to "Vertical" on the toolbar; in Real-time Translation, switch it while editing a translation block. Text written top to bottom and right to left (Japanese books and manga) is then recognised, and the translation is shown vertically in the same place.
-- **Horizontal text on a vertical page**: name plates, captions, titles and other horizontal text found in vertical mode are recognised as horizontal automatically; lines that belong together are joined into a full sentence before translation, and the translation is shown horizontally.
-- **Tilted text**: for speech bubbles, narration boxes or chat cards set at an angle, the translation follows the angle of the original, and the backdrop and the erased area follow the tilted shape instead of covering neighbouring content. This works for both horizontal and vertical text; text tilted only slightly is still shown level or upright.
-
-### Manga vertical-text models
-
-When reading vertical Japanese manga, you can download the "Manga vertical-text models" in Settings for more complete recognition, fewer missed lines and faster speed.
-
-- Applied automatically when the source language is set to Japanese and the direction is vertical; other languages and horizontal text keep using the default models.
-- Requires a graphics card that supports DirectX 12, with at least 1 GB of VRAM (2 GB recommended); if it is not supported, regular recognition is used instead.
-- The models are not included in the installer and are downloaded separately from Settings.
-
----
-
 ## Quick Lookup
 > The hotkey (default `Ctrl + Alt + Q`) opens it on top of whatever is on screen.
 
@@ -258,7 +238,7 @@ OCR is handled by RapidOcrNet with ONNX models. The matching model is selected a
 | **Korean** | PP-OCRv5 Korean recognition model (`korean_PP-OCRv5_rec`), covering the Korean characters the general PP-OCRv6 model doesn't include |
 
 All languages share the same **text detection model** (`PP-OCRv6_det_tiny`) and **orientation classification model** (`cls`); only the recognition model is switched per language.
-OCR runs entirely on your own PC, and images are never uploaded to any external service; the default models run on the CPU, while the [manga vertical-text models](#manga-vertical-text-models) run on the graphics card.
+OCR runs entirely on your own PC, and images are never uploaded to any external service; the default models run on the CPU, while the manga vertical-text models run on the graphics card.
 
 ---
 
