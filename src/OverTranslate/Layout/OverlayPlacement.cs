@@ -17,6 +17,11 @@ namespace OverTranslate.Layout;
 /// lone column, with one cell per character — so neither the horizontal splitter nor the reflow
 /// intent describes anything real about them. They go to the vertical renderer exactly as they
 /// arrive, which is what they did before this layer existed.</para>
+///
+/// <para>What a vertical page writes ACROSS is the exception, and only it. Those blocks are
+/// grouped the way a horizontal capture groups its lines (see
+/// <c>VerticalColumnGrouping.WithRowsSetAcross</c>), so a caption of several lines is one sentence
+/// and is drawn the way General draws one.</para>
 /// </remarks>
 internal static class OverlayPlacement
 {
@@ -25,7 +30,7 @@ internal static class OverlayPlacement
     {
         // Not a fast path — a hard condition. See the remarks above.
         if (verticalText)
-            return [.. blocks];
+            return [.. blocks.Select(block => block.RunsAcross ? AsGroupReflow(block) : block)];
 
         return mode switch
         {

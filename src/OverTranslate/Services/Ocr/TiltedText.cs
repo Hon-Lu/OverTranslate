@@ -55,6 +55,13 @@ internal sealed record TiltedText(
     /// </summary>
     private const double MarginInset = 0.12;
 
+    /// <summary>
+    /// Whether these are vertical columns rather than lines across: <see cref="Box"/> is then a
+    /// column group's level box, and <see cref="Degrees"/> its turn from vertical — see
+    /// <see cref="FromColumns"/>.
+    /// </summary>
+    public bool Column { get; init; }
+
     /// <summary>The box's four corners on the card, round its edge from its top left.</summary>
     public Point[] Outline => Corners(Box);
 
@@ -92,11 +99,16 @@ internal sealed record TiltedText(
     /// width before the card's margin — the left edge of <see cref="Box"/>.
     /// </summary>
     /// <remarks>
-    /// Cut for the reason the box's edge is a median: a quadrilateral that overshoots the text
+    /// <para>Cut for the reason the box's edge is a median: a quadrilateral that overshoots the text
     /// reaches off the card, and on the 30° card the repair then erased the card's own black border
-    /// against the white page and painted the page into the card.
+    /// against the white page and painted the page into the card.</para>
+    ///
+    /// <para>Columns are not cut. A column group's box is everything its columns cover, not a
+    /// median margin — an indented column starts lower than the rest — so there is no edge inside
+    /// the text to cut at, and cutting at the box's own top would remove nothing.</para>
     /// </remarks>
-    public IReadOnlyList<Point[]> EraseQuads => [.. LineQuads.Select(quad => FromMargin(Padded(quad), quad))];
+    public IReadOnlyList<Point[]> EraseQuads =>
+        [.. LineQuads.Select(quad => Column ? Padded(quad) : FromMargin(Padded(quad), quad))];
 
     /// <summary>The upright box round some points.</summary>
     public static Rect Enclosing(IEnumerable<Point> points)
@@ -208,6 +220,33 @@ internal sealed record TiltedText(
         if (right <= margin) return null;
 
         return frame with { Box = new Rect(margin, top, right - margin, bottom - top) };
+    }
+
+    /// <summary>
+    /// A group of tilted columns, turned <paramref name="degrees"/> from vertical (see
+    /// <see cref="TiltedColumns.Deviation"/>): the level box their quadrilaterals make, about the
+    /// middle of them.
+    /// </summary>
+    /// <remarks>
+    /// <para>Always a rotation. A tilted narration box or strip of paper is turned whole, its
+    /// letters with it; a hand-lettered column that leans by a few degrees reads the same either
+    /// way.</para>
+    ///
+    /// <para>The box is everything the columns cover, taken from each quadrilateral's corners in the
+    /// level frame rather than from its measurements, so a short column whose fit came out the other
+    /// way round still adds the room it really takes.</para>
+    /// </remarks>
+    /// <param name="quads">Each column's quadrilateral, first side along the column — see
+    /// <see cref="TiltedColumns.Quad"/>.</param>
+    public static TiltedText? FromColumns(double degrees, IReadOnlyList<Point[]> quads)
+    {
+        if (quads.Count == 0 || quads.Any(quad => quad.Length != 4)) return null;
+        var centre = new Point(
+            quads.Average(quad => quad.Average(point => point.X)),
+            quads.Average(quad => quad.Average(point => point.Y)));
+        var frame = new TiltedText(degrees, false, centre, Rect.Empty, quads) { Column = true };
+        var box = Enclosing(quads.SelectMany(quad => quad).Select(frame.ToLevel));
+        return box.IsEmpty || box.Width <= 0 || box.Height <= 0 ? null : frame with { Box = box };
     }
 
     /// <summary>Whether a point lies in a convex polygon, whichever way round its corners go.</summary>

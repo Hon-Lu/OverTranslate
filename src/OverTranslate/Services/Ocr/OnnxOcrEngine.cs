@@ -438,6 +438,21 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     }
 
     /// <summary>
+    /// The detector's quadrilaterals over a whole bitmap, and nothing read: detection alone, at the
+    /// bitmap's own size (never enlarged), without the chromatic repair of split rows.
+    /// </summary>
+    /// <remarks>
+    /// For <see cref="Manga.MangaColumnAngles"/>, which only wants to know which way the columns of a
+    /// few blocks run. A separate call so no existing detection changes: it goes through
+    /// <see cref="BeginDetection"/> exactly as OcrHarness does.
+    /// </remarks>
+    internal IReadOnlyList<SKPointI[]> DetectQuads(Bitmap bitmap, string sourceLanguage)
+    {
+        using var session = BeginDetection(bitmap, sourceLanguage, maxDetectSize: null, repairRows: false);
+        return session.Quads();
+    }
+
+    /// <summary>
     /// One detection, kept alive so its boxes can be recognised a subset at a time.
     /// </summary>
     internal sealed class DetectionSession : IDisposable
@@ -539,6 +554,23 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
         /// <summary>Every box the detector found, in the handed-in bitmap's own coordinates.</summary>
         internal IReadOnlyList<(System.Windows.Rect Bounds, float Score)> Boxes { get; }
+
+        /// <summary>
+        /// Every box the detector found as the quadrilateral it drew, corner after corner, in the
+        /// handed-in bitmap's own coordinates — what <see cref="Boxes"/> takes the upright bounds of.
+        /// </summary>
+        /// <remarks>For the manga path's column angles (<see cref="Manga.MangaColumnAngles"/>), which
+        /// detects and never recognises.</remarks>
+        internal IReadOnlyList<SKPointI[]> Quads() =>
+        [
+            .. _detectorSpaceBoxes.Select(box =>
+            {
+                var points = (SKPointI[])box.BoxPoints.Clone();
+                MapToOriginalMethod.Invoke(_detectorInput, new object[] { points });
+                _frame.MapToSource(points);
+                return points;
+            }),
+        ];
 
         /// <summary>
         /// Recognises the boxes at the given indices into <see cref="Boxes"/> and nothing else.
@@ -1211,9 +1243,16 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     /// </remarks>
     internal static List<OcrTextBlock> ApplyBlockFilters(
         TextBlock[] textBlocks, string normalizedLanguage, bool useCjkRenderMetrics, bool usesAutomaticLayout)
-    {
-        var converted = ConvertBlocks(textBlocks);
+        => ApplyBlockFilters(ConvertBlocks(textBlocks), normalizedLanguage, useCjkRenderMetrics, usesAutomaticLayout);
 
+    /// <summary>
+    /// The same chain from blocks already converted — for the lines a vertical capture reads across,
+    /// which reach here as blocks rather than as the library's output. See
+    /// <see cref="VerticalColumnGrouping"/>.
+    /// </summary>
+    internal static List<OcrTextBlock> ApplyBlockFilters(
+        List<OcrTextBlock> converted, string normalizedLanguage, bool useCjkRenderMetrics, bool usesAutomaticLayout)
+    {
         // Every language, because an accented letter is a misread whichever script surrounds
         // it, and it costs the whole line its translation rather than just one character.
         converted = FoldBlockDiacritics(converted);

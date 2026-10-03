@@ -23,13 +23,18 @@ internal static class MangaVerticalReader
     /// <see cref="MangaOcrEngine.ReadAsync"/>.
     /// </param>
     /// <param name="readColumns">The column pipeline, for the long blocks' crops.</param>
+    /// <param name="detectColumns">
+    /// The column detector alone, for which column blocks are tilted (see
+    /// <see cref="MangaColumnAngles"/>); null leaves every block upright.
+    /// </param>
     /// <returns>The blocks when the outcome is <see cref="MangaReadOutcome.Read"/>; null otherwise.</returns>
     internal static async Task<(MangaReadOutcome Outcome, List<OcrTextBlock>? Blocks)> ReadAsync(
         MangaOcrEngine manga,
         Bitmap bitmap,
         bool wait,
         Func<Bitmap, CancellationToken, Task<List<OcrTextBlock>>> readColumns,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<Bitmap, IReadOnlyList<SkiaSharp.SKPointI[]>>? detectColumns = null)
     {
         var (outcome, page) = await manga.ReadAsync(bitmap, wait, cancellationToken);
         if (outcome != MangaReadOutcome.Read)
@@ -45,7 +50,10 @@ internal static class MangaVerticalReader
             passedOn.AddRange(read.Select(found => Moved(found, crop.X, crop.Y)));
         }
 
-        return (outcome, MangaPageLayout.Assemble(page.Blocks, page.Bubbles, passedOn, page.Luma));
+        var blocks = MangaPageLayout.Assemble(page.Blocks, page.Bubbles, passedOn, page.Luma);
+        if (detectColumns is not null && page.Luma is { } luma)
+            blocks = MangaColumnAngles.Apply(blocks, page.Blocks, luma, detectColumns);
+        return (outcome, blocks);
     }
 
     private static OcrTextBlock Moved(OcrTextBlock block, double dx, double dy)
@@ -58,6 +66,7 @@ internal static class MangaVerticalReader
             Bounds = Shift(block.Bounds, dx, dy),
             SourceLineBounds = block.SourceLineBounds?.Select(r => Shift(r, dx, dy)).ToList(),
             LayoutBounds = Shift(block.LayoutBounds, dx, dy),
+            Tilt = block.Tilt?.Offset(dx, dy),
         };
     }
 }

@@ -38,8 +38,14 @@ internal static class VerticalColumnGrouping
     /// caption and the columns around it is a question nothing here can answer, and guessing at it
     /// would put a name plate in the middle of somebody's dialogue.</para>
     /// </remarks>
+    /// <param name="language">
+    /// The source language, normalised. With it the rows are set across as a horizontal capture sets
+    /// them — see <see cref="WithRowsSetAcross"/>; without it they are handed on line by line, as
+    /// they were before, which is what the tests that build columns by hand still ask for.
+    /// </param>
     internal static List<OcrTextBlock> Group(
-        List<OcrTextBlock> blocks, double frameWidth, bool realtime = false, Bitmap? bitmap = null)
+        List<OcrTextBlock> blocks, double frameWidth, bool realtime = false, Bitmap? bitmap = null,
+        string? language = null)
     {
         // The collapse test only; the short-and-unsure test waits for the groups — see the remarks
         // on WithoutUnconvincingGroups for why asking it of a column throws balloons away.
@@ -107,7 +113,71 @@ internal static class VerticalColumnGrouping
             [.. readings.Select(reading => CombineColumns([reading]))]);
         groups.AddRange(aside.Where(reading =>
             SaysMoreThanOneCharacter(reading) && !groups.Any(body => IsRubyOver(reading, body))));
-        return groups;
+        return language is null ? groups : WithRowsSetAcross(groups, language, realtime, pixels);
+    }
+
+    /// <summary>
+    /// The rows that came through, read the way a horizontal capture reads them: measured as lines,
+    /// joined into sentences, and given back their tilt.
+    /// </summary>
+    /// <remarks>
+    /// <para>Before this a row was handed on exactly as the column pipeline prepared it — one line,
+    /// one translation, a glyph size from its upright box's area. On a tilted card that is every
+    /// line translated alone and drawn level over its neighbours, at three times the size of the
+    /// type: what the horizontal pipeline stopped doing in #246–#248. A caption box of three level
+    /// lines was three translations of a third of a sentence.</para>
+    ///
+    /// <para>LAST, and on the rows that survived, and that order is what keeps the columns where
+    /// they were. Everything above reads the rows as they are prepared for columns — the ruby test
+    /// takes a row as the body of a reading by its RenderGlyphHeight and Bounds, the row filters
+    /// measure a row against the columns by its Bounds — and normalising a CJK line rewrites both.
+    /// Doing it first would move readings and rows on pages where nothing runs across at an angle.
+    /// So every decision about a column is made exactly as before, and only what is then drawn for
+    /// the rows changes.</para>
+    ///
+    /// <para>Each row starts again from what the detector and recogniser gave — its text, box,
+    /// score and quadrilateral — so that the chain it goes through is the horizontal one end to
+    /// end, filters and all, rather than one that inherits half of the column preparation.</para>
+    /// </remarks>
+    private static List<OcrTextBlock> WithRowsSetAcross(
+        List<OcrTextBlock> groups, string language, bool realtime, SkiaSharp.SKBitmap? pixels)
+    {
+        int first = groups.FindIndex(group => group.RunsAcross);
+        if (first < 0)
+            return groups;
+
+        var rows = groups
+            .Where(group => group.RunsAcross)
+            .Select(row => new OcrTextBlock(row.Text, row.Bounds, Confidence: row.Confidence)
+            {
+                LineGeometry = row.LineGeometry,
+            })
+            .OrderBy(row => row.Bounds.Y)
+            .ThenBy(row => row.Bounds.X)
+            .ToList();
+
+        var lines = OnnxOcrEngine.ApplyBlockFilters(
+            rows,
+            language,
+            OcrLanguageRouter.UsesCjkOnnx(language),
+            OcrLanguageRouter.UsesAutomaticLayout(language));
+
+        // The live path has no block mode to honour here — a vertical block does not ask for one —
+        // so its rows are grouped as a panel's are: the general rules, not the subtitle strip's.
+        var set = realtime
+            ? OcrService.GroupRealtime(lines, pixels?.Height ?? 0, Realtime.RealtimeBlockMode.Panel)
+            : OcrService.GroupScreenshot(pixels, lines, GroupingProfile.General);
+
+        var result = new List<OcrTextBlock>(groups.Count);
+        for (int i = 0; i < groups.Count; i++)
+        {
+            if (i == first)
+                result.AddRange(set.Select(group => group with { RunsAcross = true }));
+            if (!groups[i].RunsAcross)
+                result.Add(groups[i]);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -474,14 +544,47 @@ internal static class VerticalColumnGrouping
         }
     }
 
-    private static bool IsColumnCandidate(OcrTextBlock column)
+    private static bool IsColumnCandidate(OcrTextBlock column) => !RunsAcross(column);
+
+    /// <summary>
+    /// How much longer than thick a detector quadrilateral lying within 45° of level has to be for
+    /// its writing to be taken as running across, whatever its upright box says.
+    /// </summary>
+    /// <remarks>
+    /// <para>The upright box alone misreads a tilted line: turned 30°, a line of type has an upright
+    /// box hardly wider than tall, and turned further it has one TALLER than wide. On the tilted
+    /// cards of <c>region-comic-en-3</c> the narrowest long line was 310x200 — 1.55 against the bar
+    /// of 1.4 below — and "TOO." at 55x41 went under it, was taken for a column and was not on the
+    /// screen at all. The quadrilateral is not turned by the tilt: "TOO." measures 49x25 along
+    /// itself.</para>
+    ///
+    /// <para>MEASURED over the 171 vertical pages, every box the two tests disagree on. Asked
+    /// INSTEAD of the upright box, two to one demotes 20 boxes that are rows today — page numbers
+    /// (184, 105), 読む, 剣聖, 心の壁, 1.7 to 1.9 along themselves — to columns, and still misses
+    /// "TOO." at 1.96. So it is asked AS WELL, never instead: a box either test calls a row is one.
+    /// At 1.6 that adds five boxes to the rows — "TOO.", びっいり and どど lettered at 36–38° on
+    /// mokuro-001b, and two misreads, mn and 00 — and at 1.4 it adds twelve, the rest of them
+    /// two-character readings and numbers that are squarer than any line.</para>
+    /// </remarks>
+    internal const double AcrossAlongItself = 1.6;
+
+    /// <summary>
+    /// Whether a block is writing that runs across the page — a name plate, a caption, a tilted
+    /// line — rather than a column to be merged with the others.
+    /// </summary>
+    internal static bool RunsAcross(OcrTextBlock block)
     {
+        int characters = block.Text.Count(character => !char.IsWhiteSpace(character));
+        if (characters <= 1)
+            return false;
+
         // Issue #132's Japanese corpus had six multi-character detections wider than 1.4: all six
         // were horizontal UI or signs, while none of the 188 vertical detections crossed it.
         const double maxWidthToHeightRatio = 1.4;
-        int characters = column.Text.Count(character => !char.IsWhiteSpace(character));
-        return characters <= 1 ||
-               column.LayoutBounds.Width <= column.LayoutBounds.Height * maxWidthToHeightRatio;
+        return block.LayoutBounds.Width > block.LayoutBounds.Height * maxWidthToHeightRatio ||
+               block.LineGeometry is { } line &&
+               Math.Abs(line.AngleDegrees) <= OcrLineGeometry.TiltedToDegrees &&
+               line.Length >= line.Thickness * AcrossAlongItself;
     }
 
     /// <summary>
@@ -606,7 +709,12 @@ internal static class VerticalColumnGrouping
             // title down the spine of a book is still Latin.
             layoutScript,
             ordered.Select(column => column.LayoutBounds).Aggregate(Rect.Union),
-            CombineGlyphSize(layoutScript, ordered));
+            CombineGlyphSize(layoutScript, ordered))
+        {
+            // Only how the group is drawn and erased: what it says, where it is and how big its
+            // letters are stay as they would be for a straight group — see TiltedColumns.
+            Tilt = TiltedColumns.For(ordered),
+        };
     }
 
     /// <summary>

@@ -10,8 +10,11 @@ internal static class TextInkMetrics
     internal static List<OcrTextBlock> Annotate(Bitmap bitmap, IReadOnlyList<OcrTextBlock> blocks)
     {
         using var pixels = OnnxOcrEngine.ConvertToSkBitmap(bitmap);
-        return blocks.Select(b => b with { LayoutInkHeight = Measure(pixels, b.LayoutBounds) }).ToList();
+        return Annotate(pixels, blocks);
     }
+
+    internal static List<OcrTextBlock> Annotate(SKBitmap pixels, IReadOnlyList<OcrTextBlock> blocks) =>
+        blocks.Select(b => b with { LayoutInkHeight = Measure(pixels, b.LayoutBounds) }).ToList();
 
     internal static double? Measure(SKBitmap pixels, Rect box)
     {

@@ -170,6 +170,10 @@ internal static class TurnedFrameDetection
     {
         Bounds = ToUpright(block.Bounds, sourceWidth),
         LayoutBounds = ToUpright(block.LayoutBounds, sourceWidth),
+        // The detector measured it lying on its side. Nothing that reads a column's angle existed
+        // when this was written, so it was left behind; the lines a vertical page writes across are
+        // now told from columns by it — see VerticalColumnGrouping.RunsAcross.
+        LineGeometry = block.LineGeometry?.TurnedBack(),
         // Refilled by the vertical grouping from the mapped bounds; carrying the turned frame's
         // rectangles past this point would put one overlay box in a coordinate system of its own.
         SourceLineBounds = null,

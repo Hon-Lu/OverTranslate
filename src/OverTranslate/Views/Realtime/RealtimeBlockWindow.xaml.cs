@@ -800,6 +800,9 @@ public partial class RealtimeBlockWindow : Window
         System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
         Lazy<CaptureBubbleBackdrop?> backdrop)
     {
+        if (line.Tilt is { Column: true } tilt)
+            return BuildTiltedVerticalLine(line, tilt, canvasWidth, frame, repairedFrame, backdrop);
+
         double left = line.Bounds.X / _dpiX;
         double top = line.Bounds.Y / _dpiY;
         double sourceWidth = line.Bounds.Width / _dpiX;
@@ -918,6 +921,176 @@ public partial class RealtimeBlockWindow : Window
     }
 
     /// <summary>
+    /// A column group off a tilted card or strip: set in the group's level box the way
+    /// <see cref="BuildVerticalLine"/> sets an upright one, and turned back onto the page with its
+    /// background — see <see cref="Services.Ocr.TiltedText"/> and <see cref="Services.Ocr.TiltedColumns"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The same three looks as an upright column, each in the group's shape: the band turned
+    /// with the text; the plate cut to the turned band; and the repaired patch clipped to the band
+    /// grown by the guard and to the quadrilaterals the repair erased, as a tilted line's is (see
+    /// <see cref="BuildTiltedLine"/>).</para>
+    ///
+    /// <para>Sized on the level box, which is the room the columns really take. The upright box
+    /// round a turned group is wider by its length times the sine of the turn — 146px against about
+    /// 110 for the two columns of a strip at 12° in vertical-image-ja4 — and a grid fitted to that
+    /// has room for a column the source does not.</para>
+    ///
+    /// <para>Nothing is held inside the window: the box is already on the source, and clamping a
+    /// turned shape by its upright corners would pull it off the writing it covers.</para>
+    /// </remarks>
+    private LineVisual? BuildTiltedVerticalLine(
+        TranslatedBlock line, Services.Ocr.TiltedText tilt, double canvasWidth,
+        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        Lazy<CaptureBubbleBackdrop?> backdrop)
+    {
+        Point ToCanvas(Point pixel) => new(pixel.X / _dpiX, pixel.Y / _dpiY);
+
+        var level = tilt.Box;
+        double left = level.X / _dpiX, top = level.Y / _dpiY;
+        double sourceWidth = level.Width / _dpiX, sourceHeight = level.Height / _dpiY;
+        if (sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+        string glyphs = new([.. line.TranslatedText.Where(character => !char.IsWhiteSpace(character))]);
+        if (glyphs.Length == 0) return null;
+
+        double cellPreferred = Math.Max(MinFontSize, GetGlyphHeight(line, sourceWidth));
+        double columnLength = Math.Max(cellPreferred, sourceHeight);
+        double columnRoom = Math.Max(cellPreferred, sourceWidth);
+        double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
+        var (cellSize, gridWidth, gridHeight) = VerticalTextGrid.FitWithin(
+            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs.Length);
+
+        // Top of the source, centred across it — VerticalTextGrid.Cells' rule, in the level frame.
+        double gridLeft = left + (sourceWidth - gridWidth) / 2;
+        double gridTop = top;
+        double scrimLeft = Math.Min(gridLeft, left) - ScrimPaddingX;
+        double scrimTop = Math.Min(gridTop, top) - ScrimPaddingY;
+        double scrimWidth = Math.Max(gridLeft + gridWidth, left + sourceWidth) + ScrimPaddingX - scrimLeft;
+        double scrimHeight = Math.Max(gridTop + gridHeight, top + sourceHeight) + ScrimPaddingY - scrimTop;
+        // The band in capture pixels, in the level frame.
+        var band = new Rect(scrimLeft * _dpiX, scrimTop * _dpiY, scrimWidth * _dpiX, scrimHeight * _dpiY);
+        var turnText = TiltedPlacement.For(tilt, ToCanvas, gridLeft, gridTop);
+        var (foreground, edge) = SampleForeground(frame, line);
+
+        // Round the band, as a tilted line's patch is, rather than round the upright element it is
+        // painted on. Inset by half the stroke, as a Border's lies inside its box.
+        void Outline(Border surface, double surfaceLeft, double surfaceTop)
+        {
+            if (!_border) return;
+            double inset = RealtimeSubtitleColors.BorderThickness / 2;
+            surface.Child = new System.Windows.Shapes.Path
+            {
+                Data = TiltedPlacement.Shape(
+                    [TiltedPlacement.Outline(tilt, band, -inset * _dpiX, -inset * _dpiY)],
+                    ToCanvas, surfaceLeft, surfaceTop),
+                Stroke = BorderBrushFor(line),
+                StrokeThickness = RealtimeSubtitleColors.BorderThickness,
+                StrokeLineJoin = PenLineJoin.Miter,
+            };
+        }
+
+        if (_naturalBackground && frame is not null && backdrop.Value is { } plates)
+        {
+            // The plate an upright column gets (see Plated), cut to the turned band and fading out
+            // beyond it, as the capture overlay's tilted bubble is.
+            var outline = tilt.Corners(band);
+            double glyphPixels = cellPreferred * _dpiX;
+            double feather = CaptureBubbleBackdrop.Feather(glyphPixels);
+            var area = Services.Ocr.TiltedText.Enclosing(outline);
+            area.Inflate(feather, feather);
+            var wash = SourceTextColorSampler.Sample(frame, tilt.SampleArea)?.Background ?? _scrimBrush.Color;
+            var text = foreground.Color;
+            if (plates.Plate(area, wash, text, glyphPixels, band.Height, [outline]) is { } plate)
+            {
+                double plateLeft = area.X / _dpiX, plateTop = area.Y / _dpiY;
+                var surface = new Border
+                {
+                    Background = plate.Brush,
+                    Width = area.Width / _dpiX,
+                    Height = area.Height / _dpiY,
+                    ClipToBounds = true,
+                };
+                Canvas.SetLeft(surface, plateLeft);
+                Canvas.SetTop(surface, plateTop);
+                Outline(surface, plateLeft, plateTop);
+                return VerticalVisual(line, surface,
+                    ToPhysicalPatchBounds(plateLeft, plateTop, area.Width / _dpiX, area.Height / _dpiY),
+                    Freeze(new SolidColorBrush(plate.Text)), null,
+                    glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight,
+                    next => next.Plate(area, wash, text, glyphPixels, band.Height, [outline])?.Brush, turnText);
+            }
+
+            // Read from inside the card: the upright box round the band is partly the page.
+            var sample = tilt.SampleArea;
+            if (plates.Card(sample, text) is { } card)
+            {
+                var surface = new Border
+                {
+                    Background = Freeze(new SolidColorBrush(card.Background)),
+                    Width = scrimWidth,
+                    Height = scrimHeight,
+                    RenderTransform = TiltedPlacement.For(tilt, ToCanvas, scrimLeft, scrimTop),
+                };
+                Canvas.SetLeft(surface, scrimLeft);
+                Canvas.SetTop(surface, scrimTop);
+                ApplyBorder(surface, line);
+                return VerticalVisual(line, surface,
+                    ToPhysicalPatchBounds(scrimLeft, scrimTop, scrimWidth, scrimHeight),
+                    Freeze(new SolidColorBrush(card.Text)), null,
+                    glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight,
+                    next => next.Card(sample, text) is { } again ? Freeze(new SolidColorBrush(again.Background)) : null,
+                    turnText);
+            }
+        }
+
+        Border background;
+        System.Drawing.Rectangle patchBounds;
+        if (_naturalBackground)
+        {
+            // The guard an upright column has — generous across the column, where the dakuten sit —
+            // round the band, and every quadrilateral the repair erased: a patch is a copy of the
+            // repair, and anything erased outside it would show the source again.
+            double guardX = Math.Clamp(sourceWidth * 0.40, MinNaturalGuardY, 26) * _dpiX;
+            double guardY = Math.Clamp(sourceWidth * 0.20, MinNaturalGuardX, 20) * _dpiY;
+            Point[][] shape = [TiltedPlacement.Outline(tilt, band, guardX, guardY), .. tilt.EraseQuads];
+            var reach = Services.Ocr.TiltedText.Enclosing(shape.SelectMany(polygon => polygon));
+            var crop = ToPhysicalPatchBounds(reach.X / _dpiX, reach.Y / _dpiY, reach.Width / _dpiX, reach.Height / _dpiY);
+            double patchLeft = crop.X / _dpiX, patchTop = crop.Y / _dpiY;
+            patchBounds = crop;
+            background = new Border
+            {
+                Width = crop.Width / _dpiX,
+                Height = crop.Height / _dpiY,
+                Background = (System.Windows.Media.Brush?)BuildNaturalBrush(repairedFrame, crop) ?? _scrimBrush,
+                Clip = TiltedPlacement.Shape(shape, ToCanvas, patchLeft, patchTop),
+            };
+            Canvas.SetLeft(background, patchLeft);
+            Canvas.SetTop(background, patchTop);
+            Outline(background, patchLeft, patchTop);
+        }
+        else
+        {
+            background = new Border
+            {
+                Width = scrimWidth,
+                Height = scrimHeight,
+                Background = _scrimBrush,
+                CornerRadius = new CornerRadius(BandCornerRadius),
+                RenderTransform = TiltedPlacement.For(tilt, ToCanvas, scrimLeft, scrimTop),
+            };
+            Canvas.SetLeft(background, scrimLeft);
+            Canvas.SetTop(background, scrimTop);
+            patchBounds = ToPhysicalPatchBounds(scrimLeft, scrimTop, scrimWidth, scrimHeight);
+            // Turned with the band, so the band's own outline is already the group's shape.
+            ApplyBorder(background, line);
+        }
+
+        return VerticalVisual(line, background, patchBounds, foreground, edge,
+            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, null, turnText);
+    }
+
+    /// <summary>
     /// A column's background painted the way the capture overlay paints a bubble: the repair,
     /// blurred, washed toward the sampled colour and faded out at the edges — or a flat card where
     /// the surface is flat enough that a plate would only be a blurred card.
@@ -993,7 +1166,7 @@ public partial class RealtimeBlockWindow : Window
         TranslatedBlock line, Border background, System.Drawing.Rectangle patchBounds,
         SolidColorBrush foreground, SolidColorBrush? edge, string glyphs, double cellSize,
         double gridLeft, double gridTop, double gridWidth, double gridHeight,
-        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? replate)
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? replate, Transform? turn = null)
     {
         // One element per glyph, positioned by hand. A TextBlock cannot set type downwards, and the
         // alternatives — a rotated horizontal line, or a font feature — either turn every character
@@ -1041,6 +1214,8 @@ public partial class RealtimeBlockWindow : Window
             ClipToBounds = true,
             Child = cells,
         };
+        // A tilted group's grid is laid out level and turned with its background.
+        if (turn is not null) textLayer.RenderTransform = turn;
 
         Canvas.SetLeft(textLayer, gridLeft);
         Canvas.SetTop(textLayer, gridTop);

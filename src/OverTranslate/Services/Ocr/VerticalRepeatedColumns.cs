@@ -44,6 +44,7 @@ internal static class VerticalRepeatedColumns
         for (var j = 0; j < columns.Count; j++)
         {
             if (i == j || repeated[i] || repeated[j]) continue;
+            if (Tilted(columns[i]) || Tilted(columns[j])) continue;
             if (!Within(columns[i].LayoutBounds, columns[j].LayoutBounds)) continue;
             if (!SameWriting.SaysTheSame(columns[i].Text, columns[j].Text)) continue;
 
@@ -56,6 +57,20 @@ internal static class VerticalRepeatedColumns
             ? [.. columns.Where((_, i) => !repeated[i])]
             : columns;
     }
+
+    /// <summary>
+    /// A line lying at an angle, whose upright box says where the tilt reaches rather than where its
+    /// writing is.
+    /// </summary>
+    /// <remarks>
+    /// Its upright box takes in the lines beside it, so "inside" means nothing against it, and its
+    /// text says nothing either once it is a long English line: on region-comic-en-3 the word "TOO.",
+    /// alone on its line under a card turned 25°, lies wholly inside the upright box of the line
+    /// above, whose letters hold T and O twice over — and was thrown away as a second reading of it.
+    /// A column is never tilted in this sense (its angle is near 90°), so no pair of columns is
+    /// asked any differently.
+    /// </remarks>
+    private static bool Tilted(OcrTextBlock block) => block.LineGeometry is { IsTilted: true };
 
     private static bool Within(Rect inner, Rect outer)
     {

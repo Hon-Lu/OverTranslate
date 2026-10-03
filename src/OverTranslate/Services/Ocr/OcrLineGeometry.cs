@@ -73,11 +73,20 @@ internal readonly record struct OcrLineGeometry(double Length, double Thickness,
 
         var (from, to) = first >= second ? (points[0], points[1]) : (points[1], points[2]);
         double angle = Math.Atan2(to.Y - from.Y, to.X - from.X) * 180 / Math.PI;
-        if (angle > 90) angle -= 180;
-        else if (angle <= -90) angle += 180;
 
-        return new OcrLineGeometry(Math.Max(first, second), Math.Min(first, second), angle);
+        return new OcrLineGeometry(Math.Max(first, second), Math.Min(first, second), Folded(angle));
     }
+
+    /// <summary>
+    /// The same line put back on the upright frame from the one <see cref="TurnedFrameDetection.Turn"/>
+    /// makes — a quarter turn counterclockwise, so a direction (x, y) there is (-y, x) here, a
+    /// quarter turn on the angle.
+    /// </summary>
+    public OcrLineGeometry TurnedBack() => this with { AngleDegrees = Folded(AngleDegrees + 90) };
+
+    // A line has no head and tail, so its angle lives in (-90, 90].
+    private static double Folded(double angle) =>
+        angle > 90 ? angle - 180 : angle <= -90 ? angle + 180 : angle;
 
     private static double Distance(SKPointI a, SKPointI b) =>
         Math.Sqrt((double)(a.X - b.X) * (a.X - b.X) + (double)(a.Y - b.Y) * (a.Y - b.Y));
