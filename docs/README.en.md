@@ -68,11 +68,11 @@ When you need a translation, press the hotkey (default Ctrl + Alt + A) and selec
 
 | Source text | Translation |
 |------|----------|
+| ![截圖翻譯0-前.png](images/截圖翻譯0-前.png) | ![截圖翻譯0-後.png](images/截圖翻譯0-後.png) |
 | ![截圖翻譯1-前.png](images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](images/截圖翻譯1-後.png) |
 | ![截圖翻譯-前.png](images/截圖翻譯-前.png) | ![截圖翻譯-後.png](images/截圖翻譯-後.png) |
-| ![截圖翻譯2-前.png](images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](images/截圖翻譯2-後.png) |
 
-> The comic in the comparison images comes from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html).
+> Image sources: the first comic is AI-generated; the second comic is from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html); the third is from [Godot Engine Blog](https://godotengine.org/blog/).
 
 ### Toolbar - Other Features
 
@@ -106,12 +106,12 @@ For video subtitles, game story dialogue and comic lettering; use this mode when
 
 | Selection | Translation result |
 |-----------|--------------------|
-| ![Real-time translation - comic source](images/即時翻譯-漫畫翻譯前.png) | ![Real-time translation - comic result](images/即時翻譯-漫畫翻譯後.png) |
+| ![Real-time translation - comic selection](images/即時翻譯-漫畫框.png) | ![Real-time translation - comic result](images/即時翻譯-漫畫翻譯.png) |
+| ![Real-time translation1 - comic selection](images/即時翻譯1-漫畫框.png) | ![Real-time translation1 - comic result](images/即時翻譯1-漫畫翻譯.png) |
 | ![Real-time translation - video selection](images/即時翻譯-影片框.png) | ![Real-time translation - video result](images/即時翻譯-影片翻譯.png) |
-| ![Real-time translation1 - dialogue game selection](images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> The four-panel comic in the comparison images is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1).
+> Image sources: the first comic is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third video is from [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw); the fourth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
 
 #### Game / UI
 For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.

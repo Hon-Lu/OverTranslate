@@ -68,11 +68,11 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 
 | 원문 | 번역 결과 |
 |------|----------|
+| ![캡처 번역0-전](images/截圖翻譯0-前.png) | ![캡처 번역0-후](images/截圖翻譯0-後.png) |
 | ![캡처 번역1-전](images/截圖翻譯1-前.png) | ![캡처 번역1-후](images/截圖翻譯1-後.png) |
 | ![캡처 번역-전](images/截圖翻譯-前.png) | ![캡처 번역-후](images/截圖翻譯-後.png) |
-| ![캡처 번역2-전](images/截圖翻譯2-前.png) | ![캡처 번역2-후](images/截圖翻譯2-後.png) |
 
-> 비교 이미지의 만화 내용은 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)에서 발췌했습니다.
+> 이미지 출처: 첫 번째 만화는 AI 생성 이미지, 두 번째 만화는 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html), 세 번째는 [Godot Engine Blog](https://godotengine.org/blog/)에서 발췌했습니다.
 
 ### 툴바 - 그 외 기능
 
@@ -107,12 +107,12 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 
 | 영역 선택 | 번역 결과 |
 |------|----------|
-| ![실시간 번역-만화 원문](images/即時翻譯-漫畫翻譯前.png) | ![실시간 번역-만화 번역문](images/即時翻譯-漫畫翻譯後.png) |
+| ![실시간 번역-만화 영역](images/即時翻譯-漫畫框.png) | ![실시간 번역-만화 번역문](images/即時翻譯-漫畫翻譯.png) |
+| ![실시간 번역1-만화 영역](images/即時翻譯1-漫畫框.png) | ![실시간 번역1-만화 번역문](images/即時翻譯1-漫畫翻譯.png) |
 | ![실시간 번역-영상 영역](images/即時翻譯-影片框.png) | ![실시간 번역-영상 번역문](images/即時翻譯-影片翻譯.png) |
-| ![실시간 번역1-대사 영역](images/即時翻譯1-對話遊戲框.png) | ![실시간 번역1-대사 번역문](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![실시간 번역2-대사 영역](images/即時翻譯2-對話遊戲框.png) | ![실시간 번역2-대사 번역문](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 비교 이미지의 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1) 님의 작품입니다.
+> 이미지 출처: 첫 번째 만화는 AI 생성 이미지, 두 번째 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) 님의 작품, 세 번째 영상은 [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw), 네 번째 게임 화면은 [《마법소녀의 마녀재판》](https://store.steampowered.com/app/3101040)입니다.
 
 #### 게임 / UI
 게임 화면, 채팅창, 메뉴와 인터페이스 글자 등에 적합합니다. 자막이나 스토리 대사, 만화 글자가 아니라면 이 모드를 사용하세요.

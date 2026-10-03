@@ -68,11 +68,11 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 | 原文 | 翻译结果 |
 |------|----------|
+| ![截图翻译0-前.png](images/截圖翻譯0-前.png) | ![截图翻译0-后.png](images/截圖翻譯0-後.png) |
 | ![截图翻译1-前.png](images/截圖翻譯1-前.png) | ![截图翻译1-后.png](images/截圖翻譯1-後.png) |
 | ![截图翻译-前.png](images/截圖翻譯-前.png) | ![截图翻译-后.png](images/截圖翻譯-後.png) |
-| ![截图翻译2-前.png](images/截圖翻譯2-前.png) | ![截图翻译2-后.png](images/截圖翻譯2-後.png) |
 
-> 比对图中的漫画内容取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)。
+> 图片来源：第一组漫画为 AI 生成图；第二组漫画取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三组取自 [Godot Engine Blog](https://godotengine.org/blog/)。
 
 ### 工具栏 - 其他功能
 
@@ -107,12 +107,12 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 | 框选 | 翻译结果 |
 |------|----------|
-| ![实时翻译-漫画翻译前.png](images/即時翻譯-漫畫翻譯前.png) | ![实时翻译-漫画翻译后.png](images/即時翻譯-漫畫翻譯後.png) |
+| ![实时翻译-漫画框.png](images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](images/即時翻譯-漫畫翻譯.png) |
+| ![实时翻译1-漫画框.png](images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](images/即時翻譯1-漫畫翻譯.png) |
 | ![实时翻译-视频框.png](images/即時翻譯-影片框.png) | ![实时翻译-视频翻译.png](images/即時翻譯-影片翻譯.png) |
-| ![实时翻译1-对话游戏框.png](images/即時翻譯1-對話遊戲框.png) | ![实时翻译1-对话游戏翻译.png](images/即時翻譯1-對話遊戲翻譯.png) |
 | ![实时翻译2-对话游戏框.png](images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 对比图中的四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1)。
+> 图片来源：第一组漫画为 AI 生成图；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组视频来源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
 
 #### 游戏 / 界面：
 适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。
