@@ -709,7 +709,12 @@ internal static class VerticalColumnGrouping
             // title down the spine of a book is still Latin.
             layoutScript,
             ordered.Select(column => column.LayoutBounds).Aggregate(Rect.Union),
-            CombineGlyphSize(layoutScript, ordered));
+            CombineGlyphSize(layoutScript, ordered))
+        {
+            // Only how the group is drawn and erased: what it says, where it is and how big its
+            // letters are stay as they would be for a straight group — see TiltedColumns.
+            Tilt = TiltedColumns.For(ordered),
+        };
     }
 
     /// <summary>

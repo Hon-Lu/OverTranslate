@@ -58,6 +58,7 @@ internal static class MangaVerticalReader
             Bounds = Shift(block.Bounds, dx, dy),
             SourceLineBounds = block.SourceLineBounds?.Select(r => Shift(r, dx, dy)).ToList(),
             LayoutBounds = Shift(block.LayoutBounds, dx, dy),
+            Tilt = block.Tilt?.Offset(dx, dy),
         };
     }
 }

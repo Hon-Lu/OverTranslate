@@ -829,6 +829,12 @@ public partial class OverlayWindow : Window
             if (block.RunsAcross)
                 continue;
 
+            if (block.Tilt is { Column: true } tilt)
+            {
+                BuildTiltedColumn(block, tilt, translatedFont, selScreenX, selScreenY);
+                continue;
+            }
+
             double canvasX = (selScreenX + block.Bounds.X - winPhysLeft) / _dpiX;
             double canvasY = (selScreenY + block.Bounds.Y - winPhysTop) / _dpiY;
             double wpfW = block.Bounds.Width / _dpiX;
@@ -915,6 +921,136 @@ public partial class OverlayWindow : Window
                 BubbleTextCanvas.Children.Add(cell);
             }
         }
+    }
+
+    /// <summary>
+    /// A column group off a tilted card or strip: set in the group's level box as an upright group
+    /// is in its own, on the same plate or card, and turned back onto the page — see
+    /// <see cref="Services.Ocr.TiltedText"/> and <see cref="Services.Ocr.TiltedColumns"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Sized on the level box rather than the upright one, which is wider by the group's
+    /// length times the sine of its turn.</para>
+    ///
+    /// <para>The plate is cut over the upright box round the bubble and fades out beyond the
+    /// bubble's outline, as a tilted line's does (<see cref="BuildTiltedBubble"/>). Not held inside
+    /// the selection: the box is already on the source, and clamping a turned shape by its upright
+    /// corners would pull it off the writing it covers.</para>
+    /// </remarks>
+    private void BuildTiltedColumn(
+        TranslatedBlock block, Services.Ocr.TiltedText tilt, System.Windows.Media.FontFamily translatedFont,
+        double selScreenX, double selScreenY)
+    {
+        System.Windows.Point ToCanvas(System.Windows.Point pixel) => new(
+            (selScreenX + pixel.X - _physBounds.Left) / _dpiX,
+            (selScreenY + pixel.Y - _physBounds.Top) / _dpiY);
+
+        var level = tilt.Box;
+        double wpfW = level.Width / _dpiX;
+        double wpfH = level.Height / _dpiY;
+        if (wpfW <= 0 || wpfH <= 0) return;
+
+        string text = new(block.TranslatedText.Where(c => !char.IsWhiteSpace(c)).ToArray());
+        if (text.Length == 0) return;
+
+        // The upright group's arithmetic, on the level box — see BuildVerticalOverlay.
+        double borderW = Math.Max(wpfW + BubbleExpand * 2, BubbleMinWidth);
+        double widthPadding = (borderW - (wpfW + BubbleExpand * 2)) / 2;
+        double sourceGlyphSize = GetSourceFontReferenceHeight(block, wpfH);
+        var grid = FitVerticalGrid(wpfW, wpfH, sourceGlyphSize, text.Length);
+        double borderH = grid.Height + BubbleExpand * 2;
+
+        // The bubble in the level frame, in captured pixels.
+        var bubble = new Rect(
+            level.X - (BubbleExpand + widthPadding) * _dpiX,
+            level.Y - BubbleExpand * _dpiY,
+            borderW * _dpiX,
+            borderH * _dpiY);
+        var corner = ToCanvas(bubble.TopLeft);
+        var turn = TiltedPlacement.For(tilt, ToCanvas, corner.X, corner.Y);
+        var outline = tilt.Corners(bubble);
+
+        var background = block.BackgroundColor.A == 0 ? Colors.White : block.BackgroundColor;
+        var textColor = block.TextColor.A != 0
+            ? block.TextColor
+            : (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255.0 > 0.5
+                ? Colors.Black
+                : Colors.White;
+
+        Border? surface = null;
+        if (_backdrop is { } backdrop)
+        {
+            double glyphPixels = sourceGlyphSize * _dpiY;
+            double feather = CaptureBubbleBackdrop.Feather(glyphPixels);
+            var area = Services.Ocr.TiltedText.Enclosing(outline);
+            area.Inflate(feather, feather);
+
+            // Vertical text fills its grid, so the written part is the whole bubble.
+            if (backdrop.Plate(area, background, textColor, glyphPixels, bubble.Height, [outline]) is { } plate)
+            {
+                var at = ToCanvas(area.TopLeft);
+                surface = new Border
+                {
+                    Background = plate.Brush,
+                    Width = area.Width / _dpiX,
+                    Height = area.Height / _dpiY,
+                    ClipToBounds = true,
+                };
+                Canvas.SetLeft(surface, at.X);
+                Canvas.SetTop(surface, at.Y);
+                textColor = plate.Text;
+            }
+            // Read from inside the card: the upright box round the bubble is partly the page.
+            else if (backdrop.Card(tilt.SampleArea, textColor) is { } card)
+            {
+                background = card.Background;
+                textColor = card.Text;
+            }
+        }
+
+        if (surface is null)
+        {
+            surface = new Border
+            {
+                Background = new SolidColorBrush(background),
+                Width = borderW,
+                Height = borderH,
+                RenderTransform = turn,
+            };
+            Canvas.SetLeft(surface, corner.X);
+            Canvas.SetTop(surface, corner.Y);
+        }
+        BubbleBackgroundCanvas.Children.Add(surface);
+
+        // The grid as an upright group's sits in its bubble, laid out level and turned with it.
+        var cells = new Canvas { Width = borderW, Height = borderH, RenderTransform = turn };
+        Canvas.SetLeft(cells, corner.X);
+        Canvas.SetTop(cells, corner.Y);
+        var foreground = new SolidColorBrush(textColor);
+        var gridBounds = new Rect(BubbleExpand + widthPadding, BubbleExpand, wpfW, grid.Height);
+        double fontSize = grid.CellSize * 0.92;
+        foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, grid.CellSize))
+        {
+            var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _currentTargetLanguage);
+            var cell = new TextBlock
+            {
+                Text = drawn.Glyph.ToString(),
+                FontSize = fontSize,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = foreground,
+                TextAlignment = TextAlignment.Center,
+                FontFamily = drawn.Font ?? translatedFont,
+            };
+            if (drawn.Rotates)
+            {
+                cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+                cell.RenderTransform = new RotateTransform(90);
+            }
+
+            PositionVerticalGlyph(cell, cellBounds);
+            cells.Children.Add(cell);
+        }
+        BubbleTextCanvas.Children.Add(cells);
     }
 
     // The vertical setting rules live in Layout/VerticalTextGrid now, because the live overlay lays
