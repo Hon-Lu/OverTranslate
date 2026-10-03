@@ -636,12 +636,11 @@ p:last-child { margin-bottom: 0; }
 
 /* Aspect boxes keep the two frames locked to the same geometry. */
 .shot--hero .compare { aspect-ratio: 2060 / 1160; }
-.compare--comic { aspect-ratio: 1402 / 1287; }
-.compare--wide { aspect-ratio: 1730 / 891; }
-.compare--tall { aspect-ratio: 956 / 1363; }
-#panel-prose .grid2 > :nth-child(2) .compare,
-#panel-prose .grid2 > :nth-child(3) .compare,
-#panel-prose .grid2 > :nth-child(4) .compare,
+.compare--capture0 { aspect-ratio: 1421 / 1014; }
+.compare--comic { aspect-ratio: 1406 / 1347; }
+.compare--comicai { aspect-ratio: 786 / 1291; }
+.compare--tall { aspect-ratio: 1048 / 1343; }
+.compare--video,
 #panel-ui .compare { aspect-ratio: 16 / 9; }
 #panel-ui .compare--chat { aspect-ratio: 596 / 998; }
 
@@ -918,10 +917,12 @@ p:last-child { margin-bottom: 0; }
 .tabs__panel[hidden] { display: none; }
 
 .grid2 { display: grid; gap: clamp(18px, 3vw, 28px); }
+.prose__comics + .prose__screens { margin-top: clamp(18px, 3vw, 28px); }
 @media (min-width: 820px) {
   .grid2 { grid-template-columns: 1fr 1fr; align-items: start; }
-  #panel-prose .grid2 > :nth-child(1) { grid-row: span 2; }
-  #panel-prose .grid2 > :nth-child(4) { grid-column: 1 / -1; }
+  /* 並排的兩張比例不同：欄寬依各自的寬高比分配，兩張才會一樣高 */
+  .capture__compares { grid-template-columns: minmax(0, 1.401fr) minmax(0, 1.044fr); }
+  .prose__comics { grid-template-columns: minmax(0, 0.609fr) minmax(0, 0.78fr); }
   /* 聊天室比對框佔左欄兩列，右欄疊聊天室比對圖與 Crab Champions */
   #panel-ui .grid2 { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); }
   #panel-ui .grid2 > :nth-child(1) { grid-row: span 2; }

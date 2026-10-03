@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="site/styles.css?v=23e5c0037c" />
+<link rel="stylesheet" href="site/styles.css?v=89328437b9" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -218,37 +218,42 @@
       </div>
 
       <div class="split__media reveal">
-        <figure class="shot">
-          <div class="compare compare--comic" data-compare>
-            <img class="compare__img" src="images/截圖翻譯1-後.png" width="1416" height="1224" alt="漫畫翻譯後的畫面" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
-            <div class="compare__clip">
-              <img class="compare__img" src="images/截圖翻譯1-前.png" width="1416" height="1225" alt="翻譯前的日文漫畫" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
-            </div>
-            <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
-            <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
-            <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
-              <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
-            </div>
-          </div>
-          <figcaption class="src" data-i18n-html="capture.cap.comic">漫畫來源：<a href="https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html" target="_blank" rel="noopener">こうしす！＠IT支線</a></figcaption>
+        <figure class="shot shot--plain">
+          <img src="images/翻譯比對圖.png" width="1407" height="966" alt="英文搜尋結果翻譯成繁體中文的前後對照" data-i18n-attr="alt|shot.capture.overview" loading="lazy" decoding="async" data-zoom />
         </figure>
       </div>
     </div>
 
-    <figure class="shot subsection reveal">
-      <div class="compare compare--wide" data-compare>
-        <img class="compare__img" src="images/截圖翻譯2-後.png" width="1722" height="886" alt="韓文網頁翻譯後的畫面" data-i18n-attr="alt|shot.capture.after" loading="lazy" decoding="async" />
-        <div class="compare__clip">
-          <img class="compare__img" src="images/截圖翻譯2-前.png" width="1730" height="891" alt="翻譯前的韓文網頁畫面" data-i18n-attr="alt|shot.capture.before" loading="lazy" decoding="async" />
-        </div>
+    <div class="grid2 capture__compares subsection reveal">
+      <figure class="shot">
+        <div class="compare compare--capture0" data-compare>
+          <img class="compare__img" src="images/截圖翻譯0-後.png" width="1421" height="1014" alt="英文漫畫翻譯後的畫面" data-i18n-attr="alt|shot.capture0.after" loading="lazy" decoding="async" />
+          <div class="compare__clip">
+            <img class="compare__img" src="images/截圖翻譯0-前.png" width="1421" height="1014" alt="翻譯前的英文漫畫" data-i18n-attr="alt|shot.capture0.before" loading="lazy" decoding="async" />
+          </div>
           <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
           <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
           <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
             <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
           </div>
-      </div>
-      <figcaption class="src" data-i18n-html="capture.cap.web">畫面來源：<a href="https://www.naddic.co.kr/ko/cls/index" target="_blank" rel="noopener">Closers 官方網站（NADDIC GAMES）</a></figcaption>
-    </figure>
+        </div>
+        <figcaption class="src" data-i18n-html="capture.cap.ai">漫畫來源：AI 生成圖</figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="compare compare--comic" data-compare>
+          <img class="compare__img" src="images/截圖翻譯1-後.png" width="1406" height="1347" alt="漫畫翻譯後的畫面" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
+          <div class="compare__clip">
+            <img class="compare__img" src="images/截圖翻譯1-前.png" width="1406" height="1347" alt="翻譯前的日文漫畫" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
+          </div>
+          <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
+          <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+          <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+            <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+          </div>
+        </div>
+        <figcaption class="src" data-i18n-html="capture.cap.comic">漫畫來源：<a href="https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html" target="_blank" rel="noopener">こうしす！＠IT支線</a></figcaption>
+      </figure>
+    </div>
 
     <div class="split subsection reveal">
       <div class="split__text">
@@ -302,26 +307,42 @@
       </div>
 
       <div class="tabs__panel" id="panel-prose" role="tabpanel" aria-labelledby="tab-prose" data-tabpanel>
-        <div class="grid2">
+        <div class="grid2 prose__comics">
           <figure class="shot">
-            <div class="compare compare--tall" data-compare>
-              <img class="compare__img" src="images/即時翻譯-漫畫翻譯後.png" width="913" height="1381" alt="漫畫即時翻譯後的畫面" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
+            <div class="compare compare--comicai" data-compare>
+              <img class="compare__img" src="images/即時翻譯-漫畫翻譯.png" width="786" height="1291" alt="AI 生成漫畫即時翻譯後的畫面" data-i18n-attr="alt|shot.comicai.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="images/即時翻譯-漫畫翻譯前.png" width="913" height="1380" alt="翻譯前的日文漫畫畫面" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="images/即時翻譯-漫畫框.png" width="786" height="1291" alt="AI 生成漫畫框選中的畫面" data-i18n-attr="alt|shot.comicai.before" loading="lazy" decoding="async" />
               </div>
-              <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
               <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
                 <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
               </div>
             </div>
-            <figcaption class="src" data-i18n-html="realtime.cap.comic">漫畫來源：<a href="https://x.com/kiyo_mariari/status/1980247239948988588/photo/1" target="_blank" rel="noopener">@kiyo_mariari</a></figcaption>
+            <figcaption class="src" data-i18n-html="realtime.cap.comicai">漫畫來源：AI 生成圖</figcaption>
           </figure>
           <figure class="shot">
-            <div class="compare" data-compare>
+            <div class="compare compare--tall" data-compare>
+              <img class="compare__img" src="images/即時翻譯1-漫畫翻譯.png" width="1048" height="1343" alt="漫畫即時翻譯後的畫面" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="images/即時翻譯1-漫畫框.png" width="1048" height="1343" alt="翻譯前的日文漫畫畫面" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.comic">漫畫來源：<a href="https://x.com/kiyo_mariari/status/2101991547877429535?s=20" target="_blank" rel="noopener">@kiyo_mariari</a></figcaption>
+          </figure>
+        </div>
+        <div class="grid2 prose__screens">
+          <figure class="shot">
+            <div class="compare compare--video" data-compare>
               <img class="compare__img" src="images/即時翻譯-影片翻譯.png" width="1920" height="1080" alt="影片字幕即時翻譯後的畫面" data-i18n-attr="alt|shot.video.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="images/即時翻譯-影片框.png" width="1921" height="1080" alt="影片字幕框選中的畫面" data-i18n-attr="alt|shot.video.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="images/即時翻譯-影片框.png" width="1920" height="1080" alt="影片字幕框選中的畫面" data-i18n-attr="alt|shot.video.before" loading="lazy" decoding="async" />
               </div>
               <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
@@ -332,21 +353,7 @@
             <figcaption class="src" data-i18n-html="realtime.cap.video">影片來源：<a href="https://www.youtube.com/watch?v=Tsmf4dkigbw" target="_blank" rel="noopener">BanG Dream! Girls Band Party!☆PICO～OHMORI～</a></figcaption>
           </figure>
           <figure class="shot">
-            <div class="compare" data-compare>
-              <img class="compare__img" src="images/即時翻譯1-對話遊戲翻譯.png" width="2557" height="1437" alt="遊戲劇情對話即時翻譯後的畫面" data-i18n-attr="alt|shot.story.after" loading="lazy" decoding="async" />
-              <div class="compare__clip">
-                <img class="compare__img" src="images/即時翻譯1-對話遊戲框.png" width="2557" height="1437" alt="遊戲劇情對話框選中的畫面" data-i18n-attr="alt|shot.story.before" loading="lazy" decoding="async" />
-              </div>
-              <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
-              <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
-              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="左右拖曳比較原文與譯文" data-i18n-attr="aria-label|a11y.compare">
-                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
-              </div>
-            </div>
-            <figcaption class="src" data-i18n-html="realtime.cap.story">遊戲畫面來源：<a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《魔法少女的魔女審判》</a></figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="compare" data-compare>
+            <div class="compare compare--video" data-compare>
               <img class="compare__img" src="images/即時翻譯2-對話遊戲翻譯.png" width="2557" height="1437" alt="遊戲劇情對話即時翻譯後的畫面" data-i18n-attr="alt|shot.story2.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
                 <img class="compare__img" src="images/即時翻譯2-對話遊戲框.png" width="2557" height="1437" alt="遊戲劇情對話框選中的畫面" data-i18n-attr="alt|shot.story2.before" loading="lazy" decoding="async" />
