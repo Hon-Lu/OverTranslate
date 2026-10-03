@@ -23,7 +23,7 @@
     <br/>
     OverTranslate
   </h1>
-  <p>一款适合游戏、漫画、影音与日常使用的 Windows 屏幕翻译工具，通过 OCR 识别画面文字，支持截图翻译、实时翻译等多种功能，译文直接覆盖在原画面上。</p>
+  <p>一款适合游戏、漫画、影音与日常使用的 Windows 屏幕翻译工具，支持截图翻译、实时翻译等功能，译文可直接覆盖在原文上。</p>
 
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
