@@ -37,13 +37,17 @@
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.ja.svg" alt="ポータブル版をダウンロード" /></a>
   </p>
 
+  <p>
+    <img src="docs/images/readme-hero.png" alt="翻訳前後の比較アニメーション：訳文が原文の上に重ねて表示されます" />
+    <br/>
+    <sub>画面の出典：<a href="https://godotengine.org/blog/">Godot Engine Blog</a></sub>
+  </p>
+
 </div>
 
 ---
 
 ## 翻訳機能
-
-> 🌐 **OverTranslate は多言語インターフェースに対応しています。この README のスクリーンショットは繁体字中国語または英語の画面ですが、表示言語はアプリ内で切り替えられます。**
 
 OverTranslate には 5 つの翻訳機能があり、その場に合ったものをすぐ選べます。
 
@@ -52,6 +56,8 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 - **[クイック辞書](#クイック辞書)** — テキストを選ぶと小さな翻訳ウィンドウが開きます。ピン留めして出したままにもできます
 - **[クイック翻訳](#クイック翻訳)** — テキストを選んでショートカットキーを押すと、その場で訳文に置き換わります
 - **[テキスト翻訳](#テキスト翻訳)** — 入力・言語の入れ替え・読み上げに対応した、通常の翻訳ウィンドウです
+
+> 🌐 **OverTranslate は多言語インターフェースに対応しています。この README のスクリーンショットは繁体字中国語または英語の画面ですが、表示言語はアプリ内で切り替えられます。**
 
 ---
 
@@ -67,10 +73,11 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 |------|----------|
 | ![キャプチャ翻訳0-前](docs/images/截圖翻譯0-前.png) | ![キャプチャ翻訳0-後](docs/images/截圖翻譯0-後.png) |
 | ![キャプチャ翻訳1-前](docs/images/截圖翻譯1-前.png) | ![キャプチャ翻訳1-後](docs/images/截圖翻譯1-後.png) |
-| ![キャプチャ翻訳-前](docs/images/截圖翻譯-前.png) | ![キャプチャ翻訳-後](docs/images/截圖翻譯-後.png) |
+| ![キャプチャ翻訳2-前](docs/images/截圖翻譯2-前.png) | ![キャプチャ翻訳2-後](docs/images/截圖翻譯2-後.png) |
 
-> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。  
-> 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目のマンガは [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)、3 組目は [Godot Engine Blog](https://godotengine.org/blog/) から引用しています。
+> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。
+
+> 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目のマンガは [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)、3 組目は [Closers 公式サイト](https://www.naddic.co.kr/ko/cls/index) から引用しています。
 
 ### ツールバー - そのほかの機能
 
@@ -110,7 +117,8 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 | ![リアルタイム翻訳-動画の範囲](docs/images/即時翻譯-影片框.png) | ![リアルタイム翻訳-動画の訳文](docs/images/即時翻譯-影片翻譯.png) |
 | ![リアルタイム翻訳2-セリフの範囲](docs/images/即時翻譯2-對話遊戲框.png) | ![リアルタイム翻訳2-セリフの訳文](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。  
+> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。
+
 > 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目の 4 コマ漫画は [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) さんの作品、3 組目の動画は [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)、4 組目のゲーム画面は [『魔法少女ノ魔女裁判』](https://store.steampowered.com/app/3101040) です。
 
 #### ゲーム / UI

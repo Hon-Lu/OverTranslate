@@ -37,13 +37,17 @@
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.ko.svg" alt="포터블 버전 다운로드" /></a>
   </p>
 
+  <p>
+    <img src="docs/images/readme-hero.png" alt="번역 전후 비교 애니메이션: 번역 결과가 원문 위에 겹쳐 표시됩니다" />
+    <br/>
+    <sub>화면 출처: <a href="https://godotengine.org/blog/">Godot Engine Blog</a></sub>
+  </p>
+
 </div>
 
 ---
 
 ## 번역 기능
-
-> 🌐 **OverTranslate는 다국어 인터페이스를 지원합니다. 이 README의 스크린샷은 중국어 번체 또는 영어 화면이지만, 인터페이스 언어는 앱에서 바꿀 수 있습니다.**
 
 OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 것을 바로 고를 수 있습니다.
 
@@ -52,6 +56,8 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 - **[빠른 조회](#빠른-조회)** — 텍스트를 선택하면 작은 번역 창이 열리며, 고정해 계속 띄워 둘 수도 있습니다
 - **[빠른 번역](#빠른-번역)** — 텍스트를 선택하고 단축키를 누르면 그 자리에서 번역문으로 바뀝니다
 - **[텍스트 번역](#텍스트-번역)** — 입력, 언어 바꾸기, 읽어 주기를 지원하는 전체 번역 창입니다
+
+> 🌐 **OverTranslate는 다국어 인터페이스를 지원합니다. 이 README의 스크린샷은 중국어 번체 또는 영어 화면이지만, 인터페이스 언어는 앱에서 바꿀 수 있습니다.**
 
 ---
 
@@ -67,10 +73,11 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 |------|----------|
 | ![캡처 번역0-전](docs/images/截圖翻譯0-前.png) | ![캡처 번역0-후](docs/images/截圖翻譯0-後.png) |
 | ![캡처 번역1-전](docs/images/截圖翻譯1-前.png) | ![캡처 번역1-후](docs/images/截圖翻譯1-後.png) |
-| ![캡처 번역-전](docs/images/截圖翻譯-前.png) | ![캡처 번역-후](docs/images/截圖翻譯-後.png) |
+| ![캡처 번역2-전](docs/images/截圖翻譯2-前.png) | ![캡처 번역2-후](docs/images/截圖翻譯2-後.png) |
 
-> 위 번역 비교는 모두 OverTranslate를 실제로 실행한 결과입니다.  
-> 이미지 출처: 첫 번째 만화의 원본 그림은 AI 생성 이미지, 두 번째 만화는 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html), 세 번째는 [Godot Engine Blog](https://godotengine.org/blog/)에서 발췌했습니다.
+> 위 번역 비교는 모두 OverTranslate를 실제로 실행한 결과입니다.
+
+> 이미지 출처: 첫 번째 만화의 원본 그림은 AI 생성 이미지, 두 번째 만화는 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html), 세 번째는 [Closers 공식 홈페이지](https://www.naddic.co.kr/ko/cls/index)에서 발췌했습니다.
 
 ### 툴바 - 그 외 기능
 
@@ -110,7 +117,8 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 | ![실시간 번역-영상 영역](docs/images/即時翻譯-影片框.png) | ![실시간 번역-영상 번역문](docs/images/即時翻譯-影片翻譯.png) |
 | ![실시간 번역2-대사 영역](docs/images/即時翻譯2-對話遊戲框.png) | ![실시간 번역2-대사 번역문](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 위 번역 비교는 모두 OverTranslate를 실제로 실행한 결과입니다.  
+> 위 번역 비교는 모두 OverTranslate를 실제로 실행한 결과입니다.
+
 > 이미지 출처: 첫 번째 만화의 원본 그림은 AI 생성 이미지, 두 번째 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) 님의 작품, 세 번째 영상은 [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw), 네 번째 게임 화면은 [《마법소녀의 마녀재판》](https://store.steampowered.com/app/3101040)입니다.
 
 #### 게임 / UI

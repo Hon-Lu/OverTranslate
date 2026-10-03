@@ -37,13 +37,17 @@
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.svg" alt="下載免安裝版（Portable）" /></a>
   </p>
 
+  <p>
+    <img src="docs/images/readme-hero.png" alt="翻譯前後對照動畫：譯文直接覆蓋在原文上" />
+    <br/>
+    <sub>畫面來源：<a href="https://godotengine.org/blog/">Godot Engine Blog</a></sub>
+  </p>
+
 </div>
 
 ---
 
 ## 翻譯功能
-
-> 🌐 **OverTranslate 支援多國語言介面。README 中的應用程式圖片統一以繁體中文顯示，實際介面可切換不同語言。**
 
 OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速選擇：
 
@@ -52,6 +56,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 - **[取詞翻譯](#取詞翻譯)** — 選取文字後開啟精簡翻譯小視窗，也可釘選常駐使用
 - **[快速翻譯](#快速翻譯)** — 選取文字後按下快捷鍵，直接翻譯並取代原文
 - **[文字翻譯](#文字翻譯)** — 使用完整翻譯視窗，支援文字輸入、語言互換與文字朗讀
+
+> 🌐 **OverTranslate 支援多國語言介面。README 中的應用程式圖片統一以繁體中文顯示，實際介面可切換不同語言。**
 
 ---
 
@@ -67,10 +73,11 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 |------|----------|
 | ![截圖翻譯0-前.png](docs/images/截圖翻譯0-前.png) | ![截圖翻譯0-後.png](docs/images/截圖翻譯0-後.png) |
 | ![截圖翻譯1-前.png](docs/images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](docs/images/截圖翻譯1-後.png) |
-| ![截圖翻譯-前.png](docs/images/截圖翻譯-前.png) | ![截圖翻譯-後.png](docs/images/截圖翻譯-後.png) |
+| ![截圖翻譯2-前.png](docs/images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](docs/images/截圖翻譯2-後.png) |
 
-> 以上翻譯對比皆為 OverTranslate 實機執行結果。  
-> 圖片來源：第一組漫畫原圖為 AI 生成；第二組漫畫取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三組取自 [Godot Engine Blog](https://godotengine.org/blog/)。
+> 以上翻譯對比皆為 OverTranslate 實機執行結果。
+
+> 圖片來源：第一組漫畫原圖為 AI 生成；第二組漫畫取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三組取自 [Closers 官網](https://www.naddic.co.kr/ko/cls/index)。
 
 ### 工具列 - 其他功能
 
@@ -110,7 +117,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 | ![即時翻譯-影片框.png](docs/images/即時翻譯-影片框.png) | ![即時翻譯-影片翻譯.png](docs/images/即時翻譯-影片翻譯.png) |
 | ![即時翻譯2-對話遊戲框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![即時翻譯2-對話遊戲翻譯.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 以上翻譯對比皆為 OverTranslate 實機執行結果。  
+> 以上翻譯對比皆為 OverTranslate 實機執行結果。
+
 > 圖片來源：第一組漫畫原圖為 AI 生成；第二組四格漫畫原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三組影片來源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四組遊戲畫面來源：[《魔法少女的魔女審判》](https://store.steampowered.com/app/3101040)。
 
 #### 遊戲 / 介面：
