@@ -215,7 +215,7 @@ public class OcrService : IDisposable
         return blocks is null
             ? null
             : Ocr.VerticalColumnGrouping.Group(
-                blocks, bitmap.Width, realtime: true, bitmap: bitmap);
+                blocks, bitmap.Width, realtime: true, bitmap: bitmap, language: language);
     }
 
 
@@ -373,11 +373,32 @@ public class OcrService : IDisposable
         return TiltedLayout.Restore(OcrTextBlockGrouper.Group(TiltedLayout.Straighten(blocks), profile));
     }
 
+    /// <summary>
+    /// The same grouping for lines already read, on pixels already converted: what a vertical
+    /// capture does with the lines it reads across — see <see cref="Ocr.VerticalColumnGrouping"/>.
+    /// </summary>
+    /// <remarks>
+    /// The pixels rather than the bitmap because the column grouping has converted the page once
+    /// already, and converting it again cost more than everything else this does: 4ms of a 4.2ms
+    /// total on an 1820x1298 page holding three lines.
+    /// </remarks>
+    /// <param name="pixels">The capture, for the ink measurement; null skips it.</param>
+    internal static List<OcrTextBlock> GroupScreenshot(
+        SkiaSharp.SKBitmap? pixels, List<OcrTextBlock> blocks, GroupingProfile profile)
+    {
+        if (pixels is not null && MeasuresInk(profile))
+            blocks = TextInkMetrics.Annotate(pixels, blocks);
+        return TiltedLayout.Restore(OcrTextBlockGrouper.Group(TiltedLayout.Straighten(blocks), profile));
+    }
+
     internal static List<OcrTextBlock> PrepareScreenshotGrouping(
         Bitmap bitmap, List<OcrTextBlock> blocks, GroupingProfile profile) =>
-        profile.SolidLineAdvanceWhenWrapped > OcrTextBlockGrouper.SolidLineAdvance
+        MeasuresInk(profile)
             ? TextInkMetrics.Annotate(bitmap, blocks)
             : blocks;
+
+    private static bool MeasuresInk(GroupingProfile profile) =>
+        profile.SolidLineAdvanceWhenWrapped > OcrTextBlockGrouper.SolidLineAdvance;
 
     /// <summary>
     /// Detects columns in the original frame; only recognition crops change orientation.
@@ -414,7 +435,7 @@ public class OcrService : IDisposable
     {
         var blocks = await engine.RecognizeAsync(
             bitmap, sourceLanguage, cancellationToken, verticalText: true);
-        return Ocr.VerticalColumnGrouping.Group(blocks, bitmap.Width, bitmap: bitmap);
+        return Ocr.VerticalColumnGrouping.Group(blocks, bitmap.Width, bitmap: bitmap, language: sourceLanguage);
     }
 
     private static bool ReadsWithMangaModels(string language) => OcrLanguageRouter.Normalize(language) == "JA";

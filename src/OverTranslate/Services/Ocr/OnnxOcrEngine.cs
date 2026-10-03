@@ -1211,9 +1211,16 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     /// </remarks>
     internal static List<OcrTextBlock> ApplyBlockFilters(
         TextBlock[] textBlocks, string normalizedLanguage, bool useCjkRenderMetrics, bool usesAutomaticLayout)
-    {
-        var converted = ConvertBlocks(textBlocks);
+        => ApplyBlockFilters(ConvertBlocks(textBlocks), normalizedLanguage, useCjkRenderMetrics, usesAutomaticLayout);
 
+    /// <summary>
+    /// The same chain from blocks already converted — for the lines a vertical capture reads across,
+    /// which reach here as blocks rather than as the library's output. See
+    /// <see cref="VerticalColumnGrouping"/>.
+    /// </summary>
+    internal static List<OcrTextBlock> ApplyBlockFilters(
+        List<OcrTextBlock> converted, string normalizedLanguage, bool useCjkRenderMetrics, bool usesAutomaticLayout)
+    {
         // Every language, because an accented letter is a misread whichever script surrounds
         // it, and it costs the whole line its translation rather than just one character.
         converted = FoldBlockDiacritics(converted);
