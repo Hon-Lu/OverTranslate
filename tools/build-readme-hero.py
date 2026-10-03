@@ -40,8 +40,9 @@ FPS = 25
 # 線在左右兩端停的位置（寬度比例）。不貼邊，握把才不會被切掉。
 EDGE = 0.04
 # (起點, 終點, 秒)；起點等於終點就是停住
-TIMELINE = [('right', 'right', 1.0), ('right', 'left', 2.0),
-            ('left', 'left', 1.6), ('left', 'right', 2.0)]
+# 第一格就要在動，讀者一眼就知道這張圖會動；看清原文的那一停放到最後，循環時一樣接得上
+TIMELINE = [('right', 'left', 2.0), ('left', 'left', 1.6),
+            ('left', 'right', 2.0), ('right', 'right', 1.0)]
 
 GRIP = 46      # 握把直徑
 SUPERSAMPLE = 4
