@@ -183,6 +183,8 @@
 
     el.addEventListener('pointerdown', function (e) {
       if (e.button !== undefined && e.button !== 0) return;
+      // the zoom button sits on the frame; pressing it must not move the handle
+      if (e.target.closest && e.target.closest('[data-compare-zoom]')) return;
       markTouched();
       stopAnim();
       dragging = true;
@@ -251,6 +253,12 @@
       });
     }
 
+    // For the zoomed copy: it opens and closes at whatever position the other one was left at.
+    el._compare = {
+      get: function () { return p; },
+      set: function (value) { markTouched(); stopAnim(); paint(value); }
+    };
+
     // One-time hint so the handle reads as draggable, only if untouched.
     if (el.hasAttribute('data-compare-hint') && 'IntersectionObserver' in window) {
       var hinted = false;
@@ -283,6 +291,145 @@
 
   var compares = document.querySelectorAll('[data-compare]');
   for (var c = 0; c < compares.length; c++) setupCompare(compares[c]);
+
+  /* ---------------- compare zoom ----------------
+     Pressing anywhere on a compare moves the handle, so it cannot open on a
+     click like a plain image does; each one gets its own button instead. The
+     overlay holds a live copy, sized to fit the viewport, that grows out of the
+     card and hands the handle position back when it closes. */
+
+  (function setupCompareZoom() {
+    var tpl = document.querySelector('[data-compare-zoom-tpl]');
+    var layer = document.querySelector('[data-cmpzoom-layer]');
+    if (!tpl || !layer) return;
+    var closeBtn = layer.querySelector('[data-cmpzoom-close]');
+    var source = null;
+    var copy = null;
+    var ratio = 1;
+    var lastFocus = null;
+
+    // Width a compare of this ratio gets in the overlay. The layer covers the
+    // viewport, so its padding can be read while it is still hidden.
+    function fittedWidth(r) {
+      var cs = getComputedStyle(layer);
+      var availW = window.innerWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      var availH = window.innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      return Math.floor(Math.min(availW, availH * r));
+    }
+
+    function fit() {
+      if (copy) copy.style.width = fittedWidth(ratio) + 'px';
+    }
+
+    // A portrait comic already fills most of the screen's height on the page, so
+    // the overlay could not make it any larger — on a laptop it would come out
+    // smaller. The button only shows where opening is worth it.
+    var MIN_GAIN = 1.2;
+    function updateButton(el) {
+      var btn = el._zoomBtn;
+      var rect = el.getBoundingClientRect();
+      if (!btn || !rect.width || !rect.height) return;
+      btn.hidden = fittedWidth(rect.width / rect.height) < rect.width * MIN_GAIN;
+    }
+
+    function offset() {
+      var from = source.getBoundingClientRect();
+      var to = copy.getBoundingClientRect();
+      if (!to.width) return null;
+      return {
+        scale: from.width / to.width,
+        dx: (from.left + from.width / 2) - (to.left + to.width / 2),
+        dy: (from.top + from.height / 2) - (to.top + to.height / 2)
+      };
+    }
+
+    function open(el) {
+      var rect = el.getBoundingClientRect();
+      source = el;
+      ratio = rect.width / rect.height;
+      lastFocus = document.activeElement;
+
+      copy = el.cloneNode(true);
+      var btn = copy.querySelector('[data-compare-zoom]');
+      if (btn) btn.remove();
+      copy.removeAttribute('data-compare-hint');
+      copy.classList.remove('is-dragging');
+      copy.style.aspectRatio = String(ratio);
+      Array.prototype.forEach.call(copy.querySelectorAll('img'), function (img) {
+        img.removeAttribute('loading');
+      });
+      layer.appendChild(copy);
+      layer.hidden = false;
+      fit();
+      setupCompare(copy);
+      copy._compare.set(el._compare.get());
+
+      requestAnimationFrame(function () {
+        var f = offset();
+        if (f && !reduceMotion.matches) {
+          copy.style.transition = 'none';
+          copy.style.transform = 'translate(' + f.dx + 'px,' + f.dy + 'px) scale(' + f.scale + ')';
+          requestAnimationFrame(function () {
+            copy.style.transition = 'transform 420ms cubic-bezier(0.22, 0.9, 0.24, 1)';
+            copy.style.transform = 'none';
+          });
+        }
+        layer.classList.add('is-open');
+      });
+      if (closeBtn) closeBtn.focus();
+      document.body.style.overflow = 'hidden';
+    }
+
+    function close() {
+      if (layer.hidden || !copy) return;
+      var leaving = copy;
+      source._compare.set(leaving._compare.get());
+      var f = offset();
+      layer.classList.remove('is-open');
+      if (f && !reduceMotion.matches) {
+        leaving.style.transition = 'transform 320ms cubic-bezier(0.32, 0.72, 0.3, 1)';
+        leaving.style.transform = 'translate(' + f.dx + 'px,' + f.dy + 'px) scale(' + f.scale + ')';
+      }
+      copy = null;
+      source = null;
+      window.setTimeout(function () {
+        leaving.remove();
+        if (!copy) layer.hidden = true;
+      }, reduceMotion.matches ? 0 : 300);
+      document.body.style.overflow = '';
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    function updateButtons() {
+      Array.prototype.forEach.call(compares, updateButton);
+    }
+
+    Array.prototype.forEach.call(compares, function (el) {
+      var btn = tpl.content.firstElementChild.cloneNode(true);
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        open(el);
+      });
+      el.appendChild(btn);
+      el._zoomBtn = btn;
+      updateButton(el);
+    });
+
+    // The backdrop closes it; the compare itself is for dragging.
+    layer.addEventListener('click', function (e) {
+      if (e.target.closest('.compare')) return;
+      close();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    // A card's size only moves with the viewport (its aspect is fixed in CSS)
+    // or when the tab panel it sits in is shown — a hidden one measures 0 and
+    // is skipped until then.
+    window.addEventListener('resize', function () {
+      fit();
+      updateButtons();
+    });
+    document.addEventListener('ot:tabchange', updateButtons);
+  })();
 
   /* ---------------- tabs ---------------- */
 
@@ -334,6 +481,8 @@
       moveInk(button, animate);
       gos.forEach(function (g) { g.classList.toggle('is-on', g.getAttribute('data-tab-go') === button.id); });
       if (focus) button.focus({ preventScroll: true });
+      // what was hidden now has a size; the compare zoom buttons go by it
+      document.dispatchEvent(new CustomEvent('ot:tabchange'));
     }
 
     buttons.forEach(function (button, index) {

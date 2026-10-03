@@ -171,6 +171,7 @@ otLocale('ko', {
   'a11y.star': 'GitHub에서 Star 누르기',
   'a11y.coffee': 'Buy Me a Coffee로 후원하기',
   'a11y.close': '닫기',
+  'a11y.zoomcompare': '크게 보기',
   'meta.title': 'OverTranslate — Windows 실시간 화면 번역 도구',
   'meta.description': 'OverTranslate는 Windows용 무료 실시간 화면 번역 도구입니다. 내장 OCR로 게임, 만화, 영상, 웹 페이지의 글자를 인식하고 번역문을 원문 위에 오버레이로 표시합니다. 캡처 번역과 실시간 번역을 지원합니다.'
 });

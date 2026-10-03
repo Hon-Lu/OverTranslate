@@ -171,6 +171,7 @@ otLocale('zh-Hans', {
   'a11y.star': '前往 GitHub 给颗 Star',
   'a11y.coffee': '通过 Buy Me a Coffee 赞助',
   'a11y.close': '关闭',
+  'a11y.zoomcompare': '放大查看',
   'meta.title': 'OverTranslate — Windows 屏幕即时翻译工具',
   'meta.description': 'OverTranslate 是一款免费的 Windows 屏幕即时翻译工具，内置 OCR 识别游戏、漫画、影音与网页上的文字，译文直接覆盖在原文上，支持截图翻译与实时翻译。'
 });

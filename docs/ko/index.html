@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=22ee210862" />
+<link rel="stylesheet" href="../site/styles.css?v=a651649ecc" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -672,6 +672,18 @@
   <img class="zoom__img" data-zoom-img src="" alt="" />
 </div>
 
-<script src="../site/app.js?v=23ea7c9d92" defer></script>
+<template data-compare-zoom-tpl>
+  <button class="compare__zoom" type="button" data-compare-zoom aria-label="크게 보기" data-i18n-attr="aria-label|a11y.zoomcompare">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M10.5 8v5M8 10.5h5"/></svg>
+  </button>
+</template>
+
+<div class="zoom zoom--compare" data-cmpzoom-layer hidden>
+  <button class="zoom__close" type="button" data-cmpzoom-close aria-label="닫기" data-i18n-attr="aria-label|a11y.close">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</div>
+
+<script src="../site/app.js?v=03618d89f2" defer></script>
 </body>
 </html>

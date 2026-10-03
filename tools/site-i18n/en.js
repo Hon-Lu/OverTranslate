@@ -171,6 +171,7 @@ otLocale('en', {
   'a11y.star': 'Star it on GitHub',
   'a11y.coffee': 'Support via Buy Me a Coffee',
   'a11y.close': 'Close',
+  'a11y.zoomcompare': 'Zoom in to compare',
   'meta.title': 'OverTranslate — Real-time Screen Translator Overlay for Windows',
   'meta.description': 'Free real-time screen translator overlay for Windows. Built-in OCR reads text in games, manga, video and web pages and shows the translation over the original.'
 });

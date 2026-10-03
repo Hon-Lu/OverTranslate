@@ -171,6 +171,7 @@ otLocale('ja', {
   'a11y.star': 'GitHub で Star を付ける',
   'a11y.coffee': 'Buy Me a Coffee で支援する',
   'a11y.close': '閉じる',
+  'a11y.zoomcompare': '拡大して比べる',
   'meta.title': 'OverTranslate — Windows 用のリアルタイム画面翻訳ツール',
   'meta.description': 'OverTranslate は Windows 向けの無料のリアルタイム画面翻訳ツールです。内蔵の OCR でゲーム・漫画・動画・ウェブページの文字を読み取り、訳文を原文の上にオーバーレイ表示します。キャプチャ翻訳とリアルタイム翻訳に対応。'
 });
