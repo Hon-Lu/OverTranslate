@@ -68,11 +68,11 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 | 原文 | 翻譯結果 |
 |------|----------|
+| ![截圖翻譯0-前.png](docs/images/截圖翻譯0-前.png) | ![截圖翻譯0-後.png](docs/images/截圖翻譯0-後.png) |
 | ![截圖翻譯1-前.png](docs/images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](docs/images/截圖翻譯1-後.png) |
 | ![截圖翻譯-前.png](docs/images/截圖翻譯-前.png) | ![截圖翻譯-後.png](docs/images/截圖翻譯-後.png) |
-| ![截圖翻譯2-前.png](docs/images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](docs/images/截圖翻譯2-後.png) |
 
-> 比對圖中的漫畫內容取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)。
+> 圖片來源：第一組漫畫為 AI 生成圖；第二組漫畫取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三組取自 [Godot Engine Blog](https://godotengine.org/blog/)。
 
 ### 工具列 - 其他功能
 
@@ -107,12 +107,12 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 | 框選 | 翻譯結果 |
 |------|----------|
-| ![即時翻譯-漫畫翻譯前.png](docs/images/即時翻譯-漫畫翻譯前.png) | ![即時翻譯-漫畫翻譯後.png](docs/images/即時翻譯-漫畫翻譯後.png) |
+| ![即時翻譯-漫畫框.png](docs/images/即時翻譯-漫畫框.png) | ![即時翻譯-漫畫翻譯.png](docs/images/即時翻譯-漫畫翻譯.png) |
+| ![即時翻譯1-漫畫框.png](docs/images/即時翻譯1-漫畫框.png) | ![即時翻譯1-漫畫翻譯.png](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![即時翻譯-影片框.png](docs/images/即時翻譯-影片框.png) | ![即時翻譯-影片翻譯.png](docs/images/即時翻譯-影片翻譯.png) |
-| ![即時翻譯1-對話遊戲框.png](docs/images/即時翻譯1-對話遊戲框.png) | ![即時翻譯1-對話遊戲翻譯.png](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![即時翻譯2-對話遊戲框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![即時翻譯2-對話遊戲翻譯.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 比對圖中的四格漫畫原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/1980247239948988588/photo/1)。
+> 圖片來源：第一組漫畫為 AI 生成圖；第二組四格漫畫原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三組影片來源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四組遊戲畫面來源：[《魔法少女的魔女審判》](https://store.steampowered.com/app/3101040)。
 
 #### 遊戲 / 介面：
 適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。
@@ -241,7 +241,7 @@ OCR 辨識由 RapidOcrNet 搭配 ONNX 模型處理，會依語言自動使用對
 | **韓文** | PP-OCRv5 韓文辨識模型（`korean_PP-OCRv5_rec`），用於補足 PP-OCRv6 通用模型未涵蓋的韓文字元 |
 
 所有語言共用同一套**文字偵測模型**（`PP-OCRv6_det_tiny`）與**方向分類模型**（`cls`），僅辨識模型會依語言切換。  
-OCR 全程於本機 CPU 執行，不會將圖片上傳至外部服務。
+OCR 全程於本機執行，不會將圖片上傳至外部服務；預設模型使用 CPU，漫畫直排模型則使用顯示卡。
 
 ---
 

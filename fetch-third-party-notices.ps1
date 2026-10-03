@@ -67,6 +67,17 @@ $items = @(
         )
     },
     @{
+        Name = "OpenCV (ported source)"
+        Version = "4.13.0"
+        License = "Apache License 2.0; inpaint.cpp also carries the Intel License Agreement"
+        Project = "https://github.com/opencv/opencv"
+        Note = "OverTranslate does not ship OpenCV binaries. src/OverTranslate/Imaging ports two parts of OpenCV 4.13.0 to C#: image resizing (modules/imgproc/src/resize.cpp) and Navier-Stokes inpainting; the inpainting port comes from modules/photo/src/inpaint.cpp, whose original license header is reproduced below."
+        Files = @(
+            @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/opencv/opencv/4.13.0/LICENSE" },
+            @{ Label = "Intel License Agreement"; Url = "https://raw.githubusercontent.com/opencv/opencv/4.13.0/modules/photo/src/inpaint.cpp"; Until = "//M*/" }
+        )
+    },
+    @{
         Name = "comic-text-and-bubble-detector (manga models, downloaded separately)"
         Version = "ogkalu/comic-text-and-bubble-detector, RT-DETR-v2 r50vd"
         License = "Apache License 2.0"
@@ -123,6 +134,12 @@ foreach ($item in $items) {
         }
         else {
             $content = (Invoke-WebRequest -Uri $file.Url -UseBasicParsing).Content
+        }
+        if ($file.Until) {
+            # The license is the comment block at the top of a source file, not the whole file.
+            $end = $content.IndexOf($file.Until)
+            if ($end -lt 0) { throw "$($file.Url) has no '$($file.Until)'." }
+            $content = $content.Substring(0, $end + $file.Until.Length)
         }
         $content = $content -replace "`r?`n", "`r`n"
 

@@ -29,23 +29,21 @@ dotnet run --project tools/SceneBackgroundProbe/SceneBackgroundProbe.csproj -c R
 
 `RealtimeCpuBackground` 每個視窗的一次更新只修補一張來源圖，所有翻譯區塊從這張結果裁切；文字取色仍用原圖。核心分開偵測文字本體與相反極性的描邊，最後沿字形擴張邊緣以涵蓋抗鋸齒外圈。以 96px 分區與 24px 周邊觀察範圍處理：薄洞使用原解析度 Navier–Stokes，厚洞共用一次半解析度運算，只寫回遮罩內。
 
-更新目標為每 100ms 一輪，扣除本輪耗時再等待；超時就完成後讀取最新畫面，不排隊補跑。靜止畫面跳過修補；持續變動且超時的場景可能持續占用 CPU，沒有強制負載上限。首次視覺建構仍同步執行，後續更新在背景工作執行；取消可在分區間生效，單次 OpenCV 呼叫不能中途取消。
+更新目標為每 100ms 一輪，扣除本輪耗時再等待；超時就完成後讀取最新畫面，不排隊補跑。靜止畫面跳過修補；持續變動且超時的場景可能持續占用 CPU，沒有強制負載上限。首次視覺建構仍同步執行，後續更新在背景工作執行；取消可在分區間生效，單一分區的修補不能中途取消。
 
 ## 已知限制與量測
 
 密集文字下的重複斜紋、眼睛、植物等細節仍可能模糊；低對比描邊與漏掉的 OCR 字仍可能殘留。文字遮罩是啟發式分割，可能把背景邊緣誤認為字。沒有已知像素可觀察的區域保留原值。
 
-計時先暖機再測 7 次，包含遮罩、補洞及暫存釋放，不含 OCR、擷取、PNG I/O 或 UI；OpenCV 設定 2 執行緒。程序 working set 是取樣而非峰值，managed allocation 不包含原生配置。不能用 probe 耗時直接承諾端到端延遲。
+計時先暖機再測 7 次，包含遮罩、補洞及暫存釋放，不含 OCR、擷取、PNG I/O 或 UI；修補走主程式的 `OverTranslate.Imaging`，執行緒數為處理器核心數（工具自己讀寫圖用的 OpenCV 設定 2 執行緒，不在計時內）。程序 working set 是取樣而非峰值，managed allocation 不包含原生配置。不能用 probe 耗時直接承諾端到端延遲。
 
-2026-09-15，在相同額外 1px 字形擴張版本比較完整 runtime 與官方 Slim：28 組素材的 230 張既有 PNG 雜湊完全一致。兩輪 adaptive 中位耗時範圍為 4.0–87.9ms 與 4.3–91.7ms；各案例中位數總和差約 2.9%，非交錯受控效能測試，不能歸因於套件。這 230 張不含工具整併後新增的舊版矩形對照。
-
-完整套件的 OpenCV 相關 DLL 合計 98,171,392 bytes（93.6MiB），目前直接引用 `OpenCvSharp4` 與 `OpenCvSharp4.runtime.win.slim` 4.13.0.20260627：包裝 DLL 1,003,008 bytes＋原生 DLL 55,547,904 bytes，合計 53.9MiB，減少約 42.4%。Debug、Release 和獨立 publish 都不含 FFmpeg 或 WPF adapter DLL。這是磁碟體積，不是記憶體降幅。
+主程式已不再使用 OpenCV（PR #237）：字形遮罩與 Navier–Stokes 修補改由 `src/OverTranslate/Imaging` 的 C# 移植實作，與 OpenCV 4.13.0 逐位元相同，因此不再附帶約 53MB 的原生 DLL（壓縮後的發行包約小 20MB）。本工具仍自行引用 OpenCvSharp 讀寫圖片、繪製合成文字與評分，只在呼叫修補時轉成主程式的影像型別。
 
 ## 方法選擇與清理
 
 參考 [OpenCV inpainting 官方說明](https://docs.opencv.org/4.x/df/d3d/tutorial_py_inpainting.html)，採用 Navier–Stokes CPU 實作。方法與半徑後來都以乾淨底圖真值掃過，維持 NS 與半徑 3，理由寫在 `CpuHoleRepair.Fill` 的註解裡；半徑那一軸的關鍵是平均誤差看不出來，要看色度。
 
-使用[官方 Slim 套件](https://www.nuget.org/packages/OpenCvSharp4.runtime.win.slim)，無須自行維護原生編譯。自建更小的版本已評估並否決：Slim 的 53.0MB 幾乎都是 core 與 imgproc（含 IPP kernels），只留 core／imgproc／photo 自建仍有 47.4MB，而 `OpenCvSharpExtern` 的 CMake 是 `find_package(OpenCV REQUIRED)` 連結全部模組、沒有子集選項，要縮就得 fork。
+早期直接使用 OpenCvSharp 的[官方 Slim 套件](https://www.nuget.org/packages/OpenCvSharp4.runtime.win.slim)；自建更小的原生版本評估後縮不下來（只留 core／imgproc／photo 仍有 47.4MB），最後改為只移植用到的運算。
 
 先前研究過 [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) 和 [LaMa](https://github.com/advimman/lama)：MI-GAN 在大片聊天遮罩中生成不屬於場景的物件；LaMa 的部分重複紋理效果較好，但本機 CPU 約 3.2 秒，測試的 ONNX 匯出亦無法在 DirectML 正常初始化。兩者不符合目前輕量 CPU 方向，執行器與下載腳本已移除。
 
