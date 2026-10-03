@@ -75,7 +75,8 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 | ![キャプチャ翻訳1-前](docs/images/截圖翻譯1-前.png) | ![キャプチャ翻訳1-後](docs/images/截圖翻譯1-後.png) |
 | ![キャプチャ翻訳2-前](docs/images/截圖翻譯2-前.png) | ![キャプチャ翻訳2-後](docs/images/截圖翻譯2-後.png) |
 
-> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。  
+> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。
+
 > 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目のマンガは [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)、3 組目は [Closers 公式サイト](https://www.naddic.co.kr/ko/cls/index) から引用しています。
 
 ### ツールバー - そのほかの機能
@@ -116,7 +117,8 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 | ![リアルタイム翻訳-動画の範囲](docs/images/即時翻譯-影片框.png) | ![リアルタイム翻訳-動画の訳文](docs/images/即時翻譯-影片翻譯.png) |
 | ![リアルタイム翻訳2-セリフの範囲](docs/images/即時翻譯2-對話遊戲框.png) | ![リアルタイム翻訳2-セリフの訳文](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
-> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。  
+> 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。
+
 > 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目の 4 コマ漫画は [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) さんの作品、3 組目の動画は [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)、4 組目のゲーム画面は [『魔法少女ノ魔女裁判』](https://store.steampowered.com/app/3101040) です。
 
 #### ゲーム / UI
