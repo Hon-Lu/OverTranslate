@@ -82,6 +82,7 @@ public partial class ServiceSettingsOverlay : UserControl
             {
                 s.OpenAiBaseUrl = OpenAiBaseUrlBox.Text.Trim();
                 s.OpenAiApiKey = OpenAiApiKeyBox.Secret.Trim();
+                if (TryReadTimeout(out var timeout)) s.OpenAiTimeoutSeconds = timeout;
             });
         };
 
@@ -205,6 +206,7 @@ public partial class ServiceSettingsOverlay : UserControl
 
             OpenAiBaseUrlBox.Text = s.OpenAiBaseUrl;
             OpenAiApiKeyBox.Secret = s.OpenAiApiKey;
+            OpenAiTimeoutBox.Text = s.OpenAiTimeoutSeconds?.ToString(CultureInfo.InvariantCulture) ?? "";
             LoadPromptLibrary(s);
 
             // Set here rather than in XAML because the guide has a copy per interface language, and
@@ -237,6 +239,10 @@ public partial class ServiceSettingsOverlay : UserControl
     /// <summary>Writes out whatever is still waiting on a debounce timer.</summary>
     private void FlushPendingEdits()
     {
+        // Before the debounce below reads it: a number too small that is still being edited when
+        // the panel closes is raised to the minimum rather than dropped.
+        RaiseTimeoutToMinimum();
+
         if (_apiKeyDebounce.IsEnabled)
         {
             _apiKeyDebounce.Stop();
@@ -250,6 +256,7 @@ public partial class ServiceSettingsOverlay : UserControl
             {
                 s.OpenAiBaseUrl = OpenAiBaseUrlBox.Text.Trim();
                 s.OpenAiApiKey = OpenAiApiKeyBox.Secret.Trim();
+                if (TryReadTimeout(out var timeout)) s.OpenAiTimeoutSeconds = timeout;
             });
         }
     }
@@ -290,7 +297,66 @@ public partial class ServiceSettingsOverlay : UserControl
         OpenAiBaseUrlPlaceholder.Visibility =
             OpenAiBaseUrlBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        OpenAiTimeoutPlaceholder.Text =
+            OpenAiCompatibleProvider.DefaultTimeoutSeconds.ToString(CultureInfo.InvariantCulture);
+        OpenAiTimeoutPlaceholder.Visibility =
+            OpenAiTimeoutBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        OpenAiTimeoutError.Text = TryReadTimeout(out _)
+            ? ""
+            : LocalizationService.Format("S.Settings.OpenAiTimeoutMin", OpenAiCompatibleProvider.MinTimeoutSeconds);
+
     }
+
+    // ── OpenAI timeout ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The timeout box as a setting: true for empty (null, the default) or a whole number at or
+    /// above the minimum; false for a number still too small.
+    /// </summary>
+    private bool TryReadTimeout(out int? seconds)
+    {
+        seconds = null;
+        var text = OpenAiTimeoutBox.Text;
+        if (text.Length == 0) return true;
+        if (!int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
+            || value < OpenAiCompatibleProvider.MinTimeoutSeconds)
+            return false;
+        seconds = value;
+        return true;
+    }
+
+    /// <summary>
+    /// Replaces a number under the minimum with the minimum. Only once the box is left: while it is
+    /// being typed in, "3" is on its way to "30", and correcting it then would fight the typing.
+    /// </summary>
+    private void RaiseTimeoutToMinimum()
+    {
+        if (!TryReadTimeout(out _))
+            OpenAiTimeoutBox.Text = OpenAiCompatibleProvider.MinTimeoutSeconds.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private void OpenAiTimeoutBox_PreviewTextInput(object sender, TextCompositionEventArgs e) =>
+        e.Handled = !IsDigits(e.Text);
+
+    // Space never reaches PreviewTextInput, so it is stopped here.
+    private void OpenAiTimeoutBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Space) e.Handled = true;
+    }
+
+    private void OpenAiTimeoutBox_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (e.DataObject.GetData(System.Windows.DataFormats.UnicodeText) is not string pasted || !IsDigits(pasted))
+            e.CancelCommand();
+    }
+
+    private static bool IsDigits(string text) => text.Length > 0 && text.All(c => c is >= '0' and <= '9');
+
+    private void OpenAiTimeoutBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        OpenAiSetting_TextChanged(sender, e);
+
+    private void OpenAiTimeoutBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+        RaiseTimeoutToMinimum();
 
     private void OpenAiSecret_SecretChanged(object? sender, EventArgs e)
     {

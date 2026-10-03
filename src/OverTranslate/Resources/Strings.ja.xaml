@@ -84,6 +84,7 @@
     <sys:String x:Key="S.Error.OpenAiHttp">OpenAI 互換 API が {0} を返しました：{1}</sys:String>
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI 互換 API の応答を解析できませんでした。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI 互換 API から訳文が返りませんでした。</sys:String>
+    <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI 互換 API から {0} 秒以内に応答がありませんでした。翻訳サービス設定でタイムアウトの秒数を変更できます。</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">OpenAI 互換 API のアドレスは有効な HTTP または HTTPS の URL である必要があります。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">モデル名が設定されていません。翻訳サービス設定で使用するモデルを入力してください。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">不明なエラー</sys:String>
@@ -440,6 +441,9 @@
     <sys:String x:Key="S.Settings.ServiceDefault">既定値を使用</sys:String>
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} の設定</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API アドレス</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeout">タイムアウト</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutMin">{0} 秒以上を入力してください</sys:String>
     <sys:String x:Key="S.Settings.ModelName">モデル名</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">モデル名をコピー</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">必須</sys:String>

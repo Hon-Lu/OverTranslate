@@ -83,6 +83,7 @@
     <sys:String x:Key="S.Error.OpenAiHttp">The OpenAI-compatible API returned {0}: {1}</sys:String>
     <sys:String x:Key="S.Error.OpenAiUnparsable">Could not parse the OpenAI-compatible API response.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">The OpenAI-compatible API returned no translation.</sys:String>
+    <sys:String x:Key="S.Error.OpenAiTimeout">The OpenAI-compatible API did not respond within {0} seconds. You can change the timeout in the translation service settings.</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">The OpenAI-compatible API address must be a valid HTTP or HTTPS URL.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">No model name is set. Enter the model to use in the translation service settings.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Unknown error</sys:String>
@@ -436,6 +437,9 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">Using defaults</sys:String>
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} settings</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API URL</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeout">Timeout</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">seconds</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutMin">At least {0} seconds</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Model</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">Copy the model name</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">Required</sys:String>

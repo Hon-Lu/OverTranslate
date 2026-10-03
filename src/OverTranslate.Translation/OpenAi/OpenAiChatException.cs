@@ -13,6 +13,12 @@ public enum OpenAiChatFailure
 
     /// <summary>The answer was empty once any thinking block was taken out.</summary>
     NoTranslation,
+
+    /// <summary>
+    /// No full answer within <see cref="OpenAiChatRequest.Timeout"/>. Its own kind rather than the
+    /// cancellation it starts as, which callers take for the user having walked away.
+    /// </summary>
+    TimedOut,
 }
 
 /// <summary>
