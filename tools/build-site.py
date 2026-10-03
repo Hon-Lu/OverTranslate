@@ -28,15 +28,15 @@ MAX_DESCRIPTION = 160
 # 每個語言：輸出目錄、<html lang>、截圖後綴、下載統計圖卡、README 與 Ollama 教學
 LANGS = [
     ('zh-TW',   'zh-TW',   'zh-Hant',  '',          'overtranslate-downloads-history.zh-TW.svg',
-     'README.md',                'docs/guides/OLLAMA_GUIDE.md'),
+     'README.zh-Hant.md',        'docs/guides/OLLAMA_GUIDE.md'),
     ('en',      'en',      'en',       '_en',       'overtranslate-downloads-history.svg',
-     'docs/README.en.md',        'docs/guides/OLLAMA_GUIDE.en.md'),
+     'README.md',                'docs/guides/OLLAMA_GUIDE.en.md'),
     ('zh-Hans', 'zh-Hans', 'zh-Hans',  '_zh-Hans',  'overtranslate-downloads-history.svg',
-     'docs/README.zh-Hans.md',   'docs/guides/OLLAMA_GUIDE.zh-Hans.md'),
+     'README.zh-Hans.md',        'docs/guides/OLLAMA_GUIDE.zh-Hans.md'),
     ('ja',      'ja',      'ja',       '_jp',       'overtranslate-downloads-history.svg',
-     'docs/README.ja.md',        'docs/guides/OLLAMA_GUIDE.ja.md'),
+     'README.ja.md',             'docs/guides/OLLAMA_GUIDE.ja.md'),
     ('ko',      'ko',      'ko',       '_ko',       'overtranslate-downloads-history.svg',
-     'docs/README.ko.md',        'docs/guides/OLLAMA_GUIDE.ko.md'),
+     'README.ko.md',             'docs/guides/OLLAMA_GUIDE.ko.md'),
 ]
 LANG_LABEL = {'en': 'English', 'zh-TW': '繁體中文', 'zh-Hans': '简体中文',
               'ja': '日本語', 'ko': '한국어'}

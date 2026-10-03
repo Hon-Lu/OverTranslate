@@ -1,9 +1,9 @@
 <div align="center">
   <p>
     🌐
-    <strong><a href="README.en.md">English</a></strong>
+    <strong><a href="README.md">English</a></strong>
     &nbsp;｜&nbsp;
-    <strong><a href="../README.md">繁體中文</a></strong>
+    <strong><a href="README.zh-Hant.md">繁體中文</a></strong>
     &nbsp;｜&nbsp;
     <strong>简体中文 ✓</strong>
     &nbsp;｜&nbsp;
@@ -15,15 +15,15 @@
   <br/>
 
   <p>
-    <a href="https://hon-lu.github.io/OverTranslate/"><img src="images/ui/btn-site.zh-Hans.svg" alt="前往官方网站" /></a>
+    <a href="https://hon-lu.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.zh-Hans.svg" alt="前往官方网站" /></a>
   </p>
 
   <h1>
-    <img src="images/icon.svg" width="180" alt="OverTranslate Icon"/>
+    <img src="docs/images/icon.svg" width="180" alt="OverTranslate Icon"/>
     <br/>
     OverTranslate
   </h1>
-  <p>一款适合日常使用、漫画、影音与游戏的 Windows 屏幕翻译工具，支持截图翻译、实时翻译等多种翻译功能，翻译结果可直接显示在原画面上。</p>
+  <p>一款适合游戏、漫画、影音与日常使用的 Windows 屏幕翻译工具，通过 OCR 识别画面文字，支持截图翻译、实时翻译等多种功能，译文直接覆盖在原画面上。</p>
 
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
@@ -31,9 +31,9 @@
   </p>
 
   <p>
-    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.zh-Hans.svg" alt="下载 Windows 安装版（推荐）" /></a>
+    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.zh-Hans.svg" alt="下载 Windows 安装版（推荐）" /></a>
     &nbsp;
-    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.zh-Hans.svg" alt="下载免安装版（Portable）" /></a>
+    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.zh-Hans.svg" alt="下载免安装版（Portable）" /></a>
   </p>
 
   <p>
@@ -64,13 +64,13 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 需要翻译时按下快捷键（默认 Ctrl + Alt + A），框选想翻译的画面即可。
 > 适用于网页、PDF、图片、漫画、影音、游戏界面等各种无法直接选取文字的画面。
 
-![翻译比对图.png](images/翻譯比對圖.png)
+![翻译比对图.png](docs/images/翻譯比對圖.png)
 
 | 原文 | 翻译结果 |
 |------|----------|
-| ![截图翻译0-前.png](images/截圖翻譯0-前.png) | ![截图翻译0-后.png](images/截圖翻譯0-後.png) |
-| ![截图翻译1-前.png](images/截圖翻譯1-前.png) | ![截图翻译1-后.png](images/截圖翻譯1-後.png) |
-| ![截图翻译-前.png](images/截圖翻譯-前.png) | ![截图翻译-后.png](images/截圖翻譯-後.png) |
+| ![截图翻译0-前.png](docs/images/截圖翻譯0-前.png) | ![截图翻译0-后.png](docs/images/截圖翻譯0-後.png) |
+| ![截图翻译1-前.png](docs/images/截圖翻譯1-前.png) | ![截图翻译1-后.png](docs/images/截圖翻譯1-後.png) |
+| ![截图翻译-前.png](docs/images/截圖翻譯-前.png) | ![截图翻译-后.png](docs/images/截圖翻譯-後.png) |
 
 > 以上翻译对比均为 OverTranslate 实机运行结果。  
 > 图片来源：第一组漫画原图为 AI 生成；第二组漫画取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三组取自 [Godot Engine Blog](https://godotengine.org/blog/)。
@@ -83,7 +83,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 - **截图**：将框选画面复制到剪贴板，也可在设置中开启「保存截图」，同步保存图片文件
 - **标记**：可使用画笔工具直接在截图上进行标记，并通过截图功能复制或保存画面内容
 
-![截圖翻譯-標記.png](images/截圖翻譯-標記.png)
+![截圖翻譯-標記.png](docs/images/截圖翻譯-標記.png)
 
 ---
 
@@ -95,7 +95,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 画面来源分为 **屏幕捕获** 与 **窗口捕获** 两种模式：  
 屏幕捕获需 Windows 11 24H2 以上，窗口捕获需 Windows 10 1903 以上。
 
-![实时翻译窗口预览.png](images/即時翻譯視窗預覽_zh-Hans.png)
+![实时翻译窗口预览.png](docs/images/即時翻譯視窗預覽_zh-Hans.png)
 
 ### 翻译区块模式（框选）
 
@@ -108,10 +108,10 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 | 框选 | 翻译结果 |
 |------|----------|
-| ![实时翻译-漫画框.png](images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](images/即時翻譯-漫畫翻譯.png) |
-| ![实时翻译1-漫画框.png](images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](images/即時翻譯1-漫畫翻譯.png) |
-| ![实时翻译-视频框.png](images/即時翻譯-影片框.png) | ![实时翻译-视频翻译.png](images/即時翻譯-影片翻譯.png) |
-| ![实时翻译2-对话游戏框.png](images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](images/即時翻譯2-對話遊戲翻譯.png) |
+| ![实时翻译-漫画框.png](docs/images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](docs/images/即時翻譯-漫畫翻譯.png) |
+| ![实时翻译1-漫画框.png](docs/images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](docs/images/即時翻譯1-漫畫翻譯.png) |
+| ![实时翻译-视频框.png](docs/images/即時翻譯-影片框.png) | ![实时翻译-视频翻译.png](docs/images/即時翻譯-影片翻譯.png) |
+| ![实时翻译2-对话游戏框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > 以上翻译对比均为 OverTranslate 实机运行结果。  
 > 图片来源：第一组漫画原图为 AI 生成；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组视频来源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
@@ -119,12 +119,12 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 #### 游戏 / 界面：
 适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。
 
-![实时翻译-聊天室对比图.png](images/即時翻譯-聊天室比對圖.png)
+![实时翻译-聊天室对比图.png](docs/images/即時翻譯-聊天室比對圖.png)
 
 | 框选 | 翻译结果 |
 |------|----------|
-| ![实时翻译1-游戏翻译框.png](images/即時翻譯1-遊戲翻譯框.png) | ![实时翻译1-游戏翻译.png](images/即時翻譯1-遊戲翻譯.png) |
-| ![实时翻译-游戏翻译框.png](images/即時翻譯-遊戲翻譯框.png) | ![实时翻译-游戏翻译.png](images/即時翻譯-遊戲翻譯.png) |
+| ![实时翻译1-游戏翻译框.png](docs/images/即時翻譯1-遊戲翻譯框.png) | ![实时翻译1-游戏翻译.png](docs/images/即時翻譯1-遊戲翻譯.png) |
+| ![实时翻译-游戏翻译框.png](docs/images/即時翻譯-遊戲翻譯框.png) | ![实时翻译-游戏翻译.png](docs/images/即時翻譯-遊戲翻譯.png) |
 
 ---
 
@@ -134,7 +134,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 选取文字后按下快捷键，会自动带入并翻译；未选取文字时，也可以直接输入内容。  
 切换到其他窗口时会自动关闭；若需要持续显示，可将窗口固定。
 
-![取词翻译.png](images/選詞翻譯.png)
+![取词翻译.png](docs/images/選詞翻譯.png)
 
 ---
 
@@ -143,7 +143,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 选取文字后按下快捷键，翻译结果会直接粘贴替换原文（仅适用于可输入文字的字段，非输入区域则无法粘贴）。
 
-![快速翻译.png](images/快速翻譯.png)
+![快速翻译.png](docs/images/快速翻譯.png)
 
 ---
 
@@ -152,13 +152,13 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 **输入文字后即可翻译**，源语言与目标语言可快速互换；  
 内置文字转语音（TTS），支持朗读原文与翻译结果。
 
-![翻译窗口预览.png](images/翻譯視窗預覽_zh-Hans.png)
+![翻译窗口预览.png](docs/images/翻譯視窗預覽_zh-Hans.png)
 
 ---
 
 ## 设置
 
-![设置页.png](images/設定頁_zh-Hans.png)
+![设置页.png](docs/images/設定頁_zh-Hans.png)
 
 | 设置项 | 说明 |
 |----------|------|
@@ -193,24 +193,24 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 | Bing 翻译 | 翻译质量佳（官方翻译可能使用 LLM 进行语义优化，因此结果用词可能略有不同） |
 | Microsoft 翻译 | **（默认）** 稳定性佳、响应速度快 |
 | DeepL | 需到 DeepL 官方注册并获取 API Key |
-| OpenAI | 支持 OpenAI API 格式，建议使用本地 LLM，可通过 [Ollama](guides/OLLAMA_GUIDE.zh-Hans.md) 快速安装与使用 |
+| OpenAI | 支持 OpenAI API 格式，建议使用本地 LLM，可通过 [Ollama](docs/guides/OLLAMA_GUIDE.zh-Hans.md) 快速安装与使用 |
   
 提供「自动备用」机制（适用于 **截图翻译**、**实时翻译**、**取词翻译** 与 **快速翻译**）：  
 翻译失败或响应过慢时，会先用同一个服务重试，仍然无法翻译才切换到其他可用的翻译服务。实际使用的引擎显示于工具栏。
-![备用.png](images/備援.png)
+![备用.png](docs/images/備援.png)
 
 > 使用 **DeepL** 与 **OpenAI** 时，不会触发备用机制。
 
 ### OpenAI 设置
 
-![OpenAI.png](images/OpenAI.png)
+![OpenAI.png](docs/images/OpenAI.png)
 
 | 项目 | 说明 |
 |------|------|
 | API 地址 | 留空时使用 `http://localhost:11434/v1`（Ollama 的本机默认地址） |
 | API Key | 本机运行可留空 |
 | 模型设置 | 一份设置 = 模型名称 + 高级参数 + **自动** 与 **指定语言** 各一组 System / User 提示词，切换设置会整组一起换 |
-| 推荐设置 | 只读的那一份，使用 [Ollama 安装教程](guides/OLLAMA_GUIDE.zh-Hans.md) 推荐的模型，提示词会依界面语言切换 |
+| 推荐设置 | 只读的那一份，使用 [Ollama 安装教程](docs/guides/OLLAMA_GUIDE.zh-Hans.md) 推荐的模型，提示词会依界面语言切换 |
 | 新增设置 | 最多 5 份；模型名称为必填，System / User 提示词至少要填写一项 |
 | 高级参数 | 位于编辑页的 **高级** 区，三项都可单独关闭；关闭的参数不会发送 |
 
@@ -255,7 +255,7 @@ OCR 全程于本机执行，不会将图片上传至外部服务；默认模型�
 使用以下翻译服务时，需另外准备：
 
 - **DeepL**：需到 [DeepL 官网](https://www.deepl.com/pro-api) 申请 API Key
-- **OpenAI**：需自备 OpenAI API 兼容服务，本地 LLM 搭建使用方式可参考 [Ollama 安装教程](guides/OLLAMA_GUIDE.zh-Hans.md)
+- **OpenAI**：需自备 OpenAI API 兼容服务，本地 LLM 搭建使用方式可参考 [Ollama 安装教程](docs/guides/OLLAMA_GUIDE.zh-Hans.md)
 
 ---
 
@@ -270,4 +270,4 @@ OverTranslate 是免费提供的 Windows 翻译工具。
 
 本项目采用 [MIT License](https://opensource.org/license/mit) 许可。  
 你可以自由使用、修改、分发本软件，也可用于商业用途；主要要求是在复制或分发时保留原始的版权声明与 MIT 许可条款。  
-完整许可内容请参阅 [LICENSE](../LICENSE)。
+完整许可内容请参阅 [LICENSE](LICENSE)。

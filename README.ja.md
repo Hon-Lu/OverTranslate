@@ -1,9 +1,9 @@
 <div align="center">
   <p>
     🌐
-    <strong><a href="README.en.md">English</a></strong>
+    <strong><a href="README.md">English</a></strong>
     &nbsp;｜&nbsp;
-    <strong><a href="../README.md">繁體中文</a></strong>
+    <strong><a href="README.zh-Hant.md">繁體中文</a></strong>
     &nbsp;｜&nbsp;
     <strong><a href="README.zh-Hans.md">简体中文</a></strong>
     &nbsp;｜&nbsp;
@@ -15,15 +15,15 @@
   <br/>
 
   <p>
-    <a href="https://hon-lu.github.io/OverTranslate/"><img src="images/ui/btn-site.ja.svg" alt="公式サイトへ" /></a>
+    <a href="https://hon-lu.github.io/OverTranslate/"><img src="docs/images/ui/btn-site.ja.svg" alt="公式サイトへ" /></a>
   </p>
 
   <h1>
-    <img src="images/icon.svg" width="180" alt="OverTranslate Icon"/>
+    <img src="docs/images/icon.svg" width="180" alt="OverTranslate Icon"/>
     <br/>
     OverTranslate
   </h1>
-  <p>日常の利用から漫画・動画・ゲームまで使える Windows 用の画面翻訳ツール。キャプチャ翻訳やリアルタイム翻訳など複数の翻訳機能に対応し、訳文は元の画面にそのまま重ねて表示されます。</p>
+  <p>ゲーム・漫画・動画から日常使いまで対応する Windows 用の画面翻訳ツール。OCR で画面上の文字を認識し、キャプチャ翻訳やリアルタイム翻訳などに対応。訳文は元の画面にそのまま重ねて表示されます。</p>
 
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
@@ -31,9 +31,9 @@
   </p>
 
   <p>
-    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="images/ui/btn-setup.ja.svg" alt="Windows インストーラーをダウンロード（推奨）" /></a>
+    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.ja.svg" alt="Windows インストーラーをダウンロード（推奨）" /></a>
     &nbsp;
-    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="images/ui/btn-portable.ja.svg" alt="ポータブル版をダウンロード" /></a>
+    <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.ja.svg" alt="ポータブル版をダウンロード" /></a>
   </p>
 
   <p>
@@ -64,13 +64,13 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 翻訳したいときにショートカットキー（既定 Ctrl + Alt + A）を押し、翻訳したい範囲を選ぶだけです。
 > Web ページ、PDF、画像、漫画、動画、ゲームの画面など、文字を直接選択できない場面で使えます。
 
-![翻訳の比較](images/翻譯比對圖.png)
+![翻訳の比較](docs/images/翻譯比對圖.png)
 
 | 原文 | 翻訳結果 |
 |------|----------|
-| ![キャプチャ翻訳0-前](images/截圖翻譯0-前.png) | ![キャプチャ翻訳0-後](images/截圖翻譯0-後.png) |
-| ![キャプチャ翻訳1-前](images/截圖翻譯1-前.png) | ![キャプチャ翻訳1-後](images/截圖翻譯1-後.png) |
-| ![キャプチャ翻訳-前](images/截圖翻譯-前.png) | ![キャプチャ翻訳-後](images/截圖翻譯-後.png) |
+| ![キャプチャ翻訳0-前](docs/images/截圖翻譯0-前.png) | ![キャプチャ翻訳0-後](docs/images/截圖翻譯0-後.png) |
+| ![キャプチャ翻訳1-前](docs/images/截圖翻譯1-前.png) | ![キャプチャ翻訳1-後](docs/images/截圖翻譯1-後.png) |
+| ![キャプチャ翻訳-前](docs/images/截圖翻譯-前.png) | ![キャプチャ翻訳-後](docs/images/截圖翻譯-後.png) |
 
 > 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。  
 > 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目のマンガは [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)、3 組目は [Godot Engine Blog](https://godotengine.org/blog/) から引用しています。
@@ -83,7 +83,7 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 - **スクリーンショット**：選んだ範囲をクリップボードにコピーします。設定の「スクリーンショットの保存」をオンにすると、画像ファイルとしても保存されます
 - **マークアップ**：ペンツールでキャプチャに直接書き込み、その内容をスクリーンショットでコピー・保存できます
 
-![截圖翻譯-標記.png](images/截圖翻譯-標記.png)
+![截圖翻譯-標記.png](docs/images/截圖翻譯-標記.png)
 
 ---
 
@@ -95,7 +95,7 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 取り込み方法は **画面全体** と **ウィンドウ指定** の 2 つです。  
 画面全体は Windows 11 24H2 以降、ウィンドウ指定は Windows 10 1903 以降が必要です。
 
-![リアルタイム翻訳のプレビュー](images/即時翻譯視窗預覽_jp.png)
+![リアルタイム翻訳のプレビュー](docs/images/即時翻譯視窗預覽_jp.png)
 
 ### 翻訳ブロックのモード（範囲選択）
 
@@ -108,10 +108,10 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 
 | 範囲選択 | 翻訳結果 |
 |------|----------|
-| ![リアルタイム翻訳-マンガの範囲](images/即時翻譯-漫畫框.png) | ![リアルタイム翻訳-マンガの訳文](images/即時翻譯-漫畫翻譯.png) |
-| ![リアルタイム翻訳1-マンガの範囲](images/即時翻譯1-漫畫框.png) | ![リアルタイム翻訳1-マンガの訳文](images/即時翻譯1-漫畫翻譯.png) |
-| ![リアルタイム翻訳-動画の範囲](images/即時翻譯-影片框.png) | ![リアルタイム翻訳-動画の訳文](images/即時翻譯-影片翻譯.png) |
-| ![リアルタイム翻訳2-セリフの範囲](images/即時翻譯2-對話遊戲框.png) | ![リアルタイム翻訳2-セリフの訳文](images/即時翻譯2-對話遊戲翻譯.png) |
+| ![リアルタイム翻訳-マンガの範囲](docs/images/即時翻譯-漫畫框.png) | ![リアルタイム翻訳-マンガの訳文](docs/images/即時翻譯-漫畫翻譯.png) |
+| ![リアルタイム翻訳1-マンガの範囲](docs/images/即時翻譯1-漫畫框.png) | ![リアルタイム翻訳1-マンガの訳文](docs/images/即時翻譯1-漫畫翻譯.png) |
+| ![リアルタイム翻訳-動画の範囲](docs/images/即時翻譯-影片框.png) | ![リアルタイム翻訳-動画の訳文](docs/images/即時翻譯-影片翻譯.png) |
+| ![リアルタイム翻訳2-セリフの範囲](docs/images/即時翻譯2-對話遊戲框.png) | ![リアルタイム翻訳2-セリフの訳文](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。  
 > 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目の 4 コマ漫画は [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) さんの作品、3 組目の動画は [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)、4 組目のゲーム画面は [『魔法少女ノ魔女裁判』](https://store.steampowered.com/app/3101040) です。
@@ -119,12 +119,12 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 #### ゲーム / UI
 ゲーム画面、チャット、メニューや UI の文字などに適しています。字幕・ストーリー会話・マンガの文字でなければ、このモードをお使いください。
 
-![リアルタイム翻訳-チャットの比較](images/即時翻譯-聊天室比對圖.png)
+![リアルタイム翻訳-チャットの比較](docs/images/即時翻譯-聊天室比對圖.png)
 
 | 範囲選択 | 翻訳結果 |
 |------|----------|
-| ![リアルタイム翻訳-ゲームチャットの範囲](images/即時翻譯1-遊戲翻譯框.png) | ![リアルタイム翻訳-ゲームチャットの訳文](images/即時翻譯1-遊戲翻譯.png) |
-| ![リアルタイム翻訳-ゲームの範囲](images/即時翻譯-遊戲翻譯框.png) | ![リアルタイム翻訳-ゲームの訳文](images/即時翻譯-遊戲翻譯.png) |
+| ![リアルタイム翻訳-ゲームチャットの範囲](docs/images/即時翻譯1-遊戲翻譯框.png) | ![リアルタイム翻訳-ゲームチャットの訳文](docs/images/即時翻譯1-遊戲翻譯.png) |
+| ![リアルタイム翻訳-ゲームの範囲](docs/images/即時翻譯-遊戲翻譯框.png) | ![リアルタイム翻訳-ゲームの訳文](docs/images/即時翻譯-遊戲翻譯.png) |
 
 ---
 
@@ -134,7 +134,7 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 テキストを選んでショートカットキーを押すと、そのまま読み込んで翻訳します。何も選んでいないときは、直接入力もできます。  
 ほかのウィンドウに切り替えると閉じます。出したままにしたいときはピン留めしてください。
 
-![クイック辞書](images/選詞翻譯.png)
+![クイック辞書](docs/images/選詞翻譯.png)
 
 ---
 
@@ -143,7 +143,7 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 
 テキストを選んでショートカットキーを押すと、訳文がそのまま貼り付けられて原文と置き換わります（文字を入力できる欄でのみ動作し、入力欄以外には貼り付けられません）。
 
-![クイック翻訳](images/快速翻譯.png)
+![クイック翻訳](docs/images/快速翻譯.png)
 
 ---
 
@@ -152,13 +152,13 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 **入力するだけで翻訳**でき、翻訳元と翻訳先の言語はすぐ入れ替えられます。  
 音声合成（TTS）を内蔵しており、原文と訳文のどちらも読み上げられます。
 
-![テキスト翻訳のプレビュー](images/翻譯視窗預覽_jp.png)
+![テキスト翻訳のプレビュー](docs/images/翻譯視窗預覽_jp.png)
 
 ---
 
 ## 設定
 
-![設定ページ](images/設定頁_jp.png)
+![設定ページ](docs/images/設定頁_jp.png)
 
 | 設定項目 | 説明 |
 |----------|------|
@@ -193,24 +193,24 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 | Bing 翻訳 | 訳文の品質が高い（公式の翻訳で LLM による意味の最適化が行われることがあるため、訳語が毎回わずかに異なる場合があります） |
 | Microsoft 翻訳 | **（既定）** 安定していて応答も速い |
 | DeepL | DeepL の公式サイトで登録して API キーを取得する必要があります |
-| OpenAI | OpenAI API 互換の形式に対応。ローカル LLM の利用がおすすめで、[Ollama](guides/OLLAMA_GUIDE.ja.md) なら手軽に導入できます |
+| OpenAI | OpenAI API 互換の形式に対応。ローカル LLM の利用がおすすめで、[Ollama](docs/guides/OLLAMA_GUIDE.ja.md) なら手軽に導入できます |
   
 **自動バックアップ**の仕組みがあります（**キャプチャ翻訳**・**リアルタイム翻訳**・**クイック辞書**・**クイック翻訳** で働きます）。  
 翻訳に失敗したり応答が遅かったりすると、まず同じサービスで再試行し、それでも翻訳できない場合にだけ使える別の翻訳サービスへ切り替わります。実際に使われたエンジンはツールバーに表示されます。
-![バックアップ](images/備援.png)
+![バックアップ](docs/images/備援.png)
 
 > **DeepL** と **OpenAI** の利用中はバックアップに切り替わりません。
 
 ### OpenAI の設定
 
-![OpenAI](images/OpenAI.png)
+![OpenAI](docs/images/OpenAI.png)
 
 | 項目 | 説明 |
 |------|------|
 | API アドレス | 空欄なら `http://localhost:11434/v1`（Ollama のローカル既定アドレス）を使います |
 | API キー | ローカル実行なら空欄で構いません |
 | モデル設定 | 1 つの設定 = モデル名 + 詳細パラメーター + **自動** と **言語を指定** それぞれの System / User プロンプト。設定を切り替えるとまとめて切り替わります |
-| 推奨設定 | 読み取り専用のもの。[Ollama の導入ガイド](guides/OLLAMA_GUIDE.ja.md) が推奨するモデルを使い、プロンプトは表示言語に合わせて切り替わります |
+| 推奨設定 | 読み取り専用のもの。[Ollama の導入ガイド](docs/guides/OLLAMA_GUIDE.ja.md) が推奨するモデルを使い、プロンプトは表示言語に合わせて切り替わります |
 | 追加 | 最大 5 つ。モデル名は必須で、System / User プロンプトはどちらか一方が入っていれば構いません |
 | 詳細パラメーター | 編集画面の **詳細** にあります。3 つとも個別にオフにでき、オフのものは送信されません |
 
@@ -255,7 +255,7 @@ OCR は最初から最後までお使いの PC 上で動き、画像が外部の
 次の翻訳サービスを使う場合は、別途用意が必要です。
 
 - **DeepL**：[DeepL 公式サイト](https://www.deepl.com/pro-api) で API キーを取得してください
-- **OpenAI**：OpenAI API 互換のサービスをご自身で用意してください。ローカル LLM の構築方法は [Ollama の導入ガイド](guides/OLLAMA_GUIDE.ja.md) を参照してください
+- **OpenAI**：OpenAI API 互換のサービスをご自身で用意してください。ローカル LLM の構築方法は [Ollama の導入ガイド](docs/guides/OLLAMA_GUIDE.ja.md) を参照してください
 
 ---
 
@@ -270,4 +270,4 @@ OverTranslate は無料で公開している Windows 向けの翻訳ツールで
 
 本プロジェクトは [MIT License](https://opensource.org/license/mit) の下で公開しています。  
 自由に使用・改変・配布でき、商用利用も可能です。主な条件は、複製・配布する際に元の著作権表示と MIT ライセンスの条文を保持することです。  
-全文は [LICENSE](../LICENSE) をご覧ください。
+全文は [LICENSE](LICENSE) をご覧ください。
