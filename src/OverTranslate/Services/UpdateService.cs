@@ -93,22 +93,29 @@ public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions?
     }
 
     /// <remarks>
+    /// <para>
     /// Refuses up front when the package the deltas apply to is gone — cleaned up by a version of
     /// the app from before <see cref="CleanPackagesExcept"/> kept it, or removed by hand. The
     /// UpdateInfo from the check still promises deltas either way, and left alone Velopack would
     /// download every one of them only for the merge to fail on the missing base, then fetch the
     /// full package it could have started on. Throwing here lands in the same fallback, minus the
     /// waste.
+    /// </para>
+    /// <para>
+    /// The merge itself runs in Update.exe with one thread; see <see cref="PatchThreadsVariable"/>.
+    /// </para>
     /// </remarks>
     protected override async Task DownloadAndApplyDeltaUpdates(
         VelopackUpdateInfo updates, string targetFile, Action<int> progress, CancellationToken cancelToken)
     {
+        var previousThreads = Environment.GetEnvironmentVariable(PatchThreadsVariable);
         try
         {
             var basePackage = BasePackagePath(updates.BaseRelease!.FileName);
             if (!File.Exists(basePackage))
                 throw new FileNotFoundException("Base package for delta updates is missing.", basePackage);
 
+            Environment.SetEnvironmentVariable(PatchThreadsVariable, "1");
             await base.DownloadAndApplyDeltaUpdates(updates, targetFile, progress, cancelToken);
         }
         catch when (!cancelToken.IsCancellationRequested)
@@ -116,7 +123,27 @@ public sealed class DeltaAwareUpdateManager(IUpdateSource source, UpdateOptions?
             FellBackToFull?.Invoke();
             throw;
         }
+        finally
+        {
+            Environment.SetEnvironmentVariable(PatchThreadsVariable, previousThreads);
+        }
     }
+
+    /// <summary>
+    /// Read by the thread pool Update.exe's <c>patch</c> unzips with; set to 1 for as long as the
+    /// deltas are being fetched and merged, which Update.exe inherits when Velopack starts it.
+    /// </summary>
+    /// <remarks>
+    /// Velopack's parallel unzip (fastzip, inside Update.exe, unchanged up to 1.2.161) shares one
+    /// file reader between its threads, and that reader forgets its new position after a seek. A
+    /// thread asking for exactly the offset it wrongly believes it is at reads from wherever the
+    /// last seek left the file, and the entry comes out as "corrupt deflate stream". Whether the
+    /// offsets ever line up depends on the package: 2.4.0's full package hit it on
+    /// korean/rec.onnx in 7 merges of 20, each failure throwing away the deltas for a 120 MB
+    /// download; one thread did 0 of 20 at about 2 seconds more a merge. Velopack only reads
+    /// packages this way in <c>patch</c>, so nothing else Update.exe does is slowed.
+    /// </remarks>
+    internal const string PatchThreadsVariable = "RAYON_NUM_THREADS";
 
     // Where Velopack itself keeps it (its GetLocalPackagePath is internal). That also runs the name
     // through a filename sanitiser, which a name from our own feed never needs.
