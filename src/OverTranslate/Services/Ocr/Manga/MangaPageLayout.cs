@@ -160,7 +160,7 @@ internal static class MangaPageLayout
         {
             var run = runs[Root(i)];
             if (run.Count == 1)
-                result.Add(Single(blocks[i]));
+                result.Add(Single(blocks[i], luma));
             else if (emitted.Add(Root(i)))
                 result.Add(Joined([.. ReadingOrder(run, blocks).Select(member => blocks[member])]));
         }
@@ -279,17 +279,54 @@ internal static class MangaPageLayout
         return [.. bands.SelectMany(band => band.OrderBy(m => blocks[m].Bounds.Top))];
     }
 
-    private static OcrTextBlock Single(MangaBlock block)
+    /// <summary>
+    /// One block as it was read. A row set in several lines carries them, as the horizontal
+    /// pipeline's groups do — see <see cref="MangaTextRows"/>.
+    /// </summary>
+    private static OcrTextBlock Single(MangaBlock block, LumaPage? luma)
     {
         var across = RunsAcross(block.Bounds);
         var bounds = ToRect(block.Bounds);
         var glyph = GlyphSize(bounds, block.Text, across);
+        var lines = across && luma is not null ? Lines(block, luma) : null;
+        if (lines is not null)
+        {
+            // √(w·h/n) is the same over the whole block as over each of its lines; what changes is
+            // the height it may not exceed, which is now a line's.
+            var heights = lines.Select(line => line.Height).Order().ToList();
+            glyph = Math.Min(glyph, heights[heights.Count / 2]);
+        }
+
         var script = LayoutScriptDetection.For(block.Text);
         return new OcrTextBlock(
-            block.Text, bounds, null, glyph, block.Confidence, script, bounds, ScriptGlyph(script, glyph))
+            block.Text, bounds, lines, glyph, block.Confidence, script, bounds, ScriptGlyph(script, glyph))
         {
             RunsAcross = across,
         };
+    }
+
+    /// <summary>
+    /// The block cut across into its lines, edge to edge: each reaches halfway to the next, so the
+    /// furigana between two lines and the margin round them stay inside the lines, which are what
+    /// both overlays erase. Null when it is one line.
+    /// </summary>
+    private static List<Rect>? Lines(MangaBlock block, LumaPage luma)
+    {
+        var rows = MangaTextRows.Find(luma, block.Bounds, block.Text.Count(c => !char.IsWhiteSpace(c)));
+        if (rows.Count < 2) return null;
+
+        var lines = new List<Rect>(rows.Count);
+        double top = block.Bounds.Top;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            double bottom = i + 1 < rows.Count
+                ? (rows[i].Bottom + rows[i + 1].Top) / 2.0
+                : block.Bounds.Bottom;
+            lines.Add(new Rect(block.Bounds.Left, top, block.Bounds.Width, bottom - top));
+            top = bottom;
+        }
+
+        return lines;
     }
 
     private static OcrTextBlock Joined(List<MangaBlock> parts)
@@ -478,7 +515,7 @@ internal sealed class LumaPage(byte[] pixels, int width, int height)
         return Rectangle.FromLTRB(left, top, right, bottom);
     }
 
-    private double Median(Rectangle box)
+    internal double Median(Rectangle box)
     {
         if (box.Width <= 0 || box.Height <= 0) return 0;
         var histogram = new int[256];
