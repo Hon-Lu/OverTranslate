@@ -37,13 +37,17 @@
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.zh-Hans.svg" alt="下载免安装版（Portable）" /></a>
   </p>
 
+  <p>
+    <img src="docs/images/readme-hero.png" alt="翻译前后对照动画：译文直接覆盖在原文上" />
+    <br/>
+    <sub>画面来源：<a href="https://godotengine.org/blog/">Godot Engine Blog</a></sub>
+  </p>
+
 </div>
 
 ---
 
 ## 翻译功能
-
-> 🌐 **OverTranslate 支持多语言界面。README 中的应用界面截图统一以繁体中文显示，实际界面可切换为其他语言。**
 
 OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速选择：
 
@@ -52,6 +56,8 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 - **[取词翻译](#取词翻译)** — 选取文字后打开精简翻译小窗口，也可固定常驻使用
 - **[快速翻译](#快速翻译)** — 选取文字后按下快捷键，直接翻译并替换原文
 - **[文字翻译](#文字翻译)** — 使用完整翻译窗口，支持文字输入、语言互换与文字朗读
+
+> 🌐 **OverTranslate 支持多语言界面。README 中的应用界面截图统一以繁体中文显示，实际界面可切换为其他语言。**
 
 ---
 
@@ -67,10 +73,10 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 |------|----------|
 | ![截图翻译0-前.png](docs/images/截圖翻譯0-前.png) | ![截图翻译0-后.png](docs/images/截圖翻譯0-後.png) |
 | ![截图翻译1-前.png](docs/images/截圖翻譯1-前.png) | ![截图翻译1-后.png](docs/images/截圖翻譯1-後.png) |
-| ![截图翻译-前.png](docs/images/截圖翻譯-前.png) | ![截图翻译-后.png](docs/images/截圖翻譯-後.png) |
+| ![截图翻译2-前.png](docs/images/截圖翻譯2-前.png) | ![截图翻译2-后.png](docs/images/截圖翻譯2-後.png) |
 
 > 以上翻译对比均为 OverTranslate 实机运行结果。  
-> 图片来源：第一组漫画原图为 AI 生成；第二组漫画取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三组取自 [Godot Engine Blog](https://godotengine.org/blog/)。
+> 图片来源：第一组漫画原图为 AI 生成；第二组漫画取自 [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html)；第三组取自 [Closers 官网](https://www.naddic.co.kr/ko/cls/index)。
 
 ### 工具栏 - 其他功能
 

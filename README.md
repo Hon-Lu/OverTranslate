@@ -38,13 +38,17 @@
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.en.svg" alt="Download the portable version" /></a>
   </p>
 
+  <p>
+    <img src="docs/images/readme-hero.png" alt="Animated before/after comparison: the translation is overlaid right on the original text" />
+    <br/>
+    <sub>Source: <a href="https://godotengine.org/blog/">Godot Engine Blog</a></sub>
+  </p>
+
 </div>
 
 ---
 
 ## Translation Features
-
-> 🌐 **OverTranslate has a multilingual interface. The screenshots in this README show it in Traditional Chinese or English; the interface language is switchable in the app.**
 
 OverTranslate currently offers five translation features, so you can pick the one that suits what you are doing:
 
@@ -53,6 +57,8 @@ OverTranslate currently offers five translation features, so you can pick the on
 - **[Quick Lookup](#quick-lookup)** — select some text and a compact translation popup opens; it can be pinned to stay on screen
 - **[Quick Translate](#quick-translate)** — select some text and press the hotkey to translate it and replace it in place
 - **[Text Translation](#text-translation)** — the full translation window, with text input, swapping languages and reading aloud
+
+> 🌐 **OverTranslate has a multilingual interface. The screenshots in this README show it in Traditional Chinese or English; the interface language is switchable in the app.**
 
 ---
 
@@ -68,10 +74,10 @@ When you need a translation, press the hotkey (default Ctrl + Alt + A) and selec
 |------|----------|
 | ![截圖翻譯0-前.png](docs/images/截圖翻譯0-前.png) | ![截圖翻譯0-後.png](docs/images/截圖翻譯0-後.png) |
 | ![截圖翻譯1-前.png](docs/images/截圖翻譯1-前.png) | ![截圖翻譯1-後.png](docs/images/截圖翻譯1-後.png) |
-| ![截圖翻譯-前.png](docs/images/截圖翻譯-前.png) | ![截圖翻譯-後.png](docs/images/截圖翻譯-後.png) |
+| ![截圖翻譯2-前.png](docs/images/截圖翻譯2-前.png) | ![截圖翻譯2-後.png](docs/images/截圖翻譯2-後.png) |
 
 > All translation comparisons above are real results from running OverTranslate.  
-> Image sources: the first comic's original artwork is AI-generated; the second comic is from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html); the third is from [Godot Engine Blog](https://godotengine.org/blog/).
+> Image sources: the first comic's original artwork is AI-generated; the second comic is from [こうしす！＠IT支線](https://atmarkit.itmedia.co.jp/ait/articles/2604/02/news010.html); the third is from the [Closers official website](https://www.naddic.co.kr/ko/cls/index).
 
 ### Toolbar - Other Features
 
