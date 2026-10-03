@@ -1160,6 +1160,9 @@ p:last-child { margin-bottom: 0; }
   inset: 0;
   z-index: 120;
   display: grid;
+  /* 格子固定為視窗扣掉 padding。列高若是 auto，圖片的 max-height: 100% 無從換算等於沒設，
+     比視窗高的圖就會超出畫面，而背景鎖住捲動、一捲動就關閉，超出的部分完全看不到 */
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   padding: clamp(16px, 4vw, 48px);
   background: rgba(4, 8, 14, 0.7);
