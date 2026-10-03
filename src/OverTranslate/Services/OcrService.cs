@@ -187,6 +187,13 @@ public class OcrService : IDisposable
         return GroupRealtime(blocks, bitmap.Height, mode);
     }
 
+    /// <summary>
+    /// The column detector alone, for the manga path to tell which of its blocks are tilted — see
+    /// <see cref="Ocr.Manga.MangaColumnAngles"/>. Null for an engine that is not the ONNX one.
+    /// </summary>
+    private static Func<Bitmap, IReadOnlyList<SkiaSharp.SKPointI[]>>? ColumnDetector(IOcrEngine engine, string language) =>
+        engine is OnnxOcrEngine onnx ? mosaic => onnx.DetectQuads(mosaic, language) : null;
+
     /// <summary>Reads original-frame columns without queueing a busy realtime engine.</summary>
     /// <remarks>
     /// With <paramref name="manga"/> usable the page goes to the manga models instead, as on the
@@ -205,7 +212,8 @@ public class OcrService : IDisposable
         {
             var (outcome, read) = await MangaVerticalReader.ReadAsync(
                 manga, bitmap, wait: false,
-                (part, token) => ReadColumnsAsync(engine, part, language, token), cancellationToken);
+                (part, token) => ReadColumnsAsync(engine, part, language, token), cancellationToken,
+                ColumnDetector(engine, language));
             if (outcome == MangaReadOutcome.Busy) return null;
             if (outcome == MangaReadOutcome.Read) return read;
         }
@@ -423,7 +431,8 @@ public class OcrService : IDisposable
         {
             var (outcome, read) = await MangaVerticalReader.ReadAsync(
                 manga, bitmap, wait: true,
-                (part, token) => ReadColumnsAsync(engine, part, sourceLanguage, token), cancellationToken);
+                (part, token) => ReadColumnsAsync(engine, part, sourceLanguage, token), cancellationToken,
+                ColumnDetector(engine, sourceLanguage));
             if (outcome == MangaReadOutcome.Read) return read!;
         }
 
