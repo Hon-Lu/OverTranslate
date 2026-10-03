@@ -28,16 +28,13 @@
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/badges/overtranslate-downloads.json" alt="Total downloads" />
   </p>
 
   <p>
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.ja.svg" alt="Windows インストーラーをダウンロード（推奨）" /></a>
     &nbsp;
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.ja.svg" alt="ポータブル版をダウンロード" /></a>
-  </p>
-
-  <p>
-    <a href="https://github.com/Hon-Lu/github-statcards"><img src="https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/overtranslate-downloads-history.svg" alt="累計ダウンロード数と日次の増加" /></a>
   </p>
 
 </div>
@@ -263,6 +260,10 @@ OCR は最初から最後までお使いの PC 上で動き、画像が外部の
 
 OverTranslate は無料で公開している Windows 向けの翻訳ツールです。  
 このプロジェクトがお役に立ったなら、[Buy Me a Coffee](https://buymeacoffee.com/hon.lu) からコーヒーを一杯おごっていただけると、今後の開発と保守の励みになります。
+
+<p align="center">
+  <a href="https://github.com/Hon-Lu/github-statcards"><img src="https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/overtranslate-downloads-history.svg" alt="累計ダウンロード数と日次の増加" /></a>
+</p>
 
 ---
 
