@@ -23,7 +23,7 @@
     <br/>
     OverTranslate
   </h1>
-  <p>ゲーム・漫画・動画から日常使いまで対応する Windows 用の画面翻訳ツール。キャプチャ翻訳やリアルタイム翻訳などに対応し、訳文を元の画面上に表示できます。</p>
+  <p>ゲーム・漫画・動画から日常使いまで対応する Windows 用の画面翻訳ツール。キャプチャ翻訳やリアルタイム翻訳などに対応し、訳文を原文の上にそのまま重ねて表示します。</p>
 
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
