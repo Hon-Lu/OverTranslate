@@ -23,8 +23,8 @@
     <br/>
     OverTranslate
   </h1>
-  <p>A Windows screen translator for games, manga, comics, videos and everyday use, with screenshot and real-time translation overlaid right on the original screen.</p>
-  <p>一款適合遊戲、漫畫、影音與日常使用的 Windows 螢幕翻譯工具，支援截圖翻譯與即時翻譯，譯文可直接顯示在原畫面上。</p>
+  <p>A Windows screen translator for games, manga, comics, videos and everyday use — screenshot translation, real-time translation and more, overlaid right on the original screen.</p>
+  <p>一款適合遊戲、漫畫、影音與日常使用的 Windows 螢幕翻譯工具，支援截圖翻譯、即時翻譯等功能，譯文可直接顯示在原畫面上。</p>
 
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
