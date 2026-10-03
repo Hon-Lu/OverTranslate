@@ -636,8 +636,8 @@ p:last-child { margin-bottom: 0; }
 
 /* Aspect boxes keep the two frames locked to the same geometry. */
 .shot--hero .compare { aspect-ratio: 2060 / 1160; }
-.compare--capture0 { aspect-ratio: 1421 / 1014; }
-.compare--comic { aspect-ratio: 1406 / 1347; }
+.compare--capture0 { aspect-ratio: 751 / 1002; }
+.compare--comic { aspect-ratio: 842 / 1305; }
 .compare--comicai { aspect-ratio: 786 / 1291; }
 .compare--tall { aspect-ratio: 1048 / 1343; }
 .compare--video,
@@ -921,7 +921,7 @@ p:last-child { margin-bottom: 0; }
 @media (min-width: 820px) {
   .grid2 { grid-template-columns: 1fr 1fr; align-items: start; }
   /* 並排的兩張比例不同：欄寬依各自的寬高比分配，兩張才會一樣高 */
-  .capture__compares { grid-template-columns: minmax(0, 1.401fr) minmax(0, 1.044fr); }
+  .capture__compares { grid-template-columns: minmax(0, 0.75fr) minmax(0, 0.645fr); }
   .prose__comics { grid-template-columns: minmax(0, 0.609fr) minmax(0, 0.78fr); }
   /* 聊天室比對框佔左欄兩列，右欄疊聊天室比對圖與 Crab Champions */
   #panel-ui .grid2 { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); }
