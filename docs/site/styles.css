@@ -529,6 +529,14 @@ p:last-child { margin-bottom: 0; }
   transition: color 160ms ease, text-decoration-color 160ms ease;
 }
 .shot .src a:hover { color: var(--accent); text-decoration-color: currentColor; }
+/* 比對圖組下方的整體說明：跟出處同字級同色，置中收在整組圖之後 */
+.shots__note {
+  margin: clamp(14px, 2vw, 20px) 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-align: center;
+}
 .shot--plain img,
 .shot--app img {
   border: 1px solid var(--line);
