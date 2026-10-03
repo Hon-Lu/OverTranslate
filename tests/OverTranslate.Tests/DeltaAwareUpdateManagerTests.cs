@@ -13,8 +13,8 @@ namespace OverTranslate.Tests;
 // Runs Velopack's real DownloadUpdatesAsync against a packages directory in a temp folder, with the
 // network replaced by a source that writes whatever the test says. What is pinned is what the
 // override adds on top: the base package surviving a download that did not finish, the fallback
-// being announced when it happens and not when the user cancelled, and a missing base costing no
-// delta download at all.
+// being announced when it happens and not when the user cancelled, a missing base costing no
+// delta download at all, and the merge's Update.exe being started on one thread.
 public sealed class DeltaAwareUpdateManagerTests : IDisposable
 {
     private readonly string _packages = Directory.CreateTempSubdirectory("ot-update-").FullName;
@@ -112,12 +112,44 @@ public sealed class DeltaAwareUpdateManagerTests : IDisposable
         Assert.Equal(new[] { "App-1.0.0-full.nupkg" }, PackagesOnDisk());
     }
 
-    private DeltaAwareUpdateManager CreateManager()
+    [Fact]
+    public async Task Merge_RunsUpdateExeOnOneThread_AndPutsTheVariableBack()
     {
-        // Velopack refuses the deltas outright unless an Update.exe exists; it is never run here.
-        var updateExe = Path.Combine(_packages, "Update.exe");
-        File.WriteAllBytes(updateExe, []);
-        var locator = new TestVelopackLocator("App", "1.0.0", _packages, null, null, updateExe);
+        // Stands in for Update.exe: records the thread count it was started with, then fails the
+        // merge so the download carries on to the full package.
+        var seen = Path.Combine(Path.GetTempPath(), $"ot-update-seen-{Guid.NewGuid():N}.txt");
+        var updateExe = Path.Combine(_packages, "Update.cmd");
+        File.WriteAllText(updateExe, $"@>\"{seen}\" echo %{DeltaAwareUpdateManager.PatchThreadsVariable}%\r\n@exit /b 1\r\n");
+        WritePackage(_base);
+        _source.OnDownload = WriteReal;
+        var before = Environment.GetEnvironmentVariable(DeltaAwareUpdateManager.PatchThreadsVariable);
+
+        try
+        {
+            await CreateManager(updateExe).DownloadUpdatesAsync(Update(deltas: [_delta]));
+
+            Assert.Equal("1", File.ReadAllText(seen).Trim());
+            Assert.Equal(before, Environment.GetEnvironmentVariable(DeltaAwareUpdateManager.PatchThreadsVariable));
+            Assert.Equal(1, _fellBack);
+        }
+        finally
+        {
+            File.Delete(seen);
+        }
+    }
+
+    private DeltaAwareUpdateManager CreateManager(string? updateExe = null)
+    {
+        // Velopack refuses the deltas outright unless an Update.exe exists; unless a test brings
+        // its own, it is never run.
+        if (updateExe is null)
+        {
+            updateExe = Path.Combine(_packages, "Update.exe");
+            File.WriteAllBytes(updateExe, []);
+        }
+
+        // The root is only read when Update.exe is started, and this locator throws on it unset.
+        var locator = new TestVelopackLocator("App", "1.0.0", _packages, null, _packages, updateExe);
         return new DeltaAwareUpdateManager(_source, null, locator) { FellBackToFull = () => _fellBack++ };
     }
 
