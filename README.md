@@ -29,16 +29,13 @@
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/badges/overtranslate-downloads.json" alt="Total downloads" />
   </p>
 
   <p>
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.en.svg" alt="Download the Windows installer (recommended)" /></a>
     &nbsp;
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.en.svg" alt="Download the portable version" /></a>
-  </p>
-
-  <p>
-    <a href="https://github.com/Hon-Lu/github-statcards"><img src="https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/overtranslate-downloads-history.svg" alt="Total downloads and daily growth" /></a>
   </p>
 
 </div>
@@ -261,6 +258,10 @@ The following translation services require some extra setup:
 
 OverTranslate is a free Windows translation tool.  
 If this project helps you, feel free to buy me a coffee on [Buy Me a Coffee](https://buymeacoffee.com/hon.lu) and support its continued development and maintenance.
+
+<p align="center">
+  <a href="https://github.com/Hon-Lu/github-statcards"><img src="https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/overtranslate-downloads-history.svg" alt="Total downloads and daily growth" /></a>
+</p>
 
 ---
 

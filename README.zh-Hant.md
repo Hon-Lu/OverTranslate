@@ -28,16 +28,13 @@
   <p>
     <img src="https://img.shields.io/github/v/release/Hon-Lu/OverTranslate?style=for-the-badge&label=latest%20release" alt="Latest release" />
     <img src="https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge" alt="License MIT" />
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/badges/overtranslate-downloads.json" alt="Total downloads" />
   </p>
 
   <p>
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Setup.exe"><img src="docs/images/ui/btn-setup.svg" alt="下載 Windows 安裝版（推薦）" /></a>
     &nbsp;
     <a href="https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip"><img src="docs/images/ui/btn-portable.svg" alt="下載免安裝版（Portable）" /></a>
-  </p>
-
-  <p>
-    <a href="https://github.com/Hon-Lu/github-statcards"><img src="https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/overtranslate-downloads-history.zh-TW.svg" alt="累積下載次數與每日新增" /></a>
   </p>
 
 </div>
@@ -263,6 +260,10 @@ OCR 全程於本機執行，不會將圖片上傳至外部服務；預設模型�
 
 OverTranslate 是免費提供的 Windows 翻譯工具。  
 如果這個專案對你有幫助，歡迎透過 [Buy Me a Coffee](https://buymeacoffee.com/hon.lu) 請我喝杯咖啡，支持後續開發與維護。
+
+<p align="center">
+  <a href="https://github.com/Hon-Lu/github-statcards"><img src="https://raw.githubusercontent.com/Hon-Lu/github-statcards/main/cards/overtranslate-downloads-history.zh-TW.svg" alt="累積下載次數與每日新增" /></a>
+</p>
 
 ---
 
