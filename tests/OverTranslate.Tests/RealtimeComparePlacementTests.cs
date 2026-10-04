@@ -296,6 +296,36 @@ public class RealtimeComparePlacementTests
         Assert.Equal(taller.Size, kept.Size);
     }
 
+    // ── Turned off for one block ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Place_HiddenSlot_TakesNoRoom()
+    {
+        // Another block's copy dragged into the room above this one sends this one's below — until
+        // that copy is turned off.
+        var other = new RealtimeCompareSlot(
+            new Rectangle(100, 100, 200, 100), RealtimeTextOrientation.Horizontal, new Point(600, 434));
+        var line = new RealtimeCompareSlot(new Rectangle(700, 640, 600, 100), RealtimeTextOrientation.Horizontal);
+
+        var shown = RealtimeComparePlacement.Place([other, line], Screen, gap: 6)[1];
+        var hidden = RealtimeComparePlacement.Place([other with { Hidden = true }, line], Screen, gap: 6)[1];
+
+        Assert.Equal(new Point(0, 106), shown);
+        Assert.Equal(new Point(0, -106), hidden);
+    }
+
+    [Fact]
+    public void Place_HiddenSlot_ItsBlockIsStillKeptClearOf()
+    {
+        var upper = new RealtimeCompareSlot(
+            new Rectangle(400, 500, 800, 100), RealtimeTextOrientation.Horizontal, Hidden: true);
+        var lower = new RealtimeCompareSlot(new Rectangle(400, 640, 800, 100), RealtimeTextOrientation.Horizontal);
+
+        var offset = RealtimeComparePlacement.Place([upper, lower], Screen, gap: 6)[1];
+
+        Assert.False(RealtimeComparePlacement.Overlaps(PlacedBox(lower, offset), upper.Bounds));
+    }
+
     // ── Scale ────────────────────────────────────────────────────────────────────────────────────
 
     [Fact]

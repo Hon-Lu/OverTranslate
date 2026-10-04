@@ -4,11 +4,13 @@ namespace OverTranslate.Services.Realtime;
 
 /// <summary>
 /// One block as 對照顯示 sees it: the rectangle being read, which way its text runs, the offset the
-/// user dragged its compare box to — null when they never did — and how large they made it, as a
-/// fraction of the block (see <see cref="RealtimeBlockPlacement.CompareScale"/>).
+/// user dragged its compare box to — null when they never did — how large they made it, as a
+/// fraction of the block (see <see cref="RealtimeBlockPlacement.CompareScale"/>), and whether they
+/// turned its compare box off (see <see cref="RealtimeBlockPlacement.CompareHidden"/>).
 /// </summary>
 public readonly record struct RealtimeCompareSlot(
-    Rectangle Bounds, RealtimeTextOrientation Orientation, Point? Offset = null, double Scale = 1.0);
+    Rectangle Bounds, RealtimeTextOrientation Orientation, Point? Offset = null, double Scale = 1.0,
+    bool Hidden = false);
 
 /// <summary>
 /// Where 對照顯示 puts each block's translation: a copy of the block, moved beside it so the source
@@ -71,6 +73,9 @@ public static class RealtimeComparePlacement
     /// A slot that carries an offset keeps it — the user put it there — and is only pulled back onto
     /// the screen if moving the block has pushed it off. Those go first, so the boxes placed
     /// automatically can avoid them; the automatic ones follow in order and avoid each other too.
+    ///
+    /// A hidden slot gets no box and takes no room — its entry in the result means nothing — but its
+    /// block is still kept clear of, because its source is still being read.
     /// </remarks>
     public static IReadOnlyList<Point> Place(
         IReadOnlyList<RealtimeCompareSlot> slots, Rectangle screen, int gap = DefaultGap)
@@ -81,7 +86,7 @@ public static class RealtimeComparePlacement
 
         for (int i = 0; i < slots.Count; i++)
         {
-            if (slots[i].Offset is not { } offset) continue;
+            if (slots[i].Hidden || slots[i].Offset is not { } offset) continue;
             var box = ClampInto(Displace(slots[i].Bounds, offset, slots[i].Scale), screen);
             result[i] = new Point(box.X - slots[i].Bounds.X, box.Y - slots[i].Bounds.Y);
             placed.Add(box);
@@ -89,7 +94,7 @@ public static class RealtimeComparePlacement
 
         for (int i = 0; i < slots.Count; i++)
         {
-            if (slots[i].Offset is not null) continue;
+            if (slots[i].Hidden || slots[i].Offset is not null) continue;
             var box = Automatic(slots[i], blocks, placed, screen, gap);
             result[i] = new Point(box.X - slots[i].Bounds.X, box.Y - slots[i].Bounds.Y);
             placed.Add(box);

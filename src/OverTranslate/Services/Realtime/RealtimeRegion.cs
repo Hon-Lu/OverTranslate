@@ -57,12 +57,22 @@ public sealed record RealtimeRegion(
 /// same reasons, and like it only ever set by the user's hand, so a copy smaller than its block is
 /// always one with an offset too.
 /// </param>
+/// <param name="CompareHidden">
+/// Whether the user has turned 對照顯示 off for this block alone: its translation is then drawn over
+/// the block, as it is with the switch off, while the other blocks keep their copies. Off for every
+/// new block, because turning the switch on means "compare", and the exception is the block the
+/// user picks out. Turning a copy off also lets go of it: the offset goes back to null and the
+/// scale to 1.0, as the double-click on its label does, so a copy brought back starts again where
+/// and as large as the automatic placement would have it. Carried here with the rest for the same
+/// reasons.
+/// </param>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
     RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
     RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal,
     Point? CompareOffset = null,
-    double CompareScale = 1.0);
+    double CompareScale = 1.0,
+    bool CompareHidden = false);
 
 /// <summary>
 /// The translated lines currently showing for one region. An empty list is a real result — it means
