@@ -667,12 +667,13 @@ public partial class RealtimeEditWindow : Window
     /// actually moved because of it.
     /// </summary>
     /// <remarks>
-    /// <para>Runs on every mouse move of a drag, which is why it is this careful. This layer is a
-    /// full-screen layered window: each frame, whatever changed on it is read back off the GPU and
-    /// composed again, so the cost of a frame is the area that changed. Laying out every block on
-    /// every move made that area the union of all of them — their copies, trays and lines — and
-    /// dragging one block cost as much as dragging all three at once, which showed up as the GPU
-    /// climbing during a plain drag.</para>
+    /// <para>Runs on every mouse move of a drag, so it lays out only what the move can have changed.
+    /// That keeps the layout work small; it is not what a drag costs the GPU. Measured, dragging one
+    /// block cost the same as dragging three, and laying out every block on every move against only
+    /// the changed ones made under half a point of difference: the area that changes is not the
+    /// cost. What is, is that this is a full-screen layered window, handed to the system whole on
+    /// every frame it changes, and that the frame's shadow is blurred again on every one of those
+    /// frames.</para>
     ///
     /// <para>An automatic copy can move when another block moves, because it steers clear of the
     /// blocks and of the other copies, so those are placed again and compared with where they are
@@ -1105,10 +1106,7 @@ public partial class RealtimeEditWindow : Window
             var chip = new FrameworkElementFactory(typeof(Border));
             chip.SetValue(Border.BackgroundProperty, FrameStroke);
             chip.SetValue(Border.CornerRadiusProperty, new CornerRadius(removeSize / 2));
-            chip.SetValue(UIElement.EffectProperty, new DropShadowEffect
-            {
-                BlurRadius = 8 * uiScale, ShadowDepth = 0, Opacity = 0.4, Color = Colors.Black
-            });
+            // No drop shadow, like the trays — see Plate in ModeSegments for why they went.
             chip.AppendChild(glyph);
 
             return new ControlTemplate(typeof(Button)) { VisualTree = chip };
@@ -1148,9 +1146,9 @@ public partial class RealtimeEditWindow : Window
     ///
     /// ON THE TEXT LOOKING SOFT. This window is layered (<c>AllowsTransparency</c>), and WPF turns
     /// ClearType off for the whole of a layered window — every glyph here is greyscale antialiased
-    /// and no setting changes that. What is left is worth doing and is done below: the drop shadows
-    /// are drawn on their own layer rather than on an ancestor of the text, because an Effect pushes
-    /// everything beneath it through an intermediate surface; the text is formatted in Display mode,
+    /// and no setting changes that. What is left is worth doing and is done below: no ancestor of the
+    /// text carries an Effect, because an Effect pushes everything beneath it through an intermediate
+    /// surface and the text comes back softer; the text is formatted in Display mode,
     /// which snaps stems to whole pixels at the small sizes used here; and the control rounds its own
     /// layout, while the canvas rounds the position it is placed at, so the first glyph starts on the
     /// pixel grid instead of half way across one — the same fix AboutOverlay's card carries, for the
@@ -1752,42 +1750,36 @@ public partial class RealtimeEditWindow : Window
         }
 
         /// <summary>
-        /// A surface with its shadow on one layer and its contents on another.
+        /// A dark surface with a hairline along its top edge, holding the content.
         /// </summary>
         /// <remarks>
-        /// The two layers exist only so the text is not a descendant of the Effect. An Effect renders
-        /// its whole subtree into an intermediate surface first, and text that has been through one
-        /// comes back softer than text drawn straight onto the window — which on a layered window,
-        /// where ClearType is already unavailable, is the difference between legible and not. The
-        /// shadow layer holds the fill and the effect and nothing else; the content layer holds the
-        /// hairline and the children, and carries no effect at all.
+        /// <para>No drop shadow. Each plate had one, and with four plates and the remove button they
+        /// were five blurs re-run on every frame of a drag: measured under a GPU-bound game, dropping
+        /// them took the drag from 19 to 55 frames a second, and over bright and dark scenes alike
+        /// the near-opaque plates look no different without them.</para>
+        ///
+        /// <para>The hairline is a border nested inside the fill rather than the fill's own border:
+        /// a Border paints its background inside its border, so on one element the hairline would
+        /// sit over whatever is behind the plate instead of over the plate. The fill is itself inside
+        /// the Border returned, which carries no fill of its own: callers size and style that one,
+        /// and the guidance toggle sets its background to make the whole circle clickable.</para>
         /// </remarks>
-        private static Border Plate(double width, CornerRadius corner, UIElement content, double uiScale)
+        private static Border Plate(double width, CornerRadius corner, UIElement content, double uiScale) => new()
         {
-            var shadow = new Border
+            Width = width,
+            Child = new Border
             {
                 CornerRadius = corner,
                 Background = ModeTrack,
-                Effect = new DropShadowEffect
+                Child = new Border
                 {
-                    BlurRadius = 8 * uiScale, ShadowDepth = 0, Opacity = 0.4, Color = Colors.Black
+                    CornerRadius = corner,
+                    BorderBrush = ModeTrackEdge,
+                    BorderThickness = new Thickness(0, 1 * uiScale, 0, 0),
+                    Child = content,
                 },
-            };
-
-            var body = new Border
-            {
-                CornerRadius = corner,
-                BorderBrush = ModeTrackEdge,
-                BorderThickness = new Thickness(0, 1 * uiScale, 0, 0),
-                Child = content,
-            };
-
-            var layers = new Grid();
-            layers.Children.Add(shadow);
-            layers.Children.Add(body);
-
-            return new Border { Width = width, Child = layers };
-        }
+            },
+        };
 
         /// <summary>
         /// Animates one transform property to a new value, from wherever it is on screen right now.
