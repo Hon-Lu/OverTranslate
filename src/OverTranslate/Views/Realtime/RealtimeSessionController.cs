@@ -152,8 +152,8 @@ internal sealed class RealtimeSessionController
         {
             // The control bar last, so it ends up above the block layers it may overlap.
             foreach (var block in _blockWindows.Values) AlwaysOnTop.Reassert(block);
-            if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
-            if (_control is { } control) AlwaysOnTop.Reassert(control);
+            if (_edit is { } edit) AlwaysOnTop.ReassertWithToolTips(edit);
+            if (_control is { } control) AlwaysOnTop.ReassertWithToolTips(control);
         };
     }
 

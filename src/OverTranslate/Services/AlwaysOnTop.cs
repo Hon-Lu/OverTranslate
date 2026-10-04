@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
+using ToolTip = System.Windows.Controls.ToolTip;
 
 namespace OverTranslate.Services;
 
@@ -34,12 +36,51 @@ internal static class AlwaysOnTop
     private const uint SWP_NOMOVE = 0x0002;
     private const uint SWP_NOACTIVATE = 0x0010;
 
-    public static void Reassert(Window window)
+    public static void Reassert(Window window) => Reassert(new WindowInteropHelper(window).Handle);
+
+    /// <summary>The same, for a window WPF does not expose as a <see cref="Window"/> — a popup's.</summary>
+    public static void Reassert(IntPtr hwnd)
     {
-        var hwnd = new WindowInteropHelper(window).Handle;
         if (hwnd == IntPtr.Zero) return;
 
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    /// <summary>
+    /// <see cref="Reassert(Window)"/>, then the same for any tooltip the window has open, so the
+    /// tooltip stays in front of it.
+    /// </summary>
+    /// <remarks>
+    /// A tooltip is a popup window of its own, topmost and owned by nothing — not by the window it
+    /// belongs to — so Windows does not keep it above that window the way it would an owned one.
+    /// Re-asserting the window alone put it over the tooltip it had just opened, a second after the
+    /// tooltip appeared. The tooltips are raised after the window rather than the window being
+    /// skipped while one is open: hovering is exactly when it must not slip behind anything else.
+    /// </remarks>
+    public static void ReassertWithToolTips(Window window)
+    {
+        Reassert(window);
+
+        foreach (PresentationSource source in PresentationSource.CurrentSources)
+        {
+            if (source is HwndSource { RootVisual: { } root } popup && root is not Window
+                && FindToolTip(root) is { IsOpen: true, PlacementTarget: { } target }
+                && window.IsAncestorOf(target))
+                Reassert(popup.Handle);
+        }
+    }
+
+    // A popup's root is WPF's own PopupRoot, with the tooltip a few decorators down, each of them
+    // holding it as their first child — an adorner decorator's second is its adorner layer.
+    private static ToolTip? FindToolTip(Visual root)
+    {
+        DependencyObject node = root;
+        for (int depth = 0; depth < 6 && VisualTreeHelper.GetChildrenCount(node) > 0; depth++)
+        {
+            node = VisualTreeHelper.GetChild(node, 0);
+            if (node is ToolTip tip) return tip;
+        }
+        return null;
     }
 
     /// <summary>
