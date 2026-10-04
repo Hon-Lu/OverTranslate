@@ -38,10 +38,21 @@ public sealed record RealtimeRegion(
 /// block they draw — so it lives in the settings file as
 /// <see cref="Models.RealtimeSettings.GuidanceExpanded"/> and outlives the session.
 /// </remarks>
+/// <param name="CompareOffset">
+/// Where 對照顯示 draws this block's translation, as an offset from <paramref name="Bounds"/> in
+/// physical pixels — or null while the user has never dragged it, which means "wherever
+/// <see cref="RealtimeComparePlacement.Place"/> puts it". Null rather than a computed value written
+/// back, so a block that was never placed by hand keeps following the automatic rule as it is moved
+/// and resized, and a block that was keeps where the user put it — the edit layer adjusts the
+/// offset on a resize so the copy stays on the same side of the block. Carried here with the
+/// rectangle because it belongs to the block the same way the mode does, and so it survives the
+/// trips between editing and translating, and the switch being turned off and on again.
+/// </param>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
     RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
-    RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal);
+    RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal,
+    Point? CompareOffset = null);
 
 /// <summary>
 /// The translated lines currently showing for one region. An empty list is a real result — it means

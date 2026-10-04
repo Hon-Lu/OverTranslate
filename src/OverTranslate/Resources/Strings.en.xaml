@@ -329,6 +329,12 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">Edit blocks</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">Pause framing and use the app underneath</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Resume framing</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplay">Compare with original</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOn">On</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOff">Off</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOnHint">Compare with original: turn off to show the translation directly over the original</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOffHint">Compare with original: turn on to keep the original visible and show the translation in a separate compare area</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyHint">Drag to move the compare box. Double-click this label to put it back automatically</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">Framing paused — the app underneath takes the mouse</sys:String>
 
     <!-- Control bar and edit window messages -->

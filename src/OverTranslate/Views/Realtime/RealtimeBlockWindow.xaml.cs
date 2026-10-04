@@ -90,7 +90,17 @@ public partial class RealtimeBlockWindow : Window
     // Kept for vertical writing, which draws some punctuation differently by target language.
     private readonly string _targetLanguage;
 
-    private readonly System.Drawing.Rectangle _physBounds;
+    // The block the user drew, which is what the picture under this window is read from — every
+    // grab, and every patch rectangle cut out of one, is in this rectangle's coordinates.
+    private readonly System.Drawing.Rectangle _sourceBounds;
+
+    // Where this window is pinned on screen. The same rectangle as the source unless 對照顯示 is on,
+    // in which case it is the block's copy beside it — same size, so every line's position inside
+    // the block is also its position inside this window, and nothing that lays a line out needs to
+    // know which of the two it is drawing in. Kept apart from the source all the same, because the
+    // two used to be one field and the capture path would otherwise read the picture under the copy:
+    // see CaptureUnderlyingRegion.
+    private readonly System.Drawing.Rectangle _displayBounds;
     private readonly bool _latinSourceToCjkTarget;
 
     // The session's capture backend, reached through the controller so this window never holds one.
@@ -148,6 +158,11 @@ public partial class RealtimeBlockWindow : Window
     /// 進階選項 cannot be drawn without it, and a window that quietly fell back to reading the
     /// screen itself would be reading its own subtitles.
     /// </param>
+    /// <param name="displayLocation">
+    /// Where to draw, when that is not over the block itself — 對照顯示's copy beside it, as the
+    /// top-left corner of a rectangle the size of <paramref name="physBounds"/>, which is the whole of
+    /// what 對照顯示 changes. Null draws over the block, as this window always has.
+    /// </param>
     public RealtimeBlockWindow(
         int regionId,
         System.Drawing.Rectangle physBounds,
@@ -162,7 +177,8 @@ public partial class RealtimeBlockWindow : Window
         RealtimeBlockMode mode = RealtimeBlockMode.Subtitle,
         bool border = false,
         string? borderColor = null,
-        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal)
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal,
+        System.Drawing.Point? displayLocation = null)
     {
         InitializeComponent();
         _mode = mode;
@@ -173,7 +189,10 @@ public partial class RealtimeBlockWindow : Window
             : null;
 
         RegionId = regionId;
-        _physBounds = physBounds;
+        _sourceBounds = physBounds;
+        _displayBounds = displayLocation is { } location
+            ? new System.Drawing.Rectangle(location, physBounds.Size)
+            : physBounds;
         _grabUnderlying = grabUnderlying;
         _naturalBackground = naturalBackground;
         _sampleTextColor = sampleTextColor;
@@ -210,7 +229,7 @@ public partial class RealtimeBlockWindow : Window
         WindowStyles.ApplyClickThrough(this, noActivate: true);
 
         // Before the DPI is read in Loaded: pinning settles which monitor the window belongs to.
-        ScreenGeometry.PinPhysicalBounds(this, _physBounds);
+        ScreenGeometry.PinPhysicalBounds(this, _displayBounds);
 
         // Nothing here asks to be hidden from screen capture. This window used to carry
         // WDA_EXCLUDEFROMCAPTURE so the loop would not read its own translation back; keeping the
@@ -268,8 +287,8 @@ public partial class RealtimeBlockWindow : Window
         Interlocked.Increment(ref _patchGeneration);
         var patches = new List<NaturalPatchVisual>();
 
-        double canvasWidth = _physBounds.Width / _dpiX;
-        double canvasHeight = _physBounds.Height / _dpiY;
+        double canvasWidth = _displayBounds.Width / _dpiX;
+        double canvasHeight = _displayBounds.Height / _dpiY;
 
         // Grabbed only if something is going to read it. With 進階選項 off this window draws from the
         // two colours alone, exactly as it did before those switches existed.
@@ -1389,10 +1408,15 @@ public partial class RealtimeBlockWindow : Window
     }
 
     /// <summary>
-    /// The picture the repair is built from: this window's own rectangle, as the session's capture
-    /// backend sees it — which is to say, without this window in it.
+    /// The picture the repair is built from: the block's rectangle, as the session's capture backend
+    /// sees it — which is to say, without this window in it.
     /// </summary>
     /// <remarks>
+    /// The block's rectangle and not this window's, which are different places under 對照顯示. The
+    /// controller turns both readers of this off in that mode, so nothing reaches here then; reading
+    /// the source rectangle anyway is what keeps a future caller from repairing the picture under the
+    /// copy and pasting it over the block's own lines.
+    ///
     /// This used to be a <c>CopyFromScreen</c> of the same rectangle, and it read whatever was on
     /// screen, this overlay included. What kept the overlay out of it was
     /// <c>WDA_EXCLUDEFROMCAPTURE</c> on this window, which fails on every Windows before 11 24H2 —
@@ -1414,11 +1438,11 @@ public partial class RealtimeBlockWindow : Window
     /// </remarks>
     private System.Drawing.Bitmap? CaptureUnderlyingRegion()
     {
-        if (_physBounds.Width <= 0 || _physBounds.Height <= 0) return null;
+        if (_sourceBounds.Width <= 0 || _sourceBounds.Height <= 0) return null;
 
         try
         {
-            return _grabUnderlying(_physBounds);
+            return _grabUnderlying(_sourceBounds);
         }
         catch (Exception ex)
         {
@@ -1433,10 +1457,10 @@ public partial class RealtimeBlockWindow : Window
     private System.Drawing.Rectangle ToPhysicalPatchBounds(
         double left, double top, double width, double height)
     {
-        int x1 = Math.Clamp((int)Math.Floor(left * _dpiX), 0, _physBounds.Width);
-        int y1 = Math.Clamp((int)Math.Floor(top * _dpiY), 0, _physBounds.Height);
-        int x2 = Math.Clamp((int)Math.Ceiling((left + width) * _dpiX), 0, _physBounds.Width);
-        int y2 = Math.Clamp((int)Math.Ceiling((top + height) * _dpiY), 0, _physBounds.Height);
+        int x1 = Math.Clamp((int)Math.Floor(left * _dpiX), 0, _sourceBounds.Width);
+        int y1 = Math.Clamp((int)Math.Floor(top * _dpiY), 0, _sourceBounds.Height);
+        int x2 = Math.Clamp((int)Math.Ceiling((left + width) * _dpiX), 0, _sourceBounds.Width);
+        int y2 = Math.Clamp((int)Math.Ceiling((top + height) * _dpiY), 0, _sourceBounds.Height);
         return System.Drawing.Rectangle.FromLTRB(x1, y1, x2, y2);
     }
 

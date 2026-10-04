@@ -9,6 +9,15 @@
         AllowsTransparency="True"
         Background="Transparent">
 
+    <Window.Resources>
+        <!-- 原文對照: an A over 文, each followed by two lines of text — the original and its
+             translation, kept side by side. Drawn on a 24-unit grid and baked down to the 18×18 box
+             it is shown in, so the stroke is set directly: 1.05 here is 1.4 at 24. 18 rather than
+             the bar's usual 16 because the 文 has too much detail to survive 16; the button itself is
+             the same size as the others. -->
+        <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
+    </Window.Resources>
+
     <!-- Outer margin leaves room for the shadow to render outside the visual. The LayoutTransform is
          set in code: this window is pinned onto a screen that may not be the one WPF laid it out
          for, and on a mixed-DPI desktop that means it would otherwise come out the wrong physical
@@ -92,6 +101,23 @@
                              own fill, so both edges are visible ones and the rule belongs midway
                              between them. -->
                         <Separator Style="{StaticResource VerticalSeparator}" Margin="11,0"/>
+
+                        <!-- 對照顯示, outside the tray: it is not part of the draw-or-start decision,
+                             and the same switch is on the running capsule — see CompareRunBtn. Before
+                             the tray rather than after, so the start button stays the last thing
+                             before ✕, where it has always been. -->
+                        <Button x:Name="CompareEditBtn"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Margin="0,0,6,0"
+                                Click="CompareBtn_Click">
+                            <Path Width="18" Height="18"
+                                  Data="{StaticResource RealtimeCompareGlyph}"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.05"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
+                        </Button>
 
                         <!-- The two buttons the user chooses between while framing, in a tray of their
                              own: whether to keep drawing or to start translating is one decision, and
@@ -247,6 +273,24 @@
                              feature rather than as a third session control. Drawn rather than typed for
                              the same reason as the two buttons in the edit tray: MDL2 has no framing
                              corners, and a Path has no font fallback to lose. -->
+                        <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
+                             who wants to compare usually finds out while watching, not while framing,
+                             and the switch moves the translation without stopping anything. Left of
+                             截圖翻譯, for the reason that one is leftmost: the right edge is pinned, so
+                             a button added here leaves the others where the hand knows them. -->
+                        <Button x:Name="CompareRunBtn"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Margin="0,0,4,0"
+                                Click="CompareBtn_Click">
+                            <Path Width="18" Height="18"
+                                  Data="{StaticResource RealtimeCompareGlyph}"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.05"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
+                        </Button>
+
                         <Button x:Name="CaptureBtn"
                                 Style="{StaticResource ToolbarIconButton}"
                                 Margin="0,0,4,0"

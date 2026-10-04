@@ -118,6 +118,12 @@ public partial class RealtimeEditWindow : Window
     private static readonly SolidColorBrush HandleFill = Freeze(Color.FromRgb(0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush RemoveForeground = Freeze(Color.FromRgb(0xFF, 0xFF, 0xFF));
 
+    // 對照顯示's copy of a block: the block's own blue, dashed and nearly empty, because it is not a
+    // second area being read — it is where this one's translation will be drawn. Fainter than the
+    // block's fill so the two never read as a pair of equal blocks.
+    private static readonly SolidColorBrush CopyFill = Freeze(Color.FromArgb(0x10, 0x99, 0xC8, 0xF0));
+    private static readonly SolidColorBrush CopyLabelFill = Freeze(Color.FromArgb(0xB8, 0x1E, 0x90, 0xD5));
+
     // The mode control floats over whatever is playing underneath, so its own surface has to carry
     // the contrast: a near-opaque dark track, and a hairline along the top edge in place of the
     // light a real material would catch. Anything lighter stops being legible over a bright scene.
@@ -170,13 +176,20 @@ public partial class RealtimeEditWindow : Window
     /// <inheritdoc cref="_blockMode"/>
     private RealtimeTextOrientation _textOrientation;
 
+    /// <summary>
+    /// Whether 對照顯示 is on, and with it whether every block shows the copy its translation will be
+    /// drawn in. See <see cref="SetCompareDisplay"/>.
+    /// </summary>
+    private bool _compareDisplay;
+
     public RealtimeEditWindow(
         System.Drawing.Rectangle physBounds,
         IReadOnlyList<RealtimeBlockPlacement> initialBlocks,
         int maxBlocks,
         bool guidanceExpanded,
         RealtimeBlockMode blockMode,
-        RealtimeTextOrientation textOrientation)
+        RealtimeTextOrientation textOrientation,
+        bool compareDisplay = false)
     {
         InitializeComponent();
 
@@ -186,6 +199,7 @@ public partial class RealtimeEditWindow : Window
         _guidanceExpanded = guidanceExpanded;
         _blockMode = blockMode;
         _textOrientation = textOrientation;
+        _compareDisplay = compareDisplay;
 
         Loaded += (_, _) =>
         {
@@ -202,7 +216,10 @@ public partial class RealtimeEditWindow : Window
             foreach (var block in _initialBlocks)
                 AddBlock(
                     ToCanvas(block.Bounds), block.Mode, block.Orientation, _guidanceExpanded,
-                    notify: false);
+                    notify: false,
+                    block.CompareOffset is { } offset
+                        ? new Vector(offset.X / _dpiX, offset.Y / _dpiY)
+                        : null);
 
             RaiseBlocksChanged();
         };
@@ -242,6 +259,28 @@ public partial class RealtimeEditWindow : Window
         WindowStyles.SetClickThrough(this, !enabled);
     }
 
+    /// <summary>
+    /// Shows or hides the copy beside every block that 對照顯示 draws the translation in.
+    /// </summary>
+    /// <remarks>
+    /// <para>The copies are on screen while framing because where the translation will appear is a
+    /// framing question: a copy above a subtitle can land on the HUD, a copy left of a column on the
+    /// next balloon, and the user has to see that before starting to fix it. Each one can be dragged
+    /// but not resized — it is the block's own size by definition, see
+    /// <see cref="RealtimeComparePlacement"/> — and has no remove button and no trays, because
+    /// everything about it except its position belongs to its block.</para>
+    ///
+    /// <para>Hidden rather than removed when the switch goes off, and the offsets kept: switching it
+    /// back on should bring every copy back where the user had put it.</para>
+    /// </remarks>
+    public void SetCompareDisplay(bool enabled)
+    {
+        if (_compareDisplay == enabled) return;
+
+        _compareDisplay = enabled;
+        ApplyAll();
+    }
+
     /// <summary>Raised whenever a block is added, removed, moved or resized.</summary>
     public event EventHandler? BlocksChanged;
 
@@ -271,7 +310,8 @@ public partial class RealtimeEditWindow : Window
     /// <summary>The current blocks in physical screen pixels, ready to be watched.</summary>
     public IReadOnlyList<RealtimeBlockPlacement> GetPhysicalBlocks() =>
         [.. _blocks.Select(block => new RealtimeBlockPlacement(
-            ToPhysical(block.Bounds), block.ModeControl.Value, block.ModeControl.TextOrientation))];
+            ToPhysical(block.Bounds), block.ModeControl.Value, block.ModeControl.TextOrientation,
+            ToPhysical(block.CompareOffset)))];
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -413,14 +453,28 @@ public partial class RealtimeEditWindow : Window
         RealtimeBlockMode mode,
         RealtimeTextOrientation orientation,
         bool guidanceExpanded,
-        bool notify)
+        bool notify,
+        Vector? compareOffset = null)
     {
         var visual = new BlockVisual(
             bounds, mode, orientation, guidanceExpanded, _handleSize, _removeSize,
             _modeSegmentWidth, _directionSegmentWidth, _modeHeight, _modeInset, _hintWidth,
-            _removeGap, _uiScale);
+            _removeGap, _uiScale)
+        {
+            CompareOffset = compareOffset,
+        };
 
         visual.Body.DragDelta += (_, e) => Move(visual, e.HorizontalChange, e.VerticalChange);
+        visual.Copy.DragDelta += (_, e) => MoveCopy(visual, e.HorizontalChange, e.VerticalChange);
+        visual.CopyGrip.DragDelta += (_, e) => MoveCopy(visual, e.HorizontalChange, e.VerticalChange);
+        visual.CopyGrip.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2) return;
+
+            // Handled, so the second press does not also start a drag of the copy it just moved.
+            e.Handled = true;
+            ResetCopy(visual);
+        };
         visual.Remove.Click += (_, e) =>
         {
             e.Handled = true;   // must not fall through and start drawing a new block underneath
@@ -428,6 +482,8 @@ public partial class RealtimeEditWindow : Window
         };
         visual.ModeControl.SelectionChanged += (_, tray) =>
         {
+            // The direction decides which side an automatic copy goes, so it may have just moved.
+            if (tray == ModeSegments.BlockTray.Direction) ApplyAll();
             RaiseBlocksChanged();
 
             // The tray last pressed is the one that counts, on whichever block it was pressed — and
@@ -469,14 +525,31 @@ public partial class RealtimeEditWindow : Window
         RaiseBlocksChanged();
     }
 
-    // Frames first, then every handle: a handle sitting on the edge between two overlapping blocks
-    // has to stay grabbable whichever block was drawn last.
+    // Three layers, bottom to top, and what is drawn on top is also what a click lands on:
+    //
+    //   1. the block frames, which are also how a block is dragged;
+    //   2. the 對照顯示 copies, with their lines and labels;
+    //   3. every block's handles, remove button and trays.
+    //
+    // A copy over its block is there because the user put it there, so a press on the overlap takes
+    // the copy; the block is dragged by whatever of it is still showing. The controls that only the
+    // block has — resizing, removing, its trays — stay on top of everything, so a block buried under
+    // a copy can still be resized or removed directly. And the handles of all blocks go above all
+    // frames, so a handle on the edge between two overlapping blocks stays grabbable whichever block
+    // was drawn last.
     private void RebuildCanvas()
     {
         BlockCanvas.Children.Clear();
 
         foreach (var block in _blocks)
             BlockCanvas.Children.Add(block.Body);
+
+        foreach (var block in _blocks)
+        {
+            BlockCanvas.Children.Add(block.Link);
+            BlockCanvas.Children.Add(block.Copy);
+            BlockCanvas.Children.Add(block.CopyGrip);
+        }
 
         foreach (var block in _blocks)
         {
@@ -498,8 +571,115 @@ public partial class RealtimeEditWindow : Window
         double x = Math.Clamp(bounds.X + dx, 0, Math.Max(0, BlockCanvas.ActualWidth - bounds.Width));
         double y = Math.Clamp(bounds.Y + dy, 0, Math.Max(0, BlockCanvas.ActualHeight - bounds.Height));
         visual.Bounds = new Rect(x, y, bounds.Width, bounds.Height);
-        Apply(visual);
+        ApplyChanged(visual);
         RaiseBlocksChanged();
+    }
+
+    /// <summary>
+    /// Drags a block's 對照顯示 copy, anywhere on the screen, blocks included — see
+    /// <see cref="RealtimeComparePlacement.Drag"/>.
+    /// </summary>
+    /// <remarks>
+    /// The first drag is what turns a copy from automatic into the user's: from then on moving its
+    /// block carries the copy along at the same offset, resizing it keeps the copy on the same side
+    /// at the same gap (see <see cref="Resize"/>), and only a double-click on its label hands it back
+    /// to the automatic placement.
+    /// </remarks>
+    private void MoveCopy(BlockVisual visual, double dx, double dy)
+    {
+        if (CopyBounds(visual) is not { } current) return;
+
+        var moved = RealtimeComparePlacement.Drag(
+            current, new Vector(dx, dy), new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight));
+
+        visual.CompareOffset = moved.TopLeft - visual.Bounds.TopLeft;
+        ApplyChanged(visual);
+        RaiseBlocksChanged();
+    }
+
+    /// <summary>
+    /// Hands a copy back to the automatic placement — a double-click on its label.
+    /// </summary>
+    /// <remarks>
+    /// The way back from a drag the user regrets, and the only one: there is no other control on a
+    /// copy, and dragging it by hand to exactly where the program would have put it is not a thing
+    /// anyone can do. Its block's other copies may move in answer, as they do whenever one copy
+    /// moves, because the automatic ones steer clear of each other.
+    /// </remarks>
+    private void ResetCopy(BlockVisual visual)
+    {
+        if (visual.CompareOffset is null) return;
+
+        visual.CompareOffset = null;
+        ApplyChanged(visual);
+        RaiseBlocksChanged();
+    }
+
+    /// <summary>
+    /// Where a block's 對照顯示 copy sits on the canvas, or null while the switch is off.
+    /// </summary>
+    /// <remarks>
+    /// Automatic copies are placed by the same function, on the same physical rectangles, that the
+    /// running overlays will be — so what the user sees here is where the translation will be. A copy
+    /// the user has dragged is placed straight from its offset in this window's own units, kept on
+    /// the screen as the running side keeps it; going through whole pixels on every mouse move would
+    /// make a slow drag step.
+    /// </remarks>
+    private Rect? CopyBounds(BlockVisual visual)
+    {
+        if (!_compareDisplay) return null;
+
+        var screen = new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight);
+        if (visual.CompareOffset is { } offset)
+        {
+            var box = Rect.Offset(visual.Bounds, offset);
+            return new Rect(
+                Math.Clamp(box.X, 0, Math.Max(0, screen.Width - box.Width)),
+                Math.Clamp(box.Y, 0, Math.Max(0, screen.Height - box.Height)),
+                box.Width, box.Height);
+        }
+
+        var slots = _blocks
+            .Select(block => new RealtimeCompareSlot(
+                ToPhysical(block.Bounds), block.ModeControl.TextOrientation, ToPhysical(block.CompareOffset)))
+            .ToList();
+        int index = _blocks.IndexOf(visual);
+        var placed = RealtimeComparePlacement.Displace(
+            slots[index].Bounds, RealtimeComparePlacement.Place(slots, _physBounds)[index]);
+        return ToCanvas(placed);
+    }
+
+    private void ApplyAll()
+    {
+        foreach (var block in _blocks)
+            Apply(block);
+    }
+
+    /// <summary>
+    /// Re-lays out the block being dragged, and any other block only if its automatic copy has
+    /// actually moved because of it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Runs on every mouse move of a drag, which is why it is this careful. This layer is a
+    /// full-screen layered window: each frame, whatever changed on it is read back off the GPU and
+    /// composed again, so the cost of a frame is the area that changed. Laying out every block on
+    /// every move made that area the union of all of them — their copies, trays and lines — and
+    /// dragging one block cost as much as dragging all three at once, which showed up as the GPU
+    /// climbing during a plain drag.</para>
+    ///
+    /// <para>An automatic copy can move when another block moves, because it steers clear of the
+    /// blocks and of the other copies, so those are placed again and compared with where they are
+    /// shown. A copy the user has dragged follows its own block alone and is never affected.</para>
+    /// </remarks>
+    private void ApplyChanged(BlockVisual visual)
+    {
+        Apply(visual);
+
+        foreach (var block in _blocks)
+        {
+            if (ReferenceEquals(block, visual) || block.CompareOffset is not null) continue;
+            if (CopyBounds(block) != block.ShownCopy) Apply(block);
+        }
     }
 
     // Corner order: 0 = top-left, 1 = top-right, 2 = bottom-left, 3 = bottom-right.
@@ -520,8 +700,20 @@ public partial class RealtimeEditWindow : Window
         if (movesTop) top = Math.Clamp(top + dy, 0, bottom - _minBlockHeight);
         else bottom = Math.Clamp(bottom + dy, top + _minBlockHeight, BlockCanvas.ActualHeight);
 
-        visual.Bounds = new Rect(left, top, right - left, bottom - top);
-        Apply(visual);
+        var resized = new Rect(left, top, right - left, bottom - top);
+
+        // A copy the user placed keeps its relation to the block rather than its offset from the
+        // corner — see RealtimeComparePlacement.Resized. An automatic one is simply placed again.
+        if (visual.CompareOffset is { } offset)
+        {
+            var kept = RealtimeComparePlacement.Resized(
+                bounds, Rect.Offset(bounds, offset), resized,
+                new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight));
+            visual.CompareOffset = kept.TopLeft - resized.TopLeft;
+        }
+
+        visual.Bounds = resized;
+        ApplyChanged(visual);
         RaiseBlocksChanged();
     }
 
@@ -539,6 +731,9 @@ public partial class RealtimeEditWindow : Window
         PlaceHandle(visual.Corners[2], bounds.Left, bounds.Bottom);
         PlaceHandle(visual.Corners[3], bounds.Right, bounds.Bottom);
 
+        var copy = CopyBounds(visual);
+        PlaceCopy(visual, copy);
+
         // Outside the top-right corner by preference, so it never covers the content being framed;
         // tucked inside when the block is against the screen edge and there is no room out there.
         double removeLeft = bounds.Right + _removeGap;
@@ -555,6 +750,12 @@ public partial class RealtimeEditWindow : Window
         // as a last resort. The order matters more than it did when this was a single chip: the
         // guidance makes this tall enough that putting it inside covers a good part of what the user
         // is trying to frame, so anywhere outside the block beats anywhere inside it.
+        //
+        // Placed by the block alone, 對照顯示 or not. It used to step round a copy sitting above or
+        // below, and that made the trays follow the copy rather than the block: drag a copy well
+        // clear and its block's trays went with it, out of reach of the block they set. They belong
+        // to the block, so they stay on it — over the top of an automatic copy, which sits right
+        // where they do, and that is the accepted cost.
         var mode = visual.ModeControl;
         double modeTop = bounds.Top - mode.TotalHeight - _removeGap;
         if (modeTop < 0)
@@ -606,6 +807,64 @@ public partial class RealtimeEditWindow : Window
     private static double SnapToPixels(double position, double dpi) =>
         dpi > 0 ? Math.Round(position * dpi) / dpi : position;
 
+    /// <summary>
+    /// Puts a block's 對照顯示 copy where <see cref="CopyBounds"/> says, with a line back to the block
+    /// — or takes both off the canvas while the switch is off.
+    /// </summary>
+    /// <remarks>
+    /// The line is what says which block a copy belongs to once there are three of each on screen.
+    /// It runs between the facing edges rather than the centres, so it never crosses the content the
+    /// block is framing, and it goes away when the two touch or overlap: there is then nothing to
+    /// connect, and a line drawn inside them would be one more stroke over the picture.
+    /// </remarks>
+    private static void PlaceCopy(BlockVisual visual, Rect? copy)
+    {
+        visual.ShownCopy = copy;
+        if (copy is not { } box)
+        {
+            visual.Copy.Visibility = Visibility.Collapsed;
+            visual.CopyGrip.Visibility = Visibility.Collapsed;
+            visual.Link.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        visual.Copy.Visibility = Visibility.Visible;
+        visual.Copy.Width = box.Width;
+        visual.Copy.Height = box.Height;
+        Canvas.SetLeft(visual.Copy, box.X);
+        Canvas.SetTop(visual.Copy, box.Y);
+
+        visual.CopyGrip.Visibility = Visibility.Visible;
+        Canvas.SetLeft(visual.CopyGrip, box.X + visual.GripInset);
+        Canvas.SetTop(visual.CopyGrip, box.Y + visual.GripInset);
+
+        var bounds = visual.Bounds;
+        var from = new Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+        var to = new Point(box.X + box.Width / 2, box.Y + box.Height / 2);
+        var start = EdgeToward(bounds, from, to);
+        var end = EdgeToward(box, to, from);
+
+        // Pointing the same way as centre to centre means the two edge points are in order, i.e. the
+        // rectangles are apart; reversed or coincident means they touch or overlap.
+        bool apart = (end - start) * (to - from) > 0.5;
+        visual.Link.Visibility = apart ? Visibility.Visible : Visibility.Collapsed;
+        visual.Link.X1 = start.X;
+        visual.Link.Y1 = start.Y;
+        visual.Link.X2 = end.X;
+        visual.Link.Y2 = end.Y;
+    }
+
+    /// <summary>Where a line from a rectangle's centre toward a point leaves the rectangle.</summary>
+    private static Point EdgeToward(Rect rect, Point centre, Point target)
+    {
+        var direction = target - centre;
+        if (direction.Length < 0.001) return centre;
+
+        double scaleX = Math.Abs(direction.X) > 0.001 ? rect.Width / 2 / Math.Abs(direction.X) : double.PositiveInfinity;
+        double scaleY = Math.Abs(direction.Y) > 0.001 ? rect.Height / 2 / Math.Abs(direction.Y) : double.PositiveInfinity;
+        return centre + direction * Math.Min(scaleX, scaleY);
+    }
+
     private void PlaceHandle(Thumb handle, double centreX, double centreY)
     {
         Canvas.SetLeft(handle, centreX - _handleSize / 2);
@@ -627,6 +886,11 @@ public partial class RealtimeEditWindow : Window
         (int)Math.Round(_physBounds.Top + canvas.Y * _dpiY),
         Math.Max(1, (int)Math.Round(canvas.Width * _dpiX)),
         Math.Max(1, (int)Math.Round(canvas.Height * _dpiY)));
+
+    // An offset, not a position: no screen origin to add.
+    private System.Drawing.Point? ToPhysical(Vector? offset) => offset is { } value
+        ? new System.Drawing.Point((int)Math.Round(value.X * _dpiX), (int)Math.Round(value.Y * _dpiY))
+        : null;
 
     private static SolidColorBrush Freeze(Color color)
     {
@@ -688,12 +952,66 @@ public partial class RealtimeEditWindow : Window
             ModeControl = new ModeSegments(
                 mode, orientation, guidanceExpanded, modeHeight, modeSegmentWidth,
                 directionSegmentWidth, modeInset, hintWidth, gap, uiScale);
+
+            Copy = new Thumb
+            {
+                Cursor = Cursors.SizeAll,
+                Template = BuildCopyTemplate(uiScale),
+                ToolTip = LocalizationService.Get("S.Realtime.CompareCopyHint"),
+                Visibility = Visibility.Collapsed,
+            };
+
+            GripInset = 4 * uiScale;
+            CopyGrip = new Thumb
+            {
+                Cursor = Cursors.SizeAll,
+                Template = BuildGripTemplate(uiScale),
+                ToolTip = LocalizationService.Get("S.Realtime.CompareCopyHint"),
+                Visibility = Visibility.Collapsed,
+            };
+
+            Link = new System.Windows.Shapes.Line
+            {
+                Stroke = FrameStroke,
+                StrokeThickness = 1.5 * uiScale,
+                IsHitTestVisible = false,
+                Visibility = Visibility.Collapsed,
+            };
         }
 
         public Rect Bounds { get; set; }
         public Thumb Body { get; }
         public Thumb[] Corners { get; }
         public Button Remove { get; }
+
+        /// <summary>
+        /// Where 對照顯示 draws this block's translation, as an offset from <see cref="Bounds"/> in
+        /// canvas units — null until the user drags <see cref="Copy"/>, which means "placed
+        /// automatically". See <see cref="RealtimeBlockPlacement.CompareOffset"/>.
+        /// </summary>
+        public Vector? CompareOffset { get; set; }
+
+        /// <summary>This block's 對照顯示 copy: same size, moved only, collapsed while the switch is off.</summary>
+        public Thumb Copy { get; }
+
+        /// <summary>
+        /// The copy's label, which is also its handle: it drags the copy, and a double-click on it
+        /// puts the copy back where the automatic placement would. A separate element from the
+        /// outline only so the double-click has something of its own to land on.
+        /// </summary>
+        public Thumb CopyGrip { get; }
+
+        /// <summary>How far the label sits in from the copy's top-left corner.</summary>
+        public double GripInset { get; }
+
+        /// <summary>
+        /// Where <see cref="Copy"/> was last put, or null while it is hidden — what a drag elsewhere
+        /// compares against to tell whether this block needs laying out again.
+        /// </summary>
+        public Rect? ShownCopy { get; set; }
+
+        /// <summary>The line from the block to its copy.</summary>
+        public System.Windows.Shapes.Line Link { get; }
 
         /// <summary>What the user says this block holds — see <see cref="RealtimeBlockMode"/>.</summary>
         public ModeSegments ModeControl { get; }
@@ -712,6 +1030,50 @@ public partial class RealtimeEditWindow : Window
                 BlurRadius = 10 * uiScale, ShadowDepth = 0, Opacity = 0.45, Color = Colors.Black
             });
             return new ControlTemplate(typeof(Thumb)) { VisualTree = frame };
+        }
+
+        /// <summary>
+        /// A dashed outline. The label in its corner is a separate element — see
+        /// <see cref="BuildGripTemplate"/> — because it has to be drawn above the blocks while the
+        /// outline is drawn below them.
+        /// </summary>
+        private static ControlTemplate BuildCopyTemplate(double uiScale)
+        {
+            var outline = new FrameworkElementFactory(typeof(Shape));
+            outline.SetValue(System.Windows.Shapes.Shape.StrokeProperty, FrameStroke);
+            outline.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1.5 * uiScale);
+            outline.SetValue(System.Windows.Shapes.Shape.StrokeDashArrayProperty, new DoubleCollection([4, 3]));
+            outline.SetValue(System.Windows.Shapes.Shape.FillProperty, CopyFill);
+            outline.SetValue(Shape.RadiusXProperty, 3 * uiScale);
+            outline.SetValue(Shape.RadiusYProperty, 3 * uiScale);
+            // No drop shadow, unlike the block's frame. A blur over a box the size of the block is
+            // re-run on every frame the copy moves, and the copy is the thing being dragged; the
+            // dashes and the label keep it legible without one.
+            return new ControlTemplate(typeof(Thumb)) { VisualTree = outline };
+        }
+
+        /// <summary>
+        /// The small label in a copy's corner. It is what keeps the copy from reading as a block still
+        /// being drawn — the drag preview is dashed too — and it names the switch the user would turn
+        /// off to make it go away.
+        /// </summary>
+        private static ControlTemplate BuildGripTemplate(double uiScale)
+        {
+            var text = new FrameworkElementFactory(typeof(TextBlock));
+            text.SetValue(TextBlock.TextProperty, LocalizationService.Get("S.Realtime.CompareDisplay"));
+            // 13 rather than the 11 of the block's other small glyphs: at 11 it was the one piece of
+            // text over a busy scene that had to be squinted at. The padding grows with it.
+            text.SetValue(TextBlock.FontSizeProperty, 13.0 * uiScale);
+            text.SetValue(TextBlock.ForegroundProperty, RemoveForeground);
+            text.SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display);
+
+            var label = new FrameworkElementFactory(typeof(Border));
+            label.SetValue(Border.BackgroundProperty, CopyLabelFill);
+            label.SetValue(Border.CornerRadiusProperty, new CornerRadius(3.5 * uiScale));
+            label.SetValue(Border.PaddingProperty, new Thickness(6 * uiScale, 1.2 * uiScale, 6 * uiScale, 2.4 * uiScale));
+            label.AppendChild(text);
+
+            return new ControlTemplate(typeof(Thumb)) { VisualTree = label };
         }
 
         private static ControlTemplate BuildHandleTemplate(double handleSize, double uiScale)
