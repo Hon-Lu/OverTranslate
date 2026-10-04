@@ -4,7 +4,7 @@
 
 ## 為什麼需要它
 
-`OverlayWindow` 與 `ToolbarWindow` 的 XAML 都用了 `StaticResource`，載入時就需要 `Application.Current`，而單元測試專案刻意不引入行程層級狀態（理由寫在 `tests/OverTranslate.Tests/AssemblyInfo.cs`）。**所以使用者真正看到的那兩個視窗，版面完全沒有自動化覆蓋。**
+`OverlayWindow` 與 `ToolbarWindow` 的 XAML 都用了 `StaticResource`，載入時就需要 `Application.Current`，而單元測試專案刻意不引入行程層級狀態（理由寫在 `src/OverTranslate.Tests/AssemblyInfo.cs`）。**所以使用者真正看到的那兩個視窗，版面完全沒有自動化覆蓋。**
 
 在這支工具進版控之前，每次要回答這類問題的做法都是「在暫存目錄開一支拋棄式 WPF exe，量完丟掉」——同一個工作流裡做了兩次（工具列版面一次、疊圖對齊一次），而丟掉的那兩支的內容就是這裡的全部。
 
