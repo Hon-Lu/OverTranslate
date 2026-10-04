@@ -129,18 +129,23 @@ public partial class RealtimeEditWindow : Window
     // drawn, and in the block's own blue, however faint, the copy was easy to miss and easy to take
     // for a second block. A colour of its own is found at a glance and says which is which. Amber
     // because it is far from the blue and holds up over both a bright and a dark scene. The block's
-    // own buttons — remove, restore — stay blue: they act on the block.
+    // own buttons — remove, and restore on the trays — stay blue: they act on the block.
     private static readonly SolidColorBrush CopyStroke = Freeze(Color.FromArgb(0xF2, 0xF0, 0xA0, 0x28));
     private static readonly SolidColorBrush CopyFill = Freeze(Color.FromArgb(0x24, 0xF0, 0xA0, 0x28));
     // 「譯文顯示位置」 in the middle of the copy: white text with a dark rim round every glyph, which
     // keeps it legible over a bright scene and a dark one alike.
     private static readonly SolidColorBrush CopyHintLetters = Freeze(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush CopyHintRim = Freeze(Color.FromArgb(0xA6, 0x00, 0x00, 0x00));
+    // A thin dark rim either side of the dashes, so the amber line still has an edge over a pale
+    // scene. Two hairlines rather than a shadow, for the reason the outline has none.
+    private static readonly SolidColorBrush CopyRimOuter = Freeze(Color.FromArgb(0x8C, 0x00, 0x00, 0x00));
+    private static readonly SolidColorBrush CopyRimInner = Freeze(Color.FromArgb(0x59, 0x00, 0x00, 0x00));
     private static readonly SolidColorBrush CopyLabelFill = Freeze(Color.FromArgb(0xE6, 0xF0, 0xA0, 0x28));
     private static readonly SolidColorBrush CopyLabelForeground = Freeze(Color.FromRgb(0x2A, 0x1A, 0x00));
     // The ✕ on the label: the label's own amber, about 85% where the label is about 90%, and its
-    // glyph about 90%. A darker step of the amber was tried and read as too dark; the seam and the
-    // glyph are enough to mark it as the part that can be pressed.
+    // glyph about 90%, drawn as two strokes heavier than the label's text. A darker step of the
+    // amber was tried and read as too dark; the weight of the cross is what marks it as the part
+    // that can be pressed.
     private static readonly SolidColorBrush CopyCloseFill = Freeze(Color.FromArgb(0xD9, 0xF0, 0xA0, 0x28));
     private static readonly SolidColorBrush CopyCloseForeground = Freeze(Color.FromArgb(0xE6, 0x2A, 0x1A, 0x00));
 
@@ -158,6 +163,8 @@ public partial class RealtimeEditWindow : Window
     // the contrast: a near-opaque dark track, and a hairline along the top edge in place of the
     // light a real material would catch. Anything lighter stops being legible over a bright scene.
     private static readonly SolidColorBrush ModeTrack = Freeze(Color.FromArgb(0xD8, 0x1C, 0x1C, 0x1E));
+    // The restore tray: the block's blue at the trays' opacity.
+    private static readonly SolidColorBrush RestoreFill = Freeze(Color.FromArgb(0xD8, 0x1E, 0x90, 0xD5));
     private static readonly SolidColorBrush ModeTrackEdge = Freeze(Color.FromArgb(0x2E, 0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush ModeIdleForeground = Freeze(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
 
@@ -587,7 +594,7 @@ public partial class RealtimeEditWindow : Window
     //
     //   1. the block frames, which are also how a block is dragged;
     //   2. the 對照顯示 copies, with their lines, labels and corner handles;
-    //   3. every block's handles, remove and restore buttons, and trays.
+    //   3. every block's handles, remove buttons, and trays (the restore button is one of the trays).
     //
     // A copy over its block is there because the user put it there, so a press on the overlap takes
     // the copy; the block is dragged by whatever of it is still showing. The controls that only the
@@ -619,7 +626,6 @@ public partial class RealtimeEditWindow : Window
             foreach (var corner in block.Corners)
                 BlockCanvas.Children.Add(corner);
             BlockCanvas.Children.Add(block.Remove);
-            BlockCanvas.Children.Add(block.Restore);
             BlockCanvas.Children.Add(block.ModeControl);
         }
 
@@ -866,13 +872,9 @@ public partial class RealtimeEditWindow : Window
         Canvas.SetLeft(visual.Remove, removeLeft);
         Canvas.SetTop(visual.Remove, Math.Max(0, bounds.Top));
 
-        // Straight under the remove button, inside or outside the block with it: one column of the
-        // block's own buttons. Shown only while there is a copy to bring back.
-        Canvas.SetLeft(visual.Restore, removeLeft);
-        Canvas.SetTop(visual.Restore, Math.Max(0, bounds.Top) + _removeSize + _removeGap);
-        visual.Restore.Visibility = _compareDisplay && visual.CompareHidden
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // At the end of the trays, shown only while there is a copy to bring back. Set before the
+        // trays are placed, because it changes how wide they are.
+        visual.ModeControl.SetRestoreShown(_compareDisplay && visual.CompareHidden);
 
         // Kept whole rather than allowed to run off the side: this is the control that says what the
         // block is and how to draw it, and half of it off-screen says neither.
@@ -1215,16 +1217,6 @@ public partial class RealtimeEditWindow : Window
             CopyLabel.Children.Add(CopyGrip);
             CopyLabel.Children.Add(CopyClose);
 
-            Restore = new Button
-            {
-                Width = removeSize,
-                Height = removeSize,
-                Cursor = Cursors.Hand,
-                ToolTip = LocalizationService.Get("S.Realtime.CompareShowBlock"),
-                Template = BuildRestoreTemplate(removeSize, uiScale),
-                Visibility = Visibility.Collapsed,
-            };
-
             // A little smaller than the block's, and filled in the label's colour rather than white:
             // the block's handles are the primary ones, and these have to read as the copy's at a
             // glance where the two sit close together.
@@ -1310,10 +1302,9 @@ public partial class RealtimeEditWindow : Window
         public bool CompareHidden { get; set; }
 
         /// <summary>
-        /// Brings a turned-off copy back. Under <see cref="Remove"/>, and only there while the copy is
-        /// off and 對照顯示 is on — the one moment it has anything to do.
+        /// Brings a turned-off copy back. One of the trays — see <see cref="ModeSegments.Restore"/>.
         /// </summary>
-        public Button Restore { get; }
+        public Button Restore => ModeControl.Restore;
 
         /// <summary>
         /// 「譯文顯示位置」 in the middle of the copy, sized to it — see
@@ -1376,10 +1367,32 @@ public partial class RealtimeEditWindow : Window
             outline.SetValue(Shape.RadiusXProperty, 3 * uiScale);
             outline.SetValue(Shape.RadiusYProperty, 3 * uiScale);
 
+            // The rim: a hairline just outside the dashes and a fainter one just inside. A shape's
+            // stroke is drawn inside its bounds, so the outer one sits on a box a pixel larger and
+            // the inner one on a box inset by the width of the dashes.
+            var outer = new FrameworkElementFactory(typeof(Shape));
+            outer.SetValue(System.Windows.Shapes.Shape.StrokeProperty, CopyRimOuter);
+            outer.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1 * uiScale);
+            outer.SetValue(FrameworkElement.MarginProperty, new Thickness(-1 * uiScale));
+            outer.SetValue(Shape.RadiusXProperty, 4 * uiScale);
+            outer.SetValue(Shape.RadiusYProperty, 4 * uiScale);
+
+            var inner = new FrameworkElementFactory(typeof(Shape));
+            inner.SetValue(System.Windows.Shapes.Shape.StrokeProperty, CopyRimInner);
+            inner.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1 * uiScale);
+            inner.SetValue(FrameworkElement.MarginProperty, new Thickness(2 * uiScale));
+            inner.SetValue(Shape.RadiusXProperty, 1 * uiScale);
+            inner.SetValue(Shape.RadiusYProperty, 1 * uiScale);
+
+            var layers = new FrameworkElementFactory(typeof(Grid));
+            layers.AppendChild(outer);
+            layers.AppendChild(outline);
+            layers.AppendChild(inner);
+
             // No drop shadow, unlike the block's frame. A blur over a box the size of the block is
             // re-run on every frame the copy moves, and the copy is the thing being dragged; the
-            // amber and the label keep it legible without one.
-            return new ControlTemplate(typeof(Thumb)) { VisualTree = outline };
+            // amber, its rim and the label keep it legible without one.
+            return new ControlTemplate(typeof(Thumb)) { VisualTree = layers };
         }
 
         /// <summary>
@@ -1416,39 +1429,23 @@ public partial class RealtimeEditWindow : Window
         /// </summary>
         private static ControlTemplate BuildCopyCloseTemplate(double uiScale)
         {
-            var glyph = new FrameworkElementFactory(typeof(TextBlock));
-            glyph.SetValue(TextBlock.TextProperty, "✕");
-            glyph.SetValue(TextBlock.FontSizeProperty, 10.0 * uiScale);
-            glyph.SetValue(TextBlock.ForegroundProperty, CopyCloseForeground);
+            // Two strokes rather than the ✕ character: a font's cross is a hairline at this size and
+            // no weight of it is much heavier, where a drawn one can be given the weight it needs.
+            var glyph = new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
+            glyph.SetValue(System.Windows.Shapes.Path.DataProperty, Geometry.Parse("M0,0 L1,1 M1,0 L0,1"));
+            glyph.SetValue(System.Windows.Shapes.Shape.StretchProperty, Stretch.Fill);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeProperty, CopyCloseForeground);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1.6 * uiScale);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeStartLineCapProperty, PenLineCap.Round);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeEndLineCapProperty, PenLineCap.Round);
+            glyph.SetValue(FrameworkElement.WidthProperty, 7.0 * uiScale);
+            glyph.SetValue(FrameworkElement.HeightProperty, 7.0 * uiScale);
             glyph.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
 
             var chip = new FrameworkElementFactory(typeof(Border));
             chip.SetValue(Border.BackgroundProperty, CopyCloseFill);
             chip.SetValue(Border.CornerRadiusProperty, new CornerRadius(0, 3.5 * uiScale, 3.5 * uiScale, 0));
             chip.SetValue(Border.PaddingProperty, new Thickness(5 * uiScale, 0, 5 * uiScale, 0));
-            chip.AppendChild(glyph);
-
-            return new ControlTemplate(typeof(Button)) { VisualTree = chip };
-        }
-
-        // The remove button's chip with 對照顯示's own glyph in it: it belongs to the block like the
-        // remove button does, and it brings back what the bar's 原文對照 button stands for.
-        private static ControlTemplate BuildRestoreTemplate(double removeSize, double uiScale)
-        {
-            var glyph = new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
-            glyph.SetValue(System.Windows.Shapes.Path.DataProperty, CompareGlyph);
-            glyph.SetValue(System.Windows.Shapes.Shape.StretchProperty, Stretch.Uniform);
-            glyph.SetValue(FrameworkElement.WidthProperty, removeSize * 0.6);
-            glyph.SetValue(FrameworkElement.HeightProperty, removeSize * 0.6);
-            glyph.SetValue(System.Windows.Shapes.Shape.StrokeProperty, RemoveForeground);
-            glyph.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1.1 * uiScale);
-            glyph.SetValue(System.Windows.Shapes.Shape.StrokeStartLineCapProperty, PenLineCap.Round);
-            glyph.SetValue(System.Windows.Shapes.Shape.StrokeEndLineCapProperty, PenLineCap.Round);
-            glyph.SetValue(System.Windows.Shapes.Shape.StrokeLineJoinProperty, PenLineJoin.Round);
-
-            var chip = new FrameworkElementFactory(typeof(Border));
-            chip.SetValue(Border.BackgroundProperty, FrameStroke);
-            chip.SetValue(Border.CornerRadiusProperty, new CornerRadius(removeSize / 2));
             chip.AppendChild(glyph);
 
             return new ControlTemplate(typeof(Button)) { VisualTree = chip };
@@ -1464,11 +1461,11 @@ public partial class RealtimeEditWindow : Window
             return new ControlTemplate(typeof(Thumb)) { VisualTree = handle };
         }
 
-        // The block's handle inverted: the label's fill inside, a white ring round it.
+        // The block's handle inverted: the outline's amber inside, a white ring round it.
         private static ControlTemplate BuildCopyHandleTemplate(double handleSize, double uiScale)
         {
             var handle = new FrameworkElementFactory(typeof(Border));
-            handle.SetValue(Border.BackgroundProperty, CopyLabelFill);
+            handle.SetValue(Border.BackgroundProperty, CopyStroke);
             handle.SetValue(Border.BorderBrushProperty, HandleFill);
             handle.SetValue(Border.BorderThicknessProperty, new Thickness(1.5 * uiScale));
             handle.SetValue(Border.CornerRadiusProperty, new CornerRadius(handleSize / 2));
@@ -1622,6 +1619,11 @@ public partial class RealtimeEditWindow : Window
         private readonly double _collapsedWidth;
         private readonly double _collapsedHeight;
         private readonly double _expandedHintHeight;
+
+        // What the restore button adds to the trays' width while it is showing: it is measured out
+        // with the rest, collapsed, so the widths above do not include it.
+        private readonly double _restoreWidth;
+        private bool _restoreShown;
 
         // Which segment the pointer went down on, or -1. The click is committed on release and only
         // if the pointer is still over that segment, so a press the user thought better of can be
@@ -1850,6 +1852,22 @@ public partial class RealtimeEditWindow : Window
             header.Children.Add(directionTrack);
             header.Children.Add(_guidanceToggle);
 
+            // Last in the row and the size of the toggle beside it, in the block's blue rather than
+            // the trays' dark: it acts on the block, and it is the one tray that is not always there.
+            Restore = new Button
+            {
+                Width = height,
+                Height = height,
+                Margin = new Thickness(gap, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Cursor = Cursors.Hand,
+                ToolTip = LocalizationService.Get("S.Realtime.CompareShowBlock"),
+                Template = BuildRestoreTemplate(height, uiScale),
+                Visibility = Visibility.Collapsed,
+            };
+            header.Children.Add(Restore);
+            _restoreWidth = height + gap;
+
             _hints = [BuildHint(SubtitleHint, uiScale), BuildHint(PanelHint, uiScale)];
 
             // Both sentences are laid out at once and only one is opaque, so the plate is as tall as
@@ -2011,7 +2029,48 @@ public partial class RealtimeEditWindow : Window
         public RealtimeTextOrientation TextOrientation { get; private set; }
 
         /// <summary>Current size, so the caller can keep the visible surface on screen.</summary>
-        public double TotalWidth => _guidanceExpanded ? _expandedWidth : _collapsedWidth;
+        public double TotalWidth
+        {
+            get
+            {
+                double header = _collapsedWidth + (_restoreShown ? _restoreWidth : 0);
+                return _guidanceExpanded ? Math.Max(_expandedWidth, header) : header;
+            }
+        }
+
+        /// <summary>
+        /// Brings the block's turned-off 對照顯示 copy back. Shown by <see cref="SetRestoreShown"/>
+        /// only while there is a copy to bring back.
+        /// </summary>
+        public Button Restore { get; }
+
+        public void SetRestoreShown(bool shown)
+        {
+            _restoreShown = shown;
+            Restore.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // 對照顯示's glyph on the block's blue, a little translucent like the trays beside it.
+        private static ControlTemplate BuildRestoreTemplate(double size, double uiScale)
+        {
+            var glyph = new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
+            glyph.SetValue(System.Windows.Shapes.Path.DataProperty, CompareGlyph);
+            glyph.SetValue(System.Windows.Shapes.Shape.StretchProperty, Stretch.Uniform);
+            glyph.SetValue(FrameworkElement.WidthProperty, size * 0.55);
+            glyph.SetValue(FrameworkElement.HeightProperty, size * 0.55);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeProperty, RemoveForeground);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1.2 * uiScale);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeStartLineCapProperty, PenLineCap.Round);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeEndLineCapProperty, PenLineCap.Round);
+            glyph.SetValue(System.Windows.Shapes.Shape.StrokeLineJoinProperty, PenLineJoin.Round);
+
+            var chip = new FrameworkElementFactory(typeof(Border));
+            chip.SetValue(Border.BackgroundProperty, RestoreFill);
+            chip.SetValue(Border.CornerRadiusProperty, new CornerRadius(size / 2));
+            chip.AppendChild(glyph);
+
+            return new ControlTemplate(typeof(Button)) { VisualTree = chip };
+        }
 
         public double TotalHeight => _guidanceExpanded ? _expandedHeight : _collapsedHeight;
 
