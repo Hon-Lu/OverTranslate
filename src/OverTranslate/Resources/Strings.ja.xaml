@@ -341,6 +341,7 @@
     <sys:String x:Key="S.Realtime.CompareCopyHint">ドラッグで対照枠を移動、ラベルをダブルクリックすると自動の位置に戻ります</sys:String>
     <sys:String x:Key="S.Realtime.CompareHideBlock">このブロックの原文対照をオフ</sys:String>
     <sys:String x:Key="S.Realtime.CompareShowBlock">このブロックの原文対照を表示</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyCenter">訳文の表示位置</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">範囲選択を止めました。下のアプリをそのまま操作できます</sys:String>
 
     <!-- Control bar and edit window messages -->

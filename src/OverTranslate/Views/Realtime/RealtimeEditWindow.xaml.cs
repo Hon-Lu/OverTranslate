@@ -115,20 +115,34 @@ public partial class RealtimeEditWindow : Window
 
     private const double BaseHintFontSize = 13;
 
+    // The copy's hint as a fraction of the copy's height — see PlaceCopyHint.
+    private const double CopyHintHeightRatio = 0.2;
+
     private static readonly SolidColorBrush FrameStroke = Freeze(Color.FromArgb(0xE6, 0x1E, 0x90, 0xD5));
     private static readonly SolidColorBrush FrameFill = Freeze(Color.FromArgb(0x1C, 0x99, 0xC8, 0xF0));
     private static readonly SolidColorBrush HandleFill = Freeze(Color.FromRgb(0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush RemoveForeground = Freeze(Color.FromRgb(0xFF, 0xFF, 0xFF));
 
-    // 對照顯示's copy of a block: the block's own blue, dashed and nearly empty, because it is not a
-    // second area being read — it is where this one's translation will be drawn. Fainter than the
-    // block's fill so the two never read as a pair of equal blocks.
-    private static readonly SolidColorBrush CopyFill = Freeze(Color.FromArgb(0x10, 0x99, 0xC8, 0xF0));
-    private static readonly SolidColorBrush CopyLabelFill = Freeze(Color.FromArgb(0xB8, 0x1E, 0x90, 0xD5));
-    // The ✕ on the label: the label's blue a step darker (about 12% less bright) and about 85% where
-    // the label is about 72%, and its glyph about 90%. The same hue, so it still reads as the label.
-    private static readonly SolidColorBrush CopyCloseFill = Freeze(Color.FromArgb(0xD9, 0x1A, 0x7F, 0xBB));
-    private static readonly SolidColorBrush CopyCloseForeground = Freeze(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
+    // 對照顯示's copy of a block, and everything that belongs to it — outline, label, ✕, corner
+    // handles, the line back to the block — in amber rather than the block's blue. The two are
+    // different things: the block is the area being read, the copy is where its translation will be
+    // drawn, and in the block's own blue, however faint, the copy was easy to miss and easy to take
+    // for a second block. A colour of its own is found at a glance and says which is which. Amber
+    // because it is far from the blue and holds up over both a bright and a dark scene. The block's
+    // own buttons — remove, restore — stay blue: they act on the block.
+    private static readonly SolidColorBrush CopyStroke = Freeze(Color.FromArgb(0xF2, 0xF0, 0xA0, 0x28));
+    private static readonly SolidColorBrush CopyFill = Freeze(Color.FromArgb(0x24, 0xF0, 0xA0, 0x28));
+    // 「譯文顯示位置」 in the middle of the copy: white text with a dark rim round every glyph, which
+    // keeps it legible over a bright scene and a dark one alike.
+    private static readonly SolidColorBrush CopyHintLetters = Freeze(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
+    private static readonly SolidColorBrush CopyHintRim = Freeze(Color.FromArgb(0xA6, 0x00, 0x00, 0x00));
+    private static readonly SolidColorBrush CopyLabelFill = Freeze(Color.FromArgb(0xE6, 0xF0, 0xA0, 0x28));
+    private static readonly SolidColorBrush CopyLabelForeground = Freeze(Color.FromRgb(0x2A, 0x1A, 0x00));
+    // The ✕ on the label: the label's own amber, about 85% where the label is about 90%, and its
+    // glyph about 90%. A darker step of the amber was tried and read as too dark; the seam and the
+    // glyph are enough to mark it as the part that can be pressed.
+    private static readonly SolidColorBrush CopyCloseFill = Freeze(Color.FromArgb(0xD9, 0xF0, 0xA0, 0x28));
+    private static readonly SolidColorBrush CopyCloseForeground = Freeze(Color.FromArgb(0xE6, 0x2A, 0x1A, 0x00));
 
     // 對照顯示's glyph, the same path as RealtimeControlWindow's RealtimeCompareGlyph resource: the
     // button that brings one block's copy back wears the bar button's face for that reason. Kept
@@ -176,6 +190,10 @@ public partial class RealtimeEditWindow : Window
     private double _modeHeight = BaseModeHeight;
     private double _modeInset = BaseModeInset;
     private double _hintWidth = BaseHintWidth;
+
+    // How wide the copy's hint is per unit of font size — measured once, since the text is fixed for
+    // the layer's lifetime. See PlaceCopyHint.
+    private double _copyHintUnitWidth;
 
     private Point _drawOrigin;
     private Shape? _drawPreview;
@@ -590,6 +608,7 @@ public partial class RealtimeEditWindow : Window
         {
             BlockCanvas.Children.Add(block.Link);
             BlockCanvas.Children.Add(block.Copy);
+            BlockCanvas.Children.Add(block.CopyHint);
             BlockCanvas.Children.Add(block.CopyLabel);
             foreach (var corner in block.CopyCorners)
                 BlockCanvas.Children.Add(corner);
@@ -837,6 +856,7 @@ public partial class RealtimeEditWindow : Window
 
         var copy = CopyBounds(visual);
         PlaceCopy(visual, copy);
+        PlaceCopyHint(visual, copy);
 
         // Outside the top-right corner by preference, so it never covers the content being framed;
         // tucked inside when the block is against the screen edge and there is no room out there.
@@ -938,6 +958,64 @@ public partial class RealtimeEditWindow : Window
         static bool Overlaps(Rect a, Rect b) =>
             a.Left < b.Right && b.Left < a.Right && a.Top < b.Bottom && b.Top < a.Bottom;
     }
+
+    /// <summary>
+    /// Sizes the hint to a block's copy and centres it there; takes it off the canvas with the copy.
+    /// </summary>
+    /// <remarks>
+    /// <para>Always in the middle and always shown, at a size taken from the copy: a fifth of its
+    /// height, or whatever keeps the line within 80% of its width if that is less. So it grows and
+    /// shrinks with the copy as either the copy or its block is resized — never hidden, never moved
+    /// off centre, and with no smallest size, because a copy that small is one the user pulled down
+    /// on purpose. A fifth because over a subtitle-sized block that is clearly larger than the
+    /// layer's interface text, yet small enough to leave the corners to the label and handles.</para>
+    ///
+    /// <para>The outline is rebuilt only when that size changes, on half-unit steps; moving the
+    /// copy only moves it.</para>
+    /// </remarks>
+    private void PlaceCopyHint(BlockVisual visual, Rect? copy)
+    {
+        var hint = visual.CopyHint;
+        if (copy is not { } box)
+        {
+            hint.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (_copyHintUnitWidth <= 0)
+            _copyHintUnitWidth = CopyHintText(1.0).WidthIncludingTrailingWhitespace;
+
+        double size = Math.Min(box.Height * CopyHintHeightRatio, box.Width * 0.8 / _copyHintUnitWidth);
+        size = Math.Max(0.5, Math.Round(size * 2) / 2);
+
+        if (size != visual.CopyHintSize)
+        {
+            var glyphs = CopyHintText(size).BuildGeometry(new Point(0, 0));
+            glyphs.Freeze();
+            visual.CopyHintFill.Data = glyphs;
+            visual.CopyHintOutline.Data = glyphs;
+            // Twice the rim wanted: the stroke is centred on the glyph's edge and the fill drawn over
+            // it covers the inner half.
+            visual.CopyHintOutline.StrokeThickness = Math.Max(1.5 * _uiScale, size * 0.16);
+            visual.CopyHintSize = size;
+        }
+
+        // By the ink, not the line box, so the text sits in the true middle whatever the font's
+        // ascent and descent.
+        var ink = visual.CopyHintFill.Data.Bounds;
+        Canvas.SetLeft(hint, box.X + box.Width / 2 - (ink.X + ink.Width / 2));
+        Canvas.SetTop(hint, box.Y + box.Height / 2 - (ink.Y + ink.Height / 2));
+        hint.Visibility = Visibility.Visible;
+    }
+
+    private FormattedText CopyHintText(double size) => new(
+        LocalizationService.Get("S.Realtime.CompareCopyCenter"),
+        System.Globalization.CultureInfo.CurrentUICulture,
+        System.Windows.FlowDirection.LeftToRight,
+        new Typeface(System.Windows.SystemFonts.MessageFontFamily, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal),
+        size,
+        System.Windows.Media.Brushes.White,
+        _dpiY);
 
     /// <summary>
     /// Puts a block's 對照顯示 copy where <see cref="CopyBounds"/> says, with a line back to the block
@@ -1160,9 +1238,22 @@ public partial class RealtimeEditWindow : Window
                 Visibility = Visibility.Collapsed,
             })];
 
+            // The rim and the letters as two paths on one geometry, rim underneath: an outline
+            // drawn without an Effect, which would be re-rendered on every frame of a drag. Neither
+            // takes the mouse, so a press on the hint drags the copy.
+            CopyHintOutline = new System.Windows.Shapes.Path
+            {
+                Stroke = CopyHintRim,
+                StrokeLineJoin = PenLineJoin.Round,
+            };
+            CopyHintFill = new System.Windows.Shapes.Path { Fill = CopyHintLetters };
+            CopyHint = new Canvas { IsHitTestVisible = false, Visibility = Visibility.Collapsed };
+            CopyHint.Children.Add(CopyHintOutline);
+            CopyHint.Children.Add(CopyHintFill);
+
             Link = new System.Windows.Shapes.Line
             {
-                Stroke = FrameStroke,
+                Stroke = CopyStroke,
                 StrokeThickness = 1.5 * uiScale,
                 IsHitTestVisible = false,
                 Visibility = Visibility.Collapsed,
@@ -1224,6 +1315,21 @@ public partial class RealtimeEditWindow : Window
         /// </summary>
         public Button Restore { get; }
 
+        /// <summary>
+        /// 「譯文顯示位置」 in the middle of the copy, sized to it — see
+        /// <see cref="RealtimeEditWindow.PlaceCopyHint"/>.
+        /// </summary>
+        public Canvas CopyHint { get; }
+
+        /// <summary>The hint's letters.</summary>
+        public System.Windows.Shapes.Path CopyHintFill { get; }
+
+        /// <summary>The dark rim under <see cref="CopyHintFill"/>.</summary>
+        public System.Windows.Shapes.Path CopyHintOutline { get; }
+
+        /// <summary>The font size the hint's outline was last built at, or 0 before the first.</summary>
+        public double CopyHintSize { get; set; }
+
         /// <summary>How far the label sits in from the copy's top-left corner.</summary>
         public double GripInset { get; }
 
@@ -1256,22 +1362,23 @@ public partial class RealtimeEditWindow : Window
         }
 
         /// <summary>
-        /// A dashed outline. The label in its corner is a separate element — see
-        /// <see cref="BuildGripTemplate"/> — because it has to be drawn above the blocks while the
-        /// outline is drawn below them.
+        /// A dashed amber outline. The label in its corner and the hint in its middle are separate
+        /// elements — see <see cref="BuildGripTemplate"/> — because the label has to be drawn above
+        /// the blocks while the outline is drawn below them, and the hint is resized with the copy.
         /// </summary>
         private static ControlTemplate BuildCopyTemplate(double uiScale)
         {
             var outline = new FrameworkElementFactory(typeof(Shape));
-            outline.SetValue(System.Windows.Shapes.Shape.StrokeProperty, FrameStroke);
-            outline.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1.5 * uiScale);
+            outline.SetValue(System.Windows.Shapes.Shape.StrokeProperty, CopyStroke);
+            outline.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 2 * uiScale);
             outline.SetValue(System.Windows.Shapes.Shape.StrokeDashArrayProperty, new DoubleCollection([4, 3]));
             outline.SetValue(System.Windows.Shapes.Shape.FillProperty, CopyFill);
             outline.SetValue(Shape.RadiusXProperty, 3 * uiScale);
             outline.SetValue(Shape.RadiusYProperty, 3 * uiScale);
+
             // No drop shadow, unlike the block's frame. A blur over a box the size of the block is
             // re-run on every frame the copy moves, and the copy is the thing being dragged; the
-            // dashes and the label keep it legible without one.
+            // amber and the label keep it legible without one.
             return new ControlTemplate(typeof(Thumb)) { VisualTree = outline };
         }
 
@@ -1287,7 +1394,8 @@ public partial class RealtimeEditWindow : Window
             // 13 rather than the 11 of the block's other small glyphs: at 11 it was the one piece of
             // text over a busy scene that had to be squinted at. The padding grows with it.
             text.SetValue(TextBlock.FontSizeProperty, 13.0 * uiScale);
-            text.SetValue(TextBlock.ForegroundProperty, RemoveForeground);
+            // Dark on the amber: white on it is too little contrast to read.
+            text.SetValue(TextBlock.ForegroundProperty, CopyLabelForeground);
             text.SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display);
 
             var label = new FrameworkElementFactory(typeof(Border));

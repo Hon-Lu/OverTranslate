@@ -337,6 +337,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.CompareCopyHint">Drag to move the compare box. Double-click this label to put it back automatically</sys:String>
     <sys:String x:Key="S.Realtime.CompareHideBlock">Turn off compare for this block</sys:String>
     <sys:String x:Key="S.Realtime.CompareShowBlock">Show compare for this block</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyCenter">Translation appears here</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">Framing paused — the app underneath takes the mouse</sys:String>
 
     <!-- Control bar and edit window messages -->

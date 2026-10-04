@@ -341,6 +341,7 @@
     <sys:String x:Key="S.Realtime.CompareCopyHint">드래그하면 대조 상자를 옮길 수 있고, 라벨을 두 번 클릭하면 자동 위치로 돌아갑니다</sys:String>
     <sys:String x:Key="S.Realtime.CompareHideBlock">이 블록의 원문 대조 끄기</sys:String>
     <sys:String x:Key="S.Realtime.CompareShowBlock">이 블록의 원문 대조 표시</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyCenter">번역문 표시 위치</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">영역 선택을 멈췄습니다. 아래 화면을 바로 조작할 수 있습니다</sys:String>
 
     <!-- Control bar and edit window messages -->

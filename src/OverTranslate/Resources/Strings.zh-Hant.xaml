@@ -350,6 +350,7 @@
     <sys:String x:Key="S.Realtime.CompareCopyHint">拖曳可移動對照框，按兩下標籤回到自動位置</sys:String>
     <sys:String x:Key="S.Realtime.CompareHideBlock">關閉此區塊的原文對照</sys:String>
     <sys:String x:Key="S.Realtime.CompareShowBlock">顯示此區塊的原文對照</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyCenter">譯文顯示位置</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">已暫停框選，可直接操作下方畫面</sys:String>
 
     <!-- Control bar and edit window messages -->
