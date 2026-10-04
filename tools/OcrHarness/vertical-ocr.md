@@ -42,7 +42,7 @@
 dotnet build tools/OcrHarness/OcrHarness.csproj
 $h = 'tools/OcrHarness/bin/Debug/net8.0-windows10.0.26100.0/win-x64/OcrHarness.exe'
 & $h --vertical-ocr .test-artifacts/vertical-ocr image1.png image2.jpg
-dotnet test tests/OverTranslate.Tests/OverTranslate.Tests.csproj
+dotnet test src/OverTranslate.Tests/OverTranslate.Tests.csproj
 ```
 
 工具固定使用 JA，不連翻譯服務。每張圖測截圖預設尺寸與 960 上限；960 是固定縮放對照，
