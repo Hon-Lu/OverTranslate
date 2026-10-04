@@ -342,7 +342,7 @@
     <sys:String x:Key="S.Realtime.EditBlocks">編輯翻譯區塊</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">暫停框選，改為操作下方畫面</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">恢復框選</sys:String>
-    <sys:String x:Key="S.Realtime.CompareDisplay">對照顯示</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplay">原文對照</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">已開啟</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">已關閉</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">原文對照：關閉時將翻譯後譯文直接覆蓋原文畫面</sys:String>

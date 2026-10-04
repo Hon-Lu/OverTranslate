@@ -333,7 +333,7 @@
     <sys:String x:Key="S.Realtime.EditBlocks">블록 편집</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">영역 선택을 멈추고 아래 화면 조작하기</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">영역 선택 다시 시작</sys:String>
-    <sys:String x:Key="S.Realtime.CompareDisplay">대조 표시</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplay">원문 대조</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">켜짐</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">꺼짐</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">원문 대조: 끄면 번역문이 원문 화면을 바로 덮어 표시됩니다</sys:String>

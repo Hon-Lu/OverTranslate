@@ -1061,14 +1061,16 @@ public partial class RealtimeEditWindow : Window
         {
             var text = new FrameworkElementFactory(typeof(TextBlock));
             text.SetValue(TextBlock.TextProperty, LocalizationService.Get("S.Realtime.CompareDisplay"));
-            text.SetValue(TextBlock.FontSizeProperty, 11.0 * uiScale);
+            // 13 rather than the 11 of the block's other small glyphs: at 11 it was the one piece of
+            // text over a busy scene that had to be squinted at. The padding grows with it.
+            text.SetValue(TextBlock.FontSizeProperty, 13.0 * uiScale);
             text.SetValue(TextBlock.ForegroundProperty, RemoveForeground);
             text.SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display);
 
             var label = new FrameworkElementFactory(typeof(Border));
             label.SetValue(Border.BackgroundProperty, CopyLabelFill);
-            label.SetValue(Border.CornerRadiusProperty, new CornerRadius(3 * uiScale));
-            label.SetValue(Border.PaddingProperty, new Thickness(5 * uiScale, 1 * uiScale, 5 * uiScale, 2 * uiScale));
+            label.SetValue(Border.CornerRadiusProperty, new CornerRadius(3.5 * uiScale));
+            label.SetValue(Border.PaddingProperty, new Thickness(6 * uiScale, 1.2 * uiScale, 6 * uiScale, 2.4 * uiScale));
             label.AppendChild(text);
 
             return new ControlTemplate(typeof(Thumb)) { VisualTree = label };
