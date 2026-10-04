@@ -167,6 +167,13 @@ public partial class RealtimeControlWindow : Window
     /// </summary>
     public event EventHandler<bool>? CrosshairToggleRequested;
 
+    /// <summary>
+    /// Raised when either 對照顯示 button is pressed. The new state is the session's to decide and
+    /// report back through <see cref="SetCompareDisplay"/>: it is kept in the settings file and has
+    /// to reach whichever layers are up, none of which this window owns.
+    /// </summary>
+    public event EventHandler? CompareDisplayToggleRequested;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -385,6 +392,43 @@ public partial class RealtimeControlWindow : Window
         Dispatcher.BeginInvoke(new Action(ClampIntoScreen), DispatcherPriority.Loaded);
     }
 
+    /// <summary>
+    /// Shows 對照顯示 as on or off on both of its buttons — the edit bar's and the capsule's, which
+    /// are one switch seen from two modes.
+    /// </summary>
+    /// <remarks>
+    /// On is the accent on a filled square, the way a toggle on a toolbar says it is held down; off
+    /// is the bar's ordinary icon. Colour alone would do on the capsule, but the edit bar already has
+    /// an accent-coloured glyph — the start triangle — and a second one would read as a second way
+    /// to start. The square is what makes this one a state rather than an action. The tooltip says
+    /// both halves in words: what the switch is, and which way it is set.
+    /// </remarks>
+    public void SetCompareDisplay(bool enabled)
+    {
+        var tooltip = LocalizationService.Get(
+            enabled ? "S.Realtime.CompareDisplayOnHint" : "S.Realtime.CompareDisplayOffHint");
+
+        foreach (var button in new[] { CompareEditBtn, CompareRunBtn })
+        {
+            if (enabled)
+            {
+                button.SetResourceReference(ForegroundProperty, "AppAccent");
+                button.SetResourceReference(BackgroundProperty, "ToolbarGroupBg");
+            }
+            else
+            {
+                button.ClearValue(ForegroundProperty);
+                button.ClearValue(BackgroundProperty);
+            }
+
+            button.ToolTip = tooltip;
+            System.Windows.Automation.AutomationProperties.SetName(
+                button, LocalizationService.Get("S.Realtime.CompareDisplay"));
+            System.Windows.Automation.AutomationProperties.SetItemStatus(
+                button, LocalizationService.Get(enabled ? "S.Realtime.CompareDisplayOn" : "S.Realtime.CompareDisplayOff"));
+        }
+    }
+
     // Spaced either side of the slash: at 12px the bare 1/1 reads as one glyph cluster rather than
     // as a count out of a limit, which is the one thing this line is here to say.
     public void SetBlockCount(int count, int max) => BlockCountText.Text = $"· {count} / {max}";
@@ -596,6 +640,9 @@ public partial class RealtimeControlWindow : Window
     private void PauseBtn_Click(object sender, RoutedEventArgs e) => PauseToggleRequested?.Invoke(this, EventArgs.Empty);
 
     private void CaptureBtn_Click(object sender, RoutedEventArgs e) => CaptureRequested?.Invoke(this, EventArgs.Empty);
+
+    private void CompareBtn_Click(object sender, RoutedEventArgs e) =>
+        CompareDisplayToggleRequested?.Invoke(this, EventArgs.Empty);
 
     private void CrosshairBtn_Click(object sender, RoutedEventArgs e)
     {

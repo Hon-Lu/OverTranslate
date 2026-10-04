@@ -210,6 +210,23 @@ public class RealtimeSettings
     public bool GuidanceExpanded { get; set; } = true;
 
     /// <summary>
+    /// Whether 對照顯示 is on: the source is left showing and each translation is drawn in a copy of
+    /// its block beside it, instead of over it.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, because covering the source is what this feature is for — the reader who wants
+    /// to compare the two is the one who goes looking for the switch. Kept between sittings for the
+    /// reason <see cref="GuidanceExpanded"/> is, and written the same way: on the press, from the
+    /// floating bar that owns the button, because it is a way of watching rather than a fact about
+    /// one picture. Deliberately not on the page — it is switched while looking at the screen, often
+    /// mid-session, and the bar is the one control on screen then.
+    ///
+    /// Where each copy sits is not kept here: that belongs to the blocks, which are not kept either.
+    /// See <see cref="Services.Realtime.RealtimeBlockPlacement.CompareOffset"/>.
+    /// </remarks>
+    public bool CompareDisplay { get; set; } = false;
+
+    /// <summary>
     /// Whether the band behind a subtitle is replaced by a repair of the picture underneath: the
     /// source line is erased and filled in from the pixels around it, and the translation is drawn
     /// back where it was.

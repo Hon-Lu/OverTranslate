@@ -9,6 +9,14 @@
         AllowsTransparency="True"
         Background="Transparent">
 
+    <Window.Resources>
+        <!-- 對照顯示: a dashed box over a solid one — the translation's copy beside the block it
+             reads, the way the edit layer draws the pair. Coordinates are in a 16×16 box; two paths
+             because only one of the two is dashed. -->
+        <Geometry x:Key="RealtimeCompareCopyGlyph">M3.5,2.5 H12.5 A1,1 0 0 1 13.5,3.5 V6 A1,1 0 0 1 12.5,7 H3.5 A1,1 0 0 1 2.5,6 V3.5 A1,1 0 0 1 3.5,2.5 Z</Geometry>
+        <Geometry x:Key="RealtimeCompareSourceGlyph">M3.5,9 H12.5 A1,1 0 0 1 13.5,10 V12.5 A1,1 0 0 1 12.5,13.5 H3.5 A1,1 0 0 1 2.5,12.5 V10 A1,1 0 0 1 3.5,9 Z</Geometry>
+    </Window.Resources>
+
     <!-- Outer margin leaves room for the shadow to render outside the visual. The LayoutTransform is
          set in code: this window is pinned onto a screen that may not be the one WPF laid it out
          for, and on a mixed-DPI desktop that means it would otherwise come out the wrong physical
@@ -92,6 +100,27 @@
                              own fill, so both edges are visible ones and the rule belongs midway
                              between them. -->
                         <Separator Style="{StaticResource VerticalSeparator}" Margin="11,0"/>
+
+                        <!-- 對照顯示, outside the tray: it is not part of the draw-or-start decision,
+                             and the same switch is on the running capsule — see CompareRunBtn. Before
+                             the tray rather than after, so the start button stays the last thing
+                             before ✕, where it has always been. -->
+                        <Button x:Name="CompareEditBtn"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Margin="0,0,6,0"
+                                Click="CompareBtn_Click">
+                            <Grid Width="16" Height="16">
+                                <Path Data="{StaticResource RealtimeCompareCopyGlyph}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.3"
+                                      StrokeDashArray="1.6,1.2"
+                                      StrokeLineJoin="Round"/>
+                                <Path Data="{StaticResource RealtimeCompareSourceGlyph}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.3"
+                                      StrokeLineJoin="Round"/>
+                            </Grid>
+                        </Button>
 
                         <!-- The two buttons the user chooses between while framing, in a tray of their
                              own: whether to keep drawing or to start translating is one decision, and
@@ -247,6 +276,28 @@
                              feature rather than as a third session control. Drawn rather than typed for
                              the same reason as the two buttons in the edit tray: MDL2 has no framing
                              corners, and a Path has no font fallback to lose. -->
+                        <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
+                             who wants to compare usually finds out while watching, not while framing,
+                             and the switch moves the translation without stopping anything. Left of
+                             截圖翻譯, for the reason that one is leftmost: the right edge is pinned, so
+                             a button added here leaves the others where the hand knows them. -->
+                        <Button x:Name="CompareRunBtn"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Margin="0,0,4,0"
+                                Click="CompareBtn_Click">
+                            <Grid Width="16" Height="16">
+                                <Path Data="{StaticResource RealtimeCompareCopyGlyph}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.3"
+                                      StrokeDashArray="1.6,1.2"
+                                      StrokeLineJoin="Round"/>
+                                <Path Data="{StaticResource RealtimeCompareSourceGlyph}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.3"
+                                      StrokeLineJoin="Round"/>
+                            </Grid>
+                        </Button>
+
                         <Button x:Name="CaptureBtn"
                                 Style="{StaticResource ToolbarIconButton}"
                                 Margin="0,0,4,0"

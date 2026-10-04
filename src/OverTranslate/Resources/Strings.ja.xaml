@@ -333,6 +333,12 @@
     <sys:String x:Key="S.Realtime.EditBlocks">ブロックを編集</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">範囲選択を止めて下のアプリを操作する</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">範囲選択を再開</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplay">対訳表示</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOn">オン</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOff">オフ</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOnHint">対訳表示：オン。オフにすると訳文を原文の上に重ねて表示します</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOffHint">対訳表示：オフ。オンにすると原文を残し、訳文を横に表示します</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyHint">ドラッグで対訳枠を移動、ラベルをダブルクリックすると自動の位置に戻ります</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">範囲選択を止めました。下のアプリをそのまま操作できます</sys:String>
 
     <!-- Control bar and edit window messages -->
