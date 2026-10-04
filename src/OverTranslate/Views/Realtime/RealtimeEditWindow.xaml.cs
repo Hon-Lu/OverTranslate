@@ -17,6 +17,7 @@ using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
 using Rect = System.Windows.Rect;
 using Shape = System.Windows.Shapes.Rectangle;
+using Size = System.Windows.Size;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -750,34 +751,14 @@ public partial class RealtimeEditWindow : Window
         Canvas.SetLeft(visual.Remove, removeLeft);
         Canvas.SetTop(visual.Remove, Math.Max(0, bounds.Top));
 
-        // Above the block's top-left corner: it reads as a label on the block without covering the
-        // content being framed, and it is the far corner from the remove button — the two are one
-        // click apart otherwise, and one of them destroys the block. Tucked inside the top edge when
-        // the block is against the top of the screen, which is where a subtitle strip often is.
-        // Above the block by preference, below it when there is no room up there, and only inside it
-        // as a last resort. The order matters more than it did when this was a single chip: the
-        // guidance makes this tall enough that putting it inside covers a good part of what the user
-        // is trying to frame, so anywhere outside the block beats anywhere inside it.
-        //
-        // Placed by the block alone, 對照顯示 or not. It used to step round a copy sitting above or
-        // below, and that made the trays follow the copy rather than the block: drag a copy well
-        // clear and its block's trays went with it, out of reach of the block they set. They belong
-        // to the block, so they stay on it — over the top of an automatic copy, which sits right
-        // where they do, and that is the accepted cost.
-        var mode = visual.ModeControl;
-        double modeTop = bounds.Top - mode.TotalHeight - _removeGap;
-        if (modeTop < 0)
-        {
-            double below = bounds.Bottom + _removeGap;
-            modeTop = below + mode.TotalHeight <= BlockCanvas.ActualHeight
-                ? below
-                : Math.Min(bounds.Top + _removeGap, BlockCanvas.ActualHeight - mode.TotalHeight);
-        }
-
         // Kept whole rather than allowed to run off the side: this is the control that says what the
         // block is and how to draw it, and half of it off-screen says neither.
+        var mode = visual.ModeControl;
         double modeLeft = Math.Clamp(
             bounds.Left, 0, Math.Max(0, BlockCanvas.ActualWidth - mode.TotalWidth));
+        double modeTop = ModeControlTop(
+            bounds, new Size(mode.TotalWidth, mode.TotalHeight), modeLeft, copy,
+            BlockCanvas.ActualHeight, _removeGap);
 
         // Snapped to whole device pixels, because this one carries text. The block itself is placed
         // wherever the pointer left it and is right to be; a plate of 13-point CJK starting half way
@@ -814,6 +795,46 @@ public partial class RealtimeEditWindow : Window
     // Canvas coordinates are this window's device-independent units; a device pixel is 1/dpi of one.
     private static double SnapToPixels(double position, double dpi) =>
         dpi > 0 ? Math.Round(position * dpi) / dpi : position;
+
+    /// <summary>
+    /// Where a block's trays go vertically: above the block, or tucked inside its top edge.
+    /// </summary>
+    /// <remarks>
+    /// <para>Above the block's top-left corner by preference: it reads as a label on the block
+    /// without covering the content being framed, and it is the far corner from the remove button —
+    /// the two are one click apart otherwise, and one of them destroys the block.</para>
+    ///
+    /// <para>Inside the top edge otherwise, never below the block. Below reads as belonging to
+    /// whatever is under the block, and below is also where a copy often sits. Inside is chosen when
+    /// there is no room above — the block is against the top of the screen, which is where a
+    /// subtitle strip often is — and when the trays up there would overlap this block's own 對照顯示
+    /// copy. The copy shows where the translation will be drawn while running, so it is not moved
+    /// for the trays; the trays give way instead, and stay on the block rather than stepping off to
+    /// somewhere else. Only the block's own copy counts, not other blocks', so where the trays end
+    /// up depends on the one block and its copy and nothing else.</para>
+    ///
+    /// <para>Placed by the block and its copy, never by a copy alone. They used to step round a copy
+    /// sitting above or below, and that made the trays follow the copy rather than the block: drag a
+    /// copy well clear and its block's trays went with it, out of reach of the block they set.
+    /// Tucked inside with the guidance open, they cover part of what the user is framing; that is
+    /// the accepted cost, and the guidance folds away.</para>
+    /// </remarks>
+    internal static double ModeControlTop(
+        Rect block, Size control, double controlLeft, Rect? copy, double screenHeight, double gap)
+    {
+        double above = block.Top - control.Height - gap;
+        if (above >= 0)
+        {
+            var tray = new Rect(controlLeft, above, control.Width, control.Height);
+            if (copy is not { } box || !Overlaps(tray, box)) return above;
+        }
+
+        return Math.Max(0, Math.Min(block.Top + gap, screenHeight - control.Height));
+
+        // Strictly: Rect.IntersectsWith counts two rectangles that only touch.
+        static bool Overlaps(Rect a, Rect b) =>
+            a.Left < b.Right && b.Left < a.Right && a.Top < b.Bottom && b.Top < a.Bottom;
+    }
 
     /// <summary>
     /// Puts a block's 對照顯示 copy where <see cref="CopyBounds"/> says, with a line back to the block
