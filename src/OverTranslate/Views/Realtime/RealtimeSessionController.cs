@@ -146,15 +146,63 @@ internal sealed class RealtimeSessionController
     /// </remarks>
     private readonly DispatcherTimer _stayOnTop = new() { Interval = TimeSpan.FromSeconds(1) };
 
+    // Diagnostics for an edit layer seen stuck under the capture source and never reproduced: when
+    // the timer last ran (cleared wherever it is stopped, so a pause is not read as a stall), and
+    // what was last found above the layer — logged only when that changes.
+    private long _lastStayOnTopTick;
+    private IntPtr _editCoveredBy;
+
     private RealtimeSessionController()
     {
         _stayOnTop.Tick += (_, _) =>
         {
+            LogStayOnTopStall();
+
             // The control bar last, so it ends up above the block layers it may overlap.
             foreach (var block in _blockWindows.Values) AlwaysOnTop.Reassert(block);
             if (_edit is { } edit) AlwaysOnTop.ReassertWithToolTips(edit);
             if (_control is { } control) AlwaysOnTop.ReassertWithToolTips(control);
+
+            LogEditLayerCovered();
         };
+    }
+
+    /// <summary>
+    /// Warns when a tick arrives long after the one before: the timer is a dispatcher timer, so a
+    /// gap means the UI thread was busy — and nothing was holding the layers on top meanwhile.
+    /// </summary>
+    private void LogStayOnTopStall()
+    {
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (_lastStayOnTopTick != 0)
+        {
+            var gap = System.Diagnostics.Stopwatch.GetElapsedTime(_lastStayOnTopTick, now);
+            if (gap > TimeSpan.FromSeconds(3))
+                Log.Warn("Realtime stay-on-top timer ticked {Gap:F1}s after the previous tick; the UI thread was blocked",
+                    gap.TotalSeconds);
+        }
+        _lastStayOnTopTick = now;
+    }
+
+    /// <summary>
+    /// Checks, right after the layer was put back on top, whether another application's window is
+    /// still above it — which would mean the re-assert did not take, or that window is topmost too.
+    /// </summary>
+    private void LogEditLayerCovered()
+    {
+        var edit = _edit is { } window ? new System.Windows.Interop.WindowInteropHelper(window).Handle : IntPtr.Zero;
+        var cover = edit == IntPtr.Zero ? null : WindowZOrderDiagnostics.FindForeignWindowAbove(edit);
+        var coveredBy = cover?.Hwnd ?? IntPtr.Zero;
+        if (coveredBy == _editCoveredBy) return;
+
+        if (cover is { } c)
+            Log.Warn(
+                "Realtime edit layer is under hwnd={Hwnd:X} class={Class} process={Process} exstyle={ExStyle:X8} topmost={Topmost}; edit exstyle={EditExStyle:X8}",
+                c.Hwnd, c.ClassName, c.ProcessName, c.ExStyle, c.IsTopmost, WindowZOrderDiagnostics.ExStyle(edit));
+        else if (edit != IntPtr.Zero)
+            Log.Info("Realtime edit layer is no longer under hwnd={Hwnd:X}", _editCoveredBy);
+
+        _editCoveredBy = coveredBy;
     }
 
     /// <summary>Raised when the session starts or ends, so the page can re-render its controls.</summary>
@@ -367,6 +415,7 @@ internal sealed class RealtimeSessionController
         // Nothing to keep on top while the layers are away, and a tick that fired mid-capture would
         // be re-asserting them over the window that asked them to leave.
         _stayOnTop.Stop();
+        _lastStayOnTopTick = 0;
 
         // One wait for the composition rather than one per window: they go together, and the user is
         // holding a shortcut waiting for the screen to freeze.
@@ -427,6 +476,7 @@ internal sealed class RealtimeSessionController
         Log.Info("Realtime session ending");
 
         _stayOnTop.Stop();
+        _lastStayOnTopTick = 0;
         DisposeEscapeHook();
 
         if (_session != null)
