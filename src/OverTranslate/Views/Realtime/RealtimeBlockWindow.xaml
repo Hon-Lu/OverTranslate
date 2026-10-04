@@ -15,7 +15,7 @@
          costs nothing, while redrawing the whole desktop for the same change would not. Natural mode
          leans on that further — it refreshes only these small surfaces, so a repaired background can
          follow video or game motion without a whole-screen overlay being redrawn behind it. -->
-    <Grid>
+    <Grid x:Name="Root">
         <!-- Every background is drawn before any text, so a line whose background overlaps the line
              above can never cover that line's words. Two overlapping backgrounds sitting on each
              other is fine — they are only there to hide what is underneath — but text disappearing

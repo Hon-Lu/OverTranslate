@@ -223,7 +223,8 @@ public partial class RealtimeEditWindow : Window
                     notify: false,
                     block.CompareOffset is { } offset
                         ? new Vector(offset.X / _dpiX, offset.Y / _dpiY)
-                        : null);
+                        : null,
+                    block.CompareScale);
 
             RaiseBlocksChanged();
         };
@@ -273,13 +274,14 @@ public partial class RealtimeEditWindow : Window
     /// <remarks>
     /// <para>The copies are on screen while framing because where the translation will appear is a
     /// framing question: a copy above a subtitle can land on the HUD, a copy left of a column on the
-    /// next balloon, and the user has to see that before starting to fix it. Each one can be dragged
-    /// but not resized — it is the block's own size by definition, see
+    /// next balloon, and the user has to see that before starting to fix it. Each one can be dragged,
+    /// and shrunk in proportion from its corners — it is the block's own shape by definition, see
     /// <see cref="RealtimeComparePlacement"/> — and has no remove button and no trays, because
-    /// everything about it except its position belongs to its block.</para>
+    /// everything about it except its position and size belongs to its block.</para>
     ///
-    /// <para>Hidden rather than removed when the switch goes off, and the offsets kept: switching it
-    /// back on should bring every copy back where the user had put it.</para>
+    /// <para>Hidden rather than removed when the switch goes off, and the offsets and scales kept:
+    /// switching it back on should bring every copy back where, and as large as, the user had
+    /// it.</para>
     /// </remarks>
     public void SetCompareDisplay(bool enabled)
     {
@@ -319,7 +321,7 @@ public partial class RealtimeEditWindow : Window
     public IReadOnlyList<RealtimeBlockPlacement> GetPhysicalBlocks() =>
         [.. _blocks.Select(block => new RealtimeBlockPlacement(
             ToPhysical(block.Bounds), block.ModeControl.Value, block.ModeControl.TextOrientation,
-            ToPhysical(block.CompareOffset)))];
+            ToPhysical(block.CompareOffset), block.CompareScale))];
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -462,7 +464,8 @@ public partial class RealtimeEditWindow : Window
         RealtimeTextOrientation orientation,
         bool guidanceExpanded,
         bool notify,
-        Vector? compareOffset = null)
+        Vector? compareOffset = null,
+        double compareScale = 1.0)
     {
         var visual = new BlockVisual(
             bounds, mode, orientation, guidanceExpanded, _handleSize, _removeSize,
@@ -470,6 +473,7 @@ public partial class RealtimeEditWindow : Window
             _removeGap, _uiScale)
         {
             CompareOffset = compareOffset,
+            CompareScale = compareScale,
         };
 
         visual.Body.DragDelta += (_, e) => Move(visual, e.HorizontalChange, e.VerticalChange);
@@ -517,6 +521,7 @@ public partial class RealtimeEditWindow : Window
         {
             int index = corner;
             visual.Corners[index].DragDelta += (_, e) => Resize(visual, index, e.HorizontalChange, e.VerticalChange);
+            visual.CopyCorners[index].DragDelta += (_, e) => ScaleCopy(visual, index, e.HorizontalChange, e.VerticalChange);
         }
 
         _blocks.Add(visual);
@@ -536,7 +541,7 @@ public partial class RealtimeEditWindow : Window
     // Three layers, bottom to top, and what is drawn on top is also what a click lands on:
     //
     //   1. the block frames, which are also how a block is dragged;
-    //   2. the 對照顯示 copies, with their lines and labels;
+    //   2. the 對照顯示 copies, with their lines, labels and corner handles;
     //   3. every block's handles, remove button and trays.
     //
     // A copy over its block is there because the user put it there, so a press on the overlap takes
@@ -544,7 +549,9 @@ public partial class RealtimeEditWindow : Window
     // block has — resizing, removing, its trays — stay on top of everything, so a block buried under
     // a copy can still be resized or removed directly. And the handles of all blocks go above all
     // frames, so a handle on the edge between two overlapping blocks stays grabbable whichever block
-    // was drawn last.
+    // was drawn last. A copy's own corner handles sit under every block's for the same reason: where
+    // a copy's corner lands on its block's, the press resizes the block, and the copy is still
+    // reachable from its other three.
     private void RebuildCanvas()
     {
         BlockCanvas.Children.Clear();
@@ -557,6 +564,8 @@ public partial class RealtimeEditWindow : Window
             BlockCanvas.Children.Add(block.Link);
             BlockCanvas.Children.Add(block.Copy);
             BlockCanvas.Children.Add(block.CopyGrip);
+            foreach (var corner in block.CopyCorners)
+                BlockCanvas.Children.Add(corner);
         }
 
         foreach (var block in _blocks)
@@ -606,19 +615,46 @@ public partial class RealtimeEditWindow : Window
     }
 
     /// <summary>
-    /// Hands a copy back to the automatic placement — a double-click on its label.
+    /// Shrinks or grows a block's 對照顯示 copy from one of its corners, in proportion — see
+    /// <see cref="RealtimeComparePlacement.ScaleFromCorner"/>.
     /// </summary>
     /// <remarks>
-    /// The way back from a drag the user regrets, and the only one: there is no other control on a
-    /// copy, and dragging it by hand to exactly where the program would have put it is not a thing
-    /// anyone can do. Its block's other copies may move in answer, as they do whenever one copy
-    /// moves, because the automatic ones steer clear of each other.
+    /// Counts as a drag: the copy is the user's from then on, at the offset this leaves it at, the
+    /// same as if they had moved it there. An automatic copy that changed size would otherwise have
+    /// the automatic placement put it somewhere new on every step of the pull.
+    /// </remarks>
+    private void ScaleCopy(BlockVisual visual, int corner, double dx, double dy)
+    {
+        if (CopyBounds(visual) is not { } current) return;
+
+        var (box, scale) = RealtimeComparePlacement.ScaleFromCorner(
+            current, visual.Bounds.Size, corner, new Vector(dx, dy),
+            new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight));
+
+        visual.CompareOffset = box.TopLeft - visual.Bounds.TopLeft;
+        visual.CompareScale = scale;
+        ApplyChanged(visual);
+        RaiseBlocksChanged();
+    }
+
+    /// <summary>
+    /// Hands a copy back to the automatic placement at its block's full size — a double-click on its
+    /// label.
+    /// </summary>
+    /// <remarks>
+    /// The way back from a drag or a resize the user regrets, and the only one: there is no other
+    /// control on a copy, and dragging it by hand to exactly where the program would have put it is
+    /// not a thing anyone can do. Both go back together, because a copy is either the program's or
+    /// the user's — and an automatic one is the block's size. Its block's other copies may move in
+    /// answer, as they do whenever one copy moves, because the automatic ones steer clear of each
+    /// other.
     /// </remarks>
     private void ResetCopy(BlockVisual visual)
     {
-        if (visual.CompareOffset is null) return;
+        if (visual.CompareOffset is null && visual.CompareScale == 1.0) return;
 
         visual.CompareOffset = null;
+        visual.CompareScale = 1.0;
         ApplyChanged(visual);
         RaiseBlocksChanged();
     }
@@ -640,7 +676,9 @@ public partial class RealtimeEditWindow : Window
         var screen = new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight);
         if (visual.CompareOffset is { } offset)
         {
-            var box = Rect.Offset(visual.Bounds, offset);
+            var box = new Rect(
+                visual.Bounds.TopLeft + offset,
+                new Size(visual.Bounds.Width * visual.CompareScale, visual.Bounds.Height * visual.CompareScale));
             return new Rect(
                 Math.Clamp(box.X, 0, Math.Max(0, screen.Width - box.Width)),
                 Math.Clamp(box.Y, 0, Math.Max(0, screen.Height - box.Height)),
@@ -649,11 +687,12 @@ public partial class RealtimeEditWindow : Window
 
         var slots = _blocks
             .Select(block => new RealtimeCompareSlot(
-                ToPhysical(block.Bounds), block.ModeControl.TextOrientation, ToPhysical(block.CompareOffset)))
+                ToPhysical(block.Bounds), block.ModeControl.TextOrientation, ToPhysical(block.CompareOffset),
+                block.CompareScale))
             .ToList();
         int index = _blocks.IndexOf(visual);
         var placed = RealtimeComparePlacement.Displace(
-            slots[index].Bounds, RealtimeComparePlacement.Place(slots, _physBounds)[index]);
+            slots[index].Bounds, RealtimeComparePlacement.Place(slots, _physBounds)[index], slots[index].Scale);
         return ToCanvas(placed);
     }
 
@@ -715,9 +754,10 @@ public partial class RealtimeEditWindow : Window
         // corner — see RealtimeComparePlacement.Resized. An automatic one is simply placed again.
         if (visual.CompareOffset is { } offset)
         {
+            double scale = visual.CompareScale;
             var kept = RealtimeComparePlacement.Resized(
-                bounds, Rect.Offset(bounds, offset), resized,
-                new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight));
+                bounds, new Rect(bounds.TopLeft + offset, new Size(bounds.Width * scale, bounds.Height * scale)),
+                resized, new Rect(0, 0, BlockCanvas.ActualWidth, BlockCanvas.ActualHeight), scale);
             visual.CompareOffset = kept.TopLeft - resized.TopLeft;
         }
 
@@ -854,6 +894,8 @@ public partial class RealtimeEditWindow : Window
             visual.Copy.Visibility = Visibility.Collapsed;
             visual.CopyGrip.Visibility = Visibility.Collapsed;
             visual.Link.Visibility = Visibility.Collapsed;
+            foreach (var corner in visual.CopyCorners)
+                corner.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -866,6 +908,15 @@ public partial class RealtimeEditWindow : Window
         visual.CopyGrip.Visibility = Visibility.Visible;
         Canvas.SetLeft(visual.CopyGrip, box.X + visual.GripInset);
         Canvas.SetTop(visual.CopyGrip, box.Y + visual.GripInset);
+
+        for (int i = 0; i < visual.CopyCorners.Length; i++)
+        {
+            var corner = visual.CopyCorners[i];
+            double half = corner.Width / 2;
+            corner.Visibility = Visibility.Visible;
+            Canvas.SetLeft(corner, (i is 0 or 2 ? box.Left : box.Right) - half);
+            Canvas.SetTop(corner, (i is 0 or 1 ? box.Top : box.Bottom) - half);
+        }
 
         var bounds = visual.Bounds;
         var from = new Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
@@ -999,6 +1050,19 @@ public partial class RealtimeEditWindow : Window
                 Visibility = Visibility.Collapsed,
             };
 
+            // A little smaller than the block's, and filled in the label's colour rather than white:
+            // the block's handles are the primary ones, and these have to read as the copy's at a
+            // glance where the two sit close together.
+            double copyHandleSize = handleSize * 10 / 12;
+            CopyCorners = [.. CornerCursors.Select(cursor => new Thumb
+            {
+                Width = copyHandleSize,
+                Height = copyHandleSize,
+                Cursor = cursor,
+                Template = BuildCopyHandleTemplate(copyHandleSize, uiScale),
+                Visibility = Visibility.Collapsed,
+            })];
+
             Link = new System.Windows.Shapes.Line
             {
                 Stroke = FrameStroke,
@@ -1020,8 +1084,20 @@ public partial class RealtimeEditWindow : Window
         /// </summary>
         public Vector? CompareOffset { get; set; }
 
-        /// <summary>This block's 對照顯示 copy: same size, moved only, collapsed while the switch is off.</summary>
+        /// <summary>
+        /// How large the copy is, as a fraction of <see cref="Bounds"/> — 1.0 until the user pulls
+        /// one of <see cref="CopyCorners"/>. See <see cref="RealtimeBlockPlacement.CompareScale"/>.
+        /// </summary>
+        public double CompareScale { get; set; } = 1.0;
+
+        /// <summary>
+        /// This block's 對照顯示 copy: the block's shape, at <see cref="CompareScale"/> of its size,
+        /// collapsed while the switch is off.
+        /// </summary>
         public Thumb Copy { get; }
+
+        /// <summary>The copy's corner handles, in the same order as <see cref="Corners"/>.</summary>
+        public Thumb[] CopyCorners { get; }
 
         /// <summary>
         /// The copy's label, which is also its handle: it drags the copy, and a double-click on it
@@ -1111,6 +1187,17 @@ public partial class RealtimeEditWindow : Window
             handle.SetValue(Border.BackgroundProperty, HandleFill);
             handle.SetValue(Border.BorderBrushProperty, FrameStroke);
             handle.SetValue(Border.BorderThicknessProperty, new Thickness(2 * uiScale));
+            handle.SetValue(Border.CornerRadiusProperty, new CornerRadius(handleSize / 2));
+            return new ControlTemplate(typeof(Thumb)) { VisualTree = handle };
+        }
+
+        // The block's handle inverted: the label's fill inside, a white ring round it.
+        private static ControlTemplate BuildCopyHandleTemplate(double handleSize, double uiScale)
+        {
+            var handle = new FrameworkElementFactory(typeof(Border));
+            handle.SetValue(Border.BackgroundProperty, CopyLabelFill);
+            handle.SetValue(Border.BorderBrushProperty, HandleFill);
+            handle.SetValue(Border.BorderThicknessProperty, new Thickness(1.5 * uiScale));
             handle.SetValue(Border.CornerRadiusProperty, new CornerRadius(handleSize / 2));
             return new ControlTemplate(typeof(Thumb)) { VisualTree = handle };
         }

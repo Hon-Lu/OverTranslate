@@ -690,7 +690,7 @@ internal sealed class RealtimeSessionController
                 request.NaturalBackground && !_compareDisplay,
                 request.SampleSourceTextColor && !_compareDisplay,
                 region.Mode, request.Border, request.FixedBorderColor, region.Orientation,
-                copies?[region.Id]);
+                copies?[region.Id], copies is null ? 1.0 : _blocks[region.Id].CompareScale);
             _blockWindows[region.Id] = window;
             window.Show();
         }
@@ -704,7 +704,7 @@ internal sealed class RealtimeSessionController
     {
         var offsets = RealtimeComparePlacement.Place(
             [.. _blocks.Select(block =>
-                new RealtimeCompareSlot(block.Bounds, block.Orientation, block.CompareOffset))],
+                new RealtimeCompareSlot(block.Bounds, block.Orientation, block.CompareOffset, block.CompareScale))],
             request.ScreenBounds);
 
         return [.. _blocks.Select((block, index) => new System.Drawing.Point(

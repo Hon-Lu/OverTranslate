@@ -48,11 +48,21 @@ public sealed record RealtimeRegion(
 /// rectangle because it belongs to the block the same way the mode does, and so it survives the
 /// trips between editing and translating, and the switch being turned off and on again.
 /// </param>
+/// <param name="CompareScale">
+/// How large 對照顯示 draws this block's translation, as a fraction of <paramref name="Bounds"/> on
+/// both axes: <see cref="RealtimeComparePlacement.MinScale"/> to 1.0, and 1.0 — never null — for
+/// "the block's own size", which is what every block starts at and what the double-click on the
+/// copy's label goes back to. A plain number rather than a nullable one because, unlike the offset,
+/// there is no automatic rule for it to fall back on: 1.0 is the rule. Kept with the offset for the
+/// same reasons, and like it only ever set by the user's hand, so a copy smaller than its block is
+/// always one with an offset too.
+/// </param>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
     RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
     RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal,
-    Point? CompareOffset = null);
+    Point? CompareOffset = null,
+    double CompareScale = 1.0);
 
 /// <summary>
 /// The translated lines currently showing for one region. An empty list is a real result — it means

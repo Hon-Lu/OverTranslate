@@ -95,12 +95,16 @@ public partial class RealtimeBlockWindow : Window
     private readonly System.Drawing.Rectangle _sourceBounds;
 
     // Where this window is pinned on screen. The same rectangle as the source unless 對照顯示 is on,
-    // in which case it is the block's copy beside it — same size, so every line's position inside
-    // the block is also its position inside this window, and nothing that lays a line out needs to
-    // know which of the two it is drawing in. Kept apart from the source all the same, because the
-    // two used to be one field and the capture path would otherwise read the picture under the copy:
-    // see CaptureUnderlyingRegion.
+    // in which case it is the block's copy beside it — laid out at the block's size, so every line's
+    // position inside the block is also its position inside this window, and nothing that lays a
+    // line out needs to know which of the two it is drawing in. Kept apart from the source all the
+    // same, because the two used to be one field and the capture path would otherwise read the
+    // picture under the copy: see CaptureUnderlyingRegion.
     private readonly System.Drawing.Rectangle _displayBounds;
+
+    // How much smaller the copy is than its block — 1.0 over the block itself. The layout ignores it
+    // and the whole drawing is scaled once at the root instead: see the constructor.
+    private readonly double _displayScale;
     private readonly bool _latinSourceToCjkTarget;
 
     // The session's capture backend, reached through the controller so this window never holds one.
@@ -163,6 +167,11 @@ public partial class RealtimeBlockWindow : Window
     /// top-left corner of a rectangle the size of <paramref name="physBounds"/>, which is the whole of
     /// what 對照顯示 changes. Null draws over the block, as this window always has.
     /// </param>
+    /// <param name="displayScale">
+    /// How large the copy at <paramref name="displayLocation"/> is, as a fraction of the block — see
+    /// <see cref="RealtimeBlockPlacement.CompareScale"/>. Ignored without a location: over the block
+    /// itself the translation is always the block's size.
+    /// </param>
     public RealtimeBlockWindow(
         int regionId,
         System.Drawing.Rectangle physBounds,
@@ -178,7 +187,8 @@ public partial class RealtimeBlockWindow : Window
         bool border = false,
         string? borderColor = null,
         RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal,
-        System.Drawing.Point? displayLocation = null)
+        System.Drawing.Point? displayLocation = null,
+        double displayScale = 1.0)
     {
         InitializeComponent();
         _mode = mode;
@@ -190,9 +200,21 @@ public partial class RealtimeBlockWindow : Window
 
         RegionId = regionId;
         _sourceBounds = physBounds;
+        _displayScale = displayLocation is null ? 1.0 : displayScale;
         _displayBounds = displayLocation is { } location
-            ? new System.Drawing.Rectangle(location, physBounds.Size)
+            ? new System.Drawing.Rectangle(location, RealtimeComparePlacement.Scaled(physBounds.Size, _displayScale))
             : physBounds;
+
+        // A shrunk copy is the full-size drawing scaled down whole, not a layout of its own: the
+        // lines are set exactly as they would be over the block — sizes, wrapping, bands, borders —
+        // and only then made smaller together. Every layout this window has, across both directions
+        // and both kinds of block, then behaves at 0.7 the way it does at 1.0, which laying out
+        // against a smaller box would not promise: the fonts are picked from the source's line
+        // heights, and the minimum sizes and paddings are fixed numbers that would not shrink with
+        // it. A render transform rather than a layout one, because nothing here is laid out by the
+        // panels: the canvases place every element themselves and have no size to scale.
+        if (_displayScale != 1.0)
+            Root.RenderTransform = new ScaleTransform(_displayScale, _displayScale);
         _grabUnderlying = grabUnderlying;
         _naturalBackground = naturalBackground;
         _sampleTextColor = sampleTextColor;
@@ -287,8 +309,9 @@ public partial class RealtimeBlockWindow : Window
         Interlocked.Increment(ref _patchGeneration);
         var patches = new List<NaturalPatchVisual>();
 
-        double canvasWidth = _displayBounds.Width / _dpiX;
-        double canvasHeight = _displayBounds.Height / _dpiY;
+        // The block's size, not the window's: a shrunk copy is scaled at the root afterwards.
+        double canvasWidth = _sourceBounds.Width / _dpiX;
+        double canvasHeight = _sourceBounds.Height / _dpiY;
 
         // Grabbed only if something is going to read it. With 進階選項 off this window draws from the
         // two colours alone, exactly as it did before those switches existed.
