@@ -44,18 +44,28 @@ internal static class SourceWindowFocus
     {
         if (hwnd == IntPtr.Zero || !IsWindow(hwnd)) return;
 
+        // Every step below runs on the UI thread and some wait on the target's: a log seen once had
+        // the edit layer arrive 13 seconds after the press, with this as the likeliest stall. The
+        // marks say which step it was if it happens again.
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        TimeSpan restored = default, attachedAt = default, broughtToTop = default, foreground = default;
+
         try
         {
             if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+            restored = clock.Elapsed;
 
             var target = GetWindowThreadProcessId(hwnd, out _);
             var current = GetCurrentThreadId();
             var attached = target != current && AttachThreadInput(current, target, true);
+            attachedAt = clock.Elapsed;
 
             try
             {
                 BringWindowToTop(hwnd);
+                broughtToTop = clock.Elapsed;
                 SetForegroundWindow(hwnd);
+                foreground = clock.Elapsed;
             }
             finally
             {
@@ -63,6 +73,12 @@ internal static class SourceWindowFocus
             }
 
             Log.Debug("Realtime capture source hwnd={Hwnd:X} raised for framing", hwnd);
+
+            if (clock.Elapsed > TimeSpan.FromMilliseconds(500))
+                Log.Warn(
+                    "Raising the capture source hwnd={Hwnd:X} took {Total:F0}ms (restored at {Restored:F0}, attached at {Attached:F0}, brought to top at {Top:F0}, foreground at {Foreground:F0})",
+                    hwnd, clock.Elapsed.TotalMilliseconds, restored.TotalMilliseconds, attachedAt.TotalMilliseconds,
+                    broughtToTop.TotalMilliseconds, foreground.TotalMilliseconds);
         }
         catch (Exception ex)
         {

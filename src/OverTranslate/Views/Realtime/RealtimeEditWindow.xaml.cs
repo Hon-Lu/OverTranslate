@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using NLog;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
 using Button = System.Windows.Controls.Button;
@@ -130,6 +131,8 @@ public partial class RealtimeEditWindow : Window
     private static readonly SolidColorBrush ModeTrack = Freeze(Color.FromArgb(0xD8, 0x1C, 0x1C, 0x1E));
     private static readonly SolidColorBrush ModeTrackEdge = Freeze(Color.FromArgb(0x2E, 0xFF, 0xFF, 0xFF));
     private static readonly SolidColorBrush ModeIdleForeground = Freeze(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
+
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     private readonly System.Drawing.Rectangle _physBounds;
     private readonly IReadOnlyList<RealtimeBlockPlacement> _initialBlocks;
@@ -257,6 +260,10 @@ public partial class RealtimeEditWindow : Window
 
         BlockCanvas.Cursor = enabled ? Cursors.Cross : Cursors.Arrow;
         WindowStyles.SetClickThrough(this, !enabled);
+
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        Log.Debug("Realtime edit layer framing {State} exstyle={ExStyle:X8} visible={Visible}",
+            enabled ? "on" : "off", WindowZOrderDiagnostics.ExStyle(hwnd), WindowZOrderDiagnostics.IsVisible(hwnd));
     }
 
     /// <summary>
