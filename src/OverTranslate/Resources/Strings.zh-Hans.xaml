@@ -335,6 +335,9 @@
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">原文对照：关闭后，译文将直接覆盖在原文画面上</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOffHint">原文对照：开启后，将保留原文画面，译文显示在对照区域</sys:String>
     <sys:String x:Key="S.Realtime.CompareCopyHint">拖动可移动对照框，双击标签回到自动位置</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHideBlock">关闭此区块的原文对照</sys:String>
+    <sys:String x:Key="S.Realtime.CompareShowBlock">显示此区块的原文对照</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyCenter">译文显示位置</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">已暂停框选，可直接操作下方画面</sys:String>
 
     <!-- Control bar and edit window messages -->

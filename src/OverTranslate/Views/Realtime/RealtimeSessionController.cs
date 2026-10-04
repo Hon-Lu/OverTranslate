@@ -160,8 +160,13 @@ internal sealed class RealtimeSessionController
 
             // The control bar last, so it ends up above the block layers it may overlap.
             foreach (var block in _blockWindows.Values) AlwaysOnTop.Reassert(block);
-            if (_edit is { } edit) AlwaysOnTop.ReassertWithToolTips(edit);
-            if (_control is { } control) AlwaysOnTop.ReassertWithToolTips(control);
+            if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
+            if (_control is { } control) AlwaysOnTop.Reassert(control);
+
+            // Every tooltip after every window: the control bar is owned by the edit layer, and
+            // raising it brings the layer up too — over any tooltip of the layer's raised before it.
+            if (_edit is { } editTips) AlwaysOnTop.ReassertToolTips(editTips);
+            if (_control is { } controlTips) AlwaysOnTop.ReassertToolTips(controlTips);
 
             LogEditLayerCovered();
         };
@@ -667,7 +672,8 @@ internal sealed class RealtimeSessionController
         .ToList();
 
     /// <summary>
-    /// Opens one overlay per region, over its block or — with 對照顯示 on — over the block's copy.
+    /// Opens one overlay per region, over its block or — with 對照顯示 on, for a block whose copy the
+    /// user has not turned off — over the block's copy.
     /// </summary>
     /// <remarks>
     /// The two 進階選項 looks are turned off for the copy, whatever the page says. Both exist to make
@@ -675,7 +681,8 @@ internal sealed class RealtimeSessionController
     /// the background, the other reads the source's colour — and under 對照顯示 the source is meant
     /// to stay visible and the translation is somewhere else. A patch repaired from the block and
     /// pasted beside it would be a piece of the wrong place; the band is the honest look for a
-    /// translation drawn next to its source, and it costs no screen grabs.
+    /// translation drawn next to its source, and it costs no screen grabs. A block with its copy
+    /// turned off is drawn over itself, so it gets them back exactly as with the switch off.
     /// </remarks>
     private void ShowBlockWindows(RealtimeStartRequest request, IReadOnlyList<RealtimeRegion> regions)
     {
@@ -684,13 +691,15 @@ internal sealed class RealtimeSessionController
         // Resolved before the overlays are shown. They are click-through and belong to this process,
         foreach (var region in regions)
         {
+            var block = _blocks[region.Id];
+            bool compared = copies is not null && !block.CompareHidden;
             var window = new RealtimeBlockWindow(
                 region.Id, region.Bounds, GrabUnderlying, request.SourceLanguage, request.TargetLanguage,
                 request.TextColor, request.ScrimColor, request.ScrimOpacity,
-                request.NaturalBackground && !_compareDisplay,
-                request.SampleSourceTextColor && !_compareDisplay,
+                request.NaturalBackground && !compared,
+                request.SampleSourceTextColor && !compared,
                 region.Mode, request.Border, request.FixedBorderColor, region.Orientation,
-                copies?[region.Id]);
+                compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0);
             _blockWindows[region.Id] = window;
             window.Show();
         }
@@ -698,13 +707,14 @@ internal sealed class RealtimeSessionController
 
     /// <summary>
     /// Where each block's copy goes on screen, indexed like <see cref="_blocks"/> — which is what a
-    /// region's id is.
+    /// region's id is. The entry for a block whose copy is turned off means nothing.
     /// </summary>
     private System.Drawing.Point[] CompareLocations(RealtimeStartRequest request)
     {
         var offsets = RealtimeComparePlacement.Place(
             [.. _blocks.Select(block =>
-                new RealtimeCompareSlot(block.Bounds, block.Orientation, block.CompareOffset))],
+                new RealtimeCompareSlot(
+                    block.Bounds, block.Orientation, block.CompareOffset, block.CompareScale, block.CompareHidden))],
             request.ScreenBounds);
 
         return [.. _blocks.Select((block, index) => new System.Drawing.Point(

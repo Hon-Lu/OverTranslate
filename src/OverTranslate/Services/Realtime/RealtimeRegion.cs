@@ -48,11 +48,31 @@ public sealed record RealtimeRegion(
 /// rectangle because it belongs to the block the same way the mode does, and so it survives the
 /// trips between editing and translating, and the switch being turned off and on again.
 /// </param>
+/// <param name="CompareScale">
+/// How large 對照顯示 draws this block's translation, as a fraction of <paramref name="Bounds"/> on
+/// both axes: <see cref="RealtimeComparePlacement.MinScale"/> to 1.0, and 1.0 — never null — for
+/// "the block's own size", which is what every block starts at and what the double-click on the
+/// copy's label goes back to. A plain number rather than a nullable one because, unlike the offset,
+/// there is no automatic rule for it to fall back on: 1.0 is the rule. Kept with the offset for the
+/// same reasons, and like it only ever set by the user's hand, so a copy smaller than its block is
+/// always one with an offset too.
+/// </param>
+/// <param name="CompareHidden">
+/// Whether the user has turned 對照顯示 off for this block alone: its translation is then drawn over
+/// the block, as it is with the switch off, while the other blocks keep their copies. Off for every
+/// new block, because turning the switch on means "compare", and the exception is the block the
+/// user picks out. Turning a copy off also lets go of it: the offset goes back to null and the
+/// scale to 1.0, as the double-click on its label does, so a copy brought back starts again where
+/// and as large as the automatic placement would have it. Carried here with the rest for the same
+/// reasons.
+/// </param>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
     RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
     RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal,
-    Point? CompareOffset = null);
+    Point? CompareOffset = null,
+    double CompareScale = 1.0,
+    bool CompareHidden = false);
 
 /// <summary>
 /// The translated lines currently showing for one region. An empty list is a real result — it means

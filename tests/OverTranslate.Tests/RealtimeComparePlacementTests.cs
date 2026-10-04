@@ -3,6 +3,7 @@ using OverTranslate.Services.Realtime;
 using Xunit;
 using Rect = System.Windows.Rect;
 using Vector = System.Windows.Vector;
+using WinSize = System.Windows.Size;
 
 namespace OverTranslate.Tests;
 
@@ -293,5 +294,151 @@ public class RealtimeComparePlacementTests
 
         Assert.Equal(0, kept.Top);
         Assert.Equal(taller.Size, kept.Size);
+    }
+
+    // ── Turned off for one block ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Place_HiddenSlot_TakesNoRoom()
+    {
+        // Another block's copy dragged into the room above this one sends this one's below — until
+        // that copy is turned off.
+        var other = new RealtimeCompareSlot(
+            new Rectangle(100, 100, 200, 100), RealtimeTextOrientation.Horizontal, new Point(600, 434));
+        var line = new RealtimeCompareSlot(new Rectangle(700, 640, 600, 100), RealtimeTextOrientation.Horizontal);
+
+        var shown = RealtimeComparePlacement.Place([other, line], Screen, gap: 6)[1];
+        var hidden = RealtimeComparePlacement.Place([other with { Hidden = true }, line], Screen, gap: 6)[1];
+
+        Assert.Equal(new Point(0, 106), shown);
+        Assert.Equal(new Point(0, -106), hidden);
+    }
+
+    [Fact]
+    public void Place_HiddenSlot_ItsBlockIsStillKeptClearOf()
+    {
+        var upper = new RealtimeCompareSlot(
+            new Rectangle(400, 500, 800, 100), RealtimeTextOrientation.Horizontal, Hidden: true);
+        var lower = new RealtimeCompareSlot(new Rectangle(400, 640, 800, 100), RealtimeTextOrientation.Horizontal);
+
+        var offset = RealtimeComparePlacement.Place([upper, lower], Screen, gap: 6)[1];
+
+        Assert.False(RealtimeComparePlacement.Overlaps(PlacedBox(lower, offset), upper.Bounds));
+    }
+
+    // ── Scale ────────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Displace_ScalesTheSizeAndKeepsTheOffset()
+    {
+        var box = RealtimeComparePlacement.Displace(new Rectangle(400, 800, 802, 100), new Point(10, -60), 0.5);
+
+        Assert.Equal(new Rectangle(410, 740, 401, 50), box);
+    }
+
+    [Fact]
+    public void Place_Automatic_UsesTheScaledSize()
+    {
+        // Half the height above, so the gap to the block is still 6.
+        var slot = new RealtimeCompareSlot(
+            new Rectangle(400, 800, 800, 100), RealtimeTextOrientation.Horizontal, Scale: 0.5);
+
+        var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
+
+        Assert.Equal(new Point(0, -56), offset);
+    }
+
+    [Fact]
+    public void Place_Automatic_ScaledBoxFitsWhereTheFullOneWouldNot()
+    {
+        // 70 above the block: a full-size copy does not fit, a half-size one does.
+        var slot = new RealtimeCompareSlot(
+            new Rectangle(400, 70, 800, 100), RealtimeTextOrientation.Horizontal, Scale: 0.5);
+
+        var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
+
+        Assert.Equal(new Point(0, -56), offset);
+    }
+
+    [Fact]
+    public void Place_Dragged_IsHeldOnTheScreenAtItsScaledSize()
+    {
+        // Off the right edge: pulled back by the half width it has, not the block's full width.
+        var slot = new RealtimeCompareSlot(
+            new Rectangle(400, 800, 800, 100), RealtimeTextOrientation.Horizontal, new Point(1500, 0), 0.5);
+
+        var box = RealtimeComparePlacement.Displace(
+            slot.Bounds, RealtimeComparePlacement.Place([slot], Screen)[0], slot.Scale);
+
+        Assert.Equal(new Rectangle(1520, 800, 400, 50), box);
+    }
+
+    [Fact]
+    public void Resized_ShrunkCopyAbove_KeepsItsScaleAndItsGap()
+    {
+        var copy = new Rect(400, 344, 100, 50);               // half size, 6 above
+        var taller = new Rect(400, 350, 200, 150);            // pulled up by 50
+
+        var kept = RealtimeComparePlacement.Resized(Block, copy, taller, DipScreen, scale: 0.5);
+
+        Assert.Equal(new Rect(400, 269, 100, 75), kept);
+        Assert.Equal(6, taller.Top - kept.Bottom, 6);
+    }
+
+    [Fact]
+    public void ScaleFromCorner_BottomRight_ShrinksAboutTheTopLeft()
+    {
+        var (box, scale) = RealtimeComparePlacement.ScaleFromCorner(
+            new Rect(100, 200, 400, 100), new WinSize(400, 100), 3, new Vector(-200, -50), DipScreen);
+
+        Assert.Equal(0.5, scale, 6);
+        Assert.Equal(new Rect(100, 200, 200, 50), box);
+    }
+
+    [Fact]
+    public void ScaleFromCorner_TopLeft_ShrinksAboutTheBottomRight()
+    {
+        var (box, scale) = RealtimeComparePlacement.ScaleFromCorner(
+            new Rect(100, 200, 400, 100), new WinSize(400, 100), 0, new Vector(40, 10), DipScreen);
+
+        Assert.Equal(0.9, scale, 6);
+        Assert.Equal(500, box.Right, 6);
+        Assert.Equal(300, box.Bottom, 6);
+        Assert.Equal(360, box.Width, 6);
+    }
+
+    [Fact]
+    public void ScaleFromCorner_OffTheDiagonal_StillFollowsThePull()
+    {
+        // Straight out sideways from the top-right corner, nothing vertical.
+        var (_, scale) = RealtimeComparePlacement.ScaleFromCorner(
+            new Rect(100, 200, 200, 50), new WinSize(400, 100), 1, new Vector(100, 0), DipScreen);
+
+        Assert.True(scale > 0.5 && scale < 1.0);
+    }
+
+    [Fact]
+    public void ScaleFromCorner_IsHeldBetweenHalfAndFull()
+    {
+        var shrunk = RealtimeComparePlacement.ScaleFromCorner(
+            new Rect(100, 200, 400, 100), new WinSize(400, 100), 3, new Vector(-1000, -1000), DipScreen);
+        var grown = RealtimeComparePlacement.ScaleFromCorner(
+            new Rect(100, 200, 200, 50), new WinSize(400, 100), 3, new Vector(1000, 1000), DipScreen);
+
+        Assert.Equal(RealtimeComparePlacement.MinScale, shrunk.Scale, 6);
+        Assert.Equal(new Rect(100, 200, 200, 50), shrunk.Box);
+        Assert.Equal(1.0, grown.Scale, 6);
+        Assert.Equal(new Rect(100, 200, 400, 100), grown.Box);
+    }
+
+    [Fact]
+    public void ScaleFromCorner_IsHeldOnTheScreen()
+    {
+        // Half size, its top-left 300 from the right edge: it can only grow to 300 wide there.
+        var (box, scale) = RealtimeComparePlacement.ScaleFromCorner(
+            new Rect(700, 600, 200, 50), new WinSize(400, 100), 3, new Vector(500, 500), DipScreen);
+
+        Assert.Equal(0.75, scale, 6);
+        Assert.Equal(new Rect(700, 600, 300, 75), box);
     }
 }
