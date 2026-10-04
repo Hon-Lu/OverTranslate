@@ -525,23 +525,31 @@ public partial class RealtimeEditWindow : Window
         RaiseBlocksChanged();
     }
 
-    // Frames first, then every handle: a handle sitting on the edge between two overlapping blocks
-    // has to stay grabbable whichever block was drawn last. The 對照顯示 copies go under all of it:
-    // a copy may be dragged over a block, and the block must still be reachable to move, resize or
-    // remove — it is the thing being read. Each copy's label goes over everything instead, so a copy
-    // pushed right under a block can still be taken hold of and pulled back out.
+    // Three layers, bottom to top, and what is drawn on top is also what a click lands on:
+    //
+    //   1. the block frames, which are also how a block is dragged;
+    //   2. the 對照顯示 copies, with their lines and labels;
+    //   3. every block's handles, remove button and trays.
+    //
+    // A copy over its block is there because the user put it there, so a press on the overlap takes
+    // the copy; the block is dragged by whatever of it is still showing. The controls that only the
+    // block has — resizing, removing, its trays — stay on top of everything, so a block buried under
+    // a copy can still be resized or removed directly. And the handles of all blocks go above all
+    // frames, so a handle on the edge between two overlapping blocks stays grabbable whichever block
+    // was drawn last.
     private void RebuildCanvas()
     {
         BlockCanvas.Children.Clear();
 
         foreach (var block in _blocks)
+            BlockCanvas.Children.Add(block.Body);
+
+        foreach (var block in _blocks)
         {
             BlockCanvas.Children.Add(block.Link);
             BlockCanvas.Children.Add(block.Copy);
+            BlockCanvas.Children.Add(block.CopyGrip);
         }
-
-        foreach (var block in _blocks)
-            BlockCanvas.Children.Add(block.Body);
 
         foreach (var block in _blocks)
         {
@@ -550,9 +558,6 @@ public partial class RealtimeEditWindow : Window
             BlockCanvas.Children.Add(block.Remove);
             BlockCanvas.Children.Add(block.ModeControl);
         }
-
-        foreach (var block in _blocks)
-            BlockCanvas.Children.Add(block.CopyGrip);
 
         foreach (var block in _blocks)
             Apply(block);
@@ -746,16 +751,16 @@ public partial class RealtimeEditWindow : Window
         // guidance makes this tall enough that putting it inside covers a good part of what the user
         // is trying to frame, so anywhere outside the block beats anywhere inside it.
         //
-        // With 對照顯示 on, "the block" here is the block together with its copy when the copy sits
-        // above or below it: the copy is where the translation will be read, and covering it with
-        // the trays would hide the one thing this switch was turned on to show. A copy to one side
-        // shares the block's top and bottom, so it changes nothing.
+        // Placed by the block alone, 對照顯示 or not. It used to step round a copy sitting above or
+        // below, and that made the trays follow the copy rather than the block: drag a copy well
+        // clear and its block's trays went with it, out of reach of the block they set. They belong
+        // to the block, so they stay on it — over the top of an automatic copy, which sits right
+        // where they do, and that is the accepted cost.
         var mode = visual.ModeControl;
-        var occupied = copy is { } shown ? Rect.Union(bounds, shown) : bounds;
-        double modeTop = occupied.Top - mode.TotalHeight - _removeGap;
+        double modeTop = bounds.Top - mode.TotalHeight - _removeGap;
         if (modeTop < 0)
         {
-            double below = occupied.Bottom + _removeGap;
+            double below = bounds.Bottom + _removeGap;
             modeTop = below + mode.TotalHeight <= BlockCanvas.ActualHeight
                 ? below
                 : Math.Min(bounds.Top + _removeGap, BlockCanvas.ActualHeight - mode.TotalHeight);
@@ -990,8 +995,9 @@ public partial class RealtimeEditWindow : Window
         public Thumb Copy { get; }
 
         /// <summary>
-        /// The copy's label, drawn over every block and handle as its handle: it drags the copy, and
-        /// a double-click on it puts the copy back where the automatic placement would.
+        /// The copy's label, which is also its handle: it drags the copy, and a double-click on it
+        /// puts the copy back where the automatic placement would. A separate element from the
+        /// outline only so the double-click has something of its own to land on.
         /// </summary>
         public Thumb CopyGrip { get; }
 
