@@ -332,8 +332,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">Side-by-side</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">On</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">Off</sys:String>
-    <sys:String x:Key="S.Realtime.CompareDisplayOnHint">Side-by-side: on. Turn off to show the translation over the original again</sys:String>
-    <sys:String x:Key="S.Realtime.CompareDisplayOffHint">Side-by-side: off. Turn on to keep the original visible and show the translation next to it</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOnHint">Compare with original: turn off to show the translation directly over the original</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOffHint">Compare with original: turn on to keep the original visible and show the translation in a separate compare area</sys:String>
     <sys:String x:Key="S.Realtime.CompareCopyHint">Drag to move the side-by-side box. Double-click this label to put it back automatically</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOffHint">Framing paused — the app underneath takes the mouse</sys:String>
 

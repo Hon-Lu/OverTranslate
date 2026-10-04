@@ -400,8 +400,9 @@ public partial class RealtimeControlWindow : Window
     /// On is the accent on a filled square, the way a toggle on a toolbar says it is held down; off
     /// is the bar's ordinary icon. Colour alone would do on the capsule, but the edit bar already has
     /// an accent-coloured glyph — the start triangle — and a second one would read as a second way
-    /// to start. The square is what makes this one a state rather than an action. The tooltip says
-    /// both halves in words: what the switch is, and which way it is set.
+    /// to start. The square is what makes this one a state rather than an action. The tooltip leaves
+    /// the state to the square and says what a press will do: it used to open with the state word,
+    /// and "對照顯示：關閉" on a switch that was off read as what clicking it would do.
     /// </remarks>
     public void SetCompareDisplay(bool enabled)
     {
