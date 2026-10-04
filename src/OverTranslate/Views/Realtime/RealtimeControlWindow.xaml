@@ -10,11 +10,12 @@
         Background="Transparent">
 
     <Window.Resources>
-        <!-- 對照顯示: a dashed box over a solid one — the translation's copy beside the block it
-             reads, the way the edit layer draws the pair. Coordinates are in a 16×16 box; two paths
-             because only one of the two is dashed. -->
-        <Geometry x:Key="RealtimeCompareCopyGlyph">M3.5,2.5 H12.5 A1,1 0 0 1 13.5,3.5 V6 A1,1 0 0 1 12.5,7 H3.5 A1,1 0 0 1 2.5,6 V3.5 A1,1 0 0 1 3.5,2.5 Z</Geometry>
-        <Geometry x:Key="RealtimeCompareSourceGlyph">M3.5,9 H12.5 A1,1 0 0 1 13.5,10 V12.5 A1,1 0 0 1 12.5,13.5 H3.5 A1,1 0 0 1 2.5,12.5 V10 A1,1 0 0 1 3.5,9 Z</Geometry>
+        <!-- 原文對照: an A over 文, each followed by two lines of text — the original and its
+             translation, kept side by side. Drawn on a 24-unit grid and baked down to the 18×18 box
+             it is shown in, so the stroke is set directly: 1.05 here is 1.4 at 24. 18 rather than
+             the bar's usual 16 because the 文 has too much detail to survive 16; the button itself is
+             the same size as the others. -->
+        <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
     </Window.Resources>
 
     <!-- Outer margin leaves room for the shadow to render outside the visual. The LayoutTransform is
@@ -109,17 +110,13 @@
                                 Style="{StaticResource ToolbarIconButton}"
                                 Margin="0,0,6,0"
                                 Click="CompareBtn_Click">
-                            <Grid Width="16" Height="16">
-                                <Path Data="{StaticResource RealtimeCompareCopyGlyph}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.3"
-                                      StrokeDashArray="1.6,1.2"
-                                      StrokeLineJoin="Round"/>
-                                <Path Data="{StaticResource RealtimeCompareSourceGlyph}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.3"
-                                      StrokeLineJoin="Round"/>
-                            </Grid>
+                            <Path Width="18" Height="18"
+                                  Data="{StaticResource RealtimeCompareGlyph}"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.05"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
                         </Button>
 
                         <!-- The two buttons the user chooses between while framing, in a tray of their
@@ -285,17 +282,13 @@
                                 Style="{StaticResource ToolbarIconButton}"
                                 Margin="0,0,4,0"
                                 Click="CompareBtn_Click">
-                            <Grid Width="16" Height="16">
-                                <Path Data="{StaticResource RealtimeCompareCopyGlyph}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.3"
-                                      StrokeDashArray="1.6,1.2"
-                                      StrokeLineJoin="Round"/>
-                                <Path Data="{StaticResource RealtimeCompareSourceGlyph}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.3"
-                                      StrokeLineJoin="Round"/>
-                            </Grid>
+                            <Path Width="18" Height="18"
+                                  Data="{StaticResource RealtimeCompareGlyph}"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.05"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"/>
                         </Button>
 
                         <Button x:Name="CaptureBtn"
