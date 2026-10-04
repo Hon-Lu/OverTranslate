@@ -60,7 +60,21 @@ internal static class AlwaysOnTop
     public static void ReassertWithToolTips(Window window)
     {
         Reassert(window);
+        ReassertToolTips(window);
+    }
 
+    /// <summary>
+    /// Only the tooltips half of <see cref="ReassertWithToolTips"/>, for a caller that has to raise
+    /// several windows first and their tooltips after all of them.
+    /// </summary>
+    /// <remarks>
+    /// Raising an owned window brings its owner up with it, to just beneath it. So re-asserting the
+    /// realtime control bar, which the edit layer owns, put the whole edit layer back over a tooltip
+    /// the layer had just raised — the tooltip ended up behind the trays and the block it belonged
+    /// to. Raising every window and then every tooltip leaves the tooltips on top whatever owns what.
+    /// </remarks>
+    public static void ReassertToolTips(Window window)
+    {
         foreach (PresentationSource source in PresentationSource.CurrentSources)
         {
             if (source is HwndSource { RootVisual: { } root } popup && root is not Window

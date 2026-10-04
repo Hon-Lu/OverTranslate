@@ -160,8 +160,13 @@ internal sealed class RealtimeSessionController
 
             // The control bar last, so it ends up above the block layers it may overlap.
             foreach (var block in _blockWindows.Values) AlwaysOnTop.Reassert(block);
-            if (_edit is { } edit) AlwaysOnTop.ReassertWithToolTips(edit);
-            if (_control is { } control) AlwaysOnTop.ReassertWithToolTips(control);
+            if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
+            if (_control is { } control) AlwaysOnTop.Reassert(control);
+
+            // Every tooltip after every window: the control bar is owned by the edit layer, and
+            // raising it brings the layer up too — over any tooltip of the layer's raised before it.
+            if (_edit is { } editTips) AlwaysOnTop.ReassertToolTips(editTips);
+            if (_control is { } controlTips) AlwaysOnTop.ReassertToolTips(controlTips);
 
             LogEditLayerCovered();
         };
