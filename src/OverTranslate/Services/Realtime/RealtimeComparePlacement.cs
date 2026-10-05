@@ -27,11 +27,11 @@ public readonly record struct RealtimeCompareSlot(
 /// overlay lays the translation out exactly as it would at the block's size and then scales the
 /// whole of it — so a smaller copy is the same picture, smaller, rather than a new layout.</para>
 ///
-/// <para>Beside it in the direction the eye goes next. Horizontal text is read in rows, and a row
-/// above is where a subtitle's second language traditionally sits, so above first and below when
-/// there is no room. Vertical text is read in columns from right to left, so the next column — the
-/// left — first and the right second. Whatever is left is tried after that, in one fixed order, so
-/// two sittings over the same layout land in the same place.</para>
+/// <para>Beside it in the direction the eye goes next. Horizontal text is read in rows from top to
+/// bottom, so the next row — below — first and above when there is no room. Vertical text is read in
+/// columns from right to left, so the next column — the left — first and the right second. Whatever
+/// is left is tried after that, in one fixed order, so two sittings over the same layout land in the
+/// same place.</para>
 ///
 /// <para>"Room" is the hard part: the box has to lie entirely on the session's one screen and must
 /// not cover any block being read — its own included, which is the whole point — because covering a
@@ -62,8 +62,8 @@ public static class RealtimeComparePlacement
 
     private enum Side { Above, Below, Left, Right }
 
-    private static readonly Side[] HorizontalOrder = [Side.Above, Side.Below, Side.Left, Side.Right];
-    private static readonly Side[] VerticalOrder = [Side.Left, Side.Right, Side.Above, Side.Below];
+    private static readonly Side[] HorizontalOrder = [Side.Below, Side.Above, Side.Left, Side.Right];
+    private static readonly Side[] VerticalOrder = [Side.Left, Side.Right, Side.Below, Side.Above];
 
     /// <summary>
     /// The offset of every block's compare box from the block, in the same order as
