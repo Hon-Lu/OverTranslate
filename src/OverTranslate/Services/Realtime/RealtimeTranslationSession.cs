@@ -710,7 +710,7 @@ public sealed class RealtimeTranslationSession
         // thrown away because the line beside it had wobbled; see RealtimeReadingMerge.
         var merged = region.Mode == RealtimeBlockMode.Subtitle
             ? state.Dialogue.Merge(state.RenderedLines, recognized)
-            : RealtimeReadingMerge.Merge(state.RenderedLines, recognized);
+            : state.Dialogue.MergePanel(state.RenderedLines, recognized);
         var shownBefore = state.RenderedText.Length;
 
         // Whether this pass read the region differently at all, as opposed to reading it the same

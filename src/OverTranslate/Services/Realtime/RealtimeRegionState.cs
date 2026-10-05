@@ -304,7 +304,11 @@ internal sealed class RealtimeRegionState
             IsWatchingText ? current.Differs(previous) : current.DiffersLocally(previous);
 
         ReadingAgain = false;
-        if (dialogue && Dialogue.TryTakeConfirmation())
+        // A panel only ever confirms where a box moved, and only over a still picture: while the
+        // pixels are changing its own settle-then-read rule already supplies the second reading,
+        // and jumping ahead of it would change the panel's timing for every scroll.
+        var confirms = dialogue || (Dialogue.HasPendingPlacement && !Changed(_rendered));
+        if (confirms && Dialogue.TryTakeConfirmation())
         {
             // The confirmation pass is asked for without looking at the picture, so whether it IS
             // the same picture has to be asked here. Without it, a page turned at exactly this
@@ -316,7 +320,8 @@ internal sealed class RealtimeRegionState
 
         if (Changed(_rendered))
         {
-            if (dialogue) Dialogue.ObservePixelChange();
+            // Both modes: a panel's placement confirmations need the same fresh budget per change.
+            Dialogue.ObservePixelChange();
             // Changed, and not yet the same twice running. Give it a poll to settle so a line that
             // is still fading in is read once it has arrived — but only up to the cap, or content
             // that never holds still would never be read at all.
@@ -351,7 +356,7 @@ internal sealed class RealtimeRegionState
         _pollsSinceFullScan = 0;
         var full = capture(null);
         bool changed = full.DiffersLocally(_renderedFull);
-        if (dialogue && changed) Dialogue.ObservePixelChange();
+        if (changed) Dialogue.ObservePixelChange();
         return changed ? RealtimeReadReason.Rescan : IdleScan(capture, full);
     }
 

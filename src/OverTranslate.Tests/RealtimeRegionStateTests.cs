@@ -161,6 +161,29 @@ public class RealtimeRegionStateTests
         Assert.False(state.Observe(frame.Capture, dialogue: true));
     }
 
+    [Fact]
+    public void PanelConfirmsASmallMoveOverAStillPictureOnly()
+    {
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        OverTranslate.Services.OcrTextBlock Block(double y) => new(
+            "A wrapped chat\nmessage.", new System.Windows.Rect(20, y, 300, 60), Confidence: 0.98,
+            SourceLineBounds: [new System.Windows.Rect(20, y, 300, 30), new System.Windows.Rect(20, y + 30, 300, 30)]);
+        var first = state.Dialogue.MergePanel([], [Block(200)]);
+        state.MarkRendered(OneLine, frame.Capture, first.Lines);
+        // Nothing pending: a still panel asks for nothing, as before.
+        Assert.False(state.Observe(frame.Capture));
+
+        var pending = state.Dialogue.MergePanel(state.RenderedLines, [Block(188)]);
+        Assert.False(pending.Changed);
+        state.MarkRendered(OneLine, frame.Capture, pending.Lines);
+        Assert.True(state.Observe(frame.Capture));
+        var confirmed = state.Dialogue.MergePanel(state.RenderedLines, [Block(188)]);
+        Assert.True(confirmed.Repositioned);
+        state.MarkRendered(OneLine, frame.Capture, confirmed.Lines);
+        Assert.False(state.Observe(frame.Capture));
+    }
+
     private static readonly List<Rectangle> OneLine = [new Rectangle(10, 40, 300, 20)];
 
     [Fact]
