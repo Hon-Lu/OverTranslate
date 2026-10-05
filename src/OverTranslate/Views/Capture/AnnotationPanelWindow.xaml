@@ -232,7 +232,8 @@
                                        Style="{StaticResource AnnotationSliderTitle}"/>
                             <Slider x:Name="ThicknessSlider"
                                     Style="{StaticResource AnnotationSlider}"
-                                    ValueChanged="ThicknessSlider_ValueChanged"/>
+                                    ValueChanged="ThicknessSlider_ValueChanged"
+                                    PreviewMouseDoubleClick="Slider_PreviewMouseDoubleClick"/>
                             <Grid>
                                 <TextBlock x:Name="ThicknessMinLabel"
                                            HorizontalAlignment="Left"
@@ -259,7 +260,8 @@
                             <Slider x:Name="OpacitySlider"
                                     Style="{StaticResource AnnotationSlider}"
                                     AutomationProperties.Name="{DynamicResource S.Annotate.Opacity}"
-                                    ValueChanged="OpacitySlider_ValueChanged"/>
+                                    ValueChanged="OpacitySlider_ValueChanged"
+                                    PreviewMouseDoubleClick="Slider_PreviewMouseDoubleClick"/>
                             <Grid>
                                 <TextBlock Text="{DynamicResource S.Annotate.Faint}"
                                            HorizontalAlignment="Left"

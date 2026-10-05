@@ -550,6 +550,32 @@ public partial class AnnotationPanelWindow : Window
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Where a slider goes back to when its knob is double-clicked: the default, halfway.</summary>
+    private const double DefaultSliderPosition = 0.5;
+
+    /// <summary>
+    /// A double-click on a slider's knob puts it back to the default.
+    /// </summary>
+    /// <remarks>
+    /// The knob only, not the track: a double-click on the track is two clicks aimed at a position,
+    /// and throwing that away for the middle would be the opposite of what was pointed at.
+    /// </remarks>
+    private void Slider_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not Slider slider || e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
+
+        for (DependencyObject? node = e.OriginalSource as Visual; node is not null && !ReferenceEquals(node, slider);
+             node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is Thumb)
+            {
+                slider.Value = DefaultSliderPosition;
+                e.Handled = true;
+                return;
+            }
+        }
+    }
+
     private void UndoBtn_Click(object sender, RoutedEventArgs e)
         => UndoRequested?.Invoke(this, EventArgs.Empty);
 
