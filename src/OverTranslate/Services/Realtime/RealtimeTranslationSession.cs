@@ -568,20 +568,16 @@ public sealed class RealtimeTranslationSession
         // whatever size is asked for, so there is no other geometry to ask with: MEASURED, reading
         // the same frame twice returned the identical page on all 46 transcribed pages, and merging
         // the two changed nothing. The previous reading is the answer, without a second GPU pass.
-        var readingAgain = false;
-        var sameAsLastRead = false;
-        if (region.Orientation == RealtimeTextOrientation.Vertical && state.ReadingAgain)
-        {
-            if (_ocr.ReadsVerticalWithMangaModels(sourceLanguage))
-            {
-                sameAsLastRead = true;
-            }
-            else if (Ocr.VerticalSecondLook.OtherSize(frame.Width, frame.Height, primarySize) is { } otherSize)
-            {
-                primarySize = otherSize;
-                readingAgain = true;
-            }
-        }
+        var columnsAgain = region.Orientation == RealtimeTextOrientation.Vertical && state.ReadingAgain;
+        var mangaModels = columnsAgain && _ocr.ReadsVerticalWithMangaModels(sourceLanguage);
+        var otherSize = columnsAgain && !mangaModels
+            ? Ocr.VerticalSecondLook.OtherSize(frame.Width, frame.Height, primarySize)
+            : null;
+        var confirmation = ChooseConfirmationRead(
+            columnsAgain, mangaModels, otherSize is not null, state.SamePictureAsRead);
+        var readingAgain = confirmation == ConfirmationRead.OtherSize;
+        var sameAsLastRead = confirmation == ConfirmationRead.ReuseLastRead;
+        if (readingAgain) primarySize = otherSize!.Value;
 
         List<OcrTextBlock>? recognized = sameAsLastRead
             ? [.. state.LastRead]
@@ -873,6 +869,24 @@ public sealed class RealtimeTranslationSession
             (int)Math.Ceiling(block.Bounds.Right),
             (int)Math.Ceiling(block.Bounds.Bottom)))
     ];
+
+    internal enum ConfirmationRead { Recognise, ReuseLastRead, OtherSize }
+
+    /// <summary>How a pass reads its picture, given what kind of second reading it is.</summary>
+    /// <remarks>
+    /// The other detector size comes first: on a page of columns it is new information, not a
+    /// repeat. Past that, a confirmation over the identical picture can only give back what the last
+    /// pass read, so that is the answer and the recognition is saved — measured as the second of
+    /// the two reads every small scroll costs. It only ever spares a read: any cell that moved, and
+    /// the pass reads as it always did.
+    /// </remarks>
+    internal static ConfirmationRead ChooseConfirmationRead(
+        bool columnsAgain, bool mangaModels, bool hasOtherSize, bool samePicture)
+    {
+        if (columnsAgain && !mangaModels && hasOtherSize) return ConfirmationRead.OtherSize;
+        if (columnsAgain && mangaModels) return ConfirmationRead.ReuseLastRead;
+        return samePicture ? ConfirmationRead.ReuseLastRead : ConfirmationRead.Recognise;
+    }
 
     /// <summary>
     /// Translates only the lines the session has not seen before, then reassembles the full result

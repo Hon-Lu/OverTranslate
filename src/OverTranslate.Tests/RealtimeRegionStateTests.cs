@@ -162,6 +162,64 @@ public class RealtimeRegionStateTests
     }
 
     [Fact]
+    public void AConfirmationOverTheIdenticalPictureMayReuseTheLastRead()
+    {
+        var (state, frame) = ReadOnce();
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture, dialogue: true));
+        Assert.True(state.SamePictureAsRead);
+    }
+
+    [Fact]
+    public void OneCellChangedIsEnoughToReadAgainForReal()
+    {
+        // Under every change bar, so the confirmation still runs — but not the picture that was read.
+        var (state, frame) = ReadOnce();
+        frame.Flicker();
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture, dialogue: true));
+        Assert.True(state.ReadingAgain);
+        Assert.False(state.SamePictureAsRead);
+    }
+
+    [Fact]
+    public void AnOrdinaryPassNeverReusesTheLastRead()
+    {
+        var (state, frame) = ReadOnce();
+        state.Examine(frame.Capture, dialogue: true);
+        state.MarkRendered(OneLine, frame.Capture, state.RenderedLines);
+        frame.ChangeText();
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture, dialogue: true));
+        Assert.False(state.SamePictureAsRead);
+    }
+
+    [Theory]
+    // A page of columns read by the general models: the other detector size is new information.
+    [InlineData(true, false, true, true, "OtherSize")]
+    [InlineData(true, false, true, false, "OtherSize")]
+    // The manga models have no other size to ask with, as before.
+    [InlineData(true, true, false, false, "ReuseLastRead")]
+    // Everything else: reuse only over the identical picture.
+    [InlineData(false, false, false, true, "ReuseLastRead")]
+    [InlineData(false, false, false, false, "Recognise")]
+    [InlineData(true, false, false, true, "ReuseLastRead")]
+    public void TheSecondLookAtColumnsIsNotReplacedByReuse(
+        bool columnsAgain, bool mangaModels, bool hasOtherSize, bool samePicture, string expected) =>
+        Assert.Equal(
+            Enum.Parse<RealtimeTranslationSession.ConfirmationRead>(expected),
+            RealtimeTranslationSession.ChooseConfirmationRead(
+            columnsAgain, mangaModels, hasOtherSize, samePicture));
+
+    private static (RealtimeRegionState State, FakeFrame Frame) ReadOnce()
+    {
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        var read = new[] { new OverTranslate.Services.OcrTextBlock("A complete line.", new System.Windows.Rect(0, 0, 100, 20)) };
+        var merged = state.Dialogue.Merge([], read);
+        state.RememberRead(read);
+        state.MarkRendered(OneLine, frame.Capture, merged.Lines);
+        return (state, frame);
+    }
+
+    [Fact]
     public void PanelConfirmsASmallMoveOverAStillPictureOnly()
     {
         var state = new RealtimeRegionState();
