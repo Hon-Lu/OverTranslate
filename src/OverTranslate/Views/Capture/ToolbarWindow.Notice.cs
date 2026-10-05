@@ -87,9 +87,9 @@ public partial class ToolbarWindow
             PlaceNotice(above: false);
         });
 
-        // Under the bar is where it belongs, unless that runs it off the bottom of the screen or
-        // over the selection the bar sits on top of. Measured with the notice already in, since only
-        // then is its height known: a message can wrap to three lines.
+        // Under the bar is where it belongs, unless that runs it off the bottom of the screen.
+        // Measured with the notice already in, since only then is its height known: a message can
+        // wrap to three lines.
         if (NoticeBelongsAbove())
             KeepingBarRowInPlace(() => PlaceNotice(above: true));
 
@@ -236,17 +236,14 @@ public partial class ToolbarWindow
     /// Whether the notice, now laid out under the row, has to go above it instead.
     /// </summary>
     /// <remarks>
-    /// Two cases. The bar sits on top of the selection (there was no room under it), where growing
-    /// down would lay the notice over the very capture it is about. Or the bar sits under the
-    /// selection but too near the bottom of the screen for this notice: the bar is placed with room
-    /// for the one-line manga footer (PositionNearSelection), and a notice can be taller than that.
+    /// Only when the screen runs out: the bar is placed with room for the one-line manga footer
+    /// (PositionNearSelection), and a notice can be taller than that. Running over the top edge of
+    /// the selection, when the bar sits above it, is not a reason — the notice is gone in three
+    /// seconds, and the same line in the same place every time is worth more than that strip.
     /// </remarks>
     private bool NoticeBelongsAbove()
     {
         var bounds = ScreenGeometry.PhysicalBounds(this);
-        if (bounds.Top < _selPhysTop)
-            return true;
-
         var wa = System.Windows.Forms.Screen
             .FromPoint(new System.Drawing.Point(
                 (int)(_selPhysLeft + _selPhysWidth / 2), (int)(_selPhysTop + _selPhysHeight / 2)))
