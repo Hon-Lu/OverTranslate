@@ -4,7 +4,6 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using NLog;
-using OverTranslate.Services;
 
 namespace OverTranslate.Views.Capture;
 
@@ -81,17 +80,10 @@ public partial class ToolbarWindow
         NoticeRing.SetResourceReference(Shape.StrokeProperty, brushKey);
         NoticeMark.SetResourceReference(Shape.StrokeProperty, brushKey);
 
-        KeepingBarRowInPlace(() =>
-        {
-            NoticeFooter.Visibility = Visibility.Visible;
-            PlaceNotice(above: false);
-        });
-
-        // Under the bar is where it belongs, unless that runs it off the bottom of the screen.
-        // Measured with the notice already in, since only then is its height known: a message can
-        // wrap to three lines.
-        if (NoticeBelongsAbove())
-            KeepingBarRowInPlace(() => PlaceNotice(above: true));
+        // Always under the row, even where that runs it off the bottom of the screen. Moving it above
+        // the row meant growing the window and moving it up by as much, and Windows 10 could show
+        // the two a frame apart: the row jumped and came back.
+        NoticeFooter.Visibility = Visibility.Visible;
 
         RestartNoticeTimer();
     }
@@ -108,15 +100,9 @@ public partial class ToolbarWindow
 
         ResetNoticeCopyButton();
 
-        // The fade's own end lands here too, with the window still held. Letting it go inside the
-        // same step means the bar is measured once, at its final height, and the row is kept where
-        // it was across all of it.
-        KeepingBarRowInPlace(() =>
-        {
-            StopNoticeFade();
-            NoticeFooter.Visibility = Visibility.Collapsed;
-            PlaceNotice(above: false);
-        });
+        // The fade's own end lands here too, with the window still held.
+        StopNoticeFade();
+        NoticeFooter.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>
@@ -201,94 +187,6 @@ public partial class ToolbarWindow
         _copyShotTimer?.Stop();
     }
 
-    /// <summary>
-    /// Puts the notice under the bar's row, in the cell it shares with the manga footer, or above
-    /// the row.
-    /// </summary>
-    private void PlaceNotice(bool above)
-    {
-        var host = (System.Windows.Controls.StackPanel)BarRow.Parent;
-        bool isAbove = NoticeFooter.Parent == host;
-        if (above == isAbove) return;
-
-        if (above)
-        {
-            FooterSlot.Children.Remove(NoticeFooter);
-            host.Children.Insert(host.Children.IndexOf(BarRow), NoticeFooter);
-
-            // Mirrored: the rule now runs between it and the row below it, and the bar's padding
-            // of 8 is above it instead of under it.
-            NoticeFooter.Margin = new Thickness(0, 0, 0, 4);
-            NoticeFooter.BorderThickness = new Thickness(0, 0, 0, 1);
-            NoticeContent.Margin = new Thickness(2, 0, 0, 8);
-        }
-        else
-        {
-            host.Children.Remove(NoticeFooter);
-            FooterSlot.Children.Add(NoticeFooter);
-            NoticeFooter.Margin = new Thickness(0, 4, 0, 0);
-            NoticeFooter.BorderThickness = new Thickness(0, 1, 0, 0);
-            NoticeContent.Margin = new Thickness(2, 8, 0, 0);
-        }
-    }
-
-    /// <summary>
-    /// Whether the notice, now laid out under the row, has to go above it instead.
-    /// </summary>
-    /// <remarks>
-    /// Only when the screen runs out: the bar is placed with room for the one-line manga footer
-    /// (PositionNearSelection), and a notice can be taller than that. Running over the top edge of
-    /// the selection, when the bar sits above it, is not a reason — the notice is gone in three
-    /// seconds, and the same line in the same place every time is worth more than that strip.
-    /// </remarks>
-    private bool NoticeBelongsAbove()
-    {
-        var bounds = ScreenGeometry.PhysicalBounds(this);
-        var wa = System.Windows.Forms.Screen
-            .FromPoint(new System.Drawing.Point(
-                (int)(_selPhysLeft + _selPhysWidth / 2), (int)(_selPhysTop + _selPhysHeight / 2)))
-            .WorkingArea;
-        double scale = SelectionScale();
-
-        // The visible bar's bottom rather than the window's: the window runs on past it by the
-        // margin the shadow fades out in, and that margin may hang off the screen.
-        var barBottom = BarSurface.TranslatePoint(new System.Windows.Point(0, BarSurface.ActualHeight), this).Y;
-        return bounds.Top + barBottom * scale > wa.Bottom;
-    }
-
-    /// <summary>
-    /// Makes a change to the bar's height without moving the row of buttons on screen.
-    /// </summary>
-    /// <remarks>
-    /// The window keeps its top as it grows, so a notice going in under the row costs nothing; one
-    /// going in above it, or the manga footer giving way, would move the row the pointer is on. The
-    /// window is moved by however far the row moved inside it, which is zero in the first case.
-    /// </remarks>
-    private void KeepingBarRowInPlace(Action change)
-    {
-        // A fade that finishes after the bar has closed still lands here, with no window left to move.
-        if (PresentationSource.FromVisual(this) is null)
-        {
-            change();
-            return;
-        }
-
-        double before = BarRow.TranslatePoint(new System.Windows.Point(0, 0), this).Y;
-        change();
-        UpdateLayout();
-        double shift = BarRow.TranslatePoint(new System.Windows.Point(0, 0), this).Y - before;
-        if (Math.Abs(shift) < 0.5) return;
-
-        var bounds = ScreenGeometry.PhysicalBounds(this);
-        ScreenGeometry.MoveToPhysical(this,
-            bounds.Left, (int)Math.Round(bounds.Top - shift * SelectionScale()));
-    }
-
-    // The scale of the monitor the selection is on — see PositionNearSelection for why not this
-    // window's own.
-    private double SelectionScale() => ScreenGeometry.ScaleAt(
-        (int)(_selPhysLeft + _selPhysWidth / 2), (int)(_selPhysTop + _selPhysHeight / 2));
-
     private void RestartNoticeTimer()
     {
         _noticeTimer ??= NewOneShotTimer(NoticeDisplayMs, FadeOutNotice);
@@ -319,11 +217,9 @@ public partial class ToolbarWindow
     /// Fading alone left the bar to drop back to its own height in one step at the end, which read
     /// as the window jumping. So the line closes up as it fades — down to the manga footer it was
     /// covering, if that is showing, so the hint is uncovered rather than redrawn.
-    /// The window itself is held at its size meanwhile and the bar pinned to the edge that stays
-    /// put (the top when the notice is under the row, the bottom when it is above), so the bar
+    /// The window itself is held at its size meanwhile and the bar pinned to its top, so the bar
     /// shrinks inside a window that does not move. Only the transparent margin is let go at the end,
-    /// and that cannot be seen. Resizing the window every frame instead would also move it every
-    /// frame when the notice is above the row, and the two do not land on the same frame.
+    /// and that cannot be seen.
     /// </remarks>
     private void FadeOutNotice()
     {
@@ -338,13 +234,12 @@ public partial class ToolbarWindow
             return;
         }
 
-        bool above = NoticeFooter.Parent != FooterSlot;
         SizeToContent = SizeToContent.Manual;
-        ((FrameworkElement)Content).VerticalAlignment = above ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+        ((FrameworkElement)Content).VerticalAlignment = VerticalAlignment.Top;
 
-        // Under the row it can close onto the manga footer, which sits in the same cell at the same
-        // margin; above the row there is nothing there, so the margin closes too.
-        bool ontoHint = !above && MangaFooter.Visibility == Visibility.Visible;
+        // It can close onto the manga footer, which sits in the same cell at the same margin;
+        // without that footer there is nothing there, so the margin closes too.
+        bool ontoHint = MangaFooter.Visibility == Visibility.Visible;
         double toHeight = ontoHint ? MangaFooter.Height : 0;
         var toMargin = ontoHint ? NoticeFooter.Margin : new Thickness(0);
 
