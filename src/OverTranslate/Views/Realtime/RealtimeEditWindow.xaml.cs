@@ -142,11 +142,9 @@ public partial class RealtimeEditWindow : Window
     private static readonly SolidColorBrush CopyRimInner = Freeze(Color.FromArgb(0x59, 0x00, 0x00, 0x00));
     private static readonly SolidColorBrush CopyLabelFill = Freeze(Color.FromArgb(0xE6, 0xF0, 0xA0, 0x28));
     private static readonly SolidColorBrush CopyLabelForeground = Freeze(Color.FromRgb(0x2A, 0x1A, 0x00));
-    // The ✕ on the label: the label's own amber, about 85% where the label is about 90%, and its
-    // glyph about 90%, drawn as two strokes heavier than the label's text. A darker step of the
-    // amber was tried and read as too dark; the weight of the cross is what marks it as the part
-    // that can be pressed.
-    private static readonly SolidColorBrush CopyCloseFill = Freeze(Color.FromArgb(0xD9, 0xF0, 0xA0, 0x28));
+    // The copy's ✕: the label's amber, its glyph about 90%, drawn as two strokes heavier than the
+    // label's text. A darker step of the amber was tried and read as too dark.
+    private static readonly SolidColorBrush CopyCloseFill = CopyLabelFill;
     private static readonly SolidColorBrush CopyCloseForeground = Freeze(Color.FromArgb(0xE6, 0x2A, 0x1A, 0x00));
 
     // 對照顯示's glyph, the same path as RealtimeControlWindow's RealtimeCompareGlyph resource: the
@@ -593,7 +591,7 @@ public partial class RealtimeEditWindow : Window
     // Three layers, bottom to top, and what is drawn on top is also what a click lands on:
     //
     //   1. the block frames, which are also how a block is dragged;
-    //   2. the 對照顯示 copies, with their lines, labels and corner handles;
+    //   2. the 對照顯示 copies, with their lines, labels, corner handles and ✕;
     //   3. every block's handles, remove buttons, and trays (the restore button is one of the trays).
     //
     // A copy over its block is there because the user put it there, so a press on the overlap takes
@@ -616,9 +614,10 @@ public partial class RealtimeEditWindow : Window
             BlockCanvas.Children.Add(block.Link);
             BlockCanvas.Children.Add(block.Copy);
             BlockCanvas.Children.Add(block.CopyHint);
-            BlockCanvas.Children.Add(block.CopyLabel);
+            BlockCanvas.Children.Add(block.CopyGrip);
             foreach (var corner in block.CopyCorners)
                 BlockCanvas.Children.Add(corner);
+            BlockCanvas.Children.Add(block.CopyClose);
         }
 
         foreach (var block in _blocks)
@@ -713,7 +712,7 @@ public partial class RealtimeEditWindow : Window
     }
 
     /// <summary>
-    /// Turns one block's copy off — the ✕ on its label — or back on — the button under its remove
+    /// Turns one block's copy off — the ✕ at its corner — or back on — the button under its remove
     /// button.
     /// </summary>
     /// <remarks>
@@ -1029,13 +1028,14 @@ public partial class RealtimeEditWindow : Window
     /// block is framing, and it goes away when the two touch or overlap: there is then nothing to
     /// connect, and a line drawn inside them would be one more stroke over the picture.
     /// </remarks>
-    private static void PlaceCopy(BlockVisual visual, Rect? copy)
+    private void PlaceCopy(BlockVisual visual, Rect? copy)
     {
         visual.ShownCopy = copy;
         if (copy is not { } box)
         {
             visual.Copy.Visibility = Visibility.Collapsed;
-            visual.CopyLabel.Visibility = Visibility.Collapsed;
+            visual.CopyGrip.Visibility = Visibility.Collapsed;
+            visual.CopyClose.Visibility = Visibility.Collapsed;
             visual.Link.Visibility = Visibility.Collapsed;
             foreach (var corner in visual.CopyCorners)
                 corner.Visibility = Visibility.Collapsed;
@@ -1048,9 +1048,17 @@ public partial class RealtimeEditWindow : Window
         Canvas.SetLeft(visual.Copy, box.X);
         Canvas.SetTop(visual.Copy, box.Y);
 
-        visual.CopyLabel.Visibility = Visibility.Visible;
-        Canvas.SetLeft(visual.CopyLabel, box.X + visual.GripInset);
-        Canvas.SetTop(visual.CopyLabel, box.Y + visual.GripInset);
+        visual.CopyGrip.Visibility = Visibility.Visible;
+        Canvas.SetLeft(visual.CopyGrip, box.X + visual.GripInset);
+        Canvas.SetTop(visual.CopyGrip, box.Y + visual.GripInset);
+
+        // Where the block's remove button goes on the block, for the same reasons.
+        double closeLeft = box.Right + _removeGap;
+        if (closeLeft + _removeSize > BlockCanvas.ActualWidth)
+            closeLeft = box.Right - _removeSize - _removeGap;
+        visual.CopyClose.Visibility = Visibility.Visible;
+        Canvas.SetLeft(visual.CopyClose, closeLeft);
+        Canvas.SetTop(visual.CopyClose, Math.Max(0, box.Top));
 
         for (int i = 0; i < visual.CopyCorners.Length; i++)
         {
@@ -1196,26 +1204,20 @@ public partial class RealtimeEditWindow : Window
                 Cursor = Cursors.SizeAll,
                 Template = BuildGripTemplate(uiScale),
                 ToolTip = LocalizationService.Get("S.Realtime.CompareCopyHint"),
-            };
-
-            CopyClose = new Button
-            {
-                Cursor = Cursors.Hand,
-                Margin = new Thickness(1 * uiScale, 0, 0, 0),
-                ToolTip = LocalizationService.Get("S.Realtime.CompareHideBlock"),
-                Template = BuildCopyCloseTemplate(uiScale),
-            };
-
-            // Side by side and touching, so the two read as one label with an end that can be
-            // pressed. Siblings rather than the button inside the label's template, so a press on ✕
-            // never reaches the label: no drag of the copy, and no double-click putting it back.
-            CopyLabel = new StackPanel
-            {
-                Orientation = System.Windows.Controls.Orientation.Horizontal,
                 Visibility = Visibility.Collapsed,
             };
-            CopyLabel.Children.Add(CopyGrip);
-            CopyLabel.Children.Add(CopyClose);
+
+            // The copy's own remove button, in the same place and of the same size as the block's,
+            // so the two are found the same way.
+            CopyClose = new Button
+            {
+                Width = removeSize,
+                Height = removeSize,
+                Cursor = Cursors.Hand,
+                ToolTip = LocalizationService.Get("S.Realtime.CompareHideBlock"),
+                Template = BuildCopyCloseTemplate(removeSize, uiScale),
+                Visibility = Visibility.Collapsed,
+            };
 
             // A little smaller than the block's, and filled in the label's colour rather than white:
             // the block's handles are the primary ones, and these have to read as the copy's at a
@@ -1287,13 +1289,10 @@ public partial class RealtimeEditWindow : Window
         public Thumb CopyGrip { get; }
 
         /// <summary>
-        /// The ✕ at the end of the label: turns this block's copy off and leaves the others alone.
-        /// See <see cref="CompareHidden"/>.
+        /// The ✕ outside the copy's top-right corner: turns this block's copy off and leaves the
+        /// others alone. See <see cref="CompareHidden"/>.
         /// </summary>
         public Button CopyClose { get; }
-
-        /// <summary><see cref="CopyGrip"/> and <see cref="CopyClose"/>, placed on the canvas as one.</summary>
-        public StackPanel CopyLabel { get; }
 
         /// <summary>
         /// Whether the user has turned this block's copy off — see
@@ -1413,8 +1412,7 @@ public partial class RealtimeEditWindow : Window
 
             var label = new FrameworkElementFactory(typeof(Border));
             label.SetValue(Border.BackgroundProperty, CopyLabelFill);
-            // Square on the right, where the ✕ continues it.
-            label.SetValue(Border.CornerRadiusProperty, new CornerRadius(3.5 * uiScale, 0, 0, 3.5 * uiScale));
+            label.SetValue(Border.CornerRadiusProperty, new CornerRadius(3.5 * uiScale));
             label.SetValue(Border.PaddingProperty, new Thickness(6 * uiScale, 1.2 * uiScale, 6 * uiScale, 2.4 * uiScale));
             label.AppendChild(text);
 
@@ -1422,12 +1420,11 @@ public partial class RealtimeEditWindow : Window
         }
 
         /// <summary>
-        /// The ✕ that ends the label. Stronger than the label it ends, so it reads as the one part of
-        /// it that can be pressed, but still quieter than the block's remove button — translucent
-        /// rather than solid, a smaller glyph, no round chip — because this one only lets go of a
-        /// copy and the other destroys a block, and the two must not be mistaken for each other.
+        /// The copy's ✕: the block's remove button in the copy's amber rather than the block's blue,
+        /// because this one only lets go of a copy and the other destroys a block, and the two must
+        /// not be mistaken for each other.
         /// </summary>
-        private static ControlTemplate BuildCopyCloseTemplate(double uiScale)
+        private static ControlTemplate BuildCopyCloseTemplate(double removeSize, double uiScale)
         {
             // Two strokes rather than the ✕ character: a font's cross is a hairline at this size and
             // no weight of it is much heavier, where a drawn one can be given the weight it needs.
@@ -1438,14 +1435,14 @@ public partial class RealtimeEditWindow : Window
             glyph.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty, 1.6 * uiScale);
             glyph.SetValue(System.Windows.Shapes.Shape.StrokeStartLineCapProperty, PenLineCap.Round);
             glyph.SetValue(System.Windows.Shapes.Shape.StrokeEndLineCapProperty, PenLineCap.Round);
-            glyph.SetValue(FrameworkElement.WidthProperty, 7.0 * uiScale);
-            glyph.SetValue(FrameworkElement.HeightProperty, 7.0 * uiScale);
+            glyph.SetValue(FrameworkElement.WidthProperty, 8.0 * uiScale);
+            glyph.SetValue(FrameworkElement.HeightProperty, 8.0 * uiScale);
+            glyph.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             glyph.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
 
             var chip = new FrameworkElementFactory(typeof(Border));
             chip.SetValue(Border.BackgroundProperty, CopyCloseFill);
-            chip.SetValue(Border.CornerRadiusProperty, new CornerRadius(0, 3.5 * uiScale, 3.5 * uiScale, 0));
-            chip.SetValue(Border.PaddingProperty, new Thickness(5 * uiScale, 0, 5 * uiScale, 0));
+            chip.SetValue(Border.CornerRadiusProperty, new CornerRadius(removeSize / 2));
             chip.AppendChild(glyph);
 
             return new ControlTemplate(typeof(Button)) { VisualTree = chip };
