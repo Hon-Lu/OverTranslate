@@ -186,6 +186,9 @@
     <sys:String x:Key="S.Toolbar.AnnotateHint">在選取範圍上塗畫標記</sys:String>
     <sys:String x:Key="S.Annotate.Pen">筆</sys:String>
     <sys:String x:Key="S.Annotate.Highlighter">螢光筆</sys:String>
+    <sys:String x:Key="S.Annotate.Line">直線</sys:String>
+    <sys:String x:Key="S.Annotate.Rectangle">方框</sys:String>
+    <sys:String x:Key="S.Annotate.Ellipse">圓框</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">橡皮擦</sys:String>
     <sys:String x:Key="S.Annotate.Undo">復原</sys:String>
     <sys:String x:Key="S.Annotate.Redo">重做</sys:String>

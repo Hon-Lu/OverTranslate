@@ -14,8 +14,11 @@
          opacity at the window's edge is cut off by a straight line, which reads as a stray border
          around the bar. -->
     <Border Margin="12,10,12,14">
-        <Grid>
-            <Grid>
+        <!-- The bar, and the 形狀 tray hung off it. A stack rather than one surface so the tray can
+             come and go without the bar itself changing shape, and so it can be put on whichever
+             side of the bar faces away from the capture toolbar — see ShowShapeTray. -->
+        <StackPanel x:Name="PanelStack">
+            <Grid x:Name="PanelBar">
                 <!-- Shadow on an empty twin rather than on the bar: an Effect rasterises the element
                      it is set on, and ClearType cannot run over a surface that may be transparent —
                      which at 11px CJK is the difference between a label that reads and one that
@@ -104,6 +107,38 @@
                                   </Grid>
                                 </Grid>
                                 <TextBlock Text="{DynamicResource S.Annotate.Highlighter}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <!-- 形狀: the three drag-out shapes behind one button, which wears whichever
+                             of them is in hand (or was last) so the button says what a press will
+                             give. The chevron is what says there is a choice behind it. -->
+                        <ToggleButton x:Name="ShapeTool"
+                                      Style="{StaticResource ToolbarStackToggleButton}"
+                                      Click="ShapeTool_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <Path x:Name="ShapeIconLine"
+                                          Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M2.6,15.4 L15.4,2.6"/>
+                                    <Path x:Name="ShapeIconRectangle"
+                                          Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M2.2,3.8 H15.8 V14.2 H2.2 Z"/>
+                                    <Path x:Name="ShapeIconEllipse"
+                                          Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M1.8,9 A7.2,5.6 0 1 1 16.2,9 A7.2,5.6 0 1 1 1.8,9 Z"/>
+                                  </Grid>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="ShapeLabel"/>
+                                    <Path x:Name="ShapeChevron"
+                                          Style="{StaticResource ToolbarToolStroke}"
+                                          StrokeThickness="1.2"
+                                          Margin="3,1,0,0"
+                                          VerticalAlignment="Center"
+                                          Data="M0,0 L3,3 L6,0"/>
+                                </StackPanel>
                             </StackPanel>
                         </ToggleButton>
 
@@ -197,7 +232,8 @@
                                        Style="{StaticResource AnnotationSliderTitle}"/>
                             <Slider x:Name="ThicknessSlider"
                                     Style="{StaticResource AnnotationSlider}"
-                                    ValueChanged="ThicknessSlider_ValueChanged"/>
+                                    ValueChanged="ThicknessSlider_ValueChanged"
+                                    PreviewMouseDoubleClick="Slider_PreviewMouseDoubleClick"/>
                             <Grid>
                                 <TextBlock x:Name="ThicknessMinLabel"
                                            HorizontalAlignment="Left"
@@ -224,7 +260,8 @@
                             <Slider x:Name="OpacitySlider"
                                     Style="{StaticResource AnnotationSlider}"
                                     AutomationProperties.Name="{DynamicResource S.Annotate.Opacity}"
-                                    ValueChanged="OpacitySlider_ValueChanged"/>
+                                    ValueChanged="OpacitySlider_ValueChanged"
+                                    PreviewMouseDoubleClick="Slider_PreviewMouseDoubleClick"/>
                             <Grid>
                                 <TextBlock Text="{DynamicResource S.Annotate.Faint}"
                                            HorizontalAlignment="Left"
@@ -238,6 +275,76 @@
                     </StackPanel>
                 </Border>
             </Grid>
-        </Grid>
+
+            <!-- The three shapes behind the 形狀 button, opened under it. Part of this window rather
+                 than a Popup: a Popup only closes itself on an outside click by capturing the mouse,
+                 and in a window that never activates that capture is not reliably let go. Here it
+                 closes on the three things that end the choice — picking a shape, pressing 形狀
+                 again, or picking up another tool. -->
+            <Grid x:Name="ShapeTray"
+                  HorizontalAlignment="Left"
+                  Visibility="Collapsed">
+                <Border Background="{DynamicResource ToolbarBg}"
+                        Margin="2"
+                        CornerRadius="12">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Direction="270"
+                                          Opacity="0.20" Color="#000000"/>
+                    </Border.Effect>
+                </Border>
+
+                <Border x:Name="ShapeTraySurface"
+                        Background="{DynamicResource ToolbarBg}"
+                        BorderBrush="{DynamicResource ToolbarBorder}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="6"
+                        RenderOptions.ClearTypeHint="Enabled">
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton x:Name="LineTool"
+                                      Style="{StaticResource ToolbarStackToggleButton}"
+                                      Click="ShapeChoice_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <Path Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M2.6,15.4 L15.4,2.6"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Annotate.Line}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <ToggleButton x:Name="RectangleTool"
+                                      Style="{StaticResource ToolbarStackToggleButton}"
+                                      Click="ShapeChoice_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <Path Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M2.2,3.8 H15.8 V14.2 H2.2 Z"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Annotate.Rectangle}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <ToggleButton x:Name="EllipseTool"
+                                      Style="{StaticResource ToolbarStackToggleButton}"
+                                      Click="ShapeChoice_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <Path Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M1.8,9 A7.2,5.6 0 1 1 16.2,9 A7.2,5.6 0 1 1 1.8,9 Z"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Annotate.Ellipse}"/>
+                            </StackPanel>
+                        </ToggleButton>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
     </Border>
 </Window>

@@ -186,6 +186,9 @@
     <sys:String x:Key="S.Toolbar.AnnotateHint">선택 영역에 그리기</sys:String>
     <sys:String x:Key="S.Annotate.Pen">펜</sys:String>
     <sys:String x:Key="S.Annotate.Highlighter">형광펜</sys:String>
+    <sys:String x:Key="S.Annotate.Line">직선</sys:String>
+    <sys:String x:Key="S.Annotate.Rectangle">사각형</sys:String>
+    <sys:String x:Key="S.Annotate.Ellipse">타원</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">지우개</sys:String>
     <sys:String x:Key="S.Annotate.Undo">실행 취소</sys:String>
     <sys:String x:Key="S.Annotate.Redo">다시 실행</sys:String>

@@ -262,7 +262,7 @@ public sealed class InkSurface
                 {
                     StartLineCap = Cap(stroke.Tool),
                     EndLineCap   = Cap(stroke.Tool),
-                    LineJoin     = PenLineJoin.Round,
+                    LineJoin     = Join(stroke.Tool),
                 };
 
                 // Composed whole and then faded, never piece by piece at its own opacity: a 螢光筆
@@ -273,7 +273,12 @@ public sealed class InkSurface
 
                 // A single point is a tap. A round nib leaves a dot; a chisel one has no width
                 // across a point it never moved off, so there is nothing to lay down.
-                if (stroke.Points.Count == 1)
+                if (stroke.IsShape && stroke.Points.Count == 2)
+                {
+                    dc.DrawGeometry(null, pen,
+                        AnnotationStroke.ShapeGeometry(stroke.Tool, stroke.Points[0], stroke.Points[1]));
+                }
+                else if (stroke.Points.Count == 1)
                 {
                     if (pen.StartLineCap == PenLineCap.Round)
                         dc.DrawEllipse(pen.Brush, null, stroke.Points[0], stroke.Thickness / 2, stroke.Thickness / 2);
@@ -398,6 +403,10 @@ public sealed class InkSurface
 
     private static PenLineCap Cap(AnnotationTool tool) =>
         tool == AnnotationTool.Highlighter ? PenLineCap.Flat : PenLineCap.Round;
+
+    /// <summary>Square corners for a box — a 方框 with rounded corners reads as a button, not a frame.</summary>
+    internal static PenLineJoin Join(AnnotationTool tool) =>
+        tool == AnnotationTool.Rectangle ? PenLineJoin.Miter : PenLineJoin.Round;
 
     private static StreamGeometry Line(IReadOnlyList<Point> points)
     {

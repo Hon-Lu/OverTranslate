@@ -758,4 +758,45 @@ public class SettingsParsingTests
 
         Assert.True(settings.Realtime.GuidanceExpanded);
     }
+
+    /// <summary>
+    /// A settings file from before 標記 remembered anything opens on the panel's old fixed start:
+    /// black, every slider halfway, 方框 behind 形狀.
+    /// </summary>
+    [Fact]
+    public void ASettingsFileWithoutAnnotation_OpensOnTheOldDefaults()
+    {
+        var annotation = SettingsService.Parse("""{"Capture":{"VerticalText":true}}""").Capture.Annotation;
+
+        Assert.Equal("#000000", annotation.Color);
+        Assert.Equal(0.5, annotation.PenThickness);
+        Assert.Equal(0.5, annotation.HighlighterThickness);
+        Assert.Equal(0.5, annotation.ShapeThickness);
+        Assert.Equal(0.5, annotation.EraserSize);
+        Assert.Equal(0.5, annotation.HighlighterOpacity);
+        Assert.Equal(AnnotationTool.Rectangle, annotation.Shape);
+    }
+
+    /// <summary>The 標記 preferences survive the file, the shape by name.</summary>
+    [Fact]
+    public void AnnotationPreferences_RoundTripThroughTheFile()
+    {
+        var written = new AppSettings();
+        written.Capture.Annotation.Color = "#EF4444";
+        written.Capture.Annotation.PenThickness = 0.2;
+        written.Capture.Annotation.HighlighterThickness = 0.9;
+        written.Capture.Annotation.HighlighterOpacity = 0.3;
+        written.Capture.Annotation.Shape = AnnotationTool.Ellipse;
+
+        var json = SettingsService.Serialize(written);
+        Assert.Contains("Ellipse", json);
+
+        var annotation = SettingsService.Parse(json).Capture.Annotation;
+        Assert.Equal("#EF4444", annotation.Color);
+        Assert.Equal(0.2, annotation.PenThickness);
+        Assert.Equal(0.9, annotation.HighlighterThickness);
+        Assert.Equal(0.5, annotation.ShapeThickness);
+        Assert.Equal(0.3, annotation.HighlighterOpacity);
+        Assert.Equal(AnnotationTool.Ellipse, annotation.Shape);
+    }
 }

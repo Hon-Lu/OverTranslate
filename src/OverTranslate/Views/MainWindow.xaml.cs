@@ -35,15 +35,10 @@ public partial class MainWindow : Window
     private AnnotationPanelWindow? _annotationPanel; // only while 標記 is on
     private AnnotationShortcutHook? _annotationKeys;  // likewise
 
-    // Which pen 標記 has in hand. Reset by every new capture and kept nowhere else: what it is for
-    // is closing the panel and reopening it inside one capture without losing the colour just
-    // chosen, and that is the whole of it. Across captures the defaults are the point — a fresh
-    // capture is a fresh piece of work, and starting it on whatever was left over from the last one
-    // is a state the user has to notice and undo before drawing.
+    // Which tool 標記 has in hand. Reset by every new capture and kept nowhere else: what it is for
+    // is closing the panel and reopening it inside one capture without putting the tool down. The
+    // colour and the widths are preferences and live in CaptureSettings.Annotation instead.
     private Models.AnnotationTool _annotationTool = AnnotationPanelWindow.DefaultTool;
-    private System.Windows.Media.Color _annotationColor = AnnotationPanelWindow.DefaultColor;
-    private double _annotationThickness = AnnotationPanelWindow.DefaultThickness;
-    private double _annotationOpacity = AnnotationPanelWindow.DefaultOpacity;
     private GlobalEscapeHook? _escapeHook; // lives for the whole capture session, see CloseAll
     private SystemRecoveryYield? _recoveryYield; // same lifetime; lets Task Manager out from under the layers
     private CancellationTokenSource? _sessionCts; // cancelled on teardown so abandoned work stops
@@ -753,10 +748,7 @@ public partial class MainWindow : Window
         _lastSelPhysHeight = selection.Height;
         _lastVerticalText  = false;
 
-        _annotationTool      = AnnotationPanelWindow.DefaultTool;
-        _annotationColor     = AnnotationPanelWindow.DefaultColor;
-        _annotationThickness = AnnotationPanelWindow.DefaultThickness;
-        _annotationOpacity   = AnnotationPanelWindow.DefaultOpacity;
+        _annotationTool = AnnotationPanelWindow.DefaultTool;
 
         var settings = SettingsService.Instance.Current;
         ShowOverlay(
@@ -1513,7 +1505,7 @@ public partial class MainWindow : Window
         _annotationPanel = null;
 
         var panel = new AnnotationPanelWindow(
-            _annotationTool, _annotationColor, _annotationThickness, _annotationOpacity);
+            _annotationTool, SettingsService.Instance.Current.Capture.Annotation);
         if (_captureWindow != null) panel.Owner = _captureWindow;
         panel.SettingsChanged += (_, _) => ApplyAnnotationSettings();
         panel.UndoRequested   += (_, _) => _overlayWindow?.UndoAnnotation();
@@ -1543,10 +1535,7 @@ public partial class MainWindow : Window
     {
         if (_annotationPanel is null) return;
 
-        _annotationTool      = _annotationPanel.Tool;
-        _annotationColor     = _annotationPanel.InkColor;
-        _annotationThickness = _annotationPanel.ThicknessFraction;
-        _annotationOpacity   = _annotationPanel.OpacityFraction;
+        _annotationTool = _annotationPanel.Tool;
 
         _overlayWindow?.SetAnnotationTool(_annotationPanel.Tool);
         _overlayWindow?.SetAnnotationColor(_annotationPanel.InkColor);
@@ -1616,6 +1605,10 @@ public partial class MainWindow : Window
 
         _overlayWindow?.EndAnnotating();
         _captureWindow?.SetAnnotationHold(false);
+
+        // The panel edits the preferences in memory as the user goes; they are written once here
+        // rather than on every step of a slider drag.
+        if (_annotationPanel is not null) SettingsService.Instance.Save();
 
         CloseWindow(_annotationPanel, w => w.Close(), nameof(AnnotationPanelWindow));
         _annotationPanel = null;

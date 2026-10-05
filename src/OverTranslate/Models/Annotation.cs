@@ -1,12 +1,19 @@
 using System.Windows;
 using System.Windows.Media;
 // UseWindowsForms puts System.Drawing in the implicit usings, so these names collide
+using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
+using Pen = System.Windows.Media.Pen;
 using Point = System.Windows.Point;
 
 namespace OverTranslate.Models;
 
 /// <summary>What a drag inside the selection does while 標記 is on.</summary>
+/// <remarks>
+/// Stored by name in the settings file (the shape 形狀 last gave): the tools are in no order that
+/// would keep an ordinal meaning the same one once another is added.
+/// </remarks>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum AnnotationTool
 {
     /// <summary>An opaque line at the chosen colour and width.</summary>
@@ -17,6 +24,15 @@ public enum AnnotationTool
 
     /// <summary>Rubs out whatever its circle passes over.</summary>
     Eraser,
+
+    /// <summary>A straight line from where the drag started to where it ends.</summary>
+    Line,
+
+    /// <summary>The outline of the box the drag spans.</summary>
+    Rectangle,
+
+    /// <summary>The outline of the ellipse inscribed in the box the drag spans.</summary>
+    Ellipse,
 }
 
 /// <summary>
@@ -58,6 +74,59 @@ public sealed class AnnotationStroke
     /// compose the stroke once and then fade the result, so the band is even.
     /// </remarks>
     public required double Opacity { get; init; }
+
+    /// <summary>Whether this is one of the drag-out shapes rather than a freehand line.</summary>
+    /// <remarks>
+    /// A shape keeps only the two ends of the drag in <see cref="Points"/> and is drawn from them,
+    /// rather than being stored as the outline it draws. An ellipse kept as points would be a polygon
+    /// at whatever resolution was picked when it was drawn, and the box it is measured from is all
+    /// the bounds and the undo history ever need.
+    /// </remarks>
+    public bool IsShape => IsShapeTool(Tool);
+
+    public static bool IsShapeTool(AnnotationTool tool) =>
+        tool is AnnotationTool.Line or AnnotationTool.Rectangle or AnnotationTool.Ellipse;
+
+    /// <summary>The outline a shape tool draws for a drag from <paramref name="start"/> to <paramref name="end"/>.</summary>
+    public static Geometry ShapeGeometry(AnnotationTool tool, Point start, Point end)
+    {
+        Geometry geometry = tool switch
+        {
+            AnnotationTool.Rectangle => new RectangleGeometry(new Rect(start, end)),
+            AnnotationTool.Ellipse   => new EllipseGeometry(new Rect(start, end)),
+            _                        => new LineGeometry(start, end),
+        };
+        geometry.Freeze();
+        return geometry;
+    }
+
+    /// <summary>
+    /// Where a shape's drag ends once Shift is held: lines snap to every 45°, boxes and ellipses
+    /// become squares and circles.
+    /// </summary>
+    /// <remarks>
+    /// The square takes the longer of the two sides rather than the shorter, so the corner stays on
+    /// the side of the pointer it was dragged to and the shape never shrinks away from the hand.
+    /// </remarks>
+    public static Point ConstrainShape(AnnotationTool tool, Point start, Point end)
+    {
+        double dx = end.X - start.X, dy = end.Y - start.Y;
+
+        if (tool == AnnotationTool.Line)
+        {
+            double length = Math.Sqrt(dx * dx + dy * dy);
+            if (length < 1e-9) return end;
+
+            double step  = Math.PI / 4;
+            double angle = Math.Round(Math.Atan2(dy, dx) / step) * step;
+            return new Point(start.X + length * Math.Cos(angle), start.Y + length * Math.Sin(angle));
+        }
+
+        double side = Math.Max(Math.Abs(dx), Math.Abs(dy));
+        return new Point(
+            start.X + (dx < 0 ? -side : side),
+            start.Y + (dy < 0 ? -side : side));
+    }
 
     /// <summary>The box the stroke paints inside, with the width of the nib allowed for.</summary>
     /// <remarks>
@@ -148,6 +217,11 @@ public sealed class AnnotationStroke
     {
         double reach = radius + Thickness / 2;
         double reachSq = reach * reach;
+
+        // A shape's two points are the corners of its box, not a path along it.
+        if (IsShape && Points.Count == 2)
+            return ShapeGeometry(Tool, Points[0], Points[1])
+                .StrokeContains(new Pen(Brushes.Black, reach * 2), point);
 
         if (Points.Count == 1)
             return DistanceSquared(Points[0], point) <= reachSq;
