@@ -268,7 +268,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     }
 
     /// <summary>
-    /// A failure the server answered with, in the words the capture toast and the translation
+    /// A failure the server answered with, in the words the capture toolbar's notice and the translation
     /// window's status line show — both put <see cref="Exception.Message"/> on screen as it is.
     /// </summary>
     private static Exception Localized(OpenAiChatException ex, int timeoutSeconds) => ex.Failure switch

@@ -16,10 +16,7 @@
     <Window.Resources>
         <!-- The application's own icon button at the size this surface can carry. A hint is one
              line of text tall, so the 32px control would set the height of the whole thing and turn
-             a remark into a panel.
-
-             IconButton rather than the toast's ToastIconButton: that one is drawn for a surface
-             that is dark in both themes, and this card is not — see the card itself. -->
+             a remark into a panel. -->
         <Style x:Key="HintIconButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
             <Setter Property="Width"      Value="22"/>
             <Setter Property="Height"     Value="22"/>
@@ -28,20 +25,18 @@
         </Style>
     </Window.Resources>
 
-    <!-- At least the blur radius on every side, plus the offset below — the same margin the toast
-         carries, and for the same reason: short of it the blur is cut off by the window's edge and
-         the cut reads as a faint grey rectangle around the card. -->
+    <!-- At least the blur radius on every side, plus the offset below: short of it the blur is
+         cut off by the window's edge and the cut reads as a faint grey rectangle around the card. -->
     <Border Margin="14,12,14,16">
-        <!-- A capsule rather than the toast's rounded rectangle. This is the smallest thing the
+        <!-- A capsule rather than a rounded rectangle. This is the smallest thing the
              application puts on screen and it carries one line, so the shape says so: the corner
              radius is half the height it has when nothing has gone wrong, which is the shape of a
              remark rather than of a panel. A failure wraps to two lines and the same radius then
              reads as a rounded card, which is the right weight for something that has to be read.
 
-             The theme's own surface colours rather than the toast's, which are dark in both themes.
-             A toast is a notification and reads as a system layer; this is a reply to something the
-             user just did, in the middle of their own text, and a dark slab over a light desktop is
-             far heavier than that moment deserves. Not quite solid, for the same reason — see
+             The theme's own surface colours rather than a dark slab: this is a reply to something
+             the user just did, in the middle of their own text, and a dark slab over a light desktop
+             is far heavier than that moment deserves. Not quite solid, for the same reason — see
              HintCardBg. -->
         <Border x:Name="Card"
                 Background="{DynamicResource HintCardBg}"

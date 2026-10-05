@@ -170,7 +170,7 @@
                         </Border.Effect>
 
                         <!-- No reveal animation, deliberately: the toolbar, the processing card and
-                             the toast all appear instantly, and one element easing itself in reads
+                             the toolbar's notice all appear instantly, and one element easing itself in reads
                              as an inconsistency rather than as polish. -->
                         <StackPanel Orientation="Horizontal">
                             <!-- Leading position: before a selection exists this is the only

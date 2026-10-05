@@ -1861,10 +1861,9 @@
         <Setter Property="Width"           Value="38"/>
         <Setter Property="Height"          Value="38"/>
         <Setter Property="Padding"         Value="0"/>
-        <!-- Its own template, for the same reason ToastIconButton has one: BasedOn cannot reach the
-             hover and pressed brushes named inside the inherited one, and the bar's steps are
-             measured against the bar — against this raised surface the light theme's would be a
-             four-value change nobody can see. -->
+        <!-- Its own template: BasedOn cannot reach the hover and pressed brushes named inside the
+             inherited one, and the bar's steps are measured against the bar — against this raised
+             surface the light theme's would be a four-value change nobody can see. -->
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -1992,9 +1991,9 @@
     </Style>
 
     <!-- Icon buttons that sit inside a raised group tray rather than directly on the bar. Their
-         template is repeated rather than inherited for the same reason ToastIconButton repeats it:
-         BasedOn cannot reach the hover and pressed brushes named inside it, and against the tray the
-         bar's own steps are too close to its surface to be seen. -->
+         template is repeated rather than inherited: BasedOn cannot reach the hover and pressed
+         brushes named inside it, and against the tray the bar's own steps are too close to its
+         surface to be seen. -->
     <Style x:Key="ToolbarGroupIconButton" TargetType="Button" BasedOn="{StaticResource ToolbarIconButton}">
         <Setter Property="Template">
             <Setter.Value>
@@ -2116,37 +2115,6 @@
                             <Setter TargetName="Ring" Property="Stroke"     Value="{DynamicResource ToolbarPrimaryFg}"/>
                             <Setter TargetName="Dot"  Property="Visibility" Value="Visible"/>
                             <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- The toast is dark in both themes, so its buttons need their own brushes rather than the
-         themed ones IconButton carries. Its template is repeated instead of inherited because
-         BasedOn cannot reach the hover and pressed brushes named inside that template. -->
-    <Style x:Key="ToastIconButton" TargetType="Button" BasedOn="{StaticResource ToolbarIconButton}">
-        <Setter Property="Foreground" Value="{DynamicResource ToastIconFg}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="Root"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background"
-                                    Value="{DynamicResource ToastIconHoverBg}"/>
-                            <Setter Property="Foreground"
-                                    Value="{DynamicResource ToastIconFgHover}"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Background"
-                                    Value="{DynamicResource ToastIconPressedBg}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
