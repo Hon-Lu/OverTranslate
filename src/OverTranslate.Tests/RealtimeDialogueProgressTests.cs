@@ -361,6 +361,41 @@ public class RealtimeDialogueProgressTests
         }
     }
 
+    [Fact]
+    public void LongColumnsRideAlongWhenAShortBalloonOnThePageClearlyMoved()
+    {
+        // A 40px scroll is past a short balloon's own bar but within a long column's — measured as
+        // two redraws per scroll, the second a confirmation pass for the long ones only.
+        var tracker = new DialogueReadingTracker();
+        var shortOne = Balloon("ん？", new Rect(500, 100, 30, 80), new Rect(500, 100, 30, 80));
+        var longOne = Balloon("縦書きの吹き出し", new Rect(100, 100, 60, 300),
+            new Rect(135, 100, 25, 300), new Rect(100, 100, 25, 300));
+        var first = tracker.Merge([], [shortOne, longOne]);
+        Assert.True(tracker.TryTakeConfirmation());
+        var shown = tracker.Merge(first.Lines, [shortOne, longOne]);
+        var scrolled = tracker.Merge(shown.Lines, [Offset(shortOne, 0, -40), Offset(longOne, 0, -40)]);
+        Assert.True(scrolled.Repositioned);
+        Assert.Equal(Offset(shortOne, 0, -40).Bounds, scrolled.Blocks[0].Bounds);
+        Assert.Equal(Offset(longOne, 0, -40).Bounds, scrolled.Blocks[1].Bounds);
+        Assert.False(tracker.NeedsConfirmation);
+    }
+
+    [Fact]
+    public void ANudgeThatDoesNotMatchTheOtherMoveStillWaitsForConfirmation()
+    {
+        var tracker = new DialogueReadingTracker();
+        var shortOne = Balloon("ん？", new Rect(500, 100, 30, 80), new Rect(500, 100, 30, 80));
+        var longOne = Balloon("縦書きの吹き出し", new Rect(100, 100, 60, 300),
+            new Rect(135, 100, 25, 300), new Rect(100, 100, 25, 300));
+        var first = tracker.Merge([], [shortOne, longOne]);
+        Assert.True(tracker.TryTakeConfirmation());
+        var shown = tracker.Merge(first.Lines, [shortOne, longOne]);
+        var mixed = tracker.Merge(shown.Lines, [Offset(shortOne, 0, -40), Offset(longOne, 0, 20)]);
+        Assert.True(mixed.Repositioned);
+        Assert.Equal(longOne.Bounds, mixed.Blocks[1].Bounds);
+        Assert.True(tracker.HasPendingPlacement);
+    }
+
     private static OcrTextBlock Balloon(string text, Rect bounds, params Rect[] lines) =>
         new(text, bounds, Confidence: 0.98, SourceLineBounds: lines);
 

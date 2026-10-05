@@ -122,11 +122,27 @@ internal sealed class DialogueReadingTracker
     /// re-read, so a move there is only taken once a second reading lands in the same place. Wobble
     /// rarely lands twice on the same spot, and the confirming reads it can ask for are bounded by
     /// MaxConfirmationReads like every other confirmation.
+    ///
+    /// One exception to the wait: a block that clearly moved in this same pass, by the same amount.
+    /// That is a scroll, and the pass is redrawing anyway — measured on a manga page, a 40px scroll
+    /// moved a two-character balloon at once and left its long neighbours for a confirmation pass,
+    /// which redrew the page a second time. Riding along adds no redraw of its own, so a wobble
+    /// cannot use it to make one.
     /// </remarks>
     private bool FollowPlacement(ReadingMerge result)
     {
         bool moved = false;
         var placement = new Dictionary<(int Index, string Text), Rect>();
+        var clearMoves = new List<Vector>();
+        for (int i = 0; _placed.Length == result.Blocks.Count && i < result.Blocks.Count; i++)
+        {
+            if (!TextSimilarity.IsSameWording(_placed[i].Text, result.Blocks[i].Text)) continue;
+            var a = _placed[i].Bounds;
+            var b = result.Blocks[i].Bounds;
+            var shift = new Vector(b.X + b.Width / 2 - a.X - a.Width / 2, b.Y + b.Height / 2 - a.Y - a.Height / 2);
+            double tolerance = Math.Max(2, Math.Min(a.Height, b.Height) * 0.25);
+            if (Math.Abs(shift.X) > tolerance || Math.Abs(shift.Y) > tolerance) clearMoves.Add(shift);
+        }
         for (int i = 0; _placed.Length == result.Blocks.Count && i < result.Blocks.Count; i++)
         {
             var block = result.Blocks[i];
@@ -149,8 +165,9 @@ internal sealed class DialogueReadingTracker
             // size without ever returning to the same coordinates.
             bool sizeConfirmed = resized && hasCandidate && SameSize(candidate, b);
             // A small move, by contrast, is only believed where it was read twice running.
-            bool nudgeConfirmed = !resized && nudged && hasCandidate && SameSize(candidate, b) &&
-                !Shifted(candidate, b, lineTolerance);
+            bool nudgeConfirmed = !resized && nudged && (hasCandidate && SameSize(candidate, b) &&
+                !Shifted(candidate, b, lineTolerance) || clearMoves.Any(v =>
+                    Math.Abs(v.X - dx) <= lineTolerance && Math.Abs(v.Y - dy) <= lineTolerance));
             if (sizeConfirmed || (!resized && shifted) || nudgeConfirmed) moved = true;
             else
             {
