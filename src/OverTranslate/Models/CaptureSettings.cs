@@ -40,8 +40,38 @@ public class CaptureSettings
     /// </remarks>
     public bool ShowModelHint { get; set; } = true;
 
-    // 標記 deliberately keeps nothing here. Which pen is in hand lasts exactly as long as the
-    // capture it was picked up for: every new capture starts on the black pen at the middle width,
-    // and the choice only has to survive closing and reopening the panel inside that one session —
-    // see MainWindow's annotation session state.
+    /// <summary>How the 標記 tools were last set up.</summary>
+    /// <remarks>
+    /// The user's preferences for the tools, not the state of a drawing: the colour, each tool's
+    /// width, how faint a highlight is and which shape 形狀 gives. Which tool is in hand is not kept —
+    /// every capture starts on the pen, because one that started on the eraser would be a drag that
+    /// draws nothing and looks broken. The marks themselves belong to the capture they were drawn on.
+    /// </remarks>
+    public CaptureAnnotationSettings Annotation { get; set; } = new();
+}
+
+/// <summary>The 標記 preferences kept between captures. See <see cref="CaptureSettings.Annotation"/>.</summary>
+/// <remarks>
+/// The widths and the opacity are slider positions from 0 to 1, not DIP: what each position means is
+/// the panel's to decide, and keeping the position is what lets that change without every settings
+/// file written before it coming back at a width nobody chose.
+/// </remarks>
+public class CaptureAnnotationSettings
+{
+    /// <summary>The ink colour as #RRGGBB. One the palette does not offer reads as its first colour.</summary>
+    public string Color { get; set; } = "#000000";
+
+    public double PenThickness { get; set; } = 0.5;
+
+    public double HighlighterThickness { get; set; } = 0.5;
+
+    /// <summary>One width for all three shapes: they are one tool behind one button.</summary>
+    public double ShapeThickness { get; set; } = 0.5;
+
+    public double EraserSize { get; set; } = 0.5;
+
+    public double HighlighterOpacity { get; set; } = 0.5;
+
+    /// <summary>What 形狀 gives when pressed. Anything but one of the three shapes reads as Rectangle.</summary>
+    public AnnotationTool Shape { get; set; } = AnnotationTool.Rectangle;
 }

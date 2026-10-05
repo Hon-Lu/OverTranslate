@@ -55,6 +55,7 @@ internal sealed class WetInkLayer : FrameworkElement
     private List<Point> _activePoints = [];
     private Pen? _pen;
     private bool _isFirstBlock;
+    private AnnotationTool _shapeTool;
 
     public WetInkLayer()
     {
@@ -104,6 +105,41 @@ internal sealed class WetInkLayer : FrameworkElement
         }
 
         Redraw();
+    }
+
+    /// <summary>Starts a shape being dragged out, throwing away anything left of the last stroke.</summary>
+    /// <remarks>
+    /// One visual redrawn whole on every move rather than the blocks a freehand line is built from:
+    /// a shape is a single segment or outline however long the drag goes on, so there is nothing to
+    /// seal and nothing that grows.
+    /// </remarks>
+    public void BeginShape(Color color, double thickness, AnnotationTool tool, Point start)
+    {
+        _blocks.Clear();
+
+        _pen = new Pen(new SolidColorBrush(color), thickness)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap   = PenLineCap.Round,
+            LineJoin     = InkSurface.Join(tool),
+        };
+        _pen.Freeze();
+
+        Opacity       = 1;
+        _shapeTool    = tool;
+        _activePoints = [];
+        _active = new DrawingVisual();
+        _blocks.Add(_active);
+        ReshapeTo(start, start);
+    }
+
+    /// <summary>Redraws the shape for a drag that has now reached <paramref name="end"/>.</summary>
+    public void ReshapeTo(Point start, Point end)
+    {
+        if (_pen is null || _active is null) return;
+
+        using var dc = _active.RenderOpen();
+        dc.DrawGeometry(null, _pen, AnnotationStroke.ShapeGeometry(_shapeTool, start, end));
     }
 
     /// <summary>Takes the stroke away, which is what happens once it has been committed.</summary>

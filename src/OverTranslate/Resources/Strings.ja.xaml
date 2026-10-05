@@ -186,6 +186,9 @@
     <sys:String x:Key="S.Toolbar.AnnotateHint">選択範囲に書き込む</sys:String>
     <sys:String x:Key="S.Annotate.Pen">ペン</sys:String>
     <sys:String x:Key="S.Annotate.Highlighter">蛍光ペン</sys:String>
+    <sys:String x:Key="S.Annotate.Line">直線</sys:String>
+    <sys:String x:Key="S.Annotate.Rectangle">四角</sys:String>
+    <sys:String x:Key="S.Annotate.Ellipse">楕円</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">消しゴム</sys:String>
     <sys:String x:Key="S.Annotate.Undo">元に戻す</sys:String>
     <sys:String x:Key="S.Annotate.Redo">やり直す</sys:String>

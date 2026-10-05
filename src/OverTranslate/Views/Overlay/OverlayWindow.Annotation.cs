@@ -61,6 +61,31 @@ public partial class OverlayWindow
     private List<Point>? _wetPoints;
     private readonly WetInkLayer _wetLayer = new();
 
+    // A shape being dragged out: where the drag started, and where its far corner is now.
+    private Point? _shapeStart;
+    private Point _shapeEnd;
+
+    /// <summary>How far a shape's drag must reach before letting go of it leaves a mark.</summary>
+    /// <remarks>
+    /// A click with a shape tool in hand is almost always a click that meant something else — picking
+    /// the spot to start from, or a press that slipped — and the zero-size shape it would leave is a
+    /// dot nobody can tell was meant to be a box.
+    /// </remarks>
+    private const double MinShapeExtent = 3;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    private const int VK_SHIFT = 0x10;
+
+    /// <summary>Whether Shift is down right now.</summary>
+    /// <remarks>
+    /// Asked of the keyboard itself rather than of WPF. Nothing in this session holds the focus —
+    /// see <see cref="AnnotationShortcutHook"/> — so WPF's own idea of the modifiers is whatever it
+    /// was the last time this thread saw a key, which while drawing is never.
+    /// </remarks>
+    private static bool IsShiftDown => (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+
     // An erase drag in progress: the strokes as they stand right now, where the eraser was last
     // seen, and whether it has taken anything yet.
     private List<Point>? _erasePoints;
@@ -233,7 +258,11 @@ public partial class OverlayWindow
     private void ApplyAnnotationCursor()
     {
         bool erasing = _annotationTool == AnnotationTool.Eraser;
-        AnnotationSurface.Cursor = erasing ? Cursors.None : Cursors.Pen;
+        // A crosshair for the shapes: what they need from the pointer is the exact corner to start
+        // from, and the pen's nib hides the very pixel it is on.
+        AnnotationSurface.Cursor = erasing ? Cursors.None
+            : AnnotationStroke.IsShapeTool(_annotationTool) ? Cursors.Cross
+            : Cursors.Pen;
         if (!erasing) HideEraserRing();
         else RenderEraserRing();
     }
@@ -271,6 +300,15 @@ public partial class OverlayWindow
             return;
         }
 
+        if (AnnotationStroke.IsShapeTool(_annotationTool))
+        {
+            _shapeStart = point;
+            _shapeEnd   = point;
+            _wetLayer.BeginShape(_annotationColor, _annotationThickness, _annotationTool, point);
+            AnnotationCanvas.Children.Add(_wetLayer);
+            return;
+        }
+
         _wetPoints = [point];
 
         _wetLayer.Begin(
@@ -301,6 +339,13 @@ public partial class OverlayWindow
                 _erasePoints.Add(point);
                 _eraseLast = point;
             }
+            return;
+        }
+
+        if (_shapeStart is { } start)
+        {
+            _shapeEnd = IsShiftDown ? AnnotationStroke.ConstrainShape(_annotationTool, start, point) : point;
+            _wetLayer.ReshapeTo(start, _shapeEnd);
             return;
         }
 
@@ -358,6 +403,32 @@ public partial class OverlayWindow
             return;
         }
 
+        if (_shapeStart is { } shapeStart)
+        {
+            var shapeEnd = _shapeEnd;
+            AbandonWetStroke();
+
+            // A line by its length, a box by its longer side: a long, flat box is still a deliberate
+            // drag, however little it is tall.
+            double dx = Math.Abs(shapeEnd.X - shapeStart.X), dy = Math.Abs(shapeEnd.Y - shapeStart.Y);
+            double extent = _annotationTool == AnnotationTool.Line ? Math.Sqrt(dx * dx + dy * dy) : Math.Max(dx, dy);
+            if (extent < MinShapeExtent) return;
+
+            var shape = new AnnotationStroke
+            {
+                Tool      = _annotationTool,
+                Color     = _annotationColor,
+                Thickness = _annotationThickness,
+                Opacity   = 1,
+                Points    = [shapeStart, shapeEnd],
+            };
+
+            EnsureInkSurface();
+            _ink.Lay(shape);
+            CommitStrokes([.. CurrentStrokes, shape], alreadyPainted: true);
+            return;
+        }
+
         if (_wetPoints is null) return;
 
         var points = _wetPoints;
@@ -391,6 +462,7 @@ public partial class OverlayWindow
         AnnotationCanvas.Children.Remove(_wetLayer);
         _wetLayer.Clear();
         _wetPoints = null;
+        _shapeStart = null;
 
         // A rub that is walked away from has already taken ink off the picture, and the picture is
         // the only place that happened — so the marks that are still on the list are painted again.

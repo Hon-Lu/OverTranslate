@@ -46,21 +46,11 @@ public partial class AnnotationPanelWindow : Window
         Color.FromRgb(0x7C, 0x3A, 0xED), // 紫
     ];
 
-    /// <summary>What every capture starts with, before the user has touched anything.</summary>
+    /// <summary>What every capture starts with in hand.</summary>
     /// <remarks>
-    /// Fixed rather than remembered. Nothing about 標記 outlives the capture it was used in — see
-    /// CaptureSettings — so these are the only starting values there are, and they are named here
-    /// rather than at the caller because this is the file that knows what the palette contains.
+    /// Not remembered, unlike the rest of the panel — see CaptureSettings.Annotation for why.
     /// </remarks>
     public static AnnotationTool DefaultTool => AnnotationTool.Pen;
-
-    public static Color DefaultColor => PaletteColors[0];
-
-    /// <summary>Halfway along the slider: no tool's range has a better place to start.</summary>
-    public const double DefaultThickness = 0.5;
-
-    /// <summary>Likewise halfway, which lands on a highlight you can still read through.</summary>
-    public const double DefaultOpacity = 0.5;
 
     /// <summary>
     /// What the 透明度 slider means, as (faintest, strongest).
@@ -96,6 +86,11 @@ public partial class AnnotationPanelWindow : Window
     private readonly List<ToggleButton> _swatches = [];
     private bool _initializing = true;
 
+    /// <summary>
+    /// The preferences this panel shows and edits, in place — the caller saves them when it is done.
+    /// </summary>
+    private readonly CaptureAnnotationSettings _prefs;
+
     /// <summary>Raised whenever the tool, the colour or the width changed.</summary>
     public event EventHandler? SettingsChanged;
 
@@ -105,44 +100,93 @@ public partial class AnnotationPanelWindow : Window
     public AnnotationTool Tool { get; private set; }
     public Color InkColor { get; private set; }
 
-    /// <summary>Where the 透明度 slider sits, 0 to 1.</summary>
-    public double OpacityFraction { get; private set; }
-
     /// <summary>How see-through a highlight drawn now would be.</summary>
     /// <remarks>
     /// Named for the ink and not just "Opacity" because a Window already has one of those, and it
     /// means the transparency of this panel. Two properties one letter apart, on the same object,
     /// one of which would make the toolbar itself fade — see also <see cref="InkColor"/>.
     /// </remarks>
-    public double InkOpacity => MinOpacity + (MaxOpacity - MinOpacity) * OpacityFraction;
+    public double InkOpacity => MinOpacity + (MaxOpacity - MinOpacity) * Math.Clamp(_prefs.HighlighterOpacity, 0, 1);
 
-    /// <summary>Where the slider sits, 0 to 1. The width itself depends on the tool — see <see cref="Thickness"/>.</summary>
-    public double ThicknessFraction { get; private set; }
+    /// <summary>
+    /// Where the slider sits for the tool in hand, 0 to 1. Each tool keeps its own, so widening the
+    /// highlighter does not leave the pen wide as well.
+    /// </summary>
+    private double ThicknessFraction
+    {
+        get => Math.Clamp(Tool switch
+        {
+            AnnotationTool.Highlighter => _prefs.HighlighterThickness,
+            AnnotationTool.Eraser      => _prefs.EraserSize,
+            AnnotationTool.Pen         => _prefs.PenThickness,
+            _                          => _prefs.ShapeThickness,
+        }, 0, 1);
+        set
+        {
+            switch (Tool)
+            {
+                case AnnotationTool.Highlighter: _prefs.HighlighterThickness = value; break;
+                case AnnotationTool.Eraser:      _prefs.EraserSize           = value; break;
+                case AnnotationTool.Pen:         _prefs.PenThickness         = value; break;
+                default:                         _prefs.ShapeThickness       = value; break;
+            }
+        }
+    }
 
     public double Thickness
     {
         get
         {
             var (min, max) = RangeFor(Tool);
-            return min + (max - min) * ThicknessFraction;
+            return min + (max - min) * Math.Pow(ThicknessFraction, CurveFor(Tool));
         }
     }
 
-    public AnnotationPanelWindow(
-        AnnotationTool tool, Color color, double thicknessFraction, double opacityFraction)
+    /// <summary>
+    /// How much the 粗細 slider bends towards the thin end, given as where its middle lands along the
+    /// tool's range.
+    /// </summary>
+    /// <remarks>
+    /// A curve rather than a narrower range, so both ends still reach as far as they did — the
+    /// thickest pen is still there for whoever wants it — while the default, which sits in the
+    /// middle, is the width most marks are actually made at: 6 for the pen and the shapes, a little
+    /// under the straight halfway for the highlighter.
+    ///
+    /// Not for the eraser: its slider is a reach rather than the width of a mark, and a wide rub in
+    /// the middle is what it is for.
+    /// </remarks>
+    private static double CurveFor(AnnotationTool tool) => tool switch
+    {
+        AnnotationTool.Eraser      => 1,
+        AnnotationTool.Highlighter => MiddleAt(0.4),
+        _                          => MiddleAt((6.0 - 2) / (13 - 2)),
+    };
+
+    /// <summary>The exponent that puts the slider's middle at <paramref name="share"/> of the range.</summary>
+    private static double MiddleAt(double share) => Math.Log(share) / Math.Log(0.5);
+
+    public AnnotationPanelWindow(AnnotationTool tool, CaptureAnnotationSettings prefs)
     {
         InitializeComponent();
 
-        Tool              = tool;
-        InkColor          = color;
-        ThicknessFraction = Math.Clamp(thicknessFraction, 0, 1);
-        OpacityFraction   = Math.Clamp(opacityFraction, 0, 1);
+        _prefs = prefs;
+        Tool   = tool;
+
+        // A colour the palette does not offer — hand-edited, or from a palette since changed — is
+        // put back on the first swatch by BuildPalette rather than drawn with.
+        InkColor = TryParseColor(prefs.Color) ?? PaletteColors[0];
+        if (AnnotationStroke.IsShapeTool(prefs.Shape)) _lastShape = prefs.Shape;
 
         BuildPalette();
         RenderToolSelection();
-        ThicknessSlider.Value = ThicknessFraction;
-        OpacitySlider.Value   = OpacityFraction;
+        OpacitySlider.Value = Math.Clamp(prefs.HighlighterOpacity, 0, 1);
         _initializing = false;
+    }
+
+    private static Color? TryParseColor(string? text)
+    {
+        try { return text is null ? null : (Color)System.Windows.Media.ColorConverter.ConvertFromString(text); }
+        catch (Exception e) when (e is FormatException or NotSupportedException) { return null; }
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -191,6 +235,8 @@ public partial class AnnotationPanelWindow : Window
     /// </remarks>
     public void PlaceNear(Rect toolbarVisiblePhys, double scale)
     {
+        // Which side the tray opens on depends on where this lands, so it is put away first.
+        HideShapeTray();
         UpdateLayout();
 
         // Where the visible panel starts inside its own window, and how big it is, in pixels.
@@ -210,7 +256,8 @@ public partial class AnnotationPanelWindow : Window
             toolbarVisiblePhys.Left + (toolbarVisiblePhys.Width - visW) / 2, minLeft, maxLeft);
 
         double visTop = toolbarVisiblePhys.Bottom + gap;
-        if (visTop + visH > wa.Bottom) visTop = toolbarVisiblePhys.Top - gap - visH;
+        _placedAbove = visTop + visH > wa.Bottom;
+        if (_placedAbove) visTop = toolbarVisiblePhys.Top - gap - visH;
 
         // On a monitor with room for neither, the panel goes wherever it fits rather than off the
         // top. It is the only way to change tools, so it can never be the thing that ends up out of
@@ -240,15 +287,19 @@ public partial class AnnotationPanelWindow : Window
         }
 
         // A palette showing eight unchecked swatches is a state the user cannot get out of by
-        // looking at it. Nothing should reach here — the caller only ever hands back a colour this
-        // list gave it — but the ring is the only thing saying what is in hand, and it has to be on
-        // something.
+        // looking at it. A saved colour reaches here when it is not one of these eight — a hand-
+        // edited settings file, or a palette that has since changed — and the ring is the only thing
+        // saying what is in hand, so it has to be on something.
         if (!_swatches.Any(s => s.IsChecked == true))
         {
             InkColor = PaletteColors[0];
             _swatches[0].IsChecked = true;
         }
+
+        _prefs.Color = ToHex(InkColor);
     }
+
+    private static string ToHex(Color color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 
     private void Swatch_Click(object sender, RoutedEventArgs e)
     {
@@ -257,6 +308,7 @@ public partial class AnnotationPanelWindow : Window
         // Clicking the one already chosen must leave it chosen: a ToggleButton unchecks itself on the
         // second press, and a palette with nothing selected is not a state this control has.
         InkColor = color;
+        _prefs.Color = ToHex(color);
         foreach (var swatch in _swatches) swatch.IsChecked = ReferenceEquals(swatch, clicked);
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -270,15 +322,186 @@ public partial class AnnotationPanelWindow : Window
             _                                               => AnnotationTool.Pen,
         };
 
+        HideShapeTray();
         RenderToolSelection();
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// 形狀 picks up the shape last used and opens the tray; pressed again, it only opens or closes it.
+    /// </summary>
+    /// <remarks>
+    /// The first press does both because the common case is one shape drawn again and again: that is
+    /// a single press, and the tray beside it is how the other two are found the first time.
+    /// </remarks>
+    private void ShapeTool_Click(object sender, RoutedEventArgs e)
+    {
+        if (!AnnotationStroke.IsShapeTool(Tool))
+        {
+            Tool = _lastShape;
+            RenderToolSelection();
+            ShowShapeTray();
+            SettingsChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        // Already in hand: a ToggleButton would uncheck itself here, and a tool that is still in
+        // use must not look put down.
+        ShapeTool.IsChecked = true;
+        if (ShapeTray.Visibility == Visibility.Visible) HideShapeTray();
+        else ShowShapeTray();
+    }
+
+    private void ShapeChoice_Click(object sender, RoutedEventArgs e)
+    {
+        Tool = sender switch
+        {
+            _ when ReferenceEquals(sender, LineTool)    => AnnotationTool.Line,
+            _ when ReferenceEquals(sender, EllipseTool) => AnnotationTool.Ellipse,
+            _                                           => AnnotationTool.Rectangle,
+        };
+
+        HideShapeTray();
+        RenderToolSelection();
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>The shape 形狀 gives when pressed, and the one its button shows while it is not in hand.</summary>
+    private AnnotationTool _lastShape = AnnotationTool.Rectangle;
+
+    /// <summary>Whether this panel was put above the capture toolbar rather than under it.</summary>
+    private bool _placedAbove;
+
+    /// <summary>The gap between the bar and the tray, in DIP — the same one left above the bar.</summary>
+    private const double ShapeTrayGap = GapFromToolbar;
+
+    /// <summary>Opens the tray under the 形狀 button, or above it when below is not an option.</summary>
+    /// <remarks>
+    /// Away from the capture toolbar where it can be: hung on the toolbar's side it lands in the gap
+    /// between the two bars and over the toolbar itself. Off the bottom of the monitor is worse than
+    /// that, though — a choice the user cannot reach — so a panel with no room under it opens upward
+    /// anyway.
+    /// </remarks>
+    private void ShowShapeTray()
+    {
+        if (ShapeTray.Visibility == Visibility.Visible) return;
+
+        // Laid out below first: that is where it goes unless it will not fit, and the room it needs
+        // is only known once it has been measured.
+        PlaceTray(upward: false);
+        ShapeTray.Visibility = Visibility.Visible;
+        UpdateLayout();
+
+        // Centred under the button, but never past either end of the bar.
+        double buttonCentre = ShapeTool.TranslatePoint(new Point(ShapeTool.ActualWidth / 2, 0), PanelBar).X;
+        double left = Math.Clamp(
+            buttonCentre - ShapeTray.ActualWidth / 2, 0, Math.Max(0, PanelBar.ActualWidth - ShapeTray.ActualWidth));
+        ShapeTray.Margin = new Thickness(left, ShapeTray.Margin.Top, 0, ShapeTray.Margin.Bottom);
+
+        // Above instead when the panel is above the toolbar — below would land on the toolbar — or
+        // when below would run off the bottom of the monitor.
+        if (_placedAbove || RunsOffScreenBottom(ShapeTraySurface))
+        {
+            PlaceTray(upward: true);
+            ShapeTray.Margin = new Thickness(left, 0, 0, ShapeTrayGap);
+
+            // The window sizes to its content and grows from its top edge, so it is moved up by what
+            // the tray added: the bar stays where the user is looking.
+            _trayShift = ShapeTray.ActualHeight + ShapeTrayGap;
+            Top -= _trayShift;
+        }
+
+        _trayCloser ??= MouseDownHook.Install(OnAnyMouseDown);
+    }
+
+    private void PlaceTray(bool upward)
+    {
+        PanelStack.Children.Remove(ShapeTray);
+        PanelStack.Children.Insert(upward ? 0 : 1, ShapeTray);
+        ShapeTray.Margin = upward ? new Thickness(0, 0, 0, ShapeTrayGap) : new Thickness(0, ShapeTrayGap, 0, 0);
+    }
+
+    private static bool RunsOffScreenBottom(FrameworkElement element)
+    {
+        if (PresentationSource.FromVisual(element) is null) return false;
+        var bottom = element.PointToScreen(new Point(element.ActualWidth / 2, element.ActualHeight));
+        var wa = System.Windows.Forms.Screen.FromPoint(
+            new System.Drawing.Point((int)bottom.X, (int)bottom.Y - 1)).WorkingArea;
+        return bottom.Y > wa.Bottom;
+    }
+
+    /// <summary>How far the window was moved up to open the tray above the bar, to move it back by.</summary>
+    private double _trayShift;
+
+    private void HideShapeTray()
+    {
+        if (ShapeTray.Visibility == Visibility.Visible)
+        {
+            ShapeTray.Visibility = Visibility.Collapsed;
+            Top += _trayShift;
+            _trayShift = 0;
+        }
+
+        _trayCloser?.Dispose();
+        _trayCloser = null;
+    }
+
+    /// <summary>Watches for the press that puts the tray away, only while it is open.</summary>
+    private MouseDownHook? _trayCloser;
+
+    /// <summary>
+    /// Any button pressed anywhere closes the tray — except on the tray itself or on 形狀, whose own
+    /// clicks decide what happens to it.
+    /// </summary>
+    /// <remarks>
+    /// The tray is a choice made on the way to drawing, so the first press that is not that choice
+    /// is the user having moved on: starting a mark, reaching for the palette, or clicking in some
+    /// other window altogether. Left open it would sit there over nothing until something closed it.
+    /// </remarks>
+    private void OnAnyMouseDown(Point screenPoint)
+    {
+        if (ShapeTray.Visibility != Visibility.Visible) return;
+        if (ContainsScreenPoint(ShapeTraySurface, screenPoint) || ContainsScreenPoint(ShapeTool, screenPoint)) return;
+        HideShapeTray();
+    }
+
+    private static bool ContainsScreenPoint(FrameworkElement element, Point screenPoint)
+    {
+        if (PresentationSource.FromVisual(element) is null) return false;
+        var topLeft     = element.PointToScreen(new Point(0, 0));
+        var bottomRight = element.PointToScreen(new Point(element.ActualWidth, element.ActualHeight));
+        return new Rect(topLeft, bottomRight).Contains(screenPoint);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _trayCloser?.Dispose();
+        _trayCloser = null;
+        base.OnClosed(e);
+    }
+
     private void RenderToolSelection()
     {
+        bool shape = AnnotationStroke.IsShapeTool(Tool);
+        if (shape) _lastShape = _prefs.Shape = Tool;
+
         PenTool.IsChecked         = Tool == AnnotationTool.Pen;
         HighlighterTool.IsChecked = Tool == AnnotationTool.Highlighter;
         EraserTool.IsChecked      = Tool == AnnotationTool.Eraser;
+        ShapeTool.IsChecked       = shape;
+        LineTool.IsChecked        = Tool == AnnotationTool.Line;
+        RectangleTool.IsChecked   = Tool == AnnotationTool.Rectangle;
+        EllipseTool.IsChecked     = Tool == AnnotationTool.Ellipse;
+
+        ShapeIconLine.Visibility      = _lastShape == AnnotationTool.Line      ? Visibility.Visible : Visibility.Collapsed;
+        ShapeIconRectangle.Visibility = _lastShape == AnnotationTool.Rectangle ? Visibility.Visible : Visibility.Collapsed;
+        ShapeIconEllipse.Visibility   = _lastShape == AnnotationTool.Ellipse   ? Visibility.Visible : Visibility.Collapsed;
+        ShapeLabel.Text = LocalizationService.Get(_lastShape switch
+        {
+            AnnotationTool.Line    => "S.Annotate.Line",
+            AnnotationTool.Ellipse => "S.Annotate.Ellipse",
+            _                      => "S.Annotate.Rectangle",
+        });
 
         // The eraser takes a colour from nothing and gives one to nothing. Left enabled it would be
         // eight buttons that quietly do not apply to what is in hand.
@@ -303,19 +526,27 @@ public partial class AnnotationPanelWindow : Window
         ThicknessMinLabel.Text = LocalizationService.Get(erasing ? "S.Annotate.Small" : "S.Annotate.Thin");
         ThicknessMaxLabel.Text = LocalizationService.Get(erasing ? "S.Annotate.Large" : "S.Annotate.Thick");
         System.Windows.Automation.AutomationProperties.SetName(ThicknessSlider, ThicknessTitle.Text);
+
+        // Each tool's own width, so the slider jumps to it when the tool changes.
+        _showingToolThickness = true;
+        ThicknessSlider.Value = ThicknessFraction;
+        _showingToolThickness = false;
     }
 
     private void ThicknessSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_initializing) return;
+        if (_initializing || _showingToolThickness) return;
         ThicknessFraction = e.NewValue;
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Set while the slider is being moved to the new tool's width, which is not the user dragging it.</summary>
+    private bool _showingToolThickness;
+
     private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_initializing) return;
-        OpacityFraction = e.NewValue;
+        _prefs.HighlighterOpacity = e.NewValue;
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
