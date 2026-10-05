@@ -208,4 +208,243 @@ public class RealtimeDialogueProgressTests
         var merged = RealtimeReadingMerge.Merge(shown, [Read("We should leave this place right now.")]);
         Assert.False(merged.Changed);
     }
+
+    [Fact]
+    public void VerticalBalloonScrolledALittleFollowsAfterOneConfirmation()
+    {
+        // 300px columns: the old block-height bar was 75px, so a 40px scroll never moved it.
+        var tracker = new DialogueReadingTracker();
+        var balloon = Balloon("縦書きの吹き出し", new Rect(100, 100, 60, 300),
+            new Rect(135, 100, 25, 300), new Rect(100, 100, 25, 300));
+        var shown = Settle(tracker, balloon);
+        var scrolled = Offset(balloon, 0, -40);
+        var pending = tracker.Merge(shown.Lines, [scrolled]);
+        Assert.False(pending.Changed);
+        Assert.Equal(balloon.Bounds, pending.Blocks[0].Bounds);
+        Assert.True(tracker.TryTakeConfirmation());
+        var confirmed = tracker.Merge(pending.Lines, [scrolled]);
+        Assert.True(confirmed.Repositioned);
+        Assert.Equal(scrolled.Bounds, confirmed.Blocks[0].Bounds);
+        Assert.Equal(scrolled.SourceLineBounds, confirmed.Blocks[0].SourceLineBounds);
+        Assert.False(tracker.Merge(confirmed.Lines, [scrolled]).Changed);
+    }
+
+    [Fact]
+    public void ThreeLineBalloonScrolledALittleFollowsAfterOneConfirmation()
+    {
+        var tracker = new DialogueReadingTracker();
+        var balloon = Balloon("Three lines in one balloon.", new Rect(100, 100, 200, 90),
+            new Rect(100, 100, 200, 30), new Rect(100, 130, 200, 30), new Rect(100, 160, 200, 30));
+        var shown = Settle(tracker, balloon);
+        var scrolled = Offset(balloon, 0, 15);
+        var pending = tracker.Merge(shown.Lines, [scrolled]);
+        Assert.False(pending.Changed);
+        Assert.True(tracker.TryTakeConfirmation());
+        var confirmed = tracker.Merge(pending.Lines, [scrolled]);
+        Assert.True(confirmed.Repositioned);
+        Assert.Equal(scrolled.Bounds, confirmed.Blocks[0].Bounds);
+    }
+
+    [Fact]
+    public void TwoLineSubtitleWobblingBetweenTheTwoBarsNeverRedraws()
+    {
+        // Line bar 35 * 0.25 = 8.75px, block bar 70 * 0.25 = 17.5px: every read lands in between,
+        // on alternating sides, the way detector boxes wobble over a moving video background.
+        var tracker = new DialogueReadingTracker();
+        var subtitle = Balloon("Two lines of a film\nsubtitle on screen.", new Rect(300, 600, 600, 70),
+            new Rect(300, 600, 600, 35), new Rect(300, 635, 600, 35));
+        var shown = Settle(tracker, subtitle);
+        var random = new Random(7);
+        int confirmations = 0;
+        for (int read = 0; read < 40; read++)
+        {
+            double side = read % 2 == 0 ? 1 : -1;
+            double dy = side * (9 + random.NextDouble() * 8.4);
+            double dx = (random.NextDouble() - 0.5) * 8;
+            // Half the reads come from a pixel change (fresh budget), half from confirmations.
+            if (read % 2 == 0) tracker.ObservePixelChange();
+            else if (tracker.TryTakeConfirmation()) confirmations++;
+            shown = tracker.Merge(shown.Lines, [Offset(subtitle, dx, dy)]);
+            Assert.False(shown.Changed);
+            Assert.Equal(subtitle.Bounds, shown.Blocks[0].Bounds);
+        }
+        Assert.InRange(confirmations, 1, 20);
+    }
+
+    [Fact]
+    public void WobbleWithoutPixelChangesHasABoundedConfirmationBudget()
+    {
+        var tracker = new DialogueReadingTracker();
+        var subtitle = Balloon("Two lines of a film\nsubtitle on screen.", new Rect(300, 600, 600, 70),
+            new Rect(300, 600, 600, 35), new Rect(300, 635, 600, 35));
+        var shown = Settle(tracker, subtitle);
+        // One read caused by the picture changing, which leaves a small move pending.
+        tracker.ObservePixelChange();
+        shown = tracker.Merge(shown.Lines, [Offset(subtitle, 0, -12)]);
+        Assert.True(tracker.NeedsConfirmation);
+        int reads = 0;
+        for (int poll = 0; poll < 20; poll++)
+        {
+            if (!tracker.TryTakeConfirmation()) continue;
+            reads++;
+            shown = tracker.Merge(shown.Lines, [Offset(subtitle, 0, reads % 2 == 0 ? -12 : 12)]);
+            Assert.False(shown.Changed);
+        }
+        Assert.Equal(DialogueReadingTracker.MaxConfirmationReads, reads);
+        Assert.False(tracker.NeedsConfirmation);
+    }
+
+    [Theory]
+    [InlineData(0, 30)]
+    [InlineData(-25, 0)]
+    public void MoveBeyondTheBlockBarStillFollowsAtOnce(double dx, double dy)
+    {
+        var tracker = new DialogueReadingTracker();
+        var subtitle = Balloon("Two lines of a film\nsubtitle on screen.", new Rect(300, 600, 600, 70),
+            new Rect(300, 600, 600, 35), new Rect(300, 635, 600, 35));
+        var shown = Settle(tracker, subtitle);
+        var moved = tracker.Merge(shown.Lines, [Offset(subtitle, dx, dy)]);
+        Assert.True(moved.Repositioned);
+        Assert.Equal(Offset(subtitle, dx, dy).Bounds, moved.Blocks[0].Bounds);
+    }
+
+    [Fact]
+    public void PanelFollowsAMovedLineWithoutChangingWords()
+    {
+        var tracker = new DialogueReadingTracker();
+        var first = tracker.MergePanel([], [Read("Chat message.")]);
+        Assert.True(first.Changed);
+        Assert.False(tracker.NeedsConfirmation);
+        var moved = tracker.MergePanel(first.Lines, [Read("Chat message.", x: 40)]);
+        Assert.True(moved.Repositioned);
+        Assert.Equal(40, moved.Blocks[0].Bounds.X);
+    }
+
+    [Fact]
+    public void PanelSmallJitterDoesNotRedraw()
+    {
+        var tracker = new DialogueReadingTracker();
+        var first = tracker.MergePanel([], [Read("Chat message.")]);
+        var jitter = tracker.MergePanel(first.Lines, [Read("Chat message.", x: 12)]);
+        Assert.False(jitter.Changed);
+        Assert.False(tracker.NeedsConfirmation);
+        Assert.Equal(10, jitter.Blocks[0].Bounds.X);
+    }
+
+    [Fact]
+    public void PanelMultiLineBlockScrolledALittleFollowsAfterOneConfirmation()
+    {
+        var tracker = new DialogueReadingTracker();
+        var block = Balloon("A wrapped chat\nmessage in a panel.", new Rect(20, 200, 300, 60),
+            new Rect(20, 200, 300, 30), new Rect(20, 230, 300, 30));
+        var first = tracker.MergePanel([], [block]);
+        var scrolled = Offset(block, 0, -12);
+        var pending = tracker.MergePanel(first.Lines, [scrolled]);
+        Assert.False(pending.Changed);
+        Assert.True(tracker.HasPendingPlacement);
+        Assert.True(tracker.TryTakeConfirmation());
+        var confirmed = tracker.MergePanel(pending.Lines, [scrolled]);
+        Assert.True(confirmed.Repositioned);
+        Assert.Equal(scrolled.Bounds, confirmed.Blocks[0].Bounds);
+    }
+
+    [Fact]
+    public void PanelDoesNotTakeDialogueSentenceEndings()
+    {
+        var tracker = new DialogueReadingTracker();
+        var first = tracker.MergePanel([], [Read("We should leave this place right no", confidence: 0.99)]);
+        for (int read = 0; read < 3; read++)
+        {
+            var next = tracker.MergePanel(first.Lines, [Read("We should leave this place right now.")]);
+            Assert.False(next.Changed);
+            Assert.False(tracker.NeedsConfirmation);
+        }
+    }
+
+    [Fact]
+    public void LongColumnsRideAlongWhenAShortBalloonOnThePageClearlyMoved()
+    {
+        // A 40px scroll is past a short balloon's own bar but within a long column's — measured as
+        // two redraws per scroll, the second a confirmation pass for the long ones only.
+        var tracker = new DialogueReadingTracker();
+        var shortOne = Balloon("ん？", new Rect(500, 100, 30, 80), new Rect(500, 100, 30, 80));
+        var longOne = Balloon("縦書きの吹き出し", new Rect(100, 100, 60, 300),
+            new Rect(135, 100, 25, 300), new Rect(100, 100, 25, 300));
+        var first = tracker.Merge([], [shortOne, longOne]);
+        Assert.True(tracker.TryTakeConfirmation());
+        var shown = tracker.Merge(first.Lines, [shortOne, longOne]);
+        var scrolled = tracker.Merge(shown.Lines, [Offset(shortOne, 0, -40), Offset(longOne, 0, -40)]);
+        Assert.True(scrolled.Repositioned);
+        Assert.Equal(Offset(shortOne, 0, -40).Bounds, scrolled.Blocks[0].Bounds);
+        Assert.Equal(Offset(longOne, 0, -40).Bounds, scrolled.Blocks[1].Bounds);
+        Assert.False(tracker.NeedsConfirmation);
+    }
+
+    [Fact]
+    public void ANudgeThatDoesNotMatchTheOtherMoveStillWaitsForConfirmation()
+    {
+        var tracker = new DialogueReadingTracker();
+        var shortOne = Balloon("ん？", new Rect(500, 100, 30, 80), new Rect(500, 100, 30, 80));
+        var longOne = Balloon("縦書きの吹き出し", new Rect(100, 100, 60, 300),
+            new Rect(135, 100, 25, 300), new Rect(100, 100, 25, 300));
+        var first = tracker.Merge([], [shortOne, longOne]);
+        Assert.True(tracker.TryTakeConfirmation());
+        var shown = tracker.Merge(first.Lines, [shortOne, longOne]);
+        var mixed = tracker.Merge(shown.Lines, [Offset(shortOne, 0, -40), Offset(longOne, 0, 20)]);
+        Assert.True(mixed.Repositioned);
+        Assert.Equal(longOne.Bounds, mixed.Blocks[1].Bounds);
+        Assert.True(tracker.HasPendingPlacement);
+    }
+
+    [Fact]
+    public void ADetectorCroppingOneEndOfTheLineDoesNotRedrawIt()
+    {
+        // The boxes logged for one still subtitle over a moving video: the first glyph lost, then back.
+        var tracker = new DialogueReadingTracker();
+        var shown = Settle(tracker, Subtitle(new Rect(493, 177.8, 554, 59.4)));
+        foreach (var box in new[] { new Rect(535, 180.5, 512, 54.9), new Rect(501, 176.9, 551, 59.1) })
+        {
+            shown = tracker.Merge(shown.Lines, [Subtitle(box)]);
+            Assert.False(shown.Changed);
+            Assert.Equal(new Rect(493, 177.8, 554, 59.4), shown.Blocks[0].Bounds);
+        }
+    }
+
+    [Fact]
+    public void ACropReadTwiceRunningIsFollowedAfterConfirmation()
+    {
+        var tracker = new DialogueReadingTracker();
+        var shown = Settle(tracker, Subtitle(new Rect(493, 177.8, 554, 59.4)));
+        var cropped = Subtitle(new Rect(535, 180.5, 512, 54.9));
+        var pending = tracker.Merge(shown.Lines, [cropped]);
+        Assert.False(pending.Changed);
+        Assert.True(tracker.TryTakeConfirmation());
+        var confirmed = tracker.Merge(pending.Lines, [cropped]);
+        Assert.True(confirmed.Repositioned);
+        Assert.Equal(cropped.Bounds, confirmed.Blocks[0].Bounds);
+    }
+
+    private static OcrTextBlock Subtitle(Rect bounds) =>
+        new("今日はいい天気ですね。", bounds, Confidence: 0.98);
+
+    private static OcrTextBlock Balloon(string text, Rect bounds, params Rect[] lines) =>
+        new(text, bounds, Confidence: 0.98, SourceLineBounds: lines);
+
+    private static OcrTextBlock Offset(OcrTextBlock block, double dx, double dy)
+    {
+        static Rect Move(Rect r, double dx, double dy) { r.Offset(dx, dy); return r; }
+        return block with {
+            Bounds = Move(block.Bounds, dx, dy),
+            SourceLineBounds = block.SourceLineBounds?.Select(r => Move(r, dx, dy)).ToArray() };
+    }
+
+    // The first read plus its settle read, so the tests start from a region at rest.
+    private static ReadingMerge Settle(DialogueReadingTracker tracker, OcrTextBlock block)
+    {
+        var first = tracker.Merge([], [block]);
+        Assert.True(tracker.TryTakeConfirmation());
+        var settled = tracker.Merge(first.Lines, [block]);
+        Assert.False(tracker.NeedsConfirmation);
+        return settled;
+    }
 }

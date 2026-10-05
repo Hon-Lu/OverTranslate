@@ -244,6 +244,17 @@ internal sealed class RealtimeRegionState
     public bool ReadingAgain { get; private set; }
 
     /// <summary>
+    /// Whether this confirmation pass is looking at the very picture recognition last read, cell for
+    /// cell — so that reading it again at the same size could only return <see cref="LastRead"/>.
+    /// </summary>
+    /// <remarks>
+    /// Stricter than <see cref="ReadingAgain"/> on purpose: that one tolerates a frame that merely
+    /// looks unchanged, which over a video is noise that a real read might still answer differently.
+    /// This is the identical-picture test the idle scan already trusts, and nothing less.
+    /// </remarks>
+    public bool SamePictureAsRead { get; private set; }
+
+    /// <summary>
     /// What the last pass read, for a second reading of the same picture to be weighed against.
     /// </summary>
     /// <remarks>
@@ -304,19 +315,26 @@ internal sealed class RealtimeRegionState
             IsWatchingText ? current.Differs(previous) : current.DiffersLocally(previous);
 
         ReadingAgain = false;
-        if (dialogue && Dialogue.TryTakeConfirmation())
+        SamePictureAsRead = false;
+        // A panel only ever confirms where a box moved, and only over a still picture: while the
+        // pixels are changing its own settle-then-read rule already supplies the second reading,
+        // and jumping ahead of it would change the panel's timing for every scroll.
+        var confirms = dialogue || (Dialogue.HasPendingPlacement && !Changed(_rendered));
+        if (confirms && Dialogue.TryTakeConfirmation())
         {
             // The confirmation pass is asked for without looking at the picture, so whether it IS
             // the same picture has to be asked here. Without it, a page turned at exactly this
             // moment would have the previous page's reading merged into the new one's — and the
             // reader would be shown a sentence that is no longer on screen.
             ReadingAgain = LastRead.Count > 0 && !Changed(_rendered);
+            SamePictureAsRead = ReadingAgain && capture(null).IsIdenticalTo(_recognised);
             return RealtimeReadReason.TextChanged;
         }
 
         if (Changed(_rendered))
         {
-            if (dialogue) Dialogue.ObservePixelChange();
+            // Both modes: a panel's placement confirmations need the same fresh budget per change.
+            Dialogue.ObservePixelChange();
             // Changed, and not yet the same twice running. Give it a poll to settle so a line that
             // is still fading in is read once it has arrived — but only up to the cap, or content
             // that never holds still would never be read at all.
@@ -351,7 +369,7 @@ internal sealed class RealtimeRegionState
         _pollsSinceFullScan = 0;
         var full = capture(null);
         bool changed = full.DiffersLocally(_renderedFull);
-        if (dialogue && changed) Dialogue.ObservePixelChange();
+        if (changed) Dialogue.ObservePixelChange();
         return changed ? RealtimeReadReason.Rescan : IdleScan(capture, full);
     }
 

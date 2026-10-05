@@ -161,6 +161,87 @@ public class RealtimeRegionStateTests
         Assert.False(state.Observe(frame.Capture, dialogue: true));
     }
 
+    [Fact]
+    public void AConfirmationOverTheIdenticalPictureMayReuseTheLastRead()
+    {
+        var (state, frame) = ReadOnce();
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture, dialogue: true));
+        Assert.True(state.SamePictureAsRead);
+    }
+
+    [Fact]
+    public void OneCellChangedIsEnoughToReadAgainForReal()
+    {
+        // Under every change bar, so the confirmation still runs — but not the picture that was read.
+        var (state, frame) = ReadOnce();
+        frame.Flicker();
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture, dialogue: true));
+        Assert.True(state.ReadingAgain);
+        Assert.False(state.SamePictureAsRead);
+    }
+
+    [Fact]
+    public void AnOrdinaryPassNeverReusesTheLastRead()
+    {
+        var (state, frame) = ReadOnce();
+        state.Examine(frame.Capture, dialogue: true);
+        state.MarkRendered(OneLine, frame.Capture, state.RenderedLines);
+        frame.ChangeText();
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture, dialogue: true));
+        Assert.False(state.SamePictureAsRead);
+    }
+
+    [Theory]
+    // A page of columns read by the general models: the other detector size is new information.
+    [InlineData(true, false, true, true, "OtherSize")]
+    [InlineData(true, false, true, false, "OtherSize")]
+    // The manga models have no other size to ask with, as before.
+    [InlineData(true, true, false, false, "ReuseLastRead")]
+    // Everything else: reuse only over the identical picture.
+    [InlineData(false, false, false, true, "ReuseLastRead")]
+    [InlineData(false, false, false, false, "Recognise")]
+    [InlineData(true, false, false, true, "ReuseLastRead")]
+    public void TheSecondLookAtColumnsIsNotReplacedByReuse(
+        bool columnsAgain, bool mangaModels, bool hasOtherSize, bool samePicture, string expected) =>
+        Assert.Equal(
+            Enum.Parse<RealtimeTranslationSession.ConfirmationRead>(expected),
+            RealtimeTranslationSession.ChooseConfirmationRead(
+            columnsAgain, mangaModels, hasOtherSize, samePicture));
+
+    private static (RealtimeRegionState State, FakeFrame Frame) ReadOnce()
+    {
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        var read = new[] { new OverTranslate.Services.OcrTextBlock("A complete line.", new System.Windows.Rect(0, 0, 100, 20)) };
+        var merged = state.Dialogue.Merge([], read);
+        state.RememberRead(read);
+        state.MarkRendered(OneLine, frame.Capture, merged.Lines);
+        return (state, frame);
+    }
+
+    [Fact]
+    public void PanelConfirmsASmallMoveOverAStillPictureOnly()
+    {
+        var state = new RealtimeRegionState();
+        var frame = new FakeFrame();
+        OverTranslate.Services.OcrTextBlock Block(double y) => new(
+            "A wrapped chat\nmessage.", new System.Windows.Rect(20, y, 300, 60), Confidence: 0.98,
+            SourceLineBounds: [new System.Windows.Rect(20, y, 300, 30), new System.Windows.Rect(20, y + 30, 300, 30)]);
+        var first = state.Dialogue.MergePanel([], [Block(200)]);
+        state.MarkRendered(OneLine, frame.Capture, first.Lines);
+        // Nothing pending: a still panel asks for nothing, as before.
+        Assert.False(state.Observe(frame.Capture));
+
+        var pending = state.Dialogue.MergePanel(state.RenderedLines, [Block(188)]);
+        Assert.False(pending.Changed);
+        state.MarkRendered(OneLine, frame.Capture, pending.Lines);
+        Assert.True(state.Observe(frame.Capture));
+        var confirmed = state.Dialogue.MergePanel(state.RenderedLines, [Block(188)]);
+        Assert.True(confirmed.Repositioned);
+        state.MarkRendered(OneLine, frame.Capture, confirmed.Lines);
+        Assert.False(state.Observe(frame.Capture));
+    }
+
     private static readonly List<Rectangle> OneLine = [new Rectangle(10, 40, 300, 20)];
 
     [Fact]
