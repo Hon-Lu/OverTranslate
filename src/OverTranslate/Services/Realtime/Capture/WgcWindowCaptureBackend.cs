@@ -474,8 +474,14 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         finally
         {
             if (!held) frame?.Dispose();
-            // After the frame above has been released, so the pool gets every buffer back.
-            if (resizeTo is { } size) Recreate(size);
+            // After the frame above has been released, so the pool gets every buffer back — and so
+            // must the one kept from an earlier call, which an exception above never touches.
+            // Recreating while it is still out waits for a buffer nobody is going to give back.
+            if (resizeTo is { } size)
+            {
+                lock (_heldLock) ReleaseHeldLocked();
+                Recreate(size);
+            }
         }
     }
 
