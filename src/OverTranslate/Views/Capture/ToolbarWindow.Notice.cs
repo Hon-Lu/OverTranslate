@@ -85,7 +85,45 @@ public partial class ToolbarWindow
         // the two a frame apart: the row jumped and came back.
         NoticeFooter.Visibility = Visibility.Visible;
 
+        // Measured with the notice in, since only then is its height known: a message can wrap to
+        // three lines.
+        UpdateLayout();
+        StartNoticeCountdown();
+    }
+
+    /// <summary>
+    /// Lets the notice start counting down to its fade, unless part of it is off the screen.
+    /// </summary>
+    /// <remarks>
+    /// One cut off at the bottom of the screen stays, as it does under the pointer, until the bar is
+    /// dragged to where all of it shows: three seconds is no time to find the bar's grip, and a
+    /// message that went while it was still half unread is the one that most needed reading.
+    /// </remarks>
+    private void StartNoticeCountdown()
+    {
+        if (NoticeFooter.Visibility != Visibility.Visible) return;
+        if (NoticeFooter.IsMouseOver || NoticeCutOff())
+        {
+            _noticeTimer?.Stop();
+            return;
+        }
         RestartNoticeTimer();
+    }
+
+    /// <summary>Whether the bar, notice and all, runs past the bottom of the screen it is on.</summary>
+    private bool NoticeCutOff()
+    {
+        if (PresentationSource.FromVisual(this) is null) return false;
+
+        // The visible bar's bottom rather than the window's: the window runs on past it by the
+        // margin the shadow fades out in, and that margin may hang off the screen. Both points come
+        // back in physical pixels, scaled by whichever monitor the bar is now on.
+        var barTop = BarSurface.PointToScreen(new System.Windows.Point(0, 0));
+        var barBottom = BarSurface.PointToScreen(new System.Windows.Point(0, BarSurface.ActualHeight));
+        var wa = System.Windows.Forms.Screen
+            .FromPoint(new System.Drawing.Point((int)barTop.X, (int)barTop.Y))
+            .WorkingArea;
+        return barBottom.Y > wa.Bottom;
     }
 
     /// <summary>Takes the notice away now, if one is showing.</summary>
@@ -208,8 +246,7 @@ public partial class ToolbarWindow
     // reader just finished, and giving them the leftover 200ms of a spent timer reads as a glitch.
     private void NoticeFooter_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (NoticeFooter.Visibility != Visibility.Visible) return;
-        RestartNoticeTimer();
+        StartNoticeCountdown();
     }
 
     /// <summary>Takes the notice away by folding it into the bar, fading as it goes.</summary>

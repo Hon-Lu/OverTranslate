@@ -473,8 +473,11 @@ public partial class ToolbarWindow : Window
 
     private void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed)
-            DragMove();
+        if (e.ButtonState != System.Windows.Input.MouseButtonState.Pressed) return;
+
+        // Returns once the bar is let go. A notice held because it was cut off may show whole now.
+        DragMove();
+        StartNoticeCountdown();
     }
 
     public void SetBusy(bool busy)
