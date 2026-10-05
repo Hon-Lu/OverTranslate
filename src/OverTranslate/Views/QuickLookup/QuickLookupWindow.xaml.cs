@@ -453,7 +453,7 @@ public partial class QuickLookupWindow : Window
     /// Drops the popup around the pointer, inside the monitor the pointer is on.
     /// </summary>
     /// <remarks>
-    /// All physical pixels and the scale of the monitor being placed on, exactly as the toast does:
+    /// All physical pixels and the scale of the monitor being placed on, exactly as the capture toolbar does:
     /// reading the scale off this window reports the monitor it currently sits on, which before the
     /// first placement is whichever one WPF happened to open it on.
     ///

@@ -144,22 +144,9 @@
 
     <!-- 快速翻譯's hint card. The surface colours of the theme, but not quite solid: the card lands
          in the middle of the user's own text, and letting a little of what is underneath through is
-         what keeps it reading as something laid over that text rather than a hole punched in it.
-         The toast above has carried the same 0.91 since it was written. -->
+         what keeps it reading as something laid over that text rather than a hole punched in it. -->
     <SolidColorBrush x:Key="HintCardBg"     Color="#E8FFFFFF"/>
     <SolidColorBrush x:Key="HintCardBorder" Color="#E8E0E0E0"/>
-
-    <!-- Toast — same in both themes (always dark) -->
-    <SolidColorBrush x:Key="ToastBg"           Color="#E8202020"/>
-    <SolidColorBrush x:Key="ToastBorder"       Color="#44FFFFFF"/>
-    <SolidColorBrush x:Key="ToastTitle"        Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="ToastMessage"      Color="#CCCCCC"/>
-    <!-- Icon buttons sit on the dark toast, never on the window background, so they cannot use the
-         themed button brushes: in Light those resolve to dark-on-dark glyphs and a white hover. -->
-    <SolidColorBrush x:Key="ToastIconFg"        Color="#AAFFFFFF"/>
-    <SolidColorBrush x:Key="ToastIconFgHover"   Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="ToastIconHoverBg"   Color="#22FFFFFF"/>
-    <SolidColorBrush x:Key="ToastIconPressedBg" Color="#33FFFFFF"/>
 
     <!-- Separator -->
     <SolidColorBrush x:Key="AppSeparator"      Color="#E0E0E0"/>

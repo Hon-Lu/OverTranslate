@@ -100,6 +100,7 @@ public partial class ToolbarWindow : Window
         Closed += (_, _) =>
         {
             MorePopup.IsOpen = false;
+            StopNoticeTimers();
             SettingsService.Instance.OcrDebugChanged -= SyncDebugSwitches;
             SettingsService.Instance.CaptureOptionsChanged -= SyncCaptureSwitches;
             SettingsService.Instance.MangaModelOptionsChanged -= SyncCaptureSwitches;
@@ -169,6 +170,10 @@ public partial class ToolbarWindow : Window
         _selPhysTop    = physicalSelection.Top;
         _selPhysWidth  = physicalSelection.Width;
         _selPhysHeight = physicalSelection.Height;
+
+        // Whatever it said was about the box as it was. It also may have been put above the row to
+        // keep clear of where the box used to be, which is no guide to where the bar goes next.
+        HideNotice();
 
         // Nothing to place onto until the window has a handle; OnSourceInitialized does it then.
         if (IsLoaded) PositionNearSelection();

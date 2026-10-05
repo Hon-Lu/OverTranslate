@@ -475,15 +475,39 @@
                                 <Grid Style="{StaticResource ToolbarActionIcon}">
                                   <Grid Style="{StaticResource ToolbarActionDrawing}">
                                     <!-- A full-size camera keeps the body and lens legible at 18px. -->
-                                    <Path Style="{StaticResource ToolbarActionStroke}"
-                                          Data="M3.2,5.5 H5.2 L6.5,3.2 H11.5 L12.8,5.5 H14.8
-                                                A1.6,1.6 0 0 1 16.4,7.1 V13.8 A1.6,1.6 0 0 1 14.8,15.4
-                                                H3.2 A1.6,1.6 0 0 1 1.6,13.8 V7.1 A1.6,1.6 0 0 1 3.2,5.5 Z"/>
-                                    <Path Style="{StaticResource ToolbarActionStroke}"
-                                          Data="M12,10.2 A3,3 0 1 1 6,10.2 A3,3 0 1 1 12,10.2 Z"/>
+                                    <Grid x:Name="CopyShotCamera">
+                                      <Path Style="{StaticResource ToolbarActionStroke}"
+                                            Data="M3.2,5.5 H5.2 L6.5,3.2 H11.5 L12.8,5.5 H14.8
+                                                  A1.6,1.6 0 0 1 16.4,7.1 V13.8 A1.6,1.6 0 0 1 14.8,15.4
+                                                  H3.2 A1.6,1.6 0 0 1 1.6,13.8 V7.1 A1.6,1.6 0 0 1 3.2,5.5 Z"/>
+                                      <Path Style="{StaticResource ToolbarActionStroke}"
+                                            Data="M12,10.2 A3,3 0 1 1 6,10.2 A3,3 0 1 1 12,10.2 Z"/>
+                                    </Grid>
+                                    <!-- The copy landing, said on the button that was pressed — see
+                                         ShowScreenshotCopied. A shade heavier than the camera: a tick
+                                         at 1.4 reads as thinner than the outlines around it. -->
+                                    <Path x:Name="CopyShotDoneMark"
+                                          Style="{StaticResource ToolbarActionStroke}"
+                                          Stroke="{DynamicResource AppSuccess}"
+                                          StrokeThickness="1.8"
+                                          Visibility="Collapsed"
+                                          Data="M3.2,9.6 L7.2,13.4 L14.8,4.6"/>
                                   </Grid>
                                 </Grid>
-                                <TextBlock Text="{DynamicResource S.Toolbar.Screenshot}"/>
+                                <!-- Both labels always laid out, the one not showing only hidden, so
+                                     the button is as wide as the longer of the two either way: in a
+                                     language where 已複製 is the shorter word the bar would otherwise
+                                     shrink under the pointer, and everything right of it would move. -->
+                                <Grid>
+                                    <TextBlock x:Name="CopyShotLabel"
+                                               Text="{DynamicResource S.Toolbar.Screenshot}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="CopyShotDoneLabel"
+                                               Text="{DynamicResource S.Main.CopiedTitle}"
+                                               Foreground="{DynamicResource AppSuccess}"
+                                               HorizontalAlignment="Center"
+                                               Visibility="Hidden"/>
+                                </Grid>
                             </StackPanel>
                         </Button>
 
@@ -560,7 +584,7 @@
                                               Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
                                     <!-- Where to change the folder, not the folder itself. A folder picker
                                          or an Explorer window opened from this bar would land under the
-                                         capture overlay, which is full screen and topmost; and the toast
+                                         capture overlay, which is full screen and topmost; and the notice
                                          after a save already names the file it wrote. -->
                                     <CheckBox x:Name="SaveScreenshotSwitch" Style="{StaticResource ToolbarMenuToggle}"
                                               Tag="&#xE74E;"
@@ -659,21 +683,110 @@
                          starts at the row's left edge, under the speaker, one size up from the
                          stacked labels: it is a sentence to be read, not a caption. Spacing:
                          4 under the row, the rule, 7, a 16px line, then the bar's padding of 8. -->
-                    <Border x:Name="MangaFooter"
-                            HorizontalAlignment="Left"
-                            Width="{Binding ActualWidth, ElementName=BarRow}"
-                            Height="24" Margin="0,4,0,0"
-                            BorderThickness="0,1,0,0"
-                            BorderBrush="{DynamicResource ToolbarDivider}"
-                            Visibility="{Binding Visibility, ElementName=MangaHint}"
-                            ClipToBounds="True">
-                        <ctl:MangaModelHintText x:Name="MangaHint"
-                                                CollapsesWhenHidden="True"
-                                                FollowsCaptureHintSwitch="True"
-                                                FontSize="12"
-                                                LineHeight="16" LineStackingStrategy="BlockLineHeight"
-                                                Margin="0,7,0,0"/>
-                    </Border>
+                    <Grid x:Name="FooterSlot">
+                        <Border x:Name="MangaFooter"
+                                HorizontalAlignment="Left"
+                                Width="{Binding ActualWidth, ElementName=BarRow}"
+                                Height="24" Margin="0,4,0,0"
+                                BorderThickness="0,1,0,0"
+                                BorderBrush="{DynamicResource ToolbarDivider}"
+                                Visibility="{Binding Visibility, ElementName=MangaHint}"
+                                ClipToBounds="True">
+                            <ctl:MangaModelHintText x:Name="MangaHint"
+                                                    CollapsesWhenHidden="True"
+                                                    FollowsCaptureHintSwitch="True"
+                                                    FontSize="12"
+                                                    LineHeight="16" LineStackingStrategy="BlockLineHeight"
+                                                    Margin="0,7,0,0"/>
+                        </Border>
+
+                        <!-- What came of the last thing pressed on this bar: a line of its own, built
+                             like the manga footer so it reads as part of the bar rather than as a window
+                             of its own. In the same cell as that footer and drawn over it — the hint is
+                             always there, this is there for three seconds — so it never pushes the hint
+                             down, and closing it brings the hint back as it was. Moved above the row when
+                             the bar has no room to grow down; see PlaceNotice.
+                             One line: icon, title, message. A message too long for the row wraps under
+                             itself, up to three lines; the copy button takes the whole of it. The icon
+                             and title stay on the first line, the two buttons sit in the middle. The
+                             text's 4.5 above and below centres a single line on the 26 the buttons
+                             take, and 8 over it matches the bar's padding of 8 under it. -->
+                        <Border x:Name="NoticeFooter"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Width="{Binding ActualWidth, ElementName=BarRow}"
+                                Margin="0,4,0,0"
+                                BorderThickness="0,1,0,0"
+                                BorderBrush="{DynamicResource ToolbarDivider}"
+                                Background="{DynamicResource ToolbarBg}"
+                                Visibility="Collapsed"
+                                ClipToBounds="True"
+                                MouseEnter="NoticeFooter_MouseEnter"
+                                MouseLeave="NoticeFooter_MouseLeave">
+                            <Grid x:Name="NoticeContent" Margin="2,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Drawn rather than typed: a font glyph sits wherever its font puts
+                                     it, and this one has to sit on the first line exactly. -->
+                                <Grid Width="16" Height="16" Margin="0,5,8,0" VerticalAlignment="Top">
+                                    <Path x:Name="NoticeRing"
+                                          StrokeThickness="1.3"
+                                          Data="M15,8 A7,7 0 1 1 1,8 A7,7 0 1 1 15,8 Z"/>
+                                    <Path x:Name="NoticeMark"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"/>
+                                </Grid>
+
+                                <!-- The title in a column of its own, so a message that runs on wraps
+                                     under itself rather than back under the title. -->
+                                <Grid Grid.Column="1" VerticalAlignment="Top" Margin="0,4.5,0,4.5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="NoticeTitle"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               LineHeight="17" LineStackingStrategy="BlockLineHeight"
+                                               MaxWidth="160" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource AppTextPrimary}"
+                                               VerticalAlignment="Top"
+                                               Margin="0,0,10,0"/>
+                                    <TextBlock x:Name="NoticeMessage"
+                                               Grid.Column="1"
+                                               FontSize="12"
+                                               LineHeight="17" LineStackingStrategy="BlockLineHeight"
+                                               MaxHeight="51"
+                                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource AppTextSecondary}"/>
+                                </Grid>
+
+                                <!-- Raised by one: the two glyphs carry their ink low in the box. -->
+                                <StackPanel Grid.Column="2"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Margin="8,-2,0,0">
+                                    <Button x:Name="NoticeCopyBtn"
+                                            Content="⧉"
+                                            Style="{StaticResource ToolbarIconButton}"
+                                            ToolTip="{DynamicResource S.Toast.CopyMessage}"
+                                            AutomationProperties.Name="{DynamicResource S.Toast.CopyMessage}"
+                                            Click="NoticeCopyBtn_Click"/>
+                                    <!-- A hair smaller: ✕ carries more ink than ⧉ at the same size. -->
+                                    <Button Content="✕"
+                                            Style="{StaticResource ToolbarIconButton}"
+                                            FontSize="11"
+                                            ToolTip="{DynamicResource S.Common.Close}"
+                                            AutomationProperties.Name="{DynamicResource S.Common.Close}"
+                                            Click="NoticeCloseBtn_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </StackPanel>
             </Border>
         </Grid>
