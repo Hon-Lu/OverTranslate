@@ -396,6 +396,37 @@ public class RealtimeDialogueProgressTests
         Assert.True(tracker.HasPendingPlacement);
     }
 
+    [Fact]
+    public void ADetectorCroppingOneEndOfTheLineDoesNotRedrawIt()
+    {
+        // The boxes logged for one still subtitle over a moving video: the first glyph lost, then back.
+        var tracker = new DialogueReadingTracker();
+        var shown = Settle(tracker, Subtitle(new Rect(493, 177.8, 554, 59.4)));
+        foreach (var box in new[] { new Rect(535, 180.5, 512, 54.9), new Rect(501, 176.9, 551, 59.1) })
+        {
+            shown = tracker.Merge(shown.Lines, [Subtitle(box)]);
+            Assert.False(shown.Changed);
+            Assert.Equal(new Rect(493, 177.8, 554, 59.4), shown.Blocks[0].Bounds);
+        }
+    }
+
+    [Fact]
+    public void ACropReadTwiceRunningIsFollowedAfterConfirmation()
+    {
+        var tracker = new DialogueReadingTracker();
+        var shown = Settle(tracker, Subtitle(new Rect(493, 177.8, 554, 59.4)));
+        var cropped = Subtitle(new Rect(535, 180.5, 512, 54.9));
+        var pending = tracker.Merge(shown.Lines, [cropped]);
+        Assert.False(pending.Changed);
+        Assert.True(tracker.TryTakeConfirmation());
+        var confirmed = tracker.Merge(pending.Lines, [cropped]);
+        Assert.True(confirmed.Repositioned);
+        Assert.Equal(cropped.Bounds, confirmed.Blocks[0].Bounds);
+    }
+
+    private static OcrTextBlock Subtitle(Rect bounds) =>
+        new("今日はいい天気ですね。", bounds, Confidence: 0.98);
+
     private static OcrTextBlock Balloon(string text, Rect bounds, params Rect[] lines) =>
         new(text, bounds, Confidence: 0.98, SourceLineBounds: lines);
 

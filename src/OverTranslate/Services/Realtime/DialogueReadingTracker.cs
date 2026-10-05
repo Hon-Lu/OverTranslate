@@ -137,28 +137,16 @@ internal sealed class DialogueReadingTracker
         for (int i = 0; _placed.Length == result.Blocks.Count && i < result.Blocks.Count; i++)
         {
             if (!TextSimilarity.IsSameWording(_placed[i].Text, result.Blocks[i].Text)) continue;
-            var a = _placed[i].Bounds;
-            var b = result.Blocks[i].Bounds;
-            var shift = new Vector(b.X + b.Width / 2 - a.X - a.Width / 2, b.Y + b.Height / 2 - a.Y - a.Height / 2);
-            double tolerance = Math.Max(2, Math.Min(a.Height, b.Height) * 0.25);
-            if (Math.Abs(shift.X) > tolerance || Math.Abs(shift.Y) > tolerance) clearMoves.Add(shift);
+            var change = Compare(_placed[i], result.Blocks[i]);
+            if (change.Shifted) clearMoves.Add(new Vector(change.Dx, change.Dy));
         }
         for (int i = 0; _placed.Length == result.Blocks.Count && i < result.Blocks.Count; i++)
         {
             var block = result.Blocks[i];
             var previous = _placed[i];
             if (!TextSimilarity.IsSameWording(previous.Text, block.Text)) continue;
-            var a = previous.Bounds;
             var b = block.Bounds;
-            double tolerance = Math.Max(2, Math.Min(a.Height, b.Height) * 0.25);
-            double lineTolerance = Math.Min(tolerance,
-                Math.Max(2, Math.Min(LineThickness(previous), LineThickness(block)) * 0.25));
-            double dx = b.X + b.Width / 2 - a.X - a.Width / 2;
-            double dy = b.Y + b.Height / 2 - a.Y - a.Height / 2;
-            bool shifted = Math.Abs(dx) > tolerance || Math.Abs(dy) > tolerance;
-            bool nudged = !shifted && (Math.Abs(dx) > lineTolerance || Math.Abs(dy) > lineTolerance);
-            bool resized = Math.Abs(a.Width - b.Width) > Math.Max(2, a.Width * 0.25) ||
-                Math.Abs(a.Height - b.Height) > Math.Max(2, a.Height * 0.25);
+            var (dx, dy, lineTolerance, shifted, nudged, resized) = Compare(previous, block);
             var key = (i, block.Text);
             bool hasCandidate = _pendingPlacement.TryGetValue(key, out var candidate);
             // Confirm size independently of position: a moving subtitle can hold a stable new
@@ -191,6 +179,45 @@ internal sealed class DialogueReadingTracker
         }
         _pendingPlacement = placement;
         return moved;
+    }
+
+    private readonly record struct Change(
+        double Dx, double Dy, double LineTolerance, bool Shifted, bool Nudged, bool Resized);
+
+    /// <summary>How a block's box differs from where it was placed — see <see cref="FollowPlacement"/>.</summary>
+    /// <remarks>
+    /// A centre past the block's bar is only a move when the box moved: both edges along that axis,
+    /// the same way, each past the line's bar. One edge moving while the other holds is the detector
+    /// cropping or overreaching — measured on a video subtitle, the box lost its first glyph's worth
+    /// on one read (493,w554 → 535,w512) and had it back on the next, and taking that at once
+    /// redrew the line twice for nothing. It still counts as a small move, so if the detector keeps
+    /// reading it that way the confirmation lets it through. Such a box is not a scroll either, so it
+    /// is never what other blocks ride along with.
+    /// </remarks>
+    private static Change Compare(OcrTextBlock previous, OcrTextBlock block)
+    {
+        var a = previous.Bounds;
+        var b = block.Bounds;
+        double tolerance = Math.Max(2, Math.Min(a.Height, b.Height) * 0.25);
+        double lineTolerance = Math.Min(tolerance,
+            Math.Max(2, Math.Min(LineThickness(previous), LineThickness(block)) * 0.25));
+        double dx = b.X + b.Width / 2 - a.X - a.Width / 2;
+        double dy = b.Y + b.Height / 2 - a.Y - a.Height / 2;
+        bool resized = Math.Abs(a.Width - b.Width) > Math.Max(2, a.Width * 0.25) ||
+            Math.Abs(a.Height - b.Height) > Math.Max(2, a.Height * 0.25);
+        bool shifted = Math.Abs(dx) > tolerance || Math.Abs(dy) > tolerance;
+        if (shifted && !resized)
+            shifted = Math.Abs(dx) > tolerance && BothEdgesMoved(a.Left, a.Right, b.Left, b.Right, lineTolerance) ||
+                Math.Abs(dy) > tolerance && BothEdgesMoved(a.Top, a.Bottom, b.Top, b.Bottom, lineTolerance);
+        bool nudged = !shifted && (Math.Abs(dx) > lineTolerance || Math.Abs(dy) > lineTolerance);
+        return new Change(dx, dy, lineTolerance, shifted, nudged, resized);
+    }
+
+    private static bool BothEdgesMoved(double fromStart, double fromEnd, double toStart, double toEnd, double tolerance)
+    {
+        double start = toStart - fromStart;
+        double end = toEnd - fromEnd;
+        return Math.Sign(start) == Math.Sign(end) && Math.Abs(start) > tolerance && Math.Abs(end) > tolerance;
     }
 
     private void ExpireSpentConfirmations()
