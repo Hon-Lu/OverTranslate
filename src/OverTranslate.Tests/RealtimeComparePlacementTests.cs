@@ -15,19 +15,9 @@ public class RealtimeComparePlacementTests
         RealtimeComparePlacement.Displace(slot.Bounds, offset);
 
     [Fact]
-    public void Horizontal_GoesAboveWhenThereIsRoom()
+    public void Horizontal_GoesBelowWhenThereIsRoom()
     {
-        var slot = new RealtimeCompareSlot(new Rectangle(400, 800, 800, 100), RealtimeTextOrientation.Horizontal);
-
-        var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
-
-        Assert.Equal(new Point(0, -106), offset);
-    }
-
-    [Fact]
-    public void Horizontal_AgainstTheTopEdge_GoesBelow()
-    {
-        var slot = new RealtimeCompareSlot(new Rectangle(400, 20, 800, 100), RealtimeTextOrientation.Horizontal);
+        var slot = new RealtimeCompareSlot(new Rectangle(400, 400, 800, 100), RealtimeTextOrientation.Horizontal);
 
         var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
 
@@ -35,9 +25,19 @@ public class RealtimeComparePlacementTests
     }
 
     [Fact]
-    public void Horizontal_WithAnotherBlockAbove_GoesBelow()
+    public void Horizontal_AgainstTheBottomEdge_GoesAbove()
     {
-        // Two subtitle lines framed one above the other: the lower one's copy cannot go up, because
+        var slot = new RealtimeCompareSlot(new Rectangle(400, 960, 800, 100), RealtimeTextOrientation.Horizontal);
+
+        var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
+
+        Assert.Equal(new Point(0, -106), offset);
+    }
+
+    [Fact]
+    public void Horizontal_WithAnotherBlockBelow_GoesAbove()
+    {
+        // Two subtitle lines framed one above the other: the upper one's copy cannot go down, because
         // that would put a translation over the other block's source text.
         var upper = new RealtimeCompareSlot(new Rectangle(400, 500, 800, 100), RealtimeTextOrientation.Horizontal);
         var lower = new RealtimeCompareSlot(new Rectangle(400, 640, 800, 100), RealtimeTextOrientation.Horizontal);
@@ -82,13 +82,13 @@ public class RealtimeComparePlacementTests
     [Fact]
     public void NothingFits_TakesTheFirstChoiceClampedOntoTheScreen()
     {
-        // Nearly the whole screen: no side has room, so the box goes above and is pulled back on.
+        // Nearly the whole screen: no side has room, so the box goes below and is pulled back on.
         var slot = new RealtimeCompareSlot(new Rectangle(100, 100, 1700, 900), RealtimeTextOrientation.Horizontal);
 
         var box = PlacedBox(slot, RealtimeComparePlacement.Place([slot], Screen)[0]);
 
         Assert.True(Screen.Contains(box));
-        Assert.Equal(new Rectangle(100, 0, 1700, 900), box);
+        Assert.Equal(new Rectangle(100, 180, 1700, 900), box);
     }
 
     [Fact]
@@ -116,15 +116,15 @@ public class RealtimeComparePlacementTests
     [Fact]
     public void AutomaticBoxes_AvoidEachOtherWhenTheyCan()
     {
-        // A subtitle line with a vertical column just to its right. The column's first choice, its
-        // left, is clear of both blocks but would land on the corner of the line's copy above it, so
-        // the column takes its second choice instead.
-        var line = new RealtimeCompareSlot(new Rectangle(500, 600, 400, 100), RealtimeTextOrientation.Horizontal);
+        // A subtitle line with a vertical column just below and to its right. The column's first
+        // choice, its left, is clear of both blocks but would land on the corner of the line's copy
+        // below the line, so the column takes its second choice instead.
+        var line = new RealtimeCompareSlot(new Rectangle(500, 40, 400, 100), RealtimeTextOrientation.Horizontal);
         var column = new RealtimeCompareSlot(new Rectangle(1000, 150, 100, 440), RealtimeTextOrientation.Vertical);
 
         var offsets = RealtimeComparePlacement.Place([line, column], Screen, gap: 6);
 
-        Assert.Equal(new Point(0, -106), offsets[0]);
+        Assert.Equal(new Point(0, 106), offsets[0]);
         Assert.Equal(new Point(106, 0), offsets[1]);
         Assert.False(RealtimeComparePlacement.Overlaps(
             PlacedBox(line, offsets[0]), PlacedBox(column, offsets[1])));
@@ -156,24 +156,24 @@ public class RealtimeComparePlacementTests
     {
         // The first block's copy was dragged to exactly where the second's would go by default.
         var dragged = new RealtimeCompareSlot(
-            new Rectangle(1300, 100, 400, 100), RealtimeTextOrientation.Horizontal, new Point(-900, 494));
+            new Rectangle(1300, 100, 400, 100), RealtimeTextOrientation.Horizontal, new Point(-900, 706));
         var automatic = new RealtimeCompareSlot(new Rectangle(400, 700, 400, 100), RealtimeTextOrientation.Horizontal);
 
         var offsets = RealtimeComparePlacement.Place([dragged, automatic], Screen, gap: 6);
 
-        Assert.Equal(new Point(0, 106), offsets[1]);
+        Assert.Equal(new Point(0, -106), offsets[1]);
     }
 
     [Fact]
     public void Placement_IsRelativeToTheScreenItIsOn()
     {
-        // A second monitor to the right, whose top is not at zero.
+        // A second monitor to the right, whose top is not at zero, so its bottom is at 1240.
         var screen = new Rectangle(1920, -200, 2560, 1440);
-        var slot = new RealtimeCompareSlot(new Rectangle(2000, -180, 600, 100), RealtimeTextOrientation.Horizontal);
+        var slot = new RealtimeCompareSlot(new Rectangle(2000, 1120, 600, 100), RealtimeTextOrientation.Horizontal);
 
         var offset = RealtimeComparePlacement.Place([slot], screen, gap: 6)[0];
 
-        Assert.Equal(new Point(0, 106), offset);
+        Assert.Equal(new Point(0, -106), offset);
     }
 
     // ── Dragging ─────────────────────────────────────────────────────────────────────────────────
@@ -301,17 +301,17 @@ public class RealtimeComparePlacementTests
     [Fact]
     public void Place_HiddenSlot_TakesNoRoom()
     {
-        // Another block's copy dragged into the room above this one sends this one's below — until
+        // Another block's copy dragged into the room below this one sends this one's above — until
         // that copy is turned off.
         var other = new RealtimeCompareSlot(
-            new Rectangle(100, 100, 200, 100), RealtimeTextOrientation.Horizontal, new Point(600, 434));
+            new Rectangle(100, 100, 200, 100), RealtimeTextOrientation.Horizontal, new Point(600, 646));
         var line = new RealtimeCompareSlot(new Rectangle(700, 640, 600, 100), RealtimeTextOrientation.Horizontal);
 
         var shown = RealtimeComparePlacement.Place([other, line], Screen, gap: 6)[1];
         var hidden = RealtimeComparePlacement.Place([other with { Hidden = true }, line], Screen, gap: 6)[1];
 
-        Assert.Equal(new Point(0, 106), shown);
-        Assert.Equal(new Point(0, -106), hidden);
+        Assert.Equal(new Point(0, -106), shown);
+        Assert.Equal(new Point(0, 106), hidden);
     }
 
     [Fact]
@@ -339,9 +339,9 @@ public class RealtimeComparePlacementTests
     [Fact]
     public void Place_Automatic_UsesTheScaledSize()
     {
-        // Half the height above, so the gap to the block is still 6.
+        // No room below, and half the height above, so the gap to the block is still 6.
         var slot = new RealtimeCompareSlot(
-            new Rectangle(400, 800, 800, 100), RealtimeTextOrientation.Horizontal, Scale: 0.5);
+            new Rectangle(400, 960, 800, 100), RealtimeTextOrientation.Horizontal, Scale: 0.5);
 
         var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
 
@@ -351,13 +351,13 @@ public class RealtimeComparePlacementTests
     [Fact]
     public void Place_Automatic_ScaledBoxFitsWhereTheFullOneWouldNot()
     {
-        // 70 above the block: a full-size copy does not fit, a half-size one does.
+        // 60 below the block: a full-size copy does not fit, a half-size one does.
         var slot = new RealtimeCompareSlot(
-            new Rectangle(400, 70, 800, 100), RealtimeTextOrientation.Horizontal, Scale: 0.5);
+            new Rectangle(400, 920, 800, 100), RealtimeTextOrientation.Horizontal, Scale: 0.5);
 
         var offset = RealtimeComparePlacement.Place([slot], Screen, gap: 6)[0];
 
-        Assert.Equal(new Point(0, -56), offset);
+        Assert.Equal(new Point(0, 106), offset);
     }
 
     [Fact]
