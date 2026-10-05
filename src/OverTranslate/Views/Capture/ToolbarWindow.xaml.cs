@@ -171,8 +171,7 @@ public partial class ToolbarWindow : Window
         _selPhysWidth  = physicalSelection.Width;
         _selPhysHeight = physicalSelection.Height;
 
-        // Whatever it said was about the box as it was. It also may have been put above the row to
-        // keep clear of where the box used to be, which is no guide to where the bar goes next.
+        // Whatever it said was about the box as it was.
         HideNotice();
 
         // Nothing to place onto until the window has a handle; OnSourceInitialized does it then.
@@ -474,8 +473,11 @@ public partial class ToolbarWindow : Window
 
     private void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed)
-            DragMove();
+        if (e.ButtonState != System.Windows.Input.MouseButtonState.Pressed) return;
+
+        // Returns once the bar is let go. A notice held because it was cut off may show whole now.
+        DragMove();
+        StartNoticeCountdown();
     }
 
     public void SetBusy(bool busy)

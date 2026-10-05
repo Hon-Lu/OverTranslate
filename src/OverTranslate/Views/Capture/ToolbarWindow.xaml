@@ -704,8 +704,7 @@
                              like the manga footer so it reads as part of the bar rather than as a window
                              of its own. In the same cell as that footer and drawn over it — the hint is
                              always there, this is there for three seconds — so it never pushes the hint
-                             down, and closing it brings the hint back as it was. Moved above the row when
-                             the bar has no room to grow down; see PlaceNotice.
+                             down, and closing it brings the hint back as it was.
                              One line: icon, title, message. A message too long for the row wraps under
                              itself, up to three lines; the copy button takes the whole of it. The icon
                              and title stay on the first line, the two buttons sit in the middle. The
