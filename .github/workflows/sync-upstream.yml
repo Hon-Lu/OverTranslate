@@ -1,0 +1,61 @@
+name: Sync upstream
+
+# 讓 fork 的 main 自動跟上正本 Hon-Lu/OverTranslate。排程每 8 小時跑一次，
+# 也可以從 Actions 頁面手動觸發。
+#
+# 為什麼用 merge 而不是 fast-forward：這個 workflow 檔案本身只存在於 fork 的
+# main，正本沒有它，所以 main 一定「領先 1 個 commit」，--ff-only 每次都會
+# 失敗。用 merge 會產生一個合併 commit，把正本的新 commit 收進來的同時保住
+# 這個檔案。正本不動 .github/workflows/sync-upstream.yml，所以不會有衝突。
+#
+# 只推回 fork 自己的 main（origin），完全不推正本；不用 --force，萬一本機或
+# 其他來源往 fork 的 main 塞了東西，merge 失敗就讓它失敗，由人看過再處理。
+on:
+  schedule:
+    # GitHub Actions 的 cron 是 UTC
+    - cron: '0 */8 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只看落差，不合併也不推'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+# 排程可能重疊，同一時間只跑一個。
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: 同步 main 與 upstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # 要看兩邊的落差，需要完整歷史
+          fetch-depth: 0
+
+      - name: 設定身份與 upstream 遠端
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/Hon-Lu/OverTranslate.git
+          git fetch upstream
+
+      - name: 顯示落差
+        run: |
+          echo "落後 upstream：$(git rev-list --count HEAD..upstream/main) 個 commit"
+          echo "領先 upstream：$(git rev-list --count upstream/main..HEAD) 個 commit"
+
+      - name: 合併 upstream/main
+        if: github.event.inputs.dry_run != 'true'
+        run: git merge upstream/main --no-edit
+
+      - name: 推回 fork 的 main
+        if: github.event.inputs.dry_run != 'true'
+        run: git push origin main
