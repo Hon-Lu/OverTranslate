@@ -90,7 +90,7 @@ public readonly record struct HotkeyBinding(
 ///
 /// So the order is declared rather than discovered, and it runs from the feature the application is
 /// for down to the most recently added: capture, then the translation window, then pausing a
-/// realtime session, then 取詞翻譯, then 快速翻譯. A shortcut shadowed by a higher one is reported
+/// realtime session, then 取詞翻譯, then 替換翻譯. A shortcut shadowed by a higher one is reported
 /// rather than silently dropped.
 /// </remarks>
 public static class HotkeyBindings

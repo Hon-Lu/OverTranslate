@@ -4,7 +4,13 @@
 
     <!-- Keys are grouped by the surface they appear on. Every key here must also exist in
          Strings.en.xaml — StringsParityTests fails the build otherwise. Strings holding {0}
-         are composite formats consumed through LocalizationService.Format. -->
+         are composite formats consumed through LocalizationService.Format.
+
+         Keys keep the names features had when they were added, and those names can lag behind
+         what the screen says: S.QuickTranslate.* and S.Settings.QuickTranslate* belong to 替換翻譯
+         (In-place translation), renamed from 快速翻譯 in #277 — see QuickTranslateSettings — and
+         S.QuickLookup.* to 取詞翻譯 (Quick lookup), whose Japanese and Korean names were changed in
+         the same issue. -->
 
     <!-- ── Shared ── -->
     <sys:String x:Key="S.Common.Reset">重設</sys:String>
@@ -115,7 +121,7 @@
     <sys:String x:Key="S.Translation.Translating">翻譯中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">朗讀失敗：{0}</sys:String>
 
-    <!-- ── 快速翻譯 ── 只在提示卡片上出現的字，一行以內，因為它蓋在使用者自己的視窗上。 -->
+    <!-- ── 替換翻譯 ── 只在提示卡片上出現的字，一行以內，因為它蓋在使用者自己的視窗上。 -->
     <sys:String x:Key="S.QuickTranslate.Replaced">已完成翻譯並貼上譯文。</sys:String>
     <sys:String x:Key="S.QuickTranslate.EmptyResult">翻譯結果是空的，已保留原本的文字。</sys:String>
     <sys:String x:Key="S.QuickTranslate.FocusMoved">已切換視窗，無法貼上翻譯結果。</sys:String>
@@ -441,11 +447,11 @@
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷鍵開啟[[取詞翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkey">快速翻譯</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkey">替換翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">將[[選取文字]]翻譯後貼上並取代原文</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">僅適用於可輸入文字的欄位，非輸入區域則無法貼上。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻譯設定</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此設定僅適用於快速翻譯，不會影響截圖翻譯、文字翻譯或即時翻譯。</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此設定僅適用於替換翻譯，不會影響截圖翻譯、文字翻譯或即時翻譯。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 單一按鍵只能是 F1–F24、Pause 或 Scroll Lock，其他按鍵請搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般設定</sys:String>

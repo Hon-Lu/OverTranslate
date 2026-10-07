@@ -118,8 +118,9 @@ public class SettingsService
         settings.Provider = LanguageData.CurrentProvider(settings.Provider);
         settings.Realtime.Provider = LanguageData.CurrentProvider(settings.Realtime.Provider);
 
-        // The grouped section wins. Older files used flat quick-translation keys, and before
-        // that shared the text-translation pair. Migrate only when the group is absent.
+        // 替換翻譯's languages (QuickTranslate, its name before #277). The grouped section wins.
+        // Older files used flat QuickTranslate* keys, and before that shared the text-translation
+        // pair. Migrate only when the group is absent.
         if (!root.ContainsKey(nameof(AppSettings.QuickTranslate)))
         {
             string LegacyLanguage(string key, string shared) =>

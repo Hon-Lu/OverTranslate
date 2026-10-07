@@ -114,7 +114,7 @@
     <sys:String x:Key="S.Translation.Translating">翻译中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">朗读失败：{0}</sys:String>
 
-    <!-- ── Quick translate ── Only ever seen on the hint card, so each line stays to one: it sits
+    <!-- ── In-place translation ── Only ever seen on the hint card, so each line stays to one: it sits
          over the window the reader is working in. -->
     <sys:String x:Key="S.QuickTranslate.Replaced">已完成翻译并粘贴译文。</sys:String>
     <sys:String x:Key="S.QuickTranslate.EmptyResult">翻译结果是空的，已保留原本的文字。</sys:String>
@@ -425,11 +425,11 @@
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取词翻译</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷键打开[[取词翻译]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若已选中文字，打开窗口时会自动带入并翻译。</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkey">快速翻译</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkey">替换翻译</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">将[[选中的文字]]翻译后粘贴并替换原文</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">仅适用于可输入文字的字段，非输入区域则无法粘贴。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻译设置</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此设置仅适用于快速翻译，不会影响截图翻译、文字翻译或实时翻译。</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此设置仅适用于替换翻译，不会影响截图翻译、文字翻译或实时翻译。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 单个按键只能是 F1–F24、Pause 或 Scroll Lock，其他按键请搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">常规设置</sys:String>

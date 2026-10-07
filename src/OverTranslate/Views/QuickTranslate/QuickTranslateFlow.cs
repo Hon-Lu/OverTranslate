@@ -7,7 +7,7 @@ using OverTranslate.Services;
 namespace OverTranslate.Views.QuickTranslate;
 
 /// <summary>
-/// 快速翻譯: the selected text, translated and put back in its place.
+/// 替換翻譯: the selected text, translated and put back in its place.
 /// </summary>
 /// <remarks>
 /// The shortest path this application has. The other three translation surfaces all end with the
@@ -25,6 +25,10 @@ namespace OverTranslate.Views.QuickTranslate;
 /// their screen would make a non-event into an interruption. The log carries it instead, because the
 /// other reason for an empty read is that the application refused the copy — which is a bug report
 /// waiting to be made.
+///
+/// QuickTranslate, here and in the folder, the hint window, the settings and the S.QuickTranslate
+/// string keys, is the name this feature had before it became 替換翻譯 — see
+/// <see cref="QuickTranslateSettings"/> for why the code was not renamed with it.
 /// </remarks>
 internal static class QuickTranslateFlow
 {
@@ -52,13 +56,13 @@ internal static class QuickTranslateFlow
 
         if (source.Length == 0)
         {
-            Log.Info("快速翻譯 did nothing: no selected text came back from the foreground window");
+            Log.Info("替換翻譯 did nothing: no selected text came back from the foreground window");
             return;
         }
 
         // Debug rather than Info: this is the user's own text, out of whatever they were reading or
         // writing. It belongs in a log only when they have turned 詳細資訊 on to report a problem.
-        Log.Debug("快速翻譯 is translating a selection of {Length} characters: {Text}",
+        Log.Debug("替換翻譯 is translating a selection of {Length} characters: {Text}",
             source.Length, source);
 
         if (seq != _seq) return;
@@ -87,12 +91,12 @@ internal static class QuickTranslateFlow
             {
                 // A provider that answers with nothing rather than failing. Pasting the empty string
                 // would delete the user's selection, which is the one outcome worse than not working.
-                Log.Info("快速翻譯 did not paste: the translation came back empty");
+                Log.Info("替換翻譯 did not paste: the translation came back empty");
                 hint.ReportFailure(LocalizationService.Get("S.QuickTranslate.EmptyResult"));
                 return;
             }
 
-            Log.Debug("快速翻譯 is pasting: {Text}", translation);
+            Log.Debug("替換翻譯 is pasting: {Text}", translation);
 
             var outcome = await SelectionReplacer.ReplaceSelectionAsync(translation, foreground);
             if (seq != _seq) return;
@@ -114,7 +118,7 @@ internal static class QuickTranslateFlow
         {
             if (seq != _seq) return;
 
-            Log.Warn(ex, "快速翻譯 could not translate");
+            Log.Warn(ex, "替換翻譯 could not translate");
             hint.ReportFailure(LocalizationService.Format(
                 "S.Translation.ProviderUnavailable",
                 LanguageData.GetProviderDisplay(settings.Provider),

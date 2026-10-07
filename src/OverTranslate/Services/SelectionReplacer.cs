@@ -21,7 +21,7 @@ public enum PasteOutcome
 /// Puts text where the user's selection is, in whatever application they are working in.
 /// </summary>
 /// <remarks>
-/// 快速翻譯's second half. <see cref="SelectedTextReader"/> borrows the copy shortcut to find out
+/// 替換翻譯's second half. <see cref="SelectedTextReader"/> borrows the copy shortcut to find out
 /// what is selected; this borrows the paste one to replace it, for the same reason — no process can
 /// edit another's text, so the only lever available is the editing shortcut the application already
 /// implements for its own user.
@@ -61,7 +61,7 @@ internal static class SelectionReplacer
     {
         if (expectedForeground != IntPtr.Zero && GetForegroundWindow() != expectedForeground)
         {
-            Log.Info("快速翻譯 did not paste: the foreground moved to another window while translating");
+            Log.Info("替換翻譯 did not paste: the foreground moved to another window while translating");
             return PasteOutcome.FocusMoved;
         }
 
@@ -75,7 +75,7 @@ internal static class SelectionReplacer
         {
             // With no snapshot there is nothing to put back, so the clipboard is not taken at all:
             // the user's own contents are worth more than this one translation.
-            Log.Info(ex, "快速翻譯 could not snapshot the clipboard, so nothing was pasted");
+            Log.Info(ex, "替換翻譯 could not snapshot the clipboard, so nothing was pasted");
             return PasteOutcome.ClipboardUnavailable;
         }
 
@@ -89,7 +89,7 @@ internal static class SelectionReplacer
         }
         catch (Exception ex)
         {
-            Log.Warn(ex, "快速翻譯 could not paste the translation");
+            Log.Warn(ex, "替換翻譯 could not paste the translation");
             return PasteOutcome.ClipboardUnavailable;
         }
         finally
@@ -112,7 +112,7 @@ internal static class SelectionReplacer
         }
         catch (Exception ex)
         {
-            Log.Warn(ex, "快速翻譯 could not put the translation on the clipboard");
+            Log.Warn(ex, "替換翻譯 could not put the translation on the clipboard");
             return false;
         }
     }

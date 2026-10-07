@@ -6,7 +6,7 @@ using Size = System.Windows.Size;
 namespace OverTranslate.Layout;
 
 /// <summary>
-/// Where 快速翻譯's hint goes: beside the pointer, inside the monitor the pointer is on.
+/// Where 替換翻譯's hint goes: beside the pointer, inside the monitor the pointer is on.
 /// </summary>
 /// <remarks>
 /// The hint is the only thing telling the user that a shortcut they pressed over someone else's

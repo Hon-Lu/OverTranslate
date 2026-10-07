@@ -12,7 +12,7 @@ using Size = System.Windows.Size;
 namespace OverTranslate.Views.QuickTranslate;
 
 /// <summary>
-/// The one thing 快速翻譯 puts on the screen: a line saying what is happening to the text the user
+/// The one thing 替換翻譯 puts on the screen: a line saying what is happening to the text the user
 /// just selected.
 /// </summary>
 /// <remarks>
@@ -356,7 +356,7 @@ public partial class QuickTranslateHintWindow : Window
         }
         catch (Exception ex)
         {
-            Log.Warn(ex, "快速翻譯 could not copy the hint's text to the clipboard");
+            Log.Warn(ex, "替換翻譯 could not copy the hint's text to the clipboard");
             return;
         }
 

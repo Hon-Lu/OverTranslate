@@ -347,7 +347,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- 快速翻譯. Beside 取詞翻譯 because the two start from the same gesture —
+                        <!-- 替換翻譯. Beside 取詞翻譯 because the two start from the same gesture —
                              select some text, press a key — and differ only in where the answer
                              goes: that one shows it, this one writes it into the document. After
                              it, because reading an answer is the smaller step of the two and the

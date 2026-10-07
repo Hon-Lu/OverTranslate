@@ -4,7 +4,7 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// The shape of the chords 取詞翻譯 and 快速翻譯 synthesise into somebody else's window.
+/// The shape of the chords 取詞翻譯 and 替換翻譯 synthesise into somebody else's window.
 /// </summary>
 /// <remarks>
 /// The keystrokes themselves are not testable here — they go to whatever has the foreground, which
