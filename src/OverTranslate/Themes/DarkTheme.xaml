@@ -135,7 +135,7 @@
     <SolidColorBrush x:Key="ToolbarSegmentThumbBorder" Color="Transparent"/>
     <Color x:Key="ToolbarShadowColor"          >#000000</Color>
 
-    <!-- 快速翻譯's mark, which keeps the palette it was drawn in rather than taking the accent: A
+    <!-- 替換翻譯's mark, which keeps the palette it was drawn in rather than taking the accent: A
          and 文 are told apart by the plates they sit on, and repainting both plates one colour
          throws that away. The values here are the drawing's own — it was drawn for a dark interface,
          and this is the theme it was drawn for. See LightTheme.xaml for the half that had to move. -->
@@ -151,7 +151,7 @@
         <GradientStop Offset="1" Color="#08A7EA"/>
     </LinearGradientBrush>
 
-    <!-- 快速翻譯's hint card. The surface colours of the theme, but not quite solid: the card lands
+    <!-- 替換翻譯's hint card. The surface colours of the theme, but not quite solid: the card lands
          in the middle of the user's own text, and letting a little of what is underneath through is
          what keeps it reading as something laid over that text rather than a hole punched in it. -->
     <SolidColorBrush x:Key="HintCardBg"     Color="#E82C2C2C"/>

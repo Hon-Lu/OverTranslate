@@ -120,7 +120,7 @@
     <SolidColorBrush x:Key="ToolbarSegmentThumbBorder" Color="#D8D8D8"/>
     <Color x:Key="ToolbarShadowColor"          >#000000</Color>
 
-    <!-- 快速翻譯's mark. The drawing it was made from is dark-interface artwork — pale plates with
+    <!-- 替換翻譯's mark. The drawing it was made from is dark-interface artwork — pale plates with
          dark letters — and see DarkTheme.xaml, where it is kept exactly as drawn. It cannot be
          carried over here: 設定 sets every mark on an AppAccentSubtle tile, #DEEDFB, and pale plates
          land within a few percent of that brightness. Deepening them alone was not enough either —
@@ -142,7 +142,7 @@
         <GradientStop Offset="1" Color="#0B72B8"/>
     </LinearGradientBrush>
 
-    <!-- 快速翻譯's hint card. The surface colours of the theme, but not quite solid: the card lands
+    <!-- 替換翻譯's hint card. The surface colours of the theme, but not quite solid: the card lands
          in the middle of the user's own text, and letting a little of what is underneath through is
          what keeps it reading as something laid over that text rather than a hole punched in it. -->
     <SolidColorBrush x:Key="HintCardBg"     Color="#E8FFFFFF"/>

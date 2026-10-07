@@ -110,9 +110,14 @@ public class AppSettings
     public bool QuickLookupHotkeyEnabled { get; set; } = true;
 
     /// <summary>
-    /// Replaces the selected text with its translation, in place. Ctrl+Alt+E by default.
+    /// 替換翻譯's shortcut: replaces the selected text with its translation, in place. Ctrl+Alt+E
+    /// by default.
     /// </summary>
     /// <remarks>
+    /// QuickTranslate in these names is 替換翻譯's name from before the rename; they are settings
+    /// file keys and keep it — see <see cref="QuickTranslateSettings"/>.
+    ///
+
     /// E for 取代 — the letters the other four are named after are taken (A, W, S, Q), and this one
     /// is the shortcut people reach for while writing in a language that is not theirs, where what
     /// they want is the replacement rather than a window about it. Ctrl+Alt+E is claimed by nothing
@@ -236,7 +241,10 @@ public class AppSettings
     /// <summary>What 取詞翻譯 keeps between lookups, grouped.</summary>
     public QuickLookupSettings QuickLookup { get; set; } = new();
 
-    /// <summary>Language preferences used only by quick translation.</summary>
+    /// <summary>
+    /// Language preferences used only by 替換翻譯 — named QuickTranslate from before the rename, see
+    /// <see cref="QuickTranslateSettings"/>.
+    /// </summary>
     public QuickTranslateSettings QuickTranslate { get; set; } = new();
 
     /// <summary>What 即時翻譯 keeps between sittings, grouped.</summary>

@@ -5,7 +5,7 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// Where 快速翻譯's hint lands, which is the only thing telling the user their shortcut did
+/// Where 替換翻譯's hint lands, which is the only thing telling the user their shortcut did
 /// anything.
 /// </summary>
 /// <remarks>

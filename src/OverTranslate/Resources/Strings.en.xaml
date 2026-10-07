@@ -114,7 +114,7 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.Translation.Translating">Translating...</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">Could not read it aloud: {0}</sys:String>
 
-    <!-- ── Quick translate ── Only ever seen on the hint card, so each line stays to one: it sits
+    <!-- ── In-place translation ── Only ever seen on the hint card, so each line stays to one: it sits
          over the window the reader is working in. -->
     <sys:String x:Key="S.QuickTranslate.Replaced">Translated and pasted.</sys:String>
     <sys:String x:Key="S.QuickTranslate.EmptyResult">The translation came back empty; your text was left as it was.</sys:String>
@@ -425,11 +425,11 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkey">Quick translate</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkey">In-place translation</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">Translates the [[selected text]] and pastes it over the original</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Only in fields that accept typed text; nothing can be pasted outside an input area.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Translation settings</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">These languages apply only to quick translation, without affecting screenshot, text or real-time translation.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">These languages apply only to in-place translation, without affecting screenshot, text or real-time translation.</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ A single key can only be F1–F24, Pause or Scroll Lock — other keys need Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">General</sys:String>

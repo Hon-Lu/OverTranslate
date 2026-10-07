@@ -252,7 +252,7 @@
          and the row can place it by measurement — see the note rows in SettingsPage.xaml. -->
     <Geometry x:Key="InfoMarkGeometry">M0.55,6 A5.45,5.45 0 1 0 11.45,6 A5.45,5.45 0 1 0 0.55,6 Z M6,3.15 L6,3.25 M6,5.3 L6,8.9</Geometry>
 
-    <!-- 快速翻譯: A and 文 each on their own tile, with an arrow curving from one to the other and
+    <!-- 替換翻譯: A and 文 each on their own tile, with an arrow curving from one to the other and
          back. Converted from the drawing this feature's icon was designed as, scaled into the same
          16-unit square the marks around it are drawn in.
 

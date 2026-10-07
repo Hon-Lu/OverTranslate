@@ -6,8 +6,8 @@
          meaning — StringsParityTests fails the build if the dictionaries drift apart.
 
          Written as Korean software rather than as a translation of the Chinese: the sentences are
-         rebuilt, not reordered word by word. Feature names are fixed — 캡처 번역, 빠른 조회,
-         빠른 번역, 실시간 번역, 텍스트 번역, 플로팅 바 — and a screen that invents its own wording
+         rebuilt, not reordered word by word. Feature names are fixed — 캡처 번역, 팝업 번역,
+         대치 번역, 실시간 번역, 텍스트 번역, 플로팅 바 — and a screen that invents its own wording
          for one of them is the thing to catch in review. -->
 
     <!-- ── Shared ── -->
@@ -26,7 +26,7 @@
     <sys:String x:Key="S.Shell.About">정보</sys:String>
     <sys:String x:Key="S.Shell.QuickTools">빠른 도구</sys:String>
     <sys:String x:Key="S.Shell.CaptureTranslate">캡처 번역</sys:String>
-    <sys:String x:Key="S.Shell.QuickLookup">빠른 조회</sys:String>
+    <sys:String x:Key="S.Shell.QuickLookup">팝업 번역</sys:String>
     <sys:String x:Key="S.Shell.TextTranslate">텍스트 번역</sys:String>
     <sys:String x:Key="S.Shell.RealtimeTranslate">실시간 번역</sys:String>
     <sys:String x:Key="S.Shell.Settings">설정</sys:String>
@@ -35,7 +35,7 @@
     <sys:String x:Key="S.Shell.Pin">창을 항상 위에 표시합니다</sys:String>
     <sys:String x:Key="S.Shell.Unpin">고정 해제</sys:String>
     <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">블록을 지정하는 중입니다. ‘시작’을 누른 뒤 캡처 번역을 사용하세요</sys:String>
-    <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">실시간 번역이 실행 중입니다. 종료한 뒤 빠른 조회를 사용하세요</sys:String>
+    <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">실시간 번역이 실행 중입니다. 종료한 뒤 팝업 번역을 사용하세요</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">v{0}(으)로 업데이트</sys:String>
 
     <!-- ── Tray menu ── -->
@@ -115,7 +115,7 @@
     <sys:String x:Key="S.Translation.Translating">번역 중…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">읽어 주지 못했습니다: {0}</sys:String>
 
-    <!-- ── Quick translate ── Only ever seen on the hint card, so each line stays to one: it sits
+    <!-- ── In-place translation ── Only ever seen on the hint card, so each line stays to one: it sits
          over the window the reader is working in. -->
     <sys:String x:Key="S.QuickTranslate.Replaced">번역해서 붙여넣었습니다.</sys:String>
     <sys:String x:Key="S.QuickTranslate.EmptyResult">번역 결과가 비어 있어 원래 텍스트를 그대로 두었습니다.</sys:String>
@@ -142,7 +142,7 @@
 
     <!-- ── Quick lookup popup ── -->
     <sys:String x:Key="S.QuickLookup.Placeholder">번역할 텍스트를 입력하세요…</sys:String>
-    <sys:String x:Key="S.QuickLookup.Settings">빠른 조회 설정</sys:String>
+    <sys:String x:Key="S.QuickLookup.Settings">팝업 번역 설정</sys:String>
     <sys:String x:Key="S.QuickLookup.BackToResult">번역 결과로 돌아가기</sys:String>
     <sys:String x:Key="S.QuickLookup.Pin">고정하면 창이 저절로 닫히지 않습니다</sys:String>
     <sys:String x:Key="S.QuickLookup.Unpin">고정 해제</sys:String>
@@ -245,7 +245,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">시스템 트레이로 최소화했습니다. {0} 키로 캡처 번역을 시작할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">설정한 단축키</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">실시간 번역 실행 중</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">실시간 번역을 종료한 뒤 빠른 조회를 사용하세요.</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">실시간 번역을 종료한 뒤 팝업 번역을 사용하세요.</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">API 키가 없습니다</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">설정에서 API 키를 입력하세요.</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">인식 실패</sys:String>
@@ -426,14 +426,14 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">일시 정지 / 재개</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">[[실시간 번역]] 일시 정지·재개</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">‘일시 정지 / 재개’는 실시간 번역이 실행 중일 때만 동작합니다. (원문을 확인할 때 유용합니다)</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkey">빠른 조회</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">단축키로 [[빠른 조회]] 열기</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkey">팝업 번역</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">단축키로 [[팝업 번역]] 열기</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">텍스트를 선택해 두면 창이 열릴 때 자동으로 불러와 번역합니다.</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkey">빠른 번역</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkey">대치 번역</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">[[선택한 텍스트]]를 번역해 그대로 붙여넣어 원문을 바꿉니다</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">글자를 입력할 수 있는 칸에서만 동작하며, 입력란이 아니면 붙여넣을 수 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">번역 설정</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">이 언어 설정은 빠른 번역에만 적용되며 스크린샷, 텍스트 또는 실시간 번역에는 영향을 주지 않습니다.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">이 언어 설정은 대치 번역에만 적용되며 스크린샷, 텍스트 또는 실시간 번역에는 영향을 주지 않습니다.</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 단독으로 쓸 수 있는 키는 F1–F24, Pause, Scroll Lock뿐입니다. 다른 키는 Ctrl／Alt／Shift와 함께 사용하세요</sys:String>
 
     <sys:String x:Key="S.Settings.General">일반</sys:String>

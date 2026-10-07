@@ -7,7 +7,7 @@
 
          Written as Japanese software rather than as a translation of the Chinese: the sentences
          are rebuilt, not reordered word by word. Feature names are fixed — キャプチャ翻訳,
-         クイック辞書, クイック翻訳, リアルタイム翻訳, テキスト翻訳, フローティングバー — and a
+         ポップアップ翻訳, 置換翻訳, リアルタイム翻訳, テキスト翻訳, フローティングバー — and a
          screen that invents its own wording for one of them is the thing to catch in review. -->
 
     <!-- ── Shared ── -->
@@ -26,7 +26,7 @@
     <sys:String x:Key="S.Shell.About">このアプリについて</sys:String>
     <sys:String x:Key="S.Shell.QuickTools">クイックツール</sys:String>
     <sys:String x:Key="S.Shell.CaptureTranslate">キャプチャ翻訳</sys:String>
-    <sys:String x:Key="S.Shell.QuickLookup">クイック辞書</sys:String>
+    <sys:String x:Key="S.Shell.QuickLookup">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Shell.TextTranslate">テキスト翻訳</sys:String>
     <sys:String x:Key="S.Shell.RealtimeTranslate">リアルタイム翻訳</sys:String>
     <sys:String x:Key="S.Shell.Settings">設定</sys:String>
@@ -35,7 +35,7 @@
     <sys:String x:Key="S.Shell.Pin">ウィンドウを常に手前に表示します</sys:String>
     <sys:String x:Key="S.Shell.Unpin">ピン留めを解除</sys:String>
     <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">ブロックを選択中です。「開始」を押してからキャプチャ翻訳をご利用ください</sys:String>
-    <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">リアルタイム翻訳の実行中です。終了してからクイック辞書をご利用ください</sys:String>
+    <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">リアルタイム翻訳の実行中です。終了してからポップアップ翻訳をご利用ください</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">v{0} にアップデート</sys:String>
 
     <!-- ── Tray menu ── -->
@@ -115,7 +115,7 @@
     <sys:String x:Key="S.Translation.Translating">翻訳中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">読み上げに失敗しました：{0}</sys:String>
 
-    <!-- ── Quick translate ── Only ever seen on the hint card, so each line stays to one: it sits
+    <!-- ── In-place translation ── Only ever seen on the hint card, so each line stays to one: it sits
          over the window the reader is working in. -->
     <sys:String x:Key="S.QuickTranslate.Replaced">翻訳して貼り付けました。</sys:String>
     <sys:String x:Key="S.QuickTranslate.EmptyResult">訳文が空でした。元のテキストはそのままです。</sys:String>
@@ -142,7 +142,7 @@
 
     <!-- ── Quick lookup popup ── -->
     <sys:String x:Key="S.QuickLookup.Placeholder">翻訳したいテキストを入力…</sys:String>
-    <sys:String x:Key="S.QuickLookup.Settings">クイック辞書の設定</sys:String>
+    <sys:String x:Key="S.QuickLookup.Settings">ポップアップ翻訳の設定</sys:String>
     <sys:String x:Key="S.QuickLookup.BackToResult">翻訳結果に戻る</sys:String>
     <sys:String x:Key="S.QuickLookup.Pin">ピン留めするとウィンドウが自動で閉じなくなります</sys:String>
     <sys:String x:Key="S.QuickLookup.Unpin">ピン留めを解除</sys:String>
@@ -245,7 +245,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">タスクトレイに最小化しました。{0} でキャプチャ翻訳を開始できます。</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">設定したショートカットキー</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">リアルタイム翻訳の実行中</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">リアルタイム翻訳を終了してからクイック辞書をご利用ください。</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">リアルタイム翻訳を終了してからポップアップ翻訳をご利用ください。</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">API キーがありません</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">設定で API キーを入力してください。</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">認識に失敗しました</sys:String>
@@ -426,14 +426,14 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">一時停止 / 再開</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">[[リアルタイム翻訳]]を一時停止／再開する</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">「一時停止 / 再開」はリアルタイム翻訳の実行中のみ使えます。(原文を確認したいときに便利です)</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkey">クイック辞書</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">ショートカットキーで[[クイック辞書]]を開く</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">ショートカットキーで[[ポップアップ翻訳]]を開く</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">テキストを選択していると、ウィンドウを開いたときに自動で読み込んで翻訳します。</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkey">クイック翻訳</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkey">置換翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">[[選択中のテキスト]]を翻訳して貼り付け、原文を置き換える</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">文字を入力できる欄でのみ動作し、入力欄以外には貼り付けられません。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻訳設定</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">この言語設定はクイック翻訳専用です。スクリーンショット翻訳、テキスト翻訳、リアルタイム翻訳には影響しません。</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">この言語設定は置換翻訳専用です。スクリーンショット翻訳、テキスト翻訳、リアルタイム翻訳には影響しません。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 単独で使えるのは F1–F24、Pause、Scroll Lock のみです。ほかのキーは Ctrl／Alt／Shift と組み合わせてください</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般</sys:String>
