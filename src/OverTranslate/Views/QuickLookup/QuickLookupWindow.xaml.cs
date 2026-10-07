@@ -956,7 +956,8 @@ public partial class QuickLookupWindow : Window
     /// A single-line TextBox keeps a pasted text only up to its first line break, so text copied by
     /// hand across lines lost everything after the first (#274). It is folded onto one line the way
     /// a carried-in selection is — see <see cref="SelectedTextReader.Sanitize"/> for why the breaks
-    /// do not belong to the sentence. Text without a line break is pasted as it came.
+    /// do not belong to the sentence — but not capped, see <see cref="SelectedTextReader.Fold"/>.
+    /// Text without a line break is pasted as it came.
     /// </remarks>
     private void SourceTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
     {
@@ -964,7 +965,7 @@ public partial class QuickLookupWindow : Window
             || pasted.IndexOfAny(['\r', '\n']) < 0)
             return;
 
-        var folded = SelectedTextReader.Sanitize(pasted);
+        var folded = SelectedTextReader.Fold(pasted);
         if (folded.Length == 0)
         {
             e.CancelCommand();
