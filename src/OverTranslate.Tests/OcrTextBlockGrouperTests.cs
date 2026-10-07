@@ -921,6 +921,39 @@ public class OcrTextBlockGrouperTests
     }
 
     /// <summary>
+    /// A short line between two long ones on a label photographed at 2.5° still lies between them,
+    /// although their upright boxes meet over it.
+    /// </summary>
+    /// <remarks>
+    /// photo-ko-tilted (#273): under the 3° from which tilted lines are levelled for grouping, each
+    /// long line's upright box is as tall as its thickness plus its length times the sine of the
+    /// slope, so the gap between the two long lines' boxes closed and the short one had nowhere to
+    /// be. The long ones were then joined round it, and their group's box was drawn over its
+    /// translation.
+    /// </remarks>
+    [Fact]
+    public void AShortLineBetweenTwoSlightlySlopedLongOnes_StillLiesBetweenThem()
+    {
+        var first = TiltedLayoutTests.Sloped("SYNTHETIC FLAVOUR COFFEE DL MENTHOL SUGAR ALCOHOL CONTAINING", 100, 100, 570, 16, 2.5);
+        var middle = TiltedLayoutTests.Sloped("EXCESSIVE INTAKE MAY CAUSE IT.", 100, 120, 290, 16, 2.5);
+        var last = TiltedLayoutTests.Sloped("STORAGE KEEP AWAY FROM DIRECT SUNLIGHT AND STORE IN A COOL PLACE", 100, 140, 570, 16, 2.5);
+        Assert.True(first.LayoutBounds.Bottom >= last.LayoutBounds.Top);
+
+        var decisions = new List<OcrTextBlockGrouper.NextLineDecision>();
+        var grouped = OcrTextBlockGrouper.Group([first, middle, last], GroupingProfile.General, decisions);
+
+        Assert.DoesNotContain(
+            decisions,
+            decision => decision.Kind == "next" &&
+                        decision.Previous == first.Text &&
+                        decision.Current == last.Text);
+        Assert.DoesNotContain(
+            grouped,
+            group => group.Text.Contains(first.Text) && group.Text.Contains(last.Text) &&
+                     !group.Text.Contains(middle.Text));
+    }
+
+    /// <summary>
     /// A row of figures under a label is a row, however closely it is set.
     /// </summary>
     /// <remarks>
