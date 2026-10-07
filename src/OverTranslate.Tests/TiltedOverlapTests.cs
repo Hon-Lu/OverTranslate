@@ -56,6 +56,25 @@ public class TiltedOverlapTests
     }
 
     [Fact]
+    public void TiltedColumnsAreLevelledOnlyWhereStandingThemUpWouldHelp()
+    {
+        // Two columns turned 9°, their slant running into the upright column beside them.
+        var quads = new[] { new Rect(600, 100, 40, 600), new Rect(660, 100, 40, 600) }
+            .Select(box => Turned(box, 9, pivot: new Rect(600, 100, 100, 600)))
+            .ToList();
+        var tilt = TiltedText.FromColumns(9, quads)!;
+        var beside = Level("beside", 560, 100, 40, 600);
+
+        // The enclosing box, as the column pipeline reports it: standing up overlaps even more.
+        var enclosed = new OcrTextBlock("tilted", TiltedText.Enclosing(tilt.Outline)) { Tilt = tilt };
+        Assert.NotNull(TiltedOverlap.Level([enclosed, beside])[0].Tilt);
+
+        // Pulled in onto the columns' own glyphs: standing up clears the neighbour.
+        var pulledIn = new OcrTextBlock("tilted", new Rect(605, 100, 90, 600)) { Tilt = tilt };
+        Assert.Null(TiltedOverlap.Level([pulledIn, beside])[0].Tilt);
+    }
+
+    [Fact]
     public void ALevelPageComesBackAsItWent()
     {
         var groups = new List<OcrTextBlock> { Level("a", 0, 0, 100, 20), Level("b", 0, 10, 100, 20) };
@@ -101,5 +120,12 @@ public class TiltedOverlapTests
         var tilt = new TiltedText(degrees, false, centre, box, []);
         var bounds = TiltedText.Enclosing(tilt.Outline);
         return new OcrTextBlock(text, bounds, LayoutBounds: bounds) { Tilt = tilt };
+    }
+
+    /// <summary>A box's corners turned <paramref name="degrees"/> about the middle of <paramref name="pivot"/>.</summary>
+    private static Point[] Turned(Rect box, double degrees, Rect pivot)
+    {
+        var centre = new Point(pivot.X + pivot.Width / 2, pivot.Y + pivot.Height / 2);
+        return new TiltedText(degrees, false, centre, box, []).Corners(box);
     }
 }
