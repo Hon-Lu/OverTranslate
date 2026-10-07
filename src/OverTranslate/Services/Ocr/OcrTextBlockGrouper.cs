@@ -485,7 +485,33 @@ internal static class OcrTextBlockGrouper
             FontGlyphHeight = CombineGlyphHeight(previous.FontGlyphHeight, current.FontGlyphHeight),
             UprightLayoutBounds = TiltedLayout.CombineUpright([previous, current]),
             TiltedLines = TiltedLayout.CombineTilted([previous, current]),
+            LineGeometry = CombineRowGeometry(previous, current),
         };
+    }
+
+    /// <summary>
+    /// The line two pieces of one row make, measured along itself: as thick as the thicker, at their
+    /// angle weighted by length, as long as the row is across. Null unless both pieces ran across.
+    /// </summary>
+    /// <remarks>
+    /// A row the detector broke in pieces is still one sloped line, and <see cref="NothingLiesBetween"/>
+    /// has to see it as one: on photo-ko-tilted a long line read in three pieces lay between two
+    /// others that were otherwise joined round it.
+    /// </remarks>
+    private static OcrLineGeometry? CombineRowGeometry(OcrTextBlock previous, OcrTextBlock current)
+    {
+        if (previous.LineGeometry is not { } first || current.LineGeometry is not { } second ||
+            Math.Abs(first.AngleDegrees) >= OcrLineGeometry.TiltedToDegrees ||
+            Math.Abs(second.AngleDegrees) >= OcrLineGeometry.TiltedToDegrees)
+            return null;
+
+        var degrees = (first.AngleDegrees * first.Length + second.AngleDegrees * second.Length) /
+                      Math.Max(1e-9, first.Length + second.Length);
+        var across = Rect.Union(previous.LayoutBounds, current.LayoutBounds).Width;
+        return new OcrLineGeometry(
+            across / Math.Cos(degrees * Math.PI / 180),
+            Math.Max(first.Thickness, second.Thickness),
+            degrees);
     }
 
     internal static string JoinInlineText(string left, string right)
@@ -613,6 +639,15 @@ internal static class OcrTextBlockGrouper
     /// counts as being in the way when its own middle falls in the gap. A line beside the column, or
     /// one clipping into it by a few pixels of unclipped detection box, is not in the way of
     /// anything.</para>
+    ///
+    /// <para>The gap is between the lines themselves, not their upright boxes. A line a few degrees
+    /// off level has an upright box as tall as its thickness plus its length times the sine of the
+    /// slope, and on a dense label photographed at 3° (photo-ko-tilted, #273) neighbouring lines'
+    /// boxes met: a highlighted short line between two long ones had no gap left to sit in, and the
+    /// two long ones were strung together round it, their box drawn over its translation. Below the
+    /// tilt <see cref="TiltedLayout"/> levels, nothing else takes that slope out. So a sloped line is
+    /// taken as the band its quadrilateral covers, measured where the third line is; a level line
+    /// is its box, as before.</para>
     /// </remarks>
     private static bool NothingLiesBetween(
         OcrTextBlock previous, OcrTextBlock current, IReadOnlyList<OcrTextBlock> lines)
@@ -620,11 +655,6 @@ internal static class OcrTextBlockGrouper
         var left = Math.Max(previous.LayoutBounds.Left, current.LayoutBounds.Left);
         var right = Math.Min(previous.LayoutBounds.Right, current.LayoutBounds.Right);
         if (right <= left)
-            return true;
-
-        var top = previous.LayoutBounds.Bottom;
-        var bottom = current.LayoutBounds.Top;
-        if (bottom <= top)
             return true;
 
         foreach (var line in lines)
@@ -636,12 +666,33 @@ internal static class OcrTextBlockGrouper
             if (box.Right <= left || box.Left >= right)
                 continue;
 
+            var x = Math.Clamp(box.X + box.Width / 2.0, left, right);
             var middle = box.Y + box.Height / 2.0;
-            if (middle > top && middle < bottom)
+            if (middle > Band(previous, x).Bottom && middle < Band(current, x).Top)
                 return false;
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Where a line's text lies across the page at <paramref name="x"/>: the band its quadrilateral
+    /// covers there, inside its upright box. A level line's quadrilateral is its box, so that is
+    /// what a level line is measured on, as before.
+    /// </summary>
+    private static (double Top, double Bottom) Band(OcrTextBlock line, double x)
+    {
+        var box = line.LayoutBounds;
+        // A straightened line's box is already the level one — see TiltedLayout.
+        if (line.UprightLayoutBounds.HasValue ||
+            line.LineGeometry is not { } geometry ||
+            Math.Abs(geometry.AngleDegrees) >= OcrLineGeometry.TiltedToDegrees)
+            return (box.Top, box.Bottom);
+
+        var middle = box.Y + box.Height / 2.0 +
+                     (x - (box.X + box.Width / 2.0)) * Math.Tan(geometry.AngleDegrees * Math.PI / 180);
+        return (Math.Max(box.Top, middle - geometry.Thickness / 2.0),
+                Math.Min(box.Bottom, middle + geometry.Thickness / 2.0));
     }
 
     // A rejected same-row fragment must not be skipped by a wrap into its horizontal span.
