@@ -186,11 +186,19 @@ internal static class SelectedTextReader
     /// </remarks>
     public static string Sanitize(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "";
-
-        var text = Whitespace.Replace(raw, " ").Trim();
+        var text = Fold(raw);
         return text.Length <= MaxLength ? text : text[..MaxLength].TrimEnd();
     }
+
+    /// <summary>
+    /// Folds the text onto one line, with no cap on its length.
+    /// </summary>
+    /// <remarks>
+    /// For text the user pasted in on purpose: the cap in <see cref="Sanitize"/> guards against a
+    /// selection that got away, and a paste is no more of a runaway than typing, which has no cap.
+    /// </remarks>
+    public static string Fold(string? raw) =>
+        string.IsNullOrWhiteSpace(raw) ? "" : Whitespace.Replace(raw, " ").Trim();
 
     /// <summary>
     /// Sends Ctrl+C to whatever has the foreground — see <see cref="KeyboardInput"/> for how the

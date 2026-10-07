@@ -79,6 +79,18 @@ public class SelectedTextReaderTests
     }
 
     [Fact]
+    public void Pasted_lines_are_folded_into_one_sentence_without_the_selection_cap()
+    {
+        // #274: a single-line box keeps a paste only up to its first line break.
+        Assert.Equal(
+            "The package should arrive tomorrow, but the tracking page has not updated yet.",
+            SelectedTextReader.Fold("The package should arrive tomorrow,\r\nbut the tracking page has not updated yet.\r\n"));
+
+        var raw = new string('a', SelectedTextReader.MaxLength) + "\nb";
+        Assert.Equal(new string('a', SelectedTextReader.MaxLength) + " b", SelectedTextReader.Fold(raw));
+    }
+
+    [Fact]
     public void The_cap_never_leaves_a_trailing_space_behind()
     {
         // Cutting mid-gap would otherwise hand the engine a sentence ending in a space, and the box
