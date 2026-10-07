@@ -132,10 +132,16 @@ public class OcrService : IDisposable
 
         // The mode picks the thresholds for horizontal text only. Vertical has its own profile and
         // does not take a parameter for one — see RecognizeVerticalAsync.
-        return verticalText
+        return LevelCrowdedTilts(verticalText
             ? RecognizeVerticalAsync(_engine, bitmap, language, cancellationToken, _manga)
-            : RecognizeAndGroupAsync(_engine, bitmap, language, GroupingProfile.For(layoutMode), cancellationToken);
+            : RecognizeAndGroupAsync(_engine, bitmap, language, GroupingProfile.For(layoutMode), cancellationToken));
     }
+
+    // Here, where every path's groups are final — columns and the lines across a vertical page
+    // alike — because the groups that collide need not have been grouped together. See
+    // Ocr.TiltedOverlap.
+    private static async Task<List<OcrTextBlock>> LevelCrowdedTilts(Task<List<OcrTextBlock>> groups) =>
+        TiltedOverlap.Level(await groups);
 
     /// <summary>
     /// Recognises only if the engine has a free slot right now, returning null instead of queueing.
@@ -162,9 +168,10 @@ public class OcrService : IDisposable
 
         if (orientation == Realtime.RealtimeTextOrientation.Vertical)
         {
-            return await TryRecognizeVerticalAsync(
+            var columns = await TryRecognizeVerticalAsync(
                 _engine, bitmap, OcrLanguageRouter.Normalize(sourceLanguage), maxDetectSize, cancellationToken,
                 _manga);
+            return columns is null ? null : TiltedOverlap.Level(columns);
         }
 
         var blocks = await _engine.TryRecognizeAsync(
@@ -184,7 +191,7 @@ public class OcrService : IDisposable
         // There is no toolbar in front of a running video, so there is no CaptureLayoutMode to
         // honour here; taking one would mean a mode the user chose for a still capture silently
         // steering frames it was never asked about.
-        return GroupRealtime(blocks, bitmap.Height, mode);
+        return TiltedOverlap.Level(GroupRealtime(blocks, bitmap.Height, mode));
     }
 
     /// <summary>
