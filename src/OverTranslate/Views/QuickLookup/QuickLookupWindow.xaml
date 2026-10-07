@@ -274,6 +274,7 @@
                                  Height="34"
                                  FontSize="15"
                                  Padding="8,0,30,0"
+                                 DataObject.Pasting="SourceTextBox_Pasting"
                                  TextChanged="SourceTextBox_TextChanged"/>
 
                         <!-- Fainter than secondary text: this is a prompt standing in for content
