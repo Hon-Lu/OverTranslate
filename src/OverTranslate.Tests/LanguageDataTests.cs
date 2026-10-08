@@ -31,6 +31,22 @@ public class LanguageDataTests
         // language" in that position and must not gain a tag.
         Assert.Equal("", LanguageData.GetModelLanguageTag(code));
 
+    // The two keyless engines for users Google cannot reach go before the two that need setting up
+    // first: DeepL a key, OpenAI a model.
+    [Theory]
+    [InlineData(TranslationProvider.Youdao, "S.Provider.Youdao")]
+    [InlineData(TranslationProvider.TranSmart, "S.Provider.TranSmart")]
+    public void KeylessChineseEngines_AreListedBeforeDeepL(TranslationProvider engine, string displayKey)
+    {
+        var order = LanguageData.Providers.Select(item => item.Provider).ToList();
+        var item = LanguageData.Providers.Single(item => item.Provider == engine);
+
+        Assert.True(order.IndexOf(engine) < order.IndexOf(TranslationProvider.DeepL));
+        Assert.True(order.IndexOf(TranslationProvider.Youdao) < order.IndexOf(TranslationProvider.TranSmart));
+        Assert.Equal(displayKey, item.DisplayKey);
+        Assert.False(item.RequiresApiKey);
+    }
+
     [Fact]
     public void OpenAiCompatibleProvider_IsAvailableWithoutRequiringAKey()
     {

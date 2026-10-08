@@ -402,6 +402,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Provider.GoogleChromeHint">More natural on full sentences, but names and titles may be translated or left out</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing Translator</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">Youdao Translate</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">Tencent Translate</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Requires an API key from DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

@@ -7,6 +7,8 @@ using OverTranslate.Translation.Bing;
 using OverTranslate.Translation.DeepL;
 using OverTranslate.Translation.Google;
 using OverTranslate.Translation.Microsoft;
+using OverTranslate.Translation.Tencent;
+using OverTranslate.Translation.Youdao;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -555,6 +557,322 @@ public class EngineProtocolTests
         Assert.Equal(HttpStatusCode.Forbidden, failure.StatusCode);
     }
 
+    // ---- TranSmart -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task TranSmart_SendsEveryTextInOneListAndMapsItsLanguageCodes()
+    {
+        var handler = new Canned(_ => Json("""{"header":{"ret_code":"succ"},"auto_translation":["一","二"],"src_lang":"ja","tgt_lang":"zh"}"""));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["いち", "に"], "zh-CN", "ja");
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("https://transmart.qq.com/api/imt", request.Uri);
+        var body = JsonDocument.Parse(request.Body).RootElement;
+        Assert.Equal(["いち", "に"], body.GetProperty("source").GetProperty("text_list").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal("ja", body.GetProperty("source").GetProperty("lang").GetString());
+        Assert.Equal("zh", body.GetProperty("target").GetProperty("lang").GetString());
+        Assert.StartsWith("browser-chrome-", body.GetProperty("header").GetProperty("client_key").GetString());
+        Assert.Equal(["一", "二"], answers.Select(a => a.Text));
+
+        // Given, not detected: nothing to report.
+        Assert.All(answers, a => Assert.Equal("", a.DetectedLanguage));
+    }
+
+    [Fact]
+    public async Task TranSmart_ADetectedRequestIsSentOncePerScript_AndAnsweredInOrder()
+    {
+        var handler = new Canned(request =>
+        {
+            var texts = JsonDocument.Parse(request.Body).RootElement.GetProperty("source").GetProperty("text_list")
+                .EnumerateArray().Select(e => e.GetString()!).ToList();
+            var language = texts[0].Any(c => c is >= '぀' and <= 'ヿ') ? "ja" : texts[0].Any(c => c >= '가') ? "ko" : "en";
+            return Json(JsonSerializer.Serialize(new
+            {
+                header = new { ret_code = "succ" },
+                auto_translation = texts.Select(t => $"<{t}>"),
+                src_lang = language,
+            }));
+        });
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["こんにちは", "Hello", "おはよう", "안녕"], "zh-TW");
+
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Equal(["<こんにちは>", "<Hello>", "<おはよう>", "<안녕>"], answers.Select(a => a.Text));
+        Assert.Equal(["ja", "en", "ja", "ko"], answers.Select(a => a.DetectedLanguage));
+        Assert.All(handler.Bodies, body => Assert.Contains("\"lang\":\"auto\"", body));
+    }
+
+    [Fact]
+    public async Task TranSmart_BusyIsAskedAgain()
+    {
+        var calls = 0;
+        var handler = new Canned(_ => Json(Interlocked.Increment(ref calls) == 1
+            ? """{"header":{"ret_code":"busy"},"message":"Server is busy now, (10000), please retry later"}"""
+            : """{"header":{"ret_code":"succ"},"auto_translation":["好"]}"""));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["OK"], "zh-TW", "en"));
+
+        Assert.Equal("好", answer.Text);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task TranSmart_ARefusalInsideA200_IsAFailure()
+    {
+        var handler = new Canned(_ => Json("""{"header":{"ret_code":"outOfLimit"}}"""));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], "ja", "en"));
+
+        Assert.Contains("outOfLimit", failure.Message);
+        Assert.Single(handler.Requests);
+    }
+
+    // Refused before anything is sent, so the backups take over at once.
+    [Theory]
+    [InlineData("nl", "en")]
+    [InlineData("zh-TW", "pl")]
+    [InlineData("zh-TW", "ru")]
+    [InlineData("zh-CN", "th")]
+    [InlineData("sv", null)]
+    public async Task TranSmart_APairItDoesNotHave_IsRefusedWithoutARequest(string target, string? source)
+    {
+        var handler = new Canned();
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], target, source));
+
+        Assert.Contains("unsupported", failure.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("ja", "zh-TW", true)]
+    [InlineData("ko", "zh-CN", true)]
+    [InlineData(null, "zh-TW", true)]
+    [InlineData(null, "nl", false)]
+    [InlineData("nl", "zh-TW", false)]
+    [InlineData("ru", "ja", true)]
+    [InlineData("ru", "zh-TW", false)]
+    [InlineData("zh-TW", "ru", true)]
+    [InlineData("th", "zh-CN", false)]
+    public void TranSmart_KnowsWhichPairsItHas(string? source, string target, bool expected) =>
+        Assert.Equal(expected, TranSmartTranslator.Supports(source, target));
+
+    [Fact]
+    public async Task TranSmart_ALineBreakInsideATextIsJoined_AndABlankLineKept()
+    {
+        var handler = new Canned(request => Json(JsonSerializer.Serialize(new
+        {
+            header = new { ret_code = "succ" },
+            auto_translation = JsonDocument.Parse(request.Body).RootElement.GetProperty("source").GetProperty("text_list")
+                .EnumerateArray().Select(e => $"<{e.GetString()}>"),
+        })));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["おはよう\nございます", "First line\nwraps.\n\nSecond."], "zh-TW", "ja");
+
+        Assert.Equal(["<おはようございます>", "<First line wraps.>\n\n<Second.>"], answers.Select(a => a.Text));
+    }
+
+    [Theory]
+    [InlineData("おはよう\nございます", "おはようございます")]
+    [InlineData("This sentence\r\n  wraps.", "This sentence wraps.")]
+    [InlineData("「はい」\nOK", "「はい」 OK")]
+    [InlineData("안녕하세요\n반갑습니다", "안녕하세요 반갑습니다")]
+    [InlineData("  one line  ", "one line")]
+    public void JoinLines_JoinsWithASpaceOnlyWhereTheScriptUsesOne(string paragraph, string expected) =>
+        Assert.Equal(expected, BatchTranslator.JoinLines(paragraph));
+
+    [Theory]
+    [InlineData("装備", "裝備（裝備）", "zh-TW", "裝備")]
+    [InlineData("攻撃力", "攻擊力（Attack Force）", "zh-TW", "攻擊力")]
+    [InlineData("戻る", "Back（後退）", "zh-TW", "後退")]
+    [InlineData("いいえ", "否（No）", "zh-TW", "否")]
+    [InlineData("ロード", "Load（Load）", "zh-TW", "Load")]
+    [InlineData("装備", "장비 (Equipment)", "ko", "장비")]
+    [InlineData("閉じる", "닫기 (Close)", "ko", "닫기")]
+    [InlineData("戻る", "Retour (Zurück)", "fr", "Retour (Zurück)")]
+    [InlineData("体力（HP）", "體力（HP）", "zh-TW", "體力（HP）")]
+    [InlineData("はい", "是的。", "zh-TW", "是的。")]
+    public void TranSmart_TheGlossAfterAShortAnswerIsTakenOff(string piece, string answer, string target, string expected) =>
+        Assert.Equal(expected, TranSmartTranslator.WithoutGloss(piece, answer, target));
+
+    // ---- Youdao --------------------------------------------------------------------------
+
+    // Shaped like the real page and script, made up. The key getter's key is put together at run
+    // time, as FakeKey's are, so nothing here reads as a key copied from Youdao's page.
+    private const string YoudaoPage =
+        """<html><script src="https://shared.ydstatic.com/dict/translation-website/1.0.7/js/app.fake.js"></script></html>""";
+
+    private static readonly string YoudaoGetterKey = "Getter" + new string('K', 10);
+
+    private static readonly string YoudaoScript =
+        """i={secretKey:"",decodeKey:"ydsecret://query/key/TEST",decodeIv:"ydsecret://query/iv/TEST",allowStroke:!1};""" +
+        $$"""fetchTextTranslateSecretKey:async({commit:e},t)=>{const o="webfanyi-key-getter-2025",a="{{YoudaoGetterKey}}";return o}""";
+
+    private const string YoudaoKey = """{"code":0,"data":{"secretKey":"SECRET","aesKey":"","aesIv":""}}""";
+
+    /// <summary>A Youdao endpoint that answers each line it is sent with that line in brackets.</summary>
+    private static Canned YoudaoEndpoint(
+        Func<IReadOnlyList<string>, string>? type = null, Func<IReadOnlyList<string>, string>? answer = null) =>
+        new(request =>
+        {
+            if (request.Uri == "https://fanyi.youdao.com/") return Text(YoudaoPage);
+            if (request.Uri.EndsWith(".js")) return Text(YoudaoScript);
+            if (request.Uri.StartsWith("https://dict.youdao.com/webtranslate/key")) return Json(YoudaoKey);
+
+            var lines = YoudaoField(request.Body, "i").Split('\n');
+            var json = answer?.Invoke(lines) ?? JsonSerializer.Serialize(new
+            {
+                code = 0,
+                type = type?.Invoke(lines) ?? "ja2zh-CHT",
+                translateResult = lines.Select(line => new[] { new { tgt = $"<{line}>", src = line } }),
+            });
+            return Text(YoudaoEncrypt(json));
+        });
+
+    private static string YoudaoField(string body, string name) => Uri.UnescapeDataString(
+        body.Split('&').Single(field => field.StartsWith(name + "=")).Split('=', 2)[1].Replace('+', ' '));
+
+    private static string YoudaoEncrypt(string json)
+    {
+        using var aes = System.Security.Cryptography.Aes.Create();
+        aes.Key = System.Security.Cryptography.MD5.HashData(Encoding.UTF8.GetBytes("ydsecret://query/key/TEST"));
+        var cipher = aes.EncryptCbc(Encoding.UTF8.GetBytes(json),
+            System.Security.Cryptography.MD5.HashData(Encoding.UTF8.GetBytes("ydsecret://query/iv/TEST")));
+        return Convert.ToBase64String(cipher).Replace('+', '-').Replace('/', '_');
+    }
+
+    [Fact]
+    public async Task Youdao_FetchesItsCredentialsOnce_AndSendsTheTextsAsSignedLines()
+    {
+        var handler = YoudaoEndpoint();
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var first = await engine.TranslateAsync(["早く逃げて！", "装備"], "zh-TW", "ja");
+        await engine.TranslateAsync(["戻る"], "zh-TW", "ja");
+
+        var key = Assert.Single(handler.Requests, r => r.Uri.StartsWith("https://dict.youdao.com/webtranslate/key"));
+        Assert.Contains("keyid=webfanyi-key-getter-2025", key.Uri);
+        var mysticTime = Uri.UnescapeDataString(key.Uri.Split('?')[1].Split('&').Single(f => f.StartsWith("mysticTime=")).Split('=')[1]);
+        Assert.Contains($"sign={YoudaoSession.Sign(mysticTime, YoudaoGetterKey)}", key.Uri);
+        var translate = handler.Requests.Where(r => r.Uri == "https://dict.youdao.com/webtranslate").ToList();
+        Assert.Equal(2, translate.Count);
+        Assert.Equal("早く逃げて！\n装備", YoudaoField(translate[0].Body, "i"));
+        Assert.Equal("ja", YoudaoField(translate[0].Body, "from"));
+        Assert.Equal("zh-CHT", YoudaoField(translate[0].Body, "to"));
+        Assert.Equal("webfanyi", YoudaoField(translate[0].Body, "keyid"));
+        Assert.Equal(YoudaoSession.Sign(YoudaoField(translate[0].Body, "mysticTime"), "SECRET"), YoudaoField(translate[0].Body, "sign"));
+        Assert.Equal(["<早く逃げて！>", "<装備>"], first.Select(a => a.Text));
+    }
+
+    [Fact]
+    public void Youdao_SignatureIsTheMd5OfTheTimeAndKey() =>
+        Assert.Equal(
+            Convert.ToHexString(System.Security.Cryptography.MD5.HashData(Encoding.UTF8.GetBytes(
+                "client=fanyideskweb&mysticTime=1700000000000&product=webfanyi&key=SECRET"))).ToLowerInvariant(),
+            YoudaoSession.Sign("1700000000000", "SECRET"));
+
+    // A line break inside a text would come back as one entry more, and every answer after it
+    // would belong to the text before.
+    [Fact]
+    public async Task Youdao_ALineBreakInsideATextIsJoinedBeforeItIsSent()
+    {
+        var handler = YoudaoEndpoint();
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["おはよう\nございます", "This sentence\nwraps.", "End"], "zh-TW", "ja");
+
+        var sent = YoudaoField(handler.Requests.Single(r => r.Uri == "https://dict.youdao.com/webtranslate").Body, "i");
+        Assert.Equal("おはようございます\nThis sentence wraps.\nEnd", sent);
+        Assert.Equal(["<おはようございます>", "<This sentence wraps.>", "<End>"], answers.Select(a => a.Text));
+    }
+
+    [Fact]
+    public async Task Youdao_ParagraphsAreSentAsLinesAndPutBackWithTheBlankLine()
+    {
+        var engine = new YoudaoTranslator(new HttpClient(YoudaoEndpoint()));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["First.\n\nSecond."], "zh-TW", "en"));
+
+        Assert.Equal("<First.>\n\n<Second.>", answer.Text);
+    }
+
+    [Fact]
+    public async Task Youdao_ALineAnsweredInSeveralSentences_IsOneTranslation()
+    {
+        var engine = new YoudaoTranslator(new HttpClient(YoudaoEndpoint(answer: _ =>
+            """{"code":0,"type":"en2zh-CHT","translateResult":[[{"tgt":"這是第一句話。"},{"tgt":"這是第二個！\n"}]]}""")));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["This is the first. This is the second!"], "zh-TW"));
+
+        Assert.Equal("這是第一句話。這是第二個！", answer.Text);
+        Assert.Equal("en", answer.DetectedLanguage);
+    }
+
+    [Fact]
+    public async Task Youdao_AnAnswerWithALineMoreOrLess_FailsTheRequest()
+    {
+        var engine = new YoudaoTranslator(new HttpClient(YoudaoEndpoint(answer: _ =>
+            """{"code":0,"type":"ja2zh-CHT","translateResult":[[{"tgt":"一"}],[{"tgt":"二"}],[{"tgt":"三"}]]}""")));
+
+        await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["いち", "に"], "zh-TW", "ja"));
+    }
+
+    [Fact]
+    public async Task Youdao_ADetectedRequestIsSentOncePerScript_AndReportsWhatEachWasReadAs()
+    {
+        var handler = YoudaoEndpoint(type: lines =>
+            lines[0].Any(c => c >= '가') ? "ko2zh-CHS" : lines[0].Any(c => c > 0x2000) ? "ja2zh-CHS" : "en2zh-CHS");
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["안녕하세요", "Hello", "こんにちは"], "zh-CN");
+
+        Assert.Equal(3, handler.Requests.Count(r => r.Uri == "https://dict.youdao.com/webtranslate"));
+        Assert.Equal(["<안녕하세요>", "<Hello>", "<こんにちは>"], answers.Select(a => a.Text));
+        Assert.Equal(["ko", "en", "ja"], answers.Select(a => a.DetectedLanguage));
+        Assert.All(handler.Requests.Where(r => r.Uri == "https://dict.youdao.com/webtranslate"),
+            r => Assert.Equal("zh-CHS", YoudaoField(r.Body, "to")));
+    }
+
+    [Fact]
+    public async Task Youdao_ARefusalIsAskedAgainOnceWithFreshCredentials()
+    {
+        var refused = true;
+        var inner = YoudaoEndpoint();
+        var handler = new Canned(request =>
+        {
+            if (request.Uri == "https://dict.youdao.com/webtranslate" && refused)
+            {
+                refused = false;
+                return Text(YoudaoEncrypt("""{"code":50}"""));
+            }
+            return inner.Answer(request);
+        });
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["装備"], "zh-TW", "ja"));
+
+        Assert.Equal("<装備>", answer.Text);
+        Assert.Equal(2, handler.Requests.Count(r => r.Uri.Contains("/webtranslate/key")));
+    }
+
+    [Fact]
+    public async Task Youdao_AScriptWithoutTheKeyGetter_SaysSo()
+    {
+        var handler = new Canned(request => request.Uri.EndsWith(".js") ? Text("nothing here") : Text(YoudaoPage));
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["装備"], "zh-TW", "ja"));
+
+        Assert.Contains("key getter", failure.Message);
+    }
+
     // ---- Transport -----------------------------------------------------------------------
 
     // Concurrent requests share one connection per host instead of one each; see EngineHttp.
@@ -598,6 +916,9 @@ public class EngineProtocolTests
     private sealed class Canned(Func<SentRequest, HttpResponseMessage>? answer = null) : HttpMessageHandler
     {
         private readonly List<SentRequest> _requests = [];
+
+        /// <summary>What this handler answers, for another that answers most requests the same way.</summary>
+        public HttpResponseMessage Answer(SentRequest request) => (answer ?? (_ => Json("[]")))(request);
 
         public IReadOnlyList<SentRequest> Requests { get { lock (_requests) return [.. _requests]; } }
 

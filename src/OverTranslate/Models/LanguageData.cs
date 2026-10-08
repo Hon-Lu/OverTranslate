@@ -158,6 +158,8 @@ public static class LanguageData
         new(TranslationProvider.GoogleChrome, "S.Provider.GoogleChrome", false, "S.Provider.GoogleChromeHint"),
         new(TranslationProvider.Bing,      "S.Provider.Bing",      false),
         new(TranslationProvider.Microsoft, "S.Provider.Microsoft", false),
+        new(TranslationProvider.Youdao,    "S.Provider.Youdao",    false),
+        new(TranslationProvider.TranSmart, "S.Provider.TranSmart", false),
         new(TranslationProvider.DeepL,     "S.Provider.DeepL",     true,  "S.Provider.DeepLHint"),
         new(TranslationProvider.OpenAI,    "S.Provider.OpenAI",    false, "S.Provider.OpenAIHint"),
     ];

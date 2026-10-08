@@ -208,6 +208,123 @@ public class LookupProtocolTests
         Assert.Equal(refetched ? 2 : 1, handler.Requests.Count(r => r.Uri.EndsWith("/translator")));
     }
 
+    // ---- Youdao ------------------------------------------------------------------------------
+
+    // Shapes taken from real answers, 2026-10-08, cut down to the parts read.
+    private const string YoudaoEnglish = """
+        {"ec":{"word":{"usphone":"rʌn","ukphone":"rʌn","return-phrase":"run",
+          "trs":[{"pos":"v.","tran":"跑，奔跑；参加（赛跑）；管理，经营；运转；刊登；行驶；流动；掉色；变成；达到"},
+                 {"pos":"n.","tran":"跑步，赛跑；旅程"},
+                 {"tran":"【名】 （Run）（塞）鲁恩（人名）"}]}}}
+        """;
+
+    private const string YoudaoJapanese = """
+        {"newjc":{"word":{"head":{"rs":"sēbu","pjm":"セーブ","hw":"セーブ"},
+          "sense":[{"phrList":[{"jmsy":"【英】save；救，搭救，拯救。"}],"cx":"他动词・サ变/三类 名词"},
+                   {"phrList":[{"jmsy":"電算保存"}]}]}},
+         "jc":{"$ref":"$.newjc"}}
+        """;
+
+    private const string YoudaoHomonyms = """
+        {"newjc":{"word":{"head":{"pjm":"やさしい","hw":"やさしい"},
+          "homonymD":[{"head":{"hw":"優しい"},"sense":[{"phrList":[{"jmsy":"亲切的，富于同情心的。"}],"cx":"形容词"}]},
+                      {"head":{"hw":"易しい"},"sense":[{"phrList":[{"jmsy":"容易。"},{"jmsy":"易懂，简单。"}],"cx":"形容词"}]}],
+          "sense":[{"phrList":[{"jmsy":"容易；小心点；留神点；轻松点"}]}]}}}
+        """;
+
+    private const string YoudaoKorean = """
+        {"kc":{"word":[{"trs":[{"pos":"名","tr":[{"exam":{"i":[]},"l":{"i":["爱，爱情。"]}},{"l":{"i":["爱好。"]}}]}],
+                        "return-phrase":{"l":{"i":"사랑"}}},
+                       {"trs":[{"pos":"名","tr":[{"l":{"i":["厢房。"]}}]}]}]}}
+        """;
+
+    private const string YoudaoFrench = """
+        {"fc":{"word":[{"phone":"mɛzɔ̃","trs":[{"pos":"f.","tr":[{"l":{"i":["房屋，房子；住宅；家，家庭"]}}]},
+                                               {"pos":"a.inv.","tr":[{"l":{"i":["家制的，自制的"]}}]}]}]}}
+        """;
+
+    [Fact]
+    public async Task Youdao_SendsTheWordAndItsLanguage_AndReadsEnglish()
+    {
+        var handler = new Canned(_ => Json(YoudaoEnglish));
+        var engine = new YoudaoDictionary(new HttpClient(handler));
+
+        var result = await engine.LookupAsync("run", "zh-CN", "en");
+
+        var sent = Assert.Single(handler.Requests);
+        Assert.Equal("https://dict.youdao.com/jsonapi_s?doctype=json&jsonversion=4", sent.Uri);
+        Assert.Equal("https://www.youdao.com/", sent.Headers["Referer"]);
+        var form = Form(sent.Body);
+        Assert.Equal(("run", "en", "web"), (form["q"], form["le"], form["client"]));
+
+        Assert.Equal("/rʌn/", result.Pronunciation);
+        Assert.Equal(["v.", "n."], result.Groups.Select(g => g.PartOfSpeech));   // the name with no pos left out
+        Assert.Equal(YoudaoDictionary.MaxEntriesPerGroup, result.Groups[0].Entries.Count);
+        Assert.Equal(["跑，奔跑", "参加（赛跑）", "管理，经营"], result.Groups[0].Entries.Take(3).Select(e => e.Text));
+    }
+
+    [Fact]
+    public async Task Youdao_ReadsJapanese_WithTheKanaReading_AndASenseWithoutAPartOfSpeechKeptWithTheOneBefore()
+    {
+        var engine = new YoudaoDictionary(new HttpClient(new Canned(_ => Json(YoudaoJapanese))));
+
+        var result = await engine.LookupAsync("セーブ", "zh-TW", "ja");
+
+        Assert.Null(result.Pronunciation);   // the reading is the word itself
+        var group = Assert.Single(result.Groups);
+        Assert.Equal("他动词・サ变/三类 名词", group.PartOfSpeech);
+        Assert.Equal(["【英】save", "救，搭救，拯救", "電算保存"], group.Entries.Select(e => e.Text));
+    }
+
+    [Fact]
+    public async Task Youdao_AWordWrittenMoreThanOneWay_IsReadFromItsHomonyms()
+    {
+        var engine = new YoudaoDictionary(new HttpClient(new Canned(_ => Json(YoudaoHomonyms))));
+
+        var result = await engine.LookupAsync("やさしい", "zh-CN", "ja");
+
+        var group = Assert.Single(result.Groups);
+        Assert.Equal(["亲切的，富于同情心的", "容易", "易懂，简单"], group.Entries.Select(e => e.Text));
+    }
+
+    [Fact]
+    public async Task Youdao_ReadsKoreanAndFrench()
+    {
+        var korean = await new YoudaoDictionary(new HttpClient(new Canned(_ => Json(YoudaoKorean))))
+            .LookupAsync("사랑", "zh-CN", "ko");
+        var french = await new YoudaoDictionary(new HttpClient(new Canned(_ => Json(YoudaoFrench))))
+            .LookupAsync("maison", "zh-CN", "fr");
+
+        Assert.Equal(["爱，爱情", "爱好", "厢房"], Assert.Single(korean.Groups).Entries.Select(e => e.Text));
+        Assert.Equal("/mɛzɔ̃/", french.Pronunciation);
+        Assert.Equal(["f.", "a.inv."], french.Groups.Select(g => g.PartOfSpeech));
+        Assert.Equal(["房屋，房子", "住宅", "家，家庭"], french.Groups[0].Entries.Select(e => e.Text));
+    }
+
+    [Fact]
+    public async Task Youdao_AWordItDoesNotKnow_HasNoGroups()
+    {
+        var engine = new YoudaoDictionary(new HttpClient(new Canned(_ => Json("""{"fanyi":{"tran":"x"},"le":"ja"}"""))));
+
+        Assert.Empty((await engine.LookupAsync("ぬぬぬぬ", "zh-CN", "ja")).Groups);
+    }
+
+    // Chinese glosses only, and only for the four languages whose entries have parts of speech:
+    // anything else hands the lookup on without a request.
+    [Theory]
+    [InlineData("run", "ja", "en")]
+    [InlineData("Haus", "zh-CN", "de")]
+    [InlineData("猫", "zh-CN", "zh-TW")]
+    public async Task Youdao_APairItHasNoDictionaryFor_IsEmptyWithoutARequest(string word, string target, string source)
+    {
+        var handler = new Canned(_ => Json(YoudaoEnglish));
+
+        var result = await new YoudaoDictionary(new HttpClient(handler)).LookupAsync(word, target, source);
+
+        Assert.Empty(result.Groups);
+        Assert.Empty(handler.Requests);
+    }
+
     // ---- The application's side -------------------------------------------------------------
 
     [Fact]

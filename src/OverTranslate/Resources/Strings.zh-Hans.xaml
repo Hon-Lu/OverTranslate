@@ -402,6 +402,8 @@
     <sys:String x:Key="S.Provider.GoogleChromeHint">完整句子翻得较自然，但人名、作品名可能被意译或省略</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻译</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻译</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">有道翻译</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">腾讯翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">需到 DeepL 官方注册并获取 API Key</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

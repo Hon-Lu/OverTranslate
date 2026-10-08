@@ -406,6 +406,8 @@
     <sys:String x:Key="S.Provider.GoogleChromeHint">완전한 문장은 더 자연스럽게 번역되지만, 인명이나 작품명이 의역되거나 생략될 수 있습니다</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 번역</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 번역</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">Youdao 번역</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">Tencent 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">DeepL 공식 사이트에서 가입해 API 키를 받아야 합니다</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

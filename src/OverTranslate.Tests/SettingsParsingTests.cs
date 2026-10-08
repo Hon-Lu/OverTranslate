@@ -26,6 +26,15 @@ public class SettingsParsingTests
     }
 
     [Fact]
+    public void YoudaoAndTranSmart_AreReadBackByName()
+    {
+        var settings = SettingsService.Parse("""{"Provider":"Youdao","Realtime":{"Provider":"TranSmart"}}""");
+
+        Assert.Equal(TranslationProvider.Youdao, settings.Provider);
+        Assert.Equal(TranslationProvider.TranSmart, settings.Realtime.Provider);
+    }
+
+    [Fact]
     public void QuickTranslateDefaultsToEnglishWithoutChangingOtherDefaults()
     {
         Assert.Equal("EN-US", new QuickTranslateSettings().TargetLanguage);
