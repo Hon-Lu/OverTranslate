@@ -2,6 +2,7 @@ using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
@@ -112,16 +113,25 @@ public sealed class MangaVerticalRoutingTests : IDisposable
         await store.DownloadAsync();
         using var manga = new MangaOcrEngine(store, BrokenGpu);
 
+        // A process loads DirectML once, so after a test that ran the real models (see
+        // RealMangaModelsFactAttribute) every other file is refused for that reason before it is looked at.
+        var loadedAlready = GetModuleHandleW("DirectML.dll") != IntPtr.Zero;
+
         Assert.Equal(Signature(await Columnsread(null)), Signature(await Columnsread(manga)));
         Assert.Equal(MangaUnavailable.LoadFailed, manga.Unavailable);
-        Assert.Contains("Authenticode", manga.UnavailableReason);
+        Assert.Contains(loadedAlready ? "another DirectML.dll was loaded already" : "Authenticode", manga.UnavailableReason);
 
         // Changed after the download: the hash says so before the signature is asked.
         File.WriteAllBytes(store.RuntimePath!, [8, 7, 6, 5, 4, 3, 2, 1]);
-        Assert.Contains("does not hash", DirectMlDevice.Load(store.RuntimePath, manifest.DirectMl.Files[0]));
+        Assert.Contains("does not hash", DirectMlDevice.Problem(store.RuntimePath!, manifest.DirectMl.Files[0]));
+        Assert.NotNull(DirectMlDevice.Load(store.RuntimePath, manifest.DirectMl.Files[0]));
         File.Delete(store.RuntimePath!);
-        Assert.Contains("not been downloaded", DirectMlDevice.Load(store.RuntimePath, manifest.DirectMl.Files[0]));
+        Assert.Contains("not been downloaded", DirectMlDevice.Problem(store.RuntimePath!, manifest.DirectMl.Files[0]));
+        Assert.NotNull(DirectMlDevice.Load(store.RuntimePath, manifest.DirectMl.Files[0]));
     }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern IntPtr GetModuleHandleW(string moduleName);
 
     [Fact]
     public async Task AnotherLanguage_NeverReachesTheModels()
