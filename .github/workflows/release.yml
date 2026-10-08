@@ -129,7 +129,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$fork\vendor" | Out-Null
           Copy-Item "$vendor\*" "$fork\vendor" -Recurse -Force
 
-          dotnet build "$fork\src\vpk\Velopack.Vpk" -c Release -f net10.0
+          # NuGetAudit 關掉：fork 基於 1.2.0，引用的 SixLabors.ImageSharp 2.1.13 之後被公布了高風險
+          # 漏洞，fork 把警告當錯誤，restore 會直接失敗。vpk 只在這裡打包本倉自己的圖示、不隨 app
+          # 發出去，先不讓它擋發版；fork 升級套件後拿掉這個參數（#283）。
+          dotnet build "$fork\src\vpk\Velopack.Vpk" -c Release -f net10.0 -p:NuGetAudit=false
           if ($LASTEXITCODE -ne 0) { throw "建置 fork 版 vpk 失敗。" }
 
           # Release 下 vendor 是從執行檔往上三層找的，所以直接跑 build 輸出的這顆就會看到
