@@ -81,6 +81,40 @@ public abstract class BatchTranslator(HttpClient http) : ITextTranslator
         return pieces;
     }
 
+    /// <summary>
+    /// For an engine that reads a line break inside a text as the end of a sentence: every
+    /// paragraph becomes pieces of its own, as in <see cref="SplitParagraphs"/>, and the lines
+    /// within each are joined — see <see cref="JoinLines"/>.
+    /// </summary>
+    /// <remarks>
+    /// Where <c>joinLines: true</c> always joins with a space, this joins two lines of Chinese or
+    /// Japanese with nothing, which is how they would have been written on one line. TranSmart
+    /// turned 「おはよう⏎ございます」 into 「早上好，早上好。⏎是的，先生。」 and gives 「おはようございます」
+    /// back as 「早上好，先生。」 (measured 2026-10-08).
+    /// </remarks>
+    private protected IReadOnlyList<TranslationRequestChunk> SplitJoiningLines(string text) =>
+        SplitParagraphs(text, joinLines: false)
+            .Select(chunk => chunk with { Text = JoinLines(chunk.Text) })
+            .ToList();
+
+    /// <summary>
+    /// One paragraph's lines as one line: a space between words, and nothing between two characters
+    /// of a script that sets none.
+    /// </summary>
+    internal static string JoinLines(string paragraph)
+    {
+        // Trimmed first, so every break left has a character on either side of it.
+        var text = paragraph.Trim();
+        return LineBreak.Replace(text, match =>
+            IsUnspaced(text[match.Index - 1]) && IsUnspaced(text[match.Index + match.Length]) ? "" : " ");
+    }
+
+    /// <remarks>Not Hangul: Korean puts spaces between its words.</remarks>
+    private static bool IsUnspaced(char character) =>
+        character is >= '⺀' and <= '鿿'    // radicals, kana, bopomofo, Han
+            or >= '豈' and <= '﫿'          // compatibility ideographs
+            or >= '＀' and <= '￯';         // full-width forms and CJK punctuation
+
     /// <summary>Sends one request's worth of pieces.</summary>
     /// <returns>
     /// Exactly one entry per piece, in order — a count that does not match is thrown for the

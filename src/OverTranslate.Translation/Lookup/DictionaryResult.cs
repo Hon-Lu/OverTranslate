@@ -19,7 +19,10 @@ namespace OverTranslate.Translation.Lookup;
 /// </list>
 /// </remarks>
 /// <param name="Headword">The word the entry is for, as the engine wrote it; the text asked about when it did not say.</param>
-/// <param name="Pronunciation">How the word is read, in Latin letters. Google only.</param>
+/// <param name="Pronunciation">
+/// How the word is read: in Latin letters from Google; from Youdao, the IPA for English and French
+/// and the kana for Japanese.
+/// </param>
 /// <param name="Groups">Translations by part of speech, most likely first.</param>
 public sealed record DictionaryResult(
     string Headword,

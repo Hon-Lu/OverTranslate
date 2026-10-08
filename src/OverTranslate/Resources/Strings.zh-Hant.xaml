@@ -424,6 +424,8 @@
     <sys:String x:Key="S.Provider.GoogleChromeHint">完整句子翻得較自然，但人名、作品名可能被意譯或省略</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">有道翻譯</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">騰訊翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">需至 DeepL 官方註冊並取得 API Key</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

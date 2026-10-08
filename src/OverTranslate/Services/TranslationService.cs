@@ -5,6 +5,8 @@ using OverTranslate.Translation.Bing;
 using OverTranslate.Translation.Google;
 using OverTranslate.Translation.Lookup;
 using OverTranslate.Translation.Microsoft;
+using OverTranslate.Translation.Tencent;
+using OverTranslate.Translation.Youdao;
 using OverTranslate.Layout;
 using OverTranslate.Models;
 using OverTranslate.Services.Providers;
@@ -74,6 +76,8 @@ public class TranslationService
         });
     private readonly BingTranslator         _bing         = new(Http);
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
+    private readonly YoudaoTranslator       _youdao       = new(Http);
+    private readonly TranSmartTranslator    _tranSmart    = new(Http);
     // DeepL's own, because it is an official API spoken to with the user's key and has no reason to
     // introduce itself as a browser. Its clock is everyone's: see TranslationTiming.
     private static readonly HttpClient DeepLHttp = new() { Timeout = TranslationTiming.Request };
@@ -85,6 +89,7 @@ public class TranslationService
     private readonly DictionaryLookupProvider _googleDictionary    = new(new GoogleDictionary(Http), "Google Web");
     private readonly DictionaryLookupProvider _bingDictionary      = new(new BingDictionary(Http), "Bing");
     private readonly DictionaryLookupProvider _microsoftDictionary = new(new MicrosoftDictionary(Http), "Microsoft");
+    private readonly DictionaryLookupProvider _youdaoDictionary    = new(new YoudaoDictionary(Http), "Youdao");
 
     // Per-option resilient wrappers: the user's engine is the primary and is asked twice before
     // anything else is (see ResilientProvider); the backups are there for when it cannot answer.
@@ -92,12 +97,16 @@ public class TranslationService
     private readonly ResilientProvider _googleChromeR;
     private readonly ResilientProvider _bingR;
     private readonly ResilientProvider _microsoftR;
+    private readonly ResilientProvider _youdaoR;
+    private readonly ResilientProvider _tranSmartR;
 
     // The same engines on their own, for callers that asked for no fallback.
     private readonly EngineProvider _googleS;
     private readonly EngineProvider _googleChromeS;
     private readonly EngineProvider _bingS;
     private readonly EngineProvider _microsoftS;
+    private readonly EngineProvider _youdaoS;
+    private readonly EngineProvider _tranSmartS;
 
     // Which option each engine is part of, so the backup badge names what the dropdown names.
     private readonly Dictionary<string, TranslationProvider> _optionOf;
@@ -111,6 +120,8 @@ public class TranslationService
             [_googleChrome.Name] = TranslationProvider.GoogleChrome,
             [_bing.Name]         = TranslationProvider.Bing,
             [_microsoft.Name]    = TranslationProvider.Microsoft,
+            [_youdao.Name]       = TranslationProvider.Youdao,
+            [_tranSmart.Name]    = TranslationProvider.TranSmart,
         };
 
         // Each backup list leads with the engine that writes most like the primary, because a
@@ -123,15 +134,23 @@ public class TranslationService
         // is a different model with nothing that writes like it, so it falls back to 標準. Nothing
         // writes like Bing's language model or like Microsoft, so those two get the fast batch
         // engines. Bing is never a backup: it takes one text per request and is the slowest of all.
+        //
+        // 有道 and 騰訊 are there for users Google cannot reach, so neither falls back to
+        // Google: each backs the other up — the two reachable engines nearest in kind — and Microsoft,
+        // reachable from the same places, is behind both.
         _googleR       = Chain([_google, _google2, _microsoft]);
         _googleChromeR = Chain([_googleChrome, _google, _google2]);
         _bingR         = Chain([_bing, _google, _microsoft]);
         _microsoftR    = Chain([_microsoft, _google, _google2]);
+        _youdaoR       = Chain([_youdao, _tranSmart, _microsoft]);
+        _tranSmartR    = Chain([_tranSmart, _youdao, _microsoft]);
 
         _googleS       = new EngineProvider(_google);
         _googleChromeS = new EngineProvider(_googleChrome);
         _bingS         = new EngineProvider(_bing);
         _microsoftS    = new EngineProvider(_microsoft);
+        _youdaoS       = new EngineProvider(_youdao);
+        _tranSmartS    = new EngineProvider(_tranSmart);
     }
 
     private ResilientProvider Chain(IReadOnlyList<ITextTranslator> engines) =>
@@ -152,6 +171,8 @@ public class TranslationService
         TranslationProvider.GoogleChrome => _googleChromeR,
         TranslationProvider.Bing      => _bingR,
         TranslationProvider.Microsoft => _microsoftR,
+        TranslationProvider.Youdao    => _youdaoR,
+        TranslationProvider.TranSmart => _tranSmartR,
         TranslationProvider.DeepL     => _deepL,
         TranslationProvider.OpenAI    => _openAi,
         _                             => _googleR,
@@ -164,6 +185,8 @@ public class TranslationService
         TranslationProvider.GoogleChrome => _googleChromeS,
         TranslationProvider.Bing         => _bingS,
         TranslationProvider.Microsoft    => _microsoftS,
+        TranslationProvider.Youdao       => _youdaoS,
+        TranslationProvider.TranSmart    => _tranSmartS,
         TranslationProvider.DeepL        => _deepL,
         TranslationProvider.OpenAI       => _openAi,
         _                                => _googleS,
@@ -174,6 +197,7 @@ public class TranslationService
         TranslationProvider.Google    => _googleDictionary,
         TranslationProvider.Bing      => _bingDictionary,
         TranslationProvider.Microsoft => _microsoftDictionary,
+        TranslationProvider.Youdao    => _youdaoDictionary,
         _                             => null,
     };
 

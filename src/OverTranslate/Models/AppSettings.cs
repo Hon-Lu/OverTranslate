@@ -7,7 +7,7 @@ namespace OverTranslate.Models;
 // Google is 「Google 翻譯 (標準)」 — the Web endpoint backed by the RPC one, which write alike.
 // Google2 was 「Google 翻譯 (RPC)」 as a choice of its own; it stays so files that saved it still
 // read, and is read as Google (LanguageData.CurrentProvider). GoogleChrome is 「(Beta)」.
-public enum TranslationProvider { Google, Google2, GoogleChrome, Bing, Microsoft, DeepL, OpenAI }
+public enum TranslationProvider { Google, Google2, GoogleChrome, Bing, Microsoft, DeepL, OpenAI, Youdao, TranSmart }
 
 public class AppSettings
 {

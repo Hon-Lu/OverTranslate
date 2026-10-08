@@ -42,6 +42,14 @@ internal static class DictionaryLookupPlan
                 Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
                 Native(TranslationProvider.Microsoft, sourceLanguage, targetLanguage),
             ],
+            // For users Google cannot reach, so Google is only the last resort. Youdao's dictionary
+            // glosses in Chinese only and says itself when it has nothing, which hands the lookup on.
+            TranslationProvider.Youdao or TranslationProvider.TranSmart =>
+            [
+                Native(TranslationProvider.Youdao, sourceLanguage, targetLanguage),
+                Native(TranslationProvider.Microsoft, sourceLanguage, targetLanguage),
+                Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
+            ],
             TranslationProvider.DeepL =>
             [
                 Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
@@ -76,6 +84,13 @@ internal static class DictionaryLookupPlan
             Converted(TranslationProvider.Bing, sourceLanguage),
             Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
             Converted(TranslationProvider.Microsoft, sourceLanguage),
+        ],
+        // Youdao's glosses are simplified whatever is asked, and shown as they are: see YoudaoDictionary.
+        TranslationProvider.Youdao or TranslationProvider.TranSmart =>
+        [
+            Native(TranslationProvider.Youdao, sourceLanguage, targetLanguage),
+            Converted(TranslationProvider.Microsoft, sourceLanguage),
+            Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
         ],
         TranslationProvider.DeepL =>
         [
