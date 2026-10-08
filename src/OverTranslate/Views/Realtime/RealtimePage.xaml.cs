@@ -294,7 +294,13 @@ public partial class RealtimePage : UserControl
                 .Where(language => !LanguageData.IsAutomaticSource(language.Code))
                 .ToList());
         LocalizationService.BindLocalizedItems(TgtLangBox,  LanguageData.TargetLanguages);
-        LocalizationService.BindLocalizedItems(ProviderBox, LanguageData.Providers);
+        // Also where a change to which services are offered lands, on the way back from the settings
+        // page. A running session has this box locked, and keeps its own choice in the list anyway.
+        var settings = SettingsService.Instance.Current;
+        OverTranslate.Controls.ProviderPicker.Bind(
+            ProviderBox,
+            ProviderVisibility.MenuItems(
+                settings, provider as TranslationProvider? ?? settings.Realtime.Provider));
 
         SrcLangBox.SelectedValue  = source;
         TgtLangBox.SelectedValue  = target;

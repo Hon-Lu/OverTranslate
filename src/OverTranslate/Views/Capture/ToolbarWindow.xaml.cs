@@ -50,6 +50,7 @@ public partial class ToolbarWindow : Window
     private bool _initializingLayoutMode = true;
     private bool _syncingDebug = true;
     private bool _syncingCapture;
+    private bool _syncingProvider;
     private bool _ignoreMoreClick;
 
     // Whether there is recognised text to read, and whether it is being read right now. The voice
@@ -97,6 +98,7 @@ public partial class ToolbarWindow : Window
         SettingsService.Instance.OcrDebugChanged += SyncDebugSwitches;
         SettingsService.Instance.CaptureOptionsChanged += SyncCaptureSwitches;
         SettingsService.Instance.MangaModelOptionsChanged += SyncCaptureSwitches;
+        SettingsService.Instance.ProviderVisibilityChanged += RebuildProviderBox;
         Closed += (_, _) =>
         {
             MorePopup.IsOpen = false;
@@ -104,6 +106,7 @@ public partial class ToolbarWindow : Window
             SettingsService.Instance.OcrDebugChanged -= SyncDebugSwitches;
             SettingsService.Instance.CaptureOptionsChanged -= SyncCaptureSwitches;
             SettingsService.Instance.MangaModelOptionsChanged -= SyncCaptureSwitches;
+            SettingsService.Instance.ProviderVisibilityChanged -= RebuildProviderBox;
         };
         LocationChanged += (_, _) => MorePopup.IsOpen = false;
         MoreBtn.MouseLeave += (_, _) => _ignoreMoreClick = false;
@@ -243,8 +246,12 @@ public partial class ToolbarWindow : Window
 
     private void ProviderBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-        if (ProviderBox.SelectedValue is not TranslationProvider provider) return;
+        if (_syncingProvider || ProviderBox.SelectedValue is not TranslationProvider provider) return;
         SaveProviderSelection(provider);
+
+        // The box was wide enough for a hidden service it can no longer show; it fits what is left.
+        if (e.RemovedItems.OfType<ProviderItem>().Any(item => item.IsHiddenSelection))
+            SizeSelectorsToClosedLabels();
     }
 
     private void SwapBtn_Click(object sender, RoutedEventArgs e)
@@ -631,12 +638,40 @@ public partial class ToolbarWindow : Window
     {
         SrcLangBox.ItemsSource  = LanguageData.OcrSourceLanguages;
         TgtLangBox.ItemsSource  = LanguageData.TargetLanguages;
-        ProviderBox.ItemsSource = LanguageData.Providers;
+        var settings = SettingsService.Instance.Current;
+        OverTranslate.Controls.ProviderPicker.Bind(ProviderBox, ProviderVisibility.MenuItems(settings, settings.Provider));
 
         SrcLangBox.SelectedValue  = LanguageData.GetValidOcrSourceCode(sourceLang);
         TgtLangBox.SelectedValue  = LanguageData.GetValidTargetCode(targetLang);
-        ProviderBox.SelectedValue = SettingsService.Instance.Current.Provider;
+        ProviderBox.SelectedValue = settings.Provider;
         if (ProviderBox.SelectedValue == null) ProviderBox.SelectedIndex = 0;
+    }
+
+    /// <summary>
+    /// Puts the services the settings page now offers into the provider box, keeping the one it
+    /// has selected — hidden or not, see <see cref="ProviderVisibility.MenuItems(AppSettings, TranslationProvider)"/>.
+    /// </summary>
+    /// <remarks>
+    /// Re-selecting after the rebind is not the user choosing anything, so it is kept from reaching
+    /// <see cref="ProviderBox_SelectionChanged"/> and being saved as a choice.
+    /// </remarks>
+    private void RebuildProviderBox(object? sender, EventArgs e)
+    {
+        var settings = SettingsService.Instance.Current;
+        var selected = ProviderBox.SelectedValue as TranslationProvider? ?? settings.Provider;
+
+        _syncingProvider = true;
+        try
+        {
+            OverTranslate.Controls.ProviderPicker.Bind(ProviderBox, ProviderVisibility.MenuItems(settings, selected));
+            ProviderBox.SelectedValue = selected;
+            if (ProviderBox.SelectedValue == null) ProviderBox.SelectedIndex = 0;
+        }
+        finally
+        {
+            _syncingProvider = false;
+        }
+        SizeSelectorsToClosedLabels();
     }
 
     /// <summary>
@@ -654,8 +689,10 @@ public partial class ToolbarWindow : Window
     /// in, and it is the narrowest the box can be without clipping anything the user might pick. The
     /// list is unaffected — it opens as wide as its own contents, as it always did.</para>
     ///
-    /// <para>Run once, in the constructor: the toolbar lives for one capture session and the
-    /// interface language cannot change underneath it.</para>
+    /// <para>Run in the constructor, and again when the services on offer change: the toolbar lives
+    /// for one capture session and the interface language cannot change underneath it, but the
+    /// provider box measures only what it can show, and that can: the services on offer, plus a hidden
+    /// one only for as long as it is the selection (<see cref="OverTranslate.Controls.ProviderPicker.ShowableItems"/>).</para>
     /// </remarks>
     private void SizeSelectorsToClosedLabels()
     {
@@ -663,7 +700,7 @@ public partial class ToolbarWindow : Window
 
         SrcLangBox.Width  = ClosedWidth(SrcLangBox, LanguageData.OcrSourceLanguages.Select(l => l.ShortName));
         TgtLangBox.Width  = ClosedWidth(TgtLangBox, LanguageData.TargetLanguages.Select(l => l.ShortName));
-        ProviderBox.Width = ClosedWidth(ProviderBox, LanguageData.Providers.Select(p => p.ShortName));
+        ProviderBox.Width = ClosedWidth(ProviderBox, OverTranslate.Controls.ProviderPicker.ShowableItems(ProviderBox).Select(p => p.ShortName));
 
         double ClosedWidth(System.Windows.Controls.ComboBox box, IEnumerable<string> labels)
         {

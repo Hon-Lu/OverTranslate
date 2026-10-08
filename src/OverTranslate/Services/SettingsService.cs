@@ -258,6 +258,24 @@ public class SettingsService
         MangaModelOptionsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Raised when the services the menus offer change. Each open menu rebuilds its list from it,
+    /// keeping whatever it has selected.
+    /// </summary>
+    public event EventHandler? ProviderVisibilityChanged;
+
+    /// <summary>Stores which services the menus leave out.</summary>
+    /// <returns>Whether anything changed, and so was saved.</returns>
+    public bool UpdateHiddenProviders(IEnumerable<TranslationProvider> hidden)
+    {
+        var stored = ProviderVisibility.ToStored(Current.HiddenProviders, hidden);
+        if (stored.SequenceEqual(Current.HiddenProviders)) return false;
+        Current.HiddenProviders = stored;
+        Save();
+        ProviderVisibilityChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
     public void Save()
     {
         try

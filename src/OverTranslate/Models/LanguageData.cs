@@ -92,6 +92,16 @@ public record ProviderItem(
     /// nothing at all.
     /// </remarks>
     public string ShortName => Display;
+
+    /// <summary>
+    /// True for the one entry a menu holds only because it is that menu's selection while hidden.
+    /// </summary>
+    /// <remarks>
+    /// The closed picker can only show what is in its list, so the entry stays there — but the open
+    /// list leaves it out, and once the selection moves off it there is no way back to it
+    /// (<see cref="Controls.ProviderPicker"/>). Set by <see cref="ProviderVisibility.MenuItems(IEnumerable{string}?, TranslationProvider)"/>.
+    /// </remarks>
+    public bool IsHiddenSelection { get; init; }
 }
 
 public static class LanguageData
