@@ -55,7 +55,7 @@ OverTranslate currently offers five translation features, so you can pick the on
 - **[Screenshot Translation](#screenshot-translation)** — select an area of the screen; the text is recognised and the translation is shown right on it
 - **[Real-time Translation](#real-time-translation)** — select an area of a video, a game or a comic; the text is recognised continuously and the translation is shown right on it
 - **[Quick Lookup](#quick-lookup)** — select some text and a compact translation popup opens; it can be pinned to stay on screen
-- **[Quick Translate](#quick-translate)** — select some text and press the hotkey to translate it and replace it in place
+- **[In-place Translation](#in-place-translation)** — select some text and press the hotkey to translate it and replace it in place
 - **[Text Translation](#text-translation)** — the full translation window, with text input, swapping languages and reading aloud
 
 > 🌐 **OverTranslate has a multilingual interface. The screenshots in this README show it in Traditional Chinese or English; the interface language is switchable in the app.**
@@ -86,7 +86,7 @@ Once the selection is done, the toolbar offers:
 
 - **Copy text:** copies the recognized text straight to the clipboard, no translation needed
 - **Screenshot:** copies the selected area to the clipboard, and also saves an image file when "Save screenshots" is turned on in the settings
-- **Annotate:** mark up the capture directly with the pen tools, then copy or save what you drew with Screenshot
+- **Annotate:** mark up the capture directly with the pen, highlighter or shapes such as lines, rectangles and ellipses, then copy or save what you drew with Screenshot; some settings are remembered
 
 ![截圖翻譯-標記.png](docs/images/截圖翻譯-標記.png)
 
@@ -131,6 +131,17 @@ For game screens, chat windows, menus and interface text; use this mode when the
 | ![Real-time translation - game chat selection](docs/images/即時翻譯1-遊戲翻譯框.png) | ![Real-time translation - game chat result](docs/images/即時翻譯1-遊戲翻譯.png) |
 | ![Real-time translation - game selection](docs/images/即時翻譯-遊戲翻譯框.png) | ![Real-time translation - game result](docs/images/即時翻譯-遊戲翻譯.png) |
 
+### Compare with Original
+
+Turn on "Compare with original" from the floating bar to keep the original screen as it is and show the translation in a separate compare box, so the original and the translation are easy to check against each other.
+> The compare box can be dragged, resized or closed individually.
+
+| Selection | Translation result |
+|-----------|--------------------|
+| ![Real-time translation - compare with original, selection](docs/images/即時翻譯-原文對照0-前.png) | ![Real-time translation - compare with original, result](docs/images/即時翻譯-原文對照0-後.png) |
+
+> Video source: [millsage「everscape」](https://www.youtube.com/watch?v=nPv1dBYawZQ)
+
 ## Quick Lookup
 > The hotkey (default `Ctrl + Alt + Q`) opens it on top of whatever is on screen.
 
@@ -141,7 +152,7 @@ The window closes itself when you switch to another window; pin it if you need i
 
 ---
 
-## Quick Translate
+## In-place Translation
 > The hotkey (default `Ctrl + Alt + E`); translating opens no window at all.
 
 Select some text and press the hotkey: the translation is pasted straight over it (only in fields that accept typed text; nothing can be pasted outside an input area).
@@ -170,7 +181,7 @@ built-in text to speech (TTS) reads both the original text and the translation a
 | Open translation window (hotkey) | Brings up the main window on the page you left it on (default `Ctrl + Alt + W`); while real-time translation is running, it brings the floating bar to the front |
 | Pause / resume (hotkey) | Pauses or resumes **real-time translation** (default `Ctrl + Alt + S`); while paused you can read the original text |
 | Quick lookup (hotkey) | Opens the **quick lookup** window (default `Ctrl + Alt + Q`); any text you have selected is picked up automatically |
-| Quick translate (hotkey) | Replaces the selected text with its translation (default `Ctrl + Alt + E`), and can use its own source and target language |
+| In-place translation (hotkey) | Replaces the selected text with its translation (default `Ctrl + Alt + E`), and can use its own source and target language |
 | Auto translate | Translates immediately once the screenshot area is selected, with nothing left to click (off by default) |
 | Run at startup | Launch automatically when Windows starts |
 | Save screenshots | Save captures automatically, to a folder of your choice (off by default) |
@@ -198,7 +209,7 @@ built-in text to speech (TTS) reads both the original text and the translation a
 | DeepL | Requires registering on DeepL's site and obtaining an API key |
 | OpenAI | Supports the OpenAI API format; a local LLM is recommended, which you can set up quickly with [Ollama](docs/guides/OLLAMA_GUIDE.en.md) |
   
-An "automatic fallback" mechanism is provided (it applies to **screenshot translation**, **real-time translation**, **Quick Lookup** and **Quick Translate**):
+An "automatic fallback" mechanism is provided (it applies to **screenshot translation**, **real-time translation**, **Quick Lookup** and **In-place Translation**):
 when a translation fails or responds too slowly, the app first retries the same service, and switches to another available translation service only if it still cannot translate. The engine actually in use is shown in the toolbar.
 ![Fallback](docs/images/備援.png)
 

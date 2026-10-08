@@ -751,10 +751,13 @@ p:last-child { margin-bottom: 0; }
   .split { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
   .split--tight { grid-template-columns: 1fr 1fr; align-items: start; }
   .split--reverse .split__text { order: 2; }
+  .split--media-wide { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); }
 }
 .split__text p { color: var(--ink-2); line-height: 1.8; }
 .split__text .kicker, .split__text .h2 { color: var(--accent); }
 .split__text .h2 { color: var(--ink); margin-bottom: 18px; }
+/* 段落內的子功能標題：比小節標題大一階，與「其他翻譯功能」的標題同級 */
+.split--media-wide .h3 { font-size: 1.3rem; }
 .split__media { display: grid; gap: 22px; min-width: 0; }
 
 .subsection { margin-top: clamp(40px, 6vw, 72px); }
