@@ -338,7 +338,8 @@ public partial class QuickLookupWindow : Window
         _suppressAuto = true;
         LocalizationService.BindLocalizedItems(SrcLangBox, LanguageData.SourceLanguages);
         LocalizationService.BindLocalizedItems(TgtLangBox, LanguageData.TargetLanguages);
-        LocalizationService.BindLocalizedItems(ProviderBox, LanguageData.Providers);
+        // The provider box is filled by LoadSharedPreferences: what it lists depends on what is
+        // selected, which is read there.
 
         // Off the target languages, both of them: each end of the bilingual pair has to be somewhere
         // a translation can land, so 自動 is not on offer the way it is for a source picker.
@@ -394,6 +395,7 @@ public partial class QuickLookupWindow : Window
         // Composed in code from the shortcut and the interface language, so DynamicResource cannot
         // reach them — see LocalizationService.LanguageChanged.
         LocalizationService.LanguageChanged += OnLanguageChanged;
+        SettingsService.Instance.ProviderVisibilityChanged += OnProviderVisibilityChanged;
 
         Loaded += (_, _) =>
         {
@@ -1487,13 +1489,37 @@ public partial class QuickLookupWindow : Window
 
         SrcLangBox.SelectedValue = LanguageData.GetValidSourceCode(settings.SourceLanguage);
         TgtLangBox.SelectedValue = LanguageData.GetValidTargetCode(settings.TargetLanguage);
-        ProviderBox.SelectedValue = settings.Provider;
-        if (ProviderBox.SelectedValue is null) ProviderBox.SelectedIndex = 0;
+        // Rebuilt rather than only re-selected: the shared choice may have moved, in another window,
+        // to a service this list was built without — or away from a hidden one it was built with.
+        BindProviderBox(settings.Provider);
         AutoCopyToggle.IsChecked = settings.QuickLookup.AutoCopyTranslation;
 
         BilingualToggle.IsChecked = settings.QuickLookup.BilingualEnabled;
         LoadBilingualPair();
         RenderBilingualMode();
+    }
+
+    /// <summary>
+    /// Fills the provider box with the services on offer plus <paramref name="selected"/>, and
+    /// selects it. Callers hold <see cref="_suppressAuto"/>, so the selection is not saved or
+    /// translated under as if the user had made it.
+    /// </summary>
+    private void BindProviderBox(TranslationProvider selected)
+    {
+        OverTranslate.Controls.ProviderPicker.Bind(
+            ProviderBox, ProviderVisibility.MenuItems(SettingsService.Instance.Current, selected));
+        ProviderBox.SelectedValue = selected;
+        if (ProviderBox.SelectedValue is null) ProviderBox.SelectedIndex = 0;
+    }
+
+    /// <summary>The settings page changed which services are offered; this popup may be open.</summary>
+    private void OnProviderVisibilityChanged(object? sender, EventArgs e)
+    {
+        var wasSuppressed = _suppressAuto;
+        _suppressAuto = true;
+        BindProviderBox(ProviderBox.SelectedValue as TranslationProvider?
+            ?? SettingsService.Instance.Current.Provider);
+        _suppressAuto = wasSuppressed;
     }
 
     private void AutoCopyToggle_Toggled(object sender, RoutedEventArgs e)
@@ -1915,6 +1941,7 @@ public partial class QuickLookupWindow : Window
         // Static and outliving every window, so a handler left attached keeps this one alive for as
         // long as the application runs.
         LocalizationService.LanguageChanged -= OnLanguageChanged;
+        SettingsService.Instance.ProviderVisibilityChanged -= OnProviderVisibilityChanged;
 
         if (ReferenceEquals(_current, this)) _current = null;
         base.OnClosed(e);

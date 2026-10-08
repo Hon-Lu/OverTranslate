@@ -232,6 +232,7 @@ public partial class SettingsPage : UserControl
             DebugSourceOnlyRadio.IsChecked = !s.OcrDebug.ShowOnTranslation;
             DebugSourceAndTranslationRadio.IsChecked = s.OcrDebug.ShowOnTranslation;
 
+            LoadProviderRows(s);
             RefreshServiceTiles();
             UpdateScreenshotPathVisibility();
             UpdateDebugScopeAvailability();
@@ -303,6 +304,69 @@ public partial class SettingsPage : UserControl
             s.QuickTranslate.SourceLanguage = LanguageData.GetValidSourceCode(source);
             s.QuickTranslate.TargetLanguage = LanguageData.GetValidTargetCode(target);
         });
+    }
+
+    /// <summary>
+    /// The service rows in 翻譯服務設定, each with the service it switches.
+    /// </summary>
+    /// <remarks>
+    /// Paired by position: the markup lists the rows in <see cref="LanguageData.Providers"/> order,
+    /// which is the menus' order too, and SettingsPageMarkupTests holds the two lists together.
+    /// </remarks>
+    private List<(System.Windows.Controls.CheckBox Row, TranslationProvider Provider)> ProviderRows() =>
+        ProviderGrid.Children.OfType<System.Windows.Controls.CheckBox>()
+            .Concat(ProviderKeyedList.Children.OfType<System.Windows.Controls.CheckBox>())
+            .Zip(LanguageData.Providers, (row, item) => (row, item.Provider))
+            .ToList();
+
+    private void LoadProviderRows(AppSettings s)
+    {
+        var hidden = ProviderVisibility.Hidden(s);
+        var rows = ProviderRows();
+        foreach (var (row, provider) in rows)
+            row.IsChecked = !hidden.Contains(provider);
+        LockLastProviderRow(rows);
+    }
+
+    /// <summary>
+    /// Saves which services the menus offer. At least one stays offered: the last row still on is
+    /// tagged Locked, and pressing it anyway turns it straight back on. Not IsEnabled, which would
+    /// take the row's 設定 button with it.
+    /// </summary>
+    private void ProviderCard_Toggled(object sender, RoutedEventArgs e)
+    {
+        // Not while the markup is still being read, nor while LoadProviderRows puts the stored state
+        // on the rows one at a time — on the way there, every row can briefly be off.
+        if (_loading || !IsInitialized) return;
+
+        var rows = ProviderRows();
+        if (rows.All(r => r.Row.IsChecked != true))
+        {
+            ((System.Windows.Controls.CheckBox)sender).IsChecked = true;
+            return;
+        }
+        LockLastProviderRow(rows);
+
+        var hidden = rows.Where(r => r.Row.IsChecked != true).Select(r => r.Provider);
+        if (SettingsService.Instance.UpdateHiddenProviders(hidden)) FlashSaved();
+    }
+
+    private static void LockLastProviderRow(
+        List<(System.Windows.Controls.CheckBox Row, TranslationProvider Provider)> rows)
+    {
+        var on = rows.Where(r => r.Row.IsChecked == true).ToList();
+        foreach (var (row, _) in rows)
+            row.Tag = on.Count == 1 && on[0].Row == row ? "Locked" : null;
+    }
+
+    /// <summary>
+    /// Two rows across where each half has room for the longest name beside its mark and switch —
+    /// 「Google Translate (Standard)」 — and one where not.
+    /// </summary>
+    private void ProviderGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        const double MinRowWidth = 360;
+        ProviderGrid.Columns = e.NewSize.Width >= 2 * MinRowWidth ? 2 : 1;
     }
 
     private void Persist(Action<AppSettings> apply)

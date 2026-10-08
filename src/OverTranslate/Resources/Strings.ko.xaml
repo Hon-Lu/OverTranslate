@@ -403,7 +403,7 @@
     <!-- ── Translation providers ── -->
     <sys:String x:Key="S.Provider.Google">Google 번역 (표준)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 번역 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">완전한 문장은 더 자연스럽게 번역되지만, 인명이나 작품명이 의역되거나 생략될 수 있습니다</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">더 자연스럽지만 고유명사가 의역·생략될 수 있음</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 번역</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 번역</sys:String>
     <sys:String x:Key="S.Provider.Youdao">Youdao 번역</sys:String>
@@ -449,7 +449,10 @@
     <sys:String x:Key="S.Settings.StartupCheck">Windows 시작 시 자동 실행</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">번역 서비스 설정</sys:String>
-    <sys:String x:Key="S.Settings.ServiceSetupHint">키나 엔드포인트가 필요한 서비스만 설정하면 됩니다</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuHint">끄면 메뉴 항목만 숨겨지며, 사용 중인 서비스에는 영향이 없습니다. 백업 번역이나 사전 조회에는 계속 쓰일 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuKeepOne">서비스를 하나 이상 남겨 두세요</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">일반 서비스</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">맞춤 설정 가능한 서비스</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">설정 필요</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">설정됨</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">기본값 사용</sys:String>

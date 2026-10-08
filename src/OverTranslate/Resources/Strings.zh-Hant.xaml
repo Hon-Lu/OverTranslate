@@ -421,7 +421,7 @@
          invented, and it reads wrong on an English interface. -->
     <sys:String x:Key="S.Provider.Google">Google 翻譯 (標準)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google 翻譯 (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">完整句子翻得較自然，但人名、作品名可能被意譯或省略</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">譯文較自然，但專有名詞可能被意譯或省略</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Youdao">有道翻譯</sys:String>
@@ -469,7 +469,10 @@
     <sys:String x:Key="S.Settings.StartupCheck">開機時自動啟動</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻譯服務設定</sys:String>
-    <sys:String x:Key="S.Settings.ServiceSetupHint">僅需為需要金鑰或端點的服務進行設定</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuHint">關閉開關僅隱藏選單項目，不影響目前使用的服務，仍可能用於備援翻譯或字典查詢。</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuKeepOne">至少要保留一個服務</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">一般服務</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">可自訂服務</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">需設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">已設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">使用預設</sys:String>

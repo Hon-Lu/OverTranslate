@@ -144,6 +144,18 @@ public class AppSettings
     public string SourceLanguage { get; set; } = LanguageData.DefaultOcrSourceLanguage;
     public string TargetLanguage { get; set; } = "ZH-HANT";
     public TranslationProvider Provider { get; set; } = TranslationProvider.Microsoft;
+
+    /// <summary>
+    /// The services left out of the translation-service menus, by name. Empty: all offered.
+    /// </summary>
+    /// <remarks>
+    /// Names rather than <see cref="TranslationProvider"/> values, so one this build does not know
+    /// costs only itself instead of the whole list. Read through <see cref="ProviderVisibility"/>,
+    /// never directly: that is where unknown names, retired ones and a list that hides everything
+    /// are settled.
+    /// </remarks>
+    public List<string> HiddenProviders { get; set; } = [];
+
     public string ApiKey { get; set; } = "";
     /// <summary>
     /// The OpenAI-compatible server to talk to, or empty for

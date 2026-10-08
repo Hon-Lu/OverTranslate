@@ -399,7 +399,7 @@ Details: {0}</sys:String>
     <!-- ── Translation providers ── -->
     <sys:String x:Key="S.Provider.Google">Google Translate (Standard)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChrome">Google Translate (Beta)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChromeHint">More natural on full sentences, but names and titles may be translated or left out</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">More natural, but names may be reworded or dropped</sys:String>
     <sys:String x:Key="S.Provider.Bing">Bing Translator</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
     <sys:String x:Key="S.Provider.Youdao">Youdao Translate</sys:String>
@@ -445,7 +445,10 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Launch when Windows starts</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">Service setup</sys:String>
-    <sys:String x:Key="S.Settings.ServiceSetupHint">Only services that need a key or an endpoint</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuHint">Turning a service off only hides its menu entry. It doesn't change the service you're using, and the service may still be used as a backup or for dictionary lookups.</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Keep at least one service</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">General services</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">Customizable services</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Setup needed</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Configured</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">Using defaults</sys:String>

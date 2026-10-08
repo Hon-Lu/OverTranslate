@@ -121,6 +121,137 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="ToolTip"           Value="{DynamicResource S.Settings.HotkeyRecordTip}"/>
         </Style>
+        <!-- The keyboard ring for a service row, drawn just outside its border. -->
+        <Style x:Key="ProviderCardFocusVisual">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Rectangle Stroke="{DynamicResource AppAccent}"
+                                   StrokeThickness="1"
+                                   StrokeDashArray="2 2"
+                                   RadiusX="10"
+                                   RadiusY="10"
+                                   Margin="-3"
+                                   SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- One service in 翻譯服務設定: the whole row is the switch, and the switch at its trailing
+             edge is the shortcut rows' own ToggleSwitch, bound to the row and not hit-testable, so it
+             only shows which way the row is set and the press always lands on the row. What "on"
+             means is "offered in the menus", so off keeps the row's fill and place and fades its mark
+             and words (ProviderCardFade) the way the service fades out of the menus — still there,
+             still configurable, only not offered.
+
+             It darkens on the press rather than the release. A 設定 button inside a row takes its own
+             click: Button marks the press handled, so the row underneath never sees it.
+
+             No tooltip on an ordinary row — the switch says what it does. The last row still on is
+             tagged Locked: its switch greys and the hand cursor goes, pressing it anyway puts it
+             straight back on (code-behind), and that row alone explains why on hover. Not IsEnabled,
+             which would take a 設定 button with it. -->
+        <Style x:Key="ProviderCard" TargetType="CheckBox">
+            <Setter Property="FontFamily"       Value="{DynamicResource AppFont}"/>
+            <Setter Property="Foreground"       Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="Margin"           Value="4"/>
+            <Setter Property="MinHeight"        Value="62"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource ProviderCardFocusVisual}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Card"
+                                Background="{DynamicResource AppSurfaceBg}"
+                                BorderBrush="{DynamicResource AppSubtleBorder}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14,10"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="Switch"
+                                          Grid.Column="1"
+                                          Style="{StaticResource ToggleSwitch}"
+                                          IsChecked="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
+                                          IsHitTestVisible="False"
+                                          Focusable="False"
+                                          Margin="14,0,0,0"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AppInputBorder}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Card" Property="Background"  Value="{DynamicResource AppSubtleBorder}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Locked">
+                                <Setter TargetName="Switch" Property="Opacity" Value="0.5"/>
+                                <Setter Property="Cursor"  Value="Arrow"/>
+                                <Setter Property="ToolTip" Value="{DynamicResource S.Settings.ProviderMenuKeepOne}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- What fades on a row that is off: the mark, the name and the note, never the 設定 button
+             or the state badge — those are about the service's setup, which hiding leaves alone. -->
+        <Style x:Key="ProviderCardFade" TargetType="FrameworkElement">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=CheckBox}}" Value="False">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- The mark's square. Each mark is sized inside it by eye rather than to a shared box, since a
+             filled tile (有道), a disc (騰訊), four squares and an open letter cover very different
+             amounts of the same square; the values are on the marks themselves. -->
+        <Style x:Key="ProviderCardMark" TargetType="Grid" BasedOn="{StaticResource ProviderCardFade}">
+            <Setter Property="Width"             Value="32"/>
+            <Setter Property="Height"            Value="32"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin"            Value="0,0,14,0"/>
+        </Style>
+        <Style x:Key="ProviderCardName" TargetType="TextBlock" BasedOn="{StaticResource ChoiceTileTitle}">
+            <Setter Property="FontSize"          Value="15"/>
+            <Setter Property="TextWrapping"      Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=CheckBox}}" Value="False">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ProviderCardNote" TargetType="TextBlock" BasedOn="{StaticResource FieldHint}">
+            <Setter Property="Margin"   Value="0,2,0,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=CheckBox}}" Value="False">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- A group of rows: a hairline down its leading edge and a small heading, so the two groups
+             read as two lists within the one card without a box around each. -->
+        <Style x:Key="ProviderGroupRule" TargetType="Border">
+            <Setter Property="Width"        Value="2"/>
+            <Setter Property="CornerRadius" Value="1"/>
+            <Setter Property="Background"   Value="{DynamicResource AppInputBorder}"/>
+            <Setter Property="Margin"       Value="0,2,14,4"/>
+        </Style>
+        <Style x:Key="ProviderGroupTitle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"   Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="Margin"     Value="0,0,0,6"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="28,22,28,20">
@@ -826,12 +957,15 @@
                 </Border>
 
                 <!-- ══════════ 翻譯服務設定 ══════════
-                     Only the two services that have something to be told. Which service actually
-                     translates is deliberately not set here: 文字翻譯 and 即時翻譯 each keep their
-                     own choice and save it themselves, so a third selector on this page would claim
-                     to speak for both and speak for neither. The services that need nothing are not
-                     tiles either — a tile whose only message is "nothing to set" asks to be read
-                     and then says nothing. -->
+                     One row per service, in the menus' order, each with a switch for whether it is
+                     offered there. Which service actually translates is still deliberately not set
+                     here: 文字翻譯 and 即時翻譯 each keep their own choice and save it themselves, so a
+                     selector on this page would claim to speak for both and speak for neither.
+
+                     Rows rather than tiles, so a row is as tall as one line of name whatever its
+                     neighbours carry, and two groups, split by whether there is anything to set: the
+                     six free services two to a line, and the two with a key or an endpoint a line
+                     each, wide enough for their state badge and 設定 button. -->
                 <Border Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
                         Style="{StaticResource CardBorder}">
                     <StackPanel>
@@ -839,127 +973,219 @@
                             <TextBlock Text="&#xE774;" Style="{StaticResource CardHeaderIcon}"/>
                             <TextBlock Text="{DynamicResource S.Settings.ServiceSetup}"
                                        Style="{StaticResource CardTitle}"/>
-                            <TextBlock Text="{DynamicResource S.Settings.ServiceSetupHint}"
-                                       Style="{StaticResource FieldHint}"
-                                       Margin="12,0,0,0"
-                                       VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <!-- The tiles are the same width whatever they hold, so the pair reads as
-                             two of one thing rather than as a wide one and a narrow one. -->
+                        <!-- 一般服務. No sentence under the heading: what the switches do is said once,
+                             at the foot of the card, for both groups. -->
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource ProviderGroupRule}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{DynamicResource S.Settings.ProviderGroupFree}"
+                                           Style="{StaticResource ProviderGroupTitle}"/>
 
-                            <Border Grid.Column="0" Style="{StaticResource ServiceTileBorder}"
-                                    Margin="0,0,6,0">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                <!-- Two across, or one where a half is too narrow for the longest name
+                                     beside its mark and switch (ProviderGrid_SizeChanged). Two across
+                                     reads in the menus' order row by row. The negative margin cancels
+                                     the rows' own, so their edges line up with the heading. -->
+                                <UniformGrid x:Name="ProviderGrid"
+                                             Columns="2"
+                                             Margin="-4"
+                                             SizeChanged="ProviderGrid_SizeChanged">
 
-                                    <!-- The square around each mark paints nothing: it is the box
-                                         an app icon would occupy, and it is here only so the two
-                                         marks are measured against one fixed size rather than
-                                         against whatever else is in the row. Without it Uniform has
-                                         no height to fit into, and since it only ever shrinks, the
-                                         DeepL mark stayed at the 19 units its own file is drawn in.
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.Google}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource GoogleMarkImage}" Width="26" Height="26"/>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource S.Provider.Google}" Style="{StaticResource ProviderCardName}"/>
+                                        </StackPanel>
+                                    </CheckBox>
 
-                                         A visible plate is a different thing and deliberately not
-                                         drawn: these are the vendors' logos, and setting them on
-                                         tinted tiles turns two recognisable marks into two of this
-                                         app's icons. -->
-                                    <Grid Grid.Column="0" Grid.Row="0"
-                                          Width="48" Height="48"
-                                          VerticalAlignment="Center"
-                                          Margin="0,0,6,0">
-                                        <Path Data="{StaticResource DeepLMarkGeometry}"
-                                              Fill="{DynamicResource AppDeepLMark}"
-                                              Stretch="Uniform"
-                                              Width="32"/>
-                                    </Grid>
+                                    <!-- The same G as 「(標準)」, as it is: Google's guidelines rule out
+                                         altering the mark or setting anything on it, so (Beta) is told
+                                         apart by its name and its note. The one row with a note, because
+                                         (Beta) is the one name that does not say what is different about
+                                         it. -->
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.GoogleChrome}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid Grid.Column="0" Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource GoogleMarkImage}" Width="26" Height="26"/>
+                                            </Grid>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Provider.GoogleChrome}" Style="{StaticResource ProviderCardName}"/>
+                                                <TextBlock Text="{DynamicResource S.Provider.GoogleChromeHint}" Style="{StaticResource ProviderCardNote}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </CheckBox>
 
-                                    <StackPanel Grid.Column="1" Grid.Row="0" VerticalAlignment="Center">
-                                        <TextBlock Text="{DynamicResource S.Provider.DeepL}"
-                                                   Style="{StaticResource ChoiceTileTitle}"
-                                                   FontSize="15"/>
-                                        <Border x:Name="DeepLBadge"
-                                                Style="{StaticResource ServiceBadgeBorder}"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,6,0,0">
-                                            <TextBlock x:Name="DeepLBadgeText" Style="{StaticResource ServiceBadgeText}"/>
-                                        </Border>
-                                    </StackPanel>
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.Bing}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource BingMarkImage}" Height="27"/>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource S.Provider.Bing}" Style="{StaticResource ProviderCardName}"/>
+                                        </StackPanel>
+                                    </CheckBox>
 
-                                    <Button Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
-                                            x:Name="DeepLConfigureBtn"
-                                            Content="{DynamicResource S.Common.Configure}"
-                                            Style="{StaticResource FlatButton}"
-                                            Height="34"
-                                            Margin="0,14,0,0"
-                                            HorizontalAlignment="Stretch"
-                                            Click="ConfigureService_Click"/>
-                                </Grid>
-                            </Border>
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.Microsoft}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource MicrosoftMarkImage}" Width="23" Height="23"/>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource S.Provider.Microsoft}" Style="{StaticResource ProviderCardName}"/>
+                                        </StackPanel>
+                                    </CheckBox>
 
-                            <Border Grid.Column="1" Style="{StaticResource ServiceTileBorder}"
-                                    Margin="6,0,0,0">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.Youdao}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource YoudaoMarkImage}" Width="28" Height="28"/>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource S.Provider.Youdao}" Style="{StaticResource ProviderCardName}"/>
+                                        </StackPanel>
+                                    </CheckBox>
 
-                                    <Grid Grid.Column="0" Grid.Row="0"
-                                          Width="48" Height="48"
-                                          VerticalAlignment="Center"
-                                          Margin="0,0,6,0">
-                                        <!-- Wider than the DeepL mark on purpose. That one is a
-                                             solid shape that fills its box; this one is thin open
-                                             strokes with most of its box empty, and its widest
-                                             points are on the diagonal — so matched box widths
-                                             leave it looking both smaller and further from the
-                                             text. The usual optical correction for an open round
-                                             mark against a solid angular one. -->
-                                        <Path Data="{StaticResource OpenAiMarkGeometry}"
-                                              Fill="{DynamicResource AppOpenAiMark}"
-                                              Stretch="Uniform"
-                                              Width="36"/>
-                                    </Grid>
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.TranSmart}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource TranSmartMarkImage}" Width="27" Height="27"/>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource S.Provider.TranSmart}" Style="{StaticResource ProviderCardName}"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Grid>
 
-                                    <StackPanel Grid.Column="1" Grid.Row="0" VerticalAlignment="Center">
-                                        <TextBlock Text="{DynamicResource S.Provider.OpenAI}"
-                                                   Style="{StaticResource ChoiceTileTitle}"
-                                                   FontSize="15"/>
-                                        <Border x:Name="OpenAiBadge"
-                                                Style="{StaticResource ServiceBadgeBorder}"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,6,0,0">
-                                            <TextBlock x:Name="OpenAiBadgeText" Style="{StaticResource ServiceBadgeText}"/>
-                                        </Border>
-                                    </StackPanel>
+                        <!-- 可自訂服務. Named for what can be set rather than "needs setting up":
+                             OpenAI works on its defaults, and a heading that said otherwise would be
+                             wrong for one of its two rows. -->
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource ProviderGroupRule}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{DynamicResource S.Settings.ProviderGroupKeyed}"
+                                           Style="{StaticResource ProviderGroupTitle}"/>
 
-                                    <Button Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
-                                            x:Name="OpenAiConfigureBtn"
-                                            Content="{DynamicResource S.Common.Configure}"
-                                            Style="{StaticResource FlatButton}"
-                                            Height="34"
-                                            Margin="0,14,0,0"
-                                            HorizontalAlignment="Stretch"
-                                            Click="ConfigureService_Click"/>
-                                </Grid>
-                            </Border>
+                                <!-- 設定 before the switch rather than after it, so every switch on the
+                                     card ends on the same edge: these rows' trailing edge is the right
+                                     column's above. The state badge sits beside the name. -->
+                                <StackPanel x:Name="ProviderKeyedList" Margin="-4">
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.DeepL}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right"
+                                                    x:Name="DeepLConfigureBtn"
+                                                    Content="{DynamicResource S.Common.Configure}"
+                                                    Style="{StaticResource FlatButton}"
+                                                    Height="30"
+                                                    MinWidth="96"
+                                                    Margin="14,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Cursor="Hand"
+                                                    Click="ConfigureService_Click"/>
+                                            <!-- The mark's Path in an unpainted square: see
+                                                 DeepLMarkGeometry for why it is sized by width. -->
+                                            <Grid DockPanel.Dock="Left" Style="{StaticResource ProviderCardMark}">
+                                                <Path Data="{StaticResource DeepLMarkGeometry}"
+                                                      Fill="{DynamicResource AppDeepLMark}"
+                                                      Stretch="Uniform"
+                                                      Width="22"/>
+                                            </Grid>
+                                            <WrapPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Provider.DeepL}"
+                                                           Style="{StaticResource ProviderCardName}"
+                                                           Margin="0,0,10,0"/>
+                                                <Border x:Name="DeepLBadge"
+                                                        Style="{StaticResource ServiceBadgeBorder}">
+                                                    <TextBlock x:Name="DeepLBadgeText" Style="{StaticResource ServiceBadgeText}"/>
+                                                </Border>
+                                            </WrapPanel>
+                                        </DockPanel>
+                                    </CheckBox>
+
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.OpenAI}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right"
+                                                    x:Name="OpenAiConfigureBtn"
+                                                    Content="{DynamicResource S.Common.Configure}"
+                                                    Style="{StaticResource FlatButton}"
+                                                    Height="30"
+                                                    MinWidth="96"
+                                                    Margin="14,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Cursor="Hand"
+                                                    Click="ConfigureService_Click"/>
+                                            <!-- Wider than the DeepL mark on purpose: thin open strokes on
+                                                 the diagonal look smaller than a solid shape of the same
+                                                 box, so it gets the usual optical correction. -->
+                                            <Grid DockPanel.Dock="Left" Style="{StaticResource ProviderCardMark}">
+                                                <Path Data="{StaticResource OpenAiMarkGeometry}"
+                                                      Fill="{DynamicResource AppOpenAiMark}"
+                                                      Stretch="Uniform"
+                                                      Width="25"/>
+                                            </Grid>
+                                            <WrapPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Provider.OpenAI}"
+                                                           Style="{StaticResource ProviderCardName}"
+                                                           Margin="0,0,10,0"/>
+                                                <Border x:Name="OpenAiBadge"
+                                                        Style="{StaticResource ServiceBadgeBorder}">
+                                                    <TextBlock x:Name="OpenAiBadgeText" Style="{StaticResource ServiceBadgeText}"/>
+                                                </Border>
+                                            </WrapPanel>
+                                        </DockPanel>
+                                    </CheckBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Under the rows rather than in a tooltip, because it is the one thing about
+                             the switches a user would get wrong without being told: a service that is
+                             off is not switched off, only out of the menus. -->
+                        <Grid Margin="2,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="&#xE946;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource AppTextSecondary}"
+                                       VerticalAlignment="Top"
+                                       Margin="0,2,8,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{DynamicResource S.Settings.ProviderMenuHint}"
+                                       Style="{StaticResource FieldHint}"
+                                       FontSize="12"
+                                       Margin="0"/>
                         </Grid>
                     </StackPanel>
                 </Border>

@@ -207,7 +207,10 @@ public partial class TranslationPage : UserControl
             // reaches the handlers as a change to nothing and would otherwise be saved as one.
             LocalizationService.BindLocalizedItems(SrcLangBox,  LanguageData.SourceLanguages);
             LocalizationService.BindLocalizedItems(TgtLangBox,  LanguageData.TargetLanguages);
-            LocalizationService.BindLocalizedItems(ProviderBox, LanguageData.Providers);
+            // Also where a change to which services are offered lands: the settings page is only
+            // reached by leaving this one, and coming back is what calls this.
+            OverTranslate.Controls.ProviderPicker.Bind(
+                ProviderBox, ProviderVisibility.MenuItems(settings, provider));
 
             SrcLangBox.SelectedValue = sourceLanguage;
             TgtLangBox.SelectedValue = targetLanguage;
@@ -595,11 +598,13 @@ public partial class TranslationPage : UserControl
     {
         LocalizationService.BindLocalizedItems(SrcLangBox,  LanguageData.SourceLanguages);
         LocalizationService.BindLocalizedItems(TgtLangBox,  LanguageData.TargetLanguages);
-        LocalizationService.BindLocalizedItems(ProviderBox, LanguageData.Providers);
+        var settings = SettingsService.Instance.Current;
+        OverTranslate.Controls.ProviderPicker.Bind(
+            ProviderBox, ProviderVisibility.MenuItems(settings, settings.Provider));
 
         SrcLangBox.SelectedValue  = LanguageData.GetValidSourceCode(sourceLang);
         TgtLangBox.SelectedValue  = LanguageData.GetValidTargetCode(targetLang);
-        ProviderBox.SelectedValue = SettingsService.Instance.Current.Provider;
+        ProviderBox.SelectedValue = settings.Provider;
         if (ProviderBox.SelectedValue == null) ProviderBox.SelectedIndex = 0;
     }
 
