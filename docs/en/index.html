@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=af0fb2fda2" />
+<link rel="stylesheet" href="../site/styles.css?v=bef378cfbc" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -500,42 +500,51 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">Translation services</p>
       <h2 class="h2" data-i18n="engines.title">Several translation services built in</h2>
-      <p class="sectionlede" data-i18n="engines.lede">The built-in services work as soon as the app is installed — no account to register, no API key to apply for.</p>
+      <p class="sectionlede" data-i18n="engines.lede">The built-in services work as soon as the app is installed — no account or API key needed. You can also switch to DeepL or your own AI model.</p>
     </header>
 
-    <ul class="engines reveal">
+    <h3 class="enginegroup reveal" data-i18n="engines.group.general">General services</h3>
+    <ul class="engines engines--general reveal">
       <li class="engine">
-        <h3>Microsoft <span data-i18n="engines.ms.suffix">Translator</span></h3>
-        <p data-i18n="engines.ms.body">Stable and quick to respond</p>
+        <h3 data-i18n="engines.google.name">Google Translate (Standard)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.googlebeta.name">Google Translate (Beta)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.bing.name">Bing Translator</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.ms.name">Microsoft Translator</h3>
         <span class="pill pill--default" data-i18n="engines.badge.default">Default</span>
       </li>
       <li class="engine">
-        <h3>Bing <span data-i18n="engines.bing.suffix">Translator</span></h3>
-        <p data-i18n="engines.bing.body">Good translation quality</p>
-        <span class="pill" data-i18n="engines.badge.free">No setup</span>
+        <h3 data-i18n="engines.youdao.name">Youdao Translate</h3>
       </li>
       <li class="engine">
-        <h3>Google <span data-i18n="engines.google.suffix">Translate</span></h3>
-        <p data-i18n="engines.google.body">Well-rounded, good for everyday use</p>
-        <span class="pill" data-i18n="engines.badge.free">No setup</span>
+        <h3 data-i18n="engines.tencent.name">Tencent Translate</h3>
       </li>
     </ul>
 
-    <div class="split split--tight">
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
-        <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part.</p>
-      </div>
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.advanced.title">External services and AI models</h3>
-        <p data-i18n="engines.advanced.body">Beyond the built-in services you can add other translation services of your own, or translate with a local AI model. Neither is required for everyday use.</p>
-        <p>
-          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
-            <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-          </a>
-        </p>
-      </div>
+    <h3 class="enginegroup reveal" data-i18n="engines.group.custom">Customizable services</h3>
+    <ul class="engines engines--custom reveal">
+      <li class="engine">
+        <h3 data-i18n="engines.deepl.name">DeepL</h3>
+        <span class="pill" data-i18n="engines.deepl.pill">API key required</span>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.openai.name">OpenAI</h3>
+        <span class="pill" data-i18n="engines.openai.pill">OpenAI-compatible API</span>
+        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </li>
+    </ul>
+
+    <div class="enginenote reveal">
+      <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
+      <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
     </div>
   </div>
 </section>

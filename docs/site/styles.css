@@ -988,13 +988,29 @@ p:last-child { margin-bottom: 0; }
 @media (min-width: 880px) { .engines { grid-template-columns: repeat(3, 1fr); } }
 .engine {
   position: relative;
-  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 18px 20px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-m);
   background: var(--surface);
 }
-.engine h3 { font-size: 1rem; letter-spacing: -0.012em; margin-bottom: 5px; }
-.engine p { color: var(--ink-2); font-size: 0.86rem; margin-bottom: 12px; }
+.engine h3 { font-size: 1rem; letter-spacing: -0.012em; margin: 0; }
+/* 兩組服務：一般服務排三欄、可自訂服務排兩欄，組名和 app 設定頁的分組一致 */
+.enginegroup {
+  margin: 0 0 12px;
+  color: var(--ink-3);
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.engines--general { margin-bottom: clamp(28px, 4vw, 40px); }
+@media (min-width: 880px) { .engines--custom { grid-template-columns: repeat(2, 1fr); } }
+.engine__link { flex-basis: 100%; margin-top: 6px; font-size: 0.86rem; }
+.enginenote { max-width: 46rem; }
+.enginenote p { color: var(--ink-2); line-height: 1.8; }
 .pill {
   display: inline-block;
   padding: 3px 10px;

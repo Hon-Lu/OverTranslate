@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=af0fb2fda2" />
+<link rel="stylesheet" href="../site/styles.css?v=bef378cfbc" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -500,42 +500,51 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">翻译服务</p>
       <h2 class="h2" data-i18n="engines.title">内置多种翻译服务</h2>
-      <p class="sectionlede" data-i18n="engines.lede">多种翻译平台安装后即可使用，无需注册账号或申请密钥。</p>
+      <p class="sectionlede" data-i18n="engines.lede">内置服务安装后即可使用，无需注册或申请密钥；也能改用 DeepL 或自己的 AI 模型。</p>
     </header>
 
-    <ul class="engines reveal">
+    <h3 class="enginegroup reveal" data-i18n="engines.group.general">一般服务</h3>
+    <ul class="engines engines--general reveal">
       <li class="engine">
-        <h3>Microsoft <span data-i18n="engines.ms.suffix">翻译</span></h3>
-        <p data-i18n="engines.ms.body">稳定性佳、响应快速</p>
+        <h3 data-i18n="engines.google.name">Google 翻译 (标准)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.googlebeta.name">Google 翻译 (Beta)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.bing.name">Bing 翻译</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.ms.name">Microsoft 翻译</h3>
         <span class="pill pill--default" data-i18n="engines.badge.default">默认</span>
       </li>
       <li class="engine">
-        <h3>Bing <span data-i18n="engines.bing.suffix">翻译</span></h3>
-        <p data-i18n="engines.bing.body">翻译质量佳</p>
-        <span class="pill" data-i18n="engines.badge.free">免设置</span>
+        <h3 data-i18n="engines.youdao.name">有道翻译</h3>
       </li>
       <li class="engine">
-        <h3>Google <span data-i18n="engines.google.suffix">翻译</span></h3>
-        <p data-i18n="engines.google.body">表现均衡，适合日常使用</p>
-        <span class="pill" data-i18n="engines.badge.free">免设置</span>
+        <h3 data-i18n="engines.tencent.name">腾讯翻译</h3>
       </li>
     </ul>
 
-    <div class="split split--tight">
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.fallback.title">自动备援</h3>
-        <p data-i18n="engines.fallback.body">当某个翻译服务无法使用或响应过慢时，会先重新尝试，仍无法翻译才自动切换到其他可用的服务，不需要自己重试或改设置。</p>
-      </div>
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.advanced.title">外部翻译服务与 AI 模型</h3>
-        <p data-i18n="engines.advanced.body">除了内置服务，也能自行加入其他翻译服务，或使用本地 AI 模型进行翻译；不额外设置也不影响一般使用。</p>
-        <p>
-          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.zh-Hans.md" data-loc-href="ollama" target="_blank" rel="noopener">
-            <span data-i18n="engines.advanced.link">本机 AI 模型搭建教程</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-          </a>
-        </p>
-      </div>
+    <h3 class="enginegroup reveal" data-i18n="engines.group.custom">可自定义服务</h3>
+    <ul class="engines engines--custom reveal">
+      <li class="engine">
+        <h3 data-i18n="engines.deepl.name">DeepL 翻译</h3>
+        <span class="pill" data-i18n="engines.deepl.pill">需 API 密钥</span>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.openai.name">OpenAI</h3>
+        <span class="pill" data-i18n="engines.openai.pill">OpenAI 兼容 API</span>
+        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.zh-Hans.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">本机 AI 模型搭建教程</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </li>
+    </ul>
+
+    <div class="enginenote reveal">
+      <h3 class="h3" data-i18n="engines.fallback.title">自动备援</h3>
+      <p data-i18n="engines.fallback.body">当某个翻译服务无法使用或响应过慢时，会先重新尝试，仍无法翻译才自动切换到其他可用的服务，不需要自己重试或改设置。DeepL 与 OpenAI 不适用。</p>
     </div>
   </div>
 </section>

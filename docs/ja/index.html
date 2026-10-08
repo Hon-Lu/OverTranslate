@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=af0fb2fda2" />
+<link rel="stylesheet" href="../site/styles.css?v=bef378cfbc" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -500,42 +500,51 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">翻訳サービス</p>
       <h2 class="h2" data-i18n="engines.title">複数の翻訳サービスを内蔵</h2>
-      <p class="sectionlede" data-i18n="engines.lede">内蔵の翻訳サービスはインストール後すぐに使えます。アカウント登録も API キーの取得も必要ありません。</p>
+      <p class="sectionlede" data-i18n="engines.lede">内蔵のサービスはインストールするだけで使え、登録や API キーは不要です。DeepL や自分の AI モデルに切り替えることもできます。</p>
     </header>
 
-    <ul class="engines reveal">
+    <h3 class="enginegroup reveal" data-i18n="engines.group.general">一般のサービス</h3>
+    <ul class="engines engines--general reveal">
       <li class="engine">
-        <h3>Microsoft <span data-i18n="engines.ms.suffix">翻訳</span></h3>
-        <p data-i18n="engines.ms.body">安定していて応答が速い</p>
+        <h3 data-i18n="engines.google.name">Google 翻訳 (標準)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.googlebeta.name">Google 翻訳 (Beta)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.bing.name">Bing 翻訳</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.ms.name">Microsoft 翻訳</h3>
         <span class="pill pill--default" data-i18n="engines.badge.default">既定</span>
       </li>
       <li class="engine">
-        <h3>Bing <span data-i18n="engines.bing.suffix">翻訳</span></h3>
-        <p data-i18n="engines.bing.body">翻訳の品質が良い</p>
-        <span class="pill" data-i18n="engines.badge.free">設定不要</span>
+        <h3 data-i18n="engines.youdao.name">Youdao 翻訳</h3>
       </li>
       <li class="engine">
-        <h3>Google <span data-i18n="engines.google.suffix">翻訳</span></h3>
-        <p data-i18n="engines.google.body">バランスがよく、ふだん使いに向く</p>
-        <span class="pill" data-i18n="engines.badge.free">設定不要</span>
+        <h3 data-i18n="engines.tencent.name">Tencent 翻訳</h3>
       </li>
     </ul>
 
-    <div class="split split--tight">
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.fallback.title">自動フォールバック</h3>
-        <p data-i18n="engines.fallback.body">ある翻訳サービスが使えない、または応答が遅いときは、まず同じサービスで再試行し、それでも翻訳できない場合に使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。</p>
-      </div>
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.advanced.title">外部の翻訳サービスと AI モデル</h3>
-        <p data-i18n="engines.advanced.body">内蔵のサービス以外に、別の翻訳サービスを自分で追加したり、ローカルの AI モデルで翻訳したりできます。どちらも設定しなくてもふだんの利用に支障はありません。</p>
-        <p>
-          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ja.md" data-loc-href="ollama" target="_blank" rel="noopener">
-            <span data-i18n="engines.advanced.link">ローカル AI モデルの導入ガイド</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-          </a>
-        </p>
-      </div>
+    <h3 class="enginegroup reveal" data-i18n="engines.group.custom">カスタマイズできるサービス</h3>
+    <ul class="engines engines--custom reveal">
+      <li class="engine">
+        <h3 data-i18n="engines.deepl.name">DeepL 翻訳</h3>
+        <span class="pill" data-i18n="engines.deepl.pill">API キーが必要</span>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.openai.name">OpenAI</h3>
+        <span class="pill" data-i18n="engines.openai.pill">OpenAI 互換 API</span>
+        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ja.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">ローカル AI モデルの導入ガイド</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </li>
+    </ul>
+
+    <div class="enginenote reveal">
+      <h3 class="h3" data-i18n="engines.fallback.title">自動フォールバック</h3>
+      <p data-i18n="engines.fallback.body">ある翻訳サービスが使えない、または応答が遅いときは、まず同じサービスで再試行し、それでも翻訳できない場合に使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。DeepL と OpenAI には適用されません。</p>
     </div>
   </div>
 </section>

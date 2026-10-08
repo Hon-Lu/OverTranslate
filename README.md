@@ -185,7 +185,7 @@ built-in text to speech (TTS) reads both the original text and the translation a
 | Auto translate | Translates immediately once the screenshot area is selected, with nothing left to click (off by default) |
 | Run at startup | Launch automatically when Windows starts |
 | Save screenshots | Save captures automatically, to a folder of your choice (off by default) |
-| Service setup | Set the key, endpoint, and model for DeepL and OpenAI; the other services need no setup |
+| Service setup | Choose which services appear in the translation service menus, and set the key, endpoint, and model for DeepL and OpenAI |
 | Theme | Light / Dark |
 | Logging | Records more detailed information about what the app is doing; recommended only while troubleshooting (off by default) |
 | Debug tools | Draws the OCR boxes and text group boxes on top of the **screenshot translation** result (off by default) |
@@ -198,16 +198,19 @@ built-in text to speech (TTS) reads both the original text and the translation a
 
 ### Translation APIs
 
-> Apart from DeepL and OpenAI, everything else works right after you download the app.
+**General services**: work right after installing — no account or API key needed.
 
-| Service | Description |
-|---------|-------------|
-| Google Translate (Standard) | The same translations as the Google Translate website, with stable responses |
-| Google Translate (Beta) | More natural on full sentences, but names and titles may be translated or left out |
-| Bing Translator | Good translation quality (the service may use an LLM to refine meaning, so the wording can vary slightly between translations) |
-| Microsoft Translator | **(default)** Stable and fast |
-| DeepL | Requires registering on DeepL's site and obtaining an API key |
-| OpenAI | Supports the OpenAI API format; a local LLM is recommended, which you can set up quickly with [Ollama](docs/guides/OLLAMA_GUIDE.en.md) |
+- Google Translate (Standard)
+- Google Translate (Beta)
+- Bing Translator
+- Microsoft Translator **(default)**
+- Youdao Translate
+- Tencent Translate
+
+**Customizable services**: bring your own API key or endpoint (see "System Requirements" below).
+
+- DeepL
+- OpenAI
   
 An "automatic fallback" mechanism is provided (it applies to **screenshot translation**, **real-time translation**, **Quick Lookup** and **In-place Translation**):
 when a translation fails or responds too slowly, the app first retries the same service, and switches to another available translation service only if it still cannot translate. The engine actually in use is shown in the toolbar.

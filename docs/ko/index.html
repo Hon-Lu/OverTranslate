@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=af0fb2fda2" />
+<link rel="stylesheet" href="../site/styles.css?v=bef378cfbc" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -500,42 +500,51 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">번역 서비스</p>
       <h2 class="h2" data-i18n="engines.title">여러 번역 서비스 기본 내장</h2>
-      <p class="sectionlede" data-i18n="engines.lede">내장된 번역 서비스는 설치 후 바로 쓸 수 있습니다. 계정을 만들 필요도, API 키를 신청할 필요도 없습니다.</p>
+      <p class="sectionlede" data-i18n="engines.lede">내장 서비스는 설치하면 바로 쓸 수 있으며 가입이나 API 키가 필요 없습니다. DeepL이나 직접 준비한 AI 모델로 바꿔 쓸 수도 있습니다.</p>
     </header>
 
-    <ul class="engines reveal">
+    <h3 class="enginegroup reveal" data-i18n="engines.group.general">일반 서비스</h3>
+    <ul class="engines engines--general reveal">
       <li class="engine">
-        <h3>Microsoft <span data-i18n="engines.ms.suffix">번역</span></h3>
-        <p data-i18n="engines.ms.body">안정적이고 응답이 빠름</p>
+        <h3 data-i18n="engines.google.name">Google 번역 (표준)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.googlebeta.name">Google 번역 (Beta)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.bing.name">Bing 번역</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.ms.name">Microsoft 번역</h3>
         <span class="pill pill--default" data-i18n="engines.badge.default">기본</span>
       </li>
       <li class="engine">
-        <h3>Bing <span data-i18n="engines.bing.suffix">번역</span></h3>
-        <p data-i18n="engines.bing.body">번역 품질이 좋음</p>
-        <span class="pill" data-i18n="engines.badge.free">설정 불필요</span>
+        <h3 data-i18n="engines.youdao.name">Youdao 번역</h3>
       </li>
       <li class="engine">
-        <h3>Google <span data-i18n="engines.google.suffix">번역</span></h3>
-        <p data-i18n="engines.google.body">균형이 좋아 일상적으로 쓰기 좋음</p>
-        <span class="pill" data-i18n="engines.badge.free">설정 불필요</span>
+        <h3 data-i18n="engines.tencent.name">Tencent 번역</h3>
       </li>
     </ul>
 
-    <div class="split split--tight">
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.fallback.title">자동 대체</h3>
-        <p data-i18n="engines.fallback.body">어떤 번역 서비스가 동작하지 않거나 응답이 너무 느리면 먼저 다시 시도하고, 그래도 번역할 수 없을 때 사용할 수 있는 다른 서비스로 자동으로 바뀝니다. 직접 다시 시도하거나 설정을 바꿀 필요가 없습니다.</p>
-      </div>
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.advanced.title">외부 번역 서비스와 AI 모델</h3>
-        <p data-i18n="engines.advanced.body">내장 서비스 외에 다른 번역 서비스를 직접 추가하거나 로컬 AI 모델로 번역할 수 있습니다. 둘 다 설정하지 않아도 일반적인 사용에는 지장이 없습니다.</p>
-        <p>
-          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ko.md" data-loc-href="ollama" target="_blank" rel="noopener">
-            <span data-i18n="engines.advanced.link">로컬 AI 모델 설치 안내</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-          </a>
-        </p>
-      </div>
+    <h3 class="enginegroup reveal" data-i18n="engines.group.custom">맞춤 설정 가능한 서비스</h3>
+    <ul class="engines engines--custom reveal">
+      <li class="engine">
+        <h3 data-i18n="engines.deepl.name">DeepL 번역</h3>
+        <span class="pill" data-i18n="engines.deepl.pill">API 키 필요</span>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.openai.name">OpenAI</h3>
+        <span class="pill" data-i18n="engines.openai.pill">OpenAI 호환 API</span>
+        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ko.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">로컬 AI 모델 설치 안내</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </li>
+    </ul>
+
+    <div class="enginenote reveal">
+      <h3 class="h3" data-i18n="engines.fallback.title">자동 대체</h3>
+      <p data-i18n="engines.fallback.body">어떤 번역 서비스가 동작하지 않거나 응답이 너무 느리면 먼저 다시 시도하고, 그래도 번역할 수 없을 때 사용할 수 있는 다른 서비스로 자동으로 바뀝니다. 직접 다시 시도하거나 설정을 바꿀 필요가 없습니다. DeepL과 OpenAI에는 적용되지 않습니다.</p>
     </div>
   </div>
 </section>
