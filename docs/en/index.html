@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=a651649ecc" />
+<link rel="stylesheet" href="../site/styles.css?v=bef378cfbc" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -188,7 +188,7 @@
       <li class="card">
         <a class="card__link" href="#quick-translate">
           <span class="card__kbd">Ctrl + Alt + E</span>
-          <h3 data-i18n="features.quick.title">Quick Translate</h3>
+          <h3 data-i18n="features.quick.title">In-place Translation</h3>
           <p data-i18n="features.quick.body">Select some text and press the hotkey to translate it and replace it in place.</p>
         </a>
       </li>
@@ -262,12 +262,12 @@
         <ul class="ticks">
           <li><strong data-i18n="capture.tool1.title">Copy text</strong><span data-i18n="capture.tool1.body">Copies the recognized text to the clipboard without translating it.</span></li>
           <li><strong data-i18n="capture.tool2.title">Screenshot</strong><span data-i18n="capture.tool2.body">Copies the selected area to the clipboard, and saves a file too when "Save screenshots" is on.</span></li>
-          <li><strong data-i18n="capture.tool3.title">Annotate</strong><span data-i18n="capture.tool3.body">Mark up the capture with the pen tools, then copy or save what you drew.</span></li>
+          <li><strong data-i18n="capture.tool3.title">Annotate</strong><span data-i18n="capture.tool3.body">Mark up the capture with the pen, highlighter or shapes such as lines, rectangles and ellipses, then copy or save what you drew; some settings are remembered.</span></li>
         </ul>
       </div>
       <div class="split__media">
         <figure class="shot shot--plain">
-          <img src="../images/截圖翻譯-標記.png" width="1504" height="542" alt="The annotate tools on the screenshot toolbar" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
+          <img src="../images/截圖翻譯-標記.png" width="1401" height="539" alt="The annotate tools on the screenshot toolbar" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
         </figure>
       </div>
     </div>
@@ -409,6 +409,32 @@
     </div>
     <p class="shots__note reveal" data-i18n="compare.note">All translation comparisons above are real results from running OverTranslate.</p>
 
+    <div class="split split--reverse split--media-wide subsection reveal">
+      <div class="split__text">
+        <h3 class="h3" data-i18n="realtime.side.title">Compare with original, translation shown separately</h3>
+        <p data-i18n="realtime.side.body">Turn on "Compare with original" from the floating bar to keep the original screen as it is and show the translation in a separate compare box, so the two are easy to check against each other.</p>
+        <aside class="aside">
+          <p data-i18n="realtime.side.note">The compare box can be dragged, resized or closed individually.</p>
+        </aside>
+      </div>
+      <div class="split__media">
+        <figure class="shot">
+          <div class="compare compare--video" data-compare>
+            <img class="compare__img" src="../images/即時翻譯-原文對照0-後.png" width="1773" height="996" alt="Original text kept, with the translation in the compare box below" data-i18n-attr="alt|shot.side.after" loading="lazy" decoding="async" />
+            <div class="compare__clip">
+              <img class="compare__img" src="../images/即時翻譯-原文對照0-前.png" width="1773" height="996" alt="The reading area and its compare box while being set up" data-i18n-attr="alt|shot.side.before" loading="lazy" decoding="async" />
+            </div>
+            <span class="compare__tag compare__tag--before" data-i18n="compare.select">Selection</span>
+            <span class="compare__tag compare__tag--after" data-i18n="compare.after">Translated</span>
+            <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drag to compare the original and the translation" data-i18n-attr="aria-label|a11y.compare">
+              <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+            </div>
+          </div>
+          <figcaption class="src" data-i18n-html="realtime.cap.side">Video from <a href="https://www.youtube.com/watch?v=nPv1dBYawZQ" target="_blank" rel="noopener">millsage「everscape」</a></figcaption>
+        </figure>
+      </div>
+    </div>
+
     <div class="split subsection reveal">
       <div class="split__text">
         <h3 class="h3" data-i18n="realtime.look.title">The look can be adjusted to suit</h3>
@@ -448,11 +474,11 @@
     <div class="grid2 tools">
       <article class="tool reveal" id="quick-translate">
         <div class="tool__head">
-          <h3 class="h3" data-i18n="features.quick.title">Quick Translate</h3>
+          <h3 class="h3" data-i18n="features.quick.title">In-place Translation</h3>
         </div>
         <p data-i18n="more.quick.body">Select some text and press the hotkey: the translation is pasted straight over it with no window opening at all, in any field that accepts typed text.</p>
         <figure class="shot shot--plain">
-          <img src="../images/快速翻譯.png" width="1672" height="941" alt="Quick Translate replacing the selected text" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
+          <img src="../images/快速翻譯.png" width="1672" height="941" alt="In-place Translation replacing the selected text" data-i18n-attr="alt|shot.quick" loading="lazy" decoding="async" data-zoom />
         </figure>
       </article>
       <article class="tool reveal" id="text-translate">
@@ -474,42 +500,51 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">Translation services</p>
       <h2 class="h2" data-i18n="engines.title">Several translation services built in</h2>
-      <p class="sectionlede" data-i18n="engines.lede">The built-in services work as soon as the app is installed — no account to register, no API key to apply for.</p>
+      <p class="sectionlede" data-i18n="engines.lede">The built-in services work as soon as the app is installed — no account or API key needed. You can also switch to DeepL or your own AI model.</p>
     </header>
 
-    <ul class="engines reveal">
+    <h3 class="enginegroup reveal" data-i18n="engines.group.general">General services</h3>
+    <ul class="engines engines--general reveal">
       <li class="engine">
-        <h3>Microsoft <span data-i18n="engines.ms.suffix">Translator</span></h3>
-        <p data-i18n="engines.ms.body">Stable and quick to respond</p>
+        <h3 data-i18n="engines.google.name">Google Translate (Standard)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.googlebeta.name">Google Translate (Beta)</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.bing.name">Bing Translator</h3>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.ms.name">Microsoft Translator</h3>
         <span class="pill pill--default" data-i18n="engines.badge.default">Default</span>
       </li>
       <li class="engine">
-        <h3>Bing <span data-i18n="engines.bing.suffix">Translator</span></h3>
-        <p data-i18n="engines.bing.body">Good translation quality</p>
-        <span class="pill" data-i18n="engines.badge.free">No setup</span>
+        <h3 data-i18n="engines.youdao.name">Youdao Translate</h3>
       </li>
       <li class="engine">
-        <h3>Google <span data-i18n="engines.google.suffix">Translate</span></h3>
-        <p data-i18n="engines.google.body">Well-rounded, good for everyday use</p>
-        <span class="pill" data-i18n="engines.badge.free">No setup</span>
+        <h3 data-i18n="engines.tencent.name">Tencent Translate</h3>
       </li>
     </ul>
 
-    <div class="split split--tight">
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
-        <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part.</p>
-      </div>
-      <div class="split__text reveal">
-        <h3 class="h3" data-i18n="engines.advanced.title">External services and AI models</h3>
-        <p data-i18n="engines.advanced.body">Beyond the built-in services you can add other translation services of your own, or translate with a local AI model. Neither is required for everyday use.</p>
-        <p>
-          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
-            <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-          </a>
-        </p>
-      </div>
+    <h3 class="enginegroup reveal" data-i18n="engines.group.custom">Customizable services</h3>
+    <ul class="engines engines--custom reveal">
+      <li class="engine">
+        <h3 data-i18n="engines.deepl.name">DeepL</h3>
+        <span class="pill" data-i18n="engines.deepl.pill">API key required</span>
+      </li>
+      <li class="engine">
+        <h3 data-i18n="engines.openai.name">OpenAI</h3>
+        <span class="pill" data-i18n="engines.openai.pill">OpenAI-compatible API</span>
+        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </li>
+    </ul>
+
+    <div class="enginenote reveal">
+      <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
+      <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
     </div>
   </div>
 </section>

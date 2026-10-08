@@ -46,7 +46,7 @@ Depending on the translation provider configured by the user, recognized text ma
 
 
 
-These services may include providers such as Microsoft Translator, Google Translate, OpenAI, or other translation APIs configured by the user.
+These services may include providers such as Microsoft Translator, Bing Translator, Google Translate, Youdao Translate, Tencent Translate (TranSmart), DeepL, OpenAI, or other translation APIs configured by the user. Youdao Translate and Tencent Translate are operated from mainland China; text is only sent to them when the user chooses one of them as the translation service.
 
 
 
