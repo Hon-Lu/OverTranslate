@@ -305,6 +305,37 @@ public partial class SettingsPage : UserControl
         });
     }
 
+    /// <summary>
+    /// Design stage only: nothing is saved and no menu is filtered yet. What this does is keep at
+    /// least one service offered — the last row still on is tagged Locked, and pressing it anyway
+    /// turns it straight back on. Not IsEnabled, which would take the row's 設定 button with it.
+    /// </summary>
+    private void ProviderCard_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (ProviderGrid is null || ProviderKeyedList is null) return;
+        var tiles = ProviderGrid.Children.OfType<System.Windows.Controls.CheckBox>()
+            .Concat(ProviderKeyedList.Children.OfType<System.Windows.Controls.CheckBox>())
+            .ToList();
+        if (tiles.All(t => t.IsChecked != true))
+        {
+            ((System.Windows.Controls.CheckBox)sender).IsChecked = true;
+            return;
+        }
+        var ticked = tiles.Where(t => t.IsChecked == true).ToList();
+        foreach (var tile in tiles)
+            tile.Tag = ticked.Count == 1 && ticked[0] == tile ? "Locked" : null;
+    }
+
+    /// <summary>
+    /// Two rows across where each half has room for the longest name beside its mark and switch —
+    /// 「Google Translate (Standard)」 — and one where not.
+    /// </summary>
+    private void ProviderGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        const double MinRowWidth = 360;
+        ProviderGrid.Columns = e.NewSize.Width >= 2 * MinRowWidth ? 2 : 1;
+    }
+
     private void Persist(Action<AppSettings> apply)
     {
         if (_loading) return;
