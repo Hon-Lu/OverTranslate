@@ -414,6 +414,11 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
     /// turning over, reads back only what a poll has asked for — and only what was composed with the
     /// exclusion list in force.
     /// </summary>
+    /// <remarks>
+    /// Never waits on a lock that a thread calling into the device can hold — on Windows 10 this is
+    /// called with the device's own lock held. See the same handler in
+    /// <see cref="WgcWindowCaptureBackend"/> and <see cref="WgcFrameHandoff{T}"/>.
+    /// </remarks>
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
         SizeInt32? resizeTo = null;
@@ -476,8 +481,9 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             }
             else if (resizeTo is null)
             {
-                // A poll is reading the kept frame back; not waited for — see the same branch in
-                // WgcWindowCaptureBackend. This newer frame is kept for the next poll instead.
+                // A poll is reading the kept frame back and may be waiting for the device lock this
+                // thread was called with; waiting for it is the Windows 10 freeze. This newer frame
+                // is kept for the next poll instead — see the same branch in WgcWindowCaptureBackend.
                 _handoff.Hold(new HeldCaptureFrame(frame, content));
                 held = true;
             }

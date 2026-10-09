@@ -395,6 +395,13 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     /// times a second over a game. So it does as little as possible: it takes the frame to keep the
     /// pool turning over, and only reads one back when a poll has asked for one.
     /// </summary>
+    /// <remarks>
+    /// <b>Never waits on a lock that a thread calling into the device can hold.</b> On Windows 10 this
+    /// is called with the device's own lock held, so such a wait is a deadlock — the 2.7.0 freeze; see
+    /// <see cref="WgcFrameHandoff{T}"/>. The kept frame and the right to read back are therefore
+    /// taken by exchange, <see cref="Recreate"/> only takes <c>_sync</c> if it is free, and the one
+    /// lock still waited on, <c>_latestLock</c>, is held only around work on bitmaps in memory.
+    /// </remarks>
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
         SizeInt32? resizeTo = null;
@@ -462,10 +469,10 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             }
             else if (resizeTo is null)
             {
-                // A poll is reading the kept frame back right now. Not waited for — this thread
-                // waiting on a poll is the shape of the Windows 10 freeze — so this newer frame is
-                // kept for the next poll instead. A resizing frame cannot be kept and is let go:
-                // the recreated pool composes the next one.
+                // A poll is reading the kept frame back right now, and may be waiting for the device
+                // lock this thread was called with. Waiting for that poll is the Windows 10 freeze,
+                // so this newer frame is kept for the next poll instead. A resizing frame cannot be
+                // kept and is let go: the recreated pool composes the next one.
                 _handoff.Hold(new HeldCaptureFrame(frame, content));
                 held = true;
             }
@@ -566,10 +573,10 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     private void Recreate(SizeInt32 size)
     {
-        // Called from the frame handler, which must never wait on a lock: whoever holds this one
-        // may be tearing the pool down, and a pool being closed can wait for the handler to return.
-        // Taken only if free — when it is not, the chain is being rebuilt or disposed anyway, and
-        // the next frame of the wrong size asks again.
+        // Called from the frame handler, which must never wait on this lock: whoever holds it may be
+        // closing the session or the pool — calls into the capture stack that can wait for the
+        // handler to return. Taken only if free; when it is not, the chain is being rebuilt or
+        // disposed anyway, and the next frame of the wrong size asks again.
         if (!Monitor.TryEnter(_sync)) return;
         try
         {

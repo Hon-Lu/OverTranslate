@@ -5,17 +5,29 @@ namespace OverTranslate.Services.Realtime.Capture;
 /// read a frame back at a time — both without a lock.
 /// </summary>
 /// <remarks>
-/// Two threads meet here: the capture stack's, raising <c>FrameArrived</c>, and a region loop's,
-/// polling. Until 2.7.0 they met under a lock, and the lock was held across the calls into the frame
-/// and the device — <c>Surface</c>, the readback, <c>Dispose</c>. On Windows 10 that froze realtime
-/// translation a second into a session: the poll sat inside the lock in a call the capture stack
-/// would not finish, the frame handler queued behind the lock, and no frame was delivered again.
+/// The rule this exists for: <b>the frame handler never waits on any lock.</b> On Windows 10 the
+/// capture stack raises <c>FrameArrived</c> while it holds the Direct3D device's own lock — the
+/// multithread-protection lock, which capture turns on for the device it is given. Any thread
+/// calling into that device meanwhile waits for the handler to return. So if the handler in turn
+/// waits on something such a thread holds, neither ever moves again.
+///
+/// That is what froze realtime translation in 2.7.0, about a second into almost every session on
+/// Windows 10 (measured in a Windows 10 VM, dumps in hand). A poll reading the kept frame back held
+/// our lock and stood in <c>ID3D11DeviceContext::Unmap</c> waiting for the device lock; the handler,
+/// called with the device lock held, stood waiting for ours. Making the device multithread-protected
+/// changes nothing — it already is, and it is that lock — and taking the kept frame out without a
+/// lock is not enough on its own: a handler that waits on the readback's lock instead closes the
+/// same circle.
 ///
 /// So nothing here waits. The kept frame changes hands by exchange, and whoever takes it out owns
-/// it — reads it, releases it — with nothing held. The gate is a flag rather than a lock: a thread
-/// that finds a readback already under way does not wait for it but keeps or leaves its frame for
-/// the next turn, which is also what keeps two readbacks from overlapping and the older one landing
-/// last.
+/// it. The gate is a flag rather than a lock: a handler that finds a poll reading back does not
+/// wait for it but keeps its newer frame for the next poll, and a poll that finds the handler
+/// reading leaves the kept one alone. That also keeps the two from ever contending for
+/// <see cref="WgcSurfaceReader"/>'s lock. A poll's own device calls may still wait for a handler to
+/// finish, which is a few milliseconds and never a circle.
+///
+/// Windows 11 does not raise the event under the device lock, which is why the same code never
+/// froze there.
 /// </remarks>
 internal sealed class WgcFrameHandoff<T> where T : class, IDisposable
 {
