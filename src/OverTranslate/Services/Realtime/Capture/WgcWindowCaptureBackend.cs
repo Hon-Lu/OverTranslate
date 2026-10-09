@@ -102,9 +102,8 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     // The newest frame that arrived too soon after a readback to be read itself, kept for the next
     // poll — see WgcFrameThrottle. At most one, so the pool always has a buffer to compose into.
-    private readonly object _heldLock = new();
-    private Direct3D11CaptureFrame? _held;
-    private SizeInt32 _heldSize;
+    // Handed between the frame handler and the polls without a lock — see WgcFrameHandoff.
+    private readonly WgcFrameHandoff<HeldCaptureFrame> _handoff = new();
 
     // Raised whenever a frame has been read back. Only the start-up wait listens: it turns waiting
     // for the first frame from a sleep into a wait the frame itself ends — and, on the UI thread
@@ -116,6 +115,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private int _framesReceived;
     private int _framesRead;
     private int _rebuilds;
+
+    // Where a poll and the frame handler are right now, for the line a stuck session leaves behind —
+    // see StepMarker. Reported by DescribeActivity.
+    private readonly StepMarker _grabStep = new("idle");
+    private readonly StepMarker _arrivalStep = new("idle");
     private long _readbackTicks;
     private int _outsideReported;
 
@@ -245,6 +249,18 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     public Bitmap? GrabRegion(Rectangle screenBounds)
     {
+        try
+        {
+            return GrabRegionCore(screenBounds);
+        }
+        finally
+        {
+            _grabStep.Set("idle");
+        }
+    }
+
+    private Bitmap? GrabRegionCore(Rectangle screenBounds)
+    {
         if (screenBounds.Width <= 0 || screenBounds.Height <= 0) return null;
         if (Volatile.Read(ref _disposed)) return null;
 
@@ -255,8 +271,10 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         Volatile.Write(ref _lastGrabAt, Stopwatch.GetTimestamp());
         ReadHeldFrameIfDue();
 
+        _grabStep.Set("origin");
         if (!TryGetFrameOrigin(out var origin)) return null;
 
+        _grabStep.Set("crop");
         lock (_latestLock)
         {
             if (_latest is not { } latest) return null;
@@ -346,6 +364,9 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         }
     }
 
+    public string DescribeSteps() =>
+        $"grab=[{_grabStep.Describe()}] arrival=[{_arrivalStep.Describe()}]";
+
     public string DescribeActivity()
     {
         var reads = Volatile.Read(ref _framesRead);
@@ -396,6 +417,13 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     /// times a second over a game. So it does as little as possible: it takes the frame to keep the
     /// pool turning over, and only reads one back when a poll has asked for one.
     /// </summary>
+    /// <remarks>
+    /// <b>Never waits on a lock that a thread calling into the device can hold.</b> On Windows 10 this
+    /// is called with the device's own lock held, so such a wait is a deadlock — the 2.7.0 freeze; see
+    /// <see cref="WgcFrameHandoff{T}"/>. The kept frame and the right to read back are therefore
+    /// taken by exchange, <see cref="Recreate"/> only takes <c>_sync</c> if it is free, and the one
+    /// lock still waited on, <c>_latestLock</c>, is held only around work on bitmaps in memory.
+    /// </remarks>
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
         SizeInt32? resizeTo = null;
@@ -403,6 +431,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         var held = false;
         try
         {
+            _arrivalStep.Set("frame");
             frame = sender.TryGetNextFrame();
             if (frame is null) return;
 
@@ -433,27 +462,43 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // one frame when the session starts and one whenever the content changes, so over a
             // paused video or a menu that is not animating those are the same frame. Letting it go
             // means the capture appears to produce nothing at all.
-            lock (_heldLock)
+            var arrival = WgcFrameThrottle.OnArrival(
+                HasFrame(),
+                Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt)),
+                Stopwatch.GetElapsedTime(Volatile.Read(ref _lastGrabAt)),
+                MaxFrameAge,
+                IdleAfter);
+            _handoff.Release();
+            if (arrival == WgcFrameThrottle.Arrival.Skip) return;
+            // A frame that resizes the pool cannot be kept past the end of this handler — the
+            // deadlock above — so it is read now instead.
+            if (arrival == WgcFrameThrottle.Arrival.Hold && resizeTo is null)
             {
-                var arrival = WgcFrameThrottle.OnArrival(
-                    HasFrame(),
-                    Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt)),
-                    Stopwatch.GetElapsedTime(Volatile.Read(ref _lastGrabAt)),
-                    MaxFrameAge,
-                    IdleAfter);
-                ReleaseHeldLocked();
-                if (arrival == WgcFrameThrottle.Arrival.Skip) return;
-                // A frame that resizes the pool cannot be kept past the end of this handler — the
-                // deadlock above — so it is read now instead.
-                if (arrival == WgcFrameThrottle.Arrival.Hold && resizeTo is null)
-                {
-                    _held = frame;
-                    _heldSize = content;
-                    held = true;
-                    return;
-                }
+                _handoff.Hold(new HeldCaptureFrame(frame, content));
+                held = true;
+                return;
+            }
 
-                ReadBack(frame.Surface, content);
+            if (_handoff.TryBeginRead())
+            {
+                try
+                {
+                    _arrivalStep.Set("readback");
+                    ReadBack(frame.Surface, content);
+                }
+                finally
+                {
+                    _handoff.EndRead();
+                }
+            }
+            else if (resizeTo is null)
+            {
+                // A poll is reading the kept frame back right now, and may be waiting for the device
+                // lock this thread was called with. Waiting for that poll is the Windows 10 freeze,
+                // so this newer frame is kept for the next poll instead. A resizing frame cannot be
+                // kept and is let go: the recreated pool composes the next one.
+                _handoff.Hold(new HeldCaptureFrame(frame, content));
+                held = true;
             }
         }
         catch (ObjectDisposedException)
@@ -479,15 +524,19 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // Recreating while it is still out waits for a buffer nobody is going to give back.
             if (resizeTo is { } size)
             {
-                lock (_heldLock) ReleaseHeldLocked();
+                _handoff.Release();
+                _arrivalStep.Set("recreate");
                 Recreate(size);
             }
+
+            _arrivalStep.Set("idle");
         }
     }
 
     /// <summary>
-    /// Copies a frame into memory as the picture polls are handed. Callers hold <see cref="_heldLock"/>,
-    /// which is what keeps the frame handler and a poll from both reading back at once.
+    /// Copies a frame into memory as the picture polls are handed. Callers have claimed
+    /// <see cref="WgcFrameHandoff{T}.TryBeginRead"/>, which is what keeps the frame handler and a
+    /// poll from both reading back at once.
     /// </summary>
     private void ReadBack(IDirect3DSurface surface, SizeInt32 content)
     {
@@ -514,16 +563,20 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     /// </summary>
     private void ReadHeldFrameIfDue()
     {
-        lock (_heldLock)
-        {
-            if (_held is not { } frame) return;
-            if (!WgcFrameThrottle.ReadsHeldFrame(
-                    Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt)), MaxFrameAge)) return;
+        if (!_handoff.HasHeld) return;
+        if (!WgcFrameThrottle.ReadsHeldFrame(
+                Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt)), MaxFrameAge)) return;
 
-            _held = null;
+        // The frame handler is reading a newer frame back; the kept one is older than that and
+        // will be released by the next arrival.
+        if (!_handoff.TryBeginRead()) return;
+        try
+        {
+            if (_handoff.Take() is not { } held) return;
             try
             {
-                ReadBack(frame.Surface, _heldSize);
+                _grabStep.Set("held readback");
+                ReadBack(held.Frame.Surface, held.Size);
             }
             catch (ObjectDisposedException)
             {
@@ -535,23 +588,25 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             }
             finally
             {
-                frame.Dispose();
+                held.Dispose();
             }
         }
-    }
-
-    /// <summary>Lets the kept frame go back to the pool. Callers hold <see cref="_heldLock"/>.</summary>
-    private void ReleaseHeldLocked()
-    {
-        _held?.Dispose();
-        _held = null;
+        finally
+        {
+            _handoff.EndRead();
+        }
     }
 
     private SizeInt32 _poolSize;
 
     private void Recreate(SizeInt32 size)
     {
-        lock (_sync)
+        // Called from the frame handler, which must never wait on this lock: whoever holds it may be
+        // closing the session or the pool — calls into the capture stack that can wait for the
+        // handler to return. Taken only if free; when it is not, the chain is being rebuilt or
+        // disposed anyway, and the next frame of the wrong size asks again.
+        if (!Monitor.TryEnter(_sync)) return;
+        try
         {
             if (_disposed || _pool is null) return;
 
@@ -559,6 +614,10 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             _poolSize = size;
             Interlocked.Increment(ref _rebuilds);
             Log.Debug("Realtime capture resized to {Width}x{Height}", size.Width, size.Height);
+        }
+        finally
+        {
+            Monitor.Exit(_sync);
         }
     }
 
@@ -736,7 +795,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         if (_item is { } item) item.Closed -= OnItemClosed;
         if (_pool is { } pool) pool.FrameArrived -= OnFrameArrived;
 
-        lock (_heldLock) ReleaseHeldLocked();
+        _handoff.Release();
         _session?.Dispose();
         _pool?.Dispose();
         _session = null;

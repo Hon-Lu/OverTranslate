@@ -496,7 +496,9 @@ internal sealed class RealtimeSessionController
             _session = null;
         }
 
-        DisposeCapture();
+        // Taken out of reach now, released last and only after this has returned: everything the
+        // user can see — the overlays, the bar, the shell window — goes back first.
+        var capture = DetachCapture();
         CloseBlockWindows();
         CloseEditWindow();
 
@@ -517,6 +519,7 @@ internal sealed class RealtimeSessionController
         _interlude = default;
 
         RestoreShell();
+        ReleaseInBackground(capture);
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -545,7 +548,10 @@ internal sealed class RealtimeSessionController
         // Before the block windows go: a backend built around a set of overlays is only valid while
         // those overlays are the ones on screen, and edit mode is where the user changes them.
         _session?.Stop();
-        DisposeCapture();
+        // Released once this has returned — the framing layer is about to go up and must not wait on it.
+        // StartTranslating builds a new backend of its own, so the old one going at its own pace
+        // shares nothing with what comes next.
+        ReleaseInBackground(DetachCapture());
         CloseBlockWindows();
         CloseEditWindow();
 
@@ -1065,23 +1071,24 @@ internal sealed class RealtimeSessionController
         RefreshOverlayHandles();
     }
 
-    private void DisposeCapture()
+    /// <summary>
+    /// Takes the capture backend out of reach — <see cref="GrabUnderlying"/> sees nothing from here on —
+    /// and hands it to the caller to release.
+    /// </summary>
+    private IRealtimeCaptureBackend? DetachCapture()
     {
         var capture = _capture;
         _capture = null;
-        if (capture is null) return;
-
-        try
-        {
-            capture.Dispose();
-        }
-        catch (Exception ex)
-        {
-            // A capture source can hold graphics resources whose release can fail on its own; the
-            // rest of the teardown is what puts the user's screen back and must not be stranded.
-            Log.Error(ex, "Failed to dispose the {Backend} capture backend", capture.Name);
-        }
+        return capture;
     }
+
+    /// <summary>
+    /// Releases a capture backend on this (the UI) thread, but queued behind the teardown the user
+    /// sees and never waited for here — see <see cref="RealtimeCaptureRelease"/> for why it is
+    /// neither a plain <c>Dispose</c> nor a pool thread.
+    /// </summary>
+    private static void ReleaseInBackground(IRealtimeCaptureBackend? capture) =>
+        _ = RealtimeCaptureRelease.Release(capture, System.Windows.Application.Current?.Dispatcher);
 
     private void DisposeEscapeHook()
     {
