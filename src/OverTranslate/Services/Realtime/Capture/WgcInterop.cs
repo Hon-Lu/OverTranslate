@@ -30,6 +30,7 @@ internal static class WgcInterop
     private static readonly Guid IidGraphicsCaptureItemInterop = new("3628E81B-3CAC-4C60-B7F4-23CE0E0C3356");
     private static readonly Guid IidDxgiDevice = new("54EC77FA-1377-44E6-8C32-88FD5F44C84C");
     private static readonly Guid IidDxgiFactory1 = new("770AAE78-F26F-4DBA-A829-253C83D1B387");
+    private static readonly Guid IidMultithread = new("9B7E4E00-342C-4106-A19F-4F2704F689F0");
 
     private const string GraphicsCaptureItemClassId = "Windows.Graphics.Capture.GraphicsCaptureItem";
 
@@ -202,6 +203,8 @@ internal static class WgcInterop
             Marshal.ThrowExceptionForHR(hr);
         }
 
+        ProtectFromConcurrentUse(device);
+
         var dxgi = IntPtr.Zero;
         var abi = IntPtr.Zero;
         try
@@ -222,6 +225,44 @@ internal static class WgcInterop
             if (dxgi != IntPtr.Zero) Marshal.Release(dxgi);
             if (device != IntPtr.Zero) Marshal.Release(device);
             if (context != IntPtr.Zero) Marshal.Release(context);
+        }
+    }
+
+    /// <summary>
+    /// Has the device serialise its immediate context itself, so two threads using it cannot corrupt
+    /// it or each other.
+    /// </summary>
+    /// <remarks>
+    /// The capture stack composes frames on this device from a thread of its own, and the backends
+    /// read frames back on it both from the frame handler and from a region loop's poll. Our own two
+    /// paths never overlap, but nothing orders them against the capture stack's use, and an immediate
+    /// context is not thread-safe unless asked to be. Asking costs a critical section per call, which
+    /// at a handful of readbacks a second is nothing. Failing to ask is logged, not fatal: the device
+    /// works as it did before.
+    /// </remarks>
+    private static unsafe void ProtectFromConcurrentUse(IntPtr device)
+    {
+        // ID3D10Multithread, which every D3D11 device exposes; SetMultithreadProtected is slot 5.
+        var iid = IidMultithread;
+        var multithread = IntPtr.Zero;
+        try
+        {
+            var hr = Marshal.QueryInterface(device, ref iid, out multithread);
+            if (hr < 0)
+            {
+                Log.Warn("Capture device does not expose ID3D10Multithread (0x{Hr:X8}); left unprotected", hr);
+                return;
+            }
+
+            ((delegate* unmanaged[Stdcall]<IntPtr, int, int>)(*(void***)multithread)[5])(multithread, 1);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Could not make the capture device multithread-protected; left unprotected");
+        }
+        finally
+        {
+            if (multithread != IntPtr.Zero) Marshal.Release(multithread);
         }
     }
 
