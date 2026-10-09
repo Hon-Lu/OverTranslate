@@ -67,6 +67,8 @@ public class RealtimeCaptureReleaseTests
 
         public string DescribeActivity() => "fake";
 
+        public string DescribeSteps() => "grab=[idle]";
+
         public void Dispose()
         {
             DisposedOnThread = Environment.CurrentManagedThreadId;

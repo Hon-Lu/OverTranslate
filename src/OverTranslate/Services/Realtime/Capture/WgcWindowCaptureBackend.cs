@@ -115,6 +115,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private int _framesReceived;
     private int _framesRead;
     private int _rebuilds;
+
+    // Where a poll and the frame handler are right now, for the line a stuck session leaves behind —
+    // see StepMarker. Reported by DescribeActivity.
+    private readonly StepMarker _grabStep = new("idle");
+    private readonly StepMarker _arrivalStep = new("idle");
     private long _readbackTicks;
     private int _outsideReported;
 
@@ -244,6 +249,18 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     public Bitmap? GrabRegion(Rectangle screenBounds)
     {
+        try
+        {
+            return GrabRegionCore(screenBounds);
+        }
+        finally
+        {
+            _grabStep.Set("idle");
+        }
+    }
+
+    private Bitmap? GrabRegionCore(Rectangle screenBounds)
+    {
         if (screenBounds.Width <= 0 || screenBounds.Height <= 0) return null;
         if (Volatile.Read(ref _disposed)) return null;
 
@@ -254,8 +271,10 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         Volatile.Write(ref _lastGrabAt, Stopwatch.GetTimestamp());
         ReadHeldFrameIfDue();
 
+        _grabStep.Set("origin");
         if (!TryGetFrameOrigin(out var origin)) return null;
 
+        _grabStep.Set("crop");
         lock (_latestLock)
         {
             if (_latest is not { } latest) return null;
@@ -345,6 +364,9 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         }
     }
 
+    public string DescribeSteps() =>
+        $"grab=[{_grabStep.Describe()}] arrival=[{_arrivalStep.Describe()}]";
+
     public string DescribeActivity()
     {
         var reads = Volatile.Read(ref _framesRead);
@@ -409,6 +431,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         var held = false;
         try
         {
+            _arrivalStep.Set("frame");
             frame = sender.TryGetNextFrame();
             if (frame is null) return;
 
@@ -460,6 +483,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             {
                 try
                 {
+                    _arrivalStep.Set("readback");
                     ReadBack(frame.Surface, content);
                 }
                 finally
@@ -501,8 +525,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             if (resizeTo is { } size)
             {
                 _handoff.Release();
+                _arrivalStep.Set("recreate");
                 Recreate(size);
             }
+
+            _arrivalStep.Set("idle");
         }
     }
 
@@ -548,6 +575,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             if (_handoff.Take() is not { } held) return;
             try
             {
+                _grabStep.Set("held readback");
                 ReadBack(held.Frame.Surface, held.Size);
             }
             catch (ObjectDisposedException)

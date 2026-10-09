@@ -57,4 +57,12 @@ public interface IRealtimeCaptureBackend : IDisposable
     /// text — each source counts different things.
     /// </summary>
     string DescribeActivity();
+
+    /// <summary>
+    /// Where this backend's polls and frame handling are right now — the step each last entered,
+    /// for how long, on which thread. Kept in memory only and written to the log only by the
+    /// warnings about a session that did not stop, so a stuck call can be named from a log that has
+    /// nothing below Info in it.
+    /// </summary>
+    string DescribeSteps();
 }

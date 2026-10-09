@@ -49,10 +49,12 @@ internal static class RealtimeCaptureRelease
         return StallWatch.Watch(
             release,
             warnAfter,
+            // Everything needed to name the stuck call is in this one line: the shipped log has
+            // nothing below Info in it.
             () => Log.Warn(
                 "Realtime capture {Backend} is still being released after {Seconds}s; carrying on " +
-                "without it ({Activity})",
-                capture.Name, warnAfter.TotalSeconds, capture.DescribeActivity()),
+                "without it. {Steps} | {Activity}",
+                capture.Name, warnAfter.TotalSeconds, capture.DescribeSteps(), capture.DescribeActivity()),
             () => Log.Info(
                 "Realtime capture {Backend} released late, after {Ms}ms",
                 capture.Name, (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds));

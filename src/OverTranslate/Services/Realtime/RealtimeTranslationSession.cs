@@ -80,6 +80,10 @@ public sealed class RealtimeTranslationSession
     private string? _lastReportedFailure;
     private CancellationTokenSource? _cts;
 
+    // The loops of the current run, so a stop can tell whether they actually stopped — see
+    // RealtimeLoopWatch.
+    private IReadOnlyList<RegionLoop> _loops = [];
+
     // How many region loops are mid-pass. Only drives the busy indicator, so it is deliberately not
     // synchronised beyond being interlocked.
     private int _busyRegions;
@@ -193,13 +197,17 @@ public sealed class RealtimeTranslationSession
         // changed in it. All of this is background work anyway — the grab is a BitBlt, recognition
         // is CPU-bound, translation is I/O — so none of it belongs on the dispatcher, which has an
         // interface to keep responsive for as long as this runs.
+        var loops = new List<RegionLoop>(regions.Count);
         foreach (var region in regions)
         {
             var watched = region;
-            _ = Task.Run(
-                () => RunRegionAsync(watched, sourceLanguage, targetLanguage, readAtOnce, cts.Token),
+            var step = new StepMarker("starting");
+            var loop = Task.Run(
+                () => RunRegionAsync(watched, sourceLanguage, targetLanguage, readAtOnce, step, cts.Token),
                 cts.Token);
+            loops.Add(new RegionLoop(watched.Id, loop, step));
         }
+        _loops = loops;
     }
 
     /// <summary>
@@ -301,6 +309,12 @@ public sealed class RealtimeTranslationSession
     {
         _cts?.Cancel();
         _cts = null;
+
+        // A loop notices the cancellation between calls; one stuck inside a call never does, and
+        // this is what says so — with the step it is stuck in, since nothing below Info is logged.
+        var loops = _loops;
+        _loops = [];
+        _ = RealtimeLoopWatch.WatchStop(loops, _capture, RealtimeLoopWatch.WarnAfter);
         // Back to releasing the model after a period of inactivity, which is the right rule again
         // the moment nothing is watching the screen.
         _ocr.SetKeepWarm(false);
@@ -325,6 +339,7 @@ public sealed class RealtimeTranslationSession
         string sourceLanguage,
         string targetLanguage,
         bool readAtOnce,
+        StepMarker step,
         CancellationToken token)
     {
         var state = new RealtimeRegionState(region.Orientation);
@@ -344,7 +359,7 @@ public sealed class RealtimeTranslationSession
             // have had their turn before the frame counts as answered: see the turn-away below.
             var gateTurnedAway = 0;
 
-            while (asked || await timer.WaitForNextTickAsync(token))
+            while (asked || await NextPollAsync(timer, step, token))
             {
                 // Only the first pass can have been asked for; everything after it is a poll again.
                 var demanded = asked;
@@ -358,6 +373,7 @@ public sealed class RealtimeTranslationSession
                 // this one loop.
                 if (pump.TakeRetryRequest()) state.Invalidate();
 
+                step.Set("grab");
                 using var frame = _capture?.GrabRegion(region.Bounds);
                 if (frame is null) continue;
 
@@ -370,6 +386,7 @@ public sealed class RealtimeTranslationSession
                 // consulting a policy whose whole job is deciding which polls are worth paying for.
                 // A reading caught mid-change is not lost either — the next pass keeps the better of
                 // the two, see RealtimeReadingMerge.
+                step.Set("examine");
                 var reason = demanded
                     ? RealtimeReadReason.TextChanged
                     : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle);
@@ -389,6 +406,7 @@ public sealed class RealtimeTranslationSession
                 {
                     var gateSize = RealtimeGate.SizeFor(frame.Width, frame.Height, gateAlternate);
                     gateAlternate = !gateAlternate;
+                    step.Set("gate detect");
                     var found = await _ocr.TryDetectTextAsync(
                         frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
 
@@ -436,6 +454,7 @@ public sealed class RealtimeTranslationSession
                 try
                 {
                     SetBusy(true);
+                    step.Set("read (ocr)");
                     var reading = await ReadRegionAsync(
                         region, frame, state, Capture, sourceLanguage, pump, token);
 
@@ -499,6 +518,16 @@ public sealed class RealtimeTranslationSession
             Log.Error(ex, "Realtime region {Region} ended unexpectedly", region.Id);
             Failed?.Invoke(this, LocalizationService.Format("S.Realtime.SessionAborted", ex.Message));
         }
+        finally
+        {
+            step.Set("ended");
+        }
+    }
+
+    private static ValueTask<bool> NextPollAsync(PeriodicTimer timer, StepMarker step, CancellationToken token)
+    {
+        step.Set("waiting for the next poll");
+        return timer.WaitForNextTickAsync(token);
     }
 
     // The indicator is on while any region is mid-pass, so it tracks a count rather than a flag.

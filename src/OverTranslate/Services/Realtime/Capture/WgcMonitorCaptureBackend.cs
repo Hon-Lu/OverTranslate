@@ -95,6 +95,11 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
     private int _framesRead;
     private int _framesBeforeExclusion;
     private int _rebuilds;
+
+    // Where a poll and the frame handler are right now, for the line a stuck session leaves behind —
+    // see StepMarker. Reported by DescribeActivity.
+    private readonly StepMarker _grabStep = new("idle");
+    private readonly StepMarker _arrivalStep = new("idle");
     private int _exclusionUpdates;
     private long _readbackTicks;
     private int _outsideReported;
@@ -209,6 +214,18 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
 
     public Bitmap? GrabRegion(Rectangle screenBounds)
     {
+        try
+        {
+            return GrabRegionCore(screenBounds);
+        }
+        finally
+        {
+            _grabStep.Set("idle");
+        }
+    }
+
+    private Bitmap? GrabRegionCore(Rectangle screenBounds)
+    {
         if (screenBounds.Width <= 0 || screenBounds.Height <= 0) return null;
         if (Volatile.Read(ref _disposed)) return null;
 
@@ -217,11 +234,14 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
         // Before any pixels are handed out, because this is where an overlay that appeared since the
         // last poll gets excluded. Until the frames catch up with the new list there is nothing safe
         // to return, and the loop simply skips a poll.
+        _grabStep.Set("exclusions");
         SyncExclusions();
         ReadHeldFrameIfDue();
 
+        _grabStep.Set("origin");
         if (!TryGetFrameOrigin(out var origin)) return null;
 
+        _grabStep.Set("crop");
         lock (_latestLock)
         {
             if (_latest is not { } latest) return null;
@@ -262,6 +282,9 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             }
         }
     }
+
+    public string DescribeSteps() =>
+        $"grab=[{_grabStep.Describe()}] arrival=[{_arrivalStep.Describe()}]";
 
     public string DescribeActivity()
     {
@@ -426,6 +449,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
         var held = false;
         try
         {
+            _arrivalStep.Set("frame");
             frame = sender.TryGetNextFrame();
             if (frame is null) return;
 
@@ -472,6 +496,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             {
                 try
                 {
+                    _arrivalStep.Set("readback");
                     ReadBack(frame.Surface, content);
                 }
                 finally
@@ -505,8 +530,11 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             if (resizeTo is { } size)
             {
                 _handoff.Release();
+                _arrivalStep.Set("recreate");
                 Recreate(size);
             }
+
+            _arrivalStep.Set("idle");
         }
     }
 
@@ -551,6 +579,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             if (_handoff.Take() is not { } held) return;
             try
             {
+                _grabStep.Set("held readback");
                 ReadBack(held.Frame.Surface, held.Size);
             }
             catch (ObjectDisposedException)
