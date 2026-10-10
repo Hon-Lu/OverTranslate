@@ -29,6 +29,17 @@ public class WgcFrameThrottleTests
     }
 
     [Fact]
+    public void TheKeptFrameIsReadAsSoonAsTheLimitAllowsNotWhenAPollComes()
+    {
+        var capture = new Timeline();
+        capture.Poll(0);
+        capture.Frame(0, id: 1);
+        capture.Frame(68, id: 2);
+        Assert.Equal(2, capture.Poll(121));
+        Assert.Equal([0.0, 120.0], capture.Reads);
+    }
+
+    [Fact]
     public void ANewerFrameReplacesTheOneHeld()
     {
         var capture = new Timeline();
@@ -70,29 +81,35 @@ public class WgcFrameThrottleTests
             WgcFrameThrottle.OnArrival(false, TimeSpan.Zero, TimeSpan.FromSeconds(2), MaxFrameAge, IdleAfter));
     }
 
-    /// <summary>The backend's bookkeeping around the policy, with times in milliseconds.</summary>
+    /// <summary>
+    /// The backend's bookkeeping around the policy, with times in milliseconds: the frame handler,
+    /// the timer that reads a kept frame on the same thread, and the polls.
+    /// </summary>
     private sealed class Timeline
     {
         private int? _latest;
         private double _latestAt;
         private double _lastGrabAt;
         private int? _held;
+        private double _heldDue;
 
         public List<double> Reads { get; } = [];
 
         public void Frame(double at, int id)
         {
+            Advance(at);
+            var sinceRead = Ms(at - _latestAt);
+            _held = null;
             switch (WgcFrameThrottle.OnArrival(
-                _latest is not null, Ms(at - _latestAt), Ms(at - _lastGrabAt), MaxFrameAge, IdleAfter))
+                _latest is not null, sinceRead, Ms(at - _lastGrabAt), MaxFrameAge, IdleAfter))
             {
                 case WgcFrameThrottle.Arrival.Hold:
                     _held = id;
+                    _heldDue = at + WgcFrameThrottle.HeldFrameDueIn(sinceRead, MaxFrameAge).TotalMilliseconds;
                     break;
                 case WgcFrameThrottle.Arrival.Skip:
-                    _held = null;
                     break;
                 default:
-                    _held = null;
                     Read(at, id);
                     break;
             }
@@ -100,13 +117,17 @@ public class WgcFrameThrottleTests
 
         public int? Poll(double at)
         {
+            Advance(at);
             _lastGrabAt = at;
-            if (_held is { } held && WgcFrameThrottle.ReadsHeldFrame(Ms(at - _latestAt), MaxFrameAge))
-            {
-                _held = null;
-                Read(at, held);
-            }
             return _latest;
+        }
+
+        // The timer: fires once its time has come, and lets the frame go if nobody is polling.
+        private void Advance(double to)
+        {
+            if (_held is not { } held || _heldDue > to) return;
+            _held = null;
+            if (Ms(_heldDue - _lastGrabAt) <= IdleAfter) Read(_heldDue, held);
         }
 
         private void Read(double at, int id)

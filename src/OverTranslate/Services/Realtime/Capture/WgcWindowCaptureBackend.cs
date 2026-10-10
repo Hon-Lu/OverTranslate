@@ -67,9 +67,15 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // window nobody is watching any more.
     private static readonly TimeSpan IdleAfter = TimeSpan.FromSeconds(1);
 
-    // Two is what the samples use and what the model here wants: frames are consumed as they arrive
-    // and never held, so a deeper pool would only bank staler frames.
+    // Two is what the samples use and what the model here wants: at most one frame is kept for the
+    // frame thread's timer, which still leaves one to compose into, and a deeper pool would only bank
+    // staler frames.
     private const int FrameBuffers = 2;
+
+    // How long a call handed to the frame thread — attaching, closing — is waited for before the
+    // caller gives up on it. Each is a handful of calls into the capture stack that return at once;
+    // this is only there so a thread stuck in one cannot take its caller with it.
+    private static readonly TimeSpan ThreadCallTimeout = TimeSpan.FromSeconds(5);
 
     // How long a new backend is given to produce one frame with something in it before it is judged
     // unusable. Generous: this is paid once, on a path whose alternative is a session that appears
@@ -81,14 +87,14 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private readonly IDirect3DDevice _device;
     private readonly WgcSurfaceReader _reader;
 
-    // Guards the whole capture chain below, which is torn down and rebuilt on a resize and on the
-    // source window being replaced.
-    private readonly object _sync = new();
+    // The capture chain below lives on this thread and is touched nowhere else — built, resized,
+    // rebuilt when the source window is replaced, and closed. See WgcFrameThread.
+    private readonly WgcFrameThread _thread;
     private GraphicsCaptureItem? _item;
     private Direct3D11CaptureFramePool? _pool;
     private GraphicsCaptureSession? _session;
     private IntPtr _hwnd;
-    private bool _disposed;
+    private int _disposed;
 
     // The most recent readback and when it was taken. Written by the frame handler, read by every
     // region loop.
@@ -100,16 +106,8 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // the window's frame rate, this says whether anyone is still watching.
     private long _lastGrabAt;
 
-    // The newest frame that arrived too soon after a readback to be read itself, kept for the next
-    // poll — see WgcFrameThrottle. At most one, so the pool always has a buffer to compose into.
-    // Handed between the frame handler and the polls without a lock — see WgcFrameHandoff.
-    private readonly WgcFrameHandoff<HeldCaptureFrame> _handoff = new();
-
     // Raised whenever a frame has been read back. Only the start-up wait listens: it turns waiting
-    // for the first frame from a sleep into a wait the frame itself ends — and, on the UI thread
-    // that starts a session, into a wait that keeps pumping COM while it runs. A thread sleeping in
-    // Thread.Sleep pumps nothing, which is one way a capture that is working fine can look like a
-    // capture that never produced a frame.
+    // for the first frame from a sleep into a wait the frame itself ends.
     private readonly ManualResetEventSlim _frameSignal = new(false);
 
     private int _framesReceived;
@@ -135,6 +133,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         _resolveSource = resolveSource;
         _device = device;
         _reader = reader;
+        _thread = new WgcFrameThread(ReadHeldFrame);
     }
 
     /// <summary>
@@ -218,7 +217,9 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
             reader = new WgcSurfaceReader(rawDevice, context);
             backend = new WgcWindowCaptureBackend(resolveSource, device, reader) { _adapter = adapter };
-            if (!backend.Attach(hwnd)) throw new InvalidOperationException("the window refused capture");
+            var attaching = backend;
+            if (!backend._thread.Invoke(() => attaching.Attach(hwnd), ThreadCallTimeout))
+                throw new InvalidOperationException("the window refused capture");
 
             outcome = backend.WaitForUsableFrame(timeout);
             if (outcome is not WindowCaptureOutcome.Started)
@@ -262,14 +263,13 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private Bitmap? GrabRegionCore(Rectangle screenBounds)
     {
         if (screenBounds.Width <= 0 || screenBounds.Height <= 0) return null;
-        if (Volatile.Read(ref _disposed)) return null;
+        if (IsDisposed) return null;
 
         // Nothing here waits for a frame. Capture only emits one when the window's content changes,
         // so waiting would block every poll for its full timeout precisely when the window is still
         // — and a still window's last frame is a perfectly true picture of it. The frames keep
         // themselves fresh in the background instead; this says someone is still watching.
         Volatile.Write(ref _lastGrabAt, Stopwatch.GetTimestamp());
-        ReadHeldFrameIfDue();
 
         _grabStep.Set("origin");
         if (!TryGetFrameOrigin(out var origin)) return null;
@@ -348,13 +348,14 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             if (access != Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
                 return $"denied ({access})";
 
-            lock (_sync)
+            var set = _thread.Invoke(() =>
             {
-                if (_session is null) return "no session";
+                if (_session is null) return false;
                 _session.IsBorderRequired = false;
-            }
+                return true;
+            }, ThreadCallTimeout);
 
-            return "allowed";
+            return set ? "allowed" : "no session";
         }
         catch (Exception ex)
         {
@@ -380,49 +381,50 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     // ── Capture chain ────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Points the capture at a window, replacing whatever it was pointed at before.</summary>
+    /// <summary>
+    /// Points the capture at a window, replacing whatever it was pointed at before. Frame thread only:
+    /// the pool is made with <c>Create</c> rather than <c>CreateFreeThreaded</c>, which delivers its
+    /// frames through the queue of the thread that made it.
+    /// </summary>
     private bool Attach(IntPtr hwnd)
     {
-        lock (_sync)
-        {
-            if (_disposed) return false;
+        if (IsDisposed) return false;
 
-            DetachLocked();
+        Detach();
 
-            var item = WgcInterop.CreateItemForWindow(hwnd);
-            if (item is null) return false;
+        var item = WgcInterop.CreateItemForWindow(hwnd);
+        if (item is null) return false;
 
-            _item = item;
-            _hwnd = hwnd;
-            item.Closed += OnItemClosed;
+        _item = item;
+        _hwnd = hwnd;
+        item.Closed += OnItemClosed;
 
-            _poolSize = item.Size;
-            _pool = Direct3D11CaptureFramePool.CreateFreeThreaded(
-                _device, DirectXPixelFormat.B8G8R8A8UIntNormalized, FrameBuffers, _poolSize);
-            _pool.FrameArrived += OnFrameArrived;
+        _poolSize = item.Size;
+        _pool = Direct3D11CaptureFramePool.Create(
+            _device, DirectXPixelFormat.B8G8R8A8UIntNormalized, FrameBuffers, _poolSize);
+        _pool.FrameArrived += OnFrameArrived;
 
-            _session = _pool.CreateCaptureSession(item);
-            _session.StartCapture();
+        _session = _pool.CreateCaptureSession(item);
+        _session.StartCapture();
 
-            Log.Info(
-                "Realtime capture backend WgcWindow attached: hwnd={Hwnd:X} itemSize={Width}x{Height} " +
-                "on {Adapter}",
-                hwnd, item.Size.Width, item.Size.Height, _adapter);
-            return true;
-        }
+        Log.Info(
+            "Realtime capture backend WgcWindow attached: hwnd={Hwnd:X} itemSize={Width}x{Height} " +
+            "on {Adapter}",
+            hwnd, item.Size.Width, item.Size.Height, _adapter);
+        return true;
     }
 
     /// <summary>
-    /// Free-threaded, called by the capture stack at the window's own frame rate — which may be 144
-    /// times a second over a game. So it does as little as possible: it takes the frame to keep the
-    /// pool turning over, and only reads one back when a poll has asked for one.
+    /// Called on the frame thread at the window's own frame rate — which may be 144 times a second
+    /// over a game. So it does as little as possible: it takes the frame to keep the pool turning
+    /// over, and only reads one back when a poll has asked for one.
     /// </summary>
     /// <remarks>
-    /// <b>Never waits on a lock that a thread calling into the device can hold.</b> On Windows 10 this
-    /// is called with the device's own lock held, so such a wait is a deadlock — the 2.7.0 freeze; see
-    /// <see cref="WgcFrameHandoff{T}"/>. The kept frame and the right to read back are therefore
-    /// taken by exchange, <see cref="Recreate"/> only takes <c>_sync</c> if it is free, and the one
-    /// lock still waited on, <c>_latestLock</c>, is held only around work on bitmaps in memory.
+    /// <b>This and the timer that reads a kept frame are the only code that touches a frame or the
+    /// device, and both run on the one frame thread.</b> Reading back on a polling thread is what
+    /// froze 2.7.0 on Windows 10, and is the suspect in the 2.7.x lock-ups on AMD graphics; see
+    /// <see cref="WgcFrameThread"/>. The one lock waited on here, <c>_latestLock</c>, is held only
+    /// around work on bitmaps in memory.
     /// </remarks>
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
@@ -462,44 +464,27 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // one frame when the session starts and one whenever the content changes, so over a
             // paused video or a menu that is not animating those are the same frame. Letting it go
             // means the capture appears to produce nothing at all.
+            var sinceRead = Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
             var arrival = WgcFrameThrottle.OnArrival(
                 HasFrame(),
-                Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt)),
+                sinceRead,
                 Stopwatch.GetElapsedTime(Volatile.Read(ref _lastGrabAt)),
                 MaxFrameAge,
                 IdleAfter);
-            _handoff.Release();
+            // A newer frame makes the kept one stale, whatever becomes of this one.
+            _thread.ReleaseHeld();
             if (arrival == WgcFrameThrottle.Arrival.Skip) return;
             // A frame that resizes the pool cannot be kept past the end of this handler — the
             // deadlock above — so it is read now instead.
             if (arrival == WgcFrameThrottle.Arrival.Hold && resizeTo is null)
             {
-                _handoff.Hold(new HeldCaptureFrame(frame, content));
+                _thread.Hold(frame, WgcFrameThrottle.HeldFrameDueIn(sinceRead, MaxFrameAge));
                 held = true;
                 return;
             }
 
-            if (_handoff.TryBeginRead())
-            {
-                try
-                {
-                    _arrivalStep.Set("readback");
-                    ReadBack(frame.Surface, content);
-                }
-                finally
-                {
-                    _handoff.EndRead();
-                }
-            }
-            else if (resizeTo is null)
-            {
-                // A poll is reading the kept frame back right now, and may be waiting for the device
-                // lock this thread was called with. Waiting for that poll is the Windows 10 freeze,
-                // so this newer frame is kept for the next poll instead. A resizing frame cannot be
-                // kept and is let go: the recreated pool composes the next one.
-                _handoff.Hold(new HeldCaptureFrame(frame, content));
-                held = true;
-            }
+            _arrivalStep.Set("readback");
+            ReadBack(frame.Surface, content);
         }
         catch (ObjectDisposedException)
         {
@@ -524,7 +509,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // Recreating while it is still out waits for a buffer nobody is going to give back.
             if (resizeTo is { } size)
             {
-                _handoff.Release();
+                _thread.ReleaseHeld();
                 _arrivalStep.Set("recreate");
                 Recreate(size);
             }
@@ -533,11 +518,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         }
     }
 
-    /// <summary>
-    /// Copies a frame into memory as the picture polls are handed. Callers have claimed
-    /// <see cref="WgcFrameHandoff{T}.TryBeginRead"/>, which is what keeps the frame handler and a
-    /// poll from both reading back at once.
-    /// </summary>
+    /// <summary>Copies a frame into memory as the picture polls are handed. Frame thread only.</summary>
     private void ReadBack(IDirect3DSurface surface, SizeInt32 content)
     {
         var started = Stopwatch.GetTimestamp();
@@ -557,67 +538,53 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     }
 
     /// <summary>
-    /// Reads back the frame kept by the handler, once the readback limit allows it. Called by a
-    /// poll, because on a still window no later frame is coming to do it — see
-    /// <see cref="WgcFrameThrottle.OnArrival"/>.
+    /// Reads back the frame the handler kept, once the readback limit allows it — on a still window
+    /// no later frame is coming to do it, see <see cref="WgcFrameThrottle.OnArrival"/>. Run by the
+    /// frame thread's timer, so on the same thread as every other readback. Owns the frame.
     /// </summary>
-    private void ReadHeldFrameIfDue()
+    private void ReadHeldFrame(Direct3D11CaptureFrame frame)
     {
-        if (!_handoff.HasHeld) return;
-        if (!WgcFrameThrottle.ReadsHeldFrame(
-                Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt)), MaxFrameAge)) return;
-
-        // The frame handler is reading a newer frame back; the kept one is older than that and
-        // will be released by the next arrival.
-        if (!_handoff.TryBeginRead()) return;
         try
         {
-            if (_handoff.Take() is not { } held) return;
-            try
-            {
-                _grabStep.Set("held readback");
-                ReadBack(held.Frame.Surface, held.Size);
-            }
-            catch (ObjectDisposedException)
-            {
-                // The pool went while the frame was waiting; the next frame or poll recovers.
-            }
-            catch (Exception ex)
-            {
-                Log.Debug(ex, "Realtime capture dropped a held frame");
-            }
-            finally
-            {
-                held.Dispose();
-            }
+            // Nobody has polled for a while: the session is ending.
+            if (IsDisposed || Stopwatch.GetElapsedTime(Volatile.Read(ref _lastGrabAt)) > IdleAfter) return;
+
+            _arrivalStep.Set("held readback");
+            ReadBack(frame.Surface, frame.ContentSize);
+        }
+        catch (ObjectDisposedException)
+        {
+            // The pool went while the frame was waiting; the next frame recovers.
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Realtime capture dropped a held frame");
         }
         finally
         {
-            _handoff.EndRead();
+            frame.Dispose();
+            _arrivalStep.Set("idle");
         }
     }
 
     private SizeInt32 _poolSize;
 
+    /// <summary>Frame thread only, and only once the frame that asked for it has been released.</summary>
     private void Recreate(SizeInt32 size)
     {
-        // Called from the frame handler, which must never wait on this lock: whoever holds it may be
-        // closing the session or the pool — calls into the capture stack that can wait for the
-        // handler to return. Taken only if free; when it is not, the chain is being rebuilt or
-        // disposed anyway, and the next frame of the wrong size asks again.
-        if (!Monitor.TryEnter(_sync)) return;
+        if (IsDisposed || _pool is null) return;
+
         try
         {
-            if (_disposed || _pool is null) return;
-
             _pool.Recreate(_device, DirectXPixelFormat.B8G8R8A8UIntNormalized, FrameBuffers, size);
             _poolSize = size;
             Interlocked.Increment(ref _rebuilds);
             Log.Debug("Realtime capture resized to {Width}x{Height}", size.Width, size.Height);
         }
-        finally
+        catch (Exception ex)
         {
-            Monitor.Exit(_sync);
+            // The next frame of the wrong size asks again.
+            Log.Debug(ex, "Realtime capture could not resize to {Width}x{Height}", size.Width, size.Height);
         }
     }
 
@@ -628,7 +595,14 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     /// </summary>
     private void OnItemClosed(GraphicsCaptureItem sender, object args)
     {
-        if (Volatile.Read(ref _disposed)) return;
+        // Rebuilding the chain belongs on the frame thread with everything else that touches it,
+        // whichever thread this was raised on.
+        if (!IsDisposed) _thread.Post(ReattachAfterClose);
+    }
+
+    private void ReattachAfterClose()
+    {
+        if (IsDisposed) return;
 
         Log.Warn("Realtime capture source window {Hwnd:X} closed", _hwnd);
 
@@ -694,11 +668,9 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             var left = timeout - Stopwatch.GetElapsedTime(started);
             if (left <= TimeSpan.Zero) break;
 
-            // On the handle rather than through ManualResetEventSlim.Wait, and not Thread.Sleep.
-            // This is called from the thread that starts a session, which on a WPF application is
-            // the UI thread — an STA thread, whose blocking waits must keep pumping COM for anything
-            // marshalled through it to arrive. A sleep here would be a capture stack held shut for
-            // the whole of its own start-up timeout.
+            // A wait the frame ends rather than a sleep. Frames arrive on the frame thread, so
+            // nothing they need is queued behind this one — the UI thread, when a session is
+            // started from the page.
             _frameSignal.Wait(TimeSpan.FromMilliseconds(Math.Min(50, left.TotalMilliseconds)));
             _frameSignal.Reset();
         }
@@ -737,6 +709,8 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
         return true;
     }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     private bool HasFrame()
     {
@@ -790,12 +764,13 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     // ── Teardown ─────────────────────────────────────────────────────────────────────────────────
 
-    private void DetachLocked()
+    /// <summary>Frame thread only.</summary>
+    private void Detach()
     {
         if (_item is { } item) item.Closed -= OnItemClosed;
         if (_pool is { } pool) pool.FrameArrived -= OnFrameArrived;
 
-        _handoff.Release();
+        _thread.ReleaseHeld();
         _session?.Dispose();
         _pool?.Dispose();
         _session = null;
@@ -803,13 +778,23 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         _item = null;
     }
 
+    /// <summary>
+    /// Closes the capture on the frame thread — the timer and the kept frame, then the session and
+    /// the pool — and ends that thread. Waits for it, so it belongs off the UI thread; see
+    /// <see cref="RealtimeCaptureRelease"/>.
+    /// </summary>
     public void Dispose()
     {
-        lock (_sync)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        if (!_thread.Shutdown(Detach, ThreadCallTimeout))
         {
-            if (_disposed) return;
-            _disposed = true;
-            DetachLocked();
+            // The device and the reader may still be in use on a thread that is not coming back;
+            // they are left to it rather than pulled out from under it.
+            Log.Warn(
+                "Realtime capture thread for hwnd={Hwnd:X} did not close within {Seconds}s. {Steps} | {Activity}",
+                _hwnd, ThreadCallTimeout.TotalSeconds, DescribeSteps(), DescribeActivity());
+            return;
         }
 
         // After the chain is down, so a frame in flight cannot read a bitmap being disposed.
