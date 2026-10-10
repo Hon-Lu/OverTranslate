@@ -44,8 +44,16 @@ public partial class RealtimeControlWindow : Window
 {
     private static readonly TimeSpan MessageDuration = TimeSpan.FromSeconds(2.6);
 
-    private readonly System.Drawing.Rectangle _screenBounds;
+    // The session's screen, as it is now: replaced when the display changes shape under a running
+    // session — see UpdateScreenBounds.
+    private System.Drawing.Rectangle _screenBounds;
     private readonly DispatcherTimer _messageTimer;
+
+    // A display mode change arrives as a run of WM_DPICHANGED, and every fix-up waits on WPF's render
+    // thread while that thread is rebuilding its device — 0.3 to 1.4s each, measured. One fix-up
+    // after the run has settled is all of them that ever mattered.
+    private static readonly TimeSpan ScaleFixupSettle = TimeSpan.FromMilliseconds(250);
+    private readonly DispatcherTimer _scaleFixupSettle;
 
     /// <summary>
     /// The marquee the framing button shows while framing is off, and the pointer it shows while it
@@ -132,6 +140,10 @@ public partial class RealtimeControlWindow : Window
 
         _messageTimer = new DispatcherTimer { Interval = MessageDuration };
         _messageTimer.Tick += (_, _) => { _messageTimer.Stop(); RestoreText(); };
+
+        _scaleFixupSettle = new DispatcherTimer { Interval = ScaleFixupSettle };
+        _scaleFixupSettle.Tick += (_, _) => { _scaleFixupSettle.Stop(); QueueScaleFixup(); };
+        Closed += (_, _) => _scaleFixupSettle.Stop();
 
         Loaded += (_, _) =>
         {
@@ -285,7 +297,28 @@ public partial class RealtimeControlWindow : Window
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);
-        QueueScaleFixup();
+
+        // Restarted on every change, so a run of them ends in one fix-up — see ScaleFixupSettle.
+        _scaleFixupSettle.Stop();
+        _scaleFixupSettle.Start();
+    }
+
+    /// <summary>
+    /// Puts the bar back on the session's screen after that screen changed shape.
+    /// </summary>
+    /// <remarks>
+    /// A game switching to fullscreen at a lower resolution takes the monitor with it — 2560x1440 to
+    /// 1280x720, measured — and the bar, placed against the old rectangle, was left at a position
+    /// that no longer exists: off the screen, with 結束 on it. Clamped into the new rectangle it
+    /// stays where the user can reach it, and goes no further than that: the position is not reset,
+    /// so a bar the user dragged somewhere stays as close to there as the screen allows.
+    /// </remarks>
+    public void UpdateScreenBounds(System.Drawing.Rectangle screenBounds)
+    {
+        if (screenBounds == _screenBounds || screenBounds.IsEmpty) return;
+
+        _screenBounds = screenBounds;
+        if (_placed) ClampIntoScreen();
     }
 
     private void QueueScaleFixup()

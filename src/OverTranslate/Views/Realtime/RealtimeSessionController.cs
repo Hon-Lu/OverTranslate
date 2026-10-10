@@ -156,8 +156,21 @@ internal sealed class RealtimeSessionController
     // notice goes out once per occurrence. See NoteSourceResized.
     private bool _sourceResized;
 
+    // The session's screen as it is now, and the name it is found again by after the display
+    // changes — see OnDisplaySettled. A display mode change arrives as several notifications; the
+    // settle timer turns them into one look once they have stopped.
+    private string _screenDeviceName = "";
+    private System.Drawing.Rectangle _screenNow;
+    private readonly DispatcherTimer _displaySettle = new() { Interval = TimeSpan.FromMilliseconds(500) };
+
     private RealtimeSessionController()
     {
+        _displaySettle.Tick += (_, _) =>
+        {
+            _displaySettle.Stop();
+            OnDisplaySettled();
+        };
+
         _stayOnTop.Tick += (_, _) =>
         {
             LogStayOnTopStall();
@@ -271,6 +284,36 @@ internal sealed class RealtimeSessionController
         }
     }
 
+    // Raised on a thread of the system's choosing, so it only starts the settle timer, on the
+    // dispatcher.
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e) =>
+        OnDispatcher(() =>
+        {
+            if (!IsActive) return;
+            _displaySettle.Stop();
+            _displaySettle.Start();
+        });
+
+    /// <summary>
+    /// The display has stopped changing: finds the session's screen again and puts the bar back on
+    /// it — see RealtimeSessionScreen — then settles the blocks at once rather than on the next tick.
+    /// </summary>
+    private void OnDisplaySettled()
+    {
+        if (!IsActive || _control is not { } control) return;
+
+        var screens = System.Windows.Forms.Screen.AllScreens
+            .Select(screen => new RealtimeSessionScreen.Screen(screen.DeviceName, screen.Bounds))
+            .ToList();
+        var now = RealtimeSessionScreen.Resolve(_screenDeviceName, _screenNow, screens);
+        if (now != _screenNow)
+            Log.Info("Realtime session screen changed from {From} to {To}", _screenNow, now);
+
+        _screenNow = now;
+        control.UpdateScreenBounds(now);
+        UpdateBlockVisibility();
+    }
+
     /// <summary>
     /// Tells the user, once each time it happens, that the blocks have gone because the translated
     /// window is not the size it was — and that they come back with it. Without this a game that
@@ -357,6 +400,10 @@ internal sealed class RealtimeSessionController
         _control = control;
         control.Show();
         RefreshOverlayHandles();
+
+        _screenNow = request.ScreenBounds;
+        _screenDeviceName = System.Windows.Forms.Screen.FromRectangle(request.ScreenBounds).DeviceName;
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         EnterEditMode();
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -556,6 +603,10 @@ internal sealed class RealtimeSessionController
         _stayOnTop.Stop();
         _lastStayOnTopTick = 0;
         DisposeEscapeHook();
+
+        // A static event: left subscribed, it would keep this session's handler alive and running.
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        _displaySettle.Stop();
 
         if (_session != null)
         {
