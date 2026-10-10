@@ -157,9 +157,13 @@ internal sealed class RealtimeSessionController
         _stayOnTop.Tick += (_, _) =>
         {
             LogStayOnTopStall();
+            UpdateBlockVisibility();
 
-            // The control bar last, so it ends up above the block layers it may overlap.
-            foreach (var block in _blockWindows.Values) AlwaysOnTop.Reassert(block);
+            // The control bar last, so it ends up above the block layers it may overlap. A block put
+            // away by UpdateBlockVisibility is left where it is: raising it is what used to keep it
+            // over the window that had covered its source.
+            foreach (var block in _blockWindows.Values)
+                if (block.IsVisible) AlwaysOnTop.Reassert(block);
             if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
             if (_control is { } control) AlwaysOnTop.Reassert(control);
 
@@ -215,6 +219,40 @@ internal sealed class RealtimeSessionController
             Log.Info("Realtime edit layer is no longer under hwnd={Hwnd:X}", _editCoveredBy);
 
         _editCoveredBy = coveredBy;
+    }
+
+    /// <summary>
+    /// In 視窗擷取, takes each block's overlay off the screen while its source is not there to be
+    /// seen — minimised, or covered at that spot by another application — and puts it back after.
+    /// </summary>
+    /// <remarks>
+    /// The capture reads the window itself, so a covered game goes on being translated, and the
+    /// overlays drawn from it went on being re-asserted on top of whatever covered it: switching to
+    /// a second game left the first one's subtitles and repaired background floating over it, which
+    /// reads as the screen having frozen. See SourceWindowCoverage for what counts as covering.
+    ///
+    /// On the stay-on-top timer rather than a timer of its own: it is the same question the timer is
+    /// already asking — which layers belong on top — and once a second is how long a covered block
+    /// stays visible at worst. Not in 螢幕擷取, which reads the screen as it is: there is no source
+    /// window to be covered, and whatever is on top is what the user meant to translate.
+    /// </remarks>
+    private void UpdateBlockVisibility()
+    {
+        if (!IsTranslating || _interlude.HideLayers || _blockWindows.Count == 0) return;
+        if (_request is not { CaptureMode: Models.RealtimeCaptureMode.Window } request) return;
+
+        var view = SourceWindowCoverage.Look(request.SourceWindow);
+
+        foreach (var (id, window) in _blockWindows)
+        {
+            var show = SourceWindowCoverage.LeavesVisible(
+                view, ScreenGeometry.PhysicalBounds(window));
+            if (show == window.IsVisible) continue;
+
+            window.Visibility = show ? Visibility.Visible : Visibility.Hidden;
+            Log.Debug("Realtime block {Id} {State}: source {Source}", id, show ? "shown" : "hidden",
+                view.Hidden ? "not on screen" : show ? "uncovered" : "covered");
+        }
     }
 
     /// <summary>Raised when the session starts or ends, so the page can re-render its controls.</summary>
