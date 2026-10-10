@@ -123,6 +123,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private long _readbackTicks;
     private int _outsideReported;
 
+    // Where the source's frame was, and how large, the first time a region read it — the frame the
+    // blocks were drawn against. Read and written under _latestLock. See RealtimeSourceAnchor.
+    private Rectangle? _anchor;
+    private int _resizeReported;
+
     // Which adapter the frames are being asked for on, and the first thing a frame handler failed
     // with, if it failed. Both exist for the log line that a capture producing nothing leaves
     // behind: without them "no frame at all" is the whole of what a report can say.
@@ -279,7 +284,22 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         {
             if (_latest is not { } latest) return null;
 
-            var crop = screenBounds with { X = screenBounds.X - origin.X, Y = screenBounds.Y - origin.Y };
+            // Blocks are kept where they were on the window when the session started, not where they
+            // were on the screen — see RealtimeSourceAnchor. A window that has changed size since
+            // has nothing at those places any more, so nothing is read until it is back.
+            var current = new Rectangle(origin, new Size(latest.Width, latest.Height));
+            _anchor ??= current;
+            if (RealtimeSourceAnchor.Follow(screenBounds, _anchor.Value, current) is not { } followed)
+            {
+                if (Interlocked.Exchange(ref _resizeReported, 1) == 0)
+                    Log.Info(
+                        "Realtime capture source changed size from {From} to {To}; blocks wait for it to " +
+                        "return", _anchor.Value.Size, current.Size);
+                return null;
+            }
+            Volatile.Write(ref _resizeReported, 0);
+
+            var crop = followed with { X = followed.X - origin.X, Y = followed.Y - origin.Y };
             var visible = Rectangle.Intersect(crop, new Rectangle(0, 0, latest.Width, latest.Height));
             if (visible.Width <= 0 || visible.Height <= 0)
             {
@@ -361,6 +381,27 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // Refusal arrives as an exception on some systems rather than a status, and the caller
             // is asking a question, not performing an operation that may fail.
             return $"failed ({ex.GetType().Name}: {ex.Message.Trim()})";
+        }
+    }
+
+    /// <summary>
+    /// How far the source has moved since the blocks were drawn, for the overlays to follow it — or
+    /// null when it is not the size it was then, and the blocks have nothing under them.
+    /// </summary>
+    /// <remarks>
+    /// No offset at all until a region has read a frame: the blocks were drawn over the window where
+    /// it is now, and that first read is what records it.
+    /// </remarks>
+    public Point? SourceOffset()
+    {
+        if (!TryGetFrameOrigin(out var origin)) return Point.Empty;
+
+        lock (_latestLock)
+        {
+            if (_latest is not { } latest || _anchor is not { } anchor) return Point.Empty;
+
+            var current = new Rectangle(origin, new Size(latest.Width, latest.Height));
+            return RealtimeSourceAnchor.Offset(anchor, current);
         }
     }
 

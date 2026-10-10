@@ -262,6 +262,19 @@ public partial class RealtimeBlockWindow : Window
         // why a session cannot start on a source that has not proved it (#105).
     }
 
+    /// <summary>
+    /// Moves this overlay to where its block now is, the source window having moved by
+    /// <paramref name="offset"/> since the session started — see RealtimeSourceAnchor. Everything
+    /// drawn inside it is in the block's own coordinates and moves with it.
+    /// </summary>
+    public void FollowSource(System.Drawing.Point offset)
+    {
+        var target = new System.Drawing.Point(_displayBounds.X + offset.X, _displayBounds.Y + offset.Y);
+        if (ScreenGeometry.PhysicalBounds(this).Location == target) return;
+
+        ScreenGeometry.MoveToPhysical(this, target.X, target.Y);
+    }
+
     public void SetLines(IReadOnlyList<TranslatedBlock> lines)
     {
         // A rebuild cross-fades, so repainting an unchanged overlay is a visible flicker for no

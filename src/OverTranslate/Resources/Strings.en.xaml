@@ -348,6 +348,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.TooManyBlocks">{0} blocks at most — remove one first</sys:String>
     <sys:String x:Key="S.Realtime.NeedOneBlock">Drag to create at least one block first</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceLost">The window being translated has closed — realtime translation stopped</sys:String>
+    <sys:String x:Key="S.Realtime.SourceResized">The translated window changed size — blocks are hidden until it returns to its original size</sys:String>
     <sys:String x:Key="S.Realtime.ScreenCaptureUnavailable">This system cannot read the whole screen for realtime translation. Switch to One window and pick the window you want translated</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreen">Whole screen</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">One window</sys:String>

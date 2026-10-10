@@ -367,6 +367,7 @@
     <sys:String x:Key="S.Realtime.TooManyBlocks">最多同時 {0} 個區塊，請先移除一個</sys:String>
     <sys:String x:Key="S.Realtime.NeedOneBlock">請先拖曳建立至少一個區塊</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceLost">被翻譯的視窗已關閉，即時翻譯已停止</sys:String>
+    <sys:String x:Key="S.Realtime.SourceResized">被翻譯的視窗大小改變了，區塊先隱藏，視窗恢復原本大小後會繼續</sys:String>
     <sys:String x:Key="S.Realtime.ScreenCaptureUnavailable">這台機器無法用「螢幕擷取」做即時翻譯。請改用「視窗擷取」，選擇要翻譯的那個視窗</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreen">螢幕擷取</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">視窗擷取</sys:String>

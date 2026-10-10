@@ -352,6 +352,7 @@
     <sys:String x:Key="S.Realtime.TooManyBlocks">ブロックは最大 {0} つまでです。先に 1 つ削除してください</sys:String>
     <sys:String x:Key="S.Realtime.NeedOneBlock">先にドラッグしてブロックを 1 つ以上作成してください</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceLost">翻訳対象のウィンドウが閉じられたため、リアルタイム翻訳を停止しました</sys:String>
+    <sys:String x:Key="S.Realtime.SourceResized">翻訳中のウィンドウのサイズが変わったため、元のサイズに戻るまでブロックを隠しています</sys:String>
     <sys:String x:Key="S.Realtime.ScreenCaptureUnavailable">この環境では「画面全体」でリアルタイム翻訳を行えません。「ウィンドウ指定」に切り替えて、翻訳したいウィンドウを選んでください</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreen">画面全体</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">ウィンドウ指定</sys:String>

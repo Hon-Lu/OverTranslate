@@ -348,6 +348,7 @@
     <sys:String x:Key="S.Realtime.TooManyBlocks">最多同时 {0} 个区块，请先移除一个</sys:String>
     <sys:String x:Key="S.Realtime.NeedOneBlock">请先拖动创建至少一个区块</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceLost">被翻译的窗口已关闭，实时翻译已停止</sys:String>
+    <sys:String x:Key="S.Realtime.SourceResized">被翻译的窗口大小变了，区块先隐藏，窗口恢复原来大小后会继续</sys:String>
     <sys:String x:Key="S.Realtime.ScreenCaptureUnavailable">这台机器无法用“屏幕捕获”做实时翻译。请改用“窗口捕获”，选择要翻译的那个窗口</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreen">屏幕捕获</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">窗口捕获</sys:String>

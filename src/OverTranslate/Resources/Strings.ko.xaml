@@ -352,6 +352,7 @@
     <sys:String x:Key="S.Realtime.TooManyBlocks">블록은 최대 {0}개까지입니다. 하나를 먼저 지우세요</sys:String>
     <sys:String x:Key="S.Realtime.NeedOneBlock">드래그해서 블록을 하나 이상 먼저 만드세요</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceLost">번역하던 창이 닫혀 실시간 번역을 중지했습니다</sys:String>
+    <sys:String x:Key="S.Realtime.SourceResized">번역 중인 창의 크기가 바뀌어 원래 크기로 돌아올 때까지 블록을 숨깁니다</sys:String>
     <sys:String x:Key="S.Realtime.ScreenCaptureUnavailable">이 환경에서는 ‘전체 화면’으로 실시간 번역을 할 수 없습니다. ‘창 지정’으로 바꾸고 번역할 창을 선택하세요</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreen">전체 화면</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">창 지정</sys:String>

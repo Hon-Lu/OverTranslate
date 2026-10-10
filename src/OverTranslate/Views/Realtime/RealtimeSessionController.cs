@@ -152,6 +152,10 @@ internal sealed class RealtimeSessionController
     private long _lastStayOnTopTick;
     private IntPtr _editCoveredBy;
 
+    // Whether the blocks are currently hidden because the source window changed size — so the
+    // notice goes out once per occurrence. See NoteSourceResized.
+    private bool _sourceResized;
+
     private RealtimeSessionController()
     {
         _stayOnTop.Tick += (_, _) =>
@@ -243,16 +247,40 @@ internal sealed class RealtimeSessionController
 
         var view = SourceWindowCoverage.Look(request.SourceWindow);
 
+        // Where the blocks belong now. The window may have been moved — the overlays follow it, as
+        // the regions do — or be at another size, where no block has anything under it: see
+        // RealtimeSourceAnchor. Not asked while the window is off the screen, which says nothing
+        // about where it will come back.
+        System.Drawing.Point? offset = System.Drawing.Point.Empty;
+        if (!view.Hidden && _capture is WgcWindowCaptureBackend windowCapture
+            && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
+            offset = windowCapture.SourceOffset();
+        NoteSourceResized(!view.Hidden && offset is null);
+
         foreach (var (id, window) in _blockWindows)
         {
-            var show = SourceWindowCoverage.LeavesVisible(
+            if (offset is { } moved) window.FollowSource(moved);
+
+            var show = offset is not null && SourceWindowCoverage.LeavesVisible(
                 view, ScreenGeometry.PhysicalBounds(window));
             if (show == window.IsVisible) continue;
 
             window.Visibility = show ? Visibility.Visible : Visibility.Hidden;
             Log.Debug("Realtime block {Id} {State}: source {Source}", id, show ? "shown" : "hidden",
-                view.Hidden ? "not on screen" : show ? "uncovered" : "covered");
+                view.Hidden ? "not on screen" : offset is null ? "resized" : show ? "uncovered" : "covered");
         }
+    }
+
+    /// <summary>
+    /// Tells the user, once each time it happens, that the blocks have gone because the translated
+    /// window is not the size it was — and that they come back with it. Without this a game that
+    /// returned from fullscreen at another size simply stopped being translated.
+    /// </summary>
+    private void NoteSourceResized(bool resized)
+    {
+        if (resized == _sourceResized) return;
+        _sourceResized = resized;
+        if (resized) _control?.ShowMessage(LocalizationService.Get("S.Realtime.SourceResized"));
     }
 
     /// <summary>Raised when the session starts or ends, so the page can re-render its controls.</summary>
@@ -705,6 +733,7 @@ internal sealed class RealtimeSessionController
         }
 
         _capture = capture;
+        _sourceResized = false;
 
         // Set before the mode switch renders, so the capsule appears with the pair already in it
         // rather than showing the placeholder for a frame.
