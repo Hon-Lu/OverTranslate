@@ -191,6 +191,9 @@ public partial class RealtimeBlockWindow : Window
         double displayScale = 1.0)
     {
         InitializeComponent();
+        // Shown again over a game after its source was covered (see the session controller's
+        // UpdateBlockVisibility), and showing must never take the focus from the game.
+        ShowActivated = false;
         _mode = mode;
         _orientation = orientation;
         _border = border;
