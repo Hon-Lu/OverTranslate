@@ -123,7 +123,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private long _readbackTicks;
     private int _outsideReported;
 
-    // Where the source's frame was, and how large, the first time a region read it — the frame the
+    // Where the source window was, and how large, the first time a region read it — the window the
     // blocks were drawn against. Read and written under _latestLock. See RealtimeSourceAnchor.
     private Rectangle? _anchor;
     private int _resizeReported;
@@ -278,6 +278,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
         _grabStep.Set("origin");
         if (!TryGetFrameOrigin(out var origin)) return null;
+        if (!TryGetSourceRect(out var current)) return null;
 
         _grabStep.Set("crop");
         lock (_latestLock)
@@ -287,7 +288,6 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // Blocks are kept where they were on the window when the session started, not where they
             // were on the screen — see RealtimeSourceAnchor. A window that has changed size since
             // has nothing at those places any more, so nothing is read until it is back.
-            var current = new Rectangle(origin, new Size(latest.Width, latest.Height));
             _anchor ??= current;
             if (RealtimeSourceAnchor.Follow(screenBounds, _anchor.Value, current) is not { } followed)
             {
@@ -394,15 +394,36 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     /// </remarks>
     public Point? SourceOffset()
     {
-        if (!TryGetFrameOrigin(out var origin)) return Point.Empty;
+        if (!TryGetSourceRect(out var current)) return Point.Empty;
 
         lock (_latestLock)
         {
-            if (_latest is not { } latest || _anchor is not { } anchor) return Point.Empty;
-
-            var current = new Rectangle(origin, new Size(latest.Width, latest.Height));
+            if (_anchor is not { } anchor) return Point.Empty;
             return RealtimeSourceAnchor.Offset(anchor, current);
         }
+    }
+
+    /// <summary>
+    /// Where the source window is and how large, from the window itself rather than from the last
+    /// frame. The frame is no use for this: a game that goes to exclusive fullscreen can stop
+    /// producing frames altogether, and the last one then goes on describing a window that is no
+    /// longer there — measured, the blocks followed a fullscreen game to its new corner and read
+    /// its last windowed picture there.
+    /// </summary>
+    private bool TryGetSourceRect(out Rectangle rect)
+    {
+        rect = Rectangle.Empty;
+        var hwnd = _hwnd;
+        if (hwnd == IntPtr.Zero) return false;
+
+        if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var frame, Marshal.SizeOf<RECT>()) == 0)
+            rect = Rectangle.FromLTRB(frame.Left, frame.Top, frame.Right, frame.Bottom);
+        else if (GetWindowRect(hwnd, out var window))
+            rect = Rectangle.FromLTRB(window.Left, window.Top, window.Right, window.Bottom);
+        else
+            return false;
+
+        return rect.Width > 0 && rect.Height > 0;
     }
 
     public string DescribeSteps() =>
