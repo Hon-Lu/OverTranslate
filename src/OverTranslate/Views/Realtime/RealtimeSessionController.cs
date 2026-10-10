@@ -173,9 +173,16 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// Warns when a tick arrives long after the one before: the timer is a dispatcher timer, so a
-    /// gap means the UI thread was busy — and nothing was holding the layers on top meanwhile.
+    /// Warns when a tick arrives long after the one before: nothing was holding the layers on top
+    /// meanwhile.
     /// </summary>
+    /// <remarks>
+    /// A late tick is not a blocked UI thread. The timer runs at Background priority, so any run of
+    /// higher-priority work starves it while the thread keeps answering — measured over a display
+    /// mode change: ticks 3–8s late while the thread never took more than 1.4s to answer a message,
+    /// most of the gap spent in WPF waiting on its render thread. The message says what was measured
+    /// and no more.
+    /// </remarks>
     private void LogStayOnTopStall()
     {
         long now = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -183,7 +190,7 @@ internal sealed class RealtimeSessionController
         {
             var gap = System.Diagnostics.Stopwatch.GetElapsedTime(_lastStayOnTopTick, now);
             if (gap > TimeSpan.FromSeconds(3))
-                Log.Warn("Realtime stay-on-top timer ticked {Gap:F1}s after the previous tick; the UI thread was blocked",
+                Log.Warn("Realtime stay-on-top timer was delayed: ticked {Gap:F1}s after the previous tick, the layers were not re-asserted meanwhile",
                     gap.TotalSeconds);
         }
         _lastStayOnTopTick = now;
