@@ -56,6 +56,33 @@ internal sealed class WgcFrameThread
         _queue = _controller.DispatcherQueue;
     }
 
+    /// <summary>
+    /// Asks <paramref name="session"/> not to deliver frames more often than
+    /// <paramref name="interval"/>, where the system can be asked — Windows 11 24H2 and later.
+    /// Elsewhere nothing is set, zero included, and the frame handler's own limit does the whole job.
+    /// </summary>
+    /// <remarks>
+    /// Measured on 26200: frames are coalesced, delivery is held to one per interval exactly, and
+    /// the last frame of a burst still arrives within the interval — so nothing is lost by asking,
+    /// and a 144Hz game stops costing a call into the frame handler every refresh. It does not
+    /// replace keeping a frame: the system counts from the last delivery, the handler from the last
+    /// readback.
+    /// </remarks>
+    public static void LimitFrameRate(GraphicsCaptureSession session, TimeSpan interval)
+    {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 26100) || !WgcCapability.SupportsMinUpdateInterval)
+            return;
+
+        try
+        {
+            session.MinUpdateInterval = interval;
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Realtime capture could not set a minimum update interval");
+        }
+    }
+
     /// <summary>Whether the caller is on this thread.</summary>
     public bool IsCurrent => _queue.HasThreadAccess;
 

@@ -405,6 +405,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         _pool.FrameArrived += OnFrameArrived;
 
         _session = _pool.CreateCaptureSession(item);
+        WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
         _session.StartCapture();
 
         Log.Info(

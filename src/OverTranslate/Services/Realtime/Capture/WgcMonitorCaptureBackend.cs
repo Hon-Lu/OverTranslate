@@ -445,6 +445,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
             _session.IsCursorCaptureEnabled = false;
 
+        WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
         _session.StartCapture();
 
         Log.Info(
