@@ -1,4 +1,5 @@
 using OverTranslate.Services.Realtime.Capture;
+using Windows.Graphics;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -26,6 +27,17 @@ public class WgcFrameThrottleTests
         // Nothing else is ever composed: the page holds still from here on.
         Assert.Equal(1, capture.Poll(100));
         Assert.Equal(2, capture.Poll(250));
+    }
+
+    [Fact]
+    public void TheKeptFrameIsReadAsSoonAsTheLimitAllowsNotWhenAPollComes()
+    {
+        var capture = new Timeline();
+        capture.Poll(0);
+        capture.Frame(0, id: 1);
+        capture.Frame(68, id: 2);
+        Assert.Equal(2, capture.Poll(121));
+        Assert.Equal([0.0, 120.0], capture.Reads);
     }
 
     [Fact]
@@ -70,29 +82,80 @@ public class WgcFrameThrottleTests
             WgcFrameThrottle.OnArrival(false, TimeSpan.Zero, TimeSpan.FromSeconds(2), MaxFrameAge, IdleAfter));
     }
 
-    /// <summary>The backend's bookkeeping around the policy, with times in milliseconds.</summary>
+    [Fact]
+    public void AFrameOfAnotherSizeAsksForTheRebuild()
+    {
+        Assert.True(WgcFrameThrottle.NeedsResize(Size(1920, 1040), Size(1936, 1056), null));
+        Assert.False(WgcFrameThrottle.NeedsResize(Size(1936, 1056), Size(1936, 1056), null));
+    }
+
+    [Fact]
+    public void ASizeThePoolRefusedIsNotAskedForAgain()
+    {
+        Assert.False(WgcFrameThrottle.NeedsResize(Size(1920, 1040), Size(1936, 1056), Size(1920, 1040)));
+        // The window really changing size afterwards is a new request.
+        Assert.True(WgcFrameThrottle.NeedsResize(Size(1280, 720), Size(1936, 1056), Size(1920, 1040)));
+    }
+
+    [Fact]
+    public void ARefusedRebuildNoLongerReadsBackEveryFrame()
+    {
+        // 2.7.1 on Windows 10, reported: received=61908 read=61853 rebuilds=0. Every frame of the
+        // wrong size was read at once, and the rebuild it asked for failed every time.
+        var pool = Size(1936, 1056);
+        var content = Size(1920, 1040);
+        SizeInt32? failedAt = null;
+        var reads = 0;
+        var frames = 0;
+        var lastRead = 0.0;
+        for (var at = 0.0; at < 10_000; at += 1000.0 / 60, frames++)
+        {
+            var resize = WgcFrameThrottle.NeedsResize(content, pool, failedAt);
+            var arrival = WgcFrameThrottle.OnArrival(
+                reads > 0, TimeSpan.FromMilliseconds(at - lastRead), TimeSpan.Zero, MaxFrameAge, IdleAfter);
+            if (arrival == WgcFrameThrottle.Arrival.Read || resize)
+            {
+                reads++;
+                lastRead = at;
+            }
+            if (resize) failedAt = content;   // Recreate threw
+        }
+
+        Assert.InRange(reads, 1, (int)(10_000 / MaxFrameAge.TotalMilliseconds) + 2);
+        Assert.True(reads * 5 < frames, $"{reads} reads for {frames} frames");
+    }
+
+    private static SizeInt32 Size(int width, int height) => new() { Width = width, Height = height };
+
+    /// <summary>
+    /// The backend's bookkeeping around the policy, with times in milliseconds: the frame handler,
+    /// the timer that reads a kept frame on the same thread, and the polls.
+    /// </summary>
     private sealed class Timeline
     {
         private int? _latest;
         private double _latestAt;
         private double _lastGrabAt;
         private int? _held;
+        private double _heldDue;
 
         public List<double> Reads { get; } = [];
 
         public void Frame(double at, int id)
         {
+            Advance(at);
+            var sinceRead = Ms(at - _latestAt);
+            _held = null;
             switch (WgcFrameThrottle.OnArrival(
-                _latest is not null, Ms(at - _latestAt), Ms(at - _lastGrabAt), MaxFrameAge, IdleAfter))
+                _latest is not null, sinceRead, Ms(at - _lastGrabAt), MaxFrameAge, IdleAfter))
             {
                 case WgcFrameThrottle.Arrival.Hold:
                     _held = id;
+                    _heldDue = at + WgcFrameThrottle.HeldFrameDueIn(sinceRead, MaxFrameAge).TotalMilliseconds;
                     break;
                 case WgcFrameThrottle.Arrival.Skip:
-                    _held = null;
                     break;
                 default:
-                    _held = null;
                     Read(at, id);
                     break;
             }
@@ -100,13 +163,17 @@ public class WgcFrameThrottleTests
 
         public int? Poll(double at)
         {
+            Advance(at);
             _lastGrabAt = at;
-            if (_held is { } held && WgcFrameThrottle.ReadsHeldFrame(Ms(at - _latestAt), MaxFrameAge))
-            {
-                _held = null;
-                Read(at, held);
-            }
             return _latest;
+        }
+
+        // The timer: fires once its time has come, and lets the frame go if nobody is polling.
+        private void Advance(double to)
+        {
+            if (_held is not { } held || _heldDue > to) return;
+            _held = null;
+            if (Ms(_heldDue - _lastGrabAt) <= IdleAfter) Read(_heldDue, held);
         }
 
         private void Read(double at, int id)

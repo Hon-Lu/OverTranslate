@@ -42,6 +42,9 @@ public static class WgcCapability
     private static readonly Lazy<bool> DisplaySession = new(() =>
         IsApiPresent(() => ApiInformation.IsTypePresent(DisplaySessionType)));
 
+    private static readonly Lazy<bool> MinUpdateInterval = new(() =>
+        IsApiPresent(() => ApiInformation.IsPropertyPresent(SessionType, "MinUpdateInterval")));
+
     /// <summary>Capture at all: the 1903 API surface, and a system willing to serve it.</summary>
     /// <remarks>
     /// The version check is here as well as inside, and it is not redundant: it is what lets the
@@ -81,6 +84,12 @@ public static class WgcCapability
     public static bool SupportsDisplaySession => DisplaySession.Value;
 
     /// <summary>
+    /// Whether a capture session can be told not to deliver frames more often than a given interval
+    /// — Windows 11 24H2 and later. See <see cref="WgcFrameThread.LimitFrameRate"/>.
+    /// </summary>
+    public static bool SupportsMinUpdateInterval => MinUpdateInterval.Value;
+
+    /// <summary>
     /// Whether 螢幕擷取 can work on this machine at all: a monitor capture that composes the screen
     /// without this application's overlays, which needs both capture and the exclusion list.
     /// </summary>
@@ -108,7 +117,7 @@ public static class WgcCapability
     public static string Describe() =>
         $"os={Environment.OSVersion.Version} capture={IsCaptureSupported} " +
         $"borderless={CanRequestBorderless} windowExclusion={SupportsWindowExclusion} " +
-        $"displaySession={SupportsDisplaySession}";
+        $"displaySession={SupportsDisplaySession} minUpdateInterval={SupportsMinUpdateInterval}";
 
     private static bool IsApiPresent(Func<bool> ask)
     {

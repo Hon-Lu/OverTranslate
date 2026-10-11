@@ -1083,12 +1083,11 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// Releases a capture backend on this (the UI) thread, but queued behind the teardown the user
-    /// sees and never waited for here — see <see cref="RealtimeCaptureRelease"/> for why it is
-    /// neither a plain <c>Dispose</c> nor a pool thread.
+    /// Releases a capture backend on a pool thread, never waited for here — the backend closes its
+    /// capture on its own frame thread; see <see cref="RealtimeCaptureRelease"/>.
     /// </summary>
     private static void ReleaseInBackground(IRealtimeCaptureBackend? capture) =>
-        _ = RealtimeCaptureRelease.Release(capture, System.Windows.Application.Current?.Dispatcher);
+        _ = RealtimeCaptureRelease.Release(capture);
 
     private void DisposeEscapeHook()
     {
