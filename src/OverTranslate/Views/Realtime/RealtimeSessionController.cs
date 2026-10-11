@@ -89,6 +89,8 @@ internal sealed class RealtimeSessionController
     // ending the session.
     private IRealtimeCaptureBackend? _capture;
     private GlobalEscapeHook? _escapeHook;
+    // 視窗擷取 only, for the whole session: see UpdateBlockVisibility.
+    private ForegroundChangeWatch? _foregroundWatch;
     private Window? _hiddenShell;
 
     private readonly Dictionary<int, RealtimeBlockWindow> _blockWindows = [];
@@ -245,8 +247,9 @@ internal sealed class RealtimeSessionController
     /// reads as the screen having frozen. See SourceWindowCoverage for what counts as covering.
     ///
     /// On the stay-on-top timer rather than a timer of its own: it is the same question the timer is
-    /// already asking — which layers belong on top — and once a second is how long a covered block
-    /// stays visible at worst. Not in 螢幕擷取, which reads the screen as it is: there is no source
+    /// already asking — which layers belong on top. And at once whenever another application comes
+    /// to the foreground (ForegroundChangeWatch), which is when a source is usually covered, so the
+    /// tick is only the backstop for what no switch announces. Not in 螢幕擷取, which reads the screen as it is: there is no source
     /// window to be covered, and whatever is on top is what the user meant to translate.
     /// </remarks>
     private void UpdateBlockVisibility()
@@ -376,6 +379,9 @@ internal sealed class RealtimeSessionController
         _screenNow = request.ScreenBounds;
         _screenDeviceName = System.Windows.Forms.Screen.FromRectangle(request.ScreenBounds).DeviceName;
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+
+        if (request.CaptureMode == Models.RealtimeCaptureMode.Window)
+            _foregroundWatch = ForegroundChangeWatch.Install(UpdateBlockVisibility);
 
         EnterEditMode();
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -579,6 +585,8 @@ internal sealed class RealtimeSessionController
         // A static event: left subscribed, it would keep this session's handler alive and running.
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         _displaySettle.Stop();
+        _foregroundWatch?.Dispose();
+        _foregroundWatch = null;
 
         if (_session != null)
         {
