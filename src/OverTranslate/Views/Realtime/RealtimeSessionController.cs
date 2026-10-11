@@ -237,8 +237,9 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// In 視窗擷取, takes each block's overlay off the screen while its source is not there to be
-    /// seen — minimised, or covered at that spot by another application — and puts it back after.
+    /// In 視窗擷取, takes the overlays off the screen while their source is not there to be seen —
+    /// minimised, hidden, cloaked — and, while it is, hides each translation box another
+    /// application's window is touching. Everything comes back when that ends.
     /// </summary>
     /// <remarks>
     /// The capture reads the window itself, so a covered game goes on being translated, and the
@@ -246,11 +247,17 @@ internal sealed class RealtimeSessionController
     /// a second game left the first one's subtitles and repaired background floating over it, which
     /// reads as the screen having frozen. See SourceWindowCoverage for what counts as covering.
     ///
+    /// By box, not by block: a window over one line takes that line away and leaves the others, and
+    /// one over an empty part of a block takes nothing — see RealtimeBoxCoverage. A 對照顯示 copy is
+    /// a block window of its own where it is drawn, so it is judged where it is, not where its source
+    /// line is.
+    ///
     /// On the stay-on-top timer rather than a timer of its own: it is the same question the timer is
     /// already asking — which layers belong on top. And at once whenever another application comes
     /// to the foreground (ForegroundChangeWatch), which is when a source is usually covered, so the
-    /// tick is only the backstop for what no switch announces. Not in 螢幕擷取, which reads the screen as it is: there is no source
-    /// window to be covered, and whatever is on top is what the user meant to translate.
+    /// tick is only the backstop for what no switch announces. Not in 螢幕擷取, which reads the
+    /// screen as it is: there is no source window to be covered, and whatever is on top is what the
+    /// user meant to translate.
     /// </remarks>
     private void UpdateBlockVisibility()
     {
@@ -261,12 +268,19 @@ internal sealed class RealtimeSessionController
 
         foreach (var (id, window) in _blockWindows)
         {
-            var show = SourceWindowCoverage.LeavesVisible(view, window.DrawnPhysicalBounds());
-            if (show == window.IsVisible) continue;
+            var show = !view.Hidden;
+            if (show != window.IsVisible)
+            {
+                window.Visibility = show ? Visibility.Visible : Visibility.Hidden;
+                Log.Debug("Realtime block {Id} {State}: source {Source}", id, show ? "shown" : "hidden",
+                    show ? "back on screen" : "not on screen");
+            }
 
-            window.Visibility = show ? Visibility.Visible : Visibility.Hidden;
-            Log.Debug("Realtime block {Id} {State}: source {Source}", id, show ? "shown" : "hidden",
-                view.Hidden ? "not on screen" : show ? "uncovered" : "covered");
+            // Left as they were while the whole overlay is away: the next look with the source on
+            // the screen settles them against whatever is over it then.
+            if (!show) continue;
+            if (window.ApplyCovers(view.Covers) > 0)
+                Log.Debug("Realtime block {Id}: {Covered} translation box(es) covered", id, window.CoveredBoxes);
         }
     }
 

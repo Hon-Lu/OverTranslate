@@ -138,6 +138,11 @@ public partial class RealtimeBlockWindow : Window
     private readonly bool _border;
     private readonly SolidColorBrush? _fixedBorderBrush;
 
+    // Each translation box as drawn — a line's text and band or patch, or a panel group's rows and
+    // their one patch — for hiding one box when another window touches it. See ApplyCovers.
+    private List<FrameworkElement[]> _boxes = [];
+    private readonly RealtimeBoxCoverage _coverage = new();
+
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
     private bool _isLoaded;
@@ -279,34 +284,42 @@ public partial class RealtimeBlockWindow : Window
     }
 
     /// <summary>
-    /// What this window is drawing right now, in physical screen pixels: every line's band or patch
-    /// and its text, as the screen shows them. Empty while it shows nothing. For the session's
-    /// coverage check — see SourceWindowCoverage.LeavesVisible.
+    /// The windows of other applications over the source now, in physical pixels: hides each
+    /// translation box one of them touches and shows each one none of them does. Returns how many
+    /// boxes changed. Nothing is drawn again and nothing is read again — a box is only hidden or
+    /// shown, and only when its state changes. See RealtimeBoxCoverage.
     /// </summary>
-    /// <remarks>
-    /// Taken from the drawn elements themselves rather than worked out again from the lines, so a
-    /// scaled 對照顯示 copy, a tilted line and a patch's feathered edge all count exactly where they
-    /// are. Laid out first: lines can arrive while the window is hidden.
-    /// </remarks>
-    public IReadOnlyList<System.Drawing.Rectangle> DrawnPhysicalBounds()
+    public int ApplyCovers(IReadOnlyList<System.Drawing.Rectangle> covers)
     {
-        if (ScrimCanvas.Children.Count == 0 && TextCanvas.Children.Count == 0) return [];
+        var changes = _coverage.Covered(covers, MeasureBoxes);
+        foreach (var (index, hidden) in changes) SetBoxVisible(index, !hidden);
+        return changes.Count;
+    }
 
+    /// <summary>How many of this window's translation boxes are hidden under another window.</summary>
+    public int CoveredBoxes => _coverage.HiddenCount;
+
+    /// <summary>
+    /// Each box's elements as the screen shows them, in physical pixels. Taken from the drawn
+    /// elements themselves rather than worked out again from the lines, so a scaled 對照顯示 copy,
+    /// a tilted line and a patch's feathered edge all count exactly where they are. Laid out first:
+    /// a box can have been drawn a moment ago.
+    /// </summary>
+    private IReadOnlyList<IReadOnlyList<System.Drawing.Rectangle>> MeasureBoxes()
+    {
         UpdateLayout();
-        var drawn = new List<System.Drawing.Rectangle>();
-        foreach (var canvas in new[] { ScrimCanvas, TextCanvas })
-        {
-            foreach (var child in canvas.Children)
-            {
-                if (child is not FrameworkElement element || element.ActualWidth <= 0 || element.ActualHeight <= 0)
-                    continue;
+        return [.. _boxes.Select(box => (IReadOnlyList<System.Drawing.Rectangle>)[.. box
+            .Where(element => element.ActualWidth > 0 && element.ActualHeight > 0)
+            .Select(element => ToPhysical(
+                element.TransformToAncestor(this).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight)),
+                _dpiX, _dpiY, _displayBounds.Location))])];
+    }
 
-                var inWindow = element.TransformToAncestor(this)
-                    .TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
-                drawn.Add(ToPhysical(inWindow, _dpiX, _dpiY, _displayBounds.Location));
-            }
-        }
-        return drawn;
+    private void SetBoxVisible(int index, bool visible)
+    {
+        if (index >= _boxes.Count) return;
+        foreach (var element in _boxes[index])
+            element.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
     }
 
     /// <summary>A rectangle in this window's device-independent units, on the screen in physical pixels.</summary>
@@ -363,8 +376,13 @@ public partial class RealtimeBlockWindow : Window
             ? CaptureUnderlyingRegion()
             : null;
 
+        var boxes = new List<List<FrameworkElement>>();
         foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame))
         {
+            if (visual.JoinsPrevious && boxes.Count > 0) boxes[^1].Add(visual.Text);
+            else boxes.Add([visual.Text]);
+            if (visual.Background is { } drawnBackground) boxes[^1].Add(drawnBackground);
+
             TextCanvas.Children.Add(visual.Text);
             if (visual.Background is not { } background) continue;
             ScrimCanvas.Children.Add(background);
@@ -378,6 +396,11 @@ public partial class RealtimeBlockWindow : Window
 
         Volatile.Write(ref _naturalPatches, [.. patches]);
 
+        // Under the windows already known to be over the source, so a translation that arrives
+        // while its place is covered is drawn hidden rather than flashing up until the next look.
+        _boxes = [.. boxes.Select(box => box.ToArray())];
+        foreach (var index in _coverage.Redrawn(_boxes.Count, MeasureBoxes)) SetBoxVisible(index, false);
+
         // A new set of patches has to be painted once before there is anything to compare against.
         Volatile.Write(ref _lastRefreshPrint, null);
     }
@@ -386,9 +409,12 @@ public partial class RealtimeBlockWindow : Window
     /// One line's background patch and translated text, kept in separate layers. A panel row after
     /// the first carries no background: its group's first row draws one patch for all of them.
     /// </summary>
+    /// <param name="JoinsPrevious">
+    /// A panel row after the first: one box with the rows before it, under their shared patch.
+    /// </param>
     private readonly record struct LineVisual(
         Border? Background, Border Text, System.Drawing.Rectangle PatchBounds,
-        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? Replate = null);
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? Replate = null, bool JoinsPrevious = false);
 
     /// <param name="Replate">
     /// How a vertical line's plate is painted again from a new repair; null for a patch that is a
@@ -857,7 +883,7 @@ public partial class RealtimeBlockWindow : Window
                     var visual = row.SourceLineBounds is { Count: > 1 }
                         ? BuildLine(row, canvasWidth, canvasHeight, frame, repairedFrame)
                         : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null, repairedFrame);
-                    if (visual is { } drawn) yield return drawn;
+                    if (visual is { } drawn) yield return index == 0 ? drawn : drawn with { JoinsPrevious = true };
                 }
             }
             else if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } visual)

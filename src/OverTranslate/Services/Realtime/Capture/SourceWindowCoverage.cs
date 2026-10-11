@@ -56,27 +56,6 @@ internal static class SourceWindowCoverage
         && window.Bounds.Height > 0;
 
     /// <summary>
-    /// Whether an overlay that is drawing <paramref name="drawn"/> (physical pixels: each line's
-    /// band or repaired patch and its text) still has its source under it: the source is on the
-    /// screen and no other application's window touches anything the overlay draws.
-    /// </summary>
-    /// <remarks>
-    /// Per overlay, not for the session as a whole. On two monitors the user can be playing something
-    /// else on the other screen with the translated window in full view, and a window over one corner
-    /// of the source takes away only the blocks under it.
-    ///
-    /// What the overlay draws, not the block the user framed. Most of a block is transparent most of
-    /// the time — a subtitle strip framed generously, a dialogue box between lines — and a small
-    /// window parked over an empty part of it (a picture-in-picture video, a chat) hides nothing the
-    /// overlay shows. Touching any of it takes the whole overlay away, though, not the lines it
-    /// touches: half a translation is worse than none. An overlay drawing nothing has nothing to be
-    /// covered, unless the source itself is off the screen.
-    /// </remarks>
-    public static bool LeavesVisible(View view, IReadOnlyList<Rectangle> drawn) =>
-        !view.Hidden
-        && !drawn.Any(area => view.Covers.Any(cover => cover.IntersectsWith(area)));
-
-    /// <summary>
     /// Looks at the source and every window above it. Cheap enough to run on the stay-on-top timer:
     /// it walks up the z-order from the source only, so it costs the windows above it and no more.
     /// </summary>
