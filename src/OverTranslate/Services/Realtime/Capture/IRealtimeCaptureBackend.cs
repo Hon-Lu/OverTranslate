@@ -53,6 +53,19 @@ public interface IRealtimeCaptureBackend : IDisposable
     Bitmap? GrabRegion(Rectangle screenBounds);
 
     /// <summary>
+    /// Why <see cref="GrabRegion"/> just returned null for <paramref name="screenBounds"/>: the region
+    /// is not over the source any more, or the picture of it is only late.
+    /// </summary>
+    /// <remarks>
+    /// The difference decides whether what the region last showed is taken off the screen — see
+    /// RealtimeFrameLoss. Judged against the source as it is now, not against the last frame, which can
+    /// be of the source at another size. A backend that cannot tell answers
+    /// <see cref="CaptureMiss.Waiting"/>: clearing a translation that is still right is the worse
+    /// mistake, and a source that really went away is caught by its own signals.
+    /// </remarks>
+    CaptureMiss DescribeMiss(Rectangle screenBounds);
+
+    /// <summary>
     /// What this backend did over its lifetime, for the one line logged when the session ends. Free
     /// text — each source counts different things.
     /// </summary>

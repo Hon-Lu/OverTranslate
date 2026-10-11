@@ -89,6 +89,8 @@ internal sealed class RealtimeSessionController
     // ending the session.
     private IRealtimeCaptureBackend? _capture;
     private GlobalEscapeHook? _escapeHook;
+    // 視窗擷取 only, for the whole session: see UpdateBlockVisibility.
+    private ForegroundChangeWatch? _foregroundWatch;
     private Window? _hiddenShell;
 
     private readonly Dictionary<int, RealtimeBlockWindow> _blockWindows = [];
@@ -152,14 +154,31 @@ internal sealed class RealtimeSessionController
     private long _lastStayOnTopTick;
     private IntPtr _editCoveredBy;
 
+    // The session's screen as it is now, and the name it is found again by after the display
+    // changes — see OnDisplaySettled. A display mode change arrives as several notifications; the
+    // settle timer turns them into one look once they have stopped.
+    private string _screenDeviceName = "";
+    private System.Drawing.Rectangle _screenNow;
+    private readonly DispatcherTimer _displaySettle = new() { Interval = TimeSpan.FromMilliseconds(500) };
+
     private RealtimeSessionController()
     {
+        _displaySettle.Tick += (_, _) =>
+        {
+            _displaySettle.Stop();
+            OnDisplaySettled();
+        };
+
         _stayOnTop.Tick += (_, _) =>
         {
             LogStayOnTopStall();
+            UpdateBlockVisibility();
 
-            // The control bar last, so it ends up above the block layers it may overlap.
-            foreach (var block in _blockWindows.Values) AlwaysOnTop.Reassert(block);
+            // The control bar last, so it ends up above the block layers it may overlap. A block put
+            // away by UpdateBlockVisibility is left where it is: raising it is what used to keep it
+            // over the window that had covered its source.
+            foreach (var block in _blockWindows.Values)
+                if (block.IsVisible) AlwaysOnTop.Reassert(block);
             if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
             if (_control is { } control) AlwaysOnTop.Reassert(control);
 
@@ -173,9 +192,16 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// Warns when a tick arrives long after the one before: the timer is a dispatcher timer, so a
-    /// gap means the UI thread was busy — and nothing was holding the layers on top meanwhile.
+    /// Warns when a tick arrives long after the one before: nothing was holding the layers on top
+    /// meanwhile.
     /// </summary>
+    /// <remarks>
+    /// A late tick is not a blocked UI thread. The timer runs at Background priority, so any run of
+    /// higher-priority work starves it while the thread keeps answering — measured over a display
+    /// mode change: ticks 3–8s late while the thread never took more than 1.4s to answer a message,
+    /// most of the gap spent in WPF waiting on its render thread. The message says what was measured
+    /// and no more.
+    /// </remarks>
     private void LogStayOnTopStall()
     {
         long now = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -183,7 +209,7 @@ internal sealed class RealtimeSessionController
         {
             var gap = System.Diagnostics.Stopwatch.GetElapsedTime(_lastStayOnTopTick, now);
             if (gap > TimeSpan.FromSeconds(3))
-                Log.Warn("Realtime stay-on-top timer ticked {Gap:F1}s after the previous tick; the UI thread was blocked",
+                Log.Warn("Realtime stay-on-top timer was delayed: ticked {Gap:F1}s after the previous tick, the layers were not re-asserted meanwhile",
                     gap.TotalSeconds);
         }
         _lastStayOnTopTick = now;
@@ -208,6 +234,84 @@ internal sealed class RealtimeSessionController
             Log.Info("Realtime edit layer is no longer under hwnd={Hwnd:X}", _editCoveredBy);
 
         _editCoveredBy = coveredBy;
+    }
+
+    /// <summary>
+    /// In 視窗擷取, takes the overlays off the screen while their source is not there to be seen —
+    /// minimised, hidden, cloaked — and, while it is, hides each translation box another
+    /// application's window is touching. Everything comes back when that ends.
+    /// </summary>
+    /// <remarks>
+    /// The capture reads the window itself, so a covered game goes on being translated, and the
+    /// overlays drawn from it went on being re-asserted on top of whatever covered it: switching to
+    /// a second game left the first one's subtitles and repaired background floating over it, which
+    /// reads as the screen having frozen. See SourceWindowCoverage for what counts as covering.
+    ///
+    /// By box, not by block: a window over one line takes that line away and leaves the others, and
+    /// one over an empty part of a block takes nothing — see RealtimeBoxCoverage. A 對照顯示 copy is
+    /// a block window of its own where it is drawn, so it is judged where it is, not where its source
+    /// line is.
+    ///
+    /// On the stay-on-top timer rather than a timer of its own: it is the same question the timer is
+    /// already asking — which layers belong on top. And at once whenever another application comes
+    /// to the foreground (ForegroundChangeWatch), which is when a source is usually covered, so the
+    /// tick is only the backstop for what no switch announces. Not in 螢幕擷取, which reads the
+    /// screen as it is: there is no source window to be covered, and whatever is on top is what the
+    /// user meant to translate.
+    /// </remarks>
+    private void UpdateBlockVisibility()
+    {
+        if (!IsTranslating || _interlude.HideLayers || _blockWindows.Count == 0) return;
+        if (_request is not { CaptureMode: Models.RealtimeCaptureMode.Window } request) return;
+
+        var view = SourceWindowCoverage.Look(request.SourceWindow);
+
+        foreach (var (id, window) in _blockWindows)
+        {
+            var show = !view.Hidden;
+            if (show != window.IsVisible)
+            {
+                window.Visibility = show ? Visibility.Visible : Visibility.Hidden;
+                Log.Debug("Realtime block {Id} {State}: source {Source}", id, show ? "shown" : "hidden",
+                    show ? "back on screen" : "not on screen");
+            }
+
+            // Left as they were while the whole overlay is away: the next look with the source on
+            // the screen settles them against whatever is over it then.
+            if (!show) continue;
+            if (window.ApplyCovers(view.Covers) > 0)
+                Log.Debug("Realtime block {Id}: {Covered} translation box(es) covered", id, window.CoveredBoxes);
+        }
+    }
+
+    // Raised on a thread of the system's choosing, so it only starts the settle timer, on the
+    // dispatcher.
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e) =>
+        OnDispatcher(() =>
+        {
+            if (!IsActive) return;
+            _displaySettle.Stop();
+            _displaySettle.Start();
+        });
+
+    /// <summary>
+    /// The display has stopped changing: finds the session's screen again and puts the bar back on
+    /// it — see RealtimeSessionScreen — then settles the blocks at once rather than on the next tick.
+    /// </summary>
+    private void OnDisplaySettled()
+    {
+        if (!IsActive || _control is not { } control) return;
+
+        var screens = System.Windows.Forms.Screen.AllScreens
+            .Select(screen => new RealtimeSessionScreen.Screen(screen.DeviceName, screen.Bounds))
+            .ToList();
+        var now = RealtimeSessionScreen.Resolve(_screenDeviceName, _screenNow, screens);
+        if (now != _screenNow)
+            Log.Info("Realtime session screen changed from {From} to {To}", _screenNow, now);
+
+        _screenNow = now;
+        control.UpdateScreenBounds(now);
+        UpdateBlockVisibility();
     }
 
     /// <summary>Raised when the session starts or ends, so the page can re-render its controls.</summary>
@@ -284,6 +388,13 @@ internal sealed class RealtimeSessionController
         _control = control;
         control.Show();
         RefreshOverlayHandles();
+
+        _screenNow = request.ScreenBounds;
+        _screenDeviceName = System.Windows.Forms.Screen.FromRectangle(request.ScreenBounds).DeviceName;
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+
+        if (request.CaptureMode == Models.RealtimeCaptureMode.Window)
+            _foregroundWatch = ForegroundChangeWatch.Install(UpdateBlockVisibility);
 
         EnterEditMode();
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -483,6 +594,12 @@ internal sealed class RealtimeSessionController
         _stayOnTop.Stop();
         _lastStayOnTopTick = 0;
         DisposeEscapeHook();
+
+        // A static event: left subscribed, it would keep this session's handler alive and running.
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        _displaySettle.Stop();
+        _foregroundWatch?.Dispose();
+        _foregroundWatch = null;
 
         if (_session != null)
         {

@@ -65,6 +65,7 @@ public class RealtimeCaptureReleaseTests
         public string Name => "Fake";
 
         public Bitmap? GrabRegion(Rectangle screenBounds) => null;
+        public CaptureMiss DescribeMiss(Rectangle screenBounds) => CaptureMiss.Waiting;
 
         public string DescribeActivity() => "fake";
 

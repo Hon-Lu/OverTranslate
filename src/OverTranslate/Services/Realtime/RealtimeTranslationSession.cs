@@ -358,6 +358,7 @@ public sealed class RealtimeTranslationSession
             // How many gated polls in a row the gate has turned away. Both of its sizes have to
             // have had their turn before the frame counts as answered: see the turn-away below.
             var gateTurnedAway = 0;
+            var frameLoss = new RealtimeFrameLoss();
 
             while (asked || await NextPollAsync(timer, step, token))
             {
@@ -375,7 +376,22 @@ public sealed class RealtimeTranslationSession
 
                 step.Set("grab");
                 using var frame = _capture?.GrabRegion(region.Bounds);
-                if (frame is null) continue;
+                if (frame is null)
+                {
+                    // Nothing to read here any more — see RealtimeFrameLoss. Only a region the
+                    // source has really left counts: one whose picture is merely late keeps what it
+                    // shows, which on a still page is still right. Forgetting what was drawn is what
+                    // makes the region read again the moment the picture is back.
+                    if (_capture?.DescribeMiss(region.Bounds) == CaptureMiss.NotOnSource && frameLoss.Missed())
+                    {
+                        Log.Debug("Realtime region {Region} has had no picture for {Polls} polls; cleared",
+                            region.Id, RealtimeFrameLoss.ClearAfterPolls);
+                        state.Invalidate();
+                        pump.Publish(pump.NextPass(), []);
+                    }
+                    continue;
+                }
+                frameLoss.Seen();
 
                 // Closes over this poll's frame, so the policy can summarise the text strips or the
                 // whole region without ever seeing the bitmap.
