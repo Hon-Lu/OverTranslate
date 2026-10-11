@@ -1,4 +1,5 @@
 using OverTranslate.Services.Realtime.Capture;
+using Windows.Graphics;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -80,6 +81,51 @@ public class WgcFrameThrottleTests
             WgcFrameThrottle.Arrival.Read,
             WgcFrameThrottle.OnArrival(false, TimeSpan.Zero, TimeSpan.FromSeconds(2), MaxFrameAge, IdleAfter));
     }
+
+    [Fact]
+    public void AFrameOfAnotherSizeAsksForTheRebuild()
+    {
+        Assert.True(WgcFrameThrottle.NeedsResize(Size(1920, 1040), Size(1936, 1056), null));
+        Assert.False(WgcFrameThrottle.NeedsResize(Size(1936, 1056), Size(1936, 1056), null));
+    }
+
+    [Fact]
+    public void ASizeThePoolRefusedIsNotAskedForAgain()
+    {
+        Assert.False(WgcFrameThrottle.NeedsResize(Size(1920, 1040), Size(1936, 1056), Size(1920, 1040)));
+        // The window really changing size afterwards is a new request.
+        Assert.True(WgcFrameThrottle.NeedsResize(Size(1280, 720), Size(1936, 1056), Size(1920, 1040)));
+    }
+
+    [Fact]
+    public void ARefusedRebuildNoLongerReadsBackEveryFrame()
+    {
+        // 2.7.1 on Windows 10, reported: received=61908 read=61853 rebuilds=0. Every frame of the
+        // wrong size was read at once, and the rebuild it asked for failed every time.
+        var pool = Size(1936, 1056);
+        var content = Size(1920, 1040);
+        SizeInt32? failedAt = null;
+        var reads = 0;
+        var frames = 0;
+        var lastRead = 0.0;
+        for (var at = 0.0; at < 10_000; at += 1000.0 / 60, frames++)
+        {
+            var resize = WgcFrameThrottle.NeedsResize(content, pool, failedAt);
+            var arrival = WgcFrameThrottle.OnArrival(
+                reads > 0, TimeSpan.FromMilliseconds(at - lastRead), TimeSpan.Zero, MaxFrameAge, IdleAfter);
+            if (arrival == WgcFrameThrottle.Arrival.Read || resize)
+            {
+                reads++;
+                lastRead = at;
+            }
+            if (resize) failedAt = content;   // Recreate threw
+        }
+
+        Assert.InRange(reads, 1, (int)(10_000 / MaxFrameAge.TotalMilliseconds) + 2);
+        Assert.True(reads * 5 < frames, $"{reads} reads for {frames} frames");
+    }
+
+    private static SizeInt32 Size(int width, int height) => new() { Width = width, Height = height };
 
     /// <summary>
     /// The backend's bookkeeping around the policy, with times in milliseconds: the frame handler,

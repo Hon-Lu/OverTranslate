@@ -114,6 +114,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private int _framesRead;
     private int _rebuilds;
 
+    // The size the pool last refused to be recreated at, and whether that has been said at Warn.
+    // Frame thread only. See WgcFrameThrottle.NeedsResize.
+    private SizeInt32? _resizeFailedAt;
+    private int _resizeFailureReported;
+
     // Where a poll and the frame handler are right now, for the line a stuck session leaves behind —
     // see StepMarker. Reported by DescribeActivity.
     private readonly StepMarker _grabStep = new("idle");
@@ -400,6 +405,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         item.Closed += OnItemClosed;
 
         _poolSize = item.Size;
+        _resizeFailedAt = null;
         _pool = Direct3D11CaptureFramePool.Create(
             _device, DirectXPixelFormat.B8G8R8A8UIntNormalized, FrameBuffers, _poolSize);
         _pool.FrameArrived += OnFrameArrived;
@@ -458,7 +464,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // it, silently and on the very first frame, since a window's content size and its item
             // size routinely differ by the invisible resize border.
             var content = frame.ContentSize;
-            if (content.Width != _poolSize.Width || content.Height != _poolSize.Height)
+            if (WgcFrameThrottle.NeedsResize(content, _poolSize, _resizeFailedAt))
                 resizeTo = content;
 
             // The first frame is always read, and that is not an optimisation detail: capture emits
@@ -579,13 +585,21 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         {
             _pool.Recreate(_device, DirectXPixelFormat.B8G8R8A8UIntNormalized, FrameBuffers, size);
             _poolSize = size;
+            _resizeFailedAt = null;
             Interlocked.Increment(ref _rebuilds);
             Log.Debug("Realtime capture resized to {Width}x{Height}", size.Width, size.Height);
         }
         catch (Exception ex)
         {
-            // The next frame of the wrong size asks again.
-            Log.Debug(ex, "Realtime capture could not resize to {Width}x{Height}", size.Width, size.Height);
+            // Not asked again at this size: frames of it are read from the pool as it stands, at the
+            // ordinary rate. Once at Warn — a capture reading every frame back because of this is the
+            // kind of thing a report has to be able to show — and the rest at Debug.
+            _resizeFailedAt = size;
+            if (Interlocked.Exchange(ref _resizeFailureReported, 1) == 0)
+                Log.Warn(ex, "Realtime capture could not resize its frame pool to {Width}x{Height}; " +
+                    "frames of that size are read at the ordinary rate from the pool as it is", size.Width, size.Height);
+            else
+                Log.Debug(ex, "Realtime capture could not resize to {Width}x{Height}", size.Width, size.Height);
         }
     }
 

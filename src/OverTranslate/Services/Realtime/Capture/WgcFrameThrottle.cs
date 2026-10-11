@@ -42,4 +42,22 @@ internal static class WgcFrameThrottle
     /// </summary>
     public static TimeSpan HeldFrameDueIn(TimeSpan sinceRead, TimeSpan maxFrameAge) =>
         sinceRead >= maxFrameAge ? TimeSpan.Zero : maxFrameAge - sinceRead;
+
+    /// <summary>
+    /// Whether a frame of <paramref name="content"/> size asks for the pool to be recreated — which
+    /// also means it is read back at once, since it cannot be kept past the rebuild.
+    /// </summary>
+    /// <param name="failedAt">The size a rebuild was last refused at, if the last attempt failed.</param>
+    /// <remarks>
+    /// Not again for a size the pool has already refused. Every frame of that size would otherwise
+    /// count as a resizing frame, read back at once and ask again: a report on 2.7.1 under Windows 10
+    /// shows exactly that, <c>received=61908 read=61853 rebuilds=0</c> over 17 minutes, an 8MB
+    /// readback for every frame the window composed. Read from the pool as it stands, those frames go
+    /// through the ordinary limit instead; the reader clips to the texture. A different size is a
+    /// real change and is tried again.
+    /// </remarks>
+    public static bool NeedsResize(
+        Windows.Graphics.SizeInt32 content, Windows.Graphics.SizeInt32 pool, Windows.Graphics.SizeInt32? failedAt) =>
+        (content.Width != pool.Width || content.Height != pool.Height)
+        && !(failedAt is { } failed && failed.Width == content.Width && failed.Height == content.Height);
 }
