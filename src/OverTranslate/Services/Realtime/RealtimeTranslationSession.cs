@@ -378,9 +378,11 @@ public sealed class RealtimeTranslationSession
                 using var frame = _capture?.GrabRegion(region.Bounds);
                 if (frame is null)
                 {
-                    // Nothing to read here any more — see RealtimeFrameLoss. Forgetting what was
-                    // drawn is what makes the region read again the moment the picture is back.
-                    if (frameLoss.Missed())
+                    // Nothing to read here any more — see RealtimeFrameLoss. Only a region the
+                    // source has really left counts: one whose picture is merely late keeps what it
+                    // shows, which on a still page is still right. Forgetting what was drawn is what
+                    // makes the region read again the moment the picture is back.
+                    if (_capture?.DescribeMiss(region.Bounds) == CaptureMiss.NotOnSource && frameLoss.Missed())
                     {
                         Log.Debug("Realtime region {Region} has had no picture for {Polls} polls; cleared",
                             region.Id, RealtimeFrameLoss.ClearAfterPolls);

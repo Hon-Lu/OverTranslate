@@ -1,19 +1,25 @@
 namespace OverTranslate.Services.Realtime;
 
 /// <summary>
-/// Counts the polls in a row on which a region got no picture at all, and says — once — when what
-/// it last drew should come off the screen.
+/// Counts the polls in a row on which a region was not on its source at all, and says — once — when
+/// what it last drew should come off the screen.
 /// </summary>
 /// <remarks>
-/// A region gets no picture when the window it reads is minimised, or has moved or changed size so
-/// that the block is no longer over it. Carrying on as if nothing happened left the last translation
+/// A region is off its source when the window it reads is minimised, hidden or gone, or has moved or
+/// changed size so that the block is no longer over it — as the window is now, see
+/// <see cref="Capture.CaptureMiss"/>. Carrying on as if nothing happened left the last translation
 /// and its repaired background on the screen with nothing behind them: a piece of the game, frozen,
 /// floating over whatever the user switched to — which over a second game is exactly what a frozen
 /// screen looks like.
 ///
-/// Not on the first miss. A picture is briefly unavailable while a capture is rebuilt for a resize,
-/// and clearing a line the user is reading for that would be a flicker for nothing. A few polls is
-/// well under a second and longer than any of those.
+/// Only those polls are counted. A poll whose picture is merely late — the last frame is of the
+/// window at its old size, frames are held back for a moment, none has come yet — is neither a miss
+/// nor a sighting: the caller does not report it, and the count stands. A still page that was made
+/// smaller and then larger again would otherwise lose a translation that is still right, and nothing
+/// would put it back until the page changed.
+///
+/// Not on the first miss either: a window being dragged can leave a block for a poll or two.
+/// A few polls is well under a second and longer than that.
 /// </remarks>
 public sealed class RealtimeFrameLoss
 {

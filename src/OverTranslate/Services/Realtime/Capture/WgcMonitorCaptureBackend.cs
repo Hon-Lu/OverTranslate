@@ -290,6 +290,21 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
         }
     }
 
+    /// <remarks>
+    /// Only a region off the monitor as it is now is off the source. Everything else this backend
+    /// returns null for — frames held back until the overlays are excluded from them, no frame yet,
+    /// a frame from before a display mode change — is a picture that is late.
+    /// </remarks>
+    public CaptureMiss DescribeMiss(Rectangle screenBounds)
+    {
+        var monitor = _monitor;
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        Rectangle? bounds = monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info)
+            ? Rectangle.FromLTRB(info.rcMonitor.Left, info.rcMonitor.Top, info.rcMonitor.Right, info.rcMonitor.Bottom)
+            : null;
+        return CaptureMissRules.ForMonitor(bounds, screenBounds);
+    }
+
     public string DescribeSteps() =>
         $"grab=[{_grabStep.Describe()}] arrival=[{_arrivalStep.Describe()}]";
 

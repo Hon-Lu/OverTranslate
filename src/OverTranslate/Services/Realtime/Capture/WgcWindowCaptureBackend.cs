@@ -126,6 +126,14 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private long _readbackTicks;
     private int _outsideReported;
 
+    // Asking a still window for a frame of the size it is now — see FreshFrameRequest — and how
+    // often the capture had to be started again for one.
+    private readonly FreshFrameRequest _freshFrame = new();
+    private int _freshRestarts;
+
+    // Whether the capture indicator was turned off, so a capture started again keeps it off.
+    private bool _borderHidden;
+
     // Which adapter the frames are being asked for on, and the first thing a frame handler failed
     // with, if it failed. Both exist for the log line that a capture producing nothing leaves
     // behind: without them "no frame at all" is the whole of what a report can say.
@@ -277,7 +285,12 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         Volatile.Write(ref _lastGrabAt, Stopwatch.GetTimestamp());
 
         _grabStep.Set("origin");
-        if (!TryGetFrameOrigin(out var origin)) return null;
+        if (!TryGetFrameOrigin(out var origin, out var stale)) return null;
+
+        // A frame of the window at another size: the window was resized and, being still, has not
+        // drawn itself since. Asked for one now rather than left until something on it changes.
+        if (stale is { } window) AskForFreshFrame(window);
+        else _freshFrame.Settled();
 
         _grabStep.Set("crop");
         lock (_latestLock)
@@ -288,15 +301,15 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             var visible = Rectangle.Intersect(crop, new Rectangle(0, 0, latest.Width, latest.Height));
             if (visible.Width <= 0 || visible.Height <= 0)
             {
-                // The region is no longer over the window at all — it was dragged away, or the
-                // window moved out from under it. Nothing to read, and nothing to say four times a
-                // second about it.
+                // Not in this frame. Whether that is the region being off the window or the frame
+                // being behind the window is DescribeMiss's question, asked by the caller. Said once
+                // at Warn: a block the user dragged off the window is worth one line.
                 if (Interlocked.Exchange(ref _outsideReported, 1) == 0)
                     Log.Warn(
-                        "Realtime region {Bounds} lies outside the captured window at {Origin}; " +
-                        "further occurrences logged at Debug", screenBounds, origin);
+                        "Realtime region {Bounds} lies outside the captured frame ({Width}x{Height} at {Origin}); " +
+                        "further occurrences logged at Debug", screenBounds, latest.Width, latest.Height, origin);
                 else
-                    Log.Debug("Realtime region {Bounds} lies outside the captured window", screenBounds);
+                    Log.Debug("Realtime region {Bounds} lies outside the captured frame", screenBounds);
                 return null;
             }
 
@@ -320,6 +333,76 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
                 frame.Dispose();
                 throw;
             }
+        }
+    }
+
+    /// <remarks>
+    /// Against the window as it is now. The last frame can be the window at the size it was before a
+    /// resize — on a still window it stays that size until something repaints — and a region outside
+    /// that frame but over the window is late, not gone: clearing it would take a translation off a
+    /// page that has not changed, and nothing would put it back until the page did.
+    /// </remarks>
+    public CaptureMiss DescribeMiss(Rectangle screenBounds)
+    {
+        if (IsDisposed) return CaptureMiss.Waiting;
+
+        var hwnd = _hwnd;
+        if (hwnd == IntPtr.Zero || !IsWindow(hwnd)) return CaptureMiss.NotOnSource;
+
+        var onScreen = IsWindowVisible(hwnd) && !IsIconic(hwnd);
+        if (!TryGetWindowBounds(hwnd, out var bounds, out _)) return CaptureMiss.NotOnSource;
+        return CaptureMissRules.ForWindow(onScreen, bounds, screenBounds);
+    }
+
+    /// <summary>
+    /// The last frame is not of the window as it is now (<paramref name="window"/>): asks for one that
+    /// is — see FreshFrameRequest. Any thread.
+    /// </summary>
+    private void AskForFreshFrame(Rectangle window)
+    {
+        Size frame;
+        lock (_latestLock)
+        {
+            if (_latest is not { } latest) return;
+            frame = latest.Size;
+        }
+
+        var hwnd = _hwnd;
+        switch (_freshFrame.Next(frame, window.Size, Stopwatch.GetElapsedTime(0)))
+        {
+            case FreshFrameRequest.Ask.Redraw:
+                // Invalidated only, not painted here: RDW_UPDATENOW would send the window a paint
+                // message and wait for it, on a poll, across processes.
+                RedrawWindow(hwnd, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+                Log.Debug("Realtime capture frame is {Frame} but the window is {Window}; asked it to repaint",
+                    frame, window.Size);
+                break;
+
+            case FreshFrameRequest.Ask.Restart:
+                Log.Info(
+                    "Realtime capture frame is still {Frame} but the window is {Window}; starting the capture again for a frame",
+                    frame, window.Size);
+                _thread.Post(RestartForFreshFrame);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Starts the capture of the same window again: a new capture always opens with a frame, which a
+    /// window that does not repaint on request would otherwise never send. Frame thread only.
+    /// </summary>
+    private void RestartForFreshFrame()
+    {
+        var hwnd = _hwnd;
+        if (IsDisposed || hwnd == IntPtr.Zero || !IsWindow(hwnd) || IsIconic(hwnd)) return;
+
+        try
+        {
+            if (Attach(hwnd)) Interlocked.Increment(ref _freshRestarts);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Could not start the realtime capture of hwnd={Hwnd:X} again", hwnd);
         }
     }
 
@@ -357,6 +440,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             {
                 if (_session is null) return false;
                 _session.IsBorderRequired = false;
+                _borderHidden = true;
                 return true;
             }, ThreadCallTimeout);
 
@@ -381,7 +465,8 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             : Stopwatch.GetElapsedTime(0, Volatile.Read(ref _readbackTicks)).TotalMilliseconds / reads;
 
         return $"hwnd={_hwnd:X} received={Volatile.Read(ref _framesReceived)} read={reads} " +
-               $"avgReadback={averageMs:F1}ms rebuilds={Volatile.Read(ref _rebuilds)}";
+               $"avgReadback={averageMs:F1}ms rebuilds={Volatile.Read(ref _rebuilds)} " +
+               $"restarts={Volatile.Read(ref _freshRestarts)}";
     }
 
     // ── Capture chain ────────────────────────────────────────────────────────────────────────────
@@ -412,6 +497,12 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
         _session = _pool.CreateCaptureSession(item);
         WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
+        if (_borderHidden)
+        {
+            // Allowed once already for this application; a capture started again keeps it off.
+            try { _session.IsBorderRequired = false; }
+            catch (Exception ex) { Log.Debug(ex, "Capture indicator could not be turned off again"); }
+        }
         _session.StartCapture();
 
         Log.Info(
@@ -746,34 +837,45 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     /// rectangle's corner is the origin. Re-read every poll because both of them move: the window
     /// can be dragged, and dragged to a monitor at another scale.
     /// </remarks>
-    private bool TryGetFrameOrigin(out Point origin)
+    /// <param name="stale">
+    /// The window as it is now, when the last frame is not of it — the window has another size than
+    /// the frame. Null when the frame is the window's current picture.
+    /// </param>
+    private bool TryGetFrameOrigin(out Point origin, out Rectangle? stale)
     {
         origin = Point.Empty;
+        stale = null;
         var hwnd = _hwnd;
         if (hwnd == IntPtr.Zero) return false;
 
-        int width, height;
+        Size frame;
         lock (_latestLock)
         {
             if (_latest is not { } latest) return false;
-            width = latest.Width;
-            height = latest.Height;
+            frame = latest.Size;
         }
 
-        if (!GetWindowRect(hwnd, out var window)) return false;
+        if (!TryGetWindowBounds(hwnd, out var extended, out var window)) return false;
 
-        var hasExtended = DwmGetWindowAttribute(
-            hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var extended, Marshal.SizeOf<RECT>()) == 0;
+        if (!CaptureMissRules.MatchesWindow(frame, extended.Size, window.Size)) stale = extended;
 
-        if (hasExtended
-            && extended.Right - extended.Left == width
-            && extended.Bottom - extended.Top == height)
-        {
-            origin = new Point(extended.Left, extended.Top);
-            return true;
-        }
+        origin = frame == extended.Size ? extended.Location : window.Location;
+        return true;
+    }
 
-        origin = new Point(window.Left, window.Top);
+    /// <summary>
+    /// The window on the screen now: its extended frame bounds (the window rectangle where those are
+    /// unavailable) and its window rectangle, in physical pixels.
+    /// </summary>
+    private static bool TryGetWindowBounds(IntPtr hwnd, out Rectangle extended, out Rectangle window)
+    {
+        extended = window = Rectangle.Empty;
+        if (!GetWindowRect(hwnd, out var rect)) return false;
+
+        window = Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        extended = DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var frame, Marshal.SizeOf<RECT>()) == 0
+            ? Rectangle.FromLTRB(frame.Left, frame.Top, frame.Right, frame.Bottom)
+            : window;
         return true;
     }
 
@@ -843,6 +945,22 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
     [DllImport("user32.dll")]
     private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hwnd);
+
+    private const uint RDW_INVALIDATE = 0x0001;
+    private const uint RDW_ALLCHILDREN = 0x0080;
+    private const uint RDW_FRAME = 0x0400;
+
+    [DllImport("user32.dll")]
+    private static extern bool RedrawWindow(IntPtr hwnd, IntPtr update, IntPtr region, uint flags);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr hwnd, uint attribute, out RECT value, int size);
