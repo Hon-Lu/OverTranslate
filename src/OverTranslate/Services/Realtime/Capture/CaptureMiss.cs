@@ -79,7 +79,11 @@ internal sealed class FreshFrameRequest
     public static readonly TimeSpan AskEvery = TimeSpan.FromMilliseconds(300);
 
     /// <summary>How long a redraw is given to bring a frame before the capture is restarted.</summary>
-    public static readonly TimeSpan RestartAfter = TimeSpan.FromSeconds(1);
+    /// <remarks>
+    /// Short: a browser composes its page past the window's paint, so invalidating it brings no frame
+    /// (measured on Edge), and the restart is what answers there.
+    /// </remarks>
+    public static readonly TimeSpan RestartAfter = TimeSpan.FromMilliseconds(600);
 
     public const int MaxRedraws = 4;
     public const int MaxRestarts = 2;

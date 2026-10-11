@@ -857,7 +857,10 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
         if (!TryGetWindowBounds(hwnd, out var extended, out var window)) return false;
 
-        if (!CaptureMissRules.MatchesWindow(frame, extended.Size, window.Size)) stale = extended;
+        // Not while the window is off the screen: minimised it has a token rectangle, and no frame
+        // will be of that size or should be asked for.
+        if (!CaptureMissRules.MatchesWindow(frame, extended.Size, window.Size) && IsWindowVisible(hwnd) && !IsIconic(hwnd))
+            stale = extended;
 
         origin = frame == extended.Size ? extended.Location : window.Location;
         return true;
