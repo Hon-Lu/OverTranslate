@@ -261,8 +261,7 @@ internal sealed class RealtimeSessionController
 
         foreach (var (id, window) in _blockWindows)
         {
-            var show = SourceWindowCoverage.LeavesVisible(
-                view, ScreenGeometry.PhysicalBounds(window));
+            var show = SourceWindowCoverage.LeavesVisible(view, window.DrawnPhysicalBounds());
             if (show == window.IsVisible) continue;
 
             window.Visibility = show ? Visibility.Visible : Visibility.Hidden;

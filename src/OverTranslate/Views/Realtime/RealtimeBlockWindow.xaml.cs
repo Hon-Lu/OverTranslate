@@ -278,6 +278,47 @@ public partial class RealtimeBlockWindow : Window
         }
     }
 
+    /// <summary>
+    /// What this window is drawing right now, in physical screen pixels: every line's band or patch
+    /// and its text, as the screen shows them. Empty while it shows nothing. For the session's
+    /// coverage check — see SourceWindowCoverage.LeavesVisible.
+    /// </summary>
+    /// <remarks>
+    /// Taken from the drawn elements themselves rather than worked out again from the lines, so a
+    /// scaled 對照顯示 copy, a tilted line and a patch's feathered edge all count exactly where they
+    /// are. Laid out first: lines can arrive while the window is hidden.
+    /// </remarks>
+    public IReadOnlyList<System.Drawing.Rectangle> DrawnPhysicalBounds()
+    {
+        if (ScrimCanvas.Children.Count == 0 && TextCanvas.Children.Count == 0) return [];
+
+        UpdateLayout();
+        var drawn = new List<System.Drawing.Rectangle>();
+        foreach (var canvas in new[] { ScrimCanvas, TextCanvas })
+        {
+            foreach (var child in canvas.Children)
+            {
+                if (child is not FrameworkElement element || element.ActualWidth <= 0 || element.ActualHeight <= 0)
+                    continue;
+
+                var inWindow = element.TransformToAncestor(this)
+                    .TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+                drawn.Add(ToPhysical(inWindow, _dpiX, _dpiY, _displayBounds.Location));
+            }
+        }
+        return drawn;
+    }
+
+    /// <summary>A rectangle in this window's device-independent units, on the screen in physical pixels.</summary>
+    internal static System.Drawing.Rectangle ToPhysical(Rect inWindow, double dpiX, double dpiY, System.Drawing.Point origin)
+    {
+        var left = (int)Math.Floor(inWindow.Left * dpiX);
+        var top = (int)Math.Floor(inWindow.Top * dpiY);
+        var right = (int)Math.Ceiling(inWindow.Right * dpiX);
+        var bottom = (int)Math.Ceiling(inWindow.Bottom * dpiY);
+        return new System.Drawing.Rectangle(origin.X + left, origin.Y + top, right - left, bottom - top);
+    }
+
     // A pixel of movement is below what anyone can see and well inside recognition's own precision.
     private const double SamePositionTolerance = 2.0;
 
