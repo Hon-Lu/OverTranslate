@@ -154,6 +154,27 @@ public class QuickLookupWindowMarkupTests
         Assert.Equal("{StaticResource ResultActionButton}", (string?)buttons[2].Attribute("Style"));
     }
 
+    /// <summary>
+    /// The full result steps its translation down as it grows: a glance-sized line stays large, a
+    /// paragraph gets smaller, and nothing goes below the compact view's size.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 24, 32)]
+    [InlineData(3, 24, 32)]
+    [InlineData(4, 19, 27)]
+    [InlineData(6, 19, 27)]
+    [InlineData(7, 16, 24)]
+    [InlineData(200, 16, 24)]
+    public void The_full_translation_steps_down_by_how_many_lines_it_runs_to(
+        int lines, double size, double lineHeight)
+    {
+        var style = OverTranslate.Views.QuickLookup.QuickLookupWindow.TranslatedTextStyle(lines);
+
+        Assert.Equal(size, style.Size);
+        Assert.Equal(lineHeight, style.LineHeight);
+        Assert.True(style.Size > 14);
+    }
+
     /// <summary>The compact speech button is centered on the first line box, independent of script glyph size.</summary>
     [Fact]
     public void The_compact_tts_button_aligns_to_the_first_line_box()

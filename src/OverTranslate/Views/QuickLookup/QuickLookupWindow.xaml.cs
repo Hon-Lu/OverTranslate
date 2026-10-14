@@ -319,6 +319,7 @@ public partial class QuickLookupWindow : Window
     {
         InitializeComponent();
         SourceTextBox.MaxLength = SourceTextLimit.MaxLength;
+        TranslatedText.SizeChanged += TranslatedText_SizeChanged;
         _resultsCollapsed = SettingsService.Instance.Current.QuickLookup.ResultsCollapsed;
 
         _debounce = new DispatcherTimer { Interval = DebounceDelay };
@@ -1082,6 +1083,7 @@ public partial class QuickLookupWindow : Window
             SetTranslationLoading(false);
             _detectedLang = detected ?? "";
             TranslatedText.Text = results.FirstOrDefault()?.TranslatedText ?? "";
+            StyleTranslatedText();
             if (settings.QuickLookup.AutoCopyTranslation)
                 CopyTranslation(showConfirmation: false);
             StatusText.Visibility = Visibility.Collapsed;
@@ -1098,6 +1100,7 @@ public partial class QuickLookupWindow : Window
             SetTranslationLoading(false);
             Log.Warn(ex, "取詞翻譯 could not translate");
             TranslatedText.Text = "";
+            StyleTranslatedText();
             ShowStatus(
                 LocalizationService.Format(
                     "S.Translation.ProviderUnavailable",
@@ -1192,6 +1195,72 @@ public partial class QuickLookupWindow : Window
         CompactTranslatedText.Text = "";
         CompactTranslatedText.Visibility = Visibility.Collapsed;
         ShowResult();
+    }
+
+    /// <summary>How the full result's translation is set, by how many lines it runs to at full size.</summary>
+    /// <remarks>
+    /// <para>24px is for a word or a sentence, read at a glance; a paragraph at that size is a wall
+    /// the eye has to climb. Lines rather than characters decide it, because a CJK character takes
+    /// about twice the width of a Latin letter and a count would shrink one script too early and the
+    /// other too late.</para>
+    ///
+    /// <para>Steps rather than a continuous scale, because the popup re-translates as the user types:
+    /// a size that followed the length would breathe on every keystroke. The floor is still a size
+    /// above the compact view's 14, which is what keeps the expanded view the one to read in. The
+    /// weight stays semibold throughout, as the compact view's does at its smaller size.</para>
+    /// </remarks>
+    internal static (double Size, double LineHeight) TranslatedTextStyle(int fullSizeLines) =>
+        fullSizeLines switch
+        {
+            <= 3 => (24, 32),
+            <= 6 => (19, 27),
+            _ => (16, 24),
+        };
+
+    private double _translatedTextStyledWidth = -1;
+    private string? _translatedTextStyledFor;
+
+    private void TranslatedText_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.WidthChanged) StyleTranslatedText();
+    }
+
+    /// <summary>
+    /// Counts the lines the translation would take at full size, in the width it actually has, and
+    /// sets the step that count calls for — see <see cref="TranslatedTextStyle"/>.
+    /// </summary>
+    private void StyleTranslatedText()
+    {
+        var text = TranslatedText.Text;
+        var width = TranslatedText.ActualWidth;
+        if (width <= 0) return;   // Not laid out yet; SizeChanged brings it back once it is.
+        if (text == _translatedTextStyledFor && Math.Abs(width - _translatedTextStyledWidth) < 0.5) return;
+
+        _translatedTextStyledFor = text;
+        _translatedTextStyledWidth = width;
+
+        var (fullSize, fullLineHeight) = TranslatedTextStyle(0);
+        var lines = 0;
+        if (text.Length > 0)
+        {
+            var measured = new FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentUICulture,
+                TranslatedText.FlowDirection,
+                new Typeface(TranslatedText.FontFamily, TranslatedText.FontStyle, TranslatedText.FontWeight, TranslatedText.FontStretch),
+                fullSize,
+                TranslatedText.Foreground,
+                VisualTreeHelper.GetDpi(TranslatedText).PixelsPerDip)
+            {
+                MaxTextWidth = width,
+                LineHeight = fullLineHeight,
+            };
+            lines = (int)Math.Round(measured.Height / fullLineHeight);
+        }
+
+        var (size, lineHeight) = TranslatedTextStyle(lines);
+        TranslatedText.FontSize = size;
+        TranslatedText.LineHeight = lineHeight;
     }
 
     /// <summary>
@@ -1942,6 +2011,7 @@ public partial class QuickLookupWindow : Window
             // Translating a translation back gives the text it came from, so this already is the
             // answer; waiting for the engine to agree would just read as lag.
             TranslatedText.Text = wasOriginal;
+            StyleTranslatedText();
         }
 
         // Anything already in flight was asked under the old pair and would overwrite both.
