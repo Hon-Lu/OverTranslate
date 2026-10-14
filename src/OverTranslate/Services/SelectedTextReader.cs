@@ -54,6 +54,12 @@ internal static class SelectedTextReader
     /// <summary>Runs of whitespace, newlines included.</summary>
     private static readonly Regex Whitespace = new(@"\s+", RegexOptions.Compiled);
 
+    /// <summary>Runs of whitespace within one line.</summary>
+    private static readonly Regex InlineWhitespace = new(@"[^\S\r\n]+", RegexOptions.Compiled);
+
+    /// <summary>Any one line break, whichever convention it was written in.</summary>
+    private static readonly Regex LineBreak = new(@"\r\n|\r|\n", RegexOptions.Compiled);
+
     /// <summary>
     /// Copies the current selection out of the foreground application, restoring the clipboard.
     /// </summary>
@@ -63,7 +69,8 @@ internal static class SelectedTextReader
     /// nothing in it.
     /// </remarks>
     /// <param name="maxLength">Where the text is cut.</param>
-    public static async Task<string> ReadAsync(int maxLength)
+    /// <param name="keepLineBreaks">Whether the text keeps its lines — see <see cref="KeepLines"/>.</param>
+    public static async Task<string> ReadAsync(int maxLength, bool keepLineBreaks = false)
     {
         object? snapshot;
         uint before;
@@ -96,7 +103,7 @@ internal static class SelectedTextReader
                 () => Task.Delay(PollInterval),
                 maxStartPolls,
                 maxCompletionPolls);
-            return Cap(text, maxLength);
+            return Sanitize(text, maxLength, keepLineBreaks);
         }
         catch (Exception ex)
         {
@@ -136,7 +143,7 @@ internal static class SelectedTextReader
             changed |= getSequenceNumber() != before;
 
             if (changed && readText() is { } text)
-                return Fold(text);
+                return text;
 
             if (changed)
             {
@@ -178,15 +185,17 @@ internal static class SelectedTextReader
     }
 
     /// <summary>
-    /// Trims the copied text down to one line of at most <see cref="MaxLength"/> characters.
+    /// Trims the copied text down to one line of at most <paramref name="maxLength"/> characters, or
+    /// with <paramref name="keepLineBreaks"/> to tidied lines — see <see cref="KeepLines"/>.
     /// </summary>
     /// <remarks>
-    /// Whitespace is collapsed rather than kept because a selection dragged across a web page or a
-    /// PDF arrives hard-wrapped at whatever width it was laid out to, and those line breaks belong
-    /// to the page rather than to the sentence. Left in, they reach the translation engine as
+    /// Whitespace is collapsed rather than kept by default because a selection dragged across a web
+    /// page or a PDF arrives hard-wrapped at whatever width it was laid out to, and those line breaks
+    /// belong to the page rather than to the sentence. Left in, they reach the translation engine as
     /// sentence boundaries that are not there.
     /// </remarks>
-    public static string Sanitize(string? raw, int maxLength = MaxLength) => Cap(Fold(raw), maxLength);
+    public static string Sanitize(string? raw, int maxLength = MaxLength, bool keepLineBreaks = false) =>
+        Cap(keepLineBreaks ? KeepLines(raw) : Fold(raw), maxLength);
 
     private static string Cap(string text, int maxLength) =>
         text.Length <= maxLength ? text : text[..maxLength].TrimEnd();
@@ -199,6 +208,32 @@ internal static class SelectedTextReader
     /// </remarks>
     public static string Fold(string? raw) =>
         string.IsNullOrWhiteSpace(raw) ? "" : Whitespace.Replace(raw, " ").Trim();
+
+    /// <summary>
+    /// Tidies the text the way <see cref="Fold"/> does, but line by line, keeping the breaks.
+    /// </summary>
+    /// <remarks>
+    /// For 取詞翻譯's 多行輸入, which is for someone who wants an article translated as it was laid
+    /// out. Spaces inside a line are still collapsed and each line is trimmed; a run of blank lines
+    /// becomes one, which is still a paragraph break to every engine. Lines are joined with
+    /// <see cref="Environment.NewLine"/> because that is what a TextBox inserts for Enter, so the
+    /// box never holds two conventions at once.
+    /// </remarks>
+    public static string KeepLines(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+
+        var lines = new List<string>();
+        foreach (var line in LineBreak.Split(raw))
+        {
+            var tidy = InlineWhitespace.Replace(line, " ").Trim();
+            if (tidy.Length == 0 && (lines.Count == 0 || lines[^1].Length == 0)) continue;
+            lines.Add(tidy);
+        }
+
+        while (lines.Count > 0 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
+        return string.Join(Environment.NewLine, lines);
+    }
 
     /// <summary>
     /// Sends Ctrl+C to whatever has the foreground — see <see cref="KeyboardInput"/> for how the

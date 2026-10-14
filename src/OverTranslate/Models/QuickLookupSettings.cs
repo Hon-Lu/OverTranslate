@@ -12,6 +12,13 @@ public class QuickLookupSettings
     public bool AutoCopyTranslation { get; set; } = false;
 
     /// <summary>
+    /// Whether a selection keeps its line breaks and the box takes more than one line. Off by
+    /// default: a selection dragged across a web page or a PDF is hard-wrapped at the page's width,
+    /// and for most readers those breaks are noise that splits a sentence in two.
+    /// </summary>
+    public bool MultilineInput { get; set; } = false;
+
+    /// <summary>
     /// Whether the popup replaces its detailed result with the compact status-and-preview view.
     /// False keeps the complete translation, actions and dictionary visible on a first run.
     /// </summary>

@@ -148,6 +148,7 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.QuickLookup.Copy">Copy</sys:String>
     <sys:String x:Key="S.QuickLookup.Copied">Copied</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSource">Read the original</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">Read the translation</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">Read the original aloud</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
@@ -158,6 +159,8 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">Shared with screen translation and text translation</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">Automatically copy translation results</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">Automatically copies the result to the clipboard when translation finishes</sys:String>
+    <sys:String x:Key="S.QuickLookup.MultilineInput">Multi-line input</sys:String>
+    <sys:String x:Key="S.QuickLookup.MultilineInputHint">Keeps line breaks in the selected text and allows multi-line input</sys:String>
     <sys:String x:Key="S.QuickLookup.Bilingual">Two-way translation</sys:String>
     <sys:String x:Key="S.QuickLookup.BilingualHint">Detects what you typed and translates between the two languages you choose</sys:String>
     <sys:String x:Key="S.QuickLookup.BilingualFallback">Any other language detected is translated into the language on the left, {0}</sys:String>

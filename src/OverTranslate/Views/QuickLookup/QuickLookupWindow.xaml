@@ -205,6 +205,53 @@
             <Setter Property="Foreground"        Value="{DynamicResource AppTextPrimary}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+
+        <!-- The box's two shapes. The right padding is the clear button's room either way. -->
+        <Style x:Key="SourceSingleLine" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+            <Setter Property="Padding" Value="8,0,30,0"/>
+        </Style>
+
+        <!-- 多行輸入: starts as tall as the single line, so turning it on moves nothing until there
+             is a second line, and grows to five lines before it scrolls. Five shows a paragraph's
+             shape; more would bury the translation and the page behind it under the source. -->
+        <Style x:Key="SourceMultiLine" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+            <Setter Property="Height"                   Value="Auto"/>
+            <Setter Property="MinHeight"                Value="34"/>
+            <Setter Property="MaxHeight"                Value="116"/>
+            <Setter Property="Padding"                  Value="8,5,0,5"/>
+            <Setter Property="AcceptsReturn"            Value="True"/>
+            <Setter Property="TextWrapping"             Value="Wrap"/>
+            <Setter Property="VerticalContentAlignment" Value="Top"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <!-- The clear button's room is a margin here rather than padding, so
+                                 the scroll bar sits left of the button instead of under it. -->
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="0,0,30,0"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto"
+                                          Focusable="False"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush"
+                                        Value="{DynamicResource AppInputFocusBorder}"/>
+                                <Setter TargetName="Root" Property="BorderThickness" Value="1.5"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Room for the shadow to fade out inside the window on the sides and lower edge. The top is
@@ -250,7 +297,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Everything in this row beside the box is held to the box's first line, 34
+                         high and at the top, rather than centred on the row: with 多行輸入 the box
+                         grows downwards, and centred controls would drift down with it and away from
+                         the line they belong to. On one line the two are the same place. -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top" Height="34">
                         <!-- Always present because this changes how the result is presented, not
                              whether the feature is enabled. It sits beside the input whose result
                              it controls; the glyph shows the available action. -->
@@ -267,13 +318,13 @@
                         <!-- The right padding is the clear button's room, and it is held whether or
                              not the button is showing: reclaiming it on an empty box would slide
                              every character sideways on the keystroke that empties it. -->
+                        <!-- Height and padding live in the two styles, not here, so that switching
+                             style for 多行輸入 actually switches them — see ApplyLineMode. -->
                         <TextBox x:Name="SourceTextBox"
-                                 Style="{StaticResource ModernTextBox}"
+                                 Style="{StaticResource SourceSingleLine}"
                                  Background="Transparent"
                                  BorderBrush="Transparent"
-                                 Height="34"
                                  FontSize="15"
-                                 Padding="8,0,30,0"
                                  DataObject.Pasting="SourceTextBox_Pasting"
                                  TextChanged="SourceTextBox_TextChanged"/>
 
@@ -307,9 +358,9 @@
                                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                 FontSize="9"
                                 Width="24" Height="24" Padding="0"
-                                Margin="0,0,5,0"
+                                Margin="0,5,5,0"
                                 HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
+                                VerticalAlignment="Top"
                                 Style="{StaticResource IconButton}"
                                 Focusable="False"
                                 Visibility="Collapsed"
@@ -320,6 +371,8 @@
 
                     <Rectangle Grid.Column="2"
                                Width="1"
+                               Height="22"
+                               VerticalAlignment="Top"
                                Margin="8,6"
                                Fill="{DynamicResource AppSeparator}"/>
 
@@ -327,7 +380,7 @@
                          row does not move when the mode changes. Off, it is the pair the user set
                          and the button that turns it around. On, there is nothing here to decide,
                          so it stops being controls and becomes a reading of what the popup did. -->
-                    <Grid Grid.Column="3">
+                    <Grid Grid.Column="3" VerticalAlignment="Top" Height="34">
                         <StackPanel x:Name="FixedPairPanel" Orientation="Horizontal" VerticalAlignment="Center">
                             <ComboBox x:Name="SrcLangBox"
                                       Style="{StaticResource QuietComboBox}"
@@ -392,7 +445,7 @@
                         </Button>
                     </Grid>
 
-                    <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Top" Height="34">
                         <Rectangle Width="1" Margin="6,6" Fill="{DynamicResource AppSeparator}"/>
 
                         <!-- The design this was drawn from has no pin, and a popup that dies a
@@ -456,7 +509,6 @@
                                              Foreground="{DynamicResource AppAccent}"/>
 
                                 <StackPanel Grid.Row="1" Margin="18,14,18,14">
-                            <StackPanel Orientation="Horizontal">
                                 <!-- The one piece of large text in the window, and the only place
                                      that opts out of the window's Display text formatting. That mode
                                      pins glyphs to whole pixels, which is what keeps 12px labels
@@ -480,22 +532,7 @@
                                            TextOptions.TextRenderingMode="ClearType"
                                            Foreground="{DynamicResource AppTextPrimary}"
                                            VerticalAlignment="Top"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="440"/>
-
-                                <!-- Collapsed until there is a translation to read: on its own
-                                     beside an empty line it offers to speak nothing, which is what
-                                     it looked like it was doing for the second or two a translation
-                                     takes. -->
-                                <Button x:Name="TgtTtsBtn"
-                                        Style="{StaticResource HeaderIconButton}"
-                                        Content="&#xE767;"
-                                        Margin="8,1,0,0"
-                                        VerticalAlignment="Top"
-                                        Visibility="Collapsed"
-                                        ToolTip="{DynamicResource S.Translation.SpeakResult}"
-                                        Click="TgtTtsBtn_Click"/>
-                            </StackPanel>
+                                           TextWrapping="Wrap"/>
 
                             <TextBlock x:Name="StatusText"
                                        FontFamily="{DynamicResource AppFont}"
@@ -535,6 +572,24 @@
                                                    Text="&#xE767;"
                                                    Style="{StaticResource ActionGlyph}"/>
                                         <TextBlock Text="{DynamicResource S.QuickLookup.SpeakSource}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Rectangle Width="1" Margin="4,8" Fill="{DynamicResource AppSeparator}"/>
+
+                                <!-- In the row with the other actions rather than as a bare glyph
+                                     beside the translation, so both readings are found in one place
+                                     and named the same way. The row is only shown once there is a
+                                     translation, so this never offers to speak an empty line. -->
+                                <Button x:Name="TgtTtsBtn"
+                                        Style="{StaticResource ResultActionButton}"
+                                        Click="TgtTtsBtn_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="TgtTtsGlyph"
+                                                   Text="&#xE767;"
+                                                   Style="{StaticResource ActionGlyph}"/>
+                                        <TextBlock Text="{DynamicResource S.QuickLookup.SpeakResult}"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
@@ -594,8 +649,19 @@
                         </ScrollViewer>
 
                         <!-- Compact result: translation work is unchanged, only the presentation is
-                             reduced to system state plus one unobtrusive line of translated text. -->
-                        <Grid x:Name="CompactResultPanel" Visibility="Collapsed">
+                             reduced to system state plus one unobtrusive line of translated text.
+
+                             Scrolls the way the full result does — the whole panel, with the bar
+                             against the card's edge — so the two views read as one window. The cap
+                             is about eight lines of translation: this view exists to stay small. -->
+                        <ScrollViewer x:Name="CompactResultPanel"
+                                      MaxHeight="188"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Visibility="Collapsed"
+                                      SizeChanged="CompactResultPanel_SizeChanged"
+                                      ScrollChanged="CompactResultPanel_ScrollChanged">
+                        <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -616,6 +682,10 @@
                                            FontSize="12"
                                            TextWrapping="Wrap"
                                            Visibility="Collapsed"/>
+                                <!-- The button follows the end of the text, so a short translation
+                                     keeps it close; the text may widen until it would push the button
+                                     off the row — see FitCompactTranslation, which sets that limit from
+                                     the width actually on offer. -->
                                 <StackPanel x:Name="CompactTranslationRow" Orientation="Horizontal">
                                     <TextBlock x:Name="CompactTranslatedText"
                                                FontFamily="{DynamicResource AppFont}"
@@ -627,12 +697,11 @@
                                                Margin="0,5,0,0"
                                                VerticalAlignment="Top"
                                                TextWrapping="Wrap"
-                                               MaxWidth="440"
                                                Visibility="Collapsed"/>
 
                                     <Button x:Name="CompactTgtTtsBtn"
                                             Style="{StaticResource HeaderIconButton}"
-                                            Content="{Binding Content, ElementName=TgtTtsBtn}"
+                                            Content="{Binding Text, ElementName=TgtTtsGlyph}"
                                             Margin="8,0,0,0"
                                             VerticalAlignment="Top"
                                             Visibility="{Binding Visibility, ElementName=CompactTranslatedText}"
@@ -641,6 +710,7 @@
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
+                        </ScrollViewer>
 
                         <!-- Settings -->
                         <StackPanel x:Name="SettingsPanel" Margin="18,14,18,16" Visibility="Collapsed">
@@ -765,6 +835,30 @@
                                           Grid.Column="1"
                                           Style="{StaticResource ToggleSwitch}"
                                           AutomationProperties.Name="{DynamicResource S.QuickLookup.AutoCopy}"/>
+                            </Grid>
+
+                            <Rectangle Height="1" Fill="{DynamicResource AppSeparator}" Margin="0,0,0,12"/>
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{DynamicResource S.QuickLookup.MultilineInput}"
+                                               Style="{StaticResource SettingRowLabel}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="{DynamicResource S.QuickLookup.MultilineInputHint}"
+                                               Style="{StaticResource FieldHint}"
+                                               Margin="0,2,0,0"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <CheckBox x:Name="MultilineInputToggle"
+                                          Grid.Column="1"
+                                          Style="{StaticResource ToggleSwitch}"
+                                          AutomationProperties.Name="{DynamicResource S.QuickLookup.MultilineInput}"/>
                             </Grid>
 
                             <Rectangle Height="1" Fill="{DynamicResource AppSeparator}" Margin="0,0,0,12"/>

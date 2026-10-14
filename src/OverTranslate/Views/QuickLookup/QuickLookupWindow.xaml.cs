@@ -211,7 +211,8 @@ public partial class QuickLookupWindow : Window
     /// </param>
     public static async Task SummonAsync(bool pinned = false)
     {
-        var selection = await SelectedTextReader.ReadAsync(SourceTextLimit.MaxLength);
+        var selection = await SelectedTextReader.ReadAsync(
+            SourceTextLimit.MaxLength, SettingsService.Instance.Current.QuickLookup.MultilineInput);
 
         if (_current is { _closing: false } open)
         {
@@ -318,6 +319,7 @@ public partial class QuickLookupWindow : Window
     {
         InitializeComponent();
         SourceTextBox.MaxLength = SourceTextLimit.MaxLength;
+        TranslatedText.SizeChanged += TranslatedText_SizeChanged;
         _resultsCollapsed = SettingsService.Instance.Current.QuickLookup.ResultsCollapsed;
 
         _debounce = new DispatcherTimer { Interval = DebounceDelay };
@@ -356,6 +358,8 @@ public partial class QuickLookupWindow : Window
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
         AutoCopyToggle.Checked       += AutoCopyToggle_Toggled;
         AutoCopyToggle.Unchecked     += AutoCopyToggle_Toggled;
+        MultilineInputToggle.Checked   += MultilineInputToggle_Toggled;
+        MultilineInputToggle.Unchecked += MultilineInputToggle_Toggled;
         BilingualToggle.Checked      += BilingualToggle_Toggled;
         BilingualToggle.Unchecked    += BilingualToggle_Toggled;
 
@@ -836,6 +840,13 @@ public partial class QuickLookupWindow : Window
 
         if (e.Key is not (Key.Enter or Key.Return)) return;
 
+        // With 多行輸入 the box takes more than one line, and Shift+Enter is how one is started —
+        // the chat-box convention, which leaves Enter doing what it always did here.
+        if (SourceTextBox.AcceptsReturn
+            && SourceTextBox.IsKeyboardFocused
+            && Keyboard.Modifiers == ModifierKeys.Shift)
+            return;
+
         // Enter translates what is in the box now, rather than waiting out the debounce.
         e.Handled = true;
         _debounce.Stop();
@@ -961,7 +972,8 @@ public partial class QuickLookupWindow : Window
     /// a carried-in selection is — see <see cref="SelectedTextReader.Sanitize"/> for why the breaks
     /// do not belong to the sentence — and the box's MaxLength cuts it at
     /// <see cref="SourceTextLimit.MaxLength"/>.
-    /// Text without a line break is pasted as it came.
+    /// Text without a line break is pasted as it came. With 多行輸入 the lines are kept, tidied the
+    /// way a carried-in selection is — see <see cref="SelectedTextReader.KeepLines"/>.
     /// </remarks>
     private void SourceTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
     {
@@ -969,7 +981,9 @@ public partial class QuickLookupWindow : Window
             || pasted.IndexOfAny(['\r', '\n']) < 0)
             return;
 
-        var folded = SelectedTextReader.Fold(pasted);
+        var folded = SettingsService.Instance.Current.QuickLookup.MultilineInput
+            ? SelectedTextReader.KeepLines(pasted)
+            : SelectedTextReader.Fold(pasted);
         if (folded.Length == 0)
         {
             e.CancelCommand();
@@ -1069,6 +1083,7 @@ public partial class QuickLookupWindow : Window
             SetTranslationLoading(false);
             _detectedLang = detected ?? "";
             TranslatedText.Text = results.FirstOrDefault()?.TranslatedText ?? "";
+            StyleTranslatedText();
             if (settings.QuickLookup.AutoCopyTranslation)
                 CopyTranslation(showConfirmation: false);
             StatusText.Visibility = Visibility.Collapsed;
@@ -1085,6 +1100,7 @@ public partial class QuickLookupWindow : Window
             SetTranslationLoading(false);
             Log.Warn(ex, "取詞翻譯 could not translate");
             TranslatedText.Text = "";
+            StyleTranslatedText();
             ShowStatus(
                 LocalizationService.Format(
                     "S.Translation.ProviderUnavailable",
@@ -1155,11 +1171,10 @@ public partial class QuickLookupWindow : Window
 
         SettingsPanel.Visibility = Visibility.Collapsed;
         RenderResultPresentation();
-        // Both belong to a translation rather than to the panel, so neither is on screen while the
-        // status line is still saying 翻譯中.
+        // The actions belong to a translation rather than to the panel, so they are not on screen
+        // while the status line is still saying 翻譯中.
         var hasResult = TranslatedText.Text.Length > 0;
         ActionRow.Visibility = hasResult ? Visibility.Visible : Visibility.Collapsed;
-        TgtTtsBtn.Visibility = hasResult ? Visibility.Visible : Visibility.Collapsed;
 
         // After ActionRow, which the note's own visibility is measured against.
         RenderSourceTtsAvailability();
@@ -1180,6 +1195,100 @@ public partial class QuickLookupWindow : Window
         CompactTranslatedText.Text = "";
         CompactTranslatedText.Visibility = Visibility.Collapsed;
         ShowResult();
+    }
+
+    /// <summary>How the full result's translation is set, by how many lines it runs to at full size.</summary>
+    /// <remarks>
+    /// <para>24px is for a word or a sentence, read at a glance; a paragraph at that size is a wall
+    /// the eye has to climb. Lines rather than characters decide it, because a CJK character takes
+    /// about twice the width of a Latin letter and a count would shrink one script too early and the
+    /// other too late.</para>
+    ///
+    /// <para>Steps rather than a continuous scale, because the popup re-translates as the user types:
+    /// a size that followed the length would breathe on every keystroke. The floor is still a size
+    /// above the compact view's 14, which is what keeps the expanded view the one to read in. The
+    /// weight stays semibold throughout, as the compact view's does at its smaller size.</para>
+    /// </remarks>
+    internal static (double Size, double LineHeight) TranslatedTextStyle(int fullSizeLines) =>
+        fullSizeLines switch
+        {
+            <= 3 => (24, 32),
+            <= 6 => (19, 27),
+            _ => (16, 24),
+        };
+
+    private double _translatedTextStyledWidth = -1;
+    private string? _translatedTextStyledFor;
+
+    private void TranslatedText_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.WidthChanged) StyleTranslatedText();
+    }
+
+    /// <summary>
+    /// Counts the lines the translation would take at full size, in the width it actually has, and
+    /// sets the step that count calls for — see <see cref="TranslatedTextStyle"/>.
+    /// </summary>
+    private void StyleTranslatedText()
+    {
+        var text = TranslatedText.Text;
+        var width = TranslatedText.ActualWidth;
+        if (width <= 0) return;   // Not laid out yet; SizeChanged brings it back once it is.
+        if (text == _translatedTextStyledFor && Math.Abs(width - _translatedTextStyledWidth) < 0.5) return;
+
+        _translatedTextStyledFor = text;
+        _translatedTextStyledWidth = width;
+
+        var (fullSize, fullLineHeight) = TranslatedTextStyle(0);
+        var lines = 0;
+        if (text.Length > 0)
+        {
+            var measured = new FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentUICulture,
+                TranslatedText.FlowDirection,
+                new Typeface(TranslatedText.FontFamily, TranslatedText.FontStyle, TranslatedText.FontWeight, TranslatedText.FontStretch),
+                fullSize,
+                TranslatedText.Foreground,
+                VisualTreeHelper.GetDpi(TranslatedText).PixelsPerDip)
+            {
+                MaxTextWidth = width,
+                LineHeight = fullLineHeight,
+            };
+            lines = (int)Math.Round(measured.Height / fullLineHeight);
+        }
+
+        var (size, lineHeight) = TranslatedTextStyle(lines);
+        TranslatedText.FontSize = size;
+        TranslatedText.LineHeight = lineHeight;
+    }
+
+    /// <summary>
+    /// The compact panel's side margins, plus the speech button's width and the gap before it.
+    /// </summary>
+    private const double CompactTtsRoom = 18 + 18 + 30 + 8;
+
+    private void CompactResultPanel_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        FitCompactTranslation();
+
+    /// <remarks>The viewport narrows when the scroll bar appears, without the control resizing.</remarks>
+    private void CompactResultPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ViewportWidthChange != 0) FitCompactTranslation();
+    }
+
+    /// <summary>
+    /// Lets the compact translation widen until the button beside it reaches the row's end.
+    /// </summary>
+    /// <remarks>
+    /// A horizontal panel offers its children unlimited width, so without a limit the text would
+    /// never wrap; a fixed one either stops it short of the edge or pushes the button off it. The
+    /// limit is the width the row actually has, less the button's room.
+    /// </remarks>
+    private void FitCompactTranslation()
+    {
+        var width = CompactResultPanel.ViewportWidth;
+        if (width > CompactTtsRoom) CompactTranslatedText.MaxWidth = width - CompactTtsRoom;
     }
 
     private void RenderCompactCompletion()
@@ -1297,7 +1406,7 @@ public partial class QuickLookupWindow : Window
 
     private void RenderTtsGlyphs()
     {
-        TgtTtsBtn.Content = ReferenceEquals(_ttsActiveBtn, TgtTtsBtn)
+        TgtTtsGlyph.Text = ReferenceEquals(_ttsActiveBtn, TgtTtsBtn)
             ? Controls.TtsGlyphs.Stop
             : Controls.TtsGlyphs.Speak;
 
@@ -1495,6 +1604,8 @@ public partial class QuickLookupWindow : Window
         // to a service this list was built without — or away from a hidden one it was built with.
         BindProviderBox(settings.Provider);
         AutoCopyToggle.IsChecked = settings.QuickLookup.AutoCopyTranslation;
+        MultilineInputToggle.IsChecked = settings.QuickLookup.MultilineInput;
+        ApplyLineMode(settings.QuickLookup.MultilineInput);
 
         BilingualToggle.IsChecked = settings.QuickLookup.BilingualEnabled;
         LoadBilingualPair();
@@ -1531,6 +1642,34 @@ public partial class QuickLookupWindow : Window
         SettingsService.Instance.Current.QuickLookup.AutoCopyTranslation =
             AutoCopyToggle.IsChecked == true;
         SettingsService.Instance.Save();
+    }
+
+    private void MultilineInputToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAuto) return;
+
+        var multiline = MultilineInputToggle.IsChecked == true;
+        SettingsService.Instance.Current.QuickLookup.MultilineInput = multiline;
+        SettingsService.Instance.Save();
+        ApplyLineMode(multiline);
+
+        // A single-line box shows a text only up to its first break, so turning this off folds what
+        // is already there rather than hiding the rest of it. The breaks folded away on the way in
+        // are not there to put back the other way; the next selection brings them.
+        if (!multiline && SourceTextBox.Text.IndexOfAny(['\r', '\n']) >= 0)
+        {
+            var folded = SelectedTextReader.Fold(SourceTextBox.Text);
+            SourceTextBox.Text = folded;
+            SourceTextBox.CaretIndex = folded.Length;
+        }
+    }
+
+    /// <summary>
+    /// Gives the box the shape 多行輸入 asks for: one line, or up to five that Shift+Enter adds to.
+    /// </summary>
+    private void ApplyLineMode(bool multiline)
+    {
+        SourceTextBox.Style = (Style)FindResource(multiline ? "SourceMultiLine" : "SourceSingleLine");
     }
 
     // ══════════════════════════ 雙語互譯 ══════════════════════════
@@ -1872,6 +2011,7 @@ public partial class QuickLookupWindow : Window
             // Translating a translation back gives the text it came from, so this already is the
             // answer; waiting for the engine to agree would just read as lag.
             TranslatedText.Text = wasOriginal;
+            StyleTranslatedText();
         }
 
         // Anything already in flight was asked under the old pair and would overwrite both.
