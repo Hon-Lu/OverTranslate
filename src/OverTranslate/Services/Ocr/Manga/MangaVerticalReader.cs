@@ -12,9 +12,11 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// third of the time.</para>
 ///
 /// <para>Blocks too long for manga-ocr are read by the column pipeline from a crop of the page and
-/// moved back into page coordinates. They wait for a column engine slot even on the realtime path:
-/// they are rare — three pages of 46 in the corpora — and the page they are on has already been
-/// read; giving that read up because a slot was taken would cost more than the wait.</para>
+/// moved back into page coordinates, and so are blocks the column pipeline finds set against the
+/// shape of their box (<see cref="MangaPageLayout.Suspect"/>). They wait for a column engine slot
+/// even on the realtime path: they are rare — three pages of 46 in the corpora — and the page they
+/// are on has already been read; giving that read up because a slot was taken would cost more than
+/// the wait.</para>
 /// </remarks>
 internal static class MangaVerticalReader
 {
@@ -43,17 +45,46 @@ internal static class MangaVerticalReader
         var passedOn = new List<OcrTextBlock>();
         foreach (var block in page!.Long)
         {
-            var crop = MangaPageLayout.LongBlockCrop(block, bitmap.Width, bitmap.Height);
-            if (crop.Width < 2 || crop.Height < 2) continue;
-            using var part = bitmap.Clone(crop, bitmap.PixelFormat);
-            var read = await readColumns(part, cancellationToken);
-            passedOn.AddRange(read.Select(found => Moved(found, crop.X, crop.Y)));
+            var read = await ReadColumnsAsync(block);
+            if (read is not null) passedOn.AddRange(read);
         }
 
-        var blocks = MangaPageLayout.Assemble(page.Blocks, page.Bubbles, passedOn, page.Luma);
+        // Read by manga-ocr already, but asked again of the column pipeline when the ink looks set
+        // the other way from the box — see MangaPageLayout.Suspect.
+        var mangaBlocks = page.Blocks;
+        if (page.Luma is { } pageLuma)
+        {
+            var suspects = page.Blocks.Select(b => MangaPageLayout.Suspect(b.Bounds, pageLuma)).ToList();
+            if (suspects.Any(suspect => suspect != MangaWriting.Unsure))
+            {
+                mangaBlocks = [];
+                for (int i = 0; i < page.Blocks.Count; i++)
+                {
+                    var block = page.Blocks[i];
+                    if (suspects[i] != MangaWriting.Unsure &&
+                        await ReadColumnsAsync(block.Bounds) is { } read &&
+                        MangaPageLayout.ColumnsAgree(suspects[i], read))
+                        passedOn.AddRange(read);
+                    else
+                        mangaBlocks.Add(block);
+                }
+            }
+        }
+
+        var blocks = MangaPageLayout.Assemble(mangaBlocks, page.Bubbles, passedOn, page.Luma);
         if (detectColumns is not null && page.Luma is { } luma)
-            blocks = MangaColumnAngles.Apply(blocks, page.Blocks, luma, detectColumns);
+            blocks = MangaColumnAngles.Apply(blocks, mangaBlocks, luma, detectColumns);
         return (outcome, blocks);
+
+        // The column pipeline's reading of one block, in page coordinates; null when the crop is empty.
+        async Task<List<OcrTextBlock>?> ReadColumnsAsync(RectangleF block)
+        {
+            var crop = MangaPageLayout.LongBlockCrop(block, bitmap.Width, bitmap.Height);
+            if (crop.Width < 2 || crop.Height < 2) return null;
+            using var part = bitmap.Clone(crop, bitmap.PixelFormat);
+            var read = await readColumns(part, cancellationToken);
+            return [.. read.Select(found => Moved(found, crop.X, crop.Y))];
+        }
     }
 
     private static OcrTextBlock Moved(OcrTextBlock block, double dx, double dy)

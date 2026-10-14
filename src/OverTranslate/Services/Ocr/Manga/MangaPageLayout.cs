@@ -41,8 +41,72 @@ internal static class MangaPageLayout
     // Columns of one group sharing more than this much of the narrower one's width are one band.
     private const double BandOverlap = 0.5;
 
+    /// <summary>
+    /// A block of columns this many times wider than it is tall is too wide for manga-ocr to be
+    /// trusted with, when its ink says columns.
+    /// </summary>
+    /// <remarks>
+    /// manga-ocr squeezes a block into 224×224 across its columns as readily as along them. ja5's
+    /// balloon of sixteen columns, 464×182, read whole at nine framings and scales (2.48–2.88), came
+    /// back six times with its last sentences turned into hundreds of dots and !, and the other
+    /// three with words dropped or misread; both overlays sized the type from that many
+    /// characters, at a third of the source. The widest block of three columns or more that
+    /// manga-ocr read correctly in the corpora is 1.57 (計画は順調に進んでいる。), and none lies
+    /// between that and 2.48.
+    /// </remarks>
+    internal const double WideColumnsRatio = 2;
+
     internal static bool IsLong(RectangleF block) =>
         block.Height >= LongBlockRatio * block.Width || block.Width >= LongBlockRatio * block.Height;
+
+    /// <summary>
+    /// Which way a block's ink looks set, when manga-ocr's reading of it is not to be trusted:
+    /// lines across in a box not wide enough to be a row, or columns in a box wide enough to have
+    /// been squeezed (<see cref="WideColumnsRatio"/>); otherwise <see cref="MangaWriting.Unsure"/>. Such a block is read again by the column pipeline, which
+    /// settles it — see <see cref="ColumnsAgree"/>.
+    /// </summary>
+    internal static MangaWriting Suspect(RectangleF block, LumaPage luma) =>
+        MangaWritingDirection.Suspected(luma, block) switch
+        {
+            MangaWriting.Across when !RunsAcross(block) => MangaWriting.Across,
+            MangaWriting.Down when block.Width >= WideColumnsRatio * block.Height => MangaWriting.Down,
+            _ => MangaWriting.Unsure,
+        };
+
+    /// <summary>
+    /// Whether the column pipeline, reading a suspect block from <see cref="LongBlockCrop"/>, found
+    /// it set the way it was suspected to be: most of what it read, by characters, across or down.
+    /// Its reading then replaces manga-ocr's.
+    /// </summary>
+    /// <remarks>
+    /// <para>The column pipeline is the judge because it reads a block line by line and sets each
+    /// line the way it runs, across or down, which is the whole of what the overlays need to know.
+    /// manga-ocr reads a block as one string with no lines in it: the nine-line caption of ja5 came
+    /// back as sentences that are not on the page (戸野田は、優しく22月前に俺の女の男に…), and the
+    /// balloon with its tail in dots. Cut out and read by the column pipeline, the caption came
+    /// back word for word in groups across, the balloon as one group of columns but for a sound
+    /// effect beside it, and the English balloons of the comic corpora word for word across.</para>
+    ///
+    /// <para>A block it reads the other way keeps manga-ocr's reading, which on the transcribed
+    /// corpora is the better one.</para>
+    /// </remarks>
+    internal static bool ColumnsAgree(MangaWriting suspected, IReadOnlyList<OcrTextBlock> read)
+    {
+        int across = 0, down = 0;
+        foreach (var found in read)
+        {
+            int characters = found.Text.Count(c => !char.IsWhiteSpace(c));
+            if (found.RunsAcross) across += characters;
+            else down += characters;
+        }
+
+        return suspected switch
+        {
+            MangaWriting.Across => across > down,
+            MangaWriting.Down => down > across,
+            _ => false,
+        };
+    }
 
     internal static bool RunsAcross(RectangleF block) => block.Width > AcrossRatio * block.Height;
 
