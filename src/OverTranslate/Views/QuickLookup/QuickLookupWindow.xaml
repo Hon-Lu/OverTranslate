@@ -649,8 +649,19 @@
                         </ScrollViewer>
 
                         <!-- Compact result: translation work is unchanged, only the presentation is
-                             reduced to system state plus one unobtrusive line of translated text. -->
-                        <Grid x:Name="CompactResultPanel" Visibility="Collapsed">
+                             reduced to system state plus one unobtrusive line of translated text.
+
+                             Scrolls the way the full result does — the whole panel, with the bar
+                             against the card's edge — so the two views read as one window. The cap
+                             is about eight lines of translation: this view exists to stay small. -->
+                        <ScrollViewer x:Name="CompactResultPanel"
+                                      MaxHeight="188"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Visibility="Collapsed"
+                                      SizeChanged="CompactResultPanel_SizeChanged"
+                                      ScrollChanged="CompactResultPanel_ScrollChanged">
+                        <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -671,6 +682,10 @@
                                            FontSize="12"
                                            TextWrapping="Wrap"
                                            Visibility="Collapsed"/>
+                                <!-- The button follows the end of the text, so a short translation
+                                     keeps it close; the text may widen until it would push the button
+                                     off the row — see FitCompactTranslation, which sets that limit from
+                                     the width actually on offer. -->
                                 <StackPanel x:Name="CompactTranslationRow" Orientation="Horizontal">
                                     <TextBlock x:Name="CompactTranslatedText"
                                                FontFamily="{DynamicResource AppFont}"
@@ -682,7 +697,6 @@
                                                Margin="0,5,0,0"
                                                VerticalAlignment="Top"
                                                TextWrapping="Wrap"
-                                               MaxWidth="440"
                                                Visibility="Collapsed"/>
 
                                     <Button x:Name="CompactTgtTtsBtn"
@@ -696,6 +710,7 @@
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
+                        </ScrollViewer>
 
                         <!-- Settings -->
                         <StackPanel x:Name="SettingsPanel" Margin="18,14,18,16" Visibility="Collapsed">

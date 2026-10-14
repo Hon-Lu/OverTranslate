@@ -79,7 +79,7 @@ public class QuickLookupWindowMarkupTests
             .Single(e => (string?)e.Attribute(X + "Name") == "CompactTranslatedText");
 
         Assert.Equal("Wrap", (string?)result.Attribute("TextWrapping"));
-        Assert.Equal("440", (string?)result.Attribute("MaxWidth"));
+        Assert.Null((string?)result.Attribute("MaxWidth"));
         Assert.Null((string?)result.Attribute("TextTrimming"));
         Assert.Equal("14", (string?)result.Attribute("FontSize"));
         Assert.Equal("SemiBold", (string?)result.Attribute("FontWeight"));
@@ -88,7 +88,18 @@ public class QuickLookupWindowMarkupTests
         Assert.Equal("0,5,0,0", (string?)result.Attribute("Margin"));
         Assert.Equal("Top", (string?)result.Attribute("VerticalAlignment"));
         Assert.Equal("{Binding Foreground, ElementName=TranslatedText}", (string?)result.Attribute("Foreground"));
-        Assert.Equal("Horizontal", (string?)result.Parent?.Attribute("Orientation"));
+
+        // The speech action follows the end of the text, and a long translation scrolls the whole
+        // panel, the way the full result does, rather than stretching the popup.
+        var row = result.Parent!;
+        Assert.Equal("Horizontal", (string?)row.Attribute("Orientation"));
+        Assert.Equal("CompactTgtTtsBtn", (string?)row.Elements(P + "Button").Single().Attribute(X + "Name"));
+
+        var scroll = result.Ancestors(P + "ScrollViewer").First();
+        Assert.Equal("CompactResultPanel", (string?)scroll.Attribute(X + "Name"));
+        Assert.Equal("188", (string?)scroll.Attribute("MaxHeight"));
+        Assert.Equal("Auto", (string?)scroll.Attribute("VerticalScrollBarVisibility"));
+        Assert.Equal("Disabled", (string?)scroll.Attribute("HorizontalScrollBarVisibility"));
     }
 
     /// <summary>The compact result exposes the same target-language speech action as the full result.</summary>

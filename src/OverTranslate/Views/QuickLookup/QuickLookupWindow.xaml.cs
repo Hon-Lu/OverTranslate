@@ -1194,6 +1194,34 @@ public partial class QuickLookupWindow : Window
         ShowResult();
     }
 
+    /// <summary>
+    /// The compact panel's side margins, plus the speech button's width and the gap before it.
+    /// </summary>
+    private const double CompactTtsRoom = 18 + 18 + 30 + 8;
+
+    private void CompactResultPanel_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        FitCompactTranslation();
+
+    /// <remarks>The viewport narrows when the scroll bar appears, without the control resizing.</remarks>
+    private void CompactResultPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ViewportWidthChange != 0) FitCompactTranslation();
+    }
+
+    /// <summary>
+    /// Lets the compact translation widen until the button beside it reaches the row's end.
+    /// </summary>
+    /// <remarks>
+    /// A horizontal panel offers its children unlimited width, so without a limit the text would
+    /// never wrap; a fixed one either stops it short of the edge or pushes the button off it. The
+    /// limit is the width the row actually has, less the button's room.
+    /// </remarks>
+    private void FitCompactTranslation()
+    {
+        var width = CompactResultPanel.ViewportWidth;
+        if (width > CompactTtsRoom) CompactTranslatedText.MaxWidth = width - CompactTtsRoom;
+    }
+
     private void RenderCompactCompletion()
     {
         CompactStatusText.Text = "";
