@@ -72,21 +72,64 @@ internal static class MangaWritingDirection
     private const double AcrossRun = 8;
     private const double DownRun = 4;
 
+    // Long columns: two or more, between these shares of a column's thickness apart, each running
+    // at least this many characters down. See LongColumns.
+    private const int FewestLongColumns = 2;
+    private const double LongColumnGap = 0.25;
+    private const double LongColumnWidestGap = 1;
+    private const double LongColumnRun = 18;
+
     internal static MangaWriting Suspected(LumaPage luma, RectangleF block)
+    {
+        if (Inside(luma, block) is not { } box) return MangaWriting.Unsure;
+
+        bool light = luma.Median(box) >= InkLevel;
+        bool across = Lines(luma, box, light, alongRows: true, FewestLines, LineGap, double.MaxValue, AcrossRun);
+        bool down = Lines(luma, box, light, alongRows: false, FewestLines, LineGap, double.MaxValue, DownRun);
+        return across == down ? MangaWriting.Unsure : across ? MangaWriting.Across : MangaWriting.Down;
+    }
+
+    /// <summary>
+    /// Whether the block is two columns or more of eighteen characters or more each — longer than
+    /// manga-ocr reads.
+    /// </summary>
+    /// <remarks>
+    /// <para>The ink is the measure, not the box: a box is drawn round furigana and a margin, and a
+    /// column's length in its own thickness is a count of characters whatever the scale.
+    /// vertical-image-ja5's narration — two columns of 19–20 characters in a box 6.95 times as
+    /// tall as wide, three in one 5.76 — comes in under <see cref="MangaPageLayout.LongBlockRatio"/>,
+    /// and manga-ocr read it as sentences that are not on the page (大手前座業者もダミもAAAIルディング、
+    /// 不倫関係という教会知られているし) while the column pipeline read it almost word for word.
+    /// Lowering the ratio instead was measured before: at 4 it sent six good ja2 balloons away and
+    /// lost two sentences.</para>
+    ///
+    /// <para>Close, too: no more than a column's thickness apart, as typeset narration is.</para>
+    /// </remarks>
+    // MEASURED over the 182 readable vertical and comic pages, against round one's output: the
+    // ja5 narration runs 21.3–21.9 characters at every scale from 0.5 to 1.3, with gaps of 0.29–0.36;
+    // the longest columns of any balloon are 16.7 (ja2 助けてくださりありがとうございました!). Without
+    // the widest gap two more blocks went to the column pipeline: ossan's title strip (gap 1.21),
+    // read correctly there where manga-ocr garbled it, and Aisazu's hand-lettered その3 title
+    // (gap 1.54), of whose three columns the column pipeline kept one. With it, ja5 is the only page
+    // whose output changes.
+    internal static bool LongColumns(LumaPage luma, RectangleF block) =>
+        Inside(luma, block) is { } box &&
+        Lines(
+            luma, box, luma.Median(box) >= InkLevel, alongRows: false,
+            FewestLongColumns, LongColumnGap, LongColumnWidestGap, LongColumnRun);
+
+    private static Rectangle? Inside(LumaPage luma, RectangleF block)
     {
         int left = Math.Clamp((int)block.Left, 0, luma.Width), top = Math.Clamp((int)block.Top, 0, luma.Height);
         int right = Math.Clamp((int)block.Right, left, luma.Width), bottom = Math.Clamp((int)block.Bottom, top, luma.Height);
         var box = Rectangle.FromLTRB(left, top, right, bottom);
-        if (box.Width < 2 || box.Height < 2) return MangaWriting.Unsure;
-
-        bool light = luma.Median(box) >= InkLevel;
-        bool across = Lines(luma, box, light, alongRows: true, AcrossRun);
-        bool down = Lines(luma, box, light, alongRows: false, DownRun);
-        return across == down ? MangaWriting.Unsure : across ? MangaWriting.Across : MangaWriting.Down;
+        return box.Width < 2 || box.Height < 2 ? null : box;
     }
 
     // Whether the block's rows (alongRows) or columns fall into lines of writing.
-    private static bool Lines(LumaPage luma, Rectangle box, bool light, bool alongRows, double run)
+    private static bool Lines(
+        LumaPage luma, Rectangle box, bool light, bool alongRows, int fewest, double gap, double widestGap,
+        double run)
     {
         int count = alongRows ? box.Height : box.Width, length = alongRows ? box.Width : box.Height;
         var changes = new int[count];
@@ -119,12 +162,13 @@ internal static class MangaWritingDirection
 
         int thickest = bands.Max(band => band.End - band.Start);
         var lines = bands.Where(band => band.End - band.Start >= LineShare * thickest).ToList();
-        if (lines.Count < FewestLines) return false;
+        if (lines.Count < fewest) return false;
 
         double typical = Median(lines.Select(line => (double)(line.End - line.Start)));
         var gaps = new List<double>();
         for (int i = 1; i < lines.Count; i++) gaps.Add((lines[i].Start - lines[i - 1].End) / typical);
-        if (Median(gaps) < LineGap) return false;
+        double typicalGap = Median(gaps);
+        if (typicalGap < gap || typicalGap > widestGap) return false;
 
         return Median(lines.Select(Run)) >= run;
 

@@ -111,6 +111,44 @@ public class MangaWritingDirectionTests
         Assert.Equal(MangaWriting.Unsure, MangaPageLayout.Suspect(box, page.Luma));
     }
 
+    [Theory]
+    [InlineData(2)] // ja5's 「大手不動産企業…」: two columns of 19–20 characters
+    [InlineData(3)] // ja5's 「不動産業界というと…」
+    public void NarrationInLongColumnsSetClose_IsSuspectedDown(int columns)
+    {
+        // Too long for manga-ocr, but under LongBlockRatio: the box is 6–7 times as tall as wide.
+        var page = new Page();
+        for (int column = 0; column < columns; column++) page.Down(110 + column * 23, 60, 20, 16);
+        var box = RectangleF.FromLTRB(100, 50, 110 + columns * 23 + 6, 410);
+
+        Assert.False(MangaPageLayout.IsLong(box));
+        Assert.Equal(MangaWriting.Down, MangaPageLayout.Suspect(box, page.Luma));
+    }
+
+    [Theory]
+    [InlineData(20, 1)]  // one column, however long
+    [InlineData(12, 3)]  // an ordinary balloon's columns
+    public void ColumnsThatAreNotLongNarration_AreLeftToManga(int length, int columns)
+    {
+        var page = new Page();
+        for (int column = 0; column < columns; column++) page.Down(110 + column * 23, 60, length, 16);
+        var box = RectangleF.FromLTRB(100, 50, 110 + columns * 23 + 6, 70 + length * 17);
+
+        Assert.Equal(MangaWriting.Unsure, MangaPageLayout.Suspect(box, page.Luma));
+    }
+
+    [Fact]
+    public void LongColumnsSetFarApart_AreLeftToManga()
+    {
+        // Hand-lettered columns a character and more apart (Aisazu's その3 title): the column
+        // pipeline read only one of three, so these stay with manga-ocr.
+        var page = new Page();
+        for (int column = 0; column < 3; column++) page.Down(110 + column * 40, 60, 20, 16);
+        var box = RectangleF.FromLTRB(100, 50, 236, 410);
+
+        Assert.Equal(MangaWriting.Unsure, MangaPageLayout.Suspect(box, page.Luma));
+    }
+
     [Fact]
     public void ABlankBox_IsNotSuspected() =>
         Assert.Equal(MangaWriting.Unsure, MangaPageLayout.Suspect(new RectangleF(100, 100, 300, 120), new Page().Luma));

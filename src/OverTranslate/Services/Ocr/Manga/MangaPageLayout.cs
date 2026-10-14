@@ -61,15 +61,19 @@ internal static class MangaPageLayout
 
     /// <summary>
     /// Which way a block's ink looks set, when manga-ocr's reading of it is not to be trusted:
-    /// lines across in a box not wide enough to be a row, or columns in a box wide enough to have
-    /// been squeezed (<see cref="WideColumnsRatio"/>); otherwise <see cref="MangaWriting.Unsure"/>. Such a block is read again by the column pipeline, which
-    /// settles it — see <see cref="ColumnsAgree"/>.
+    /// lines across in a box not wide enough to be a row, columns in a box wide enough to have been
+    /// squeezed (<see cref="WideColumnsRatio"/>), or columns longer than it reads
+    /// (<see cref="MangaWritingDirection.LongColumns"/>); otherwise <see cref="MangaWriting.Unsure"/>.
+    /// Such a block is read again by the column pipeline, which settles it — see
+    /// <see cref="ColumnsAgree"/>.
     /// </summary>
     internal static MangaWriting Suspect(RectangleF block, LumaPage luma) =>
         MangaWritingDirection.Suspected(luma, block) switch
         {
             MangaWriting.Across when !RunsAcross(block) => MangaWriting.Across,
             MangaWriting.Down when block.Width >= WideColumnsRatio * block.Height => MangaWriting.Down,
+            MangaWriting.Across => MangaWriting.Unsure,
+            _ when !RunsAcross(block) && MangaWritingDirection.LongColumns(luma, block) => MangaWriting.Down,
             _ => MangaWriting.Unsure,
         };
 
