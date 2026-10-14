@@ -41,13 +41,13 @@ internal static class SelectedTextReader
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(15);
 
     /// <summary>
-    /// The most text this will carry into the popup.
+    /// The most text 替換翻譯 will carry over from a selection.
     /// </summary>
     /// <remarks>
-    /// 取詞翻譯 is a single-line box over someone else's window, not a document translator: a
-    /// selection longer than this was a drag that got away, or a Ctrl+A, and pouring it into a
-    /// one-line field gives the user something they cannot read and a translation they did not ask
-    /// for. 文字翻譯 is the window for that, and it is one shortcut away.
+    /// 替換翻譯 pastes its answer straight over the selection with nothing in between to look at
+    /// first: a selection longer than this was a drag that got away, or a Ctrl+A, and replacing it
+    /// whole is not something the user asked for. 取詞翻譯 shows the text in a box before anything
+    /// happens to it, and reads up to <see cref="SourceTextLimit.MaxLength"/> instead.
     /// </remarks>
     public const int MaxLength = 1000;
 
@@ -62,7 +62,8 @@ internal static class SelectedTextReader
     /// the application holding the selection, and the copy would then be sent to a text box that has
     /// nothing in it.
     /// </remarks>
-    public static async Task<string> ReadAsync()
+    /// <param name="maxLength">Where the text is cut.</param>
+    public static async Task<string> ReadAsync(int maxLength)
     {
         object? snapshot;
         uint before;
@@ -88,13 +89,14 @@ internal static class SelectedTextReader
                 CopyStartTimeout.TotalMilliseconds / PollInterval.TotalMilliseconds);
             var maxCompletionPolls = (int)Math.Ceiling(
                 CopyCompletionTimeout.TotalMilliseconds / PollInterval.TotalMilliseconds);
-            return await PollForCopiedTextAsync(
+            var text = await PollForCopiedTextAsync(
                 before,
                 GetClipboardSequenceNumber,
                 ReadClipboardTextIfAvailable,
                 () => Task.Delay(PollInterval),
                 maxStartPolls,
                 maxCompletionPolls);
+            return Cap(text, maxLength);
         }
         catch (Exception ex)
         {
@@ -134,7 +136,7 @@ internal static class SelectedTextReader
             changed |= getSequenceNumber() != before;
 
             if (changed && readText() is { } text)
-                return Sanitize(text);
+                return Fold(text);
 
             if (changed)
             {
@@ -184,18 +186,16 @@ internal static class SelectedTextReader
     /// to the page rather than to the sentence. Left in, they reach the translation engine as
     /// sentence boundaries that are not there.
     /// </remarks>
-    public static string Sanitize(string? raw)
-    {
-        var text = Fold(raw);
-        return text.Length <= MaxLength ? text : text[..MaxLength].TrimEnd();
-    }
+    public static string Sanitize(string? raw, int maxLength = MaxLength) => Cap(Fold(raw), maxLength);
+
+    private static string Cap(string text, int maxLength) =>
+        text.Length <= maxLength ? text : text[..maxLength].TrimEnd();
 
     /// <summary>
     /// Folds the text onto one line, with no cap on its length.
     /// </summary>
     /// <remarks>
-    /// For text the user pasted in on purpose: the cap in <see cref="Sanitize"/> guards against a
-    /// selection that got away, and a paste is no more of a runaway than typing, which has no cap.
+    /// For text the user pasted in on purpose, which the box it lands in caps at its own length.
     /// </remarks>
     public static string Fold(string? raw) =>
         string.IsNullOrWhiteSpace(raw) ? "" : Whitespace.Replace(raw, " ").Trim();

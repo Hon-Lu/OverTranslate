@@ -211,7 +211,7 @@ public partial class QuickLookupWindow : Window
     /// </param>
     public static async Task SummonAsync(bool pinned = false)
     {
-        var selection = await SelectedTextReader.ReadAsync();
+        var selection = await SelectedTextReader.ReadAsync(SourceTextLimit.MaxLength);
 
         if (_current is { _closing: false } open)
         {
@@ -317,6 +317,7 @@ public partial class QuickLookupWindow : Window
     private QuickLookupWindow()
     {
         InitializeComponent();
+        SourceTextBox.MaxLength = SourceTextLimit.MaxLength;
         _resultsCollapsed = SettingsService.Instance.Current.QuickLookup.ResultsCollapsed;
 
         _debounce = new DispatcherTimer { Interval = DebounceDelay };
@@ -958,7 +959,8 @@ public partial class QuickLookupWindow : Window
     /// A single-line TextBox keeps a pasted text only up to its first line break, so text copied by
     /// hand across lines lost everything after the first (#274). It is folded onto one line the way
     /// a carried-in selection is — see <see cref="SelectedTextReader.Sanitize"/> for why the breaks
-    /// do not belong to the sentence — but not capped, see <see cref="SelectedTextReader.Fold"/>.
+    /// do not belong to the sentence — and the box's MaxLength cuts it at
+    /// <see cref="SourceTextLimit.MaxLength"/>.
     /// Text without a line break is pasted as it came.
     /// </remarks>
     private void SourceTextBox_Pasting(object sender, DataObjectPastingEventArgs e)

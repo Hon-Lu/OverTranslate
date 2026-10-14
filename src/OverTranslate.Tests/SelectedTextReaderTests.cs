@@ -79,6 +79,18 @@ public class SelectedTextReaderTests
     }
 
     [Fact]
+    public void Quick_lookup_carries_a_long_selection_up_to_the_shared_source_limit()
+    {
+        // 取詞翻譯 shares 文字翻譯's limit rather than 替換翻譯's: the engines split a long text
+        // themselves, and the box shows it before anything is replaced.
+        var whole = new string('a', SelectedTextReader.MaxLength + 500);
+        Assert.Equal(whole, SelectedTextReader.Sanitize(whole, SourceTextLimit.MaxLength));
+
+        var runaway = new string('a', SourceTextLimit.MaxLength + 500);
+        Assert.Equal(SourceTextLimit.MaxLength, SelectedTextReader.Sanitize(runaway, SourceTextLimit.MaxLength).Length);
+    }
+
+    [Fact]
     public void Pasted_lines_are_folded_into_one_sentence_without_the_selection_cap()
     {
         // #274: a single-line box keeps a paste only up to its first line break.
