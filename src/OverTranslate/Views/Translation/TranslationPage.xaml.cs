@@ -58,6 +58,7 @@ public partial class TranslationPage : UserControl
     public TranslationPage()
     {
         InitializeComponent();
+        SourceTextBox.MaxLength = SourceTextLimit.MaxLength;
 
         _debounce = new DispatcherTimer { Interval = DebounceDelay };
         _debounce.Tick += (_, _) => { _debounce.Stop(); _ = TranslateNowAsync(); };

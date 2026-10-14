@@ -51,7 +51,7 @@ internal static class QuickTranslateFlow
 
         // Before anything is shown. Putting a window on the screen takes the foreground away from
         // the application holding the selection, and the copy would then be sent to our own card.
-        var source = await SelectedTextReader.ReadAsync();
+        var source = await SelectedTextReader.ReadAsync(SelectedTextReader.MaxLength);
         var foreground = GetForegroundWindow();
 
         if (source.Length == 0)
