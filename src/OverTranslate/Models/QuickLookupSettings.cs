@@ -16,7 +16,7 @@ public class QuickLookupSettings
     /// default: a selection dragged across a web page or a PDF is hard-wrapped at the page's width,
     /// and for most readers those breaks are noise that splits a sentence in two.
     /// </summary>
-    public bool KeepLineBreaks { get; set; } = false;
+    public bool MultilineInput { get; set; } = false;
 
     /// <summary>
     /// Whether the popup replaces its detailed result with the compact status-and-preview view.

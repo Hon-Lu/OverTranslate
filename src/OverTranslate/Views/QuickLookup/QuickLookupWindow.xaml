@@ -211,7 +211,7 @@
             <Setter Property="Padding" Value="8,0,30,0"/>
         </Style>
 
-        <!-- 保留換行: starts as tall as the single line, so turning it on moves nothing until there
+        <!-- 多行輸入: starts as tall as the single line, so turning it on moves nothing until there
              is a second line, and grows to five lines before it scrolls. Five shows a paragraph's
              shape; more would bury the translation and the page behind it under the source. -->
         <Style x:Key="SourceMultiLine" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
@@ -298,7 +298,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Everything in this row beside the box is held to the box's first line, 34
-                         high and at the top, rather than centred on the row: with 保留換行 the box
+                         high and at the top, rather than centred on the row: with 多行輸入 the box
                          grows downwards, and centred controls would drift down with it and away from
                          the line they belong to. On one line the two are the same place. -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top" Height="34">
@@ -319,7 +319,7 @@
                              not the button is showing: reclaiming it on an empty box would slide
                              every character sideways on the keystroke that empties it. -->
                         <!-- Height and padding live in the two styles, not here, so that switching
-                             style for 保留換行 actually switches them — see ApplyLineMode. -->
+                             style for 多行輸入 actually switches them — see ApplyLineMode. -->
                         <TextBox x:Name="SourceTextBox"
                                  Style="{StaticResource SourceSingleLine}"
                                  Background="Transparent"
@@ -846,19 +846,19 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="{DynamicResource S.QuickLookup.KeepLineBreaks}"
+                                    <TextBlock Text="{DynamicResource S.QuickLookup.MultilineInput}"
                                                Style="{StaticResource SettingRowLabel}"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock Text="{DynamicResource S.QuickLookup.KeepLineBreaksHint}"
+                                    <TextBlock Text="{DynamicResource S.QuickLookup.MultilineInputHint}"
                                                Style="{StaticResource FieldHint}"
                                                Margin="0,2,0,0"
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <CheckBox x:Name="KeepLineBreaksToggle"
+                                <CheckBox x:Name="MultilineInputToggle"
                                           Grid.Column="1"
                                           Style="{StaticResource ToggleSwitch}"
-                                          AutomationProperties.Name="{DynamicResource S.QuickLookup.KeepLineBreaks}"/>
+                                          AutomationProperties.Name="{DynamicResource S.QuickLookup.MultilineInput}"/>
                             </Grid>
 
                             <Rectangle Height="1" Fill="{DynamicResource AppSeparator}" Margin="0,0,0,12"/>

@@ -212,7 +212,7 @@ internal static class SelectedTextReader
     /// Tidies the text the way <see cref="Fold"/> does, but line by line, keeping the breaks.
     /// </summary>
     /// <remarks>
-    /// For 取詞翻譯's 保留換行, which is for someone who wants an article translated as it was laid
+    /// For 取詞翻譯's 多行輸入, which is for someone who wants an article translated as it was laid
     /// out. Spaces inside a line are still collapsed and each line is trimmed; a run of blank lines
     /// becomes one, which is still a paragraph break to every engine. Lines are joined with
     /// <see cref="Environment.NewLine"/> because that is what a TextBox inserts for Enter, so the
