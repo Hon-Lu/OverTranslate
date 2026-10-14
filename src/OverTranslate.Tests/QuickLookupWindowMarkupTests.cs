@@ -10,6 +10,7 @@ namespace OverTranslate.Tests;
 public class QuickLookupWindowMarkupTests
 {
     private static readonly XNamespace X = "http://schemas.microsoft.com/winfx/2006/xaml";
+    private static readonly XNamespace P = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
     private static XDocument Window() => XDocument.Load(Path.Combine(
         StringsParityTests.ProjectDirectory(), "Views", "QuickLookup", "QuickLookupWindow.xaml"));
@@ -99,7 +100,7 @@ public class QuickLookupWindowMarkupTests
             .Single(e => (string?)e.Attribute(X + "Name") == "CompactTgtTtsBtn");
 
         Assert.Equal("{StaticResource HeaderIconButton}", (string?)button.Attribute("Style"));
-        Assert.Equal("{Binding Content, ElementName=TgtTtsBtn}", (string?)button.Attribute("Content"));
+        Assert.Equal("{Binding Text, ElementName=TgtTtsGlyph}", (string?)button.Attribute("Content"));
         Assert.Equal("{Binding Visibility, ElementName=CompactTranslatedText}", (string?)button.Attribute("Visibility"));
         Assert.Equal("8,0,0,0", (string?)button.Attribute("Margin"));
         Assert.Equal("Top", (string?)button.Attribute("VerticalAlignment"));
@@ -126,19 +127,31 @@ public class QuickLookupWindowMarkupTests
         Assert.Equal("BodyHost", (string?)confirmation.ElementsBeforeSelf().Last().Attribute(X + "Name"));
     }
 
-    /// <summary>Each speech button is centered on the first line box, independent of script glyph size.</summary>
+    /// <summary>The full result reads both texts aloud from its action row: 複製 | 朗讀原文 | 朗讀譯文.</summary>
     [Fact]
-    public void The_result_tts_buttons_align_to_the_first_line_box()
+    public void The_full_result_reads_the_translation_from_the_action_row()
     {
         var window = Window();
         XElement Element(string name) => window
             .Descendants()
             .Single(e => (string?)e.Attribute(X + "Name") == name);
 
-        Assert.Equal("32", (string?)Element("TranslatedText").Attribute("LineHeight"));
-        Assert.Equal("Top", (string?)Element("TranslatedText").Attribute("VerticalAlignment"));
-        Assert.Equal("8,1,0,0", (string?)Element("TgtTtsBtn").Attribute("Margin"));
-        Assert.Equal("Top", (string?)Element("TgtTtsBtn").Attribute("VerticalAlignment"));
+        var buttons = Element("ActionRow").Elements(P + "Button").ToList();
+        Assert.Equal(3, buttons.Count);
+        Assert.Equal("SrcTtsBtn", (string?)buttons[1].Attribute(X + "Name"));
+        Assert.Equal("TgtTtsBtn", (string?)buttons[2].Attribute(X + "Name"));
+        Assert.Equal("{StaticResource ResultActionButton}", (string?)buttons[2].Attribute("Style"));
+    }
+
+    /// <summary>The compact speech button is centered on the first line box, independent of script glyph size.</summary>
+    [Fact]
+    public void The_compact_tts_button_aligns_to_the_first_line_box()
+    {
+        var window = Window();
+        XElement Element(string name) => window
+            .Descendants()
+            .Single(e => (string?)e.Attribute(X + "Name") == name);
+
         Assert.Equal("20", (string?)Element("CompactTranslatedText").Attribute("LineHeight"));
         Assert.Equal("0,5,0,0", (string?)Element("CompactTranslatedText").Attribute("Margin"));
         Assert.Equal("8,0,0,0", (string?)Element("CompactTgtTtsBtn").Attribute("Margin"));

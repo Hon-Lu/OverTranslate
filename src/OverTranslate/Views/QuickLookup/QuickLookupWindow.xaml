@@ -509,7 +509,6 @@
                                              Foreground="{DynamicResource AppAccent}"/>
 
                                 <StackPanel Grid.Row="1" Margin="18,14,18,14">
-                            <StackPanel Orientation="Horizontal">
                                 <!-- The one piece of large text in the window, and the only place
                                      that opts out of the window's Display text formatting. That mode
                                      pins glyphs to whole pixels, which is what keeps 12px labels
@@ -533,22 +532,7 @@
                                            TextOptions.TextRenderingMode="ClearType"
                                            Foreground="{DynamicResource AppTextPrimary}"
                                            VerticalAlignment="Top"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="440"/>
-
-                                <!-- Collapsed until there is a translation to read: on its own
-                                     beside an empty line it offers to speak nothing, which is what
-                                     it looked like it was doing for the second or two a translation
-                                     takes. -->
-                                <Button x:Name="TgtTtsBtn"
-                                        Style="{StaticResource HeaderIconButton}"
-                                        Content="&#xE767;"
-                                        Margin="8,1,0,0"
-                                        VerticalAlignment="Top"
-                                        Visibility="Collapsed"
-                                        ToolTip="{DynamicResource S.Translation.SpeakResult}"
-                                        Click="TgtTtsBtn_Click"/>
-                            </StackPanel>
+                                           TextWrapping="Wrap"/>
 
                             <TextBlock x:Name="StatusText"
                                        FontFamily="{DynamicResource AppFont}"
@@ -588,6 +572,24 @@
                                                    Text="&#xE767;"
                                                    Style="{StaticResource ActionGlyph}"/>
                                         <TextBlock Text="{DynamicResource S.QuickLookup.SpeakSource}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Rectangle Width="1" Margin="4,8" Fill="{DynamicResource AppSeparator}"/>
+
+                                <!-- In the row with the other actions rather than as a bare glyph
+                                     beside the translation, so both readings are found in one place
+                                     and named the same way. The row is only shown once there is a
+                                     translation, so this never offers to speak an empty line. -->
+                                <Button x:Name="TgtTtsBtn"
+                                        Style="{StaticResource ResultActionButton}"
+                                        Click="TgtTtsBtn_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="TgtTtsGlyph"
+                                                   Text="&#xE767;"
+                                                   Style="{StaticResource ActionGlyph}"/>
+                                        <TextBlock Text="{DynamicResource S.QuickLookup.SpeakResult}"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
@@ -685,7 +687,7 @@
 
                                     <Button x:Name="CompactTgtTtsBtn"
                                             Style="{StaticResource HeaderIconButton}"
-                                            Content="{Binding Content, ElementName=TgtTtsBtn}"
+                                            Content="{Binding Text, ElementName=TgtTtsGlyph}"
                                             Margin="8,0,0,0"
                                             VerticalAlignment="Top"
                                             Visibility="{Binding Visibility, ElementName=CompactTranslatedText}"

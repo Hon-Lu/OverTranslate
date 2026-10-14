@@ -148,6 +148,7 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.QuickLookup.Copy">Copy</sys:String>
     <sys:String x:Key="S.QuickLookup.Copied">Copied</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSource">Read the original</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">Read the translation</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">Read the original aloud</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only

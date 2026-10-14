@@ -148,6 +148,7 @@
     <sys:String x:Key="S.QuickLookup.Copy">复制</sys:String>
     <sys:String x:Key="S.QuickLookup.Copied">已复制</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSource">朗读原文</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">朗读译文</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">朗读原文</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only

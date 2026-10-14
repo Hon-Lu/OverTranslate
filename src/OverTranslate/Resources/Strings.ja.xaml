@@ -149,6 +149,7 @@
     <sys:String x:Key="S.QuickLookup.Copy">コピー</sys:String>
     <sys:String x:Key="S.QuickLookup.Copied">コピーしました</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSource">原文を読み上げ</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">訳文を読み上げ</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">原文を読み上げる</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only

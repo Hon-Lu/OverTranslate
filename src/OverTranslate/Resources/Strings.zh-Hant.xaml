@@ -154,6 +154,7 @@
     <sys:String x:Key="S.QuickLookup.Copy">複製</sys:String>
     <sys:String x:Key="S.QuickLookup.Copied">已複製</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSource">朗讀原文</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">朗讀譯文</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">朗讀原文</sys:String>
     <!-- 這裡的「自動」不像文字翻譯那樣直接停用：翻譯回來後引擎會告訴我們原文是什麼語言，
          只有還沒翻譯、或引擎沒講的時候才無語可讀。 -->

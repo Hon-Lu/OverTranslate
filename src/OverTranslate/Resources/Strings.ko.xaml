@@ -149,6 +149,7 @@
     <sys:String x:Key="S.QuickLookup.Copy">복사</sys:String>
     <sys:String x:Key="S.QuickLookup.Copied">복사됨</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSource">원문 읽기</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">번역문 읽기</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">원문 읽어 주기</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only

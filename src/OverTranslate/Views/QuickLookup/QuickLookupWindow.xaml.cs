@@ -1168,11 +1168,10 @@ public partial class QuickLookupWindow : Window
 
         SettingsPanel.Visibility = Visibility.Collapsed;
         RenderResultPresentation();
-        // Both belong to a translation rather than to the panel, so neither is on screen while the
-        // status line is still saying 翻譯中.
+        // The actions belong to a translation rather than to the panel, so they are not on screen
+        // while the status line is still saying 翻譯中.
         var hasResult = TranslatedText.Text.Length > 0;
         ActionRow.Visibility = hasResult ? Visibility.Visible : Visibility.Collapsed;
-        TgtTtsBtn.Visibility = hasResult ? Visibility.Visible : Visibility.Collapsed;
 
         // After ActionRow, which the note's own visibility is measured against.
         RenderSourceTtsAvailability();
@@ -1310,7 +1309,7 @@ public partial class QuickLookupWindow : Window
 
     private void RenderTtsGlyphs()
     {
-        TgtTtsBtn.Content = ReferenceEquals(_ttsActiveBtn, TgtTtsBtn)
+        TgtTtsGlyph.Text = ReferenceEquals(_ttsActiveBtn, TgtTtsBtn)
             ? Controls.TtsGlyphs.Stop
             : Controls.TtsGlyphs.Speak;
 
