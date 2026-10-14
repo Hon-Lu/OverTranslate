@@ -185,12 +185,13 @@ internal static class SelectedTextReader
     }
 
     /// <summary>
-    /// Trims the copied text down to one line of at most <see cref="MaxLength"/> characters.
+    /// Trims the copied text down to one line of at most <paramref name="maxLength"/> characters, or
+    /// with <paramref name="keepLineBreaks"/> to tidied lines — see <see cref="KeepLines"/>.
     /// </summary>
     /// <remarks>
-    /// Whitespace is collapsed rather than kept because a selection dragged across a web page or a
-    /// PDF arrives hard-wrapped at whatever width it was laid out to, and those line breaks belong
-    /// to the page rather than to the sentence. Left in, they reach the translation engine as
+    /// Whitespace is collapsed rather than kept by default because a selection dragged across a web
+    /// page or a PDF arrives hard-wrapped at whatever width it was laid out to, and those line breaks
+    /// belong to the page rather than to the sentence. Left in, they reach the translation engine as
     /// sentence boundaries that are not there.
     /// </remarks>
     public static string Sanitize(string? raw, int maxLength = MaxLength, bool keepLineBreaks = false) =>
