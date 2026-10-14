@@ -158,6 +158,8 @@
     <sys:String x:Key="S.QuickLookup.ProviderHint">与屏幕翻译及文字翻译共用此服务</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">自动复制翻译结果</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">翻译完成后，自动将结果复制到剪贴板</sys:String>
+    <sys:String x:Key="S.QuickLookup.KeepLineBreaks">保留换行</sys:String>
+    <sys:String x:Key="S.QuickLookup.KeepLineBreaksHint">保留取词文字中的换行，并允许输入多行文字</sys:String>
     <sys:String x:Key="S.QuickLookup.Bilingual">双语互译</sys:String>
     <sys:String x:Key="S.QuickLookup.BilingualHint">自动判断输入的语言，在指定的两种语言之间互译</sys:String>
     <sys:String x:Key="S.QuickLookup.BilingualFallback">检测到其他语言时，将自动翻译为左侧选取的语言“{0}”</sys:String>

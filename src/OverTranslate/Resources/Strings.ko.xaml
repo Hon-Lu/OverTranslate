@@ -159,6 +159,8 @@
     <sys:String x:Key="S.QuickLookup.ProviderHint">캡처 번역·텍스트 번역과 같은 서비스를 사용합니다</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopy">번역 결과 자동 복사</sys:String>
     <sys:String x:Key="S.QuickLookup.AutoCopyHint">번역이 끝나면 결과를 클립보드에 자동으로 복사합니다</sys:String>
+    <sys:String x:Key="S.QuickLookup.KeepLineBreaks">줄바꿈 유지</sys:String>
+    <sys:String x:Key="S.QuickLookup.KeepLineBreaksHint">선택한 텍스트의 줄바꿈을 유지하고 여러 줄 입력을 허용합니다</sys:String>
     <sys:String x:Key="S.QuickLookup.Bilingual">양방향 번역</sys:String>
     <sys:String x:Key="S.QuickLookup.BilingualHint">입력한 언어를 판별해 지정한 두 언어 사이에서 번역합니다</sys:String>
     <sys:String x:Key="S.QuickLookup.BilingualFallback">다른 언어가 감지되면 왼쪽에서 선택한 언어 ‘{0}’(으)로 번역합니다</sys:String>

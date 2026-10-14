@@ -91,6 +91,26 @@ public class SelectedTextReaderTests
     }
 
     [Fact]
+    public void Keeping_line_breaks_tidies_each_line_but_keeps_the_layout()
+    {
+        var nl = Environment.NewLine;
+
+        Assert.Equal(
+            $"First line{nl}second line{nl}{nl}new paragraph",
+            SelectedTextReader.Sanitize(
+                "\r\n  First   line  \r\nsecond\tline\n\n\n\r\nnew paragraph\r\n\r\n",
+                SourceTextLimit.MaxLength,
+                keepLineBreaks: true));
+    }
+
+    [Fact]
+    public void Keeping_line_breaks_still_reads_nothing_selected_as_nothing()
+    {
+        Assert.Equal("", SelectedTextReader.KeepLines(" \r\n\t\n "));
+        Assert.Equal("", SelectedTextReader.KeepLines(null));
+    }
+
+    [Fact]
     public void Pasted_lines_are_folded_into_one_sentence_without_the_selection_cap()
     {
         // #274: a single-line box keeps a paste only up to its first line break.

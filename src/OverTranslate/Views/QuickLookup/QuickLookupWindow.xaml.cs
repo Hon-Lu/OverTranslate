@@ -211,7 +211,8 @@ public partial class QuickLookupWindow : Window
     /// </param>
     public static async Task SummonAsync(bool pinned = false)
     {
-        var selection = await SelectedTextReader.ReadAsync(SourceTextLimit.MaxLength);
+        var selection = await SelectedTextReader.ReadAsync(
+            SourceTextLimit.MaxLength, SettingsService.Instance.Current.QuickLookup.KeepLineBreaks);
 
         if (_current is { _closing: false } open)
         {
@@ -356,6 +357,8 @@ public partial class QuickLookupWindow : Window
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
         AutoCopyToggle.Checked       += AutoCopyToggle_Toggled;
         AutoCopyToggle.Unchecked     += AutoCopyToggle_Toggled;
+        KeepLineBreaksToggle.Checked   += KeepLineBreaksToggle_Toggled;
+        KeepLineBreaksToggle.Unchecked += KeepLineBreaksToggle_Toggled;
         BilingualToggle.Checked      += BilingualToggle_Toggled;
         BilingualToggle.Unchecked    += BilingualToggle_Toggled;
 
@@ -836,6 +839,13 @@ public partial class QuickLookupWindow : Window
 
         if (e.Key is not (Key.Enter or Key.Return)) return;
 
+        // With 保留換行 the box takes more than one line, and Shift+Enter is how one is started —
+        // the chat-box convention, which leaves Enter doing what it always did here.
+        if (SourceTextBox.AcceptsReturn
+            && SourceTextBox.IsKeyboardFocused
+            && Keyboard.Modifiers == ModifierKeys.Shift)
+            return;
+
         // Enter translates what is in the box now, rather than waiting out the debounce.
         e.Handled = true;
         _debounce.Stop();
@@ -961,7 +971,8 @@ public partial class QuickLookupWindow : Window
     /// a carried-in selection is — see <see cref="SelectedTextReader.Sanitize"/> for why the breaks
     /// do not belong to the sentence — and the box's MaxLength cuts it at
     /// <see cref="SourceTextLimit.MaxLength"/>.
-    /// Text without a line break is pasted as it came.
+    /// Text without a line break is pasted as it came. With 保留換行 the lines are kept, tidied the
+    /// way a carried-in selection is — see <see cref="SelectedTextReader.KeepLines"/>.
     /// </remarks>
     private void SourceTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
     {
@@ -969,7 +980,9 @@ public partial class QuickLookupWindow : Window
             || pasted.IndexOfAny(['\r', '\n']) < 0)
             return;
 
-        var folded = SelectedTextReader.Fold(pasted);
+        var folded = SettingsService.Instance.Current.QuickLookup.KeepLineBreaks
+            ? SelectedTextReader.KeepLines(pasted)
+            : SelectedTextReader.Fold(pasted);
         if (folded.Length == 0)
         {
             e.CancelCommand();
@@ -1495,6 +1508,8 @@ public partial class QuickLookupWindow : Window
         // to a service this list was built without — or away from a hidden one it was built with.
         BindProviderBox(settings.Provider);
         AutoCopyToggle.IsChecked = settings.QuickLookup.AutoCopyTranslation;
+        KeepLineBreaksToggle.IsChecked = settings.QuickLookup.KeepLineBreaks;
+        ApplyLineMode(settings.QuickLookup.KeepLineBreaks);
 
         BilingualToggle.IsChecked = settings.QuickLookup.BilingualEnabled;
         LoadBilingualPair();
@@ -1531,6 +1546,34 @@ public partial class QuickLookupWindow : Window
         SettingsService.Instance.Current.QuickLookup.AutoCopyTranslation =
             AutoCopyToggle.IsChecked == true;
         SettingsService.Instance.Save();
+    }
+
+    private void KeepLineBreaksToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAuto) return;
+
+        var keep = KeepLineBreaksToggle.IsChecked == true;
+        SettingsService.Instance.Current.QuickLookup.KeepLineBreaks = keep;
+        SettingsService.Instance.Save();
+        ApplyLineMode(keep);
+
+        // A single-line box shows a text only up to its first break, so turning this off folds what
+        // is already there rather than hiding the rest of it. The breaks folded away on the way in
+        // are not there to put back the other way; the next selection brings them.
+        if (!keep && SourceTextBox.Text.IndexOfAny(['\r', '\n']) >= 0)
+        {
+            var folded = SelectedTextReader.Fold(SourceTextBox.Text);
+            SourceTextBox.Text = folded;
+            SourceTextBox.CaretIndex = folded.Length;
+        }
+    }
+
+    /// <summary>
+    /// Gives the box the shape 保留換行 asks for: one line, or up to five that Shift+Enter adds to.
+    /// </summary>
+    private void ApplyLineMode(bool keepLineBreaks)
+    {
+        SourceTextBox.Style = (Style)FindResource(keepLineBreaks ? "SourceMultiLine" : "SourceSingleLine");
     }
 
     // ══════════════════════════ 雙語互譯 ══════════════════════════
