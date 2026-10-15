@@ -230,11 +230,36 @@ internal sealed class MangaOcrEngine : IDisposable
     }
 
     /// <summary>
-    /// Reads a page. <paramref name="wait"/> false turns a busy GPU into
-    /// <see cref="MangaReadOutcome.Busy"/> instead of a queue — for a live screen, where a queued read
-    /// would answer a frame that has already been replaced.
+    /// Reads a page whole: every block the detector found that is not too long for manga-ocr.
     /// </summary>
+    /// <remarks>
+    /// <see cref="DetectAsync"/> and <see cref="MangaDetection.ReadAsync"/> in one, for callers
+    /// that have nothing to decide in between.
+    /// </remarks>
     internal async Task<(MangaReadOutcome Outcome, MangaPage? Page)> ReadAsync(
+        Bitmap bitmap, bool wait, CancellationToken cancellationToken)
+    {
+        var (outcome, detection) = await DetectAsync(bitmap, wait, cancellationToken).ConfigureAwait(false);
+        if (detection is null) return (outcome, null);
+        using (detection)
+        {
+            var blocks = await detection.ReadAsync(
+                [.. Enumerable.Range(0, detection.Text.Count)], cancellationToken).ConfigureAwait(false);
+            return blocks is null
+                ? (MangaReadOutcome.Unavailable, null)
+                : (MangaReadOutcome.Read, detection.Page(blocks));
+        }
+    }
+
+    /// <summary>
+    /// Finds the page's blocks and balloons and reads nothing yet, keeping the GPU until the result
+    /// is disposed, so the caller can choose what manga-ocr reads without another page getting in
+    /// between. <paramref name="wait"/> false turns a busy GPU into <see cref="MangaReadOutcome.Busy"/>
+    /// instead of a queue — for a live screen, where a queued read would answer a frame that has
+    /// already been replaced.
+    /// </summary>
+    /// <returns>The detection when the outcome is <see cref="MangaReadOutcome.Read"/>; null otherwise.</returns>
+    internal async Task<(MangaReadOutcome Outcome, MangaDetection? Detection)> DetectAsync(
         Bitmap bitmap, bool wait, CancellationToken cancellationToken)
     {
         if (UnavailableReason is not null)
@@ -245,20 +270,29 @@ internal sealed class MangaOcrEngine : IDisposable
         else if (!_gate.Wait(0, cancellationToken))
             return (MangaReadOutcome.Busy, null);
 
+        MangaDetection? detection = null;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await Task.Run(() => ReadUnderGate(bitmap), cancellationToken).ConfigureAwait(false);
+            detection = await Task.Run(() => DetectUnderGate(bitmap), cancellationToken).ConfigureAwait(false);
+            return detection is null ? (MangaReadOutcome.Unavailable, null) : (MangaReadOutcome.Read, detection);
         }
         finally
         {
-            // Switched off while this page was being read: nothing is waiting for the models now.
-            if (!Enabled) Unload();
-            _gate.Release();
-            lock (_sync)
-                if (!_keepWarm && !_disposed)
-                    _idleRelease.Change(IdleReleaseDelay, Timeout.InfiniteTimeSpan);
+            // Handed on, the gate goes with it; otherwise it is given back here.
+            if (detection is null) EndRead();
         }
+    }
+
+    // The end of a page: the gate is given back and the idle countdown starts.
+    private void EndRead()
+    {
+        // Switched off while this page was being read: nothing is waiting for the models now.
+        if (!Enabled) Unload();
+        _gate.Release();
+        lock (_sync)
+            if (!_keepWarm && !_disposed)
+                _idleRelease.Change(IdleReleaseDelay, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>Whether sessions are loaded right now; for tests.</summary>
@@ -278,10 +312,11 @@ internal sealed class MangaOcrEngine : IDisposable
         }
     }
 
-    private (MangaReadOutcome, MangaPage?) ReadUnderGate(Bitmap bitmap)
+    // Under _gate. Null when the models would not load or inference failed.
+    private MangaDetection? DetectUnderGate(Bitmap bitmap)
     {
         if (!EnsureLoaded())
-            return (MangaReadOutcome.Unavailable, null);
+            return null;
 
         try
         {
@@ -291,35 +326,117 @@ internal sealed class MangaOcrEngine : IDisposable
             var timer = Stopwatch.StartNew();
             var found = _detector!.Detect(rgb, bitmap.Width, bitmap.Height);
             var detectMs = timer.Elapsed.TotalMilliseconds;
-            timer.Restart();
 
-            var toRead = found.Text.Where(box => !MangaPageLayout.IsLong(box.Bounds)).ToList();
-            var readings = _recognizer!.Read(
-                rgb, bitmap.Width, bitmap.Height,
-                [.. toRead.Select(box => MangaPageLayout.RecognitionCrop(box.Bounds, bitmap.Width, bitmap.Height))]);
-            var readMs = timer.Elapsed.TotalMilliseconds;
-
-            var blocks = toRead
-                .Select((box, i) => new MangaBlock(box.Bounds, readings[i].Text, readings[i].Confidence))
-                .Where(block => block.Text.Length > 0)
-                .ToList();
-            var longBlocks = found.Text.Where(box => MangaPageLayout.IsLong(box.Bounds)).Select(box => box.Bounds).ToList();
-
-            Log.Info(
-                "Manga OCR on {W}x{H}: {Blocks} blocks, {Long} long, {Bubbles} bubbles, detect={Detect:F0}ms read={Read:F0}ms",
-                bitmap.Width, bitmap.Height, blocks.Count, longBlocks.Count, found.Bubbles.Count, detectMs, readMs);
-
-            return (MangaReadOutcome.Read, new MangaPage(
-                blocks, longBlocks, [.. found.Bubbles.Select(box => box.Bounds)], detectMs, readMs,
-                new LumaPage(PillowImage.Luma(rgb), bitmap.Width, bitmap.Height)));
+            return new MangaDetection(
+                this, rgb, bitmap.Width, bitmap.Height,
+                [.. found.Text.Where(box => !MangaPageLayout.IsLong(box.Bounds)).Select(box => box.Bounds)],
+                [.. found.Text.Where(box => MangaPageLayout.IsLong(box.Bounds)).Select(box => box.Bounds)],
+                [.. found.Bubbles.Select(box => box.Bounds)],
+                new LumaPage(PillowImage.Luma(rgb), bitmap.Width, bitmap.Height),
+                detectMs);
         }
         catch (OnnxRuntimeException ex)
         {
-            // A device lost or out of memory mid-page. This page goes to the column pipeline, and so
-            // does every one after it until the models change: a GPU that failed once will fail again.
-            Fail(MangaUnavailable.ReadFailed, $"inference failed: {ex.Message}", ex);
-            Unload();
-            return (MangaReadOutcome.Unavailable, null);
+            ReadFailed(ex);
+            return null;
+        }
+    }
+
+    // Under _gate. Null when inference failed.
+    private List<MangaBlock>? ReadUnderGate(MangaDetection page, IReadOnlyList<int> which)
+    {
+        try
+        {
+            var timer = Stopwatch.StartNew();
+            var boxes = which.Select(i => page.Text[i]).ToList();
+            var readings = _recognizer!.Read(
+                page.Rgb, page.Width, page.Height,
+                [.. boxes.Select(box => MangaPageLayout.RecognitionCrop(box, page.Width, page.Height))]);
+            var readMs = timer.Elapsed.TotalMilliseconds;
+
+            var blocks = boxes
+                .Select((box, i) => new MangaBlock(box, readings[i].Text, readings[i].Confidence))
+                .Where(block => block.Text.Length > 0)
+                .ToList();
+
+            Log.Info(
+                "Manga OCR on {W}x{H}: {Blocks} blocks read of {Found}, {Long} long, {Bubbles} bubbles, detect={Detect:F0}ms read={Read:F0}ms",
+                page.Width, page.Height, blocks.Count, page.Text.Count, page.Long.Count, page.Bubbles.Count,
+                page.DetectMs, readMs);
+            page.ReadMs = readMs;
+            return blocks;
+        }
+        catch (OnnxRuntimeException ex)
+        {
+            ReadFailed(ex);
+            return null;
+        }
+    }
+
+    // A device lost or out of memory mid-page. This page goes to the column pipeline, and so does
+    // every one after it until the models change: a GPU that failed once will fail again.
+    private void ReadFailed(OnnxRuntimeException ex)
+    {
+        Fail(MangaUnavailable.ReadFailed, $"inference failed: {ex.Message}", ex);
+        Unload();
+    }
+
+    /// <summary>
+    /// A page's blocks and balloons, found and not yet read, with the GPU held for it until disposed.
+    /// </summary>
+    internal sealed class MangaDetection : IDisposable
+    {
+        private readonly MangaOcrEngine _owner;
+        private int _ended;
+
+        internal MangaDetection(
+            MangaOcrEngine owner, byte[] rgb, int width, int height, List<RectangleF> text,
+            List<RectangleF> longBlocks, List<RectangleF> bubbles, LumaPage luma, double detectMs)
+        {
+            _owner = owner;
+            Rgb = rgb;
+            Width = width;
+            Height = height;
+            Text = text;
+            Long = longBlocks;
+            Bubbles = bubbles;
+            Luma = luma;
+            DetectMs = detectMs;
+        }
+
+        internal byte[] Rgb { get; }
+        internal int Width { get; }
+        internal int Height { get; }
+
+        /// <summary>The blocks manga-ocr can read, highest score first.</summary>
+        internal List<RectangleF> Text { get; }
+
+        /// <summary>Blocks too long for manga-ocr (<see cref="MangaPageLayout.IsLong"/>).</summary>
+        internal List<RectangleF> Long { get; }
+
+        internal List<RectangleF> Bubbles { get; }
+        internal LumaPage Luma { get; }
+        internal double DetectMs { get; }
+        internal double ReadMs { get; set; }
+
+        /// <summary>
+        /// Reads the <see cref="Text"/> blocks at the given indices with manga-ocr, all in one batch;
+        /// null when inference failed, after which the models are not used again until they change.
+        /// </summary>
+        internal Task<List<MangaBlock>?> ReadAsync(IReadOnlyList<int> which, CancellationToken cancellationToken)
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _ended) != 0, this);
+            return which.Count == 0
+                ? Task.FromResult<List<MangaBlock>?>([])
+                : Task.Run(() => _owner.ReadUnderGate(this, which), cancellationToken);
+        }
+
+        /// <summary>The page as <see cref="MangaOcrEngine.ReadAsync"/> has always handed it on.</summary>
+        internal MangaPage Page(List<MangaBlock> blocks) => new(blocks, Long, Bubbles, DetectMs, ReadMs, Luma);
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _ended, 1) == 0) _owner.EndRead();
         }
     }
 
