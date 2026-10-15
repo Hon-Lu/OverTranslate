@@ -201,6 +201,14 @@ public class OcrService : IDisposable
     private static Func<Bitmap, IReadOnlyList<SkiaSharp.SKPointI[]>>? ColumnDetector(IOcrEngine engine, string language) =>
         engine is OnnxOcrEngine onnx ? mosaic => onnx.DetectQuads(mosaic, language) : null;
 
+    /// <summary>
+    /// The column detector as it detects a vertical page, for the manga path to tell which way each
+    /// block's lines run — see <see cref="Ocr.Manga.MangaLineGeometry"/>. Null for an engine that is
+    /// not the ONNX one, which leaves every block to its shape.
+    /// </summary>
+    private static Func<Bitmap, IReadOnlyList<SkiaSharp.SKPointI[]>>? LineDetector(IOcrEngine engine, string language) =>
+        engine is OnnxOcrEngine onnx ? mosaic => onnx.DetectLineQuads(mosaic, language) : null;
+
     /// <summary>Reads original-frame columns without queueing a busy realtime engine.</summary>
     /// <remarks>
     /// With <paramref name="manga"/> usable the page goes to the manga models instead, as on the
@@ -218,9 +226,8 @@ public class OcrService : IDisposable
         if (manga is not null && ReadsWithMangaModels(language))
         {
             var (outcome, read) = await MangaVerticalReader.ReadAsync(
-                manga, bitmap, wait: false,
-                (part, token) => ReadColumnsAsync(engine, part, language, token), cancellationToken,
-                ColumnDetector(engine, language));
+                manga, bitmap, wait: false, engine, language, maxDetectSize, cancellationToken,
+                ColumnDetector(engine, language), LineDetector(engine, language));
             if (outcome == MangaReadOutcome.Busy) return null;
             if (outcome == MangaReadOutcome.Read) return read;
         }
@@ -437,9 +444,9 @@ public class OcrService : IDisposable
         if (manga is not null && ReadsWithMangaModels(sourceLanguage))
         {
             var (outcome, read) = await MangaVerticalReader.ReadAsync(
-                manga, bitmap, wait: true,
-                (part, token) => ReadColumnsAsync(engine, part, sourceLanguage, token), cancellationToken,
-                ColumnDetector(engine, sourceLanguage));
+                manga, bitmap, wait: true, engine, OcrLanguageRouter.Normalize(sourceLanguage),
+                maxDetectSize: null, cancellationToken,
+                ColumnDetector(engine, sourceLanguage), LineDetector(engine, sourceLanguage));
             if (outcome == MangaReadOutcome.Read) return read!;
         }
 

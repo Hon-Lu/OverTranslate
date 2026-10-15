@@ -28,4 +28,43 @@ internal interface IOcrEngine : IDisposable
         int? maxDetectSize = null,
         CancellationToken cancellationToken = default,
         bool verticalText = false);
+
+    /// <summary>
+    /// A recognition slot taken now, for a caller that has to know it can read before it starts
+    /// spending anything else; null when none is free.
+    /// </summary>
+    /// <remarks>
+    /// For the manga path on a live screen, which reads part of a page with the manga models and
+    /// part with this engine: finding the engine busy only after the manga models had read their
+    /// part would throw that work away. An engine without slots of its own reads straight through.
+    /// </remarks>
+    IOcrSlot? TryTakeSlot() => new ThroughSlot(this);
+
+    /// <summary>A recognition slot, waited for.</summary>
+    Task<IOcrSlot> TakeSlotAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IOcrSlot>(new ThroughSlot(this));
+
+    private sealed class ThroughSlot(IOcrEngine engine) : IOcrSlot
+    {
+        public Task<List<OcrTextBlock>> RecognizeAsync(
+            Bitmap bitmap, string sourceLanguage, int? maxDetectSize, CancellationToken cancellationToken,
+            bool verticalText) =>
+            engine.RecognizeAsync(bitmap, sourceLanguage, cancellationToken, verticalText);
+
+        public void Dispose()
+        {
+        }
+    }
+}
+
+/// <summary>
+/// One of the engine's recognition slots, held until disposed; every read through it runs at once,
+/// one after another, without asking for a slot again.
+/// </summary>
+internal interface IOcrSlot : IDisposable
+{
+    /// <param name="maxDetectSize">As <see cref="IOcrEngine.TryRecognizeAsync"/>; null is the screenshot size.</param>
+    Task<List<OcrTextBlock>> RecognizeAsync(
+        Bitmap bitmap, string sourceLanguage, int? maxDetectSize, CancellationToken cancellationToken,
+        bool verticalText);
 }

@@ -218,6 +218,40 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         }, cancellationToken);
     }
 
+    public IOcrSlot? TryTakeSlot() => _inferenceGate.Wait(0) ? new Slot(this) : null;
+
+    public async Task<IOcrSlot> TakeSlotAsync(CancellationToken cancellationToken)
+    {
+        await _inferenceGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return new Slot(this);
+    }
+
+    /// <summary>One of <see cref="_inferenceGate"/>'s slots, given back once, when disposed.</summary>
+    private sealed class Slot(OnnxOcrEngine owner) : IOcrSlot
+    {
+        private int _released;
+
+        public Task<List<OcrTextBlock>> RecognizeAsync(
+            Bitmap bitmap, string sourceLanguage, int? maxDetectSize, CancellationToken cancellationToken,
+            bool verticalText)
+        {
+            if (!OcrLanguageRouter.IsSupported(sourceLanguage))
+                throw new NotSupportedException(OcrLanguageRouter.GetUnsupportedLanguageMessage(sourceLanguage));
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _released) != 0, this);
+
+            return Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return owner.RecognizeCore(bitmap, sourceLanguage, maxDetectSize, verticalText);
+            }, cancellationToken);
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0) owner._inferenceGate.Release();
+        }
+    }
+
     private List<OcrTextBlock> RecognizeCore(
         Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null, bool verticalText = false)
     {
@@ -450,6 +484,38 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     {
         using var session = BeginDetection(bitmap, sourceLanguage, maxDetectSize: null, repairRows: false);
         return session.Quads();
+    }
+
+    /// <summary>
+    /// The detector's quadrilaterals as the column pipeline finds them on a page of vertical
+    /// writing — columns merged on the artwork taken apart on the probability map — and nothing read.
+    /// </summary>
+    /// <remarks>
+    /// For <see cref="Manga.MangaLineGeometry"/>, which asks which way the lines of a block run. The
+    /// vertical detection rather than <see cref="DetectQuads"/>: measured over the 1753 manga blocks
+    /// of the vertical and comic corpora, each cut out and detected on its own, the plain detection
+    /// joined short columns standing side by side into one box across and turned 16 blocks of
+    /// columns into rows, this one 7 — and 0 on the mosaic that class builds.
+    /// </remarks>
+    internal IReadOnlyList<SKPointI[]> DetectLineQuads(Bitmap bitmap, string sourceLanguage)
+    {
+        var normalizedLanguage = OcrLanguageRouter.Normalize(sourceLanguage);
+        var runtime = AcquireRuntime(normalizedLanguage);
+        DetectionSession session;
+        try
+        {
+            session = new DetectionSession(
+                this, runtime, bitmap, normalizedLanguage, maxDetectSize: null,
+                repairRows: false, verticalText: true);
+        }
+        catch
+        {
+            ReleaseRuntime();
+            throw;
+        }
+
+        using (session)
+            return session.Quads();
     }
 
     /// <summary>

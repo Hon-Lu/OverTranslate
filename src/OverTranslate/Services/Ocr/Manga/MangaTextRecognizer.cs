@@ -41,7 +41,30 @@ internal sealed class MangaTextRecognizer : IDisposable
 {
     internal const int BatchCap = 4;
     private const int InputSize = 224;
-    private const int MaxTokens = 300;
+
+    /// <summary>
+    /// The most tokens one block is read as — a backstop for a block the decoder cannot get out of,
+    /// not a judgement on what it reads.
+    /// </summary>
+    /// <remarks>
+    /// <para>A block manga-ocr cannot read sends the decoder round a loop — hundreds of dots, the same
+    /// syllable or two letters over and over — until this stops it, and every step is paid for: at
+    /// 300, vertical-image-ja5's wide balloon took 1.2 seconds a page on its own. Each token is at
+    /// most one character, usually one.</para>
+    ///
+    /// <para>No bar from the block's size came out any tighter than a fixed one. Over the 5157
+    /// blocks of the vertical and comic corpora read at page scales 0.5, 1.0 and 1.5 that did not
+    /// run away, reading lengths go from 1 to 134 at every shape: a caption of nine lines across in
+    /// a box hardly wider than tall holds 120–130 characters, a column of one sound effect drawn out
+    /// (ぎゅるるる…) 134. A bar on the box's shape that keeps both is above 130 for every block;
+    /// one from the width of the ink's strokes, which says how big a character is, had to allow
+    /// thousands for the blocks that ran away before it stopped cutting short ones that did not.</para>
+    /// </remarks>
+    // MEASURED: the longest reading that did not run away is 134 characters, at all three scales;
+    // 160 leaves a fifth over it. The 33 that ran away all stopped at 299 or ended in a run of 12 dots
+    // or more; most are blocks that now go to the column pipeline (MangaVerticalReader), and the rest
+    // stop here at about half the steps they took before.
+    private const int MaxTokens = 160;
     private const long StartToken = 2;
     private const long EndToken = 3;
 
