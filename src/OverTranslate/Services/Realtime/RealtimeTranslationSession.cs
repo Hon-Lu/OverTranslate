@@ -515,9 +515,13 @@ public sealed class RealtimeTranslationSession
                 catch (Exception ex)
                 {
                     // One failed pass must not end the region — the engine may be briefly
-                    // unavailable, and the next poll is one interval away.
+                    // unavailable. Nor may it be repeated at every poll over a picture that has not
+                    // changed: the region waits before trying that picture again — see
+                    // RealtimeRegionState.FirstWaitAfterFailure. The error stays up until a pass
+                    // gets through.
                     Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
                     pump.Report(DescribeFailure(ex));
+                    state.MarkFailed(Capture);
                 }
                 finally
                 {

@@ -168,6 +168,28 @@ internal sealed class RealtimeRegionState
     /// </summary>
     public const int EmptyPassesBeforeClearing = 2;
 
+    /// <summary>
+    /// How long a still picture is left alone after a pass over it failed, before it is read again;
+    /// doubled with each failure in a row, up to <see cref="LongestWaitAfterFailure"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>A pass that throws records nothing, so to the change detection the picture is still
+    /// waiting to be read — and over a still page it was read again at every poll, failing again at
+    /// every poll, for as long as the page stayed up. The error stayed on the toolbar, nothing was
+    /// translated, and the reader spent the whole time on a page it could not read: that is how a
+    /// fault in one block of one page made the feature look slow as well as broken.</para>
+    ///
+    /// <para>So the failed picture is remembered, and while the region shows that same picture it
+    /// waits. It is not given up on: a fault can be passing — a model being swapped, a device
+    /// briefly lost — and the next try after the wait reads it as if nothing had happened. A picture
+    /// that changes is read at once, as any change is, since the new one may not fail. A pass the user
+    /// asks for is never held back.</para>
+    /// </remarks>
+    public static readonly TimeSpan FirstWaitAfterFailure = TimeSpan.FromSeconds(1);
+
+    /// <inheritdoc cref="FirstWaitAfterFailure"/>
+    public static readonly TimeSpan LongestWaitAfterFailure = TimeSpan.FromSeconds(16);
+
     // Rounded to the nearest whole poll and never below one, because these are counted in polls
     // wherever they are used and a threshold of zero would mean "every poll".
     private static int PollsIn(TimeSpan interval) =>
@@ -186,6 +208,11 @@ internal sealed class RealtimeRegionState
     private int _pollsSinceFullScan;
     private int _pollsSinceLook;
     private int _emptyPasses;
+    // The whole region as it was when a pass over it last failed, how many have failed in a row,
+    // and polls since; null and 0 when the last pass did not fail.
+    private FrameFingerprint? _failedOn;
+    private int _failures;
+    private int _pollsSinceFailure;
 
     // Which way this region's text runs, for the one decision in this type that turns with it.
     private readonly RealtimeTextOrientation _orientation;
@@ -294,6 +321,7 @@ internal sealed class RealtimeRegionState
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
     {
         _pollsSinceLook++;
+        if (WaitingAfterFailure(capture)) return RealtimeReadReason.Nothing;
         var reason = Decide(capture, dialogue);
         // Whatever the pass then makes of it, the region has been handed to the reader — which is
         // all the idle scan counts, so that the poll it forces cannot be forced again by the next.
@@ -449,6 +477,38 @@ internal sealed class RealtimeRegionState
     }
 
     /// <summary>
+    /// Records that a pass over this frame failed, so a still picture is not read again until
+    /// <see cref="FirstWaitAfterFailure"/> — doubled with each failure in a row — has passed.
+    /// </summary>
+    public void MarkFailed(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture)
+    {
+        _failedOn = capture(null);
+        _failures++;
+        _pollsSinceFailure = 0;
+    }
+
+    /// <summary>Whether a pass has failed since this region was last read or scanned.</summary>
+    public bool HasFailed => _failures > 0;
+
+    // Holding off a picture a pass has just failed on: true while it is still that picture and the
+    // wait has not run out.
+    private bool WaitingAfterFailure(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture)
+    {
+        if (_failures == 0) return false;
+        _pollsSinceFailure++;
+        var wait = TimeSpan.FromTicks(Math.Min(
+            LongestWaitAfterFailure.Ticks, FirstWaitAfterFailure.Ticks << Math.Min(_failures - 1, 8)));
+        return _pollsSinceFailure < PollsIn(wait) && !capture(null).DiffersLocally(_failedOn);
+    }
+
+    private void ClearFailure()
+    {
+        _failedOn = null;
+        _failures = 0;
+        _pollsSinceFailure = 0;
+    }
+
+    /// <summary>
     /// Records what the region now shows. <paramref name="textBounds"/> are the recognised lines in
     /// region coordinates and become the strips watched from here on.
     /// </summary>
@@ -493,6 +553,7 @@ internal sealed class RealtimeRegionState
         RenderedLines = lines;
         RenderedText = string.Join('\n', lines.Select(line => line.Text));
         RenderedConfidence = WeightedConfidence(lines);
+        ClearFailure();
     }
 
     /// <summary>
@@ -518,6 +579,7 @@ internal sealed class RealtimeRegionState
         _pending = _rendered;
         _unsettledPolls = 0;
         _pollsSinceFullScan = 0;
+        ClearFailure();
     }
 
     /// <summary>
