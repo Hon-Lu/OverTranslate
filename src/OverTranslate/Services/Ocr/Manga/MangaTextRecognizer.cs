@@ -37,7 +37,7 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// path to the wrong size and every page after it ran at twice the time. Padding costs the rows'
 /// compute on the last batch of a page and makes every batch the fast one.</para>
 /// </remarks>
-internal sealed class MangaTextRecognizer : IDisposable
+internal sealed class MangaTextRecognizer : IMangaTextRecognizer
 {
     internal const int BatchCap = 4;
     private const int InputSize = 224;
@@ -107,9 +107,7 @@ internal sealed class MangaTextRecognizer : IDisposable
         _device?.Dispose();
     }
 
-    /// <summary>Reads each block of the page, in the order given.</summary>
-    /// <param name="rgb">The whole page as packed RGB (see <see cref="PillowImage.Rgb"/>).</param>
-    internal List<MangaReading> Read(byte[] rgb, int width, int height, IReadOnlyList<Rectangle> blocks)
+    public List<MangaReading> Read(byte[] rgb, int width, int height, IReadOnlyList<Rectangle> blocks)
     {
         var readings = new List<MangaReading>(blocks.Count);
         for (int first = 0; first < blocks.Count; first += BatchCap)
@@ -283,7 +281,7 @@ internal sealed class MangaTextRecognizer : IDisposable
         return text.Normalize(NormalizationForm.FormKC);
     }
 
-    private static byte[] Crop(byte[] rgb, int width, Rectangle block)
+    internal static byte[] Crop(byte[] rgb, int width, Rectangle block)
     {
         var crop = new byte[block.Width * block.Height * 3];
         for (int y = 0; y < block.Height; y++)

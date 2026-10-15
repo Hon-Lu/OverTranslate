@@ -69,7 +69,7 @@ internal sealed class MangaOcrEngine : IDisposable
 
     // Guarded by _gate.
     private MangaTextDetector? _detector;
-    private MangaTextRecognizer? _recognizer;
+    private IMangaTextRecognizer? _recognizer;
     // Guarded by _sync.
     private (MangaUnavailable Kind, string Reason)? _failure;
     private bool _keepWarm;
@@ -490,12 +490,22 @@ internal sealed class MangaOcrEngine : IDisposable
 
             using (var detectorOptions = Options())
                 _detector = new MangaTextDetector(_store.PathOf("detector"), detectorOptions);
-            _recognizer = new MangaTextRecognizer(
-                _store.PathOf("encoder"), _store.PathOf("decoder-cross"), _store.PathOf("decoder-step"),
-                _store.PathOf("vocabulary"), Options, adapter.Index);
+            var hayai = MangaRecognizerChoice.AsksForHayai();
+            if (hayai && !HayaiTextRecognizer.IsComplete(MangaRecognizerChoice.HayaiFolder))
+            {
+                Log.Warn("{Variable} asks for Hayai but {Folder} is incomplete; reading with manga-ocr",
+                    MangaRecognizerChoice.Variable, MangaRecognizerChoice.HayaiFolder);
+                hayai = false;
+            }
 
-            Log.Info("Manga models loaded on {Adapter} (device {Index}) in {Ms}ms",
-                adapter.Name, adapter.Index, timer.ElapsedMilliseconds);
+            _recognizer = hayai
+                ? new HayaiTextRecognizer(MangaRecognizerChoice.HayaiFolder, Options, adapter.Index)
+                : new MangaTextRecognizer(
+                    _store.PathOf("encoder"), _store.PathOf("decoder-cross"), _store.PathOf("decoder-step"),
+                    _store.PathOf("vocabulary"), Options, adapter.Index);
+
+            Log.Info("Manga models loaded on {Adapter} (device {Index}) in {Ms}ms, recognizer {Recognizer}",
+                adapter.Name, adapter.Index, timer.ElapsedMilliseconds, hayai ? "hayai" : "manga-ocr");
             return true;
         }
         catch (Exception ex) when (ex is OnnxRuntimeException or System.IO.IOException or
