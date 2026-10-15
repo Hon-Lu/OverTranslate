@@ -11,16 +11,9 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// 95/97, 150/157 and 137/143 whole against 72, 130 and 116 for the column pipeline, in about a
 /// third of the time.</para>
 ///
-/// <para>Not every block is theirs to read. Before anything is read, each block at least as wide as
-/// tall is asked which way its lines run (<see cref="MangaLineGeometry"/>), and a block whose lines
-/// run the other way from what the shape of its box says — rows in a box too narrow to be a row,
-/// columns in one wide enough to be — is read by the column pipeline instead and set the way its
-/// lines run. manga-ocr reads a block as one string squeezed into 224×224 and has no lines to give:
-/// it cannot read English at all, read the nine-line caption of vertical-image-ja5 as sentences
-/// that are not on the page, and turned the last sentences of that page's sixteen-column balloon
-/// into hundreds of dots. The column pipeline finds the lines itself and read all of them word for
-/// word. Blocks too long for manga-ocr (<see cref="MangaPageLayout.IsLong"/>) go to it as they
-/// always have.</para>
+/// <para>Not every block is theirs to read: see <see cref="ReaderFor"/>, which decides it for each
+/// block before anything is read, from the block's box and which way its lines run
+/// (<see cref="MangaLineGeometry"/>).</para>
 ///
 /// <para>Each block is read once, by one reader, decided before either runs. A page that needs the
 /// column pipeline takes one of its slots before manga-ocr reads anything; on a live screen, where
@@ -66,20 +59,19 @@ internal static class MangaVerticalReader
         List<MangaBlock>? read;
         LumaPage luma;
         List<RectangleF> bubbles;
-        // Every block the column pipeline reads and the way it is to be set: null for a long block,
-        // whose groups keep the directions the column pipeline gives them, as they always have.
-        var passOn = new List<(RectangleF Block, bool? Across)>();
+        // Every block the column pipeline reads, and which way it is to be set.
+        var passOn = new List<(RectangleF Block, MangaReader Reader)>();
         IOcrSlot? slot = null;
         try
         {
-            var routes = Routes(bitmap, detection.Text, detectLines);
+            var readers = Readers(bitmap, detection.Text, detectLines);
             var mangaReads = new List<int>();
             for (int i = 0; i < detection.Text.Count; i++)
             {
-                if (routes[i] is { } across) passOn.Add((detection.Text[i], across));
-                else mangaReads.Add(i);
+                if (readers[i] == MangaReader.Manga) mangaReads.Add(i);
+                else passOn.Add((detection.Text[i], readers[i]));
             }
-            passOn.AddRange(detection.Long.Select(block => (block, (bool?)null)));
+            passOn.AddRange(detection.Long.Select(block => (block, ReaderFor(block, MangaLineDirection.Unsure))));
 
             if (passOn.Count > 0)
             {
@@ -107,7 +99,7 @@ internal static class MangaVerticalReader
         {
             if (read is null) return (MangaReadOutcome.Unavailable, null);
 
-            foreach (var (block, across) in passOn)
+            foreach (var (block, reader) in passOn)
             {
                 var crop = MangaPageLayout.LongBlockCrop(block, bitmap.Width, bitmap.Height);
                 if (crop.Width < 2 || crop.Height < 2) continue;
@@ -115,7 +107,7 @@ internal static class MangaVerticalReader
                 var found = await slot!.RecognizeAsync(
                     part, language, maxDetectSize, cancellationToken, verticalText: true);
                 var groups = VerticalColumnGrouping.Group(found, part.Width, bitmap: part, language: language);
-                passedOn.AddRange(groups.Select(group => Moved(Set(group, across), crop.X, crop.Y)));
+                passedOn.AddRange(groups.Select(group => Moved(Set(group, reader), crop.X, crop.Y)));
             }
         }
 
@@ -126,31 +118,63 @@ internal static class MangaVerticalReader
     }
 
     /// <summary>
-    /// For each block, null when manga-ocr reads it; otherwise the column pipeline does, and the
-    /// value is whether it runs across.
+    /// A block wider than this many times its height, whose lines run down the page, is more columns
+    /// than manga-ocr can read at once — see <see cref="ReaderFor"/>.
     /// </summary>
     /// <remarks>
-    /// A block goes to the column pipeline only when its lines and its shape disagree. Where they
-    /// agree, or the lines say nothing, it is read as it always was.
+    /// MEASURED in the first round on the vertical and comic corpora: the widest block of three
+    /// columns or more that manga-ocr read correctly is 1.57 times as wide as tall
+    /// (計画は順調に進んでいる。), and the narrowest that it squeezed past reading is
+    /// vertical-image-ja5's balloon at 2.48 (464×182 framed one way, up to 2.88 framed others). No
+    /// block of columns on any corpus lies between the two; 2 sits in that gap, a fifth from either.
     /// </remarks>
-    internal static bool?[] Routes(
+    internal const double WideColumnsRatio = 2;
+
+    /// <summary>
+    /// Whether manga-ocr can read a block, and if not, how the column pipeline is to set it.
+    /// </summary>
+    /// <remarks>
+    /// <para>manga-ocr reads a block as one string, the whole box squeezed into 224×224. That gives it
+    /// one way of reading and three ways for a block to be out of its reach, and every one of them
+    /// goes to the column pipeline, which finds the lines itself:</para>
+    ///
+    /// <list type="bullet">
+    /// <item><b>Too long</b> (<see cref="MangaPageLayout.IsLong"/>): a column of more characters than
+    /// it reads, squeezed along its length. The column pipeline's groups keep the directions it gives
+    /// them, as they always have.</item>
+    /// <item><b>Too many columns</b>: lines that run down in a box <see cref="WideColumnsRatio"/>
+    /// times as wide as tall or more, squeezed across. vertical-image-ja5's balloon of sixteen short
+    /// columns came back with its last sentences turned into hundreds of dots, and the overlay sized
+    /// its type from that many characters — a third of the size of the writing. Set down.</item>
+    /// <item><b>Not columns at all</b>: lines that run across in a box not wide enough to be a row
+    /// (<see cref="MangaPageLayout.AcrossRatio"/>). It cannot read English, and read the nine-line
+    /// caption of vertical-image-ja5 as sentences that are not on the page. Set across.</item>
+    /// </list>
+    ///
+    /// <para>Everything else — and everything whose lines say nothing — is manga-ocr's, as it always
+    /// was: on the transcribed corpora it reads vertical writing better than the column pipeline does.
+    /// The direction the column pipeline is told to set a block in is the one its lines voted for, so
+    /// a block sent across stays across in every frame however the column pipeline groups it.</para>
+    /// </remarks>
+    internal static MangaReader ReaderFor(RectangleF block, MangaLineDirection lines)
+    {
+        if (MangaPageLayout.IsLong(block)) return MangaReader.Columns;
+        return lines switch
+        {
+            MangaLineDirection.Across when !MangaPageLayout.RunsAcross(block) => MangaReader.ColumnsAcross,
+            MangaLineDirection.Down when block.Width >= WideColumnsRatio * block.Height => MangaReader.ColumnsDown,
+            _ => MangaReader.Manga,
+        };
+    }
+
+    /// <summary><see cref="ReaderFor"/> for each block, its lines measured all together.</summary>
+    internal static MangaReader[] Readers(
         Bitmap page, IReadOnlyList<RectangleF> blocks, Func<Bitmap, IReadOnlyList<SkiaSharp.SKPointI[]>>? detectLines)
     {
-        var routes = new bool?[blocks.Count];
-        if (detectLines is null || blocks.Count == 0) return routes;
-
-        var directions = MangaLineGeometry.Directions(page, blocks, detectLines);
-        for (int i = 0; i < blocks.Count; i++)
-        {
-            bool shapeAcross = MangaPageLayout.RunsAcross(blocks[i]);
-            routes[i] = directions[i] switch
-            {
-                MangaLineDirection.Across when !shapeAcross => true,
-                MangaLineDirection.Down when shapeAcross => false,
-                _ => null,
-            };
-        }
-        return routes;
+        var directions = detectLines is null || blocks.Count == 0
+            ? new MangaLineDirection[blocks.Count]
+            : MangaLineGeometry.Directions(page, blocks, detectLines);
+        return [.. blocks.Select((block, i) => ReaderFor(block, directions[i]))];
     }
 
     /// <summary>
@@ -162,8 +186,12 @@ internal static class MangaVerticalReader
     /// balloon's columns, a two-character line it could not tell — would otherwise turn the block's
     /// overlay half across and half down, and differently from frame to frame.
     /// </remarks>
-    private static OcrTextBlock Set(OcrTextBlock group, bool? across) =>
-        across is { } runsAcross && group.RunsAcross != runsAcross ? group with { RunsAcross = runsAcross } : group;
+    private static OcrTextBlock Set(OcrTextBlock group, MangaReader reader) => reader switch
+    {
+        MangaReader.ColumnsAcross when !group.RunsAcross => group with { RunsAcross = true },
+        MangaReader.ColumnsDown when group.RunsAcross => group with { RunsAcross = false },
+        _ => group,
+    };
 
     private static OcrTextBlock Moved(OcrTextBlock block, double dx, double dy)
     {
@@ -178,4 +206,16 @@ internal static class MangaVerticalReader
             Tilt = block.Tilt?.Offset(dx, dy),
         };
     }
+}
+
+/// <summary>Which reader a manga block goes to — see <see cref="MangaVerticalReader.ReaderFor"/>.</summary>
+internal enum MangaReader
+{
+    Manga,
+    /// <summary>The column pipeline, its groups set as it sets them.</summary>
+    Columns,
+    /// <summary>The column pipeline, every group set across.</summary>
+    ColumnsAcross,
+    /// <summary>The column pipeline, every group set down.</summary>
+    ColumnsDown,
 }

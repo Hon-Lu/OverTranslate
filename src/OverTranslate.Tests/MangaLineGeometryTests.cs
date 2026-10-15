@@ -8,7 +8,7 @@ namespace OverTranslate.Tests;
 
 /// <summary>
 /// Which way a manga block's lines run, from the column detector's lines, and which reader that
-/// sends it to. See Ocr.Manga.MangaLineGeometry and MangaVerticalReader.Routes.
+/// sends it to. See Ocr.Manga.MangaLineGeometry and MangaVerticalReader.ReaderFor.
 /// </summary>
 public class MangaLineGeometryTests
 {
@@ -108,7 +108,7 @@ public class MangaLineGeometryTests
         var caption = RectangleF.FromLTRB(50, 50, 350, 250);
 
         Assert.False(MangaPageLayout.RunsAcross(caption));
-        Assert.Equal(true, Assert.Single(MangaVerticalReader.Routes(page, [caption], ComponentsAsQuads)));
+        Assert.Equal(MangaReader.ColumnsAcross, Assert.Single(MangaVerticalReader.Readers(page, [caption], ComponentsAsQuads)));
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class MangaLineGeometryTests
         var balloon = RectangleF.FromLTRB(50, 50, 500, 200);
 
         Assert.True(MangaPageLayout.RunsAcross(balloon));
-        Assert.Equal(false, Assert.Single(MangaVerticalReader.Routes(page, [balloon], ComponentsAsQuads)));
+        Assert.Equal(MangaReader.ColumnsDown, Assert.Single(MangaVerticalReader.Readers(page, [balloon], ComponentsAsQuads)));
     }
 
     [Fact]
@@ -134,11 +134,26 @@ public class MangaLineGeometryTests
             for (int column = 0; column < 4; column++) g.FillRectangle(Brushes.Black, 60 + column * 36, 60, 22, 200);
             g.FillRectangle(Brushes.Black, 300, 400, 500, 30);
         });
-        RectangleF[] blocks = [RectangleF.FromLTRB(50, 50, 210, 270), RectangleF.FromLTRB(290, 390, 810, 440)];
+        RectangleF[] blocks = [RectangleF.FromLTRB(50, 50, 210, 270), RectangleF.FromLTRB(290, 375, 810, 455)];
 
-        Assert.All(MangaVerticalReader.Routes(page, blocks, ComponentsAsQuads), route => Assert.Null(route));
-        Assert.All(MangaVerticalReader.Routes(page, blocks, null), route => Assert.Null(route));
+        Assert.All(MangaVerticalReader.Readers(page, blocks, ComponentsAsQuads), reader => Assert.Equal(MangaReader.Manga, reader));
+        Assert.All(MangaVerticalReader.Readers(page, blocks, null), reader => Assert.Equal(MangaReader.Manga, reader));
     }
+
+    [Theory]
+    // vertical-image-ja5's balloon framed at 2.48: a block of columns by its shape, but too many for manga-ocr.
+    [InlineData(464, 187, (int)MangaLineDirection.Down, (int)MangaReader.ColumnsDown)]
+    [InlineData(464, 161, (int)MangaLineDirection.Down, (int)MangaReader.ColumnsDown)]   // 2.88, a row by its shape
+    [InlineData(400, 200, (int)MangaLineDirection.Down, (int)MangaReader.ColumnsDown)]   // exactly WideColumnsRatio
+    [InlineData(157, 100, (int)MangaLineDirection.Down, (int)MangaReader.Manga)]         // 1.57, the widest it reads right
+    [InlineData(464, 187, (int)MangaLineDirection.Unsure, (int)MangaReader.Manga)]       // the lines say nothing
+    [InlineData(495, 381, (int)MangaLineDirection.Across, (int)MangaReader.ColumnsAcross)] // ja5's caption, 1.30
+    [InlineData(600, 100, (int)MangaLineDirection.Across, (int)MangaReader.Manga)]       // a row, and its box says so
+    [InlineData(60, 500, (int)MangaLineDirection.Unsure, (int)MangaReader.Columns)]      // too long, whatever its lines
+    [InlineData(60, 200, (int)MangaLineDirection.Unsure, (int)MangaReader.Manga)]
+    public void WhatMangaOcrCanRead_IsDecidedByTheBoxAndItsLines(
+        float width, float height, int lines, int expected) =>
+        Assert.Equal((MangaReader)expected, MangaVerticalReader.ReaderFor(new RectangleF(10, 10, width, height), (MangaLineDirection)lines));
 
     [Fact]
     public void TheColumnEnginesSlots_AreTakenAndGivenBackOnceEach()
