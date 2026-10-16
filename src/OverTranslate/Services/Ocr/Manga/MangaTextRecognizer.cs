@@ -231,7 +231,11 @@ internal sealed class MangaTextRecognizer : IDisposable
                         certainty[i] += 1.0 / total;
 
                         if (best == EndToken) done[i] = true;
-                        else tokens[i].Add(best);
+                        else
+                        {
+                            tokens[i].Add(best);
+                            if (MangaDecodeGuard.EndsInLoop(tokens[i])) done[i] = true;
+                        }
                     }
 
                     ids[i] = done[i] ? 0 : best;
