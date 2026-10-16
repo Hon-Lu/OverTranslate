@@ -262,7 +262,7 @@ OCR is handled by RapidOcrNet with ONNX models. The matching model is selected a
 All languages share the same **text detection model** (`PP-OCRv6_det_tiny`) and **orientation classification model** (`cls`); only the recognition model is switched per language.
 OCR runs entirely on your own PC, and images are never uploaded to any external service; the default models run on the CPU, while the manga vertical-text models run on the graphics card.
 
-**Manga vertical-text models**: when the source language is Japanese and vertical text is turned on, you can download them separately in Settings (about 303 MB; requires a DirectX 12 graphics card). [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) (RT-DETR) first finds speech bubbles and narration boxes, then [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) reads each block of vertical Japanese as a whole, almost never mixing furigana into the main text. A few cases, such as multi-line horizontal caption boxes, are still read by the default models. Without the download or a graphics card, vertical text always uses the default models.
+**Manga vertical-text models**: when the source language is Japanese and vertical text is on, they can be downloaded separately in Settings (about 303 MB, requires a graphics card). [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) detects the text boxes and [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) (CC BY-NC-SA 4.0) reads the vertical Japanese.
 
 ---
 

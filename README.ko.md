@@ -264,7 +264,7 @@ OCR 인식은 RapidOcrNet과 ONNX 모델로 처리하며, 언어에 따라 알�
 **문자 검출 모델**(`PP-OCRv6_det_tiny`)과 **방향 분류 모델**(`cls`)은 모든 언어가 공유하며, 언어에 따라 바뀌는 것은 인식 모델뿐입니다.  
 OCR은 처음부터 끝까지 내 PC에서 실행되며, 이미지를 외부 서비스로 보내지 않습니다. 기본 모델은 CPU에서, 만화 세로쓰기 모델은 그래픽 카드에서 실행됩니다.
 
-**만화 세로쓰기 모델**: 원본 언어를 일본어로 선택하고 세로쓰기를 켜면 설정에서 따로 다운로드할 수 있습니다(약 303MB, DirectX 12를 지원하는 그래픽 카드 필요). [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector)(RT-DETR)로 말풍선과 내레이션을 찾은 뒤, [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)가 세로쓰기 일본어를 블록 단위로 한 번에 읽으며, 후리가나가 본문에 섞이는 일은 거의 없습니다. 여러 줄로 된 가로쓰기 설명 상자 등 일부는 계속 기본 모델로 인식합니다. 다운로드하지 않았거나 그래픽 카드가 없으면 세로쓰기에는 항상 기본 모델을 사용합니다.
+**만화 세로쓰기 모델**: 원본 언어가 일본어이고 세로쓰기를 켜면 설정에서 따로 다운로드할 수 있습니다(약 303MB, 그래픽 카드 필요). [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector)로 텍스트 상자를 찾고, [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)(CC BY-NC-SA 4.0)로 세로쓰기 일본어를 인식합니다.
 
 ---
 
