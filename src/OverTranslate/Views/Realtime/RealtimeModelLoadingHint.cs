@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace OverTranslate.Views.Realtime;
 
 /// <summary>
@@ -9,13 +11,19 @@ namespace OverTranslate.Views.Realtime;
 /// rather than listening to each engine: one task for both, so it cannot drop back to the pair
 /// between two loads, and a load that ended before anyone listened is already done. Used on the UI
 /// thread only; the end of a load reaches it through <c>post</c>.
+///
+/// Once up, it stays up for <see cref="MinShown"/>: the recogniser alone loads in about 110ms, and
+/// a hint gone that fast reads as a flicker rather than as a message. 結束 takes it down at once.
 /// </remarks>
 internal sealed class RealtimeModelLoadingHint : IDisposable
 {
+    internal static readonly TimeSpan MinShown = TimeSpan.FromMilliseconds(500);
+
     private readonly Action<bool> _show;
     private readonly Action<Action> _post;
     private Task? _waiting;
     private bool _shown;
+    private long _shownAt;
     private bool _disposed;
 
     /// <param name="show">Puts the hint up or takes it down; called only when that changes.</param>
@@ -36,21 +44,36 @@ internal sealed class RealtimeModelLoadingHint : IDisposable
         _waiting = loading;
         if (loading.IsCompleted)
         {
-            Show(false);
+            Ended(loading);
             return;
         }
 
         Show(true);
-        loading.ContinueWith(_ => _post(() =>
+        loading.ContinueWith(_ => _post(() => Ended(loading)), TaskScheduler.Default);
+    }
+
+    // Down now, or once it has been up for MinShown — unless a later Wait or 結束 has taken over.
+    private void Ended(Task loading)
+    {
+        if (_disposed || _waiting != loading || !_shown) return;
+
+        var left = MinShown - Stopwatch.GetElapsedTime(_shownAt);
+        if (left <= TimeSpan.Zero)
         {
-            if (!_disposed && _waiting == loading) Show(false);
-        }), TaskScheduler.Default);
+            Show(false);
+            return;
+        }
+
+        // Asked again rather than taken down: the timer counts in coarse ticks and can come back a
+        // few milliseconds short.
+        Task.Delay(left).ContinueWith(_ => _post(() => Ended(loading)), TaskScheduler.Default);
     }
 
     private void Show(bool shown)
     {
         if (_shown == shown) return;
         _shown = shown;
+        if (shown) _shownAt = Stopwatch.GetTimestamp();
         _show(shown);
     }
 

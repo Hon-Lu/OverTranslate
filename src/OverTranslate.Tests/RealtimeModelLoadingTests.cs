@@ -36,10 +36,32 @@ public sealed class RealtimeModelLoadingTests : IDisposable
     private sealed class Shown
     {
         private readonly List<bool> _changes = [];
+        private readonly List<long> _at = [];
 
         internal void Add(bool shown)
         {
-            lock (_changes) _changes.Add(shown);
+            lock (_changes)
+            {
+                _changes.Add(shown);
+                _at.Add(System.Diagnostics.Stopwatch.GetTimestamp());
+            }
+        }
+
+        // How long it was up: the first change to the second.
+        internal TimeSpan Up
+        {
+            get
+            {
+                lock (_changes) return System.Diagnostics.Stopwatch.GetElapsedTime(_at[0], _at[1]);
+            }
+        }
+
+        internal long DownAt
+        {
+            get
+            {
+                lock (_changes) return _at[1];
+            }
         }
 
         internal List<bool> Changes
@@ -147,6 +169,97 @@ public sealed class RealtimeModelLoadingTests : IDisposable
         await Task.Delay(200);
 
         Assert.Equal([true, false], shown.Changes);
+    }
+
+    [Fact]
+    public async Task AQuickLoad_StaysUpForHalfASecond()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var load = Load();
+
+        hint.Wait(load.Task);
+        await Task.Delay(110);
+        load.SetResult();
+        await Task.Delay(200);
+        Assert.Equal([true], shown.Changes);
+
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+        Assert.InRange(shown.Up, RealtimeModelLoadingHint.MinShown, RealtimeModelLoadingHint.MinShown + TimeSpan.FromMilliseconds(250));
+    }
+
+    [Fact]
+    public async Task ALongLoad_GoesTheMomentItEnds()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var load = Load();
+
+        hint.Wait(load.Task);
+        await Task.Delay(1600);
+        var ended = System.Diagnostics.Stopwatch.GetTimestamp();
+        load.SetResult();
+
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(ended, shown.DownAt) < TimeSpan.FromMilliseconds(150));
+    }
+
+    [Fact]
+    public async Task TheSessionEndingDuringTheHold_TakesItDownAtOnce_AndTheHoldNeverCallsTheBar()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var load = Load();
+
+        hint.Wait(load.Task);
+        load.SetResult();
+        await Task.Delay(100);
+        Assert.Equal([true], shown.Changes);
+
+        hint.Dispose();
+        Assert.Equal([true, false], shown.Changes);
+        await Task.Delay(700);
+        Assert.Equal([true, false], shown.Changes);
+    }
+
+    [Fact]
+    public async Task AStartDuringTheHold_IsNotTakenDownByTheEarlierOne()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var first = Load();
+        var second = Load();
+
+        hint.Wait(first.Task);
+        first.SetResult();
+        await Task.Delay(100);
+        hint.Wait(second.Task);
+        await Task.Delay(700);
+        Assert.Equal([true], shown.Changes);
+
+        second.SetResult();
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+    }
+
+    [Fact]
+    public async Task AStartDuringTheHold_WithNothingToLoad_StillHoldsTheHalfSecond()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var first = Load();
+
+        hint.Wait(first.Task);
+        first.SetResult();
+        await Task.Delay(100);
+        hint.Wait(Task.CompletedTask);
+        Assert.Equal([true], shown.Changes);
+
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+        Assert.True(shown.Up >= RealtimeModelLoadingHint.MinShown);
     }
 
     // ── The manga engine: a preload held open ───────────────────────────────
