@@ -20,9 +20,9 @@ from safetensors.torch import load_file
 from transformers import VisionEncoderDecoderConfig, VisionEncoderDecoderModel
 
 REPOS = {'224': 'muscgab/manga-ocr-base-CPT', 'flex': 'muscgab/manga-ocr-base-CPT-flex'}
-# The weights the files of each manifest version were exported from.
-WEIGHTS_SHA256 = {'1032650b1e312ddcc02f8daad06a02c37a048691c345b816996d4be357b243d2': 'CPT-224, manifest version 2',
-                  'd2f507aead9c9dd9fd02660d2825363edd36aba6ba1bbf6b387519f153f69ef0': 'CPT-flex, manifest version 3'}
+# The weights each model's files were exported from.
+WEIGHTS_SHA256 = {'1032650b1e312ddcc02f8daad06a02c37a048691c345b816996d4be357b243d2': 'CPT-224, evaluated, not shipped',
+                  'd2f507aead9c9dd9fd02660d2825363edd36aba6ba1bbf6b387519f153f69ef0': 'CPT-flex, manifest version 2'}
 
 args = sys.argv[1:]
 check = None
