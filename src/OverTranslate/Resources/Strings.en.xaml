@@ -330,6 +330,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.StartTranslating">Start</sys:String>
     <sys:String x:Key="S.Realtime.Running">Translating</sys:String>
     <sys:String x:Key="S.Realtime.Paused">Paused</sys:String>
+    <sys:String x:Key="S.Realtime.LoadingModels">Loading models…</sys:String>
     <sys:String x:Key="S.Realtime.Pause">Pause realtime translation</sys:String>
     <sys:String x:Key="S.Realtime.Resume">Resume realtime translation</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">Edit blocks</sys:String>

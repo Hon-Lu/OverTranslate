@@ -142,6 +142,12 @@ public sealed class RealtimeTranslationSession
     /// </summary>
     public bool IsPaused { get; private set; }
 
+    /// <summary>
+    /// The models the last <see cref="Start"/> found missing, loading: done once each load has
+    /// ended, however it ended, and already done when everything was in memory.
+    /// </summary>
+    public Task ModelsLoading { get; private set; } = Task.CompletedTask;
+
     /// <param name="capture">
     /// Where this session reads the screen. Must be a backend whose frames cannot contain this
     /// application's own overlays — see <see cref="IRealtimeCaptureBackend"/>, where that is a
@@ -188,8 +194,11 @@ public sealed class RealtimeTranslationSession
 
         // A watched region is idle between lines, and the recogniser cannot tell that from a tray
         // icon nobody has touched all afternoon. Told explicitly, it stops releasing the model that
-        // the next line is about to need.
-        _ocr.SetKeepWarm(true);
+        // the next line is about to need — loads now whatever it will read with and does not have
+        // yet, and lets the manga models go if no block will read with them. See
+        // OcrService.KeepWarmForRealtime.
+        ModelsLoading = _ocr.KeepWarmForRealtime(
+            sourceLanguage, regions.Any(region => region.Orientation == RealtimeTextOrientation.Vertical));
 
         // One loop per region rather than one loop over the regions. Sharing a loop made every
         // region wait out the slowest one: with three regions and a half-second recognition apiece,
@@ -227,7 +236,7 @@ public sealed class RealtimeTranslationSession
     /// the first poll after 繼續, which is the one moment in a session where somebody is watching the
     /// screen waiting for words to appear. A pause is "not now", and the arrangement is still framed
     /// and still theirs; the press that means "done" is the one that ends the session, and that is
-    /// where the memory goes back — see <see cref="Stop"/>.
+    /// where the memory goes back — see <see cref="Stop"/>. Until then the models stay held warm.
     ///
     /// What has already been translated does not go with it. An answer still in flight must not land
     /// on screen after the pause — the scene has moved on — but that is a statement about a pass, not
@@ -242,11 +251,6 @@ public sealed class RealtimeTranslationSession
     {
         StopLoops();
         IsPaused = true;
-
-        // Put back after StopLoops turned it off: a paused session is still a session, and the model
-        // it will want in a moment is the one already loaded. A release queued by that turn-off is
-        // benign — ReleaseIdleRuntime checks this flag before disposing anything.
-        _ocr.SetKeepWarm(true);
 
         var generation = _translationCache.Fence();
 
@@ -276,10 +280,10 @@ public sealed class RealtimeTranslationSession
     }
 
     /// <param name="releaseRecogniser">
-    /// Whether to hand the model's memory back now rather than leaving it to the inactivity timer.
-    /// True when the user has ended the session, false when this is the stop on the way back to block
-    /// framing — that one is nearly always followed by 開始翻譯 within seconds, and it would pay the
-    /// reload the pause above exists to avoid.
+    /// Whether the session has ended: the models stop being held warm and their memory goes back
+    /// now. False on the way back to block framing, which keeps them held as a pause does — it is
+    /// followed by 開始翻譯, however long the framing takes, and would otherwise pay the reload the
+    /// pause above exists to avoid.
     /// </param>
     public void Stop(bool releaseRecogniser = false) =>
         Stop(releaseRecogniser, reportCapture: true);
@@ -293,6 +297,7 @@ public sealed class RealtimeTranslationSession
         StopLoops();
         IsPaused = false;
 
+        // ReleaseModel turns keep-warm off as well.
         if (releaseRecogniser) _ocr.ReleaseModel();
 
         // One line per run of translating, on the way out. Which backend was used and how it fared
@@ -315,9 +320,8 @@ public sealed class RealtimeTranslationSession
         var loops = _loops;
         _loops = [];
         _ = RealtimeLoopWatch.WatchStop(loops, _capture, RealtimeLoopWatch.WarnAfter);
-        // Back to releasing the model after a period of inactivity, which is the right rule again
-        // the moment nothing is watching the screen.
-        _ocr.SetKeepWarm(false);
+        // Keep-warm is left alone: a pause and the way back to framing keep the models, and the
+        // stop that ends the session lets them go itself.
         // The cache is kept across a stop/edit/start cycle on purpose: the user usually comes back
         // to the same content, and re-translating lines we already have would be a visible pause
         // for nothing.
@@ -628,6 +632,7 @@ public sealed class RealtimeTranslationSession
         var sameAsLastRead = confirmation == ConfirmationRead.ReuseLastRead;
         if (readingAgain) primarySize = otherSize!.Value;
 
+        var modelsLoading = _ocr.IsLoadingModels;
         List<OcrTextBlock>? recognized = sameAsLastRead
             ? [.. state.LastRead]
             : await _ocr.TryRecognizeAsync(
@@ -639,7 +644,11 @@ public sealed class RealtimeTranslationSession
             // sides use. Skipping is the whole recovery and the next poll is one interval away, so this is
             // not an error; it is the one thing that would explain a region updating far less often
             // than its neighbours, and it is invisible without saying so.
-            if (Interlocked.Exchange(ref _noSlotReported, 1) == 0)
+            // Not while the models load as the session starts: the GPU is taken by the load, which
+            // is not a shortage of slots. Asked before the read as well, for a load that ended since.
+            if (modelsLoading || _ocr.IsLoadingModels)
+                Log.Debug("Realtime region {Region} skipped a poll: models still loading", region.Id);
+            else if (Interlocked.Exchange(ref _noSlotReported, 1) == 0)
                 Log.Warn(
                     "Realtime region {Region} skipped a poll: all {Slots} recognition slots busy; " +
                     "further skips logged at Debug",

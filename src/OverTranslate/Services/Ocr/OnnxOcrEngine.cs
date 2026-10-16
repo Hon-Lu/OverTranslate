@@ -89,7 +89,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     private readonly SemaphoreSlim _inferenceGate = new(InferenceSlots, InferenceSlots);
     private readonly System.Threading.Timer _idleReleaseTimer;
     private RapidOcrRuntime? _current;
-    private string? _currentModelKey;
+    // Written under _sync; volatile so the UI thread can ask what is loaded without waiting out a
+    // load that holds the lock.
+    private volatile string? _currentModelKey;
+    private volatile bool _loading;
     // Number of Detect calls currently running against _current. Inference runs OUTSIDE _sync
     // (it is slow and must not block other work or the timer), so the idle timer must never
     // dispose a runtime while this is > 0 — that would free the native ONNX sessions mid-
@@ -155,6 +158,33 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             DisposeCurrentRuntime();
         }
     }
+
+    /// <summary>Whether the model for the language is in memory; does not wait for a load under way.</summary>
+    internal bool IsLoaded(string sourceLanguage) => _currentModelKey == GetModelKeyForLanguage(sourceLanguage);
+
+    /// <summary>Whether a model is being loaded right now.</summary>
+    internal bool IsLoading => _loading;
+
+    /// <summary>
+    /// Loads the model for the language now, on a background thread, as a pass would: for a
+    /// realtime session, whose first frame may be a while coming. Ends as a pass ends, so a session
+    /// that ended meanwhile leaves it to the idle countdown. A failure is logged and left to the
+    /// first pass, which meets it again down the usual error path.
+    /// </summary>
+    internal Task PreloadAsync(string sourceLanguage) => Task.Run(() =>
+    {
+        try
+        {
+            AcquireRuntime(OcrLanguageRouter.Normalize(sourceLanguage));
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Loading the OCR model ahead of a realtime session failed");
+            return;
+        }
+
+        ReleaseRuntime();
+    });
 
     public Task<List<OcrTextBlock>> RecognizeAsync(
         Bitmap bitmap,
@@ -935,7 +965,17 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             _current = null;
             _currentModelKey = null;
 
-            var runtime = CreateRuntime(modelKey);
+            RapidOcrRuntime runtime;
+            _loading = true;
+            try
+            {
+                runtime = CreateRuntime(modelKey);
+            }
+            finally
+            {
+                _loading = false;
+            }
+
             _current = runtime;
             _currentModelKey = modelKey;
             _inUse++;

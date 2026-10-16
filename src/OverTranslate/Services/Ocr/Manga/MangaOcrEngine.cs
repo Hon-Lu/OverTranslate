@@ -65,6 +65,9 @@ internal sealed class MangaOcrEngine : IDisposable
     private readonly Func<(DirectMlDevice.Adapter? Adapter, string? Reason)> _chooseAdapter;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly System.Threading.Timer _idleRelease;
+    private readonly TimeSpan _idleReleaseDelay;
+    // Run at the start of a load, before anything is created; tests hold a load open with it.
+    private readonly Action? _beforeLoad;
     private readonly object _sync = new();
 
     // Guarded by _gate.
@@ -76,15 +79,47 @@ internal sealed class MangaOcrEngine : IDisposable
     private bool _disposed;
     private bool _enabled = true;
     private (DirectMlDevice.Adapter? Adapter, string? Reason)? _adapter;
+    private bool _loading;
 
+    /// <param name="beforeLoad">For tests: runs as a load starts.</param>
+    /// <param name="idleReleaseDelay">For tests: <see cref="IdleReleaseDelay"/> otherwise.</param>
     internal MangaOcrEngine(
         MangaModelStore store,
-        Func<(DirectMlDevice.Adapter? Adapter, string? Reason)>? chooseAdapter = null)
+        Func<(DirectMlDevice.Adapter? Adapter, string? Reason)>? chooseAdapter = null,
+        Action? beforeLoad = null,
+        TimeSpan? idleReleaseDelay = null)
     {
         _store = store;
         _chooseAdapter = chooseAdapter ?? DirectMlDevice.Choose;
+        _beforeLoad = beforeLoad;
+        _idleReleaseDelay = idleReleaseDelay ?? IdleReleaseDelay;
         _idleRelease = new System.Threading.Timer(_ => ReleaseIfIdle());
         _store.Changed += OnModelsChanged;
+    }
+
+    /// <summary>
+    /// Whether the models are in memory, asked without the GPU: <see cref="IsLoaded"/> waits for no
+    /// one but answers yes while a page or a load holds it.
+    /// </summary>
+    // The recogniser is the last thing a load creates and goes with the detector.
+    internal bool InMemory => Volatile.Read(ref _recognizer) is not null;
+
+    /// <summary>Whether the models are being loaded right now.</summary>
+    internal bool IsLoading
+    {
+        get
+        {
+            lock (_sync) return _loading;
+        }
+    }
+
+    /// <summary>Whether a realtime session is holding the models warm; for tests.</summary>
+    internal bool KeepsWarm
+    {
+        get
+        {
+            lock (_sync) return _keepWarm;
+        }
     }
 
     /// <summary>
@@ -209,7 +244,7 @@ internal sealed class MangaOcrEngine : IDisposable
         {
             _keepWarm = keepWarm;
             if (!keepWarm && !_disposed)
-                _idleRelease.Change(IdleReleaseDelay, Timeout.InfiniteTimeSpan);
+                _idleRelease.Change(_idleReleaseDelay, Timeout.InfiniteTimeSpan);
         }
     }
 
@@ -228,6 +263,35 @@ internal sealed class MangaOcrEngine : IDisposable
             _gate.Release();
         }
     }
+
+    /// <summary>
+    /// Loads the models now, on a background thread, as a page would: for a realtime session over
+    /// vertical Japanese, so the first page with text on it does not wait 1.6–2s for them.
+    /// </summary>
+    /// <remarks>
+    /// Holds the GPU while it loads, so a realtime read meanwhile is <see cref="MangaReadOutcome.Busy"/>
+    /// and skips its poll rather than loading a second time. Ends as a page ends
+    /// (<see cref="EndRead"/>): a session that ended meanwhile leaves them to the idle countdown, and
+    /// switched off meanwhile they go at once.
+    /// </remarks>
+    internal Task PreloadAsync() => Task.Run(async () =>
+    {
+        if (UnavailableReason is not null) return;
+
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            EnsureLoaded();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Loading the manga models ahead of a realtime session failed");
+        }
+        finally
+        {
+            EndRead();
+        }
+    });
 
     /// <summary>
     /// Reads a page whole: every block the detector found that is not too long for manga-ocr.
@@ -292,7 +356,7 @@ internal sealed class MangaOcrEngine : IDisposable
         _gate.Release();
         lock (_sync)
             if (!_keepWarm && !_disposed)
-                _idleRelease.Change(IdleReleaseDelay, Timeout.InfiniteTimeSpan);
+                _idleRelease.Change(_idleReleaseDelay, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>Whether sessions are loaded right now; for tests.</summary>
@@ -451,8 +515,23 @@ internal sealed class MangaOcrEngine : IDisposable
             _adapter ??= _chooseAdapter();
             if (_adapter.Value.Adapter is not { } chosen) return false;
             adapter = chosen;
+            _loading = true;
         }
 
+        try
+        {
+            _beforeLoad?.Invoke();
+            return Load(adapter);
+        }
+        finally
+        {
+            lock (_sync) _loading = false;
+        }
+    }
+
+    // Under _gate.
+    private bool Load(DirectMlDevice.Adapter adapter)
+    {
         var timer = Stopwatch.StartNew();
         // Before any DirectML session, and none at all without it: see DirectMlDevice.
         if (DirectMlDevice.Load(_store.RuntimePath, _store.Manifest?.DirectMl?.Files[0]) is { } runtimeProblem)

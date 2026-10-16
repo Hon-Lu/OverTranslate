@@ -330,6 +330,7 @@
     <sys:String x:Key="S.Realtime.StartTranslating">开始翻译</sys:String>
     <sys:String x:Key="S.Realtime.Running">实时翻译中</sys:String>
     <sys:String x:Key="S.Realtime.Paused">已暂停</sys:String>
+    <sys:String x:Key="S.Realtime.LoadingModels">加载模型中…</sys:String>
     <sys:String x:Key="S.Realtime.Pause">暂停实时翻译</sys:String>
     <sys:String x:Key="S.Realtime.Resume">继续实时翻译</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">编辑翻译区块</sys:String>

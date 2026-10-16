@@ -334,6 +334,7 @@
     <sys:String x:Key="S.Realtime.StartTranslating">開始</sys:String>
     <sys:String x:Key="S.Realtime.Running">翻訳中</sys:String>
     <sys:String x:Key="S.Realtime.Paused">一時停止中</sys:String>
+    <sys:String x:Key="S.Realtime.LoadingModels">モデルを読み込み中…</sys:String>
     <sys:String x:Key="S.Realtime.Pause">リアルタイム翻訳を一時停止</sys:String>
     <sys:String x:Key="S.Realtime.Resume">リアルタイム翻訳を再開</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">ブロックを編集</sys:String>

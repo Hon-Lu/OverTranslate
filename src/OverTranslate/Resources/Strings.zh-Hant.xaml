@@ -349,6 +349,7 @@
     <sys:String x:Key="S.Realtime.StartTranslating">開始翻譯</sys:String>
     <sys:String x:Key="S.Realtime.Running">即時翻譯中</sys:String>
     <sys:String x:Key="S.Realtime.Paused">已暫停</sys:String>
+    <sys:String x:Key="S.Realtime.LoadingModels">載入模型中…</sys:String>
     <sys:String x:Key="S.Realtime.Pause">暫停即時翻譯</sys:String>
     <sys:String x:Key="S.Realtime.Resume">繼續即時翻譯</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">編輯翻譯區塊</sys:String>
