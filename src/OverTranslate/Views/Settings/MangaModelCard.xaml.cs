@@ -56,6 +56,8 @@ public partial class MangaModelCard : UserControl
         /// <summary>No manifest in this build: nothing to offer.</summary>
         Hidden,
         NotDownloaded,
+        /// <summary>Not downloaded, but an earlier version is here: the models were updated.</summary>
+        Outdated,
         Downloading,
         Ready,
         /// <summary>Downloaded and able to run, but switched off here.</summary>
@@ -70,11 +72,13 @@ public partial class MangaModelCard : UserControl
     /// <summary>What the card shows, from the store, the machine and the last download.</summary>
     /// <param name="device"><see cref="Services.Ocr.Manga.MangaOcrEngine.DeviceSupport"/>.</param>
     /// <param name="engine"><see cref="Services.Ocr.Manga.MangaOcrEngine.Unavailable"/>.</param>
+    /// <param name="otherVersion"><see cref="Services.Ocr.Manga.MangaModelStore.HasOtherVersion"/>.</param>
     internal static MangaCardState StateOf(
         Services.Ocr.Manga.MangaModelState store,
         Services.Ocr.Manga.MangaUnavailable device,
         Services.Ocr.Manga.MangaUnavailable engine,
-        bool downloadFailed) => store switch
+        bool downloadFailed,
+        bool otherVersion = false) => store switch
     {
         Services.Ocr.Manga.MangaModelState.Unavailable => MangaCardState.Hidden,
         Services.Ocr.Manga.MangaModelState.Downloading => MangaCardState.Downloading,
@@ -85,7 +89,8 @@ public partial class MangaModelCard : UserControl
             Services.Ocr.Manga.MangaUnavailable.Disabled => MangaCardState.Disabled,
             _ => MangaCardState.Unusable,
         },
-        _ => downloadFailed ? MangaCardState.Failed : MangaCardState.NotDownloaded,
+        _ when downloadFailed => MangaCardState.Failed,
+        _ => otherVersion ? MangaCardState.Outdated : MangaCardState.NotDownloaded,
     };
 
     // What the card showed last, so that only a change of state fades; progress does not.
@@ -115,7 +120,8 @@ public partial class MangaModelCard : UserControl
             storeState,
             manga?.DeviceSupport ?? Services.Ocr.Manga.MangaUnavailable.None,
             manga?.Unavailable ?? Services.Ocr.Manga.MangaUnavailable.None,
-            _mangaModelsFailure is not null);
+            _mangaModelsFailure is not null,
+            store.HasOtherVersion);
 
         MangaCard.Visibility = state == MangaCardState.Hidden ? Visibility.Collapsed : Visibility.Visible;
         if (state == MangaCardState.Hidden)
@@ -132,6 +138,7 @@ public partial class MangaModelCard : UserControl
             MangaCardState.Unusable => ("S.Settings.MangaModelsNoGpu", "#FFB800"),
             MangaCardState.Failed => ("S.Settings.MangaModelsFailed", "#FF453A"),
             MangaCardState.Unsupported => ("S.Settings.MangaModelsUnsupported", "#8E8E93"),
+            MangaCardState.Outdated => ("S.Settings.MangaModelsOutdated", "#FFB800"),
             _ => ("S.Settings.MangaModelsNotDownloaded", "#8E8E93"),
         };
         MangaChipText.Text = LocalizationService.Get(chip);
@@ -152,6 +159,7 @@ public partial class MangaModelCard : UserControl
         MangaModelsDownloadText.Text = unsupported
             ? LocalizationService.Get("S.Settings.MangaModelsUnsupported")
             : LocalizationService.Format("S.Settings.MangaModelsDownload", Math.Round(total / megabyte));
+        MangaModelsUpdatedNote.Visibility = state == MangaCardState.Outdated ? Visibility.Visible : Visibility.Collapsed;
         MangaModelsUnsupportedDeleteBtn.Visibility =
             unsupported && storeState == Services.Ocr.Manga.MangaModelState.Ready ? Visibility.Visible : Visibility.Collapsed;
 
@@ -211,7 +219,7 @@ public partial class MangaModelCard : UserControl
 
         FrameworkElement foot = state switch
         {
-            MangaCardState.NotDownloaded or MangaCardState.Unsupported => MangaModelsDownloadPanel,
+            MangaCardState.NotDownloaded or MangaCardState.Outdated or MangaCardState.Unsupported => MangaModelsDownloadPanel,
             MangaCardState.Downloading => MangaModelsProgressPanel,
             _ => MangaModelsStatusBox,
         };

@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "sources": [
     {
       "name": "huggingface",
@@ -10,7 +10,7 @@
     },
     {
       "name": "huggingface",
-      "url": "https://huggingface.co/hon-lu/manga-ocr-base-onnx-fp16/resolve/v1/{name}",
+      "url": "https://huggingface.co/hon-lu/manga-ocr-base-CPT-flex-onnx-fp16/resolve/v1/{name}",
       "files": [
         "ocr-encoder.fp16.onnx",
         "ocr-decoder-cross.fp16.onnx",
@@ -20,7 +20,7 @@
     },
     {
       "name": "github",
-      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v1/{name}"
+      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v2/{name}"
     }
   ],
   "files": [
@@ -33,26 +33,26 @@
     {
       "role": "encoder",
       "name": "ocr-encoder.fp16.onnx",
-      "size": 171785393,
-      "sha256": "d58ead8c0074f6d9f6382abf29188c0ed885e394f9d29260fa86df633da640eb"
+      "size": 171982123,
+      "sha256": "f86a0455d63f87d955fe56be1380762ad621ce0dc34d0e4f3e6c512e2562b418"
     },
     {
       "role": "decoder-cross",
       "name": "ocr-decoder-cross.fp16.onnx",
       "size": 4732209,
-      "sha256": "967c31b739ee9cdc11ec40381540efacfc8aca6f2fb83948e0a17fa281b2f045"
+      "sha256": "f96b76dc239d49978d9167b55c58bf65fc786aa9bf3b3792f18c60aa264047ca"
     },
     {
       "role": "decoder-step",
       "name": "ocr-decoder-step.fp16.onnx",
-      "size": 53977443,
-      "sha256": "db6becffe3f1a232299bf6d33d768824ded1430473a0d22668606f77a027b6d1"
+      "size": 56062492,
+      "sha256": "3c5e51e18c4f96c0c71cc1ba0122c75067092a1ce269f703c143d3211352b4d5"
     },
     {
       "role": "vocabulary",
       "name": "vocab.txt",
-      "size": 24072,
-      "sha256": "344fbb6b8bf18c57839e924e2c9365434697e0227fac00b88bb4899b78aa594d"
+      "size": 27001,
+      "sha256": "a380ec969e2d73858cd84f43cdadb78b8527b12194ea4f797368ac21a24fa98c"
     }
   ],
   "directml": {

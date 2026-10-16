@@ -74,7 +74,8 @@ internal static class MangaModelOptions
             AppServices.MangaModels.State,
             manga?.DeviceSupport ?? MangaUnavailable.None,
             manga?.Unavailable ?? MangaUnavailable.None,
-            !followsCaptureSwitch || SettingsService.Instance.Current.Capture.ShowModelHint);
+            !followsCaptureSwitch || SettingsService.Instance.Current.Capture.ShowModelHint,
+            AppServices.MangaModels.HasOtherVersion);
     }
 
     /// <summary>The line under the realtime page's source picker; see <see cref="MangaModelHints.ForRealtimePage"/>.</summary>
@@ -85,7 +86,8 @@ internal static class MangaModelOptions
             sourceLanguage,
             AppServices.MangaModels.State,
             manga?.DeviceSupport ?? MangaUnavailable.None,
-            manga?.Unavailable ?? MangaUnavailable.None);
+            manga?.Unavailable ?? MangaUnavailable.None,
+            AppServices.MangaModels.HasOtherVersion);
     }
 
     private static void Raise() => Changed?.Invoke(null, EventArgs.Empty);

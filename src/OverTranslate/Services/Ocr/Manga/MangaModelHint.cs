@@ -11,6 +11,8 @@ internal enum MangaModelHint
     Downloading,
     /// <summary>Vertical Japanese on a machine that could run them, with nothing downloaded.</summary>
     NotInstalled,
+    /// <summary>As <see cref="NotInstalled"/>, but an earlier version's models are here: they were updated.</summary>
+    Outdated,
 }
 
 internal static class MangaModelHints
@@ -29,13 +31,15 @@ internal static class MangaModelHints
     /// </remarks>
     /// <param name="device"><see cref="MangaOcrEngine.DeviceSupport"/>.</param>
     /// <param name="engine"><see cref="MangaOcrEngine.Unavailable"/>.</param>
+    /// <param name="otherVersion"><see cref="MangaModelStore.HasOtherVersion"/>.</param>
     internal static MangaModelHint For(
         bool vertical,
         string? sourceLanguage,
         MangaModelState store,
         MangaUnavailable device,
         MangaUnavailable engine,
-        bool showHint)
+        bool showHint,
+        bool otherVersion = false)
     {
         if (!showHint || !vertical || store == MangaModelState.Unavailable) return MangaModelHint.None;
         if (device != MangaUnavailable.None) return MangaModelHint.None;
@@ -49,6 +53,7 @@ internal static class MangaModelHints
         {
             MangaModelState.Ready => MangaModelHint.Applied,
             MangaModelState.Downloading => MangaModelHint.Downloading,
+            _ when otherVersion => MangaModelHint.Outdated,
             _ => MangaModelHint.NotInstalled,
         };
     }
@@ -66,7 +71,8 @@ internal static class MangaModelHints
         string? sourceLanguage,
         MangaModelState store,
         MangaUnavailable device,
-        MangaUnavailable engine) =>
-        For(vertical: true, sourceLanguage, store, device, engine, showHint: true) is var hint &&
+        MangaUnavailable engine,
+        bool otherVersion = false) =>
+        For(vertical: true, sourceLanguage, store, device, engine, showHint: true, otherVersion) is var hint &&
         hint == MangaModelHint.ChooseJapanese ? MangaModelHint.None : hint;
 }

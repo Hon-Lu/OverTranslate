@@ -301,6 +301,14 @@
                     <!-- 下載, or 不支援 greyed out; with models already here on a machine that cannot run
                          them (a graphics card changed since), a way to delete them under it. -->
                     <StackPanel x:Name="MangaModelsDownloadPanel">
+                    <!-- Over the button when an earlier version is here: what was had is gone
+                         from use, and this download is how to get it back. -->
+                    <TextBlock x:Name="MangaModelsUpdatedNote"
+                               Margin="0,0,0,10"
+                               Visibility="Collapsed"
+                               FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{DynamicResource AppWarning}"
+                               Text="{DynamicResource S.Settings.MangaModelsUpdated}"/>
                     <Button x:Name="MangaModelsDownloadBtn"
                             Style="{StaticResource MangaCardButton}"
                             Height="40"

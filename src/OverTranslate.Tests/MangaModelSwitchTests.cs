@@ -85,6 +85,20 @@ public sealed class MangaModelSwitchTests : IDisposable
             Enum.Parse<MangaUnavailable>(engine), showHint).ToString());
 
     [Theory]
+    // An earlier version here: 已更新 instead of 尚未安裝, and only where 尚未安裝 would be.
+    [InlineData(true,  "JA",   "NotDownloaded", "None",  "NotDownloaded", true,  "Outdated")]
+    [InlineData(true,  "AUTO", "NotDownloaded", "None",  "NotDownloaded", true,  "ChooseJapanese")]
+    [InlineData(true,  "JA",   "Downloading",   "None",  "NotDownloaded", true,  "Downloading")]
+    [InlineData(true,  "JA",   "NotDownloaded", "NoGpu", "NotDownloaded", true,  "None")]
+    [InlineData(true,  "JA",   "NotDownloaded", "None",  "NotDownloaded", false, "None")]
+    [InlineData(false, "JA",   "NotDownloaded", "None",  "NotDownloaded", true,  "None")]
+    public void TheHint_WithAnotherVersionHere_SaysTheModelsWereUpdated(
+        bool vertical, string language, string store, string device, string engine, bool showHint, string expected) =>
+        Assert.Equal(expected, MangaModelHints.For(
+            vertical, language, Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
+            Enum.Parse<MangaUnavailable>(engine), showHint, otherVersion: true).ToString());
+
+    [Theory]
     // Japanese: where the models stand, whatever direction the blocks will be.
     [InlineData("JA",      "Ready",         "None",       "None",          "Applied")]
     [InlineData("ja",      "Ready",         "None",       "None",          "Applied")]
@@ -106,6 +120,16 @@ public sealed class MangaModelSwitchTests : IDisposable
         Assert.Equal(expected, MangaModelHints.ForRealtimePage(
             language, Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
             Enum.Parse<MangaUnavailable>(engine)).ToString());
+
+    [Theory]
+    [InlineData("JA", "NotDownloaded", "Outdated")]
+    [InlineData("EN", "NotDownloaded", "None")]
+    [InlineData("JA", "Ready",         "Applied")]
+    public void TheRealtimePageHint_WithAnotherVersionHere_SaysTheModelsWereUpdated(
+        string language, string store, string expected) =>
+        Assert.Equal(expected, MangaModelHints.ForRealtimePage(
+            language, Enum.Parse<MangaModelState>(store), MangaUnavailable.None,
+            store == "Ready" ? MangaUnavailable.None : MangaUnavailable.NotDownloaded, otherVersion: true).ToString());
 
     // ── Switched off: the column pipeline, without touching the models ──────
 
