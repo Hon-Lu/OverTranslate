@@ -539,7 +539,10 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             }
 
             _arrivalStep.Set("readback");
-            ReadBack(frame.Surface, content, (long)iteration.Value);
+            // Disposed here rather than left to the GC: the wrapper holds the pool's texture, and
+            // through it the device and its readback texture, after the session has ended.
+            using var surface = frame.Surface;
+            ReadBack(surface, content, (long)iteration.Value);
         }
         catch (ObjectDisposedException)
         {
@@ -613,7 +616,8 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
             if (iteration is null || (long)iteration.Value < Volatile.Read(ref _isolatedFrom)) return;
 
             _arrivalStep.Set("held readback");
-            ReadBack(frame.Surface, frame.ContentSize, (long)iteration.Value);
+            using var surface = frame.Surface;
+            ReadBack(surface, frame.ContentSize, (long)iteration.Value);
         }
         catch (ObjectDisposedException)
         {
