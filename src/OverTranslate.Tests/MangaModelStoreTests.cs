@@ -436,7 +436,7 @@ public sealed class MangaModelStoreTests : IDisposable
     {
         var manifest = MangaModelManifest.Parse(File.ReadAllText(MangaModelManifest.ShippedPath));
         var detectorRepo = "https://huggingface.co/hon-lu/comic-text-and-bubble-detector-onnx-fp16/resolve/v1/";
-        var ocrRepo = "https://huggingface.co/hon-lu/manga-ocr-base-CPT-onnx-fp16/resolve/v1/";
+        var ocrRepo = "https://huggingface.co/hon-lu/manga-ocr-base-CPT-flex-onnx-fp16/resolve/v1/";
         var release = $"https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v{manifest.Version}/";
 
         foreach (var file in manifest.Files)

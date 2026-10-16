@@ -7,12 +7,18 @@ using Microsoft.ML.OnnxRuntime;
 namespace OverTranslate.Services.Ocr.Manga;
 
 /// <summary>
-/// CPT-224 (muscgab/manga-ocr-base-CPT), manga-ocr's model (kha-white/manga-ocr-base) trained further:
-/// a ViT encoder and a two-layer BERT decoder, read greedily on DirectML with the decoder's key/value
-/// cache kept on the GPU between steps. Its export has manga-ocr's inputs and outputs, so either reads
-/// through this class; only the vocabulary differs, and that is read from the downloaded vocab.txt.
+/// CPT-flex (muscgab/manga-ocr-base-CPT-flex), manga-ocr's model (kha-white/manga-ocr-base) trained
+/// further to read a block with its shape kept: a ViT encoder and a two-layer BERT decoder, read
+/// greedily on DirectML with the decoder's key/value cache kept on the GPU between steps.
 /// </summary>
 /// <remarks>
+/// <para>manga-ocr and CPT-224 squeeze every block into 224×224; CPT-flex takes it at its own shape
+/// in up to 196 patches (<see cref="MangaPatchInput"/>), and the patches a block does not fill are
+/// masked out of the encoder and of the decoder's cross-attention. The graphs are fixed at 196
+/// patches, so DirectML always runs the same shapes. MEASURED against CPT-224 on the shared
+/// evaluation set: the same at page scale 1.0, and fewer wrong characters on the small writing of
+/// scale 0.5 (1.25% to 0.96%) and on the hard blocks (art, tilted, coloured).</para>
+///
 /// <para>The decoder is our own export in two graphs. <c>decoder_cross</c> turns the encoder output
 /// into both layers' cross-attention keys and values once per batch; <c>decoder_step</c> takes one
 /// token, the past self-attention cache and that cross cache, and returns the next logits and the grown
@@ -42,7 +48,6 @@ namespace OverTranslate.Services.Ocr.Manga;
 internal sealed class MangaTextRecognizer : IDisposable
 {
     internal const int BatchCap = 4;
-    private const int InputSize = 224;
 
     /// <summary>
     /// The most tokens one block is read as — a backstop for a block the decoder cannot get out of,
@@ -123,29 +128,37 @@ internal sealed class MangaTextRecognizer : IDisposable
     {
         int real = blocks.Count;
         int n = BatchCap;
-        int plane = InputSize * InputSize;
-        // Padding rows stay 0: mid-grey after normalisation, and never read.
-        var pixels = new float[n * 3 * plane];
+        const int cells = MangaPatchInput.Patches;
+        // Padding rows stay 0: every patch masked, so only the class token is left, and never read.
+        var patches = new float[n * cells * MangaPatchInput.PatchLength];
+        var patchMask = new float[n * cells];
+        var placement = new float[n * cells * cells];
         for (int i = 0; i < real; i++)
         {
-            // Grey first and then resized, as manga-ocr's own preprocessing does; the three channels
-            // the encoder takes are the same grey three times.
-            var grey = PillowImage.Resize(
-                PillowImage.Luma(Crop(rgb, width, blocks[i])), blocks[i].Width, blocks[i].Height, 1,
-                InputSize, InputSize);
-            int offset = i * 3 * plane;
-            for (int p = 0; p < plane; p++)
-            {
-                float v = (grey[p] / 255f - 0.5f) / 0.5f;
-                pixels[offset + p] = v;
-                pixels[offset + plane + p] = v;
-                pixels[offset + 2 * plane + p] = v;
-            }
+            // Grey first and then resized, as the author's preprocessing does.
+            MangaPatchInput.Fill(
+                PillowImage.Luma(Crop(rgb, width, blocks[i])), blocks[i].Width, blocks[i].Height,
+                patches.AsSpan(i * cells * MangaPatchInput.PatchLength, cells * MangaPatchInput.PatchLength),
+                patchMask.AsSpan(i * cells, cells),
+                placement.AsSpan(i * cells * cells, cells * cells));
+        }
+
+        // The decoder attends to the class token and the real patches.
+        var memoryMask = new float[n * (cells + 1)];
+        for (int i = 0; i < n; i++)
+        {
+            memoryMask[i * (cells + 1)] = 1f;
+            patchMask.AsSpan(i * cells, cells).CopyTo(memoryMask.AsSpan(i * (cells + 1) + 1, cells));
         }
 
         using var run = new RunOptions();
-        using var pixelValues = OrtValue.CreateTensorValueFromMemory(pixels, [n, 3, InputSize, InputSize]);
-        using var encoded = _encoder.Run(run, ["pixel_values"], [pixelValues], _encoder.OutputNames);
+        using var patchValues = OrtValue.CreateTensorValueFromMemory(patches, [n, cells, MangaPatchInput.PatchLength]);
+        using var patchMaskValue = OrtValue.CreateTensorValueFromMemory(patchMask, [n, cells]);
+        using var positionValues = OrtValue.CreateTensorValueFromMemory(placement, [n, cells, cells]);
+        using var encoded = _encoder.Run(
+            run, ["patches", "patch_mask", "position_weights"], [patchValues, patchMaskValue, positionValues],
+            _encoder.OutputNames);
+        using var memoryMaskValue = OrtValue.CreateTensorValueFromMemory(memoryMask, [n, cells + 1]);
 
         using var crossBinding = _cross.CreateIoBinding();
         crossBinding.BindInput("encoder_hidden_states", encoded[0]);
@@ -188,6 +201,7 @@ internal sealed class MangaTextRecognizer : IDisposable
                 binding.BindInput("past_v", pastValues);
                 binding.BindInput("cross_k", crossKeys);
                 binding.BindInput("cross_v", crossValues);
+                binding.BindInput("memory_mask", memoryMaskValue);
                 binding.BindOutputToDevice("logits", OrtMemoryInfo.DefaultInstance);
                 binding.BindOutputToDevice("present_k", _device);
                 binding.BindOutputToDevice("present_v", _device);
