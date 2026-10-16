@@ -334,6 +334,7 @@
     <sys:String x:Key="S.Realtime.StartTranslating">시작</sys:String>
     <sys:String x:Key="S.Realtime.Running">번역 중</sys:String>
     <sys:String x:Key="S.Realtime.Paused">일시 정지됨</sys:String>
+    <sys:String x:Key="S.Realtime.LoadingModels">모델 불러오는 중…</sys:String>
     <sys:String x:Key="S.Realtime.Pause">실시간 번역 일시 정지</sys:String>
     <sys:String x:Key="S.Realtime.Resume">실시간 번역 재개</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">블록 편집</sys:String>

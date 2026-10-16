@@ -92,8 +92,14 @@ public partial class RealtimeControlWindow : Window
     // like a session with nothing to translate — no words, no scrims, a still screen — so the one
     // thing that separates them has to stay on screen for as long as the state lasts.
     private static string PausedStatus => LocalizationService.Get("S.Realtime.Paused");
+    // Lasts exactly as long as the load it is about; a message borrowing the slot meanwhile hands it
+    // back to this. 已暫停 wins over it — see SetLoadingModels.
+    private static string LoadingModelsStatus => LocalizationService.Get("S.Realtime.LoadingModels");
     private bool _hasLanguages;
     private bool _isPaused;
+    private bool _isLoadingModels;
+    // What the session last said through SetBusy; the dot also pulses while the models load.
+    private bool _busy;
 
     // Whether the edit layer is still taking the mouse. Owned here rather than by the layer: the
     // button that changes it lives on this bar, and the bar has to say so in its own hint text.
@@ -399,6 +405,19 @@ public partial class RealtimeControlWindow : Window
         SetBusy(false);
     }
 
+    /// <summary>
+    /// Says 載入模型中… in the pair's place, with the dot pulsing, until called with false. Paused,
+    /// the bar says 已暫停 instead; in edit mode the running capsule is not on screen at all.
+    /// </summary>
+    public void SetLoadingModels(bool loading)
+    {
+        if (_isLoadingModels == loading) return;
+        _isLoadingModels = loading;
+
+        ApplyPulse();
+        if (!_messageShowing) RestoreText();
+    }
+
     public void SetMode(RealtimeControlMode mode)
     {
         _mode = mode;
@@ -470,9 +489,15 @@ public partial class RealtimeControlWindow : Window
     /// <summary>Pulses the status dot while a recognition or translation pass is in flight.</summary>
     public void SetBusy(bool busy)
     {
+        _busy = busy;
+        ApplyPulse();
+    }
+
+    private void ApplyPulse()
+    {
         // A pass cancelled by 暫停 can report itself busy on its way out; the dot is saying
         // something else now.
-        if (busy && !_isPaused)
+        if ((_busy || _isLoadingModels) && !_isPaused)
         {
             StatusDot.BeginAnimation(OpacityProperty, new DoubleAnimation
             {
@@ -539,9 +564,9 @@ public partial class RealtimeControlWindow : Window
         _messageShowing = false;
         EditHintText.Text = _crosshairEnabled ? EditHint : CrosshairOffHint;
 
-        RunStatusText.Text = _isPaused ? PausedStatus : RunStatus;
+        RunStatusText.Text = _isPaused ? PausedStatus : _isLoadingModels ? LoadingModelsStatus : RunStatus;
 
-        var showPair = _hasLanguages && !_isPaused;
+        var showPair = _hasLanguages && !_isPaused && !_isLoadingModels;
         LangPairPanel.Visibility = showPair ? Visibility.Visible : Visibility.Collapsed;
         RunStatusText.Visibility = showPair ? Visibility.Collapsed : Visibility.Visible;
 

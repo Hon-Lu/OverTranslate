@@ -97,6 +97,8 @@ public record OcrTextBlock(
 
 public class OcrService : IDisposable
 {
+    private static readonly NLog.Logger Log = NLog.LogManager.GetCurrentClassLogger();
+
     private readonly OnnxOcrEngine _engine = new();
     private readonly MangaOcrEngine? _manga;
 
@@ -109,6 +111,9 @@ public class OcrService : IDisposable
     /// models on the GPU whenever they can be used — see <see cref="RecognizeVerticalAsync"/>.
     /// </param>
     internal OcrService(MangaModelStore mangaModels) => _manga = new MangaOcrEngine(mangaModels);
+
+    /// <summary>For tests, which hand in a manga engine whose adapter and loads they control.</summary>
+    internal OcrService(MangaOcrEngine manga) => _manga = manga;
 
     /// <summary>The manga models' engine, or null in a build that was not given them.</summary>
     internal MangaOcrEngine? Manga => _manga;
@@ -346,6 +351,34 @@ public class OcrService : IDisposable
     {
         _engine.SetKeepWarm(keepWarm);
         _manga?.SetKeepWarm(keepWarm);
+    }
+
+    /// <summary>
+    /// What a realtime session holds as it starts: the recogniser always; the manga models only when
+    /// a block is vertical and they would read the language, in which case they are loaded now
+    /// rather than by the first page with text on it.
+    /// </summary>
+    /// <remarks>
+    /// Decided once for the session, not per block: every block reads with the same two engines.
+    /// Not needed this time, the manga models are let go at once — a session keeps what it holds
+    /// through pauses and framing until 結束, and 330MB of video memory held for blocks that no
+    /// longer read with them is memory a game beside it could have used.
+    /// </remarks>
+    internal void KeepWarmForRealtime(string sourceLanguage, bool vertical)
+    {
+        _engine.SetKeepWarm(true);
+        if (_manga is null) return;
+
+        if (vertical && ReadsVerticalWithMangaModels(sourceLanguage))
+        {
+            _manga.SetKeepWarm(true);
+            if (!_manga.IsLoaded) Log.Info("Loading the manga models ahead of a realtime session");
+            _ = _manga.PreloadAsync();
+            return;
+        }
+
+        if (_manga.IsLoaded) Log.Info("Manga models not needed by this realtime session: released");
+        _manga.ReleaseNow();
     }
 
     /// <summary>

@@ -161,6 +161,9 @@ internal sealed class RealtimeSessionController
     private System.Drawing.Rectangle _screenNow;
     private readonly DispatcherTimer _displaySettle = new() { Interval = TimeSpan.FromMilliseconds(500) };
 
+    // 載入模型中… on the bar while the manga models load; null outside a sitting.
+    private RealtimeModelLoadingHint? _loadingHint;
+
     private RealtimeSessionController()
     {
         _displaySettle.Tick += (_, _) =>
@@ -387,6 +390,16 @@ internal sealed class RealtimeSessionController
         control.SetCompareDisplay(_compareDisplay);
         _control = control;
         control.Show();
+
+        if (AppServices.Ocr.Manga is { } manga)
+        {
+            _loadingHint = new RealtimeModelLoadingHint(() => manga.IsLoading, shown =>
+            {
+                Log.Info("Realtime bar: model loading hint {State}", shown ? "shown" : "hidden");
+                _control?.SetLoadingModels(shown);
+            });
+            manga.LoadingChanged += OnMangaLoadingChanged;
+        }
         RefreshOverlayHandles();
 
         _screenNow = request.ScreenBounds;
@@ -600,6 +613,12 @@ internal sealed class RealtimeSessionController
         _displaySettle.Stop();
         _foregroundWatch?.Dispose();
         _foregroundWatch = null;
+
+        // Before the bar goes. A load still under way finishes on its own; what it raises from here
+        // on finds no hint.
+        if (AppServices.Ocr.Manga is { } manga) manga.LoadingChanged -= OnMangaLoadingChanged;
+        _loadingHint?.Dispose();
+        _loadingHint = null;
 
         if (_session != null)
         {
@@ -1157,6 +1176,10 @@ internal sealed class RealtimeSessionController
 
     private void OnBusyChanged(object? sender, bool busy) =>
         OnDispatcher(() => _control?.SetBusy(busy));
+
+    // Raised on the loading thread.
+    private void OnMangaLoadingChanged(object? sender, EventArgs e) =>
+        OnDispatcher(() => _loadingHint?.Refresh());
 
     private static void OnDispatcher(Action action)
     {
