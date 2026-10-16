@@ -369,6 +369,7 @@ internal sealed class RealtimeSessionController
         Volatile.Write(ref _visibleGeneration, 0);
         _session.RegionUpdated += OnRegionUpdated;
         _session.Failed += OnSessionFailed;
+        _session.FailureChanged += OnFailureChanged;
         _session.BusyChanged += OnBusyChanged;
 
         var control = new RealtimeControlWindow(request.ScreenBounds);
@@ -619,6 +620,7 @@ internal sealed class RealtimeSessionController
         {
             _session.RegionUpdated -= OnRegionUpdated;
             _session.Failed -= OnSessionFailed;
+            _session.FailureChanged -= OnFailureChanged;
             _session.BusyChanged -= OnBusyChanged;
 
             // The one press that means "done with this": the recogniser's memory goes back here
@@ -1169,6 +1171,15 @@ internal sealed class RealtimeSessionController
 
     private void OnSessionFailed(object? sender, string message) =>
         OnDispatcher(() => _control?.ShowMessage(message, RealtimeMessageKind.Failure));
+
+    // Read when it lands rather than carried with the event: these arrive late and can cross a pause
+    // or a restart on the way, and only what the session says now is worth keeping on the bar.
+    private void OnFailureChanged(object? sender, EventArgs e) =>
+        OnDispatcher(() =>
+        {
+            if (sender is not RealtimeTranslationSession session || session != _session) return;
+            _control?.SetFailure(session.IsPaused ? null : session.CurrentFailure);
+        });
 
     private void OnBusyChanged(object? sender, bool busy) =>
         OnDispatcher(() => _control?.SetBusy(busy));

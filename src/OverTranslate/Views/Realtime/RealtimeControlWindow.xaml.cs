@@ -111,6 +111,12 @@ public partial class RealtimeControlWindow : Window
     // underneath it.
     private bool _messageShowing;
 
+    // A failure the session is still retrying, and whether it is what the bar shows right now. Kept
+    // apart from the transient messages so one of those passing over it puts it back when it times
+    // out, and so clearing it never takes down a message that is not it.
+    private string? _failure;
+    private bool _failureShowing;
+
     // The scale WPF renders this window at, which is the DPI of whatever monitor it currently sits
     // on — not necessarily the one the session runs on. Everything that converts between the window's
     // DIP and screen pixels has to use this one, and it has to be re-read whenever Windows rescales
@@ -398,8 +404,10 @@ public partial class RealtimeControlWindow : Window
 
         ApplyPauseButton();
         // A message from before the pause has nothing to say about the state that replaced it, and
-        // its timer would restore the old text on top of the new state a moment later.
+        // its timer would restore the old text on top of the new state a moment later. Nor does a
+        // failure: nothing is retried while paused, and a resumed session reports its own.
         _messageTimer.Stop();
+        _failure = null;
         RestoreText();
         // Nothing is in flight once paused, and a pulse left running would go on saying there is.
         SetBusy(false);
@@ -436,6 +444,7 @@ public partial class RealtimeControlWindow : Window
         ApplyCrosshairButton();
 
         _messageTimer.Stop();
+        _failure = null;
         RestoreText();
         SetBusy(false);
 
@@ -548,8 +557,31 @@ public partial class RealtimeControlWindow : Window
         }
 
         _messageShowing = true;
+        _failureShowing = false;
         _messageTimer.Stop();
         if (!sticky) _messageTimer.Start();
+    }
+
+    /// <summary>
+    /// Shows a failure the session is still retrying until it is cleared with null, rather than for
+    /// the couple of seconds a message lasts: the retry can be sixteen seconds away, and a bar that
+    /// had gone back to the language pair in the meantime read as the trouble being over.
+    /// </summary>
+    /// <remarks>Only while running and not paused; both of those leaving clear it.</remarks>
+    public void SetFailure(string? message)
+    {
+        if (_failure == message) return;
+        _failure = message;
+        if (_mode != RealtimeControlMode.Running || _isPaused) return;
+
+        if (message is not null) ShowFailure();
+        else if (_failureShowing) RestoreText();
+    }
+
+    private void ShowFailure()
+    {
+        ShowMessage(_failure!, RealtimeMessageKind.Failure, sticky: true);
+        _failureShowing = true;
     }
 
     /// <summary>Re-asserts the bar above a window created after it — the edit layer, on re-entry.</summary>
@@ -561,7 +593,15 @@ public partial class RealtimeControlWindow : Window
 
     private void RestoreText()
     {
+        // The bar's own text, unless a failure is still being retried: then that is its own text.
+        if (_failure is not null && _mode == RealtimeControlMode.Running && !_isPaused)
+        {
+            ShowFailure();
+            return;
+        }
+
         _messageShowing = false;
+        _failureShowing = false;
         EditHintText.Text = _crosshairEnabled ? EditHint : CrosshairOffHint;
 
         RunStatusText.Text = _isPaused ? PausedStatus : _isLoadingModels ? LoadingModelsStatus : RunStatus;
