@@ -5,9 +5,11 @@ The fp16 decoder graphs come from `HALF=1 python export_kv.py`.
 import os, sys
 import torch
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join('out', 'mo-fp16')
+# A Hugging Face id or a local folder, e.g. what cpt_to_hf.py writes.
+MODEL = sys.argv[2] if len(sys.argv) > 2 else 'kha-white/manga-ocr-base'
 os.makedirs(OUT, exist_ok=True)
 from transformers import VisionEncoderDecoderModel
-m = VisionEncoderDecoderModel.from_pretrained('kha-white/manga-ocr-base').eval()
+m = VisionEncoderDecoderModel.from_pretrained(MODEL).eval()
 for p in m.parameters(): p.requires_grad_(False)
 
 
@@ -21,7 +23,7 @@ with torch.no_grad():
 x = torch.randn(2, 3, 224, 224)
 with torch.no_grad():
     ref = m.encoder(pixel_values=x).last_hidden_state
-    enc16 = Enc(VisionEncoderDecoderModel.from_pretrained('kha-white/manga-ocr-base').encoder.eval())
+    enc16 = Enc(VisionEncoderDecoderModel.from_pretrained(MODEL).encoder.eval())
     for p in enc16.parameters(): p.requires_grad_(False)
     print('encoder fp16 vs fp32 max diff', (enc16(x) - ref).abs().max().item())
     torch.onnx.export(enc16, (x,), f'{OUT}/encoder.onnx', dynamo=False, opset_version=17, input_names=['pixel_values'],

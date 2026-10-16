@@ -1,7 +1,7 @@
 # MangaModelExport
 
 產生漫畫直排模型（B3）中「我們自己匯出」的那幾個檔。app 讀的是下載來的成品，這裡只負責重做成品。
-對應清單 `src/OverTranslate/ocrmodels/manga-vertical.json` 的 **version 1**。
+對應清單 `src/OverTranslate/ocrmodels/manga-vertical.json` 的 **version 2**（辨識器換成 CPT-224，見下一節）；偵測器沿用 version 1 的檔。
 
 量測與選型的來龍去脈見 `tools/OcrHarness/vertical-ocr.md` 最後一節，以及 `.ai/vertical-ja3-handoff/vertical-ocr-bench-results-2.md`。
 
@@ -16,6 +16,32 @@
 | `detector.fp16.onnx` | [ogkalu/comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) 的 `detector.onnx` | **沒有腳本**，步驟見下 |
 
 檔名改成清單裡的名字後，計算 SHA-256 與大小，寫回清單。
+
+## 清單 v2：辨識器換成 CPT-224
+
+v2 的辨識器三檔與 `vocab.txt` 來自 [muscgab/manga-ocr-base-CPT](https://huggingface.co/muscgab/manga-ocr-base-CPT)（CPT-224，manga-ocr-base 續訓、架構不變、字表 6817 字，**CC BY-NC-SA 4.0**）。偵測器不變。
+
+作者的權重 key 是自己的命名，要先對回 HF `VisionEncoderDecoderModel`，再交給同兩支腳本（第二個參數是模型路徑，不給就是 kha-white/manga-ocr-base）：
+
+```bash
+cd tools/MangaModelExport
+PY=../../venv-export/Scripts/python
+$PY cpt_to_hf.py D:/temp/manga-export/cpt224-hf                  # 不給權重目錄就從 HF 下載
+$PY export_fp16.py D:/temp/manga-export/cpt224-fp16 D:/temp/manga-export/cpt224-hf
+HALF=1 $PY export_kv.py D:/temp/manga-export/cpt224-kv-fp16 D:/temp/manga-export/cpt224-hf
+```
+
+| 清單裡的檔名 | 產生的檔 |
+|---|---|
+| `ocr-encoder.fp16.onnx` | `cpt224-fp16/encoder.onnx` |
+| `ocr-decoder-cross.fp16.onnx` | `cpt224-kv-fp16-small/decoder_cross.onnx` |
+| `ocr-decoder-step.fp16.onnx` | `cpt224-kv-fp16-small/decoder_step.onnx` |
+| `vocab.txt` | `cpt224-hf/vocab.txt`（`[PAD] [UNK] [CLS] [SEP] [MASK]` 加作者的 6817 字，6822 行，LF 換行） |
+
+- `cpt_to_hf.py` 會印出 `model.safetensors` 的 SHA-256，與 v2 匯出時用的權重（`1032650b…43d2`）不同時會標出來。
+- 用上面「相依」的版本重跑，四個檔與清單 v2 的 SHA-256 **逐位元相同**（2026-10 實測，torch 2.14.1+cpu 也一樣）。HF 格式的中間目錄裡只有 ViT 的 pooler 是隨機初始化（匯出不會用到），腳本固定了亂數種子，中間目錄也每次相同。
+- `--check <manga-ocr-CPT 的 git checkout>` 會拿作者自己的 PyTorch 實作（[muscgab/manga-ocr-CPT](https://github.com/muscgab/manga-ocr-CPT)）在它的範例圖上對拍（v2 匯出時實測：encoder 最大差 3.2e-6，greedy 讀出 8/8 一致）。這一步要先取得作者的程式碼，平常不用跑。
+- **坑：一定要用 transformers 4.57.6。** transformers 5.x 改了 ViT 的參數名稱（例如 `encoder.layers.N.attention.q_proj`），對應表全部對不上；載入不會報錯，模型照樣跑，但讀出全是亂碼。`cpt_to_hf.py` 遇到對不上的 key 會直接中止。
 
 ## 兩支腳本做什麼
 

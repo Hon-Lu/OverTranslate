@@ -10,7 +10,9 @@ import torch
 from transformers import VisionEncoderDecoderModel
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join('out', 'mo-kv-fp16' if os.environ.get('HALF') == '1' else 'mo-kv')
-m = VisionEncoderDecoderModel.from_pretrained('kha-white/manga-ocr-base').eval()
+# A Hugging Face id or a local folder, e.g. what cpt_to_hf.py writes.
+MODEL = sys.argv[2] if len(sys.argv) > 2 else 'kha-white/manga-ocr-base'
+m = VisionEncoderDecoderModel.from_pretrained(MODEL).eval()
 dec = m.decoder
 for p in m.parameters(): p.requires_grad_(False)
 HALF = os.environ.get('HALF') == '1'
