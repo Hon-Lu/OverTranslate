@@ -1,38 +1,43 @@
-"""CPT-224 (muscgab/manga-ocr-base-CPT) as a Hugging Face VisionEncoderDecoderModel folder, for
-export_fp16.py and export_kv.py to export like manga-ocr.
+"""CPT-224 (muscgab/manga-ocr-base-CPT) or CPT-flex (muscgab/manga-ocr-base-CPT-flex) as a Hugging Face
+VisionEncoderDecoderModel folder: CPT-224 for export_fp16.py and export_kv.py to export like manga-ocr,
+CPT-flex for export_flex.py and MASK=1 export_kv.py.
 
   python cpt_to_hf.py <out> [weights] [--check <manga-ocr-CPT checkout>]
 
-weights: the folder of muscgab/manga-ocr-base-CPT (model.safetensors, nar_vocabulary_6817.json),
-or nothing to download it from Hugging Face. The architecture is manga-ocr's (kha-white/manga-ocr-base's
-config) with a vocabulary of 6822: the five BERT special tokens, then the author's 6817 characters.
-The output layer shares the word embeddings, as in manga-ocr.
+weights: the folder of either model (model.safetensors, nar_vocabulary_6817.json), or "224" / "flex"
+to download it from Hugging Face (nothing = "224"). The two have the same weights' names and the same
+vocabulary; only what they were trained to read differs (see export_flex.py). The architecture is
+manga-ocr's (kha-white/manga-ocr-base's config) with a vocabulary of 6822: the five BERT special tokens,
+then the author's 6817 characters. The output layer shares the word embeddings, as in manga-ocr.
 
 --check runs the author's own PyTorch code (github.com/muscgab/manga-ocr-CPT) on its sample images and
-compares encoder output and greedy readings with the converted model.
+compares encoder output and greedy readings with the converted model. CPT-224 only: CPT-flex's input
+is not the HF model's (see export_flex.py and README).
 """
 import glob, hashlib, json, os, sys
 import torch
 from safetensors.torch import load_file
 from transformers import VisionEncoderDecoderConfig, VisionEncoderDecoderModel
 
-REPO = 'muscgab/manga-ocr-base-CPT'
-# The weights the files of manifest version 2 were exported from.
-WEIGHTS_SHA256 = '1032650b1e312ddcc02f8daad06a02c37a048691c345b816996d4be357b243d2'
+REPOS = {'224': 'muscgab/manga-ocr-base-CPT', 'flex': 'muscgab/manga-ocr-base-CPT-flex'}
+# The weights the files of each manifest version were exported from.
+WEIGHTS_SHA256 = {'1032650b1e312ddcc02f8daad06a02c37a048691c345b816996d4be357b243d2': 'CPT-224, manifest version 2',
+                  'd2f507aead9c9dd9fd02660d2825363edd36aba6ba1bbf6b387519f153f69ef0': 'CPT-flex, manifest version 3'}
 
 args = sys.argv[1:]
 check = None
 if '--check' in args:
     i = args.index('--check'); check = args[i + 1]; del args[i:i + 2]
 OUT = args[0] if args else os.path.join('out', 'cpt224-hf')
-SRC = args[1] if len(args) > 1 else None
-if SRC is None:
+SRC = args[1] if len(args) > 1 else '224'
+if SRC in REPOS:
     from huggingface_hub import snapshot_download
-    SRC = snapshot_download(REPO)
+    SRC = snapshot_download(REPOS[SRC])
 
 with open(os.path.join(SRC, 'model.safetensors'), 'rb') as f:
     sha = hashlib.sha256(f.read()).hexdigest()
-print('model.safetensors', sha, '(as exported)' if sha == WEIGHTS_SHA256 else '(NOT the weights manifest v2 was made from)')
+print('model.safetensors', sha, f'({WEIGHTS_SHA256[sha]}, as exported)' if sha in WEIGHTS_SHA256
+      else '(NOT the weights any manifest version was made from)')
 w = load_file(os.path.join(SRC, 'model.safetensors'))
 chars = json.load(open(os.path.join(SRC, 'nar_vocabulary_6817.json'), encoding='utf-8'))['characters']
 

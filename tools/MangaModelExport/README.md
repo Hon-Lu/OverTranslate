@@ -1,7 +1,7 @@
 # MangaModelExport
 
 產生漫畫直排模型（B3）中「我們自己匯出」的那幾個檔。app 讀的是下載來的成品，這裡只負責重做成品。
-對應清單 `src/OverTranslate/ocrmodels/manga-vertical.json` 的 **version 2**（辨識器換成 CPT-224，見下一節）；偵測器沿用 version 1 的檔。
+對應清單 `src/OverTranslate/ocrmodels/manga-vertical.json` 的 **version 3**（辨識器換成 CPT-flex，見「清單 v3」）；偵測器沿用 version 1 的檔。
 
 量測與選型的來龍去脈見 `tools/OcrHarness/vertical-ocr.md` 最後一節，以及 `.ai/vertical-ja3-handoff/vertical-ocr-bench-results-2.md`。
 
@@ -43,6 +43,39 @@ HALF=1 $PY export_kv.py D:/temp/manga-export/cpt224-kv-fp16 D:/temp/manga-export
 - `--check <manga-ocr-CPT 的 git checkout>` 會拿作者自己的 PyTorch 實作（[muscgab/manga-ocr-CPT](https://github.com/muscgab/manga-ocr-CPT)）在它的範例圖上對拍（v2 匯出時實測：encoder 最大差 3.2e-6，greedy 讀出 8/8 一致）。這一步要先取得作者的程式碼，平常不用跑。
 - **坑：一定要用 transformers 4.57.6。** transformers 5.x 改了 ViT 的參數名稱（例如 `encoder.layers.N.attention.q_proj`），對應表全部對不上；載入不會報錯，模型照樣跑，但讀出全是亂碼。`cpt_to_hf.py` 遇到對不上的 key 會直接中止。
 
+## 清單 v3：辨識器換成 CPT-flex
+
+v3 的辨識器三檔來自 [muscgab/manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CPT-flex，與 CPT-224 同作者、同架構、同字表、同授權 **CC BY-NC-SA 4.0**），`vocab.txt` 與 v2 同一個檔。偵測器不變。
+
+CPT-flex 保持區塊的長寬比：縮放到 16px patch 的網格最多 196 格，放在網格左上，其餘填縮圖邊框的中位數；位置表 14×14 用 bicubic 插值到網格大小；補出來的 patch 在 encoder 與 decoder 的 cross-attention 都遮掉。所以圖的輸入和 v1／v2 不同：
+
+- encoder：`patches[B,196,768]`、`patch_mask[B,196]`（1／0）、`position_weights[B,196,196]` → `last_hidden_state[B,197,768]`。
+  位置表插值是固定的線性映射，第 i 列是第 i 個 patch 對 14×14 表的權重（padding 列全 0），表本身留在圖裡、以 fp32 相乘。
+- decoder step：多一個 `memory_mask[B,197]`（class token 與真的 patch 為 1）。decoder cross 不變。
+- 形狀固定在 196 個 patch，不隨區塊大小改變（DirectML 只有固定形狀快）。
+
+```bash
+cd tools/MangaModelExport
+PY=../../venv-export/Scripts/python
+$PY cpt_to_hf.py D:/temp/manga-export/cptflex-hf flex               # 或給 CPT-flex 的權重目錄
+$PY export_flex.py D:/temp/manga-export/flex-fp16 D:/temp/manga-export/cptflex-hf
+HALF=1 MASK=1 $PY export_kv.py D:/temp/manga-export/flex-kv-fp16 D:/temp/manga-export/cptflex-hf
+```
+
+| 清單裡的檔名 | 產生的檔 |
+|---|---|
+| `ocr-encoder.fp16.onnx` | `flex-fp16/encoder.onnx` |
+| `ocr-decoder-cross.fp16.onnx` | `flex-kv-fp16-small/decoder_cross.onnx` |
+| `ocr-decoder-step.fp16.onnx` | `flex-kv-fp16-small/decoder_step.onnx` |
+| `vocab.txt` | `cptflex-hf/vocab.txt`（與 v2 相同） |
+
+- `cpt_to_hf.py` 認得兩個模型的權重，CPT-flex 的 `model.safetensors` 是 `d2f507ae…9ef0`。
+- 用「相依」的版本重跑（torch 2.14.1+cpu、transformers 4.57.6、onnx 1.23.2），四個檔與清單 v3 的 SHA-256 **逐位元相同**（2026-10 實測）。
+- `export_flex.py` 會印三個自我檢查：位置權重 × 表 對 `F.interpolate(bicubic)` 的最大差（實測 3e-7）、encoder fp16 對 fp32 的最大差（實測 3.7e-3）、改 padding patch 的值對真 patch 的影響（必須是 0）。
+- app 的前處理在 `MangaPatchInput`，與作者的 `preprocess(fit="aspect")` 逐位元相同（測試 `MangaPatchInputTests` 用作者程式產生的雜湊）。
+- 對作者 PyTorch 實作（[muscgab/manga-ocr-CPT](https://github.com/muscgab/manga-ocr-CPT)）的對拍沒有放進 repo 的腳本；v3 匯出時的結果：encoder fp16（DirectML）對作者 fp32 最大差 1.9e-2（CPU 3.2e-3），共用評估集 2031 塊的讀出與作者 CUDA 路徑只差 1 塊（不計分的塊）。
+- 坑同 v2：一定要用 transformers 4.57.6。
+
 ## 兩支腳本做什麼
 
 - **`export_kv.py`**：把 manga-ocr 的兩層 BERT decoder 改寫成帶 KV cache 的圖。
@@ -52,6 +85,7 @@ HALF=1 $PY export_kv.py D:/temp/manga-export/cpt224-kv-fp16 D:/temp/manga-export
     - `<out>-small/`：`decoder_cross`＋`decoder_step`，app 用的是這組。
   - fp32 版在最後會對拍 HF 原模型 8 步，印出 logits 最大誤差（實測 1.3e-5）。
 - **`export_fp16.py`**：把 encoder 以 `half()` 直接從 PyTorch 匯出（權重 fp16、圖的輸入輸出仍是 fp32），並印出與 fp32 的最大差異。
+- **`export_flex.py`**（v3）：CPT-flex 的 encoder，同樣 `half()` 匯出，輸入見「清單 v3」。`MASK=1 export_kv.py` 給 decoder 加上記憶遮罩。
 
 兩支都只用 CPU，會自動從 HF 下載 `kha-white/manga-ocr-base`。
 
