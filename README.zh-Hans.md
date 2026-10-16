@@ -264,6 +264,8 @@ OCR 识别由 RapidOcrNet 搭配 ONNX 模型处理，会依语言自动使用对
 所有语言共用同一套**文字检测模型**（`PP-OCRv6_det_tiny`）与**方向分类模型**（`cls`），仅识别模型会依语言切换。  
 OCR 全程于本机执行，不会将图片上传至外部服务；默认模型使用 CPU，漫画竖排模型则使用显卡。
 
+**漫画竖排模型**：源语言选择日文并开启竖排时，可在设置中另外下载（约 303 MB，需支持 DirectX 12 的显卡）。先用 [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector)（RT-DETR）找出对白框与旁白，再由 [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) 整块读取竖排日文，振假名几乎不会混进正文；多行横排说明框等少数情况仍交由默认模型识别。未下载或没有显卡时，竖排一律使用默认模型。
+
 ---
 
 ## 系统需求

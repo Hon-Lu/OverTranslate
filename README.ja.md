@@ -264,6 +264,8 @@ OCR は RapidOcrNet と ONNX モデルで処理し、言語に応じてモデル
 **文字検出モデル**（`PP-OCRv6_det_tiny`）と**方向分類モデル**（`cls`）はすべての言語で共通で、切り替わるのは認識モデルだけです。  
 OCR は最初から最後までお使いの PC 上で動き、画像が外部のサービスに送られることはありません。標準のモデルは CPU で、漫画縦書きモデルはグラフィックスカードで動きます。
 
+**漫画縦書きモデル**：翻訳元の言語を日本語にして縦書きをオンにすると、設定から別途ダウンロードできます（約 303 MB、DirectX 12 対応のグラフィックスカードが必要）。[comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector)（RT-DETR）でフキダシやナレーションを見つけ、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) が縦書きの日本語をブロックごとまとめて読み取ります。ふりがなが本文に混ざることはほとんどありません。複数行の横書きの説明枠など一部は、引き続き標準のモデルで認識します。ダウンロードしていない場合やグラフィックスカードがない場合、縦書きはすべて標準のモデルを使います。
+
 ---
 
 ## 動作環境
