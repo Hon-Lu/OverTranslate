@@ -213,6 +213,59 @@ internal sealed class MangaModelStore
         }
     }
 
+    /// <summary>
+    /// Whether another version's models are here in full while this build's are not: someone who
+    /// had them before this build changed them, and is told they have been updated rather than that
+    /// they are not installed. Never while this build's are ready or downloading.
+    /// </summary>
+    /// <remarks>
+    /// A folder counts only as <c>v{version}</c> with its marker naming that version and every file
+    /// the marker lists at the size it gives — the same test as <see cref="IsComplete(string, MangaModelManifest)"/>,
+    /// read from the marker, since this build's manifest does not know the other version's files.
+    /// Nothing of it is used: the detector may well be the same file, but each version downloads
+    /// its own (see the remarks on keeping nothing).
+    /// </remarks>
+    internal bool HasOtherVersion
+    {
+        get
+        {
+            if (Manifest is null || State != MangaModelState.NotDownloaded || !Directory.Exists(Root)) return false;
+            try
+            {
+                return Directory.EnumerateDirectories(Root).Any(folder =>
+                    !string.Equals(Path.GetFullPath(folder), Path.GetFullPath(Folder!), StringComparison.OrdinalIgnoreCase) &&
+                    IsCompleteOtherVersion(folder));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+    }
+
+    private static bool IsCompleteOtherVersion(string folder)
+    {
+        try
+        {
+            var marker = Path.Combine(folder, ReadyMarker);
+            if (!File.Exists(marker)) return false;
+            using var json = JsonDocument.Parse(File.ReadAllText(marker));
+            var version = json.RootElement.GetProperty("version").GetString();
+            if (string.IsNullOrEmpty(version) || !string.Equals(Path.GetFileName(folder), "v" + version, StringComparison.OrdinalIgnoreCase))
+                return false;
+            var files = json.RootElement.GetProperty("files");
+            return files.GetArrayLength() > 0 && files.EnumerateArray().All(file =>
+                file.GetProperty("name").GetString() is { Length: > 0 } name &&
+                Path.GetFileName(name) == name &&
+                new FileInfo(Path.Combine(folder, name)) is { Exists: true } info &&
+                info.Length == file.GetProperty("size").GetInt64());
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or KeyNotFoundException or InvalidOperationException or FormatException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     internal string PathOf(string role) =>
         Path.Combine(Folder ?? throw new InvalidOperationException("no manga model manifest"),
             Manifest!.File(role).Name);

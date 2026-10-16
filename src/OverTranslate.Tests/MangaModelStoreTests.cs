@@ -356,6 +356,97 @@ public sealed class MangaModelStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task AnOlderVersionInFull_IsAnOtherVersion_UntilTheNewOneIsDownloaded()
+    {
+        await Store(Manifest("1"), new FakeServer()).DownloadAsync();
+
+        var newer = Store(Manifest("2"), new FakeServer());
+        Assert.True(newer.HasOtherVersion);
+
+        await newer.DownloadAsync();
+
+        Assert.False(newer.HasOtherVersion);
+    }
+
+    [Fact]
+    public async Task ANewerVersionInFull_IsAnOtherVersion_Too()
+    {
+        await Store(Manifest("3"), new FakeServer()).DownloadAsync();
+
+        Assert.True(Store(Manifest("2"), new FakeServer()).HasOtherVersion);
+    }
+
+    [Fact]
+    public async Task ThisVersionReady_HasNoOtherVersion_EvenWithAnOlderOneLeft()
+    {
+        await Store(Manifest("1"), new FakeServer()).DownloadAsync();
+        CopyFolder(Path.Combine(_root, "v1"), Path.Combine(_root, "v0"));
+        File.WriteAllText(Path.Combine(_root, "v0", "verified.json"),
+            File.ReadAllText(Path.Combine(_root, "v0", "verified.json")).Replace("\"version\":\"1\"", "\"version\":\"0\""));
+
+        var store = Store(Manifest("1"), new FakeServer());
+
+        Assert.Equal(MangaModelState.Ready, store.State);
+        Assert.False(store.HasOtherVersion);
+    }
+
+    [Fact]
+    public void NothingHere_HasNoOtherVersion()
+    {
+        Assert.False(Store(Manifest("2"), new FakeServer()).HasOtherVersion);
+        Assert.False(new MangaModelStore(null, _root).HasOtherVersion);
+    }
+
+    [Theory]
+    [InlineData("no marker")]
+    [InlineData("marker for another version")]
+    [InlineData("truncated file")]
+    [InlineData("missing file")]
+    [InlineData("broken marker")]
+    [InlineData("marker lists no files")]
+    public async Task AnOlderFolderNotInFull_IsNoOtherVersion(string damage)
+    {
+        await Store(Manifest("1"), new FakeServer()).DownloadAsync();
+        var old = Path.Combine(_root, "v1");
+        var marker = Path.Combine(old, "verified.json");
+        switch (damage)
+        {
+            case "no marker": File.Delete(marker); break;
+            case "marker for another version":
+                File.WriteAllText(marker, File.ReadAllText(marker).Replace("\"version\":\"1\"", "\"version\":\"7\""));
+                break;
+            case "truncated file": File.WriteAllBytes(Path.Combine(old, "detector.onnx"), Detector[..10]); break;
+            case "missing file": File.Delete(Path.Combine(old, "vocab.txt")); break;
+            case "broken marker": File.WriteAllText(marker, "{\"version\":"); break;
+            case "marker lists no files": File.WriteAllText(marker, "{\"version\":\"1\",\"files\":[]}"); break;
+        }
+
+        Assert.False(Store(Manifest("2"), new FakeServer()).HasOtherVersion);
+    }
+
+    [Fact]
+    public async Task WhileDownloading_ThereIsNoOtherVersionToTellOf()
+    {
+        await Store(Manifest("1"), new FakeServer()).DownloadAsync();
+        var newer = Store(Manifest("2"), new FakeServer { ["first.example"] = new() { BytesPerTick = 100 } });
+
+        var download = newer.DownloadAsync();
+        Assert.Equal(MangaModelState.Downloading, newer.State);
+        Assert.False(newer.HasOtherVersion);
+
+        newer.CancelDownload();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => download);
+        Assert.True(newer.HasOtherVersion);
+    }
+
+    private static void CopyFolder(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (var file in Directory.EnumerateFiles(from))
+            File.Copy(file, Path.Combine(to, Path.GetFileName(file)));
+    }
+
+    [Fact]
     public async Task ATruncatedFile_IsNoLongerReady()
     {
         var store = Store(Manifest(), new FakeServer());

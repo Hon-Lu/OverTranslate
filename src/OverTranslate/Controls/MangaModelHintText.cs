@@ -20,7 +20,7 @@ namespace OverTranslate.Controls;
 /// watches itself, through <see cref="MangaModelOptions.Changed"/>, so a download finishing or the
 /// switch on the settings page being turned while the bar is open is on it at once.</para>
 ///
-/// <para>Text only, never a link, even for 尚未安裝. The capture overlay is full screen and
+/// <para>Text only, never a link, even for 尚未安裝 or 已更新. The capture overlay is full screen and
 /// topmost, and a settings window opened from it would come up underneath it.</para>
 /// </remarks>
 public sealed class MangaModelHintText : TextBlock
@@ -97,6 +97,7 @@ public sealed class MangaModelHintText : TextBlock
         {
             MangaModelHint.Applied => (ForRealtimePage ? "S.Realtime.MangaHintApplied" : "S.Toolbar.MangaHintApplied", "MangaHintApplied"),
             MangaModelHint.NotInstalled => (ForRealtimePage ? "S.Realtime.MangaHintNotInstalled" : "S.Toolbar.MangaHintNotInstalled", "AppWarning"),
+            MangaModelHint.Outdated => (ForRealtimePage ? "S.Realtime.MangaHintOutdated" : "S.Toolbar.MangaHintOutdated", "AppWarning"),
             MangaModelHint.Downloading => ("S.Toolbar.MangaHintDownloading", "AppTextSecondary"),
             _ => ("S.Toolbar.MangaHintChooseJapanese", "AppTextSecondary"),
         };

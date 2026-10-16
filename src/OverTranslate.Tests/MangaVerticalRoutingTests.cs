@@ -294,4 +294,18 @@ public sealed class MangaVerticalRoutingTests : IDisposable
             OverTranslate.Views.Settings.MangaModelCard.StateOf(
                 Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
                 Enum.Parse<MangaUnavailable>(engine), failed).ToString());
+
+    [Theory]
+    // An earlier version here, this one not: 已更新, with the download button.
+    [InlineData("NotDownloaded", "None", "NotDownloaded", false, "Outdated")]
+    // A failed download says why first; a machine that cannot run them says that.
+    [InlineData("NotDownloaded", "None", "NotDownloaded", true, "Failed")]
+    [InlineData("NotDownloaded", "NoGpu", "NotDownloaded", false, "Unsupported")]
+    [InlineData("Downloading", "None", "NotDownloaded", false, "Downloading")]
+    public void TheCard_WithAnotherVersionHere_SaysTheModelsWereUpdated(
+        string store, string device, string engine, bool failed, string expected) =>
+        Assert.Equal(expected,
+            OverTranslate.Views.Settings.MangaModelCard.StateOf(
+                Enum.Parse<MangaModelState>(store), Enum.Parse<MangaUnavailable>(device),
+                Enum.Parse<MangaUnavailable>(engine), failed, otherVersion: true).ToString());
 }

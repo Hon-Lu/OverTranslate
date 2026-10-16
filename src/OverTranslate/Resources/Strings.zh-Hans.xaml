@@ -552,6 +552,8 @@
     <sys:String x:Key="S.Settings.MangaModelsNoGpu">无法使用</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFailed">下载失败</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">不支持</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsOutdated">有新版本</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUpdated">漫画竖排模型已更新，请重新下载。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">已启用漫画竖排模型</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">已停用（使用默认模型）</sys:String>
@@ -673,8 +675,10 @@
     <sys:String x:Key="S.Toolbar.MangaHintApplied">已套用漫画竖排模型</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫画竖排模型下载中</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">尚未安装漫画竖排模型，可在设置中下载</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintOutdated">漫画竖排模型已更新，可在设置中重新下载</sys:String>
     <sys:String x:Key="S.Realtime.MangaHintApplied">已套用漫画竖排模型（横排为默认模型）</sys:String>
     <sys:String x:Key="S.Realtime.MangaHintNotInstalled">尚未安装漫画竖排模型，可在设置中下载（横排为默认模型，无需额外下载）</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintOutdated">漫画竖排模型已更新，可在设置中重新下载（横排为默认模型，无需额外下载）</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">显示范围</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框线显示范围</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">仅原文</sys:String>
