@@ -427,8 +427,20 @@ public sealed class RealtimeTranslationSession
                     var gateSize = RealtimeGate.SizeFor(frame.Width, frame.Height, gateAlternate);
                     gateAlternate = !gateAlternate;
                     step.Set("gate detect");
-                    var found = await _ocr.TryDetectTextAsync(
-                        frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
+                    IReadOnlyList<System.Windows.Rect>? found;
+                    try
+                    {
+                        found = await _ocr.TryDetectTextAsync(
+                            frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        // The gate runs the same detector a pass does and meets the same faults, so
+                        // it is answered the same way as a failed pass below rather than ending the
+                        // region: the error is shown and this picture waits before it is tried again.
+                        PassFailed(region, state, pump, Capture, ex);
+                        continue;
+                    }
 
                     // Null is "no slot", which is not an answer — treated as this poll not having
                     // happened rather than as an empty region, or a busy moment would read as the
@@ -523,9 +535,7 @@ public sealed class RealtimeTranslationSession
                     // changed: the region waits before trying that picture again — see
                     // RealtimeRegionState.FirstWaitAfterFailure. The error stays up until a pass
                     // gets through.
-                    Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
-                    pump.Report(DescribeFailure(ex));
-                    state.MarkFailed(Capture);
+                    PassFailed(region, state, pump, Capture, ex);
                 }
                 finally
                 {
@@ -546,6 +556,20 @@ public sealed class RealtimeTranslationSession
         {
             step.Set("ended");
         }
+    }
+
+    // A look at the region that threw: logged, reported, and the picture held back — see
+    // RealtimeRegionState.MarkFailed.
+    private static void PassFailed(
+        RealtimeRegion region,
+        RealtimeRegionState state,
+        RegionTranslationPump pump,
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
+        Exception ex)
+    {
+        Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
+        pump.Report(DescribeFailure(ex));
+        state.MarkFailed(capture);
     }
 
     private static ValueTask<bool> NextPollAsync(PeriodicTimer timer, StepMarker step, CancellationToken token)
