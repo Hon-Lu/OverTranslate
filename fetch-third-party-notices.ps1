@@ -92,9 +92,20 @@ $items = @(
         Version = "kha-white/manga-ocr-base"
         License = "Apache License 2.0"
         Project = "https://github.com/kha-white/manga-ocr"
-        Note = "Modified by OverTranslate: exported from the published PyTorch weights to ONNX in fp16, with the decoder split into a cross-attention graph and a single-step graph with a key/value cache. vocab.txt is the upstream file unchanged. Not included in the installer; downloaded on request."
+        Note = "Architecture and initial weights of manga-ocr-base-CPT-flex below. Manga model set version 1 shipped this model, exported to ONNX in fp16 with the decoder split into a cross-attention graph and a single-step graph with a key/value cache; version 2 replaces it with manga-ocr-base-CPT-flex."
         Files = @(
             @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/kha-white/manga-ocr/master/LICENSE" }
+        )
+    },
+    @{
+        Name = "manga-ocr-base-CPT-flex (manga models, downloaded separately)"
+        Version = "muscgab/manga-ocr-base-CPT-flex, revision 9cc15742f8dc37cb5222a6569839bc774dfc0392"
+        License = "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International"
+        Project = "https://huggingface.co/muscgab/manga-ocr-base-CPT-flex"
+        Note = "By muscgab; use, conversion and redistribution in OverTranslate agreed at https://huggingface.co/muscgab/manga-ocr-base-CPT/discussions/1. Modified by OverTranslate: the published weights exported to ONNX in fp16, with an aspect-preserving patch input for the encoder and the decoder split into a cross-attention graph and a single-step graph with a key/value cache and a memory mask; vocab.txt is the BERT special tokens followed by the model's 6817 characters. The converted files are distributed under the same license at https://huggingface.co/hon-lu/manga-ocr-base-CPT-flex-onnx-fp16. Not included in the installer; downloaded on request."
+        Files = @(
+            @{ Label = "LICENSE_MODEL"; Url = "https://huggingface.co/muscgab/manga-ocr-base-CPT-flex/raw/9cc15742f8dc37cb5222a6569839bc774dfc0392/LICENSE_MODEL" }
+            @{ Label = "NOTICE.md"; Url = "https://huggingface.co/muscgab/manga-ocr-base-CPT-flex/raw/9cc15742f8dc37cb5222a6569839bc774dfc0392/NOTICE.md" }
         )
     }
 )
