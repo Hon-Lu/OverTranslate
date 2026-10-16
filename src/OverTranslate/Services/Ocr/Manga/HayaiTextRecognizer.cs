@@ -230,12 +230,13 @@ internal sealed class HayaiTextRecognizer : IMangaTextRecognizer
         {
             for (int step = 1; ; step++)
             {
-                var span = logits[0].GetTensorDataAsSpan<float>();
+                var span = logits[0].GetTensorMutableDataAsSpan<float>();
                 int vocabulary = span.Length / n;
                 bool allDone = true;
                 for (int i = 0; i < n; i++)
                 {
                     var row = span.Slice(i * vocabulary, vocabulary);
+                    if (!done[i]) MangaDecodeGuard.PenalizeRepeat(row, tokens[i]);
                     long best = 0;
                     float top = float.MinValue;
                     for (int v = 0; v < row.Length; v++)
@@ -253,7 +254,11 @@ internal sealed class HayaiTextRecognizer : IMangaTextRecognizer
                     for (int v = 0; v < row.Length; v++) total += Math.Exp(row[v] - top);
                     certainty[i] += 1.0 / total;
                     if (best is EndToken or PadToken) done[i] = true;
-                    else tokens[i].Add(best);
+                    else
+                    {
+                        tokens[i].Add(best);
+                        if (MangaDecodeGuard.EndsInLoop(tokens[i])) done[i] = true;
+                    }
                     allDone &= done[i];
                 }
 
