@@ -161,7 +161,7 @@ internal sealed class RealtimeSessionController
     private System.Drawing.Rectangle _screenNow;
     private readonly DispatcherTimer _displaySettle = new() { Interval = TimeSpan.FromMilliseconds(500) };
 
-    // 載入模型中… on the bar while the manga models load; null outside a sitting.
+    // 載入模型中… on the bar while a start's models load; null outside a sitting.
     private RealtimeModelLoadingHint? _loadingHint;
 
     private RealtimeSessionController()
@@ -391,15 +391,11 @@ internal sealed class RealtimeSessionController
         _control = control;
         control.Show();
 
-        if (AppServices.Ocr.Manga is { } manga)
+        _loadingHint = new RealtimeModelLoadingHint(shown =>
         {
-            _loadingHint = new RealtimeModelLoadingHint(() => manga.IsLoading, shown =>
-            {
-                Log.Info("Realtime bar: model loading hint {State}", shown ? "shown" : "hidden");
-                _control?.SetLoadingModels(shown);
-            });
-            manga.LoadingChanged += OnMangaLoadingChanged;
-        }
+            Log.Info("Realtime bar: model loading hint {State}", shown ? "shown" : "hidden");
+            _control?.SetLoadingModels(shown);
+        }, OnDispatcher);
         RefreshOverlayHandles();
 
         _screenNow = request.ScreenBounds;
@@ -470,6 +466,7 @@ internal sealed class RealtimeSessionController
             // Before the loops start, so the first result cannot arrive to a bar still saying 已暫停.
             control.SetPaused(false);
             _session.Resume();
+            _loadingHint?.Wait(_session.ModelsLoading);
             return true;
         }
 
@@ -614,9 +611,7 @@ internal sealed class RealtimeSessionController
         _foregroundWatch?.Dispose();
         _foregroundWatch = null;
 
-        // Before the bar goes. A load still under way finishes on its own; what it raises from here
-        // on finds no hint.
-        if (AppServices.Ocr.Manga is { } manga) manga.LoadingChanged -= OnMangaLoadingChanged;
+        // Before the bar goes. A load still under way finishes on its own and finds no hint.
         _loadingHint?.Dispose();
         _loadingHint = null;
 
@@ -805,6 +800,7 @@ internal sealed class RealtimeSessionController
         _stayOnTop.Start();
 
         _session.Start(regions, request.SourceLanguage, request.TargetLanguage, request.Provider, capture);
+        _loadingHint?.Wait(_session.ModelsLoading);
     }
 
     // Ids are positions in _blocks: the session and the overlays are both built from this list, so a
@@ -1176,10 +1172,6 @@ internal sealed class RealtimeSessionController
 
     private void OnBusyChanged(object? sender, bool busy) =>
         OnDispatcher(() => _control?.SetBusy(busy));
-
-    // Raised on the loading thread.
-    private void OnMangaLoadingChanged(object? sender, EventArgs e) =>
-        OnDispatcher(() => _loadingHint?.Refresh());
 
     private static void OnDispatcher(Action action)
     {

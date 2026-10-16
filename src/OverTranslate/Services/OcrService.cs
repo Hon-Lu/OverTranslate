@@ -355,31 +355,50 @@ public class OcrService : IDisposable
 
     /// <summary>
     /// What a realtime session holds as it starts: the recogniser always; the manga models only when
-    /// a block is vertical and they would read the language, in which case they are loaded now
-    /// rather than by the first page with text on it.
+    /// a block is vertical and they would read the language. Whichever of them is not in memory yet
+    /// is loaded now rather than by the first frame with text on it.
     /// </summary>
+    /// <returns>
+    /// The loads, done when every one has ended, failed ones included; already done when there was
+    /// nothing to load. For 載入模型中… on the bar.
+    /// </returns>
     /// <remarks>
     /// Decided once for the session, not per block: every block reads with the same two engines.
     /// Not needed this time, the manga models are let go at once — a session keeps what it holds
     /// through pauses and framing until 結束, and 330MB of video memory held for blocks that no
     /// longer read with them is memory a game beside it could have used.
     /// </remarks>
-    internal void KeepWarmForRealtime(string sourceLanguage, bool vertical)
+    internal Task KeepWarmForRealtime(string sourceLanguage, bool vertical)
     {
-        _engine.SetKeepWarm(true);
-        if (_manga is null) return;
+        var loads = new List<Task>(2);
 
-        if (vertical && ReadsVerticalWithMangaModels(sourceLanguage))
+        _engine.SetKeepWarm(true);
+        if (!_engine.IsLoaded(sourceLanguage))
         {
-            _manga.SetKeepWarm(true);
-            if (!_manga.IsLoaded) Log.Info("Loading the manga models ahead of a realtime session");
-            _ = _manga.PreloadAsync();
-            return;
+            Log.Info("Loading the OCR model ahead of a realtime session");
+            loads.Add(_engine.PreloadAsync(sourceLanguage));
         }
 
-        if (_manga.IsLoaded) Log.Info("Manga models not needed by this realtime session: released");
-        _manga.ReleaseNow();
+        if (_manga is not null && vertical && ReadsVerticalWithMangaModels(sourceLanguage))
+        {
+            _manga.SetKeepWarm(true);
+            if (!_manga.InMemory)
+            {
+                Log.Info("Loading the manga models ahead of a realtime session");
+                loads.Add(_manga.PreloadAsync());
+            }
+        }
+        else if (_manga is not null)
+        {
+            if (_manga.IsLoaded) Log.Info("Manga models not needed by this realtime session: released");
+            _manga.ReleaseNow();
+        }
+
+        return Task.WhenAll(loads);
     }
+
+    /// <summary>Whether either engine is loading its models right now; never waits for them.</summary>
+    internal bool IsLoadingModels => _engine.IsLoading || _manga?.IsLoading == true;
 
     /// <summary>
     /// Releases the loaded model immediately rather than after the inactivity delay — see

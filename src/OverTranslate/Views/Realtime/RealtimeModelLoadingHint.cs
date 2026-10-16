@@ -1,52 +1,50 @@
-using System.Windows.Threading;
-
 namespace OverTranslate.Views.Realtime;
 
 /// <summary>
-/// When the bar says 載入模型中…: while the manga models load, once that has taken longer than
-/// <see cref="Delay"/> — a load nobody would notice is not announced.
+/// When the bar says 載入模型中…: from the press of 開始翻譯 until the models that session found
+/// missing have all loaded — or failed to, so a hint is never left up over a load that is over.
 /// </summary>
 /// <remarks>
-/// <see cref="Refresh"/> reads whether a load is under way rather than being told, so a start and
-/// an end raised on another thread and queued to this one cannot arrive in a misleading order.
-/// Used on the UI thread only.
+/// Waits on the session's loads (<see cref="Services.Realtime.RealtimeTranslationSession.ModelsLoading"/>)
+/// rather than listening to each engine: one task for both, so it cannot drop back to the pair
+/// between two loads, and a load that ended before anyone listened is already done. Used on the UI
+/// thread only; the end of a load reaches it through <c>post</c>.
 /// </remarks>
 internal sealed class RealtimeModelLoadingHint : IDisposable
 {
-    internal static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(500);
-
-    private readonly Func<bool> _loading;
     private readonly Action<bool> _show;
-    private readonly DispatcherTimer _delay = new() { Interval = Delay };
+    private readonly Action<Action> _post;
+    private Task? _waiting;
     private bool _shown;
     private bool _disposed;
 
-    internal RealtimeModelLoadingHint(Func<bool> loading, Action<bool> show)
+    /// <param name="show">Puts the hint up or takes it down; called only when that changes.</param>
+    /// <param name="post">Runs an action on the UI thread, from the thread a load ended on.</param>
+    internal RealtimeModelLoadingHint(Action<bool> show, Action<Action> post)
     {
-        _loading = loading;
         _show = show;
-        _delay.Tick += (_, _) =>
-        {
-            _delay.Stop();
-            if (!_disposed && _loading()) Show(true);
-        };
+        _post = post;
     }
 
     internal bool IsShown => _shown;
 
-    /// <summary>Catches up with whether a load is under way; called whenever one starts or ends.</summary>
-    internal void Refresh()
+    /// <summary>Shows the hint until <paramref name="loading"/> ends; a later call takes over.</summary>
+    internal void Wait(Task loading)
     {
         if (_disposed) return;
 
-        if (_loading())
+        _waiting = loading;
+        if (loading.IsCompleted)
         {
-            if (!_shown && !_delay.IsEnabled) _delay.Start();
+            Show(false);
             return;
         }
 
-        _delay.Stop();
-        Show(false);
+        Show(true);
+        loading.ContinueWith(_ => _post(() =>
+        {
+            if (!_disposed && _waiting == loading) Show(false);
+        }), TaskScheduler.Default);
     }
 
     private void Show(bool shown)
@@ -60,8 +58,8 @@ internal sealed class RealtimeModelLoadingHint : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _delay.Stop();
         Show(false);
         _disposed = true;
+        _waiting = null;
     }
 }

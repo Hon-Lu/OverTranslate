@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
-using System.Windows.Threading;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Ocr.Manga;
@@ -32,96 +31,123 @@ public sealed class RealtimeModelLoadingTests : IDisposable
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
     }
 
-    // ── The hint: half a second, then until the load ends ───────────────────
+    // ── The hint: from the press until every load has ended ──────────────────
 
-    private static void OnDispatcher(Action body)
+    private sealed class Shown
     {
-        Exception? error = null;
-        var thread = new Thread(() =>
+        private readonly List<bool> _changes = [];
+
+        internal void Add(bool shown)
         {
-            try { body(); }
-            catch (Exception ex) { error = ex; }
-            finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-        if (error is not null) throw new Xunit.Sdk.XunitException(error.ToString());
+            lock (_changes) _changes.Add(shown);
+        }
+
+        internal List<bool> Changes
+        {
+            get
+            {
+                lock (_changes) return [.. _changes];
+            }
+        }
     }
 
-    // Lets the dispatcher run its timers for this long.
-    private static void Pump(int ms)
+    // The end of a load arrives from a pool thread; here it is run where it arrives.
+    private static RealtimeModelLoadingHint Hint(Shown shown) => new(shown.Add, action => action());
+
+    private static TaskCompletionSource Load() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    [Fact]
+    public void NothingToLoad_IsNeverShown()
     {
-        var frame = new DispatcherFrame();
-        var stop = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
-        stop.Tick += (_, _) => { stop.Stop(); frame.Continue = false; };
-        stop.Start();
-        Dispatcher.PushFrame(frame);
+        var shown = new Shown();
+        var hint = Hint(shown);
+
+        hint.Wait(Task.CompletedTask);
+
+        Assert.Empty(shown.Changes);
     }
 
     [Fact]
-    public void ALoadDoneInsideHalfASecond_IsNeverShown() => OnDispatcher(() =>
+    public async Task ALoad_IsShownAtOnce_AndGoesWhenItEnds()
     {
-        var loading = true;
-        var shown = new List<bool>();
-        var hint = new RealtimeModelLoadingHint(() => loading, shown.Add);
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var load = Load();
 
-        hint.Refresh();
-        Pump(250);
-        loading = false;
-        hint.Refresh();
-        Pump(600);
+        hint.Wait(load.Task);
+        Assert.Equal([true], shown.Changes);
 
-        Assert.Empty(shown);
-    });
+        load.SetResult();
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+    }
 
     [Fact]
-    public void ALoadLongerThanHalfASecond_IsShownThen_AndGoesWhenItEnds() => OnDispatcher(() =>
+    public async Task TwoLoads_StayShownUntilBothHaveEnded()
     {
-        var loading = true;
-        var shown = new List<bool>();
-        var hint = new RealtimeModelLoadingHint(() => loading, shown.Add);
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var recogniser = Load();
+        var manga = Load();
 
-        hint.Refresh();
-        Pump(250);
-        Assert.Empty(shown);
-        Pump(500);
-        Assert.Equal([true], shown);
+        hint.Wait(Task.WhenAll(recogniser.Task, manga.Task));
+        recogniser.SetResult();
+        await Task.Delay(200);
+        Assert.Equal([true], shown.Changes);
 
-        loading = false;
-        hint.Refresh();
-        Assert.Equal([true, false], shown);
-    });
+        manga.SetResult();
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+    }
 
     [Fact]
-    public void TheSessionEnding_TakesItDown_AndNothingAfterBringsItBack() => OnDispatcher(() =>
+    public async Task AFailedLoad_TakesItDownToo()
     {
-        var loading = true;
-        var shown = new List<bool>();
-        var hint = new RealtimeModelLoadingHint(() => loading, shown.Add);
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var load = Load();
 
-        hint.Refresh();
-        Pump(700);
+        hint.Wait(load.Task);
+        load.SetException(new InvalidOperationException("would not load"));
+
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+    }
+
+    [Fact]
+    public async Task ALaterStart_TakesOver_AndTheEarlierLoadEndingLeavesItUp()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var first = Load();
+        var second = Load();
+
+        hint.Wait(first.Task);
+        hint.Wait(second.Task);
+        first.SetResult();
+        await Task.Delay(200);
+        Assert.Equal([true], shown.Changes);
+
+        second.SetResult();
+        await WaitUntil(() => shown.Changes.Count == 2, Patience);
+        Assert.Equal([true, false], shown.Changes);
+    }
+
+    [Fact]
+    public async Task TheSessionEnding_TakesItDown_AndNothingAfterBringsItBack()
+    {
+        var shown = new Shown();
+        var hint = Hint(shown);
+        var load = Load();
+
+        hint.Wait(load.Task);
         hint.Dispose();
-        hint.Refresh();
-        Pump(700);
+        load.SetResult();
+        hint.Wait(Load().Task);
+        await Task.Delay(200);
 
-        Assert.Equal([true, false], shown);
-    });
-
-    [Fact]
-    public void TheSessionEndingInsideTheDelay_NeverShowsIt() => OnDispatcher(() =>
-    {
-        var shown = new List<bool>();
-        var hint = new RealtimeModelLoadingHint(() => true, shown.Add);
-
-        hint.Refresh();
-        Pump(200);
-        hint.Dispose();
-        Pump(700);
-
-        Assert.Empty(shown);
-    });
+        Assert.Equal([true, false], shown.Changes);
+    }
 
     // ── The manga engine: a preload held open ───────────────────────────────
 
@@ -163,8 +189,6 @@ public sealed class RealtimeModelLoadingTests : IDisposable
         await store.DownloadAsync();
         var held = new Held();
         using var manga = new MangaOcrEngine(store, AGpu, held.BeforeLoad);
-        var changes = 0;
-        manga.LoadingChanged += (_, _) => Interlocked.Increment(ref changes);
 
         var preload = manga.PreloadAsync();
         held.WaitStarted();
@@ -180,7 +204,7 @@ public sealed class RealtimeModelLoadingTests : IDisposable
 
         Assert.Equal(1, held.Loads);
         Assert.False(manga.IsLoading);
-        Assert.Equal(2, changes);
+        Assert.False(manga.InMemory);
         // It failed here (no runtime in this store), and the next page goes to the columns.
         Assert.Equal(MangaUnavailable.LoadFailed, manga.Unavailable);
         Assert.Equal(MangaReadOutcome.Unavailable, (await manga.ReadAsync(page, wait: false, default)).Outcome);
@@ -216,6 +240,7 @@ public sealed class RealtimeModelLoadingTests : IDisposable
         await preload.WaitAsync(Patience);
 
         Assert.True(manga.IsLoaded);
+        Assert.True(manga.InMemory);
         await WaitUntil(() => !manga.IsLoaded, TimeSpan.FromSeconds(10));
         Assert.False(manga.IsLoaded);
     }
@@ -283,7 +308,7 @@ public sealed class RealtimeModelLoadingTests : IDisposable
     private static void StartSession(RealtimeTranslationSession session, IReadOnlyList<RealtimeRegion> regions) =>
         session.Start(regions, "JA", "ZH-HANT", Models.TranslationProvider.Google, new NoPicture());
 
-    // The recogniser's own flag; OnnxOcrEngine is left as it is, so it is read rather than exposed.
+    // The recogniser's own flag, read rather than exposed for a test.
     private static bool RecogniserKeptWarm(OcrService ocr)
     {
         var engine = typeof(OcrService).GetField("_engine", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(ocr)!;
@@ -380,6 +405,185 @@ public sealed class RealtimeModelLoadingTests : IDisposable
         session.Stop(releaseRecogniser: true);
         Assert.False(manga.IsLoaded);
     }
+
+    // ── What a start waits for ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Start_Cold_WaitsForTheRecogniser_ThenNothing()
+    {
+        using var ocr = new OcrService(new MangaOcrEngine(Store(), AGpu));
+        var engine = Recogniser(ocr);
+
+        var loading = ocr.KeepWarmForRealtime("JA", vertical: false);
+        Assert.False(engine.IsLoaded("JA"));
+        await loading.WaitAsync(Patience);
+        Assert.True(engine.IsLoaded("JA"));
+
+        // Already in memory, as after 暫停 or framing: nothing to wait for.
+        Assert.True(ocr.KeepWarmForRealtime("JA", vertical: false).IsCompleted);
+        Assert.True(ocr.KeepWarmForRealtime("JA", vertical: true).IsCompleted);
+        ocr.ReleaseModel();
+    }
+
+    [Fact]
+    public async Task Start_RecogniserWarm_WaitsForTheMangaModelsOnly()
+    {
+        var store = Store();
+        await store.DownloadAsync();
+        var held = new Held();
+        using var ocr = new OcrService(new MangaOcrEngine(store, AGpu, held.BeforeLoad));
+        await ocr.KeepWarmForRealtime("JA", vertical: false).WaitAsync(Patience);
+
+        var loading = ocr.KeepWarmForRealtime("JA", vertical: true);
+        held.WaitStarted();
+        await Task.Delay(200);
+        Assert.False(loading.IsCompleted);
+
+        // It fails here (no runtime in this store), and a failure ends the wait as well.
+        held.Finish();
+        await loading.WaitAsync(Patience);
+        Assert.Equal(1, held.Loads);
+        Assert.Equal(MangaUnavailable.LoadFailed, ocr.Manga!.Unavailable);
+
+        // Failed, the models are not this session's to wait for any more.
+        Assert.True(ocr.KeepWarmForRealtime("JA", vertical: true).IsCompleted);
+        ocr.ReleaseModel();
+    }
+
+    [Fact]
+    public async Task Start_Cold_WaitsForBoth_UntilTheLaterHasEnded()
+    {
+        var store = Store();
+        await store.DownloadAsync();
+        var held = new Held();
+        using var ocr = new OcrService(new MangaOcrEngine(store, AGpu, held.BeforeLoad));
+        var engine = Recogniser(ocr);
+
+        var loading = ocr.KeepWarmForRealtime("JA", vertical: true);
+        held.WaitStarted();
+        await WaitUntil(() => engine.IsLoaded("JA"), Patience);
+        Assert.True(engine.IsLoaded("JA"));
+        await Task.Delay(200);
+        Assert.False(loading.IsCompleted);
+
+        held.Finish();
+        await loading.WaitAsync(Patience);
+        ocr.ReleaseModel();
+    }
+
+    [Fact]
+    public async Task Start_Horizontal_NeverWaitsForTheMangaModels()
+    {
+        var store = Store();
+        await store.DownloadAsync();
+        var held = new Held();
+        using var ocr = new OcrService(new MangaOcrEngine(store, AGpu, held.BeforeLoad));
+
+        await ocr.KeepWarmForRealtime("JA", vertical: false).WaitAsync(Patience);
+
+        Assert.Equal(0, held.Loads);
+        ocr.ReleaseModel();
+    }
+
+    // ── The busy line in the log ─────────────────────────────────────────────
+
+    private sealed class StillPicture : IRealtimeCaptureBackend
+    {
+        public string Name => "still";
+
+        public Bitmap? GrabRegion(Rectangle screenBounds)
+        {
+            var frame = new Bitmap(screenBounds.Width, screenBounds.Height);
+            using var g = Graphics.FromImage(frame);
+            g.Clear(Color.White);
+            return frame;
+        }
+
+        public CaptureMiss DescribeMiss(Rectangle screenBounds) => CaptureMiss.Waiting;
+        public string DescribeActivity() => "";
+        public string DescribeSteps() => "";
+
+        public void Dispose()
+        {
+        }
+    }
+
+    // What the session logs while body runs, as "Level|message".
+    private static async Task<string[]> SessionLog(Func<Task> body)
+    {
+        var target = new NLog.Targets.MemoryTarget { Layout = "${level}|${message}" };
+        var config = NLog.LogManager.Configuration ?? new NLog.Config.LoggingConfiguration();
+        var rule = new NLog.Config.LoggingRule(typeof(RealtimeTranslationSession).FullName, NLog.LogLevel.Debug, target);
+        config.LoggingRules.Add(rule);
+        NLog.LogManager.Configuration = config;
+        try
+        {
+            await body();
+        }
+        finally
+        {
+            config.LoggingRules.Remove(rule);
+            NLog.LogManager.Configuration = config;
+        }
+
+        return [.. target.Logs];
+    }
+
+    [Fact]
+    public async Task Busy_WhileTheModelsLoad_IsDebug_NotTheSlotsWarning()
+    {
+        var store = Store();
+        await store.DownloadAsync();
+        var held = new Held();
+        using var ocr = new OcrService(new MangaOcrEngine(store, AGpu, held.BeforeLoad));
+        await ocr.KeepWarmForRealtime("JA", vertical: false).WaitAsync(Patience);
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+
+        var log = await SessionLog(async () =>
+        {
+            session.Start([Block(0, RealtimeTextOrientation.Vertical)], "JA", "ZH-HANT",
+                Models.TranslationProvider.Google, new StillPicture(), readAtOnce: true);
+            held.WaitStarted();
+            await Task.Delay(1000);
+            session.Stop(releaseRecogniser: true);
+            held.Finish();
+            await session.ModelsLoading.WaitAsync(Patience);
+        });
+
+        Assert.Contains(log, line => line.StartsWith("Debug|") && line.Contains("models still loading"));
+        Assert.DoesNotContain(log, line => line.Contains("recognition slots busy"));
+    }
+
+    [Fact]
+    public async Task Busy_WithTheModelsLoaded_IsStillTheSlotsWarning()
+    {
+        using var ocr = new OcrService(new MangaOcrEngine(Store(), AGpu));
+        await ocr.KeepWarmForRealtime("JA", vertical: false).WaitAsync(Patience);
+        var engine = Recogniser(ocr);
+        var slots = Enumerable.Range(0, OcrService.ConcurrentRecognitions).Select(_ => engine.TryTakeSlot()).ToList();
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+
+        try
+        {
+            var log = await SessionLog(async () =>
+            {
+                session.Start([Block(0, RealtimeTextOrientation.Horizontal)], "JA", "ZH-HANT",
+                    Models.TranslationProvider.Google, new StillPicture(), readAtOnce: true);
+                await Task.Delay(1000);
+                session.Stop(releaseRecogniser: true);
+            });
+
+            Assert.Contains(log, line => line.StartsWith("Warn|") && line.Contains("recognition slots busy"));
+            Assert.DoesNotContain(log, line => line.Contains("models still loading"));
+        }
+        finally
+        {
+            foreach (var slot in slots) slot?.Dispose();
+        }
+    }
+
+    private static OnnxOcrEngine Recogniser(OcrService ocr) =>
+        (OnnxOcrEngine)typeof(OcrService).GetField("_engine", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(ocr)!;
 
     private static async Task WaitUntil(Func<bool> condition, TimeSpan patience)
     {

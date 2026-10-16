@@ -142,6 +142,12 @@ public sealed class RealtimeTranslationSession
     /// </summary>
     public bool IsPaused { get; private set; }
 
+    /// <summary>
+    /// The models the last <see cref="Start"/> found missing, loading: done once each load has
+    /// ended, however it ended, and already done when everything was in memory.
+    /// </summary>
+    public Task ModelsLoading { get; private set; } = Task.CompletedTask;
+
     /// <param name="capture">
     /// Where this session reads the screen. Must be a backend whose frames cannot contain this
     /// application's own overlays — see <see cref="IRealtimeCaptureBackend"/>, where that is a
@@ -188,9 +194,10 @@ public sealed class RealtimeTranslationSession
 
         // A watched region is idle between lines, and the recogniser cannot tell that from a tray
         // icon nobody has touched all afternoon. Told explicitly, it stops releasing the model that
-        // the next line is about to need — and loads the manga models now if any block will read
-        // with them, or lets them go if none will. See OcrService.KeepWarmForRealtime.
-        _ocr.KeepWarmForRealtime(
+        // the next line is about to need — loads now whatever it will read with and does not have
+        // yet, and lets the manga models go if no block will read with them. See
+        // OcrService.KeepWarmForRealtime.
+        ModelsLoading = _ocr.KeepWarmForRealtime(
             sourceLanguage, regions.Any(region => region.Orientation == RealtimeTextOrientation.Vertical));
 
         // One loop per region rather than one loop over the regions. Sharing a loop made every
@@ -625,6 +632,7 @@ public sealed class RealtimeTranslationSession
         var sameAsLastRead = confirmation == ConfirmationRead.ReuseLastRead;
         if (readingAgain) primarySize = otherSize!.Value;
 
+        var modelsLoading = _ocr.IsLoadingModels;
         List<OcrTextBlock>? recognized = sameAsLastRead
             ? [.. state.LastRead]
             : await _ocr.TryRecognizeAsync(
@@ -636,7 +644,11 @@ public sealed class RealtimeTranslationSession
             // sides use. Skipping is the whole recovery and the next poll is one interval away, so this is
             // not an error; it is the one thing that would explain a region updating far less often
             // than its neighbours, and it is invisible without saying so.
-            if (Interlocked.Exchange(ref _noSlotReported, 1) == 0)
+            // Not while the models load as the session starts: the GPU is taken by the load, which
+            // is not a shortage of slots. Asked before the read as well, for a load that ended since.
+            if (modelsLoading || _ocr.IsLoadingModels)
+                Log.Debug("Realtime region {Region} skipped a poll: models still loading", region.Id);
+            else if (Interlocked.Exchange(ref _noSlotReported, 1) == 0)
                 Log.Warn(
                     "Realtime region {Region} skipped a poll: all {Slots} recognition slots busy; " +
                     "further skips logged at Debug",

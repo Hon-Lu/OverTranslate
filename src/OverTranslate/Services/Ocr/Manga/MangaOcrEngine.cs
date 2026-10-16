@@ -97,8 +97,12 @@ internal sealed class MangaOcrEngine : IDisposable
         _store.Changed += OnModelsChanged;
     }
 
-    /// <summary>Raised on the loading thread when a load starts or ends; read <see cref="IsLoading"/>.</summary>
-    internal event EventHandler? LoadingChanged;
+    /// <summary>
+    /// Whether the models are in memory, asked without the GPU: <see cref="IsLoaded"/> waits for no
+    /// one but answers yes while a page or a load holds it.
+    /// </summary>
+    // The recogniser is the last thing a load creates and goes with the detector.
+    internal bool InMemory => Volatile.Read(ref _recognizer) is not null;
 
     /// <summary>Whether the models are being loaded right now.</summary>
     internal bool IsLoading
@@ -514,7 +518,6 @@ internal sealed class MangaOcrEngine : IDisposable
             _loading = true;
         }
 
-        LoadingChanged?.Invoke(this, EventArgs.Empty);
         try
         {
             _beforeLoad?.Invoke();
@@ -523,7 +526,6 @@ internal sealed class MangaOcrEngine : IDisposable
         finally
         {
             lock (_sync) _loading = false;
-            LoadingChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
