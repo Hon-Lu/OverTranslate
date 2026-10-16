@@ -7,8 +7,10 @@ using Microsoft.ML.OnnxRuntime;
 namespace OverTranslate.Services.Ocr.Manga;
 
 /// <summary>
-/// manga-ocr (kha-white/manga-ocr-base): a ViT encoder and a two-layer BERT decoder, read greedily
-/// on DirectML with the decoder's key/value cache kept on the GPU between steps.
+/// CPT-224 (muscgab/manga-ocr-base-CPT), manga-ocr's model (kha-white/manga-ocr-base) trained further:
+/// a ViT encoder and a two-layer BERT decoder, read greedily on DirectML with the decoder's key/value
+/// cache kept on the GPU between steps. Its export has manga-ocr's inputs and outputs, so either reads
+/// through this class; only the vocabulary differs, and that is read from the downloaded vocab.txt.
 /// </summary>
 /// <remarks>
 /// <para>The decoder is our own export in two graphs. <c>decoder_cross</c> turns the encoder output
