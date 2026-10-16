@@ -582,7 +582,9 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             }
 
             _arrivalStep.Set("readback");
-            ReadBack(frame.Surface, content);
+            // Disposed here rather than left to the GC — see the same line in WgcMonitorCaptureBackend.
+            using var surface = frame.Surface;
+            ReadBack(surface, content);
         }
         catch (ObjectDisposedException)
         {
