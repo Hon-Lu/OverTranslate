@@ -144,8 +144,9 @@ internal sealed class HayaiTextRecognizer : IMangaTextRecognizer
             // attention well defined, and its answer is never used.
             var block = blocks[Math.Min(b, real - 1)];
             var (th, tw) = HayaiInputs.Size(block.Height, block.Width);
-            var resized = PillowImage.Resize(
-                MangaTextRecognizer.Crop(rgb, width, block), block.Width, block.Height, 3, tw, th);
+            var crop = MangaTextRecognizer.Crop(rgb, width, block);
+            MangaRubyMask.Apply(crop, block.Width, block.Height);
+            var resized = PillowImage.Resize(crop, block.Width, block.Height, 3, tw, th);
             int rows = th / HayaiInputs.PatchSize, columns = tw / HayaiInputs.PatchSize;
             HayaiInputs.Patches(resized, th, tw, scratch);
             for (int i = 0; i < pixelRow; i++) pixels[b * pixelRow + i] = (Float16)scratch[i];
