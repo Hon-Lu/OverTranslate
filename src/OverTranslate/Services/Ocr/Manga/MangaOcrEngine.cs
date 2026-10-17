@@ -406,8 +406,8 @@ internal sealed class MangaOcrEngine : IDisposable
         }
     }
 
-    // Under _gate. Null when inference failed.
-    private List<MangaBlock>? ReadUnderGate(MangaDetection page, IReadOnlyList<int> which)
+    // Under _gate. One reading for each index asked, empty ones included; null when inference failed.
+    private MangaBlock[]? ReadUnderGate(MangaDetection page, IReadOnlyList<int> which)
     {
         try
         {
@@ -416,19 +416,9 @@ internal sealed class MangaOcrEngine : IDisposable
             var readings = _recognizer!.Read(
                 page.Rgb, page.Width, page.Height,
                 [.. boxes.Select(box => MangaPageLayout.RecognitionCrop(box, page.Width, page.Height))]);
-            var readMs = timer.Elapsed.TotalMilliseconds;
+            page.ReadMs += timer.Elapsed.TotalMilliseconds;
 
-            var blocks = boxes
-                .Select((box, i) => new MangaBlock(box, readings[i].Text, readings[i].Confidence))
-                .Where(block => block.Text.Length > 0)
-                .ToList();
-
-            Log.Info(
-                "Manga OCR on {W}x{H}: {Blocks} blocks read of {Found}, {Long} long, {Bubbles} bubbles, detect={Detect:F0}ms read={Read:F0}ms",
-                page.Width, page.Height, blocks.Count, page.Text.Count, page.Long.Count, page.Bubbles.Count,
-                page.DetectMs, readMs);
-            page.ReadMs = readMs;
-            return blocks;
+            return [.. boxes.Select((box, i) => new MangaBlock(box, readings[i].Text, readings[i].Confidence))];
         }
         catch (OnnxRuntimeException ex)
         {
@@ -452,6 +442,9 @@ internal sealed class MangaOcrEngine : IDisposable
     {
         private readonly MangaOcrEngine _owner;
         private int _ended;
+        // What ReadAhead began, for ReadAsync to finish the page with.
+        private IReadOnlyList<int> _aheadWhich = [];
+        private Task<MangaBlock[]?>? _ahead;
 
         internal MangaDetection(
             MangaOcrEngine owner, byte[] rgb, int width, int height, List<RectangleF> text,
@@ -484,15 +477,52 @@ internal sealed class MangaOcrEngine : IDisposable
         internal double ReadMs { get; set; }
 
         /// <summary>
-        /// Reads the <see cref="Text"/> blocks at the given indices with manga-ocr, all in one batch;
+        /// Begins reading the <see cref="Text"/> blocks at the given indices and returns at once, so
+        /// the GPU reads while the caller decides about the rest; <see cref="ReadAsync"/> finishes the
+        /// page. At most once, before <see cref="ReadAsync"/>.
+        /// </summary>
+        internal void ReadAhead(IReadOnlyList<int> which, CancellationToken cancellationToken)
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _ended) != 0, this);
+            if (_ahead is not null) throw new InvalidOperationException("Already reading ahead.");
+            if (which.Count == 0) return;
+            _aheadWhich = which;
+            _ahead = Task.Run(() => _owner.ReadUnderGate(this, which), cancellationToken);
+        }
+
+        /// <summary>
+        /// Reads the <see cref="Text"/> blocks at the given indices with manga-ocr, together with any
+        /// begun by <see cref="ReadAhead"/>, and hands them all back in the order of their indices;
         /// null when inference failed, after which the models are not used again until they change.
         /// </summary>
         internal Task<List<MangaBlock>?> ReadAsync(IReadOnlyList<int> which, CancellationToken cancellationToken)
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _ended) != 0, this);
-            return which.Count == 0
+            return which.Count == 0 && _ahead is null
                 ? Task.FromResult<List<MangaBlock>?>([])
-                : Task.Run(() => _owner.ReadUnderGate(this, which), cancellationToken);
+                : ReadRestAsync(which, cancellationToken);
+        }
+
+        private async Task<List<MangaBlock>?> ReadRestAsync(IReadOnlyList<int> which, CancellationToken cancellationToken)
+        {
+            // One read at a time: the rest goes in only once what was begun ahead has come out.
+            var ahead = _ahead is null ? [] : await _ahead.ConfigureAwait(false);
+            if (ahead is null) return null;
+            var rest = which.Count == 0
+                ? []
+                : await Task.Run(() => _owner.ReadUnderGate(this, which), cancellationToken).ConfigureAwait(false);
+            if (rest is null) return null;
+
+            var blocks = _aheadWhich.Zip(ahead).Concat(which.Zip(rest))
+                .OrderBy(read => read.First)
+                .Select(read => read.Second)
+                .Where(block => block.Text.Length > 0)
+                .ToList();
+
+            Log.Info(
+                "Manga OCR on {W}x{H}: {Blocks} blocks read of {Found}, {Long} long, {Bubbles} bubbles, detect={Detect:F0}ms read={Read:F0}ms",
+                Width, Height, blocks.Count, Text.Count, Long.Count, Bubbles.Count, DetectMs, ReadMs);
+            return blocks;
         }
 
         /// <summary>The page as <see cref="MangaOcrEngine.ReadAsync"/> has always handed it on.</summary>
@@ -500,7 +530,21 @@ internal sealed class MangaOcrEngine : IDisposable
 
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref _ended, 1) == 0) _owner.EndRead();
+            if (Interlocked.Exchange(ref _ended, 1) != 0) return;
+            // A read begun ahead and never finished with is still on the GPU: the gate is not given
+            // back under it.
+            try
+            {
+                _ahead?.Wait();
+            }
+            catch (AggregateException ex) when (ex.InnerException is not OperationCanceledException)
+            {
+                Log.Warn(ex.InnerException, "A manga read begun ahead failed with nothing waiting for it");
+            }
+            catch (AggregateException)
+            {
+            }
+            _owner.EndRead();
         }
     }
 

@@ -156,6 +156,20 @@ public class MangaLineGeometryTests
         Assert.Equal((MangaReader)expected, MangaVerticalReader.ReaderFor(new RectangleF(10, 10, width, height), (MangaLineDirection)lines));
 
     [Fact]
+    public void WhileTheLinesAreMeasured_WholeBatchesOfBlocksTheyCannotChangeAreRead()
+    {
+        var tall = new RectangleF(0, 0, 60, 200);
+        var wide = new RectangleF(0, 0, 300, 100);
+
+        // Five that are manga-ocr's whatever, one that is asked: the first four make a whole batch.
+        Assert.Equal([0, 1, 3, 4], MangaVerticalReader.ReadAhead([tall, tall, wide, tall, tall, tall]));
+        // Not enough for a whole batch: reading them early would add one.
+        Assert.Empty(MangaVerticalReader.ReadAhead([tall, tall, wide, tall]));
+        // Nothing asked, so nothing to wait for.
+        Assert.Empty(MangaVerticalReader.ReadAhead([tall, tall, tall, tall, tall]));
+    }
+
+    [Fact]
     public void TheColumnEnginesSlots_AreTakenAndGivenBackOnceEach()
     {
         using var engine = new OnnxOcrEngine();

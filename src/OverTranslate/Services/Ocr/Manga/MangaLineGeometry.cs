@@ -70,6 +70,12 @@ internal static class MangaLineGeometry
     internal const double WideFrom = 1;
 
     /// <summary>
+    /// Whether a block is wide enough to be asked; one that is not always comes back
+    /// <see cref="MangaLineDirection.Unsure"/>.
+    /// </summary>
+    internal static bool IsWide(RectangleF block) => block.Width >= WideFrom * block.Height;
+
+    /// <summary>
     /// How much longer than thick a line has to be to say which way it runs. The column pipeline's
     /// own bar for the same question (<see cref="VerticalColumnGrouping.AcrossAlongItself"/>).
     /// </summary>
@@ -113,7 +119,7 @@ internal static class MangaLineGeometry
         var directions = new MangaLineDirection[blocks.Count];
         var crops = blocks.Select(block => Crop(block, page.Width, page.Height)).ToArray();
         var asked = blocks.Select((block, i) =>
-            block.Width >= WideFrom * block.Height && crops[i].Width >= 2 && crops[i].Height >= 2).ToArray();
+            IsWide(block) && crops[i].Width >= 2 && crops[i].Height >= 2).ToArray();
         if (!asked.Any(a => a)) return directions;
 
         var first = asked.Select((a, i) => a ? Math.Min(1.0, FirstPassHeight / blocks[i].Height) : 0).ToArray();

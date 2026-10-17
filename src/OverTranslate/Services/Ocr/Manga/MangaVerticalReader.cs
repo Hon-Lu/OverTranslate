@@ -16,9 +16,11 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// (<see cref="MangaLineGeometry"/>).</para>
 ///
 /// <para>Each block is read once, by one reader, decided before either runs. A page that needs the
-/// column pipeline takes one of its slots before manga-ocr reads anything; on a live screen, where
-/// nothing waits, a taken slot makes the whole page <see cref="MangaReadOutcome.Busy"/> and the next
-/// poll asks again, rather than reading the manga blocks and throwing them away.</para>
+/// column pipeline takes one of its slots before manga-ocr reads the blocks that depended on that
+/// decision; on a live screen, where nothing waits, a taken slot makes the whole page
+/// <see cref="MangaReadOutcome.Busy"/> and the next poll asks again, rather than reading them and
+/// throwing them away. Only what <see cref="ReadAhead"/> began while the lines were measured can be
+/// lost that way, and only on a page with no long block, whose slot is taken first.</para>
 /// </remarks>
 internal static class MangaVerticalReader
 {
@@ -64,16 +66,26 @@ internal static class MangaVerticalReader
         IOcrSlot? slot = null;
         try
         {
+            // A long block always goes to the column pipeline, so its slot is taken before anything
+            // is read, ahead or not.
+            if (detection.Long.Count > 0)
+            {
+                slot = wait ? await columns.TakeSlotAsync(cancellationToken) : columns.TryTakeSlot();
+                if (slot is null) return (MangaReadOutcome.Busy, null);
+            }
+
+            var ahead = detectLines is null ? [] : ReadAhead(detection.Text);
+            detection.ReadAhead(ahead, cancellationToken);
             var readers = Readers(bitmap, detection.Text, detectLines);
             var mangaReads = new List<int>();
             for (int i = 0; i < detection.Text.Count; i++)
             {
-                if (readers[i] == MangaReader.Manga) mangaReads.Add(i);
-                else passOn.Add((detection.Text[i], readers[i]));
+                if (readers[i] != MangaReader.Manga) passOn.Add((detection.Text[i], readers[i]));
+                else if (!ahead.Contains(i)) mangaReads.Add(i);
             }
             passOn.AddRange(detection.Long.Select(block => (block, ReaderFor(block, MangaLineDirection.Unsure))));
 
-            if (passOn.Count > 0)
+            if (passOn.Count > 0 && slot is null)
             {
                 slot = wait ? await columns.TakeSlotAsync(cancellationToken) : columns.TryTakeSlot();
                 if (slot is null) return (MangaReadOutcome.Busy, null);
@@ -165,6 +177,33 @@ internal static class MangaVerticalReader
             MangaLineDirection.Down when block.Width >= WideColumnsRatio * block.Height => MangaReader.ColumnsDown,
             _ => MangaReader.Manga,
         };
+    }
+
+    /// <summary>
+    /// The blocks manga-ocr reads while the lines of the others are measured: those whose reader the
+    /// lines cannot change, as many as fill whole batches.
+    /// </summary>
+    /// <remarks>
+    /// <para>The lines are measured on the CPU and manga-ocr reads on the GPU, so reading these in
+    /// the meantime takes the measuring out of the page's time — 20–37ms a pass on the ordinary
+    /// vertical pages it applies to and 84 on a crowded one, about all of what it cost them. Nothing
+    /// is read that would not have been, and nothing differently: the recognizer reads each row of a
+    /// batch on its own, and over the vertical and comic corpora, and 55 framings each of seven
+    /// pages, every page came out the same to the bit.</para>
+    ///
+    /// <para>Whole batches only (<see cref="MangaTextRecognizer.BatchCap"/>), so the page is read in
+    /// as many batches as before: the rest, and the wide blocks whose lines leave them with
+    /// manga-ocr, go in the last ones. None when no block is wide enough to be asked, since then
+    /// there is nothing to wait for.</para>
+    /// </remarks>
+    internal static IReadOnlyList<int> ReadAhead(IReadOnlyList<RectangleF> blocks)
+    {
+        if (!blocks.Any(MangaLineGeometry.IsWide)) return [];
+        var settled = Enumerable.Range(0, blocks.Count)
+            .Where(i => !MangaLineGeometry.IsWide(blocks[i])
+                && ReaderFor(blocks[i], MangaLineDirection.Unsure) == MangaReader.Manga)
+            .ToList();
+        return settled.Take(settled.Count / MangaTextRecognizer.BatchCap * MangaTextRecognizer.BatchCap).ToList();
     }
 
     /// <summary><see cref="ReaderFor"/> for each block, its lines measured all together.</summary>
