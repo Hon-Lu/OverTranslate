@@ -855,7 +855,13 @@ public partial class OverlayWindow : Window
             // pixels a side are there to stop the edge of the source bleeding out from under the
             // bubble; letting them buy a row of type as well is what had this overlay and the live
             // one answering the same sentence with a different number of columns.
-            var grid = FitVerticalGrid(wpfW, wpfH, sourceGlyphSize, text.Length);
+            //
+            // A hanging comma or full stop takes a row under the columns, and is allowed it only as
+            // far as the bubble can grow without the clamp below lifting it off the source.
+            double bubbleTop = Math.Max(canvasY - BubbleExpand, Math.Max(OverlayPadding, selectionTop));
+            double hangingReach =
+                Math.Min(canvasHeight - OverlayPadding, selectionBottom) - bubbleTop - BubbleExpand * 2;
+            var grid = FitVerticalGrid(wpfW, wpfH, sourceGlyphSize, text, hangingReach);
             double cellSize = grid.CellSize;
             double gridHeight = grid.Height;
             borderH = gridHeight + BubbleExpand * 2;
@@ -900,7 +906,7 @@ public partial class OverlayWindow : Window
             var gridBounds = new Rect(
                 left + BubbleExpand + widthPadding, top + BubbleExpand, wpfW, gridHeight);
             double fontSize = cellSize * 0.92;
-            foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, cellSize))
+            foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, cellSize, grid.Breaks))
             {
                 var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _currentTargetLanguage);
                 var cell = new TextBlock
@@ -958,7 +964,10 @@ public partial class OverlayWindow : Window
         double borderW = Math.Max(wpfW + BubbleExpand * 2, BubbleMinWidth);
         double widthPadding = (borderW - (wpfW + BubbleExpand * 2)) / 2;
         double sourceGlyphSize = GetSourceFontReferenceHeight(block, wpfH);
-        var grid = FitVerticalGrid(wpfW, wpfH, sourceGlyphSize, text.Length);
+        // Without a reach nothing hangs, and the grid is set without the rest of the rules too:
+        // VerticalCells is handed no breaks below. Without a hanging row the height is the one the
+        // columns would have broken plainly at, so the two still agree.
+        var grid = FitVerticalGrid(wpfW, wpfH, sourceGlyphSize, text);
         double borderH = grid.Height + BubbleExpand * 2;
 
         // The bubble in the level frame, in captured pixels.
@@ -1061,18 +1070,20 @@ public partial class OverlayWindow : Window
     internal static void PositionVerticalGlyph(TextBlock glyph, Rect bounds) =>
         VerticalTextGrid.PositionGlyph(glyph, bounds);
 
-    internal static (double CellSize, double Height) FitVerticalGrid(
+    internal static (double CellSize, double Height, VerticalTextGrid.Breaks Breaks) FitVerticalGrid(
         double width,
         double height,
         double preferredCellSize,
-        int characterCount) =>
+        string text,
+        double? hangingReach = null) =>
         VerticalTextGrid.Fit(
             width,
             height,
             preferredCellSize,
             SingleLineAbsoluteMinFontSize,
             SingleLineEmergencyMinFontSize,
-            characterCount);
+            text,
+            hangingReach);
 
     internal static bool RotatesInVerticalText(char glyph) =>
         VerticalTextGrid.RotatesGlyph(glyph);
@@ -1081,8 +1092,9 @@ public partial class OverlayWindow : Window
     internal static IEnumerable<(char Glyph, Rect Cell)> VerticalCells(
         string text,
         Rect bounds,
-        double cellSize) =>
-        VerticalTextGrid.Cells(text, bounds, cellSize);
+        double cellSize,
+        VerticalTextGrid.Breaks breaks = VerticalTextGrid.Breaks.None) =>
+        VerticalTextGrid.Cells(text, bounds, cellSize, breaks);
 
     private void SetTranslationLayersVisible(bool visible)
     {

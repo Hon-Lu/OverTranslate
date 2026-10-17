@@ -946,8 +946,14 @@ public partial class RealtimeBlockWindow : Window
         double columnRoom = Math.Max(cellPreferred, sourceWidth);
         double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
 
-        var (cellSize, gridWidth, gridHeight) = VerticalTextGrid.FitWithin(
-            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs.Length);
+        // A hanging comma or full stop takes a row under the columns, past the source's own length.
+        // It is allowed that row only while the grid still ends inside the block with the
+        // background's padding under it: any further and the clamp below would lift the whole grid
+        // off the source to make room.
+        double hangingReach = canvasHeight - ScrimPaddingY - Math.Max(0, top);
+
+        var (cellSize, gridWidth, gridHeight, breaks) = VerticalTextGrid.FitWithin(
+            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs, hangingReach);
 
         // Top of the source, centred across it, kept inside the block — the rule
         // VerticalTextGrid.Cells sets a grid by, applied here because the grid handed to it is cut
@@ -986,7 +992,7 @@ public partial class RealtimeBlockWindow : Window
             edge = null;
             ApplyBorder(plated.Surface, line);
             return VerticalVisual(line, plated.Surface, plated.Bounds, foreground, edge,
-                glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, plated.Replate);
+                glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, plated.Replate, breaks: breaks);
         }
 
         if (_naturalBackground)
@@ -1030,7 +1036,7 @@ public partial class RealtimeBlockWindow : Window
         Canvas.SetLeft(background, patchLeft);
         Canvas.SetTop(background, patchTop);
         return VerticalVisual(line, background, patchBounds, foreground, edge,
-            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, null);
+            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, null, breaks: breaks);
     }
 
     /// <summary>
@@ -1071,8 +1077,11 @@ public partial class RealtimeBlockWindow : Window
         double columnLength = Math.Max(cellPreferred, sourceHeight);
         double columnRoom = Math.Max(cellPreferred, sourceWidth);
         double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
-        var (cellSize, gridWidth, gridHeight) = VerticalTextGrid.FitWithin(
-            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs.Length);
+        // No reach, so nothing hangs, and the breaks are not passed on: a tilted group is set as it
+        // always was. Without a hanging row the size is the one the columns would have broken
+        // plainly at, so the two still agree.
+        var (cellSize, gridWidth, gridHeight, _) = VerticalTextGrid.FitWithin(
+            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs);
 
         // Top of the source, centred across it — VerticalTextGrid.Cells' rule, in the level frame.
         double gridLeft = left + (sourceWidth - gridWidth) / 2;
@@ -1279,14 +1288,15 @@ public partial class RealtimeBlockWindow : Window
         TranslatedBlock line, Border background, System.Drawing.Rectangle patchBounds,
         SolidColorBrush foreground, SolidColorBrush? edge, string glyphs, double cellSize,
         double gridLeft, double gridTop, double gridWidth, double gridHeight,
-        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? replate, Transform? turn = null)
+        Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? replate, Transform? turn = null,
+        VerticalTextGrid.Breaks breaks = VerticalTextGrid.Breaks.None)
     {
         // One element per glyph, positioned by hand. A TextBlock cannot set type downwards, and the
         // alternatives — a rotated horizontal line, or a font feature — either turn every character
         // on its side or are unavailable on the fallback faces this has to survive on.
         var cells = new Canvas { Width = gridWidth, Height = gridHeight };
         foreach (var (glyph, cellBounds) in
-                 VerticalTextGrid.Cells(glyphs, new Rect(0, 0, gridWidth, gridHeight), cellSize))
+                 VerticalTextGrid.Cells(glyphs, new Rect(0, 0, gridWidth, gridHeight), cellSize, breaks))
         {
             var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _targetLanguage);
             TextBlock Cell(System.Windows.Media.Brush brush, double dx, double dy)
