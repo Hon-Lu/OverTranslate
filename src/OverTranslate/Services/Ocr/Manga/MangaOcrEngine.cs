@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Microsoft.ML.OnnxRuntime;
 using NLog;
 
@@ -20,7 +22,10 @@ internal enum MangaUnavailable
 {
     None,
     NotDownloaded,
-    /// <summary>No graphics adapter, only a software one, or the adapters could not be listed.</summary>
+    /// <summary>
+    /// No graphics adapter, only a software one, the adapters could not be listed, or — found out as
+    /// they load — the one chosen has no Direct3D 12.
+    /// </summary>
     NoGpu,
     /// <summary>The adapter was there but the models would not load on it.</summary>
     LoadFailed,
@@ -52,9 +57,10 @@ internal sealed record MangaPage(
 /// cannot run them pays for finding out once, not on every poll.</para>
 ///
 /// <para>One page at a time: a DirectML session takes one Run at a time, and the batch already fills
-/// the GPU. Loaded, the models hold about 330MB of video memory and up to about 770MB while a page is
-/// read; released, none. They are released <see cref="IdleReleaseDelay"/> after the last page, as the
-/// column pipeline's runtime is, unless a realtime session is holding them warm.</para>
+/// the GPU. Loaded, the models hold about 380MB of video memory and up to about 1GB while a page is
+/// read — CRAFT 45MB of the first and, once it has run, 195MB more of the second; released, none.
+/// They are released <see cref="IdleReleaseDelay"/> after the last page, as the column pipeline's
+/// runtime is, unless a realtime session is holding them warm.</para>
 /// </remarks>
 internal sealed class MangaOcrEngine : IDisposable
 {
@@ -81,6 +87,8 @@ internal sealed class MangaOcrEngine : IDisposable
     private bool _enabled = true;
     private (DirectMlDevice.Adapter? Adapter, string? Reason)? _adapter;
     private bool _loading;
+    // The reason NoteColumnsInstead last logged.
+    private string? _columnsInsteadLogged;
 
     /// <param name="beforeLoad">For tests: runs as a load starts.</param>
     /// <param name="idleReleaseDelay">For tests: <see cref="IdleReleaseDelay"/> otherwise.</param>
@@ -270,10 +278,13 @@ internal sealed class MangaOcrEngine : IDisposable
     /// vertical Japanese, so the first page with text on it does not wait 1.6–2s for them.
     /// </summary>
     /// <remarks>
-    /// Holds the GPU while it loads, so a realtime read meanwhile is <see cref="MangaReadOutcome.Busy"/>
+    /// <para>Holds the GPU while it loads, so a realtime read meanwhile is <see cref="MangaReadOutcome.Busy"/>
     /// and skips its poll rather than loading a second time. Ends as a page ends
     /// (<see cref="EndRead"/>): a session that ended meanwhile leaves them to the idle countdown, and
-    /// switched off meanwhile they go at once.
+    /// switched off meanwhile they go at once.</para>
+    ///
+    /// <para>Each model is then run once on a blank block (<see cref="WarmUp"/>), so the first page
+    /// is read as fast as the ones after it.</para>
     /// </remarks>
     internal Task PreloadAsync() => Task.Run(async () =>
     {
@@ -282,7 +293,7 @@ internal sealed class MangaOcrEngine : IDisposable
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            EnsureLoaded();
+            EnsureLoaded(warmUp: true);
         }
         catch (Exception ex)
         {
@@ -310,9 +321,9 @@ internal sealed class MangaOcrEngine : IDisposable
         {
             var blocks = await detection.ReadAsync(
                 [.. Enumerable.Range(0, detection.Text.Count)], cancellationToken).ConfigureAwait(false);
-            return blocks is null
-                ? (MangaReadOutcome.Unavailable, null)
-                : (MangaReadOutcome.Read, detection.Page(blocks));
+            if (blocks is null) return (MangaReadOutcome.Unavailable, null);
+            detection.LogPage();
+            return (MangaReadOutcome.Read, detection.Page(blocks));
         }
     }
 
@@ -327,9 +338,13 @@ internal sealed class MangaOcrEngine : IDisposable
     internal async Task<(MangaReadOutcome Outcome, MangaDetection? Detection)> DetectAsync(
         Bitmap bitmap, bool wait, CancellationToken cancellationToken)
     {
-        if (UnavailableReason is not null)
+        if (UnavailableReason is { } why)
+        {
+            NoteColumnsInstead(why);
             return (MangaReadOutcome.Unavailable, null);
+        }
 
+        lock (_sync) _columnsInsteadLogged = null;
         if (wait)
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         else if (!_gate.Wait(0, cancellationToken))
@@ -400,6 +415,7 @@ internal sealed class MangaOcrEngine : IDisposable
             timer.Restart();
             int asked = 0;
             var pieces = new List<IReadOnlyList<RectangleF>?>(text.Count);
+            var leaning = new HashSet<int>();
             foreach (var block in text)
                 pieces.Add(MangaColumnCuts.Asks(block) ? Cut(block) : null);
 
@@ -407,18 +423,44 @@ internal sealed class MangaOcrEngine : IDisposable
                 this, rgb, bitmap.Width, bitmap.Height, text, pieces, longBlocks,
                 [.. found.Bubbles.Select(box => box.Bounds)],
                 luma,
-                detectMs, timer.Elapsed.TotalMilliseconds, asked);
+                detectMs, timer.Elapsed.TotalMilliseconds, asked, leaning);
 
             IReadOnlyList<RectangleF>? Cut(RectangleF block)
             {
                 asked++;
-                return MangaColumnCuts.Pieces(_columns!.Detect(rgb, bitmap.Width, bitmap.Height, block), block, luma);
+                var cut = MangaColumnCuts.Pieces(
+                    _columns!.Detect(rgb, bitmap.Width, bitmap.Height, block), block, luma, out bool leans);
+                if (leans) leaning.Add(pieces.Count);
+                return cut;
             }
         }
         catch (OnnxRuntimeException ex)
         {
             ReadFailed(ex);
             return null;
+        }
+    }
+
+    // Under _gate. DirectML builds a session's kernels on its first run, and every model here runs at
+    // one shape, so one run on a blank block builds all of them. MEASURED on an RTX 3070, first run
+    // against the next: the detector 490ms against 34, CRAFT 83 against 9, the recogniser 240 against
+    // 110 — what a realtime session's first page paid on top.
+    private void WarmUp()
+    {
+        const int side = 32;
+        var blank = new byte[side * side * 3];
+        Array.Fill(blank, (byte)255);
+        try
+        {
+            var timer = Stopwatch.StartNew();
+            _detector!.Detect(blank, side, side);
+            _columns!.Detect(blank, side, side, new RectangleF(0, 0, side, side));
+            _recognizer!.Read(blank, side, side, [new Rectangle(0, 0, side, side)]);
+            Log.Info("Manga models warmed up in {Ms}ms", timer.ElapsedMilliseconds);
+        }
+        catch (OnnxRuntimeException ex)
+        {
+            ReadFailed(ex);
         }
     }
 
@@ -461,8 +503,31 @@ internal sealed class MangaOcrEngine : IDisposable
     // every one after it until the models change: a GPU that failed once will fail again.
     private void ReadFailed(OnnxRuntimeException ex)
     {
-        Fail(MangaUnavailable.ReadFailed, $"inference failed: {ex.Message}", ex);
+        Fail(MangaUnavailable.ReadFailed, $"inference failed: {Readable(ex.Message)}", ex);
         Unload();
+    }
+
+    private static readonly Regex HResult = new(@"\b8[0-9A-Fa-f]{7}\b", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// An ONNX Runtime message with the system's words for an HRESULT in it made readable again.
+    /// </summary>
+    /// <remarks>
+    /// The DirectML provider puts Windows' message for a failed HRESULT into its own in the system's
+    /// ANSI code page, and the message reaches .NET read as UTF-8: on a Chinese Windows every
+    /// character of it is lost. Windows is asked for that message again, as UTF-16, and it replaces
+    /// the rest of the line.
+    /// </remarks>
+    internal static string Readable(string message)
+    {
+        int lost = message.IndexOf('�');
+        if (lost < 0) return message;
+        var hr = HResult.Matches(message[..lost]).LastOrDefault();
+        if (hr is null) return message;
+
+        int lineEnd = message.IndexOf('\n', lost);
+        var said = Marshal.GetExceptionForHR(Convert.ToInt32(hr.Value, 16))?.Message.Trim() ?? "";
+        return message[..(hr.Index + hr.Length)] + " " + said + (lineEnd < 0 ? "" : message[lineEnd..]);
     }
 
     /// <summary>
@@ -475,11 +540,12 @@ internal sealed class MangaOcrEngine : IDisposable
         // What ReadAhead began, for ReadAsync to finish the page with.
         private IReadOnlyList<int> _aheadWhich = [];
         private Task<MangaBlock[]?>? _ahead;
+        private int _blocksRead;
 
         internal MangaDetection(
             MangaOcrEngine owner, byte[] rgb, int width, int height, List<RectangleF> text,
             IReadOnlyList<IReadOnlyList<RectangleF>?> pieces, List<RectangleF> longBlocks, List<RectangleF> bubbles,
-            LumaPage luma, double detectMs, double cutMs, int cutsAsked)
+            LumaPage luma, double detectMs, double cutMs, int cutsAsked, IReadOnlySet<int> leaning)
         {
             _owner = owner;
             Rgb = rgb;
@@ -493,6 +559,7 @@ internal sealed class MangaOcrEngine : IDisposable
             DetectMs = detectMs;
             CutMs = cutMs;
             CutsAsked = cutsAsked;
+            Leaning = leaning;
         }
 
         internal byte[] Rgb { get; }
@@ -519,6 +586,10 @@ internal sealed class MangaOcrEngine : IDisposable
         internal double DetectMs { get; }
         internal double CutMs { get; }
         internal int CutsAsked { get; }
+
+        /// <summary>The <see cref="Text"/> indices CRAFT was asked about and did not cut because the columns lean.</summary>
+        internal IReadOnlySet<int> Leaning { get; }
+
         internal double ReadMs { get; set; }
 
         /// <summary>
@@ -563,13 +634,21 @@ internal sealed class MangaOcrEngine : IDisposable
                 .Select(read => read.Second)
                 .Where(block => block.Text.Length > 0)
                 .ToList();
-
-            Log.Info(
-                "Manga OCR on {W}x{H}: {Blocks} blocks read of {Found}, {Long} long, {Bubbles} bubbles, detect={Detect:F0}ms read={Read:F0}ms columns: {Asked} asked, {Cut} cut, {Columns:F0}ms",
-                Width, Height, blocks.Count, Text.Count, Long.Count, Bubbles.Count, DetectMs, ReadMs,
-                CutsAsked, Pieces.Count(p => p is { Count: > 1 }), CutMs);
+            _blocksRead = blocks.Count;
             return blocks;
         }
+
+        /// <summary>
+        /// The page's line in the log, once it is read: what the manga models found and read, and
+        /// <paramref name="routes"/>, how many blocks went to the column pipeline and why.
+        /// </summary>
+        /// <param name="routes">What <see cref="MangaVerticalReader"/> sent on; nothing when there was no choosing.</param>
+        internal void LogPage(MangaRoutes routes = default) =>
+            Log.Info(
+                "Manga OCR on {W}x{H}: {Blocks} blocks read of {Found}, {Long} long, {Bubbles} bubbles, detect={Detect:F0}ms read={Read:F0}ms columns: {Asked} asked, {Cut} cut, {Columns:F0}ms; column pipeline: {Wide} wide, {Leaning} leaning, {Kept} across of {Sent}",
+                Width, Height, _blocksRead, Text.Count, Long.Count, Bubbles.Count, DetectMs, ReadMs,
+                CutsAsked, Pieces.Count(p => p is { Count: > 1 }), CutMs,
+                routes.Wide, routes.Leaning, routes.AcrossKept, routes.AcrossSent);
 
         /// <summary>The page as <see cref="MangaOcrEngine.ReadAsync"/> has always handed it on.</summary>
         internal MangaPage Page(List<MangaBlock> blocks) => new(blocks, Long, Bubbles, DetectMs, ReadMs, Luma);
@@ -594,8 +673,8 @@ internal sealed class MangaOcrEngine : IDisposable
         }
     }
 
-    // Under _gate.
-    private bool EnsureLoaded()
+    // Under _gate. Warmed up too (see WarmUp), when asked, before IsLoading says it is done.
+    private bool EnsureLoaded(bool warmUp = false)
     {
         if (_detector is not null) return true;
 
@@ -611,7 +690,9 @@ internal sealed class MangaOcrEngine : IDisposable
         try
         {
             _beforeLoad?.Invoke();
-            return Load(adapter);
+            if (!Load(adapter)) return false;
+            if (warmUp) WarmUp();
+            return _detector is not null;
         }
         finally
         {
@@ -623,6 +704,12 @@ internal sealed class MangaOcrEngine : IDisposable
     private bool Load(DirectMlDevice.Adapter adapter)
     {
         var timer = Stopwatch.StartNew();
+        if (DirectMlDevice.Direct3D12Problem(adapter) is { } direct3D)
+        {
+            Fail(MangaUnavailable.NoGpu, direct3D, null);
+            return false;
+        }
+
         // Before any DirectML session, and none at all without it: see DirectMlDevice.
         if (DirectMlDevice.Load(_store.RuntimePath, _store.Manifest?.DirectMl?.Files[0]) is { } runtimeProblem)
         {
@@ -674,10 +761,25 @@ internal sealed class MangaOcrEngine : IDisposable
                                        System.IO.InvalidDataException or EntryPointNotFoundException or
                                        DllNotFoundException)
         {
-            Fail(MangaUnavailable.LoadFailed, $"loading on {adapter.Name} failed: {ex.Message}", ex);
+            Fail(MangaUnavailable.LoadFailed, $"loading on {adapter.Name} failed: {Readable(ex.Message)}", ex);
             Unload();
             return false;
         }
+    }
+
+    /// <summary>
+    /// Says in the log, once, that vertical Japanese is being read with the column pipeline and why:
+    /// not downloaded, switched off, no GPU — none of which says anything otherwise. Once for each
+    /// reason in a row, not for every frame; a page read with the models starts it over.
+    /// </summary>
+    private void NoteColumnsInstead(string reason)
+    {
+        lock (_sync)
+        {
+            if (_columnsInsteadLogged == reason) return;
+            _columnsInsteadLogged = reason;
+        }
+        Log.Info("Vertical Japanese is read with the column pipeline: {Reason}", reason);
     }
 
     private void Fail(MangaUnavailable kind, string reason, Exception? ex)

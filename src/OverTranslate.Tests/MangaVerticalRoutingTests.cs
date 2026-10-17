@@ -76,6 +76,69 @@ public sealed class MangaVerticalRoutingTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadingTheColumnsInstead_IsLoggedOnceForEachReason()
+    {
+        var store = Store();
+        await store.DownloadAsync();
+        // A reason no other test gives, so a test running beside this one cannot add to the count.
+        var reason = "only a software adapter (" + Guid.NewGuid().ToString("N") + ")";
+        using var manga = new MangaOcrEngine(store, () => (null, reason));
+
+        var target = new NLog.Targets.MemoryTarget { Layout = "${level}|${message}" };
+        var config = NLog.LogManager.Configuration ?? new NLog.Config.LoggingConfiguration();
+        var rule = new NLog.Config.LoggingRule(typeof(MangaOcrEngine).FullName, NLog.LogLevel.Debug, target);
+        config.LoggingRules.Add(rule);
+        NLog.LogManager.Configuration = config;
+        try
+        {
+            for (int i = 0; i < 3; i++) await Columnsread(manga);
+            manga.Enabled = false;
+            await Columnsread(manga);
+            await Columnsread(manga);
+        }
+        finally
+        {
+            config.LoggingRules.Remove(rule);
+            NLog.LogManager.Configuration = config;
+        }
+
+        // Switched off says nothing new here: no GPU is still the reason given first.
+        var logged = target.Logs.Where(line => line.Contains(reason)).ToList();
+        Assert.Equal([$"Info|Vertical Japanese is read with the column pipeline: \"{reason}\""], logged);
+    }
+
+    [Fact]
+    public void TheBlocksSentToTheColumnPipeline_AreCountedByReason()
+    {
+        MangaReader[] readers =
+        [
+            MangaReader.Manga, MangaReader.ColumnsDown, MangaReader.ColumnsDown,
+            MangaReader.ColumnsAcross, MangaReader.ColumnsAcross, MangaReader.ColumnsDown,
+        ];
+
+        Assert.Equal(new MangaRoutes(Wide: 2, Leaning: 1, AcrossKept: 0, AcrossSent: 2),
+            MangaRoutes.Of(readers, new HashSet<int> { 2 }));
+    }
+
+    [Fact]
+    public void AnAdapterThatCannotBeFound_IsLeftForOnnxRuntimeToTry() =>
+        Assert.Null(DirectMlDevice.Direct3D12Problem(new DirectMlDevice.Adapter(99, "gone", 0x10DE, 1, false, 0)));
+
+    [Fact]
+    public void AnOrtMessageLostToTheCodePage_IsGivenWindowsOwnWordsAgain()
+    {
+        const string message = "[ErrorCode:RuntimeException] dml_provider_factory.cc(524) tid(f8) 887A0004 ���t�Τ��\n next line";
+
+        var readable = MangaOcrEngine.Readable(message);
+
+        Assert.DoesNotContain('�', readable);
+        Assert.StartsWith("[ErrorCode:RuntimeException] dml_provider_factory.cc(524) tid(f8) 887A0004 ", readable);
+        Assert.True(readable.Length > message.IndexOf("887A0004") + 10, readable);
+        Assert.EndsWith("\n next line", readable);
+        Assert.Equal("nothing lost 887A0004", MangaOcrEngine.Readable("nothing lost 887A0004"));
+    }
+
+    [Fact]
     public async Task ALoadThatFails_ReadsTheColumns_AndIsRemembered()
     {
         var store = Store();

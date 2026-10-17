@@ -95,13 +95,24 @@ internal static class MangaColumnCuts
     /// block itself, when it is columns short enough to read whole — or null when CRAFT does not
     /// see columns to cut along.
     /// </summary>
-    internal static IReadOnlyList<RectangleF>? Pieces(Maps maps, RectangleF block, LumaPage luma)
+    internal static IReadOnlyList<RectangleF>? Pieces(Maps maps, RectangleF block, LumaPage luma) =>
+        Pieces(maps, block, luma, out _);
+
+    /// <inheritdoc cref="Pieces(Maps, RectangleF, LumaPage)"/>
+    /// <param name="leaning">Whether it is null because the columns lean, for the log.</param>
+    internal static IReadOnlyList<RectangleF>? Pieces(Maps maps, RectangleF block, LumaPage luma, out bool leaning)
     {
+        leaning = false;
         if (Vote(maps) < AcrossVote) return null;
 
         var characters = Characters(maps);
         var columns = Columns(characters);
-        if (columns.Count == 0 || Leans(columns)) return null;
+        if (columns.Count == 0) return null;
+        if (Leans(columns))
+        {
+            leaning = true;
+            return null;
+        }
 
         var bases = Bases(columns);
         if (bases.Count < 2 || Median(bases.Select(b => (b.Bottom - b.Top) / Math.Max(1, b.Width))) < 2) return null;

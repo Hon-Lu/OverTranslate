@@ -370,7 +370,7 @@ internal sealed class MangaModelStore
 
                 await WriteReadyMarkerAsync(folder, manifest).ConfigureAwait(false);
                 RemoveOtherVersions();
-                Log.Info("Manga models v{Version} downloaded to {Folder}", manifest.Version, folder);
+                Log.Info("Manga models v{Version:l} downloaded to {Folder}", manifest.Version, folder);
             }
         }
         catch (Exception ex)
