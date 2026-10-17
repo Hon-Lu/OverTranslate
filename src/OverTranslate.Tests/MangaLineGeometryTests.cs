@@ -149,7 +149,7 @@ public class MangaLineGeometryTests
     [InlineData(464, 187, (int)MangaLineDirection.Unsure, (int)MangaReader.Manga)]       // the lines say nothing
     [InlineData(495, 381, (int)MangaLineDirection.Across, (int)MangaReader.ColumnsAcross)] // ja5's caption, 1.30
     [InlineData(600, 100, (int)MangaLineDirection.Across, (int)MangaReader.Manga)]       // a row, and its box says so
-    [InlineData(60, 500, (int)MangaLineDirection.Unsure, (int)MangaReader.Columns)]      // too long, whatever its lines
+    [InlineData(60, 500, (int)MangaLineDirection.Unsure, (int)MangaReader.Manga)]        // a long column: see MangaPageLayout.IsLong
     [InlineData(60, 200, (int)MangaLineDirection.Unsure, (int)MangaReader.Manga)]
     public void WhatMangaOcrCanRead_IsDecidedByTheBoxAndItsLines(
         float width, float height, int lines, int expected) =>

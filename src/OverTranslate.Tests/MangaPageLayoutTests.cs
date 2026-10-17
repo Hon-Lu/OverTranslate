@@ -18,7 +18,55 @@ public class MangaPageLayoutTests
     [InlineData(100, 699, false)]
     [InlineData(100, 700, true)]
     public void LongBlocks_AreTheOnesSevenTimesLongerThanWide(float w, float h, bool expected) =>
-        Assert.Equal(expected, MangaPageLayout.IsLong(new RectangleF(0, 0, w, h)));
+        Assert.Equal(expected, MangaPageLayout.IsLong(new RectangleF(0, 0, w, h), luma: null));
+
+    [Fact]
+    public void ALongSingleColumn_IsTheMangaModels_FuriganaAndAll()
+    {
+        // Characters 30px a side down one column, furigana 10px wide beside some of them.
+        var paint = new List<(Rectangle, byte)> { (new Rectangle(90, 40, 80, 640), 255) };
+        for (int y = 60; y < 640; y += 36)
+        {
+            paint.AddRange(Glyph(110, y, 30, 30));
+            if (y % 72 == 60) paint.AddRange(Glyph(146, y + 4, 10, 22));
+        }
+        var luma = Page(300, 700, [.. paint]);
+
+        Assert.False(MangaPageLayout.IsLong(new RectangleF(100, 50, 64, 600), luma));
+    }
+
+    [Fact]
+    public void ALongBlockOfTwoColumns_StaysWithTheColumnPipeline()
+    {
+        // The zang recap box: two small columns side by side.
+        var paint = new List<(Rectangle, byte)> { (new Rectangle(90, 40, 100, 640), 255) };
+        for (int y = 60; y < 640; y += 24)
+        {
+            paint.AddRange(Glyph(104, y, 20, 20));
+            paint.AddRange(Glyph(140, y, 20, 20));
+        }
+        var luma = Page(300, 700, [.. paint]);
+
+        Assert.True(MangaPageLayout.IsLong(new RectangleF(100, 50, 70, 600), luma));
+    }
+
+    [Fact]
+    public void ALongBlockWithColumnsUnderATitle_StaysWithTheColumnPipeline()
+    {
+        // The ja3 spine: a title in large type, then three columns of small credits under it.
+        var paint = new List<(Rectangle, byte)> { (new Rectangle(90, 40, 100, 640), 255) };
+        for (int y = 60; y < 400; y += 52) paint.AddRange(Glyph(108, y, 48, 48));
+        for (int y = 420; y < 640; y += 18)
+            for (int column = 0; column < 3; column++)
+                paint.AddRange(Glyph(106 + column * 20, y, 14, 14));
+        var luma = Page(300, 700, [.. paint]);
+
+        Assert.True(MangaPageLayout.IsLong(new RectangleF(100, 50, 66, 600), luma));
+    }
+
+    [Fact]
+    public void ALongRow_StaysWithTheColumnPipeline_WhateverItsInk() =>
+        Assert.True(MangaPageLayout.IsLong(new RectangleF(10, 10, 700, 90), Page(800, 200)));
 
     [Fact]
     public void LongBlockCrop_AddsSixPixelsInsideThePage()
@@ -165,6 +213,11 @@ public class MangaPageLayoutTests
 
         Assert.Equal(["中", "外"], result.Select(block => block.Text));
     }
+
+    // A character as ink is drawn: a stroke across its full width and one down its full height,
+    // mostly paper between.
+    private static (Rectangle, byte)[] Glyph(int x, int y, int w, int h) =>
+        [(new Rectangle(x, y + h / 2 - 1, w, 3), 0), (new Rectangle(x + w / 2 - 1, y, 3, h), 0)];
 
     // A page of dark artwork with the given areas painted as paper (255) or ink (0).
     private static LumaPage Page(int width, int height, params (Rectangle Area, byte Value)[] paint)

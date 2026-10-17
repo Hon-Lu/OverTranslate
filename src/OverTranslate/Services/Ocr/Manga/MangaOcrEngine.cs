@@ -391,12 +391,13 @@ internal sealed class MangaOcrEngine : IDisposable
             var found = _detector!.Detect(rgb, bitmap.Width, bitmap.Height);
             var detectMs = timer.Elapsed.TotalMilliseconds;
 
+            var luma = new LumaPage(PillowImage.Luma(rgb), bitmap.Width, bitmap.Height);
             return new MangaDetection(
                 this, rgb, bitmap.Width, bitmap.Height,
-                [.. found.Text.Where(box => !MangaPageLayout.IsLong(box.Bounds)).Select(box => box.Bounds)],
-                [.. found.Text.Where(box => MangaPageLayout.IsLong(box.Bounds)).Select(box => box.Bounds)],
+                [.. found.Text.Where(box => !MangaPageLayout.IsLong(box.Bounds, luma)).Select(box => box.Bounds)],
+                [.. found.Text.Where(box => MangaPageLayout.IsLong(box.Bounds, luma)).Select(box => box.Bounds)],
                 [.. found.Bubbles.Select(box => box.Bounds)],
-                new LumaPage(PillowImage.Luma(rgb), bitmap.Width, bitmap.Height),
+                luma,
                 detectMs);
         }
         catch (OnnxRuntimeException ex)
@@ -468,7 +469,7 @@ internal sealed class MangaOcrEngine : IDisposable
         /// <summary>The blocks manga-ocr can read, highest score first.</summary>
         internal List<RectangleF> Text { get; }
 
-        /// <summary>Blocks too long for manga-ocr (<see cref="MangaPageLayout.IsLong"/>).</summary>
+        /// <summary>Blocks too long for the manga models (<see cref="MangaPageLayout.IsLong"/>).</summary>
         internal List<RectangleF> Long { get; }
 
         internal List<RectangleF> Bubbles { get; }
