@@ -356,6 +356,26 @@ public sealed class MangaModelStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task AFileAddedToTheSameVersion_IsFetched_WithTheRestOfIt()
+    {
+        var earlier = new MangaModelManifest("1", Manifest().Sources, [Manifest().Files[0]]);
+        await Store(earlier, new FakeServer()).DownloadAsync();
+
+        var store = Store(Manifest(), new FakeServer());
+        Assert.Equal(MangaModelState.NotDownloaded, store.State);
+        Assert.False(store.HasOtherVersion);
+
+        store.DiscardIncomplete();
+        Assert.False(Directory.Exists(Path.Combine(_root, "v1")));
+
+        var server = new FakeServer();
+        await Store(Manifest(), server).DownloadAsync();
+
+        Assert.Equal(["https://first.example/v/detector.onnx", "https://first.example/v/vocab.txt"],
+            server.Requests.Select(r => r.Url));
+    }
+
+    [Fact]
     public async Task AnOlderVersionInFull_IsAnOtherVersion_UntilTheNewOneIsDownloaded()
     {
         await Store(Manifest("1"), new FakeServer()).DownloadAsync();

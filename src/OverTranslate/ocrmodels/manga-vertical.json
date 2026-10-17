@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "2",
   "sources": [
     {
       "name": "huggingface",
@@ -27,7 +27,7 @@
     },
     {
       "name": "github",
-      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v3/{name}"
+      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v2/{name}"
     }
   ],
   "files": [
