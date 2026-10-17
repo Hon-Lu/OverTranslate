@@ -15,7 +15,8 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// block before anything is read, from the block's box and which way its lines run
 /// (<see cref="MangaLineGeometry"/>).</para>
 ///
-/// <para>Each block is read once, by one reader, decided before either runs. A page that needs the
+/// <para>Each block is read once, by one reader, decided before either runs — but for a block sent
+/// across, which both read and <see cref="ReadsAcross"/> settles between. A page that needs the
 /// column pipeline takes one of its slots before manga-ocr reads the blocks that depended on that
 /// decision; on a live screen, where nothing waits, a taken slot makes the whole page
 /// <see cref="MangaReadOutcome.Busy"/> and the next poll asks again, rather than reading them and
@@ -77,12 +78,9 @@ internal static class MangaVerticalReader
             var ahead = detectLines is null ? [] : ReadAhead(detection.Text);
             detection.ReadAhead(ahead, cancellationToken);
             var readers = Readers(bitmap, detection.Text, detectLines);
-            var mangaReads = new List<int>();
+            var mangaReads = MangaReads(readers, ahead);
             for (int i = 0; i < detection.Text.Count; i++)
-            {
                 if (readers[i] != MangaReader.Manga) passOn.Add((detection.Text[i], readers[i]));
-                else if (!ahead.Contains(i)) mangaReads.Add(i);
-            }
             passOn.AddRange(detection.Long.Select(block => (block, ReaderFor(block, MangaLineDirection.Unsure))));
 
             if (passOn.Count > 0 && slot is null)
@@ -119,6 +117,9 @@ internal static class MangaVerticalReader
                 var found = await slot!.RecognizeAsync(
                     part, language, maxDetectSize, cancellationToken, verticalText: true);
                 var groups = VerticalColumnGrouping.Group(found, part.Width, bitmap: part, language: language);
+                if (!TakesColumns(reader, groups)) continue;
+                // Read by both: the column pipeline's reading wins, so manga-ocr's goes.
+                if (reader == MangaReader.ColumnsAcross) read.RemoveAll(mangaRead => mangaRead.Bounds == block);
                 passedOn.AddRange(groups.Select(group => Moved(Set(group, reader), crop.X, crop.Y)));
             }
         }
@@ -160,7 +161,8 @@ internal static class MangaVerticalReader
     /// its type from that many characters — a third of the size of the writing. Set down.</item>
     /// <item><b>Not columns at all</b>: lines that run across in a box not wide enough to be a row
     /// (<see cref="MangaPageLayout.AcrossRatio"/>). It cannot read English, and read the nine-line
-    /// caption of vertical-image-ja5 as sentences that are not on the page. Set across.</item>
+    /// caption of vertical-image-ja5 as sentences that are not on the page. Set across — if what the
+    /// column pipeline reads out of it is Latin (<see cref="ReadsAcross"/>); manga-ocr's otherwise.</item>
     /// </list>
     ///
     /// <para>Everything else — and everything whose lines say nothing — is manga-ocr's, as it always
@@ -204,6 +206,54 @@ internal static class MangaVerticalReader
                 && ReaderFor(blocks[i], MangaLineDirection.Unsure) == MangaReader.Manga)
             .ToList();
         return settled.Take(settled.Count / MangaTextRecognizer.BatchCap * MangaTextRecognizer.BatchCap).ToList();
+    }
+
+    /// <summary>
+    /// The blocks manga-ocr reads once the lines are measured: its own that were not read ahead, and
+    /// those sent across, for when they are not across after all (<see cref="ReadsAcross"/>).
+    /// </summary>
+    internal static List<int> MangaReads(IReadOnlyList<MangaReader> readers, IReadOnlyList<int> ahead) =>
+        [.. Enumerable.Range(0, readers.Count)
+            .Where(i => readers[i] is (MangaReader.Manga or MangaReader.ColumnsAcross) && !ahead.Contains(i))];
+
+    /// <summary>
+    /// Whether the column pipeline's groups stand for a block it was sent: always, but for a block
+    /// sent across, which has to read as writing that runs across (<see cref="ReadsAcross"/>).
+    /// </summary>
+    internal static bool TakesColumns(MangaReader reader, IEnumerable<OcrTextBlock> groups) =>
+        reader != MangaReader.ColumnsAcross || ReadsAcross(groups);
+
+    /// <summary>The fewest Latin letters that let a block sent across be set across.</summary>
+    internal const int MinLatinLetters = 3;
+
+    /// <summary>
+    /// Whether what the column pipeline read out of a block sent across is writing that runs across:
+    /// half its characters or more Latin letters, and at least <see cref="MinLatinLetters"/> of them.
+    /// Otherwise the block is manga-ocr's, read down.
+    /// </summary>
+    /// <remarks>
+    /// <para>Vertical writing comes first on a vertical page. The lines vote across, and confidently,
+    /// on vertical balloons of short columns with furigana beside them and on balloons the edge of
+    /// the screen cuts down to two or four characters a column; set across, the overlay turns the
+    /// sentence on its side and the column pipeline drops a column of it. MEASURED on the r4 corpus
+    /// at five scales, 55 framings each of twelve pages, 788 frames of 197 pages cut as a scroll cuts
+    /// them, and 13 framings of the page reported: the lines alone sent 23 vertical blocks across on
+    /// the cut frames and 25 on that page; this, none on any set. It still sets 142 of the corpus's
+    /// 185 blocks across that are — English, mostly. Japanese captions written across are read down
+    /// again, as they were before the lines were asked.</para>
+    ///
+    /// <para>A letter or two is noise the recognizer finds in kana; three is a word.</para>
+    /// </remarks>
+    internal static bool ReadsAcross(IEnumerable<OcrTextBlock> groups)
+    {
+        int characters = 0, latin = 0;
+        foreach (var c in groups.SelectMany(group => group.Text))
+        {
+            if (char.IsWhiteSpace(c)) continue;
+            characters++;
+            if (char.IsAsciiLetter(c)) latin++;
+        }
+        return latin >= MinLatinLetters && latin * 2 >= characters;
     }
 
     /// <summary><see cref="ReaderFor"/> for each block, its lines measured all together.</summary>

@@ -170,6 +170,58 @@ public class MangaLineGeometryTests
     }
 
     [Fact]
+    public void BlocksSentAcross_AreReadByMangaOcrAsWell()
+    {
+        MangaReader[] readers =
+            [MangaReader.Manga, MangaReader.ColumnsAcross, MangaReader.ColumnsDown, MangaReader.Columns, MangaReader.Manga];
+
+        Assert.Equal([0, 1, 4], MangaVerticalReader.MangaReads(readers, []));
+        // What was read ahead is not read again.
+        Assert.Equal([1, 4], MangaVerticalReader.MangaReads(readers, [0]));
+    }
+
+    [Fact]
+    public void AVerticalBalloonTheLinesSentAcross_IsMangaOcrsAfterAll()
+    {
+        // The reported balloon (兄が流れ弾から俺を庇って死んだ。) as the column pipeline read it:
+        // columns, one dropped, and the furigana of 兄 on its own.
+        var groups = Groups("俺を庇って", "死んだ。", "流れ弾から", "あに");
+
+        Assert.False(MangaVerticalReader.ReadsAcross(groups));
+        Assert.False(MangaVerticalReader.TakesColumns(MangaReader.ColumnsAcross, groups));
+    }
+
+    [Theory]
+    [InlineData("IT'S NOT")]
+    [InlineData("WHAT ARE / YOU DOING?")]
+    [InlineData("OPEN ドア")]        // Latin for two characters of three
+    public void EnglishInABoxSentAcross_StaysAcross(string text)
+    {
+        var groups = Groups(text.Split(" / "));
+
+        Assert.True(MangaVerticalReader.ReadsAcross(groups));
+        Assert.True(MangaVerticalReader.TakesColumns(MangaReader.ColumnsAcross, groups));
+    }
+
+    [Theory]
+    [InlineData("I")]                // a letter or two found in kana
+    [InlineData("OK")]
+    [InlineData("あいOKう")]
+    [InlineData("abcあいうえ")]       // three letters, but fewer than half
+    [InlineData("")]
+    public void ALetterOrTwo_OrMostlyKana_DoesNotTurnABlockAcross(string text) =>
+        Assert.False(MangaVerticalReader.ReadsAcross(Groups(text)));
+
+    [Theory]
+    [InlineData((int)MangaReader.Columns)]
+    [InlineData((int)MangaReader.ColumnsDown)]
+    public void LongAndWideBlocks_KeepTheColumnPipelinesReadingWhateverItSays(int reader) =>
+        Assert.True(MangaVerticalReader.TakesColumns((MangaReader)reader, Groups("俺を庇って", "死んだ。")));
+
+    private static List<Services.OcrTextBlock> Groups(params string[] texts) =>
+        [.. texts.Select((text, i) => new Services.OcrTextBlock(text, new System.Windows.Rect(i * 50, 0, 40, 150)))];
+
+    [Fact]
     public void TheColumnEnginesSlots_AreTakenAndGivenBackOnceEach()
     {
         using var engine = new OnnxOcrEngine();
