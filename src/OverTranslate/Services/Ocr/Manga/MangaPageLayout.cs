@@ -11,17 +11,16 @@ namespace OverTranslate.Services.Ocr.Manga;
 internal static class MangaPageLayout
 {
     /// <summary>
-    /// A block this many times longer than it is wide (either way round) is read by the column
-    /// pipeline rather than by manga-ocr.
+    /// A block this many times longer than it is wide (either way round) may be too long for the
+    /// manga models to read — see <see cref="IsLong"/>.
     /// </summary>
     /// <remarks>
-    /// manga-ocr squeezes every block into 224×224. A recap box of two small columns 79×738 is shrunk
-    /// seven times along its length and comes back as a sentence that is not on the page; a single
-    /// 1098px column loses characters. The three blocks that went wrong in the corpora were 9.3, 15.4
-    /// and 15.9; the longest balloon manga-ocr read correctly was 5.9 (ja2 マントの紋章で…). 6, 7 and
-    /// 8 measured the same; 4 sent six good ja2 balloons away and lost two sentences. A ratio does not
-    /// change with the resolution of the capture, which a length in pixels would. The wide case
-    /// catches the ja3 page-top title, which the column pipeline reads and manga-ocr does not.
+    /// Set for manga-ocr, which squeezed every block into 224×224: a recap box of two small columns
+    /// 79×738 came back as a sentence that is not on the page, and a single 1098px column lost
+    /// characters. The three blocks that went wrong in the corpora were 9.3, 15.4 and 15.9; the
+    /// longest balloon manga-ocr read correctly was 5.9 (ja2 マントの紋章で…). 6, 7 and 8 measured the
+    /// same; 4 sent six good ja2 balloons away and lost two sentences. A ratio does not change with
+    /// the resolution of the capture, which a length in pixels would.
     /// </remarks>
     internal const double LongBlockRatio = 7;
 
@@ -41,8 +40,26 @@ internal static class MangaPageLayout
     // Columns of one group sharing more than this much of the narrower one's width are one band.
     private const double BandOverlap = 0.5;
 
-    internal static bool IsLong(RectangleF block) =>
-        block.Height >= LongBlockRatio * block.Width || block.Width >= LongBlockRatio * block.Height;
+    /// <summary>
+    /// Whether a block is read by the column pipeline rather than by the manga models: a row
+    /// <see cref="LongBlockRatio"/> times as wide as tall, or a column that long with writing set
+    /// side by side in it (<see cref="LumaPage.WritingSideBySide"/>).
+    /// </summary>
+    /// <remarks>
+    /// <para>A single long column is the manga models' since CPT-flex: it keeps a block's shape
+    /// rather than squeezing it square. MEASURED on the vertical corpus at scale 1, the five long
+    /// columns read better or the same — ゼーリ工 → ゼーリエ, いヤいや → いやいや, a 『』 the column
+    /// pipeline lost — where the column pipeline had read them.</para>
+    ///
+    /// <para>Two long blocks read worse, and both have writing side by side: the zang recap box, two
+    /// small columns with furigana (80×740), came back as noise, and the ja3 cover's spine, a title
+    /// above three columns of credits (88×1019), lost the credits. Those stay with the column
+    /// pipeline, which finds the columns itself. A row stays there too: CPT-flex cannot read
+    /// English.</para>
+    /// </remarks>
+    internal static bool IsLong(RectangleF block, LumaPage? luma) =>
+        block.Width >= LongBlockRatio * block.Height ||
+        (block.Height >= LongBlockRatio * block.Width && (luma is null || luma.WritingSideBySide(block)));
 
     internal static bool RunsAcross(RectangleF block) => block.Width > AcrossRatio * block.Height;
 
@@ -496,6 +513,68 @@ internal sealed class LumaPage(byte[] pixels, int width, int height)
 
         return false;
     }
+
+    /// <summary>
+    /// Whether a long column holds writing set side by side somewhere along it: cut into bands
+    /// <see cref="SideBySideBand"/> widths tall, a band whose ink falls in two runs across or more,
+    /// each at least <see cref="SideBySideRun"/> of its widest.
+    /// </summary>
+    /// <remarks>
+    /// <para>The ink is the minority side of Otsu's threshold over the block. Furigana beside a
+    /// column is a run about half as wide as the column's: not a second column. A band is asked
+    /// rather than the whole block, so that a title above narrow columns of credits still has its
+    /// columns found under it.</para>
+    ///
+    /// <para>MEASURED on the seven long columns of the vertical corpus at five scales (0.5–1.5): the
+    /// recap box and the spine have 4–5 and 3 such bands at every scale, the five single columns
+    /// none; furigana runs come out below 0.5 of the column's, so anything from 0.5 to 0.7 parts
+    /// them the same.</para>
+    /// </remarks>
+    internal bool WritingSideBySide(RectangleF block)
+    {
+        var box = Clip(block);
+        if (box.Width < 2 || box.Height < 2) return false;
+
+        var histogram = new int[256];
+        for (int y = box.Top; y < box.Bottom; y++)
+        for (int x = box.Left; x < box.Right; x++)
+            histogram[this[x, y]]++;
+        int total = box.Width * box.Height, threshold = MangaColumnAngles.Otsu(histogram, total), below = 0;
+        for (int v = 0; v <= threshold; v++) below += histogram[v];
+        bool dark = below <= total - below;
+
+        int band = Math.Max(1, (int)(SideBySideBand * box.Width));
+        var profile = new int[box.Width];
+        for (int top = box.Top; top < box.Bottom; top += band)
+        {
+            int bottom = Math.Min(box.Bottom, top + band);
+            Array.Clear(profile);
+            for (int y = top; y < bottom; y++)
+            for (int x = box.Left; x < box.Right; x++)
+                if (dark ? this[x, y] <= threshold : this[x, y] > threshold) profile[x - box.Left]++;
+
+            int floor = Math.Max(1, (int)(0.02 * (bottom - top)));
+            var runs = new List<int>();
+            int start = -1;
+            for (int x = 0; x <= box.Width; x++)
+            {
+                bool on = x < box.Width && profile[x] > floor;
+                if (on && start < 0) start = x;
+                else if (!on && start >= 0) { runs.Add(x - start); start = -1; }
+            }
+            if (runs.Count < 2) continue;
+            int widest = runs.Max();
+            if (runs.Count(run => run >= SideBySideRun * widest) >= 2) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>The height of a band <see cref="WritingSideBySide"/> asks, in widths of the block.</summary>
+    internal const double SideBySideBand = 2;
+
+    /// <summary>How wide a run of ink has to be, against the band's widest, to be writing of its own.</summary>
+    internal const double SideBySideRun = 0.6;
 
     private bool Ruled(int x, int y, bool dark) =>
         dark ? 255 - this[x, y] < RuleLevel : this[x, y] < RuleLevel;

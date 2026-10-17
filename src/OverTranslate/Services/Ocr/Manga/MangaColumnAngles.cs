@@ -70,7 +70,7 @@ internal static class MangaColumnAngles
         for (int i = 0; i < blocks.Count; i++)
         {
             var bounds = blocks[i].Bounds;
-            if (MangaPageLayout.RunsAcross(bounds) || MangaPageLayout.IsLong(bounds)) continue;
+            if (MangaPageLayout.RunsAcross(bounds)) continue;
             double ink = InkAngle(luma, bounds);
             if (!double.IsNaN(ink) && Math.Abs(ink) >= InkFromDegrees) candidates.Add((i, ink));
         }
@@ -321,7 +321,7 @@ internal static class MangaColumnAngles
         return Math.Abs(best) >= InkRange - 0.5 ? double.NaN : best;
     }
 
-    private static int Otsu(int[] histogram, int total)
+    internal static int Otsu(int[] histogram, int total)
     {
         double sum = 0;
         for (int i = 0; i < 256; i++) sum += i * histogram[i];

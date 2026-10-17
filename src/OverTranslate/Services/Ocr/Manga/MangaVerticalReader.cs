@@ -81,7 +81,7 @@ internal static class MangaVerticalReader
             var mangaReads = MangaReads(readers, ahead);
             for (int i = 0; i < detection.Text.Count; i++)
                 if (readers[i] != MangaReader.Manga) passOn.Add((detection.Text[i], readers[i]));
-            passOn.AddRange(detection.Long.Select(block => (block, ReaderFor(block, MangaLineDirection.Unsure))));
+            passOn.AddRange(detection.Long.Select(block => (block, MangaReader.Columns)));
 
             if (passOn.Count > 0 && slot is null)
             {
@@ -152,9 +152,10 @@ internal static class MangaVerticalReader
     /// goes to the column pipeline, which finds the lines itself:</para>
     ///
     /// <list type="bullet">
-    /// <item><b>Too long</b> (<see cref="MangaPageLayout.IsLong"/>): a column of more characters than
-    /// it reads, squeezed along its length. The column pipeline's groups keep the directions it gives
-    /// them, as they always have.</item>
+    /// <item><b>Too long</b> (<see cref="MangaPageLayout.IsLong"/>): a row, or a long column with
+    /// writing side by side in it. Decided from the page's pixels as the blocks are found, so such a
+    /// block never comes here; the column pipeline's groups keep the directions it gives them, as
+    /// they always have.</item>
     /// <item><b>Too many columns</b>: lines that run down in a box <see cref="WideColumnsRatio"/>
     /// times as wide as tall or more, squeezed across. vertical-image-ja5's balloon of sixteen short
     /// columns came back with its last sentences turned into hundreds of dots, and the overlay sized
@@ -172,7 +173,6 @@ internal static class MangaVerticalReader
     /// </remarks>
     internal static MangaReader ReaderFor(RectangleF block, MangaLineDirection lines)
     {
-        if (MangaPageLayout.IsLong(block)) return MangaReader.Columns;
         return lines switch
         {
             MangaLineDirection.Across when !MangaPageLayout.RunsAcross(block) => MangaReader.ColumnsAcross,
