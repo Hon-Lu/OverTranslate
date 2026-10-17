@@ -26,6 +26,7 @@ public partial class OverlayWindow : Window
 
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
+    private readonly WrappedTextMeasure _wrappedMeasure = new();
 
     // Pixel rect this window covers. Left/Top/Width/Height cannot stand in for it: they are DIP
     // scaled by one monitor's DPI, which on a mixed-DPI desktop is not the rect the OCR coordinates
@@ -1411,8 +1412,13 @@ public partial class OverlayWindow : Window
         return Math.Max(0, rightLimit - currentLeft);
     }
 
-    private FormattedText MeasureText(string text, Typeface typeface, double fontSize, double? maxTextWidth = null)
+    private System.Windows.Size MeasureText(string text, Typeface typeface, double fontSize, double? maxTextWidth = null)
     {
+        // Wrapped text is measured by the TextBlock that draws it, since FormattedText breaks some
+        // lines differently — see WrappedTextMeasure. One line has no breaks to disagree on.
+        if (maxTextWidth is { } width)
+            return _wrappedMeasure.Measure(text, typeface, fontSize, width);
+
         var formattedText = new FormattedText(
             text,
             CultureInfo.CurrentCulture,
@@ -1422,10 +1428,7 @@ public partial class OverlayWindow : Window
             System.Windows.Media.Brushes.Black,
             _dpiY);
 
-        if (maxTextWidth.HasValue)
-            formattedText.MaxTextWidth = maxTextWidth.Value;
-
-        return formattedText;
+        return new System.Windows.Size(formattedText.Width, formattedText.Height);
     }
 
     // Esc is handled by the session-wide GlobalEscapeHook, not here — the overlay only exists

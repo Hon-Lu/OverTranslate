@@ -142,6 +142,7 @@ public partial class RealtimeBlockWindow : Window
     // their one patch — for hiding one box when another window touches it. See ApplyCovers.
     private List<FrameworkElement[]> _boxes = [];
     private readonly RealtimeBoxCoverage _coverage = new();
+    private readonly WrappedTextMeasure _wrappedMeasure = new();
 
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
@@ -1660,21 +1661,30 @@ public partial class RealtimeBlockWindow : Window
 
     private Size Measure(string text, Typeface typeface, double fontSize, double? maxWidth)
     {
-        var formatted = new FormattedText(
-            text,
-            CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            typeface,
-            fontSize,
-            Brushes.Black,
-            _dpiY);
-
-        if (maxWidth.HasValue) formatted.MaxTextWidth = maxWidth.Value;
+        // Wrapped text is measured by the TextBlock that draws it, since FormattedText breaks some
+        // lines differently — see WrappedTextMeasure. One line has no breaks to disagree on.
+        Size measured;
+        if (maxWidth is { } width)
+        {
+            measured = _wrappedMeasure.Measure(text, typeface, fontSize, width);
+        }
+        else
+        {
+            var formatted = new FormattedText(
+                text,
+                CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                fontSize,
+                Brushes.Black,
+                _dpiY);
+            measured = new Size(formatted.Width, formatted.Height);
+        }
 
         // FormattedText reports the ink height, which for a single line of CJK sits noticeably
         // below the line box the TextBlock will actually lay out. Sizing the scrim from the ink
         // would clip descenders on the very first line.
-        return new Size(formatted.Width, Math.Max(formatted.Height, fontSize * LineHeightRatio));
+        return new Size(measured.Width, Math.Max(measured.Height, fontSize * LineHeightRatio));
 
     }
 

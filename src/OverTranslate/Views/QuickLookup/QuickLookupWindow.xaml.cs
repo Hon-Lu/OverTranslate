@@ -1217,6 +1217,7 @@ public partial class QuickLookupWindow : Window
             _ => (16, 24),
         };
 
+    private readonly Layout.WrappedTextMeasure _wrappedMeasure = new();
     private double _translatedTextStyledWidth = -1;
     private string? _translatedTextStyledFor;
 
@@ -1243,18 +1244,14 @@ public partial class QuickLookupWindow : Window
         var lines = 0;
         if (text.Length > 0)
         {
-            var measured = new FormattedText(
+            // Measured the way the TextBlock breaks it, not by FormattedText — see WrappedTextMeasure.
+            var measured = _wrappedMeasure.Measure(
                 text,
-                System.Globalization.CultureInfo.CurrentUICulture,
-                TranslatedText.FlowDirection,
                 new Typeface(TranslatedText.FontFamily, TranslatedText.FontStyle, TranslatedText.FontWeight, TranslatedText.FontStretch),
                 fullSize,
-                TranslatedText.Foreground,
-                VisualTreeHelper.GetDpi(TranslatedText).PixelsPerDip)
-            {
-                MaxTextWidth = width,
-                LineHeight = fullLineHeight,
-            };
+                width,
+                fullLineHeight,
+                TranslatedText.FlowDirection);
             lines = (int)Math.Round(measured.Height / fullLineHeight);
         }
 
