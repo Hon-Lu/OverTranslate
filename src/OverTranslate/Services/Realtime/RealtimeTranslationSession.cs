@@ -1074,7 +1074,7 @@ public sealed class RealtimeTranslationSession
     {
         private readonly RealtimePublishOrder _order = new();
 
-        private int _retryRequested;
+        private readonly RealtimeRetryBackoff _retry = new();
 
         /// <summary>Claims the number identifying this pass in the order the region was read.</summary>
         public long NextPass() => _order.NextPass();
@@ -1138,14 +1138,18 @@ public sealed class RealtimeTranslationSession
                         // Drawn as it is, since the other lines are real, but a line shown in its
                         // original text is waiting on a translation. The pixels will not change to ask
                         // for it again, so the retry has to — and the uncached line is all it sends.
+                        // Waited for like any failure: an engine that cannot answer that line now
+                        // will mostly not answer it at the next poll either.
                         var untranslated = translated.Count(line => line.Untranslated);
                         if (untranslated > 0)
                         {
                             Log.Debug(
                                 "Realtime pass region={Region} left {Count} line(s) untranslated, retrying",
                                 region.Id, untranslated);
-                            RequestRetry();
+                            _retry.RequestAfterFailure();
                         }
+                        else
+                            _retry.Succeeded();
                     }
                     else
                         // Worth its own line: it means the region changed again before this answer
@@ -1162,7 +1166,7 @@ public sealed class RealtimeTranslationSession
                 {
                     Log.Warn(ex, "Realtime translation failed for region {Region}", region.Id);
                     Report(DescribeFailure(ex));
-                    RequestRetry();
+                    _retry.RequestAfterFailure();
                 }
                 finally
                 {
@@ -1193,9 +1197,12 @@ public sealed class RealtimeTranslationSession
 
         public void ClearFailure() => session.ClearFailure();
 
-        private void RequestRetry() => Interlocked.Exchange(ref _retryRequested, 1);
+        private void RequestRetry() => _retry.Request();
 
-        /// <summary>Whether the region should forget what it thinks is on screen and read it again.</summary>
-        public bool TakeRetryRequest() => Interlocked.Exchange(ref _retryRequested, 0) == 1;
+        /// <summary>
+        /// Whether the region should forget what it thinks is on screen and read it again — after a
+        /// failed translation, only once the wait has passed; see <see cref="RealtimeRetryBackoff"/>.
+        /// </summary>
+        public bool TakeRetryRequest() => _retry.TakeRequest();
     }
 }
