@@ -1904,3 +1904,34 @@ Source: https://huggingface.co/muscgab/manga-ocr-base-CPT-flex/raw/9cc15742f8dc3
 - No image from the JMangaBench_Read candidate pool or benchmark was used for training.
 - Acknowledgements: [mangaOCR](https://github.com/kha-white/manga-ocr) (architecture and initial weights), AnimeText and AnimeText-OCR (real training crops), Real-ESRGAN (upscaling of the kana glyphs).
 
+-------------------------------------------------------------------------------
+CRAFT (manga models, downloaded separately)
+-------------------------------------------------------------------------------
+Version: clovaai/CRAFT-pytorch, craft_mlt_25k weights
+Project: https://github.com/clovaai/CRAFT-pytorch
+License: MIT License
+Note: Modified by OverTranslate: the craft_mlt_25k weights (the file EasyOCR redistributes in its releases) exported to ONNX and converted to fp16 with float32 inputs and outputs. Not included in the installer; downloaded on request as craft.fp16.onnx.
+
+[LICENSE]
+Source: https://raw.githubusercontent.com/clovaai/CRAFT-pytorch/master/LICENSE
+
+Copyright (c) 2019-present NAVER Corp.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+

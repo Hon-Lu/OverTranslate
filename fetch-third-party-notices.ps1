@@ -107,6 +107,16 @@ $items = @(
             @{ Label = "LICENSE_MODEL"; Url = "https://huggingface.co/muscgab/manga-ocr-base-CPT-flex/raw/9cc15742f8dc37cb5222a6569839bc774dfc0392/LICENSE_MODEL" }
             @{ Label = "NOTICE.md"; Url = "https://huggingface.co/muscgab/manga-ocr-base-CPT-flex/raw/9cc15742f8dc37cb5222a6569839bc774dfc0392/NOTICE.md" }
         )
+    },
+    @{
+        Name = "CRAFT (manga models, downloaded separately)"
+        Version = "clovaai/CRAFT-pytorch, craft_mlt_25k weights"
+        License = "MIT License"
+        Project = "https://github.com/clovaai/CRAFT-pytorch"
+        Note = "Modified by OverTranslate: the craft_mlt_25k weights (the file EasyOCR redistributes in its releases) exported to ONNX and converted to fp16 with float32 inputs and outputs. Not included in the installer; downloaded on request as craft.fp16.onnx."
+        Files = @(
+            @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/clovaai/CRAFT-pytorch/master/LICENSE" }
+        )
     }
 )
 

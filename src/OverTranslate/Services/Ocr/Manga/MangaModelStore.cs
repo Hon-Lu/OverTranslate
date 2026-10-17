@@ -182,7 +182,7 @@ internal sealed class MangaModelStore
     /// The speed under which a source is left for the next one, averaged over <see cref="SlowWindow"/>.
     /// </summary>
     /// <remarks>
-    /// 256 KB/s: the whole 301 MB in about 20 minutes. GitHub's release downloads were measured at
+    /// 256 KB/s: the whole 341 MB in about 23 minutes. GitHub's release downloads were measured at
     /// about 40 KB/s for weeks — two hours — which is six times under it; Hugging Face ran at 3.5 to
     /// 41 MB/s from the same machine, fourteen times over it even at its slowest, so a passing dip
     /// does not trip it.
@@ -275,7 +275,7 @@ internal sealed class MangaModelStore
         (Manifest!.DirectMl is not { } runtime || IsComplete(RuntimeFolder!, runtime));
 
     // The marker is written after every hash was checked; the sizes are asked again because a file
-    // can be deleted or truncated by hand afterwards, and hashing 315MB on every question is not free.
+    // can be deleted or truncated by hand afterwards, and hashing 355MB on every question is not free.
     private static bool IsComplete(string folder, MangaModelManifest manifest)
     {
         try

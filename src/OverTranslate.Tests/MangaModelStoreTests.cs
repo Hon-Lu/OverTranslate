@@ -517,9 +517,9 @@ public sealed class MangaModelStoreTests : IDisposable
     {
         var manifest = MangaModelManifest.Parse(File.ReadAllText(MangaModelManifest.ShippedPath));
 
-        foreach (var role in new[] { "detector", "encoder", "decoder-cross", "decoder-step", "vocabulary" })
+        foreach (var role in new[] { "detector", "encoder", "decoder-cross", "decoder-step", "vocabulary", "columns" })
             Assert.NotNull(manifest.File(role));
-        Assert.InRange(manifest.TotalBytes, 300_000_000, 330_000_000);
+        Assert.InRange(manifest.TotalBytes, 340_000_000, 370_000_000);
     }
 
     [Fact]
@@ -528,12 +528,13 @@ public sealed class MangaModelStoreTests : IDisposable
         var manifest = MangaModelManifest.Parse(File.ReadAllText(MangaModelManifest.ShippedPath));
         var detectorRepo = "https://huggingface.co/hon-lu/comic-text-and-bubble-detector-onnx-fp16/resolve/v1/";
         var ocrRepo = "https://huggingface.co/hon-lu/manga-ocr-base-CPT-flex-onnx-fp16/resolve/v1/";
+        var columnsRepo = "https://huggingface.co/hon-lu/craft-mlt-25k-onnx-fp16/resolve/v1/";
         var release = $"https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v{manifest.Version}/";
 
         foreach (var file in manifest.Files)
         {
             var urls = manifest.SourcesOf(file).Select(s => s.Url.AbsoluteUri).ToList();
-            var hub = file.Role == "detector" ? detectorRepo : ocrRepo;
+            var hub = file.Role switch { "detector" => detectorRepo, "columns" => columnsRepo, _ => ocrRepo };
             Assert.Equal([hub + file.Name, release + file.Name], urls);
         }
     }

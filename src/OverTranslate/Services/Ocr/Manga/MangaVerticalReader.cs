@@ -78,6 +78,7 @@ internal static class MangaVerticalReader
             var ahead = detectLines is null ? [] : ReadAhead(detection.Text);
             detection.ReadAhead(ahead, cancellationToken);
             var readers = Readers(bitmap, detection.Text, detectLines);
+            ReadColumnsCut(readers, detection.Pieces);
             var mangaReads = MangaReads(readers, ahead);
             for (int i = 0; i < detection.Text.Count; i++)
                 if (readers[i] != MangaReader.Manga) passOn.Add((detection.Text[i], readers[i]));
@@ -159,7 +160,9 @@ internal static class MangaVerticalReader
     /// <item><b>Too many columns</b>: lines that run down in a box <see cref="WideColumnsRatio"/>
     /// times as wide as tall or more, squeezed across. vertical-image-ja5's balloon of sixteen short
     /// columns came back with its last sentences turned into hundreds of dots, and the overlay sized
-    /// its type from that many characters — a third of the size of the writing. Set down.</item>
+    /// its type from that many characters — a third of the size of the writing. Set down — unless
+    /// CRAFT found its columns, and then it is the manga models' after all, read cut
+    /// (<see cref="ReadColumnsCut"/>).</item>
     /// <item><b>Not columns at all</b>: lines that run across in a box not wide enough to be a row
     /// (<see cref="MangaPageLayout.AcrossRatio"/>). It cannot read English, and read the nine-line
     /// caption of vertical-image-ja5 as sentences that are not on the page. Set across — if what the
@@ -179,6 +182,22 @@ internal static class MangaVerticalReader
             MangaLineDirection.Down when block.Width >= WideColumnsRatio * block.Height => MangaReader.ColumnsDown,
             _ => MangaReader.Manga,
         };
+    }
+
+    /// <summary>
+    /// Hands back to the manga models the blocks of too many columns that CRAFT found the columns of
+    /// (<see cref="MangaColumnCuts"/>): they are read in pieces, and set down.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on real columns set side by side two to four at a time, read whole by CPT-flex and
+    /// cut: 21.6% of characters wrong against 3.6%, and on vertical-image-ja5's balloon of sixteen
+    /// short columns 26 of 60 against one. Where CRAFT finds no columns the block stays with the
+    /// column pipeline, as before.
+    /// </remarks>
+    internal static void ReadColumnsCut(MangaReader[] readers, IReadOnlyList<IReadOnlyList<RectangleF>?> pieces)
+    {
+        for (int i = 0; i < readers.Length; i++)
+            if (readers[i] == MangaReader.ColumnsDown && pieces[i] is not null) readers[i] = MangaReader.Manga;
     }
 
     /// <summary>
