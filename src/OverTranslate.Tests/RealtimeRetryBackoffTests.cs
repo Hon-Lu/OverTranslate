@@ -63,8 +63,18 @@ public class RealtimeRetryBackoffTests
             waits.Add(WaitUntilTaken(backoff));
         }
 
-        var longest = RealtimeRegionState.LongestWaitAfterFailure;
-        Assert.Equal([First, First * 2, First * 4, First * 8, longest, longest, longest], waits);
+        var longest = RealtimeRetryBackoff.LongestWait;
+        Assert.Equal(TimeSpan.FromSeconds(4), longest);
+        Assert.Equal([First, First * 2, longest, longest, longest, longest, longest], waits);
+    }
+
+    [Fact]
+    public void A_retry_waits_less_at_its_longest_than_a_failed_read_does()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(1), RealtimeRetryBackoff.Wait(1));
+        Assert.Equal(TimeSpan.FromSeconds(4), RealtimeRetryBackoff.Wait(100));
+        // The reads' own backoff is not touched.
+        Assert.Equal(TimeSpan.FromSeconds(16), RealtimeRegionState.LongestWaitAfterFailure);
     }
 
     [Fact]
