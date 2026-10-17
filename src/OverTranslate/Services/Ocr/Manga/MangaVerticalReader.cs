@@ -64,6 +64,7 @@ internal static class MangaVerticalReader
         List<RectangleF> bubbles;
         // Every block the column pipeline reads, and which way it is to be set.
         var passOn = new List<(RectangleF Block, MangaReader Reader)>();
+        var routes = new MangaRoutes();
         IOcrSlot? slot = null;
         try
         {
@@ -79,6 +80,7 @@ internal static class MangaVerticalReader
             detection.ReadAhead(ahead, cancellationToken);
             var readers = Readers(bitmap, detection.Text, detectLines);
             ReadColumnsCut(readers, detection.Pieces);
+            routes = MangaRoutes.Of(readers, detection.Leaning);
             var mangaReads = MangaReads(readers, ahead);
             for (int i = 0; i < detection.Text.Count; i++)
                 if (readers[i] != MangaReader.Manga) passOn.Add((detection.Text[i], readers[i]));
@@ -120,11 +122,16 @@ internal static class MangaVerticalReader
                 var groups = VerticalColumnGrouping.Group(found, part.Width, bitmap: part, language: language);
                 if (!TakesColumns(reader, groups)) continue;
                 // Read by both: the column pipeline's reading wins, so manga-ocr's goes.
-                if (reader == MangaReader.ColumnsAcross) read.RemoveAll(mangaRead => mangaRead.Bounds == block);
+                if (reader == MangaReader.ColumnsAcross)
+                {
+                    read.RemoveAll(mangaRead => mangaRead.Bounds == block);
+                    routes = routes with { AcrossKept = routes.AcrossKept + 1 };
+                }
                 passedOn.AddRange(groups.Select(group => Moved(Set(group, reader), crop.X, crop.Y)));
             }
         }
 
+        detection.LogPage(routes);
         var blocks = MangaPageLayout.Assemble(read, bubbles, passedOn, luma);
         if (detectColumns is not null)
             blocks = MangaColumnAngles.Apply(blocks, read, luma, detectColumns);
@@ -313,6 +320,30 @@ internal static class MangaVerticalReader
             LayoutBounds = Shift(block.LayoutBounds, dx, dy),
             Tilt = block.Tilt?.Offset(dx, dy),
         };
+    }
+}
+
+/// <summary>
+/// How many of a page's blocks went to the column pipeline, for each reason but length, for the log:
+/// too many columns that CRAFT found none of (<see cref="Wide"/>) or found leaning
+/// (<see cref="Leaning"/>), and lines across, of which <see cref="AcrossKept"/> read as Latin.
+/// </summary>
+internal readonly record struct MangaRoutes(int Wide, int Leaning, int AcrossKept, int AcrossSent)
+{
+    internal static MangaRoutes Of(IReadOnlyList<MangaReader> readers, IReadOnlySet<int> leaning)
+    {
+        int wide = 0, leans = 0, across = 0;
+        for (int i = 0; i < readers.Count; i++)
+        {
+            if (readers[i] == MangaReader.ColumnsDown)
+            {
+                if (leaning.Contains(i)) leans++;
+                else wide++;
+            }
+            else if (readers[i] == MangaReader.ColumnsAcross)
+                across++;
+        }
+        return new MangaRoutes(wide, leans, 0, across);
     }
 }
 

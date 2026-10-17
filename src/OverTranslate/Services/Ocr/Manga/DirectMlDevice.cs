@@ -18,6 +18,11 @@ namespace OverTranslate.Services.Ocr.Manga;
 /// driverless machine has — is refused even though DirectML would accept it: it runs the models on
 /// the CPU through a rasteriser and is slower than the column pipeline it would replace.</para>
 ///
+/// <para>A hardware adapter without Direct3D 12 — a VM's display adapter, VMware SVGA 3D among
+/// them — is found out just before loading (<see cref="Direct3D12Problem"/>), not here: asking
+/// loads the graphics driver, 150ms on an RTX 3070 against 12 for the listing, and this is asked on
+/// the UI thread by every model hint. Just before loading, the driver is being loaded anyway.</para>
+///
 /// <para>DirectML.dll is not shipped with the app; it is downloaded with the models
 /// (<see cref="MangaModelStore.RuntimePath"/>). onnxruntime.dll imports it delay-loaded, by module
 /// name, on the first DirectML session. So it is loaded here first, by full path, after checking
@@ -192,8 +197,58 @@ internal static class DirectMlDevice
         return adapters;
     }
 
+    /// <summary>
+    /// Why ONNX Runtime could not make a Direct3D 12 device on <paramref name="adapter"/>, or null
+    /// when it could, or when that cannot be told — then it is left to ONNX Runtime to find out.
+    /// </summary>
+    /// <remarks>
+    /// <para>ONNX Runtime's DirectML provider makes its device with <c>D3D12CreateDevice</c> at
+    /// feature level 11_0; this asks the same, without making one. On VMware SVGA 3D that call fails
+    /// with DXGI_ERROR_UNSUPPORTED, and finding it out through ONNX Runtime took a second — loading
+    /// DirectML.dll and starting a session — every run of the app.</para>
+    ///
+    /// <para>Turns away exactly the adapters ONNX Runtime would fail on, and no other: no list of
+    /// vendors or names, which would sooner or later meet a real GPU it did not know.</para>
+    /// </remarks>
+    internal static unsafe string? Direct3D12Problem(Adapter adapter)
+    {
+        const int featureLevel11 = 0xB000;   // D3D_FEATURE_LEVEL_11_0
+        try
+        {
+            var iid = new Guid("770aae78-f26f-4dba-a829-253c83d1b387");   // IDXGIFactory1
+            if (CreateDXGIFactory1(ref iid, out var factory) < 0) return null;
+            try
+            {
+                var enumAdapters = (delegate* unmanaged[Stdcall]<IntPtr, uint, out IntPtr, int>)
+                    (*(IntPtr**)factory)[12];
+                if (enumAdapters(factory, (uint)adapter.Index, out var found) < 0) return null;
+                try
+                {
+                    var device = new Guid("189819f1-1db6-4b57-be54-1821339b85f7");   // ID3D12Device
+                    int hr = D3D12CreateDevice(found, featureLevel11, ref device, IntPtr.Zero);
+                    return hr >= 0 ? null : $"{adapter.Name} cannot run Direct3D 12 (0x{hr:X8})";
+                }
+                finally
+                {
+                    Marshal.Release(found);
+                }
+            }
+            finally
+            {
+                Marshal.Release(factory);
+            }
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            return $"Direct3D 12 is not on this system: {ex.Message}";
+        }
+    }
+
     [DllImport("dxgi.dll")]
     private static extern int CreateDXGIFactory1(ref Guid riid, out IntPtr factory);
+
+    [DllImport("d3d12.dll")]
+    private static extern int D3D12CreateDevice(IntPtr adapter, int minimumFeatureLevel, ref Guid riid, IntPtr device);
 
     // DXGI_ADAPTER_DESC1
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
