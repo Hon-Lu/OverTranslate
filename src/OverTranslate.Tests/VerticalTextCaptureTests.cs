@@ -273,7 +273,7 @@ public class VerticalTextCaptureTests
     public void VerticalGrid_KeepsEveryCharacterOfALongTranslation()
     {
         const string translated = "這是一段相當長的翻譯內容需要很多空間才放得下";
-        var grid = OverlayWindow.FitVerticalGrid(44, 160, 18, translated.Length);
+        var grid = OverlayWindow.FitVerticalGrid(44, 160, 18, translated);
 
         var cells = OverlayWindow.VerticalCells(
             translated,
