@@ -440,8 +440,20 @@ public sealed class RealtimeTranslationSession
                     var gateSize = RealtimeGate.SizeFor(frame.Width, frame.Height, gateAlternate);
                     gateAlternate = !gateAlternate;
                     step.Set("gate detect");
-                    var found = await _ocr.TryDetectTextAsync(
-                        frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
+                    IReadOnlyList<System.Windows.Rect>? found;
+                    try
+                    {
+                        found = await _ocr.TryDetectTextAsync(
+                            frame, sourceLanguage, gateSize, RealtimeGate.MinimumScore, token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        // The gate runs the same detector a pass does and meets the same faults, so
+                        // it is answered the same way as a failed pass below rather than ending the
+                        // region: the error is shown and this picture waits before it is tried again.
+                        PassFailed(region, state, pump, Capture, ex);
+                        continue;
+                    }
 
                     // Null is "no slot", which is not an answer — treated as this poll not having
                     // happened rather than as an empty region, or a busy moment would read as the
@@ -451,6 +463,9 @@ public sealed class RealtimeTranslationSession
                         skippedPolls++;
                         continue;
                     }
+
+                    // The detector answered, so a gate that threw before this is over.
+                    pump.Recovered(RealtimeFailureStage.Read);
 
                     // On a rescan the strips are already accounted for: only a box outside them can
                     // be text this region does not know about.
@@ -536,9 +551,7 @@ public sealed class RealtimeTranslationSession
                     // changed: the region waits before trying that picture again — see
                     // RealtimeRegionState.FirstWaitAfterFailure. The error stays up until a pass
                     // gets through.
-                    Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
-                    pump.Report(RealtimeFailureStage.Read, DescribeFailure(ex));
-                    state.MarkFailed(Capture);
+                    PassFailed(region, state, pump, Capture, ex);
                 }
                 finally
                 {
@@ -561,6 +574,20 @@ public sealed class RealtimeTranslationSession
         {
             step.Set("ended");
         }
+    }
+
+    // A look at the region that threw: logged, reported, and the picture held back — see
+    // RealtimeRegionState.MarkFailed.
+    private static void PassFailed(
+        RealtimeRegion region,
+        RealtimeRegionState state,
+        RegionTranslationPump pump,
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
+        Exception ex)
+    {
+        Log.Warn(ex, "Realtime pass failed for region {Region}", region.Id);
+        pump.Report(RealtimeFailureStage.Read, DescribeFailure(ex));
+        state.MarkFailed(capture);
     }
 
     private static ValueTask<bool> NextPollAsync(PeriodicTimer timer, StepMarker step, CancellationToken token)
@@ -1061,7 +1088,7 @@ public sealed class RealtimeTranslationSession
     {
         private readonly RealtimePublishOrder _order = new();
 
-        private int _retryRequested;
+        private readonly RealtimeRetryBackoff _retry = new();
 
         /// <summary>Claims the number identifying this pass in the order the region was read.</summary>
         public long NextPass() => _order.NextPass();
@@ -1125,14 +1152,18 @@ public sealed class RealtimeTranslationSession
                         // Drawn as it is, since the other lines are real, but a line shown in its
                         // original text is waiting on a translation. The pixels will not change to ask
                         // for it again, so the retry has to — and the uncached line is all it sends.
+                        // Waited for like any failure: an engine that cannot answer that line now
+                        // will mostly not answer it at the next poll either.
                         var untranslated = translated.Count(line => line.Untranslated);
                         if (untranslated > 0)
                         {
                             Log.Debug(
                                 "Realtime pass region={Region} left {Count} line(s) untranslated, retrying",
                                 region.Id, untranslated);
-                            RequestRetry();
+                            _retry.RequestAfterFailure();
                         }
+                        else
+                            _retry.Succeeded();
                     }
                     else
                         // Worth its own line: it means the region changed again before this answer
@@ -1149,7 +1180,7 @@ public sealed class RealtimeTranslationSession
                 {
                     Log.Warn(ex, "Realtime translation failed for region {Region}", region.Id);
                     Report(RealtimeFailureStage.Translate, DescribeFailure(ex));
-                    RequestRetry();
+                    _retry.RequestAfterFailure();
                 }
                 finally
                 {
@@ -1186,9 +1217,12 @@ public sealed class RealtimeTranslationSession
 
         public void Recovered(RealtimeFailureStage stage) => session.Recovered(region.Id, stage);
 
-        private void RequestRetry() => Interlocked.Exchange(ref _retryRequested, 1);
+        private void RequestRetry() => _retry.Request();
 
-        /// <summary>Whether the region should forget what it thinks is on screen and read it again.</summary>
-        public bool TakeRetryRequest() => Interlocked.Exchange(ref _retryRequested, 0) == 1;
+        /// <summary>
+        /// Whether the region should forget what it thinks is on screen and read it again — after a
+        /// failed translation, only once the wait has passed; see <see cref="RealtimeRetryBackoff"/>.
+        /// </summary>
+        public bool TakeRetryRequest() => _retry.TakeRequest();
     }
 }
