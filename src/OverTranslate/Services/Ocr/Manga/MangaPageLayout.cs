@@ -536,17 +536,31 @@ internal sealed class LumaPage(byte[] pixels, int width, int height)
     /// recap box and the spine have 4–5 and 3 such bands at every scale, the five single columns
     /// none; furigana runs come out below 0.5 of the column's, so anything from 0.5 to 0.7 parts
     /// them the same.</para>
+    ///
+    /// <para>The last band is as tall as the rest and ends at the block's foot. Cut short where the
+    /// box happened to stop, it held only the bottom edges of a character, apart: the single column of
+    /// zang 08 56 (ゼーリエ暗殺計画…) was sent to the column pipeline in 10 of 80 framings and
+    /// scales, mokuro-000b's in 1 of 5, every one of them by that band. Ending at the foot, none were;
+    /// the recap box, the spine and ja5a's narration, over 55 framings, twelve insets and up to eleven
+    /// scales each, kept as many bands side by side or more, never fewer than two.</para>
     /// </remarks>
-    internal bool WritingSideBySide(RectangleF block)
+    internal bool WritingSideBySide(RectangleF block) => SideBySideBands(block) >= 1;
+
+    /// <summary>How many of the bands <see cref="WritingSideBySide"/> asks have writing side by side.</summary>
+    internal int SideBySideBands(RectangleF block)
     {
         var box = Clip(block);
-        if (box.Width < 2 || box.Height < 2) return false;
+        if (box.Width < 2 || box.Height < 2) return 0;
 
         var (threshold, dark) = Ink(block);
         int band = Math.Max(1, (int)(SideBySideBand * box.Width));
         var profile = new int[box.Width];
-        for (int top = box.Top; top < box.Bottom; top += band)
+        int found = 0;
+        for (int next = box.Top; next < box.Bottom; next += band)
         {
+            // The last band ends at the block's foot, as tall as the rest: a sliver left over holds
+            // only the edges of characters, which fall apart into runs of their own.
+            int top = Math.Max(box.Top, Math.Min(next, box.Bottom - band));
             int bottom = Math.Min(box.Bottom, top + band);
             Array.Clear(profile);
             for (int y = top; y < bottom; y++)
@@ -564,10 +578,10 @@ internal sealed class LumaPage(byte[] pixels, int width, int height)
             }
             if (runs.Count < 2) continue;
             int widest = runs.Max();
-            if (runs.Count(run => run >= SideBySideRun * widest) >= 2) return true;
+            if (runs.Count(run => run >= SideBySideRun * widest) >= 2) found++;
         }
 
-        return false;
+        return found;
     }
 
     /// <summary>

@@ -36,6 +36,22 @@ public class MangaPageLayoutTests
     }
 
     [Fact]
+    public void ALongSingleColumn_EndingOnTheFeetOfACharacter_IsTheMangaModels()
+    {
+        // The box stops 18px into the last band, across the two legs of a リ: alone in a band of
+        // their own they were two runs side by side, and ゼーリエ… went to the column pipeline.
+        var paint = new List<(Rectangle, byte)> { (new Rectangle(90, 40, 80, 640), 255) };
+        for (int y = 60; y < 540; y += 36) paint.AddRange(Glyph(110, y, 30, 30));
+        paint.Add((new Rectangle(112, 562, 6, 14), 0));
+        paint.Add((new Rectangle(134, 562, 6, 14), 0));
+        var luma = Page(300, 700, [.. paint]);
+        var block = new RectangleF(100, 50, 64, 530);
+
+        Assert.Equal(0, luma.SideBySideBands(block));
+        Assert.False(MangaPageLayout.IsLong(block, luma));
+    }
+
+    [Fact]
     public void ALongBlockOfTwoColumns_StaysWithTheColumnPipeline()
     {
         // The zang recap box: two small columns side by side.
