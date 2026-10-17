@@ -19,6 +19,13 @@
       ]
     },
     {
+      "name": "huggingface",
+      "url": "https://huggingface.co/hon-lu/craft-mlt-25k-onnx-fp16/resolve/v1/{name}",
+      "files": [
+        "craft.fp16.onnx"
+      ]
+    },
+    {
       "name": "github",
       "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/manga-vertical-v2/{name}"
     }
@@ -53,6 +60,12 @@
       "name": "vocab.txt",
       "size": 27001,
       "sha256": "a380ec969e2d73858cd84f43cdadb78b8527b12194ea4f797368ac21a24fa98c"
+    },
+    {
+      "role": "columns",
+      "name": "craft.fp16.onnx",
+      "size": 41546100,
+      "sha256": "36acd499de472a1573f285c4769b0e864311e2e7b336d6910ca5535da84378ff"
     }
   ],
   "directml": {

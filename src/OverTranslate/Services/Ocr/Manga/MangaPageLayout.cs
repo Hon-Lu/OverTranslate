@@ -127,7 +127,7 @@ internal static class MangaPageLayout
         for (int i = 0; i < blocks.Count; i++)
         {
             var block = blocks[i].Bounds;
-            if (RunsAcross(block)) continue;
+            if (blocks[i].Across) continue;
 
             int best = -1;
             for (int j = 0; j < bubbles.Count; j++)
@@ -302,7 +302,7 @@ internal static class MangaPageLayout
     /// </summary>
     private static OcrTextBlock Single(MangaBlock block, LumaPage? luma)
     {
-        var across = RunsAcross(block.Bounds);
+        var across = block.Across;
         var bounds = ToRect(block.Bounds);
         var glyph = GlyphSize(bounds, block.Text, across);
         var lines = across && luma is not null ? Lines(block, luma) : null;
@@ -403,7 +403,14 @@ internal static class MangaPageLayout
 }
 
 /// <summary>One block the manga models found and read.</summary>
-internal readonly record struct MangaBlock(RectangleF Bounds, string Text, double Confidence);
+/// <param name="Columns">
+/// Found to be columns and read as such (<see cref="MangaColumnCuts"/>): set down whatever its shape.
+/// </param>
+internal readonly record struct MangaBlock(RectangleF Bounds, string Text, double Confidence, bool Columns = false)
+{
+    /// <summary>Whether the block is a line of writing across the page (<see cref="MangaPageLayout.RunsAcross"/>).</summary>
+    internal bool Across => !Columns && MangaPageLayout.RunsAcross(Bounds);
+}
 
 /// <summary>A page in grey, one byte a pixel, row after row.</summary>
 internal sealed class LumaPage(byte[] pixels, int width, int height)
@@ -535,14 +542,7 @@ internal sealed class LumaPage(byte[] pixels, int width, int height)
         var box = Clip(block);
         if (box.Width < 2 || box.Height < 2) return false;
 
-        var histogram = new int[256];
-        for (int y = box.Top; y < box.Bottom; y++)
-        for (int x = box.Left; x < box.Right; x++)
-            histogram[this[x, y]]++;
-        int total = box.Width * box.Height, threshold = MangaColumnAngles.Otsu(histogram, total), below = 0;
-        for (int v = 0; v <= threshold; v++) below += histogram[v];
-        bool dark = below <= total - below;
-
+        var (threshold, dark) = Ink(block);
         int band = Math.Max(1, (int)(SideBySideBand * box.Width));
         var profile = new int[box.Width];
         for (int top = box.Top; top < box.Bottom; top += band)
@@ -568,6 +568,22 @@ internal sealed class LumaPage(byte[] pixels, int width, int height)
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// The ink of a block: Otsu's threshold over it, and which side is ink — the darker one
+    /// (at or below the threshold) unless it is the larger.
+    /// </summary>
+    internal (int Threshold, bool Dark) Ink(RectangleF block)
+    {
+        var box = Clip(block);
+        var histogram = new int[256];
+        for (int y = box.Top; y < box.Bottom; y++)
+        for (int x = box.Left; x < box.Right; x++)
+            histogram[this[x, y]]++;
+        int total = box.Width * box.Height, threshold = MangaColumnAngles.Otsu(histogram, total), below = 0;
+        for (int v = 0; v <= threshold; v++) below += histogram[v];
+        return (threshold, below <= total - below);
     }
 
     /// <summary>The height of a band <see cref="WritingSideBySide"/> asks, in widths of the block.</summary>
