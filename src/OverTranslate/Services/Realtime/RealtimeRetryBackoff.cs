@@ -12,8 +12,8 @@ namespace OverTranslate.Services.Realtime;
 /// original every time — that was a full recognition and another request every other poll, for as
 /// long as the picture stayed up, and a rate limit asked that often never lifts.</para>
 ///
-/// <para>So a retry after a failure waits, the same 1→2→4→8→16 seconds a failed read does (see
-/// <see cref="RealtimeRegionState.FirstWaitAfterFailure"/>); a retry for any other reason — a pass
+/// <para>So a retry after a failure waits, 1→2→4 seconds and then 4 each time — a failed read starts
+/// the same but goes on to 16 (see <see cref="LongestWait"/>); a retry for any other reason — a pass
 /// dropped or abandoned rather than refused — is taken at once, as before. Only the retry is held:
 /// a picture that changes is read and translated as any change is, since the new words are the
 /// ones the reader is waiting for. The count starts over once a translation is drawn whole.</para>
@@ -74,7 +74,19 @@ internal sealed class RealtimeRetryBackoff
         }
     }
 
+    /// <summary>
+    /// The longest a retry waits, shorter than a failed read's
+    /// <see cref="RealtimeRegionState.LongestWaitAfterFailure"/>.
+    /// </summary>
+    /// <remarks>
+    /// A failed translation is mostly a service that is down for a while — a local server not started
+    /// yet, a network that dropped — and once it is back, how soon the region shows it matters more
+    /// than one more request every few seconds. A read that keeps failing over a still picture is
+    /// mostly a fault that will not pass, and each try is a whole recognition, so it keeps its 16.
+    /// </remarks>
+    internal static readonly TimeSpan LongestWait = TimeSpan.FromSeconds(4);
+
     internal static TimeSpan Wait(int failures) => TimeSpan.FromTicks(Math.Min(
-        RealtimeRegionState.LongestWaitAfterFailure.Ticks,
+        LongestWait.Ticks,
         RealtimeRegionState.FirstWaitAfterFailure.Ticks << Math.Min(failures - 1, 8)));
 }
