@@ -65,6 +65,8 @@ internal static class VerticalTextGrid
 
     // The Traditional Chinese translation font, so the two Chinese targets share one look.
     private static readonly FontFamily CentredPunctuationFont = TranslatedTextFont.For("ZH-HANT");
+    // And at its weight: Simplified Chinese drops to Normal for YaHei's sake, which is not this font.
+    private static readonly FontWeight CentredPunctuationWeight = TranslatedTextFont.WeightFor("ZH-HANT");
 
     /// <summary>What one cell of a vertical column draws.</summary>
     /// <param name="Glyph">The character to draw, which may not be the one in the translation.</param>
@@ -76,6 +78,13 @@ internal static class VerticalTextGrid
         /// a curly quote is not turned, the corner bracket drawn for it is.
         /// </summary>
         public bool Rotates => RotatesGlyph(Glyph);
+
+        /// <summary>
+        /// The weight to draw the cell in: <paramref name="columnWeight"/>, unless the glyph is
+        /// borrowed from another family, which keeps the weight that family is drawn in.
+        /// </summary>
+        public FontWeight WeightOr(FontWeight columnWeight) =>
+            Font is null ? columnWeight : CentredPunctuationWeight;
     }
 
     /// <summary>

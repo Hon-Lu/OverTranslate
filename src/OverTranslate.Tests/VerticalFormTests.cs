@@ -54,6 +54,25 @@ public class VerticalFormTests
         }
     }
 
+    /// <remarks>
+    /// The column is Normal for YaHei's sake; a mark borrowed from JhengHei keeps the weight JhengHei
+    /// is drawn in, and everything else in the column stays at the column's.
+    /// </remarks>
+    [Fact]
+    public void SimplifiedChinese_BorrowedPunctuationKeepsJhengHeisWeight()
+    {
+        var column = TranslatedTextFont.WeightFor("ZH-HANS");
+        Assert.Equal(System.Windows.FontWeights.Normal, column);
+
+        foreach (var glyph in SimplifiedCentred)
+            Assert.Equal(
+                TranslatedTextFont.WeightFor("ZH-HANT"),
+                VerticalTextGrid.VerticalGlyphFor(glyph, "ZH-HANS").WeightOr(column));
+
+        foreach (var glyph in "漢字“…")
+            Assert.Equal(column, VerticalTextGrid.VerticalGlyphFor(glyph, "ZH-HANS").WeightOr(column));
+    }
+
     [Theory]
     [InlineData('漢')]
     [InlineData('あ')]

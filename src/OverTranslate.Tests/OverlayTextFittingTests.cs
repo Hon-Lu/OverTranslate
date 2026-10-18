@@ -134,19 +134,43 @@ public class OverlayTextFittingTests
         Assert.True(unchanged.FontSize > 40, $"font {unchanged.FontSize:0.##}");
     }
 
-    private readonly record struct DrawnLine(bool Wrapped, double FontSize, double BandHeight);
+    /// <summary>
+    /// Simplified Chinese is set Normal rather than SemiBold, and the band is built from a measurement
+    /// at that same weight. A line mixing Latin into it is used because a Han character is one em
+    /// whatever its weight and could not tell the two apart, while YaHei's Bold Latin runs wider: a
+    /// single line wider than its source gets a band that hugs what was measured, so a measurement
+    /// at the other weight would leave the band visibly wider or narrower than the text drawn in it.
+    /// </summary>
+    [Fact]
+    public void A_simplified_chinese_line_is_measured_and_drawn_at_the_same_weight()
+    {
+        var drawn = Draw(
+            Line("Hello", "Hello world, 你好 OverTranslate", new Rect(20, 15, 60, 34)),
+            target: "ZH-HANS");
+
+        Assert.False(drawn.Wrapped);
+        Assert.Equal(FontWeights.Normal, drawn.Weight);
+        Assert.True(
+            Math.Abs(drawn.InnerWidth - drawn.LaidOutWidth) <= 0.5,
+            $"band holds {drawn.InnerWidth:0.##}px, the drawn line is {drawn.LaidOutWidth:0.##}px");
+    }
+
+    private readonly record struct DrawnLine(
+        bool Wrapped, double FontSize, double BandHeight,
+        FontWeight Weight = default, double InnerWidth = 0, double LaidOutWidth = 0);
 
     /// <summary>
     /// Builds the block window for real, checks the box it produced against the text put inside it,
     /// and returns what the calling test is specifically about.
     /// </summary>
-    private static DrawnLine Draw(TranslatedBlock line, System.Drawing.Rectangle? block = null) =>
+    private static DrawnLine Draw(
+        TranslatedBlock line, System.Drawing.Rectangle? block = null, string target = "ZH-TW") =>
         OnStaThread(() =>
         {
             // 進階選項 are both off here, so nothing in this window asks for the picture underneath;
             // these tests are about the box the text lands in, not about what is behind it.
             var window = new RealtimeBlockWindow(
-                0, block ?? SubtitleBlock, _ => null, "JA", "ZH-TW",
+                0, block ?? SubtitleBlock, _ => null, "JA", target,
                 RealtimeSubtitleColors.DefaultText,
                 RealtimeSubtitleColors.DefaultScrim,
                 RealtimeSubtitleColors.DefaultScrimOpacity);
@@ -197,7 +221,8 @@ public class OverlayTextFittingTests
                     $"one line needs {laidOut.Height:0.##}px of height, box gives {innerHeight:0.##}px");
             }
 
-            return new DrawnLine(wrapped, text.FontSize, container.Height);
+            return new DrawnLine(
+                wrapped, text.FontSize, container.Height, text.FontWeight, innerWidth, laidOut.Width);
         });
 
     private static TranslatedBlock Line(

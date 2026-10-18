@@ -51,6 +51,8 @@ public partial class OverlayWindow : Window
     private double _currentSelectionScreenHeight;
     private string _currentSourceLanguage;
     private string _currentTargetLanguage;
+    // The weight the translation is measured and drawn in; see TranslatedTextFont.WeightFor.
+    private FontWeight TranslatedWeight => TranslatedTextFont.WeightFor(_currentTargetLanguage);
     private bool _currentVerticalText;
 
     /// <summary>
@@ -403,7 +405,7 @@ public partial class OverlayWindow : Window
             double fontSize = SourceFontScale.Calculate(sourceFontSizingHeight, IsLatinSourceToCjkTarget());
             var typeface = new Typeface(
                 translatedFont,
-                FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+                FontStyles.Normal, TranslatedWeight, FontStretches.Normal);
             double availableWidth = Math.Max(BubbleMinWidth, canvasWidth - OverlayPadding * 2);
             double targetBorderW = borderW;
             bool preferRightExpansion = false;
@@ -628,7 +630,7 @@ public partial class OverlayWindow : Window
                 {
                     Text = block.TranslatedText,
                     FontSize = fontSize,
-                    FontWeight = FontWeights.SemiBold,
+                    FontWeight = TranslatedWeight,
                     Foreground = textBrush,
                     TextWrapping = wrap ? TextWrapping.Wrap : TextWrapping.NoWrap,
                     // Never trimmed. Every path that cannot fit the text on one line now wraps, so
@@ -692,7 +694,7 @@ public partial class OverlayWindow : Window
 
         double sizingHeight = GetSourceFontSizingHeight(block, boxHeight);
         double referenceHeight = GetSourceFontReferenceHeight(block, boxHeight);
-        var typeface = new Typeface(translatedFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var typeface = new Typeface(translatedFont, FontStyles.Normal, TranslatedWeight, FontStretches.Normal);
         double bubbleWidth = Math.Max(boxWidth + BubbleExpand * 2, BubbleMinWidth);
         double innerWidth = Math.Max(1, bubbleWidth - BubbleHorizontalPadding);
         double fontSize = FindLargestGroupedFontSize(
@@ -782,7 +784,7 @@ public partial class OverlayWindow : Window
             {
                 Text = block.TranslatedText,
                 FontSize = fontSize,
-                FontWeight = FontWeights.SemiBold,
+                FontWeight = TranslatedWeight,
                 Foreground = new SolidColorBrush(textColor),
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.None,
@@ -913,7 +915,7 @@ public partial class OverlayWindow : Window
                 {
                     Text = drawn.Glyph.ToString(),
                     FontSize = fontSize,
-                    FontWeight = FontWeights.SemiBold,
+                    FontWeight = drawn.WeightOr(TranslatedWeight),
                     Foreground = foreground,
                     TextAlignment = TextAlignment.Center,
                     FontFamily = drawn.Font ?? translatedFont,
@@ -1046,7 +1048,7 @@ public partial class OverlayWindow : Window
             {
                 Text = drawn.Glyph.ToString(),
                 FontSize = fontSize,
-                FontWeight = FontWeights.SemiBold,
+                FontWeight = drawn.WeightOr(TranslatedWeight),
                 Foreground = foreground,
                 TextAlignment = TextAlignment.Center,
                 FontFamily = drawn.Font ?? translatedFont,

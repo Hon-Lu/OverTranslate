@@ -67,4 +67,23 @@ public class TranslatedTextFontTests
         Assert.Equal(
             "Yu Gothic UI, Segoe UI, Sans-Serif",
             TranslatedTextFont.For("JA", LocalizationService.English).Source);
+
+    /// <remarks>
+    /// YaHei has no SemiBold and falls back to a Bold far heavier than JhengHei's, so Simplified
+    /// Chinese alone is set Normal.
+    /// </remarks>
+    [Theory]
+    [InlineData("ZH",      false)]
+    [InlineData("ZH-HANS", false)]
+    [InlineData("zh-hans", false)]
+    [InlineData("ZH-HANT", true)]
+    [InlineData("JA",      true)]
+    [InlineData("KO",      true)]
+    [InlineData("EN",      true)]
+    [InlineData("ZH-TW",   true)]
+    [InlineData(null,      true)]
+    public void WeightFor_IsNormalOnlyForSimplifiedChinese(string? target, bool semiBold) =>
+        Assert.Equal(
+            semiBold ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal,
+            TranslatedTextFont.WeightFor(target));
 }

@@ -1,5 +1,7 @@
 // UseWindowsForms puts System.Drawing in the implicit usings, so this name collides
 using FontFamily = System.Windows.Media.FontFamily;
+using FontWeight = System.Windows.FontWeight;
+using FontWeights = System.Windows.FontWeights;
 
 namespace OverTranslate.Services;
 
@@ -65,6 +67,20 @@ public static class TranslatedTextFont
     /// <summary>The <see cref="FamilyList"/> answer as a family WPF can draw with.</summary>
     public static FontFamily For(string? targetLanguage, string? uiLanguage = null) =>
         new(FamilyList(targetLanguage, uiLanguage));
+
+    /// <summary>The weight a translation into <paramref name="targetLanguage"/> is set in.</summary>
+    /// <remarks>
+    /// SemiBold for every target but Simplified Chinese, which is Normal. YaHei has no SemiBold, so
+    /// WPF falls back to its Bold, which is far heavier than JhengHei's: over 日本人大中小山川口目上下左右
+    /// at 40px, ink per character is 391 for JhengHei Bold (what Traditional Chinese draws), 631 for
+    /// YaHei Bold and 381 for YaHei Regular — Regular is the one that matches. Yu Gothic UI SemiBold
+    /// (446) and Malgun Gothic Bold (436) are near enough to JhengHei to stay. Measuring and drawing
+    /// have to ask for the same weight, for the same reason they ask for the same family.
+    /// </remarks>
+    public static FontWeight WeightFor(string? targetLanguage) =>
+        targetLanguage?.Trim().ToUpperInvariant() is "ZH" or "ZH-HANS"
+            ? FontWeights.Normal
+            : FontWeights.SemiBold;
 
     private static string FallbackCjkFamily(string uiLanguage)
     {
