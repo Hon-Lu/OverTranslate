@@ -1,10 +1,12 @@
-# ローカル LLM（Ollama）導入ガイド
+# ローカル LLM 導入ガイド（Ollama を例に）
 
 > **Language:** **[繁體中文](OLLAMA_GUIDE.md)** ｜ **[English](OLLAMA_GUIDE.en.md)** ｜ **[简体中文](OLLAMA_GUIDE.zh-Hans.md)** ｜ **日本語 ✓** ｜ **[한국어](OLLAMA_GUIDE.ko.md)**
 
 OverTranslate の **OpenAI** 翻訳サービスは OpenAI API 互換形式に対応しているため、[Ollama](https://ollama.com/) を使って、自分の PC 上でローカルモデルを動かすこともできます。
 
 ローカルモデルなら別途 API 料金はかからず、翻訳する内容を外部サーバーへ送信する必要もありません。
+
+> このガイドでは Ollama を例に説明します。LM Studio や OpenRouter など、ほかの OpenAI 互換サービスも使えます。設定方法は末尾の「4. ほかの OpenAI 互換サービスを使う」を参照してください。
 
 このガイドでは `hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS` を例に説明します。Hy-MT2 は Tencent が公開している翻訳向けモデルで、33 言語の相互翻訳に対応しています。ここでは Unsloth が再パッケージした、容量の小さいバージョンを使用します。
 
@@ -114,3 +116,7 @@ OverTranslate の既定の推奨設定では、このガイドで紹介してい
 > - Seed：`42`
 >
 > これらは推奨モデルのドキュメントで案内されている設定値です。Seed を固定しておくことで、同じ原文・同じ設定では、より一貫した翻訳結果を得やすくなります。
+
+## 4. ほかの OpenAI 互換サービスを使う
+
+LM Studio や OpenRouter など、OpenAI 互換 API を提供するサービスも使えます。そのサービスの API アドレスと API Key を設定に入力し、そのモデル名でモデル設定を追加してください。詳しくは各サービスのドキュメントを参照してください。

@@ -411,7 +411,7 @@
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">需到 DeepL 官方注册并获取 API Key</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
-    <sys:String x:Key="S.Provider.OpenAIHint">支持 OpenAI API 格式，建议使用本地 LLM，可通过 Ollama 快速安装与使用。</sys:String>
+    <sys:String x:Key="S.Provider.OpenAIHint">支持 OpenAI 兼容 API（如 Ollama、LM Studio、OpenRouter），建议使用本地 LLM。</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">设置</sys:String>
@@ -464,7 +464,7 @@
     <sys:String x:Key="S.Settings.ModelName">模型名称</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">复制模型名称</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">必填</sys:String>
-    <sys:String x:Key="S.Settings.OllamaGuide">本地 LLM (Ollama) 安装教程</sys:String>
+    <sys:String x:Key="S.Settings.OllamaGuide">本地 LLM 搭建教程</sys:String>
     <sys:String x:Key="S.Settings.PromptAuto">来源：自动</sys:String>
     <sys:String x:Key="S.Settings.PromptExplicit">来源：指定语言</sys:String>
     <sys:String x:Key="S.Settings.PromptAutoHint">此提示词仅在源语言设为“自动（Automatic）”时生效。</sys:String>

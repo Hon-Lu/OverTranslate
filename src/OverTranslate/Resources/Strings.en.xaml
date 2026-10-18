@@ -411,7 +411,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Requires an API key from DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
-    <sys:String x:Key="S.Provider.OpenAIHint">Any OpenAI-compatible API. A local LLM is recommended — Ollama is the quickest way to set one up.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAIHint">Any OpenAI-compatible API (Ollama, LM Studio, OpenRouter…). A local LLM is recommended.</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">Settings</sys:String>
@@ -464,7 +464,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Model</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">Copy the model name</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">Required</sys:String>
-    <sys:String x:Key="S.Settings.OllamaGuide">Local LLM (Ollama) setup guide</sys:String>
+    <sys:String x:Key="S.Settings.OllamaGuide">Local LLM setup guide</sys:String>
     <sys:String x:Key="S.Settings.PromptAuto">Source: automatic</sys:String>
     <sys:String x:Key="S.Settings.PromptExplicit">Source: chosen</sys:String>
     <sys:String x:Key="S.Settings.PromptAutoHint">This prompt applies only when the source language is set to Automatic.</sys:String>

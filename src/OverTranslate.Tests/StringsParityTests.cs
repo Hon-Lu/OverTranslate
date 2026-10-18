@@ -235,14 +235,20 @@ public class StringsParityTests
 
     /// <summary>
     /// The OpenAI hint is the only place the interface tells anyone that a local model is an
-    /// option, and Ollama is the route it points at. Losing that in one language loses it for
-    /// those users entirely.
+    /// option, and that Ollama is only one way to get there: the guide walks through Ollama, but
+    /// anything that speaks the OpenAI API — local or cloud — works. Losing the examples in one
+    /// language loses that for those users entirely.
     /// </summary>
     [Fact]
-    public void OpenAi_hint_recommends_Ollama_in_every_language()
+    public void OpenAi_hint_names_local_and_cloud_examples_in_every_language()
     {
         foreach (var file in AllFiles)
-            Assert.Contains("Ollama", Load(file)["S.Provider.OpenAIHint"]);
+        {
+            var hint = Load(file)["S.Provider.OpenAIHint"];
+            Assert.Contains("Ollama", hint);
+            Assert.Contains("LM Studio", hint);
+            Assert.Contains("OpenRouter", hint);
+        }
     }
 
     /// <summary>

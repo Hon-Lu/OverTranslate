@@ -229,7 +229,7 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 | API 位址 | 留空時使用 `http://localhost:11434/v1`（Ollama 的本機預設位址） |
 | API Key | 本機執行可留空 |
 | 模型設定 | 一份設定 = 模型名稱 + 進階參數 + **自動** 與 **指定語言** 各一組 System / User 提示詞，切換設定會整組一起換 |
-| 系統預設 | 唯讀的那一份，使用 [Ollama 安裝教學](docs/guides/OLLAMA_GUIDE.md) 推薦的模型，提示詞會依介面語言切換 |
+| 系統預設 | 唯讀的那一份，使用 [本地 LLM 架設教學](docs/guides/OLLAMA_GUIDE.md) 推薦的模型，提示詞會依介面語言切換 |
 | 新增設定 | 最多 5 份；模型名稱為必填，System / User 提示詞至少要填寫一項 |
 | 進階參數 | 位於編輯頁的 **進階** 區，三項都可個別關閉；關閉的參數不會傳送 |
 
@@ -276,7 +276,7 @@ OCR 全程於本機執行，不會將圖片上傳至外部服務；預設模型�
 使用以下翻譯服務時，需另外準備：
 
 - **DeepL**：需至 [DeepL 官網](https://www.deepl.com/pro-api) 申請 API Key
-- **OpenAI**：需自備 OpenAI API 相容服務，本地 LLM 架設使用方式可參考 [Ollama 安裝教學](docs/guides/OLLAMA_GUIDE.md)
+- **OpenAI**：需自備 OpenAI API 相容服務，Ollama、LM Studio 等本地 LLM 或 OpenRouter 等雲端服務皆可；本地 LLM 架設方式可參考 [本地 LLM 架設教學](docs/guides/OLLAMA_GUIDE.md)
 
 ---
 

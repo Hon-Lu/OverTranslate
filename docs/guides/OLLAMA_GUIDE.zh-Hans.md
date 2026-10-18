@@ -1,10 +1,12 @@
-# 本地 LLM（Ollama）安装教程
+# 本地 LLM 搭建教程（以 Ollama 为例）
 
 > **Language：** **[繁體中文](OLLAMA_GUIDE.md)** ｜ **[English](OLLAMA_GUIDE.en.md)** ｜ **简体中文 ✓** ｜ **[日本語](OLLAMA_GUIDE.ja.md)** ｜ **[한국어](OLLAMA_GUIDE.ko.md)**
 
 OverTranslate 的 **OpenAI** 翻译服务支持 OpenAI API 兼容格式，因此也可以搭配 [Ollama](https://ollama.com/)，直接在自己的电脑上运行本地模型。
 
 使用本地模型不需要另外支付 API 费用，翻译内容也不需要发送到外部服务器。
+
+> 这篇以 Ollama 示范。LM Studio、OpenRouter 等其他 OpenAI 兼容服务也能使用，设置方式见文末〈4. 使用其他 OpenAI 兼容服务〉。
 
 这篇教程会以 `hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS` 为例。Hy-MT2 是腾讯推出的翻译专用模型，支持 33 种语言互译；这里使用的是由 Unsloth 重新打包、体积较小的版本。
 
@@ -114,3 +116,7 @@ OverTranslate 内置的推荐配置已经使用这篇教程中的模型：
 > - Seed：`42`
 >
 > 这些数值参考推荐模型官方文档中的建议设置。Seed 固定后，同一段原文在相同设置下，可以获得更一致的翻译结果。
+
+## 4. 使用其他 OpenAI 兼容服务
+
+LM Studio、OpenRouter 等提供 OpenAI 兼容 API 的服务也可以使用。把该服务的 API 地址与 API Key 填入设置，再新增一份模型设置填写它的模型名称即可，详细请参考该服务的说明文档。
