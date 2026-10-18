@@ -37,9 +37,9 @@ public class RealtimeVerticalTextTests
     [InlineData(600)]
     public void A_vertical_grid_never_asks_for_more_room_than_it_was_given(int characters)
     {
-        var (cellSize, width, height) = VerticalTextGrid.FitWithin(
+        var (cellSize, width, height, _) = VerticalTextGrid.FitWithin(
             columnRoom: 48, columnLength: 300, maxWidth: 200,
-            preferredCellSize: 24, minCellSize: 8.5, characters);
+            preferredCellSize: 24, minCellSize: 8.5, new string('字', characters));
 
         Assert.True(width <= 200 + 0.001, $"grid is {width:0.##}px wide against 200px of room");
         Assert.True(height <= 300 + 0.001, $"grid is {height:0.##}px tall against 300px of room");
@@ -53,9 +53,9 @@ public class RealtimeVerticalTextTests
     [Fact]
     public void A_column_too_full_for_the_block_shrinks_the_cell_instead_of_growing()
     {
-        var (cellSize, width, height) = VerticalTextGrid.FitWithin(
+        var (cellSize, width, height, _) = VerticalTextGrid.FitWithin(
             columnRoom: 80, columnLength: 200, maxWidth: 80,
-            preferredCellSize: 24, minCellSize: 8.5, characterCount: 120);
+            preferredCellSize: 24, minCellSize: 8.5, new string('字', 120));
 
         Assert.True(cellSize < 24, $"cell stayed at {cellSize:0.##}px with 120 characters to place");
         Assert.True(width <= 80 + 0.001);
@@ -76,9 +76,9 @@ public class RealtimeVerticalTextTests
     public void A_translation_longer_than_its_source_column_shrinks_before_it_takes_another()
     {
         // One source column 24px across and five characters long, asked to hold seven.
-        var (cellSize, width, _) = VerticalTextGrid.FitWithin(
+        var (cellSize, width, _, _) = VerticalTextGrid.FitWithin(
             columnRoom: 24, columnLength: 120, maxWidth: 400,
-            preferredCellSize: 24, minCellSize: 8.5, characterCount: 7);
+            preferredCellSize: 24, minCellSize: 8.5, new string('字', 7));
 
         Assert.True(cellSize < 24, $"cell stayed at {cellSize:0.##}px rather than fitting the column");
         Assert.True(
