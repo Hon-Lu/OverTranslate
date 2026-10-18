@@ -580,7 +580,7 @@
     <sys:String x:Key="S.Settings.MangaModelsFailed">下載失敗</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">不支援</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsOutdated">有新版本</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsUpdated">漫畫直排模型已更新，請重新下載。</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUpdated">模型已更新，重新下載前暫用預設模型。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">已啟用漫畫直排模型</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">已停用（使用預設模型）</sys:String>
@@ -700,10 +700,10 @@
     <sys:String x:Key="S.Toolbar.MangaHintApplied">已套用漫畫直排模型</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">漫畫直排模型下載中</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">尚未安裝漫畫直排模型，可至設定下載</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintOutdated">漫畫直排模型已更新，可至設定重新下載</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintOutdated">漫畫直排模型已更新，暫用預設模型，可至設定重新下載</sys:String>
     <sys:String x:Key="S.Realtime.MangaHintApplied">已套用漫畫直排模型（橫排為預設模型）</sys:String>
     <sys:String x:Key="S.Realtime.MangaHintNotInstalled">尚未安裝漫畫直排模型，可至設定下載（橫排為預設模型，不需要額外下載）</sys:String>
-    <sys:String x:Key="S.Realtime.MangaHintOutdated">漫畫直排模型已更新，可至設定重新下載（橫排為預設模型，不需要額外下載）</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintOutdated">漫畫直排模型已更新，暫用預設模型，可至設定重新下載</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">框線顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">僅原文</sys:String>
