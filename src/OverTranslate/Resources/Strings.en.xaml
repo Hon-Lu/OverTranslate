@@ -556,7 +556,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFailed">Download failed</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsUnsupported">Not supported</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsOutdated">Update available</sys:String>
-    <sys:String x:Key="S.Settings.MangaModelsUpdated">The manga models have been updated. Please download them again.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUpdated">Models updated. Using the default model for now.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} MB · {2}%</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsEnabled">Manga models on</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">Off (default model)</sys:String>
@@ -678,10 +678,10 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintApplied">Using the manga models</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintDownloading">Manga models downloading</sys:String>
     <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">Manga models not installed; see Settings</sys:String>
-    <sys:String x:Key="S.Toolbar.MangaHintOutdated">Manga models updated; download them again in Settings</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintOutdated">Manga models updated; using the default for now, redownload in Settings</sys:String>
     <sys:String x:Key="S.Realtime.MangaHintApplied">Using the manga models (horizontal uses the default model)</sys:String>
     <sys:String x:Key="S.Realtime.MangaHintNotInstalled">Manga models not installed; see Settings (horizontal uses the default model, no download needed)</sys:String>
-    <sys:String x:Key="S.Realtime.MangaHintOutdated">Manga models updated; download them again in Settings (horizontal uses the default model, no download needed)</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintOutdated">Manga models updated; using the default for now, redownload in Settings</sys:String>
     <sys:String x:Key="S.Debug.DisplayScope">Display scope</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">Box display scope</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">Source only</sys:String>
