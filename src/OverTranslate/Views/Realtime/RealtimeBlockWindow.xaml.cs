@@ -87,6 +87,8 @@ public partial class RealtimeBlockWindow : Window
     // not change for as long as its window lives, so it is decided once, and every measurement and
     // every TextBlock below reads this same family.
     private readonly FontFamily _textFont;
+    // The weight that family is set in, decided once beside it for the same reasons.
+    private readonly FontWeight _textWeight;
     // Kept for vertical writing, which draws some punctuation differently by target language.
     private readonly string _targetLanguage;
 
@@ -229,6 +231,7 @@ public partial class RealtimeBlockWindow : Window
         _sampleTextColor = sampleTextColor;
         _latinSourceToCjkTarget = IsLatinToCjk(sourceLanguage, targetLanguage);
         _textFont = TranslatedTextFont.For(targetLanguage);
+        _textWeight = TranslatedTextFont.WeightFor(targetLanguage);
         _targetLanguage = targetLanguage;
         _textBrush = Freeze(new SolidColorBrush(RealtimeSubtitleColors.Text(textColor)));
         _scrimBrush = Freeze(new SolidColorBrush(
@@ -486,7 +489,7 @@ public partial class RealtimeBlockWindow : Window
         // untidy — the part past the edge is not rendered at all. Only the wrapped fallback below
         // needs it; a single line is bounded by its source's own height long before it gets close.
         double maxTextHeight = Math.Max(lineHeight, canvasHeight - ScrimPaddingY * 2);
-        var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
 
         double textWidth;
         double textHeight;
@@ -634,7 +637,7 @@ public partial class RealtimeBlockWindow : Window
                 Text = line.TranslatedText,
                 FontFamily = _textFont,
                 FontSize = fontSize,
-                FontWeight = FontWeights.SemiBold,
+                FontWeight = _textWeight,
                 Foreground = foreground,
                 TextWrapping = wrapped ? TextWrapping.Wrap : TextWrapping.NoWrap,
                 // Never trimmed. A line that cannot fit on one line has already been switched to
@@ -701,7 +704,7 @@ public partial class RealtimeBlockWindow : Window
         if (!isGrouped)
             fontSize = Math.Max(MinFontSize, Math.Min(fontSize, fontGlyphHeight * MaxHeightOverSource));
 
-        var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
         double textWidth = Math.Max(20, boxWidth);
         bool wrapped = isGrouped;
         if (!isGrouped)
@@ -800,7 +803,7 @@ public partial class RealtimeBlockWindow : Window
                 Text = line.TranslatedText,
                 FontFamily = _textFont,
                 FontSize = fontSize,
-                FontWeight = FontWeights.SemiBold,
+                FontWeight = _textWeight,
                 Foreground = foreground,
                 TextWrapping = wrapped ? TextWrapping.Wrap : TextWrapping.NoWrap,
                 TextTrimming = TextTrimming.None,
@@ -824,7 +827,7 @@ public partial class RealtimeBlockWindow : Window
         // Read out of the repair once, and only when a column is about to ask for a plate.
         var backdrop = new Lazy<CaptureBubbleBackdrop?>(() =>
             repairedFrame is null ? null : CaptureBubbleBackdrop.FromRepaired(repairedFrame));
-        var typeface = new Typeface(_textFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
         foreach (var block in _lines)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
@@ -1306,7 +1309,7 @@ public partial class RealtimeBlockWindow : Window
                     Text = drawn.Glyph.ToString(),
                     FontFamily = drawn.Font ?? _textFont,
                     FontSize = cellSize * VerticalGlyphFill,
-                    FontWeight = FontWeights.SemiBold,
+                    FontWeight = drawn.WeightOr(_textWeight),
                     Foreground = brush,
                     TextAlignment = TextAlignment.Center,
                 };
@@ -1387,7 +1390,7 @@ public partial class RealtimeBlockWindow : Window
                 Child = Outlined(edge, fontSize, () => new TextBlock
                 {
                     Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,
-                    FontWeight = FontWeights.SemiBold, Foreground = foreground,
+                    FontWeight = _textWeight, Foreground = foreground,
                     TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.None,
                 }),
             },
