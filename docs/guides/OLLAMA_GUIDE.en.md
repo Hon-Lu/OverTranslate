@@ -1,10 +1,12 @@
-# Local LLM (Ollama) Setup Guide
+# Local LLM Setup Guide (using Ollama as the example)
 
 > **Language:** **[繁體中文](OLLAMA_GUIDE.md)** ｜ **English ✓** ｜ **[简体中文](OLLAMA_GUIDE.zh-Hans.md)** ｜ **[日本語](OLLAMA_GUIDE.ja.md)** ｜ **[한국어](OLLAMA_GUIDE.ko.md)**
 
 OverTranslate's **OpenAI** translation service supports OpenAI API-compatible endpoints, which means you can also use [Ollama](https://ollama.com/) to run a model directly on your own computer.
 
 With a local model, there are no separate API fees, and the text you translate does not need to be sent to an external server.
+
+> This guide uses Ollama as the example. Other OpenAI-compatible services such as LM Studio and OpenRouter work too — see "4. Using other OpenAI-compatible services" at the end.
 
 This guide uses `hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS` as the example. Hy-MT2 is a translation-focused model from Tencent that supports translation between 33 languages. The version used here is a smaller repackaged build provided by Unsloth.
 
@@ -114,3 +116,7 @@ The matching prompts and advanced parameters are already configured as well, so 
 > - Seed: `42`
 >
 > These values follow the recommended settings in the model documentation. With a fixed seed, the same source text under the same settings can produce more consistent translations.
+
+## 4. Using other OpenAI-compatible services
+
+Other services that offer an OpenAI-compatible API, such as LM Studio and OpenRouter, work too. Enter the service's API endpoint and API key in Settings, then add a model setting with its model name. See that service's documentation for details.

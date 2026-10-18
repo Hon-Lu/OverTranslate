@@ -227,7 +227,7 @@ when a translation fails or responds too slowly, the app first retries the same 
 | API URL | Empty uses `http://localhost:11434/v1` (Ollama's local default) |
 | API Key | Can be left empty for a local server |
 | Model settings | One setting = a model name, the advanced parameters, and a System / User prompt pair for each of **automatic** and **a chosen source language**. Switching settings switches all of it |
-| Built-in | The read-only one, on the model the [Ollama guide](docs/guides/OLLAMA_GUIDE.en.md) recommends, with wording that follows the interface language |
+| Built-in | The read-only one, on the model the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md) recommends, with wording that follows the interface language |
 | Add | Up to five; the model name is required, and at least one of the System / User prompts has to be filled in |
 | Advanced parameters | Under **Advanced** in the editor; each can be switched off on its own, and a parameter that is off is left out of the request |
 
@@ -274,7 +274,7 @@ OCR runs entirely on your own PC, and images are never uploaded to any external 
 The following translation services require some extra setup:
 
 - **DeepL**: apply for an API key on the [DeepL website](https://www.deepl.com/pro-api)
-- **OpenAI**: requires your own OpenAI-compatible API service; for setting up a local LLM, see the [Ollama guide](docs/guides/OLLAMA_GUIDE.en.md)
+- **OpenAI**: requires your own OpenAI-compatible API service — a local LLM such as Ollama or LM Studio, or a cloud service such as OpenRouter; for setting up a local LLM, see the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md)
 
 ---
 

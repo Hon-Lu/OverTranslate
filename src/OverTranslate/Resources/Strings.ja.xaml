@@ -415,7 +415,7 @@
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">DeepL の公式サイトで登録して API キーを取得する必要があります</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
-    <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 互換 API に対応。ローカル LLM の利用がおすすめで、Ollama を使うと手軽に導入できます。</sys:String>
+    <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 互換 API に対応（Ollama・LM Studio・OpenRouter など）。ローカル LLM の利用がおすすめです。</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">設定</sys:String>
@@ -468,7 +468,7 @@
     <sys:String x:Key="S.Settings.ModelName">モデル名</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">モデル名をコピー</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">必須</sys:String>
-    <sys:String x:Key="S.Settings.OllamaGuide">ローカル LLM (Ollama) の導入ガイド</sys:String>
+    <sys:String x:Key="S.Settings.OllamaGuide">ローカル LLM 導入ガイド</sys:String>
     <sys:String x:Key="S.Settings.PromptAuto">ソース：自動</sys:String>
     <sys:String x:Key="S.Settings.PromptExplicit">ソース：指定</sys:String>
     <sys:String x:Key="S.Settings.PromptAutoHint">このプロンプトは、翻訳元の言語が「自動（Automatic）」のときだけ適用されます。</sys:String>

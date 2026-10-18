@@ -229,7 +229,7 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 | API 주소 | 비워 두면 `http://localhost:11434/v1`(Ollama의 로컬 기본 주소)를 사용합니다 |
 | API 키 | 로컬 실행이면 비워 두어도 됩니다 |
 | 모델 설정 | 설정 하나 = 모델 이름 + 고급 매개변수 + **자동** 과 **언어 지정** 각각의 System / User 프롬프트. 설정을 바꾸면 한 묶음으로 바뀝니다 |
-| 권장 설정 | 읽기 전용인 설정. [Ollama 설치 안내](docs/guides/OLLAMA_GUIDE.ko.md)가 권장하는 모델을 사용하며 프롬프트는 인터페이스 언어에 따라 바뀝니다 |
+| 권장 설정 | 읽기 전용인 설정. [로컬 LLM 설치 안내](docs/guides/OLLAMA_GUIDE.ko.md)가 권장하는 모델을 사용하며 프롬프트는 인터페이스 언어에 따라 바뀝니다 |
 | 추가 | 최대 5개. 모델 이름은 필수이고 System / User 프롬프트는 둘 중 하나만 채우면 됩니다 |
 | 고급 매개변수 | 편집 화면의 **고급** 에 있습니다. 세 가지 모두 개별로 끌 수 있고, 꺼 둔 것은 전송되지 않습니다 |
 
@@ -276,7 +276,7 @@ OCR은 처음부터 끝까지 내 PC에서 실행되며, 이미지를 외부 서
 다음 번역 서비스를 사용하려면 별도로 준비해야 합니다.
 
 - **DeepL**: [DeepL 공식 사이트](https://www.deepl.com/pro-api)에서 API 키를 발급받으세요
-- **OpenAI**: OpenAI API 호환 서비스를 직접 준비해야 합니다. 로컬 LLM 구축 방법은 [Ollama 설치 안내](docs/guides/OLLAMA_GUIDE.ko.md)를 참고하세요
+- **OpenAI**: OpenAI API 호환 서비스를 직접 준비해야 합니다. Ollama, LM Studio 같은 로컬 LLM이나 OpenRouter 같은 클라우드 서비스 모두 사용할 수 있습니다. 로컬 LLM 구축 방법은 [로컬 LLM 설치 안내](docs/guides/OLLAMA_GUIDE.ko.md)를 참고하세요
 
 ---
 

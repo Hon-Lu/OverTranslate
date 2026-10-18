@@ -415,7 +415,7 @@
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">DeepL 공식 사이트에서 가입해 API 키를 받아야 합니다</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
-    <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 호환 API를 지원합니다. 로컬 LLM 사용을 권장하며, Ollama로 간편하게 설치할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 호환 API를 지원합니다(Ollama, LM Studio, OpenRouter 등). 로컬 LLM 사용을 권장합니다.</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">설정</sys:String>
@@ -468,7 +468,7 @@
     <sys:String x:Key="S.Settings.ModelName">모델 이름</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">모델 이름 복사</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">필수</sys:String>
-    <sys:String x:Key="S.Settings.OllamaGuide">로컬 LLM (Ollama) 설치 안내</sys:String>
+    <sys:String x:Key="S.Settings.OllamaGuide">로컬 LLM 설치 안내</sys:String>
     <sys:String x:Key="S.Settings.PromptAuto">원본: 자동</sys:String>
     <sys:String x:Key="S.Settings.PromptExplicit">원본: 지정</sys:String>
     <sys:String x:Key="S.Settings.PromptAutoHint">이 프롬프트는 원본 언어가 ‘자동(Automatic)’일 때만 적용됩니다.</sys:String>

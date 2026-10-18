@@ -1,10 +1,12 @@
-# 로컬 LLM(Ollama) 설치 가이드
+# 로컬 LLM 설치 가이드 (Ollama 예시)
 
 > **Language:** **[繁體中文](OLLAMA_GUIDE.md)** ｜ **[English](OLLAMA_GUIDE.en.md)** ｜ **[简体中文](OLLAMA_GUIDE.zh-Hans.md)** ｜ **[日本語](OLLAMA_GUIDE.ja.md)** ｜ **한국어 ✓**
 
 OverTranslate의 **OpenAI** 번역 서비스는 OpenAI API 호환 형식을 지원하므로, [Ollama](https://ollama.com/)를 이용해 내 컴퓨터에서 로컬 모델을 직접 실행할 수 있습니다.
 
 로컬 모델을 사용하면 별도의 API 비용이 들지 않고, 번역할 내용을 외부 서버로 보낼 필요도 없습니다.
+
+> 이 가이드는 Ollama를 예로 들어 설명합니다. LM Studio, OpenRouter 같은 다른 OpenAI 호환 서비스도 사용할 수 있으며, 설정 방법은 마지막의 「4. 다른 OpenAI 호환 서비스 사용하기」를 참고하세요.
 
 이 가이드에서는 `hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS`를 예로 사용합니다. Hy-MT2는 Tencent가 공개한 번역 특화 모델로 33개 언어 간 번역을 지원하며, 여기서는 Unsloth가 다시 패키징한 더 작은 버전을 사용합니다.
 
@@ -114,3 +116,7 @@ OverTranslate의 기본 권장 설정에는 이 가이드에서 사용하는 모
 > - Seed: `42`
 >
 > 이 값들은 권장 모델 문서에서 안내하는 설정을 기준으로 합니다. Seed를 고정하면 같은 원문과 같은 설정에서 보다 일관된 번역 결과를 얻기 쉬워집니다.
+
+## 4. 다른 OpenAI 호환 서비스 사용하기
+
+LM Studio, OpenRouter 등 OpenAI 호환 API를 제공하는 서비스도 사용할 수 있습니다. 해당 서비스의 API 주소와 API Key를 설정에 입력하고, 그 모델 이름으로 모델 설정을 추가하면 됩니다. 자세한 내용은 해당 서비스의 문서를 참고하세요.
