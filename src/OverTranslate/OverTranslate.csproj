@@ -47,6 +47,21 @@
     <SatelliteResourceLanguages>en;ja;ko;zh-Hans;zh-Hant</SatelliteResourceLanguages>
   </PropertyGroup>
 
+  <!-- The runtime a self-contained publish carries is the newest patch the building SDK knows about, so it moves
+       whenever CI's setup-dotnet happens to pick up a new SDK. 2.8.0 got 8.0.32 that way and its delta grew to 14 MB,
+       13.4 MB of it .NET/WPF runtime files, while every local test (and 2.7.2) ran on 8.0.31. Pinned to 8.0.31 for
+       both runtime packs: Microsoft.NETCore.App, and Microsoft.WindowsDesktop.App, where the WPF/WinForms DLLs come
+       from (the .WPF and .WindowsForms profiles resolve to that same pack, so they are pinned with it).
+       RuntimeFrameworkVersion is not used because it also overrides the runtime pack version of
+       Microsoft.Windows.SDK.NET.Ref. Only the runtime packs move; the targeting packs stay whatever the SDK brings.
+       The update also lands on the SDK's entries for other target frameworks (an item condition cannot look at
+       their metadata outside a target); nothing here uses those. Remove this when moving to .NET 10; the condition
+       keeps it from pinning anything but net8.0 in the meantime. -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0'))">
+    <KnownFrameworkReference Update="Microsoft.NETCore.App;Microsoft.WindowsDesktop.App;Microsoft.WindowsDesktop.App.WPF;Microsoft.WindowsDesktop.App.WindowsForms"
+                             LatestRuntimeFrameworkVersion="8.0.31" />
+  </ItemGroup>
+
   <ItemGroup>
     <ApplicationDefinition Remove="App.xaml" />
     <Page Include="App.xaml" />
