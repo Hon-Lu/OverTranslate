@@ -264,7 +264,7 @@ OCR 辨識由 RapidOcrNet 搭配 ONNX 模型處理，會依語言自動使用對
 所有語言共用同一套**文字偵測模型**（`PP-OCRv6_det_tiny`）與**方向分類模型**（`cls`），僅辨識模型會依語言切換。  
 OCR 全程於本機執行，不會將圖片上傳至外部服務；預設模型使用 CPU，漫畫直排模型則使用顯示卡。
 
-**漫畫直排模型**：來源語言為日文並開啟直排時，可在設定中另外下載（約 303 MB，需顯示卡），由 [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) 偵測文字框、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0）辨識直排日文。
+**漫畫直排模型**：來源語言為日文並開啟直排時，可在設定中另外下載（約 342 MB，需顯示卡），由 [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) 偵測文字框、[CRAFT](https://github.com/clovaai/CRAFT-pytorch)（MIT）切分多欄文字、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0）辨識直排日文。
 
 ---
 

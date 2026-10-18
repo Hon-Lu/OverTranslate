@@ -264,7 +264,7 @@ OCR は RapidOcrNet と ONNX モデルで処理し、言語に応じてモデル
 **文字検出モデル**（`PP-OCRv6_det_tiny`）と**方向分類モデル**（`cls`）はすべての言語で共通で、切り替わるのは認識モデルだけです。  
 OCR は最初から最後までお使いの PC 上で動き、画像が外部のサービスに送られることはありません。標準のモデルは CPU で、漫画縦書きモデルはグラフィックスカードで動きます。
 
-**漫画縦書きモデル**：翻訳元が日本語で縦書きをオンにすると、設定から別途ダウンロードできます（約 303 MB、グラフィックスカードが必要）。[comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) で文字枠を検出し、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0）で縦書きの日本語を認識します。
+**漫画縦書きモデル**：翻訳元が日本語で縦書きをオンにすると、設定から別途ダウンロードできます（約 342 MB、グラフィックスカードが必要）。[comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) で文字枠を検出し、[CRAFT](https://github.com/clovaai/CRAFT-pytorch)（MIT）で複数列の文字を列ごとに分け、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0）で縦書きの日本語を認識します。
 
 ---
 
