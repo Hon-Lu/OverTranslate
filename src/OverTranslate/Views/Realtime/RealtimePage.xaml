@@ -678,20 +678,15 @@
 
                                             <!-- The whole of the left part takes a click for the box,
                                                  not only the two digits: the field is as wide as it
-                                                 looks. The number and its unit sit in the middle of
-                                                 it: the range is always two digits, so they never
-                                                 move, and the part reads as balanced either side of
-                                                 them. The negative margin takes back the TextBox's own
-                                                 inset ahead of the digits, which would otherwise be
-                                                 centred as if it were ink and leave the number 3 to
-                                                 the right of the middle. -->
+                                                 looks. The number's ink starts 20 in from the box's
+                                                 inner edge: 18 here, and the TextBox's own inset and
+                                                 the digit's side bearing make up the rest. -->
                                             <Grid Grid.Column="0"
                                                   Background="Transparent"
                                                   Cursor="IBeam"
                                                   MouseLeftButtonDown="FixedFontSizeField_MouseLeftButtonDown">
                                                 <StackPanel Orientation="Horizontal"
-                                                            HorizontalAlignment="Center"
-                                                            Margin="-3,0,0,0"
+                                                            Margin="18,0,0,0"
                                                             VerticalAlignment="Center">
                                                     <TextBox x:Name="FixedFontSizeInput"
                                                              Background="Transparent"
