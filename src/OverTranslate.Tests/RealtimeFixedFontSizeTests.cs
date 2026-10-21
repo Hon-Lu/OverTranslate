@@ -138,6 +138,27 @@ public class RealtimeFixedFontSizeTests
     });
 
     [Fact]
+    public void Panel_rows_whose_grown_boxes_would_overlap_fall_back_to_the_group() => OnSta(() =>
+    {
+        // A menu with rows 20px apart, one block per item. At 32 each row's box would grow to ~39,
+        // past the 20 to the next row's centre, and the two would be drawn over each other.
+        TranslatedBlock[] menu =
+        [
+            new("Start", "開始遊戲", new Rect(20, 100, 300, 16)),
+            new("Options", "選項設定", new Rect(20, 120, 300, 16)),
+        ];
+
+        var crowded = RenderAll(fixedFontSize: 32, menu);
+        Assert.All(crowded, text => Assert.Equal(32, text.FontSize));
+        Assert.All(crowded, text => Assert.IsNotType<Viewbox>(LogicalParent(text)));
+
+        // At 12 the grown box is ~15, inside the 20: the rows stay rows, as region-panel-en at 12 does.
+        var roomy = RenderAll(fixedFontSize: 12, menu);
+        Assert.All(roomy, text => Assert.Equal(12, text.FontSize));
+        Assert.All(roomy, text => Assert.IsType<Viewbox>(LogicalParent(text)));
+    });
+
+    [Fact]
     public void Settings_default_to_auto_and_clamp_the_fixed_size()
     {
         var settings = new RealtimeSettings();
@@ -184,6 +205,25 @@ public class RealtimeFixedFontSizeTests
             var box = Assert.IsType<Border>(Assert.Single(((Canvas)window.FindName("TextCanvas")).Children));
             var text = box.Child as TextBlock ?? Assert.IsType<TextBlock>(Assert.IsType<Viewbox>(box.Child).Child);
             return (background, text);
+        }
+        finally { window.Close(); }
+    }
+
+    /// <summary>Every line's text, in a Panel block, for lines that each draw one box.</summary>
+    private static List<TextBlock> RenderAll(double fixedFontSize, IReadOnlyList<TranslatedBlock> lines)
+    {
+        var window = new RealtimeBlockWindow(0, new System.Drawing.Rectangle(0, 0, 600, 300),
+            _ => null, "EN", "ZH-TW", "#FFFFFF", "#000000", 70, mode: RealtimeBlockMode.Panel,
+            fixedFontSize: fixedFontSize);
+        try
+        {
+            var type = typeof(RealtimeBlockWindow);
+            type.GetField("_lines", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, lines.ToList());
+            type.GetMethod("Rebuild", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+            var boxes = ((Canvas)window.FindName("TextCanvas")).Children.Cast<Border>().ToList();
+            Assert.Equal(lines.Count, boxes.Count);
+            return [.. boxes.Select(box =>
+                box.Child as TextBlock ?? Assert.IsType<TextBlock>(Assert.IsType<Viewbox>(box.Child).Child))];
         }
         finally { window.Close(); }
     }

@@ -923,13 +923,20 @@ public partial class RealtimeBlockWindow : Window
                 // reader turned 自動 off to stop. The group drawn as one wrapped block is what a
                 // panel that cannot be split falls back to anyway, and it is set at the fixed size.
                 //
-                // Width only. A row too short for the size is not a reason to give the rows up:
+                // A row too short for the size is not by itself a reason to give the rows up:
                 // interface text is often set in rows barely taller than its letters, and over a
                 // menu each of those becoming a band centred on its source moved every short item
                 // off the left margin the menu is read down. The row's box grows to the size
                 // instead — see BuildPanelLine.
+                //
+                // Only while the grown box still fits between its neighbours, though. Past the
+                // distance to the next row's centre it reaches into that row's own box, and two
+                // grown rows drawn over each other are unreadable — a size picked for dialogue, 32,
+                // over a menu with rows 20px apart. The group is the honest answer there too.
                 if (_fixedFontSize is not null && rows.Any(row => row.SourceLineBounds is not { Count: > 1 }
-                    && Measure(row.TranslatedText, typeface, fontSize, null).Width > row.Bounds.Width / _dpiX))
+                    && (Measure(row.TranslatedText, typeface, fontSize, null) is var measured)
+                    && (measured.Width > row.Bounds.Width / _dpiX
+                        || measured.Height > NearestRowPitch(row.Bounds, block, rows) / _dpiY)))
                 {
                     if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
                     continue;
@@ -1418,6 +1425,30 @@ public partial class RealtimeBlockWindow : Window
         Canvas.SetTop(textLayer, gridTop);
 
         return new LineVisual(background, textLayer, patchBounds, replate);
+    }
+
+    /// <summary>
+    /// How far, in physical pixels, a panel row's centre is from the nearest row above or below it:
+    /// the other rows of its own block and every row of the other blocks on screen, since a menu
+    /// is as often read as one block per item as one block for the lot. Only rows that share some
+    /// of its width count — a column beside it is not in its way. Infinite with no such row.
+    /// </summary>
+    private double NearestRowPitch(Rect row, TranslatedBlock block, IReadOnlyList<TranslatedBlock> rows)
+    {
+        var others = rows.Select(other => other.Bounds)
+            .Concat(_lines.Where(line => !ReferenceEquals(line, block))
+                .SelectMany(line => line.SourceLineBounds ?? [line.Bounds]));
+
+        double centre = row.Y + row.Height / 2;
+        double nearest = double.PositiveInfinity;
+        foreach (var other in others)
+        {
+            if (other == row || other.Right <= row.Left || other.Left >= row.Right) continue;
+            double pitch = Math.Abs(other.Y + other.Height / 2 - centre);
+            // Two boxes on one line are the same row read twice, not a neighbour.
+            if (pitch > 0.5) nearest = Math.Min(nearest, pitch);
+        }
+        return nearest;
     }
 
     private LineVisual? BuildPanelLine(
