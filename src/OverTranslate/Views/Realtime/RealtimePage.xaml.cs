@@ -125,6 +125,10 @@ public partial class RealtimePage : UserControl
     // would otherwise be a hundred writes.
     private bool _draggingOpacity;
 
+    // The same pair for 文字大小's slider, which is held back and restored by the same rules.
+    private bool _syncingFontSize;
+    private bool _draggingFontSize;
+
     // True while this page is putting the stored 顯示外觀 modes on their trays rather than the user
     // choosing one. Same failure as the two flags above, one control further on: checking a half
     // raises Checked, which would write back the value being restored.
@@ -156,12 +160,24 @@ public partial class RealtimePage : UserControl
                 _draggingOpacity = false;
                 PersistScrimOpacity();
             }));
+        FixedFontSizeSlider.AddHandler(
+            Thumb.DragStartedEvent,
+            new DragStartedEventHandler((_, _) => _draggingFontSize = true));
+        FixedFontSizeSlider.AddHandler(
+            Thumb.DragCompletedEvent,
+            new DragCompletedEventHandler((_, _) =>
+            {
+                _draggingFontSize = false;
+                PersistFixedFontSize();
+            }));
 
         // Set before the handlers go on, for the reason the boxes above give: restoring a stored
         // value must not read as the user reaching for the switch and write it straight back.
         ShowAppearanceModes(SettingsService.Instance.Current.Realtime);
         TextColorAutoRadio.Checked += TextColorMode_Changed;
         TextColorFixedRadio.Checked += TextColorMode_Changed;
+        FontSizeAutoRadio.Checked += FontSizeMode_Changed;
+        FontSizeFixedRadio.Checked += FontSizeMode_Changed;
         ScrimColorAutoRadio.Checked += ScrimColorMode_Changed;
         ScrimColorFixedRadio.Checked += ScrimColorMode_Changed;
         BorderToggle.Checked += BorderToggle_Toggled;
@@ -170,6 +186,11 @@ public partial class RealtimePage : UserControl
         BorderFixedRadio.Checked += BorderMode_Changed;
 
         SyncScrimOpacity();
+        SyncFixedFontSize();
+        // Attached here rather than in the markup, unlike the opacity's: this track does not start at
+        // 0, so loading the markup moves the value onto its minimum, and a handler already on would
+        // take that for the user dragging to 10 and save it.
+        FixedFontSizeSlider.ValueChanged += FixedFontSizeSlider_ValueChanged;
         RenderColours();
         RenderPauseHint();
 
@@ -316,6 +337,7 @@ public partial class RealtimePage : UserControl
         ApplyCaptureMode();
         if (_windowsLoaded) LoadWindows();
         SyncScrimOpacity();
+        SyncFixedFontSize();
         RenderColours();
         RenderPauseHint();
         RenderState();
@@ -749,6 +771,9 @@ public partial class RealtimePage : UserControl
             settings.Realtime.BorderEnabled,
             settings.Realtime.BorderColorMode == RealtimeBorderColorMode.Fixed
                 ? settings.Realtime.BorderColor
+                : null,
+            settings.Realtime.FontSizeMode == RealtimeFontSizeMode.Fixed
+                ? settings.Realtime.FixedFontSize
                 : null);
 
         // The shell is handed over to be hidden: it is almost certainly sitting on the screen the
@@ -770,7 +795,7 @@ public partial class RealtimePage : UserControl
 
     /// <summary>
     /// Everything on the card, back to what it ships as: both colours and the mode each is in, the
-    /// weight of the band, and the border with its own two values.
+    /// weight of the band, the border with its own two values, and the text size with its own.
     /// </summary>
     /// <remarks>
     /// One button for the card rather than one per group. There were three before, each sitting
@@ -796,12 +821,15 @@ public partial class RealtimePage : UserControl
             realtime.BorderEnabled = defaults.BorderEnabled;
             realtime.BorderColorMode = defaults.BorderColorMode;
             realtime.BorderColor = defaults.BorderColor;
+            realtime.FontSizeMode = defaults.FontSizeMode;
+            realtime.FixedFontSize = defaults.FixedFontSize;
         });
 
-        // The trays and the slider are the controls here that hold their own value rather than
+        // The trays and the sliders are the controls here that hold their own value rather than
         // reading it back from the settings on every render, so they have to be told.
         ShowAppearanceModes(SettingsService.Instance.Current.Realtime);
         SyncScrimOpacity();
+        SyncFixedFontSize();
         RenderColours();
     }
 
@@ -818,6 +846,9 @@ public partial class RealtimePage : UserControl
     {
         _syncingAppearance = true;
         (stored.SampleSourceTextColor ? TextColorAutoRadio : TextColorFixedRadio).IsChecked = true;
+        (stored.FontSizeMode == RealtimeFontSizeMode.Fixed
+            ? FontSizeFixedRadio
+            : FontSizeAutoRadio).IsChecked = true;
         (stored.NaturalBackgroundEnabled ? ScrimColorAutoRadio : ScrimColorFixedRadio).IsChecked = true;
         (stored.BorderColorMode == RealtimeBorderColorMode.Fixed
             ? BorderFixedRadio
@@ -839,6 +870,16 @@ public partial class RealtimePage : UserControl
         MoveTextColorModeThumb(animate: true);
         if (_syncingAppearance) return;
         Persist(s => s.Realtime.SampleSourceTextColor = TextColorAutoRadio.IsChecked == true);
+    }
+
+    /// <inheritdoc cref="TextColorMode_Changed"/>
+    private void FontSizeMode_Changed(object sender, RoutedEventArgs e)
+    {
+        MoveFontSizeModeThumb(animate: true);
+        if (_syncingAppearance) return;
+        Persist(s => s.Realtime.FontSizeMode = FontSizeFixedRadio.IsChecked == true
+            ? RealtimeFontSizeMode.Fixed
+            : RealtimeFontSizeMode.Auto);
     }
 
     /// <inheritdoc cref="TextColorMode_Changed"/>
@@ -879,6 +920,10 @@ public partial class RealtimePage : UserControl
         MoveTextColorModeThumb(animate: false);
 
     /// <inheritdoc cref="TextColorModeThumb_SizeChanged"/>
+    private void FontSizeModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        MoveFontSizeModeThumb(animate: false);
+
+    /// <inheritdoc cref="TextColorModeThumb_SizeChanged"/>
     private void ScrimColorModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
         MoveScrimColorModeThumb(animate: false);
 
@@ -889,6 +934,10 @@ public partial class RealtimePage : UserControl
     private void MoveTextColorModeThumb(bool animate) =>
         MoveModeThumb(
             TextColorModeThumb, TextColorModeThumbShift, TextColorFixedRadio.IsChecked == true, animate);
+
+    private void MoveFontSizeModeThumb(bool animate) =>
+        MoveModeThumb(
+            FontSizeModeThumb, FontSizeModeThumbShift, FontSizeFixedRadio.IsChecked == true, animate);
 
     private void MoveScrimColorModeThumb(bool animate) =>
         MoveModeThumb(
@@ -962,6 +1011,36 @@ public partial class RealtimePage : UserControl
         RealtimeSubtitleColors.ClampOpacity((int)Math.Round(ScrimOpacitySlider.Value));
 
     /// <summary>
+    /// 文字大小's slider, which follows the thumb by the same rules as the opacity's — see
+    /// <see cref="ScrimOpacitySlider_ValueChanged"/>.
+    /// </summary>
+    private void FixedFontSizeSlider_ValueChanged(
+        object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_syncingFontSize) return;
+
+        if (_draggingFontSize) RenderColours();
+        else PersistFixedFontSize();
+    }
+
+    /// <summary>Puts the stored size on the slider without that reading as the user setting it.</summary>
+    private void SyncFixedFontSize()
+    {
+        _syncingFontSize = true;
+        FixedFontSizeSlider.Value = SettingsService.Instance.Current.Realtime.FixedFontSize;
+        _syncingFontSize = false;
+    }
+
+    private void PersistFixedFontSize() =>
+        Persist(s => s.Realtime.FixedFontSize = CurrentFixedFontSize);
+
+    /// <summary>What the slider is showing — see <see cref="CurrentScrimOpacity"/>.</summary>
+    private int CurrentFixedFontSize =>
+        Math.Clamp(
+            (int)Math.Round(FixedFontSizeSlider.Value),
+            RealtimeSettings.MinFixedFontSize, RealtimeSettings.MaxFixedFontSize);
+
+    /// <summary>
     /// Opens the system colour picker on the current value and reports what came back.
     /// </summary>
     /// <remarks>
@@ -1012,6 +1091,19 @@ public partial class RealtimePage : UserControl
         var scrim = RealtimeSubtitleColors.Scrim(realtime.ScrimColor, opacity);
 
         ScrimOpacityValue.Text = $"{opacity}%";
+
+        // The size from the slider for the reason the opacity is, so the preview follows a drag. A
+        // bare number: the unit is WPF's own, which means nothing to anyone reading it, and the
+        // preview is what says how large it is.
+        var fixedFontSize = CurrentFixedFontSize;
+        var fixedFontMode = realtime.FontSizeMode == RealtimeFontSizeMode.Fixed;
+        FixedFontSizeValue.Text = fixedFontSize.ToString(System.Globalization.CultureInfo.CurrentCulture);
+        PreviewText.FontSize = fixedFontMode ? fixedFontSize : PreviewAutoFontSize;
+
+        // Dimmed and disabled in 自動 for the reason the opacity row is: there is no fixed size for
+        // it to set.
+        FixedFontSizeRow.IsEnabled = fixedFontMode;
+        FixedFontSizeRow.Opacity = fixedFontMode ? 1.0 : 0.45;
 
         // The swatch shows the colour the user picked, so it is drawn opaque even for the scrim —
         // the preview below is where its translucency is on display.
@@ -1077,8 +1169,17 @@ public partial class RealtimePage : UserControl
         PreviewScrim.BorderThickness = new Thickness(
             realtime.BorderEnabled ? RealtimeSubtitleColors.BorderThickness : 0);
 
-        ResetAppearanceBtn.IsEnabled = !IsDefaultAppearance(realtime, opacity);
+        ResetAppearanceBtn.IsEnabled = !IsDefaultAppearance(realtime, opacity, fixedFontSize);
     }
+
+    /// <summary>
+    /// The size the preview is set at in 自動, which is what it was drawn at before 文字大小 existed.
+    /// </summary>
+    /// <remarks>
+    /// One number for a mode that has none: in a session 自動 follows each source line, and this
+    /// page has no source line to follow, so the preview stays at a size that reads as an example.
+    /// </remarks>
+    private const double PreviewAutoFontSize = 15;
 
     /// <summary>
     /// Whether every value on the card is still what it ships as, which is what decides the reset.
@@ -1089,11 +1190,13 @@ public partial class RealtimePage : UserControl
     /// deliberately ahead of what is stored, and a button that comes back to life a beat late reads
     /// as having missed the drag.
     /// </remarks>
-    private static bool IsDefaultAppearance(RealtimeSettings realtime, int opacity)
+    private static bool IsDefaultAppearance(RealtimeSettings realtime, int opacity, int fixedFontSize)
     {
         var defaults = new RealtimeSettings();
 
         return realtime.SampleSourceTextColor == defaults.SampleSourceTextColor
+            && realtime.FontSizeMode == defaults.FontSizeMode
+            && fixedFontSize == defaults.FixedFontSize
             && realtime.NaturalBackgroundEnabled == defaults.NaturalBackgroundEnabled
             && realtime.BorderEnabled == defaults.BorderEnabled
             && realtime.BorderColorMode == defaults.BorderColorMode

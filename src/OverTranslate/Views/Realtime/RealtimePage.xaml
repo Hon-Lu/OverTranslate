@@ -491,8 +491,11 @@
                                      chrome, and a backdrop that went light with the theme would make
                                      a white band look invisible and a black one look far heavier
                                      than it is. -->
+                                <!-- At least, rather than exactly, 96 high: 文字大小 → 固定 sets the
+                                     preview at the size chosen, and at the top of the range the
+                                     line wraps, as it would in a session. -->
                                 <Border x:Name="PreviewBackdrop"
-                                        Height="96"
+                                        MinHeight="96"
                                         CornerRadius="4"
                                         ClipToBounds="True">
                                     <Grid>
@@ -562,7 +565,9 @@
                                                        Text="{DynamicResource S.Realtime.PreviewText}"
                                                        FontFamily="Microsoft JhengHei, Segoe UI Variable Text, Segoe UI, Sans-Serif"
                                                        FontSize="15"
-                                                       FontWeight="SemiBold"/>
+                                                       FontWeight="SemiBold"
+                                                       TextWrapping="Wrap"
+                                                       TextAlignment="Center"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -648,6 +653,100 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
+                        </Border>
+
+                        <!-- 文字大小 and the size itself, in one group, built as 底色 below is: the
+                             tray in the same column as the other two, and the slider under a rule
+                             as a second question inside the group. The colour column is left empty
+                             but kept, so the tray lines up with the trays above and below it. The
+                             slider goes dim in 自動 for the reason the opacity's does — there is no
+                             one size for it to set. -->
+                        <Border Style="{StaticResource ToggleRowBorder}">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceTray"/>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceSwatch"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="&#xE8E9;"
+                                               Style="{StaticResource ToggleRowGlyph}"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.Realtime.FontSize}"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="{StaticResource AppFontSize}"
+                                                   Foreground="{DynamicResource AppTextPrimary}"/>
+                                        <TextBlock Text="{DynamicResource S.Realtime.FontSizeHint}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,3,12,0"/>
+                                    </StackPanel>
+
+                                    <Border Grid.Column="2"
+                                            Style="{StaticResource SegmentedTray}"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeMode}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeModeSegment"/>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeModeSegment"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="FontSizeModeThumb"
+                                                    Grid.Column="0"
+                                                    Background="{DynamicResource AppAccent}"
+                                                    CornerRadius="6"
+                                                    SizeChanged="FontSizeModeThumb_SizeChanged">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="FontSizeModeThumbShift"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                            <RadioButton x:Name="FontSizeAutoRadio" Grid.Column="0" GroupName="RealtimeFontSizeMode"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Realtime.ColorAuto}"/>
+                                            <RadioButton x:Name="FontSizeFixedRadio" Grid.Column="1" GroupName="RealtimeFontSizeMode"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Realtime.ColorFixed}"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <Border Height="1"
+                                        Background="{DynamicResource AppSubtleBorder}"
+                                        Margin="0,12,0,12"/>
+
+                                <Grid x:Name="FixedFontSizeRow">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" MaxWidth="360" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.Realtime.FixedFontSize}"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="{StaticResource AppFontSize}"
+                                                   Foreground="{DynamicResource AppTextPrimary}"/>
+                                        <TextBlock Text="{DynamicResource S.Realtime.FixedFontSizeHint}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,3,16,0"/>
+                                    </StackPanel>
+                                    <Slider Grid.Column="1"
+                                            x:Name="FixedFontSizeSlider"
+                                            Style="{StaticResource AppSlider}"
+                                            VerticalAlignment="Center"
+                                            Margin="16,0,0,0"
+                                            Minimum="10"
+                                            Maximum="48"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.FixedFontSize}"/>
+                                    <TextBlock Grid.Column="2"
+                                               x:Name="FixedFontSizeValue"
+                                               Style="{StaticResource FieldLabel}"
+                                               MinWidth="42"
+                                               TextAlignment="Right"
+                                               Margin="16,0,2,0"/>
+                                </Grid>
+                            </StackPanel>
                         </Border>
 
                         <!-- 底色 and how heavy it is drawn, in one group. The slider is not a setting of

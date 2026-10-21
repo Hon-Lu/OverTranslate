@@ -303,6 +303,11 @@
     <sys:String x:Key="S.Realtime.TextColor">文字顏色</sys:String>
     <sys:String x:Key="S.Realtime.TextColorHint">設定翻譯文字的顏色。選擇「自動」會沿用畫面上原文字的顏色。</sys:String>
     <sys:String x:Key="S.Realtime.TextColorMode">文字顏色模式</sys:String>
+    <sys:String x:Key="S.Realtime.FontSize">文字大小</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeHint">設定翻譯文字的大小。選擇「自動」會依原文大小調整，句子太長時縮小；選擇「固定」會維持同一大小，句子太長時改為換行。直排文字一律自動調整。</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeMode">文字大小模式</sys:String>
+    <sys:String x:Key="S.Realtime.FixedFontSize">固定大小</sys:String>
+    <sys:String x:Key="S.Realtime.FixedFontSizeHint">選擇「固定」時，翻譯文字使用的大小。</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">底色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorHint">設定翻譯框的背景顏色。選擇「自動」會以周圍畫面補出背景，讓譯文更融入畫面。</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorMode">底色模式</sys:String>
