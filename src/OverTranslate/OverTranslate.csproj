@@ -86,6 +86,10 @@
       <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Also as a file: the notification registration points Windows at it (NotificationIdentityService). -->
+    <None Update="icons\app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <EmbeddedResource Include="icons\app.ico" />
     <EmbeddedResource Include="icons\app-compact.ico" />
     <Resource Include="Resources\Cursors\capture_crosshair.cur" />

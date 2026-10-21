@@ -100,6 +100,9 @@ public partial class App
         // card and the hints read the switch this puts in step.
         MangaModelOptions.Attach();
 
+        // Before the tray icon exists, so its first notification already carries the name.
+        NotificationIdentityService.Register();
+
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
         mainWindow.InitializeApp();
