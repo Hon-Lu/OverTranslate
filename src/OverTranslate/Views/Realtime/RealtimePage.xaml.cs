@@ -14,6 +14,7 @@ using UserControl = System.Windows.Controls.UserControl;
 using DataFormats = System.Windows.DataFormats;
 using DataObject = System.Windows.DataObject;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -136,6 +137,13 @@ public partial class RealtimePage : UserControl
     private bool _syncingFontSize;
     private int _shownFixedFontSize = new RealtimeSettings().FixedFontSize;
 
+    // The arrow being held, if one is, and when its next step is due — see StartFixedFontSizeRepeat.
+    private readonly System.Windows.Threading.DispatcherTimer _fixedFontSizeRepeat =
+        new(System.Windows.Threading.DispatcherPriority.Input);
+    private readonly System.Diagnostics.Stopwatch _fixedFontSizeRepeatClock = new();
+    private ButtonBase? _repeatingArrow;
+    private TimeSpan _nextRepeatAt;
+
     // True while this page is putting the stored 顯示外觀 modes on their trays rather than the user
     // choosing one. Same failure as the two flags above, one control further on: checking a half
     // raises Checked, which would write back the value being restored.
@@ -175,9 +183,13 @@ public partial class RealtimePage : UserControl
         FixedFontSizeInput.LostKeyboardFocus += (_, _) => CommitFixedFontSize();
         DataObject.AddPastingHandler(FixedFontSizeInput, FixedFontSizeInput_Pasting);
         // The arrows step on every repeat but write once, when the button is let go: holding one down
-        // is one decision, as a drag across the opacity track is.
-        FixedFontSizeUp.PreviewMouseLeftButtonUp += (_, _) => PersistFixedFontSize();
-        FixedFontSizeDown.PreviewMouseLeftButtonUp += (_, _) => PersistFixedFontSize();
+        // is one decision, as a drag across the opacity track is. Losing the mouse is the one way
+        // every hold ends — let go, or the arrow greying out under
+        // the pointer at the end of the range, which takes the capture with it and never sees the
+        // button come up.
+        FixedFontSizeUp.LostMouseCapture += (_, _) => StopFixedFontSizeRepeat();
+        FixedFontSizeDown.LostMouseCapture += (_, _) => StopFixedFontSizeRepeat();
+        _fixedFontSizeRepeat.Tick += FixedFontSizeRepeat_Tick;
 
         // Set before the handlers go on, for the reason the boxes above give: restoring a stored
         // value must not read as the user reaching for the switch and write it straight back.
@@ -1120,9 +1132,87 @@ public partial class RealtimePage : UserControl
         e.Handled = true;
     }
 
-    private void FixedFontSizeUp_Click(object sender, RoutedEventArgs e) => StepFixedFontSize(+1, persist: false);
+    /// <summary>
+    /// A press on either arrow: one step at once, and if the mouse is what pressed it, more while it
+    /// is held. A press that holds nothing — the arrow invoked through accessibility — is one step,
+    /// saved there and then.
+    /// </summary>
+    private void FixedFontSizeStep_Click(object sender, RoutedEventArgs e)
+    {
+        var arrow = (ButtonBase)sender;
+        StepFixedFontSize(arrow == FixedFontSizeUp ? +1 : -1, persist: false);
 
-    private void FixedFontSizeDown_Click(object sender, RoutedEventArgs e) => StepFixedFontSize(-1, persist: false);
+        if (Mouse.Captured == arrow)
+            StartFixedFontSizeRepeat(arrow);
+        else
+            PersistFixedFontSize();
+    }
+
+    /// <summary>How long an arrow is held before it starts to repeat, and how often it then steps.</summary>
+    private static readonly TimeSpan FixedFontSizeRepeatDelay = TimeSpan.FromMilliseconds(400);
+    private static readonly TimeSpan FixedFontSizeRepeatInterval = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>
+    /// Repeats a held arrow on a timer of the page's own, at input priority, against a clock.
+    /// </summary>
+    /// <remarks>
+    /// A RepeatButton's repeat runs on a dispatcher timer at background priority, and on this page
+    /// that is the lowest thing waiting: while any animation runs — the box's own blinking caret is
+    /// enough — the frames go first and the repeat waits behind them, so a hold came out at anything
+    /// from 60 ms to over a second a step (measured; the step itself takes about 2 ms). Input
+    /// priority is served between frames. Each step is due a fixed time after the last one was due,
+    /// not after it ran, so the timer's own lateness does not add up over a hold; one that falls
+    /// a whole step behind — a stall, or the pointer wandering off the arrow and back — starts
+    /// counting again from now rather than catching up in a burst.
+    /// </remarks>
+    private void StartFixedFontSizeRepeat(ButtonBase arrow)
+    {
+        _repeatingArrow = arrow;
+        _fixedFontSizeRepeatClock.Restart();
+        _nextRepeatAt = FixedFontSizeRepeatDelay;
+        ScheduleFixedFontSizeRepeat();
+    }
+
+    private void FixedFontSizeRepeat_Tick(object? sender, EventArgs e)
+    {
+        if (_repeatingArrow is not { } arrow)
+        {
+            _fixedFontSizeRepeat.Stop();
+            return;
+        }
+
+        var now = _fixedFontSizeRepeatClock.Elapsed;
+        if (now >= _nextRepeatAt)
+        {
+            // Held, but off the arrow: paused, as any repeating button pauses, until it is back.
+            if (arrow.IsPressed)
+                StepFixedFontSize(arrow == FixedFontSizeUp ? +1 : -1, persist: false);
+            // That step reached the end of the range, greyed the arrow and so ended the hold.
+            if (_repeatingArrow is null) return;
+
+            _nextRepeatAt += FixedFontSizeRepeatInterval;
+            if (_nextRepeatAt <= now)
+                _nextRepeatAt = now + FixedFontSizeRepeatInterval;
+        }
+
+        ScheduleFixedFontSizeRepeat();
+    }
+
+    private void ScheduleFixedFontSizeRepeat()
+    {
+        var wait = _nextRepeatAt - _fixedFontSizeRepeatClock.Elapsed;
+        _fixedFontSizeRepeat.Interval = wait > TimeSpan.FromMilliseconds(1) ? wait : TimeSpan.FromMilliseconds(1);
+        _fixedFontSizeRepeat.Start();
+    }
+
+    /// <summary>The hold is over: the size it ended on is saved, once, however many steps it took.</summary>
+    private void StopFixedFontSizeRepeat()
+    {
+        if (_repeatingArrow is null) return;
+        _repeatingArrow = null;
+        _fixedFontSizeRepeat.Stop();
+        PersistFixedFontSize();
+    }
 
     /// <summary>One step from what the box shows, held inside the range; saved now or by the caller later.</summary>
     private void StepFixedFontSize(int delta, bool persist)

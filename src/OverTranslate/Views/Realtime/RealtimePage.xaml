@@ -591,6 +591,216 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- 文字大小, built as 文字顏色 below is: the tray, and beside it the value
+                             it fixes, in the column the colour box sits in — so the right edge of
+                             the card reads as one column of answers. A number rather than a slider:
+                             a size is something the reader knows ("the game's text is about 14"),
+                             not something judged by eye the way how heavy a band is drawn is, and a
+                             slider needed a second line of its own to say so. Greyed in 自動 like the
+                             colour box, for the same reason: in 自動 it is not what is being set. -->
+                        <Border Style="{StaticResource ToggleRowBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceTray"/>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceSwatch"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="&#xE8E9;"
+                                               Style="{StaticResource ToggleRowGlyph}"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource S.Realtime.FontSize}"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="{StaticResource AppFontSize}"
+                                                   Foreground="{DynamicResource AppTextPrimary}"/>
+                                        <TextBlock Text="{DynamicResource S.Realtime.FontSizeHint}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,3,12,0"/>
+                                    </StackPanel>
+
+                                    <Border Grid.Column="2"
+                                            Style="{StaticResource SegmentedTray}"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeMode}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeModeSegment"/>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeModeSegment"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="FontSizeModeThumb"
+                                                    Grid.Column="0"
+                                                    Background="{DynamicResource AppAccent}"
+                                                    CornerRadius="6"
+                                                    SizeChanged="FontSizeModeThumb_SizeChanged">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="FontSizeModeThumbShift"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                            <RadioButton x:Name="FontSizeAutoRadio" Grid.Column="0" GroupName="RealtimeFontSizeMode"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Realtime.ColorAuto}"/>
+                                            <RadioButton x:Name="FontSizeFixedRadio" Grid.Column="1" GroupName="RealtimeFontSizeMode"
+                                                         Style="{StaticResource SegmentedTrackRadio}"
+                                                         Content="{DynamicResource S.Realtime.ColorFixed}"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Drawn as the colour box below it is drawn — the same height,
+                                         margin, corners and fill — and stretched across the column
+                                         they share, so the two right edges meet. The number starts
+                                         where that box's swatch does, at its inner edge, with its
+                                         unit straight after it; the empty space is left on the
+                                         right, past the unit, where it reads as room rather than as
+                                         a number pushed away from its label. -->
+                                    <Border Grid.Column="3"
+                                            x:Name="FixedFontSizeBox"
+                                            Height="34"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Stretch"
+                                            CornerRadius="6"
+                                            BorderThickness="1"
+                                            Background="{DynamicResource AppButtonBg}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="28"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- The whole of the left part takes a click for the box,
+                                                 not only the two digits: the field is as wide as it
+                                                 looks. 4 to the number is the colour box's padding,
+                                                 less the TextBox's own inset. -->
+                                            <Grid Grid.Column="0"
+                                                  Background="Transparent"
+                                                  Cursor="IBeam"
+                                                  MouseLeftButtonDown="FixedFontSizeField_MouseLeftButtonDown">
+                                                <StackPanel Orientation="Horizontal"
+                                                            Margin="4,0,0,0"
+                                                            VerticalAlignment="Center">
+                                                    <TextBox x:Name="FixedFontSizeInput"
+                                                             Background="Transparent"
+                                                             BorderThickness="0"
+                                                             Padding="0"
+                                                             MaxLength="2"
+                                                             VerticalAlignment="Center"
+                                                             VerticalContentAlignment="Center"
+                                                             TextAlignment="Left"
+                                                             FontFamily="{DynamicResource AppFont}"
+                                                             FontSize="{StaticResource AppFontSize}"
+                                                             Foreground="{DynamicResource AppTextPrimary}"
+                                                             CaretBrush="{DynamicResource AppTextPrimary}"
+                                                             SelectionBrush="{DynamicResource AppAccent}"
+                                                             InputMethod.IsInputMethodEnabled="False"
+                                                             AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"/>
+                                                    <TextBlock Text="px"
+                                                               FontFamily="{DynamicResource AppFont}"
+                                                               FontSize="{StaticResource AppFontSize}"
+                                                               Foreground="{DynamicResource AppTextSecondary}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="2,0,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- The arrows get a column of their own, behind a rule, and
+                                                 split it in half: each half is the whole target, as wide
+                                                 as the column and lit whole on hover. The outer corners
+                                                 follow the box's own, less its border.
+
+                                                 Lit with a wash of the text colour rather than the page's
+                                                 button hover: that one is a shade off the box's own fill,
+                                                 which on a whole button reads, and on a cell this small
+                                                 did not show at all.
+
+                                                 Buttons that act on press, not RepeatButtons: the page
+                                                 repeats the step itself — see StartFixedFontSizeRepeat for
+                                                 why a RepeatButton's own repeat could not keep time. -->
+                                            <Border Grid.Column="1"
+                                                    BorderThickness="1,0,0,0"
+                                                    BorderBrush="{DynamicResource AppButtonBorder}">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.Resources>
+                                                        <Style TargetType="Button">
+                                                            <Setter Property="Focusable" Value="False"/>
+                                                            <Setter Property="ClickMode" Value="Press"/>
+                                                            <Setter Property="Cursor" Value="Hand"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Grid Background="Transparent">
+                                                                            <Border x:Name="Wash"
+                                                                                    Background="{DynamicResource AppTextPrimary}"
+                                                                                    Opacity="0"
+                                                                                    CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                                                            <TextBlock x:Name="Chevron"
+                                                                                       Text="{TemplateBinding Content}"
+                                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                                       FontSize="10"
+                                                                                       Foreground="{TemplateBinding Foreground}"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"/>
+                                                                        </Grid>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="Wash" Property="Opacity" Value="0.12"/>
+                                                                                <Setter TargetName="Chevron" Property="Foreground"
+                                                                                        Value="{DynamicResource AppTextPrimary}"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsPressed" Value="True">
+                                                                                <Setter TargetName="Wash" Property="Opacity" Value="0.2"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsEnabled" Value="False">
+                                                                                <Setter Property="Opacity" Value="0.35"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </Grid.Resources>
+                                                    <Button Grid.Row="0"
+                                                            x:Name="FixedFontSizeUp"
+                                                            Content="&#xE70E;"
+                                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
+                                                            Click="FixedFontSizeStep_Click">
+                                                        <Button.Tag>
+                                                            <CornerRadius>0,5,0,0</CornerRadius>
+                                                        </Button.Tag>
+                                                    </Button>
+                                                    <Button Grid.Row="1"
+                                                            x:Name="FixedFontSizeDown"
+                                                            Content="&#xE70D;"
+                                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
+                                                            Click="FixedFontSizeStep_Click">
+                                                        <Button.Tag>
+                                                            <CornerRadius>0,0,5,0</CornerRadius>
+                                                        </Button.Tag>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                        </Border>
+
                         <!-- 文字顏色. The colour button stays where it is in 自動 rather than being
                              hidden: the row would otherwise change shape with the mode, and the colour
                              it holds is still what a sampled line falls back to when the sample is
@@ -670,205 +880,6 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
-                        </Border>
-
-                        <!-- 文字大小, built as 文字顏色 above is: the tray, and beside it the value
-                             it fixes, in the column the colour box sits in — so the right edge of
-                             the card reads as one column of answers. A number rather than a slider:
-                             a size is something the reader knows ("the game's text is about 14"),
-                             not something judged by eye the way how heavy a band is drawn is, and a
-                             slider needed a second line of its own to say so. Greyed in 自動 like the
-                             colour box, for the same reason: in 自動 it is not what is being set. -->
-                        <Border Style="{StaticResource ToggleRowBorder}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceTray"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceSwatch"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="&#xE8E9;"
-                                               Style="{StaticResource ToggleRowGlyph}"/>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{DynamicResource S.Realtime.FontSize}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   Foreground="{DynamicResource AppTextPrimary}"/>
-                                        <TextBlock Text="{DynamicResource S.Realtime.FontSizeHint}"
-                                                   Style="{StaticResource FieldHint}"
-                                                   Margin="0,3,12,0"/>
-                                    </StackPanel>
-
-                                    <Border Grid.Column="2"
-                                            Style="{StaticResource SegmentedTray}"
-                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeMode}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeModeSegment"/>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeModeSegment"/>
-                                            </Grid.ColumnDefinitions>
-                                            <Border x:Name="FontSizeModeThumb"
-                                                    Grid.Column="0"
-                                                    Background="{DynamicResource AppAccent}"
-                                                    CornerRadius="6"
-                                                    SizeChanged="FontSizeModeThumb_SizeChanged">
-                                                <Border.RenderTransform>
-                                                    <TranslateTransform x:Name="FontSizeModeThumbShift"/>
-                                                </Border.RenderTransform>
-                                            </Border>
-                                            <RadioButton x:Name="FontSizeAutoRadio" Grid.Column="0" GroupName="RealtimeFontSizeMode"
-                                                         Style="{StaticResource SegmentedTrackRadio}"
-                                                         Content="{DynamicResource S.Realtime.ColorAuto}"/>
-                                            <RadioButton x:Name="FontSizeFixedRadio" Grid.Column="1" GroupName="RealtimeFontSizeMode"
-                                                         Style="{StaticResource SegmentedTrackRadio}"
-                                                         Content="{DynamicResource S.Realtime.ColorFixed}"/>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Drawn as the colour box beside it is drawn — the same height,
-                                         margin, corners and fill — and stretched across the column
-                                         they share, so the two right edges meet. The number starts
-                                         where that box's hex value does, with its unit straight after
-                                         it, so the two values read down one edge; the empty space is
-                                         left on the right, past the unit, where it reads as room
-                                         rather than as a number pushed away from its label. -->
-                                    <Border Grid.Column="3"
-                                            x:Name="FixedFontSizeBox"
-                                            Height="34"
-                                            Margin="12,0,0,0"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Stretch"
-                                            CornerRadius="6"
-                                            BorderThickness="1"
-                                            Background="{DynamicResource AppButtonBg}">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                                        <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsEnabled" Value="False">
-                                                        <Setter Property="Opacity" Value="0.45"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="28"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- The whole of the left part takes a click for the box,
-                                                 not only the two digits: the field is as wide as it
-                                                 looks. 32 to the number is the colour box's padding,
-                                                 swatch and gap, less the TextBox's own inset. -->
-                                            <Grid Grid.Column="0"
-                                                  Background="Transparent"
-                                                  Cursor="IBeam"
-                                                  MouseLeftButtonDown="FixedFontSizeField_MouseLeftButtonDown">
-                                                <StackPanel Orientation="Horizontal"
-                                                            Margin="32,0,0,0"
-                                                            VerticalAlignment="Center">
-                                                    <TextBox x:Name="FixedFontSizeInput"
-                                                             Background="Transparent"
-                                                             BorderThickness="0"
-                                                             Padding="0"
-                                                             MaxLength="2"
-                                                             VerticalAlignment="Center"
-                                                             VerticalContentAlignment="Center"
-                                                             TextAlignment="Left"
-                                                             FontFamily="{DynamicResource AppFont}"
-                                                             FontSize="{StaticResource AppFontSize}"
-                                                             Foreground="{DynamicResource AppTextPrimary}"
-                                                             CaretBrush="{DynamicResource AppTextPrimary}"
-                                                             SelectionBrush="{DynamicResource AppAccent}"
-                                                             InputMethod.IsInputMethodEnabled="False"
-                                                             AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"/>
-                                                    <TextBlock Text="px"
-                                                               FontFamily="{DynamicResource AppFont}"
-                                                               FontSize="{StaticResource AppFontSize}"
-                                                               Foreground="{DynamicResource AppTextSecondary}"
-                                                               VerticalAlignment="Center"
-                                                               Margin="2,0,0,0"/>
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <!-- The arrows get a column of their own, behind a rule, and
-                                                 split it in half: each half is the whole target, as wide
-                                                 as the column and lit whole on hover. The outer corners
-                                                 follow the box's own, less its border. -->
-                                            <Border Grid.Column="1"
-                                                    BorderThickness="1,0,0,0"
-                                                    BorderBrush="{DynamicResource AppButtonBorder}">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="*"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.Resources>
-                                                        <Style TargetType="RepeatButton">
-                                                            <Setter Property="Focusable" Value="False"/>
-                                                            <Setter Property="Cursor" Value="Hand"/>
-                                                            <Setter Property="Delay" Value="400"/>
-                                                            <Setter Property="Interval" Value="60"/>
-                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-                                                            <Setter Property="Template">
-                                                                <Setter.Value>
-                                                                    <ControlTemplate TargetType="RepeatButton">
-                                                                        <Border x:Name="Root"
-                                                                                Background="Transparent"
-                                                                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}">
-                                                                            <TextBlock Text="{TemplateBinding Content}"
-                                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                                       FontSize="10"
-                                                                                       Foreground="{TemplateBinding Foreground}"
-                                                                                       HorizontalAlignment="Center"
-                                                                                       VerticalAlignment="Center"/>
-                                                                        </Border>
-                                                                        <ControlTemplate.Triggers>
-                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                                <Setter TargetName="Root" Property="Background"
-                                                                                        Value="{DynamicResource AppButtonHoverBg}"/>
-                                                                            </Trigger>
-                                                                            <Trigger Property="IsPressed" Value="True">
-                                                                                <Setter TargetName="Root" Property="Background"
-                                                                                        Value="{DynamicResource AppButtonPressedBg}"/>
-                                                                            </Trigger>
-                                                                            <Trigger Property="IsEnabled" Value="False">
-                                                                                <Setter Property="Opacity" Value="0.35"/>
-                                                                            </Trigger>
-                                                                        </ControlTemplate.Triggers>
-                                                                    </ControlTemplate>
-                                                                </Setter.Value>
-                                                            </Setter>
-                                                        </Style>
-                                                    </Grid.Resources>
-                                                    <RepeatButton Grid.Row="0"
-                                                                  x:Name="FixedFontSizeUp"
-                                                                  Content="&#xE70E;"
-                                                                  AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
-                                                                  Click="FixedFontSizeUp_Click">
-                                                        <RepeatButton.Tag>
-                                                            <CornerRadius>0,5,0,0</CornerRadius>
-                                                        </RepeatButton.Tag>
-                                                    </RepeatButton>
-                                                    <RepeatButton Grid.Row="1"
-                                                                  x:Name="FixedFontSizeDown"
-                                                                  Content="&#xE70D;"
-                                                                  AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
-                                                                  Click="FixedFontSizeDown_Click">
-                                                        <RepeatButton.Tag>
-                                                            <CornerRadius>0,0,5,0</CornerRadius>
-                                                        </RepeatButton.Tag>
-                                                    </RepeatButton>
-                                                </Grid>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
                         </Border>
 
                         <!-- 底色 and how heavy it is drawn, in one group. The slider is not a setting of
