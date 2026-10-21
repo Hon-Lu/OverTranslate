@@ -47,6 +47,10 @@ namespace OverTranslate.Views.Realtime;
 /// <param name="FixedBorderColor">
 /// The border's colour as "#RRGGBB", or null for a colour per group chosen from its source text.
 /// </param>
+/// <param name="FixedFontSize">
+/// The size every horizontal line is set at — 顯示外觀 → 文字大小 → 固定 — or null for 自動. Travels
+/// with the colours, under the same rule.
+/// </param>
 public sealed record RealtimeStartRequest(
     System.Drawing.Rectangle ScreenBounds,
     int MaxBlocks,
@@ -61,7 +65,8 @@ public sealed record RealtimeStartRequest(
     Models.RealtimeCaptureMode CaptureMode = Models.RealtimeCaptureMode.Screen,
     IntPtr SourceWindow = default,
     bool Border = false,
-    string? FixedBorderColor = null);
+    string? FixedBorderColor = null,
+    double? FixedFontSize = null);
 
 /// <summary>
 /// Owns a realtime session end to end: the edit layer, the per-block overlays, the floating control
@@ -839,7 +844,8 @@ internal sealed class RealtimeSessionController
                 request.NaturalBackground && !compared,
                 request.SampleSourceTextColor && !compared,
                 region.Mode, request.Border, request.FixedBorderColor, region.Orientation,
-                compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0);
+                compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
+                request.FixedFontSize);
             _blockWindows[region.Id] = window;
             window.Show();
         }
