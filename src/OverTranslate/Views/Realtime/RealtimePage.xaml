@@ -728,9 +728,11 @@
 
                                     <!-- Drawn as the colour box beside it is drawn — the same height,
                                          margin, corners and fill — and stretched across the column
-                                         they share, so the two right edges meet. The arrows sit
-                                         where that box's chevron does, small for the same reason:
-                                         the number is what the box is for. -->
+                                         they share, so the two right edges meet. The number starts
+                                         where that box's hex value does, with its unit straight after
+                                         it, so the two values read down one edge; the empty space is
+                                         left on the right, past the unit, where it reads as room
+                                         rather than as a number pushed away from its label. -->
                                     <Border Grid.Column="3"
                                             x:Name="FixedFontSizeBox"
                                             Height="34"
@@ -753,84 +755,117 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <Grid Margin="10,0,4,0">
+                                        <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="28"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0"
-                                                     x:Name="FixedFontSizeInput"
-                                                     Background="Transparent"
-                                                     BorderThickness="0"
-                                                     Padding="0"
-                                                     MinWidth="24"
-                                                     MaxLength="2"
-                                                     VerticalAlignment="Center"
-                                                     VerticalContentAlignment="Center"
-                                                     TextAlignment="Right"
-                                                     FontFamily="{DynamicResource AppFont}"
-                                                     FontSize="{StaticResource AppFontSize}"
-                                                     Foreground="{DynamicResource AppTextPrimary}"
-                                                     CaretBrush="{DynamicResource AppTextPrimary}"
-                                                     SelectionBrush="{DynamicResource AppAccent}"
-                                                     InputMethod.IsInputMethodEnabled="False"
-                                                     AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="px"
-                                                       FontFamily="{DynamicResource AppFont}"
-                                                       FontSize="{StaticResource AppFontSize}"
-                                                       Foreground="{DynamicResource AppTextSecondary}"
-                                                       VerticalAlignment="Center"
-                                                       Margin="4,0,6,0"/>
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                                <StackPanel.Resources>
-                                                    <Style TargetType="RepeatButton">
-                                                        <Setter Property="Width" Value="18"/>
-                                                        <Setter Property="Height" Value="13"/>
-                                                        <Setter Property="Focusable" Value="False"/>
-                                                        <Setter Property="Cursor" Value="Hand"/>
-                                                        <Setter Property="Delay" Value="400"/>
-                                                        <Setter Property="Interval" Value="60"/>
-                                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="RepeatButton">
-                                                                    <Border x:Name="Root" Background="Transparent" CornerRadius="3">
-                                                                        <TextBlock Text="{TemplateBinding Content}"
-                                                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                                   FontSize="9"
-                                                                                   Foreground="{TemplateBinding Foreground}"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="Root" Property="Background"
-                                                                                    Value="{DynamicResource AppButtonHoverBg}"/>
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsPressed" Value="True">
-                                                                            <Setter TargetName="Root" Property="Background"
-                                                                                    Value="{DynamicResource AppButtonPressedBg}"/>
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsEnabled" Value="False">
-                                                                            <Setter Property="Opacity" Value="0.35"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </StackPanel.Resources>
-                                                <RepeatButton x:Name="FixedFontSizeUp"
-                                                              Content="&#xE70E;"
-                                                              AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
-                                                              Click="FixedFontSizeUp_Click"/>
-                                                <RepeatButton x:Name="FixedFontSizeDown"
-                                                              Content="&#xE70D;"
-                                                              AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
-                                                              Click="FixedFontSizeDown_Click"/>
-                                            </StackPanel>
+
+                                            <!-- The whole of the left part takes a click for the box,
+                                                 not only the two digits: the field is as wide as it
+                                                 looks. 32 to the number is the colour box's padding,
+                                                 swatch and gap, less the TextBox's own inset. -->
+                                            <Grid Grid.Column="0"
+                                                  Background="Transparent"
+                                                  Cursor="IBeam"
+                                                  MouseLeftButtonDown="FixedFontSizeField_MouseLeftButtonDown">
+                                                <StackPanel Orientation="Horizontal"
+                                                            Margin="32,0,0,0"
+                                                            VerticalAlignment="Center">
+                                                    <TextBox x:Name="FixedFontSizeInput"
+                                                             Background="Transparent"
+                                                             BorderThickness="0"
+                                                             Padding="0"
+                                                             MaxLength="2"
+                                                             VerticalAlignment="Center"
+                                                             VerticalContentAlignment="Center"
+                                                             TextAlignment="Left"
+                                                             FontFamily="{DynamicResource AppFont}"
+                                                             FontSize="{StaticResource AppFontSize}"
+                                                             Foreground="{DynamicResource AppTextPrimary}"
+                                                             CaretBrush="{DynamicResource AppTextPrimary}"
+                                                             SelectionBrush="{DynamicResource AppAccent}"
+                                                             InputMethod.IsInputMethodEnabled="False"
+                                                             AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"/>
+                                                    <TextBlock Text="px"
+                                                               FontFamily="{DynamicResource AppFont}"
+                                                               FontSize="{StaticResource AppFontSize}"
+                                                               Foreground="{DynamicResource AppTextSecondary}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="2,0,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- The arrows get a column of their own, behind a rule, and
+                                                 split it in half: each half is the whole target, as wide
+                                                 as the column and lit whole on hover. The outer corners
+                                                 follow the box's own, less its border. -->
+                                            <Border Grid.Column="1"
+                                                    BorderThickness="1,0,0,0"
+                                                    BorderBrush="{DynamicResource AppButtonBorder}">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.Resources>
+                                                        <Style TargetType="RepeatButton">
+                                                            <Setter Property="Focusable" Value="False"/>
+                                                            <Setter Property="Cursor" Value="Hand"/>
+                                                            <Setter Property="Delay" Value="400"/>
+                                                            <Setter Property="Interval" Value="60"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="RepeatButton">
+                                                                        <Border x:Name="Root"
+                                                                                Background="Transparent"
+                                                                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}">
+                                                                            <TextBlock Text="{TemplateBinding Content}"
+                                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                                       FontSize="10"
+                                                                                       Foreground="{TemplateBinding Foreground}"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="Root" Property="Background"
+                                                                                        Value="{DynamicResource AppButtonHoverBg}"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsPressed" Value="True">
+                                                                                <Setter TargetName="Root" Property="Background"
+                                                                                        Value="{DynamicResource AppButtonPressedBg}"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsEnabled" Value="False">
+                                                                                <Setter Property="Opacity" Value="0.35"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </Grid.Resources>
+                                                    <RepeatButton Grid.Row="0"
+                                                                  x:Name="FixedFontSizeUp"
+                                                                  Content="&#xE70E;"
+                                                                  AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
+                                                                  Click="FixedFontSizeUp_Click">
+                                                        <RepeatButton.Tag>
+                                                            <CornerRadius>0,5,0,0</CornerRadius>
+                                                        </RepeatButton.Tag>
+                                                    </RepeatButton>
+                                                    <RepeatButton Grid.Row="1"
+                                                                  x:Name="FixedFontSizeDown"
+                                                                  Content="&#xE70D;"
+                                                                  AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
+                                                                  Click="FixedFontSizeDown_Click">
+                                                        <RepeatButton.Tag>
+                                                            <CornerRadius>0,0,5,0</CornerRadius>
+                                                        </RepeatButton.Tag>
+                                                    </RepeatButton>
+                                                </Grid>
+                                            </Border>
                                         </Grid>
                                     </Border>
                                 </Grid>

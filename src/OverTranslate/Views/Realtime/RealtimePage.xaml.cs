@@ -1108,6 +1108,18 @@ public partial class RealtimePage : UserControl
         e.Handled = true;
     }
 
+    /// <summary>
+    /// A click anywhere in the box's left part puts the caret after the number, as a click past the
+    /// end of any text field does. The TextBox itself is only as wide as its two digits.
+    /// </summary>
+    private void FixedFontSizeField_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (FixedFontSizeInput.IsMouseOver) return;
+        FixedFontSizeInput.Focus();
+        FixedFontSizeInput.CaretIndex = FixedFontSizeInput.Text.Length;
+        e.Handled = true;
+    }
+
     private void FixedFontSizeUp_Click(object sender, RoutedEventArgs e) => StepFixedFontSize(+1, persist: false);
 
     private void FixedFontSizeDown_Click(object sender, RoutedEventArgs e) => StepFixedFontSize(-1, persist: false);
