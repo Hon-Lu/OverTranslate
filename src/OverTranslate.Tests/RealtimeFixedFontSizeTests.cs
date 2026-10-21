@@ -159,6 +159,97 @@ public class RealtimeFixedFontSizeTests
     });
 
     [Fact]
+    public void A_vertical_column_larger_than_the_source_keeps_the_size_and_takes_more_columns() => OnSta(() =>
+    {
+        // One 24px source column three cells long at 32: 自動 would shrink to fit the one column,
+        // 固定 keeps 32 and sets the ten glyphs in four columns centred over it.
+        var source = new Rect(300, 40, 24, 120);
+        var drawn = DrawVertical(32, source, "說得也是今天過得還好", glyphSize: 24);
+
+        Assert.Equal(10, drawn.Cells.Count);
+        Assert.All(drawn.FontSizes, size => Assert.Equal(32, size, 3));
+        Assert.Equal(4, drawn.Cells.Select(cell => Math.Round(cell.Left, 2)).Distinct().Count());
+        Assert.Equal(source.Left + source.Width / 2, drawn.Grid.Left + drawn.Grid.Width / 2, 1);
+        Assert.True(drawn.Grid.Bottom <= source.Bottom + 0.5, $"grid ends at {drawn.Grid.Bottom}, past the source column");
+        Assert.True(drawn.Grid.Left >= 0 && drawn.Grid.Right <= VerticalBlock.Width, $"grid {drawn.Grid}");
+        Assert.True(drawn.Background.Left <= Math.Min(drawn.Grid.Left, source.Left)
+            && drawn.Background.Right >= Math.Max(drawn.Grid.Right, source.Right)
+            && drawn.Background.Top <= source.Top && drawn.Background.Bottom >= source.Bottom,
+            $"background {drawn.Background} against grid {drawn.Grid} and source {source}");
+    });
+
+    [Fact]
+    public void A_vertical_column_smaller_than_the_source_still_leaves_the_source_covered() => OnSta(() =>
+    {
+        var source = new Rect(300, 40, 40, 200);
+        var drawn = DrawVertical(12, source, "說得也是", glyphSize: 40);
+
+        Assert.All(drawn.FontSizes, size => Assert.Equal(12, size, 3));
+        Assert.True(drawn.Background.Left <= source.Left && drawn.Background.Right >= source.Right
+            && drawn.Background.Top <= source.Top && drawn.Background.Bottom >= source.Bottom,
+            $"background {drawn.Background} against source {source}");
+    });
+
+    [Fact]
+    public void A_vertical_translation_too_wide_for_the_block_at_the_size_shrinks_just_enough() => OnSta(() =>
+    {
+        // At 48 a 100px column holds one glyph, and the block's 590 holds eleven columns: thirty
+        // glyphs do not fit, so the size gives — only as far as it has to.
+        var source = new Rect(300, 40, 30, 100);
+        const int glyphs = 30;
+        var drawn = DrawVertical(48, source, new string('字', glyphs), glyphSize: 30);
+
+        Assert.Equal(glyphs, drawn.Cells.Count);
+        double size = drawn.FontSizes[0];
+        Assert.True(size < 48, $"font {size}");
+        Assert.All(drawn.Cells, cell => Assert.True(cell.Left >= -0.5 && cell.Right <= VerticalBlock.Width + 0.5, $"cell {cell}"));
+        double larger = size / 0.92 + 0.5;
+        double room = VerticalBlock.Width - 10;
+        Assert.True(Math.Floor(room / larger) * Math.Floor(100 / larger) < glyphs, "shrunk further than it had to be");
+    });
+
+    [Fact]
+    public void Vertical_punctuation_still_hangs_at_a_fixed_size() => OnSta(() =>
+    {
+        // 20 is a 21.7px cell: a 110px source column is five cells long, so the full stop is the
+        // sixth glyph and hangs under the first column rather than opening one of its own.
+        var source = new Rect(300, 40, 24, 110);
+        var stop = DrawVertical(20, source, "一二三四五。", glyphSize: 24);
+        double cell = 20 / 0.92;
+
+        Assert.Single(stop.Cells.Select(c => Math.Round(c.Left, 2)).Distinct());
+        Assert.Equal(stop.Cells[0].Top + 5 * cell, stop.Cells[5].Top, 1);
+
+        // A comma that would head the second column hangs under the first; the next column starts
+        // with the glyph after it.
+        var comma = DrawVertical(20, source, "一二三四五、六七八九", glyphSize: 24);
+        Assert.Equal(comma.Cells[0].Left, comma.Cells[5].Left, 1);
+        Assert.True(comma.Cells[6].Left < comma.Cells[0].Left, "六 is expected to head the next column");
+        Assert.Equal(comma.Cells[0].Top, comma.Cells[6].Top, 1);
+    });
+
+    [Fact]
+    public void A_line_across_a_vertical_block_is_set_at_the_fixed_size() => OnSta(() =>
+    {
+        // A name plate on a vertical page: RunsAcross sends it down the horizontal branch, which
+        // now sets it at the reader's size like any other line across.
+        var window = new RealtimeBlockWindow(0, new System.Drawing.Rectangle(0, 0, 600, 300),
+            _ => null, "JA", "ZH-TW", "#FFFFFF", "#000000", 70,
+            orientation: RealtimeTextOrientation.Vertical, fixedFontSize: 32);
+        try
+        {
+            var type = typeof(RealtimeBlockWindow);
+            type.GetField("_lines", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window,
+                new List<TranslatedBlock> { new("名前", "名字", new Rect(20, 100, 300, 17)) { RunsAcross = true } });
+            type.GetMethod("Rebuild", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+            var box = Assert.IsType<Border>(Assert.Single(((Canvas)window.FindName("TextCanvas")).Children));
+            var text = box.Child as TextBlock ?? Assert.IsType<TextBlock>(Assert.IsType<Viewbox>(box.Child).Child);
+            Assert.Equal(32, text.FontSize);
+        }
+        finally { window.Close(); }
+    });
+
+    [Fact]
     public void Settings_default_to_auto_and_clamp_the_fixed_size()
     {
         var settings = new RealtimeSettings();
@@ -224,6 +315,35 @@ public class RealtimeFixedFontSizeTests
             Assert.Equal(lines.Count, boxes.Count);
             return [.. boxes.Select(box =>
                 box.Child as TextBlock ?? Assert.IsType<TextBlock>(Assert.IsType<Viewbox>(box.Child).Child))];
+        }
+        finally { window.Close(); }
+    }
+
+    private static readonly System.Drawing.Rectangle VerticalBlock = new(0, 0, 600, 400);
+
+    /// <summary>What one vertical column group drew: each glyph's size and cell, its grid and its background.</summary>
+    private sealed record DrawnColumns(List<double> FontSizes, List<Rect> Cells, Rect Grid, Rect Background);
+
+    private static DrawnColumns DrawVertical(double fixedFontSize, Rect source, string translation, double glyphSize)
+    {
+        var window = new RealtimeBlockWindow(0, VerticalBlock, _ => null, "JA", "ZH-TW", "#FFFFFF", "#000000", 70,
+            orientation: RealtimeTextOrientation.Vertical, fixedFontSize: fixedFontSize);
+        try
+        {
+            var type = typeof(RealtimeBlockWindow);
+            type.GetField("_lines", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window,
+                new List<TranslatedBlock> { new("たてがき", translation, source, null, glyphSize) });
+            type.GetMethod("Rebuild", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+
+            var container = Assert.IsType<Border>(Assert.Single(((Canvas)window.FindName("TextCanvas")).Children));
+            double left = Canvas.GetLeft(container), top = Canvas.GetTop(container);
+            var glyphs = Assert.IsType<Canvas>(container.Child).Children.Cast<TextBlock>().ToList();
+            var scrim = Assert.IsType<Border>(Assert.Single(((Canvas)window.FindName("ScrimCanvas")).Children));
+            return new DrawnColumns(
+                [.. glyphs.Select(glyph => glyph.FontSize)],
+                [.. glyphs.Select(glyph => new Rect(left + Canvas.GetLeft(glyph), top + Canvas.GetTop(glyph), glyph.Width, glyph.Height))],
+                new Rect(left, top, container.Width, container.Height),
+                new Rect(Canvas.GetLeft(scrim), Canvas.GetTop(scrim), scrim.Width, scrim.Height));
         }
         finally { window.Close(); }
     }

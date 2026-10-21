@@ -140,11 +140,12 @@ public partial class RealtimeBlockWindow : Window
     private readonly bool _border;
     private readonly SolidColorBrush? _fixedBorderBrush;
 
-    // 顯示外觀 → 文字大小, held per session like the colours: the size every horizontal line is set
-    // at, or null for 自動 — see RealtimeFixedFontLayout. Always null on a vertical block, including
-    // the lines across it that RunsAcross sends down the horizontal branches: a balloon on a comic
-    // page is cut close round its text, and a size the reader picked over dialogue boxes would burst
-    // straight out of it. Vertical quality comes first there, so those blocks stay on 自動.
+    // 顯示外觀 → 文字大小, held per session like the colours: the size every line is set at, or null
+    // for 自動 — see RealtimeFixedFontLayout for a line across and BuildVerticalLine for a column.
+    // A vertical block takes it too, lines across it included. A balloon on a comic page is cut
+    // close round its text, and a size picked larger than the page's lettering spreads the
+    // translation over more columns than the balloon has, onto the picture beside it. That is the
+    // reader's choice to make, and not one this window second-guesses by quietly going back to 自動.
     private readonly double? _fixedFontSize;
 
     // Each translation box as drawn — a line's text and band or patch, or a panel group's rows and
@@ -189,7 +190,6 @@ public partial class RealtimeBlockWindow : Window
     /// </param>
     /// <param name="fixedFontSize">
     /// The size 顯示外觀 → 文字大小 → 固定 asked for, in device-independent units; null for 自動.
-    /// Ignored on a vertical block — see <see cref="_fixedFontSize"/>.
     /// </param>
     public RealtimeBlockWindow(
         int regionId,
@@ -216,7 +216,7 @@ public partial class RealtimeBlockWindow : Window
         ShowActivated = false;
         _mode = mode;
         _orientation = orientation;
-        _fixedFontSize = orientation == RealtimeTextOrientation.Vertical ? null : fixedFontSize;
+        _fixedFontSize = fixedFontSize;
         _border = border;
         _fixedBorderBrush = border && borderColor is not null
             ? Freeze(new SolidColorBrush(RealtimeSubtitleColors.Border(borderColor)))
@@ -974,6 +974,38 @@ public partial class RealtimeBlockWindow : Window
     }
 
     /// <summary>
+    /// What a column group is fitted with: the cell it starts from, how long a column may run, the
+    /// width it is kept to if it can be, and the block's width it is never let past.
+    /// </summary>
+    /// <remarks>
+    /// <para>自動 starts from the source's own character pitch and keeps to the source's width,
+    /// shrinking before it takes a column the balloon did not have — see
+    /// <see cref="VerticalTextGrid.FitWithin"/>.</para>
+    ///
+    /// <para>固定 is the horizontal rule turned on its side: the reader's size, more columns when the
+    /// sentence is too long for one, and smaller only when even the block's width will not take it —
+    /// <see cref="RealtimeFixedFontLayout"/> is the same three steps across. So it starts from the
+    /// fixed size over the fill, which draws its glyph at exactly that size and makes 24 down look as
+    /// large as 24 across, and it is kept to the block's width instead of the source's, which leaves
+    /// FitWithin shrinking only where the block runs out. The columns stay the source's length: a
+    /// longer translation is wider, never taller, for the reason the column length is the source's
+    /// in the first place.</para>
+    /// </remarks>
+    private (double Cell, double ColumnLength, double ColumnRoom, double MaxWidth) VerticalFit(
+        double cellPreferred, double sourceWidth, double sourceLength, double canvasWidth)
+    {
+        double sourceRoom = Math.Max(cellPreferred, sourceWidth);
+        double maxWidth = Math.Max(sourceRoom, canvasWidth - ScrimPaddingX * 2);
+        if (_fixedFontSize is { } fixedSize)
+        {
+            double fixedCell = fixedSize / VerticalGlyphFill;
+            return (fixedCell, Math.Max(fixedCell, sourceLength), maxWidth, maxWidth);
+        }
+
+        return (cellPreferred, Math.Max(cellPreferred, sourceLength), sourceRoom, maxWidth);
+    }
+
+    /// <summary>
     /// One vertical column group: the translation set downwards in square cells over the source it
     /// replaces, against the top of it and centred across it.
     /// </summary>
@@ -1023,9 +1055,9 @@ public partial class RealtimeBlockWindow : Window
         // The source's own width is handed over for the same reason: a translation too long for the
         // balloon is set smaller inside it before it is allowed to take a column beside it, because
         // the column beside it is picture. Only the block bounds how far that may finally reach.
-        double columnLength = Math.Max(cellPreferred, Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2));
-        double columnRoom = Math.Max(cellPreferred, sourceWidth);
-        double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
+        // That is 自動's order; 固定 takes the columns first — see VerticalFit.
+        var (cell, columnLength, columnRoom, maxWidth) = VerticalFit(
+            cellPreferred, sourceWidth, Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2), canvasWidth);
 
         // A hanging comma or full stop takes a row under the columns, past the source's own length.
         // It is allowed that row only while the grid still ends inside the block with the
@@ -1034,7 +1066,7 @@ public partial class RealtimeBlockWindow : Window
         double hangingReach = canvasHeight - ScrimPaddingY - Math.Max(0, top);
 
         var (cellSize, gridWidth, gridHeight, breaks) = VerticalTextGrid.FitWithin(
-            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs, hangingReach);
+            columnRoom, columnLength, maxWidth, cell, MinFontSize, glyphs, hangingReach);
 
         // Top of the source, centred across it, kept inside the block — the rule
         // VerticalTextGrid.Cells sets a grid by, applied here because the grid handed to it is cut
@@ -1155,14 +1187,13 @@ public partial class RealtimeBlockWindow : Window
         if (glyphs.Length == 0) return null;
 
         double cellPreferred = Math.Max(MinFontSize, GetGlyphHeight(line, sourceWidth));
-        double columnLength = Math.Max(cellPreferred, sourceHeight);
-        double columnRoom = Math.Max(cellPreferred, sourceWidth);
-        double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
+        var (cell, columnLength, columnRoom, maxWidth) = VerticalFit(
+            cellPreferred, sourceWidth, sourceHeight, canvasWidth);
         // No reach, so nothing hangs, and the breaks are not passed on: a tilted group is set as it
         // always was. Without a hanging row the size is the one the columns would have broken
         // plainly at, so the two still agree.
         var (cellSize, gridWidth, gridHeight, _) = VerticalTextGrid.FitWithin(
-            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs);
+            columnRoom, columnLength, maxWidth, cell, MinFontSize, glyphs);
 
         // Top of the source, centred across it — VerticalTextGrid.Cells' rule, in the level frame.
         double gridLeft = left + (sourceWidth - gridWidth) / 2;
