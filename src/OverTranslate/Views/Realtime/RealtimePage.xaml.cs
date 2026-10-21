@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using OverTranslate.Models;
 using OverTranslate.Services;
@@ -9,6 +11,9 @@ using OverTranslate.Services.Realtime.Capture;
 using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 using Screen = System.Windows.Forms.Screen;
 using UserControl = System.Windows.Controls.UserControl;
+using DataFormats = System.Windows.DataFormats;
+using DataObject = System.Windows.DataObject;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -125,9 +130,11 @@ public partial class RealtimePage : UserControl
     // would otherwise be a hundred writes.
     private bool _draggingOpacity;
 
-    // The same pair for 文字大小's slider, which is held back and restored by the same rules.
+    // 文字大小's box: true while this page writes a number into it rather than the user typing one,
+    // and the size it is showing — which is what the preview draws, and while a number is being
+    // typed is deliberately ahead of what is stored, as the opacity slider is mid-drag.
     private bool _syncingFontSize;
-    private bool _draggingFontSize;
+    private int _shownFixedFontSize = new RealtimeSettings().FixedFontSize;
 
     // True while this page is putting the stored 顯示外觀 modes on their trays rather than the user
     // choosing one. Same failure as the two flags above, one control further on: checking a half
@@ -160,16 +167,17 @@ public partial class RealtimePage : UserControl
                 _draggingOpacity = false;
                 PersistScrimOpacity();
             }));
-        FixedFontSizeSlider.AddHandler(
-            Thumb.DragStartedEvent,
-            new DragStartedEventHandler((_, _) => _draggingFontSize = true));
-        FixedFontSizeSlider.AddHandler(
-            Thumb.DragCompletedEvent,
-            new DragCompletedEventHandler((_, _) =>
-            {
-                _draggingFontSize = false;
-                PersistFixedFontSize();
-            }));
+
+        // 文字大小's box takes whole numbers and nothing else, typed or pasted — see FixedFontSizeInput_PreviewTextInput.
+        FixedFontSizeInput.PreviewTextInput += FixedFontSizeInput_PreviewTextInput;
+        FixedFontSizeInput.PreviewKeyDown += FixedFontSizeInput_PreviewKeyDown;
+        FixedFontSizeInput.PreviewMouseWheel += FixedFontSizeInput_PreviewMouseWheel;
+        FixedFontSizeInput.LostKeyboardFocus += (_, _) => CommitFixedFontSize();
+        DataObject.AddPastingHandler(FixedFontSizeInput, FixedFontSizeInput_Pasting);
+        // The arrows step on every repeat but write once, when the button is let go: holding one down
+        // is one decision, as a drag across the opacity track is.
+        FixedFontSizeUp.PreviewMouseLeftButtonUp += (_, _) => PersistFixedFontSize();
+        FixedFontSizeDown.PreviewMouseLeftButtonUp += (_, _) => PersistFixedFontSize();
 
         // Set before the handlers go on, for the reason the boxes above give: restoring a stored
         // value must not read as the user reaching for the switch and write it straight back.
@@ -187,10 +195,9 @@ public partial class RealtimePage : UserControl
 
         SyncScrimOpacity();
         SyncFixedFontSize();
-        // Attached here rather than in the markup, unlike the opacity's: this track does not start at
-        // 0, so loading the markup moves the value onto its minimum, and a handler already on would
-        // take that for the user dragging to 10 and save it.
-        FixedFontSizeSlider.ValueChanged += FixedFontSizeSlider_ValueChanged;
+        // After the stored number is in, for the reason the trays' handlers are: putting it there
+        // must not read as the user typing it.
+        FixedFontSizeInput.TextChanged += FixedFontSizeInput_TextChanged;
         RenderColours();
         RenderPauseHint();
 
@@ -1010,35 +1017,108 @@ public partial class RealtimePage : UserControl
     private int CurrentScrimOpacity =>
         RealtimeSubtitleColors.ClampOpacity((int)Math.Round(ScrimOpacitySlider.Value));
 
+    /// <summary>Puts the stored size in 文字大小's box without that reading as the user typing it.</summary>
+    private void SyncFixedFontSize() =>
+        ShowFixedFontSize(SettingsService.Instance.Current.Realtime.FixedFontSize);
+
     /// <summary>
-    /// 文字大小's slider, which follows the thumb by the same rules as the opacity's — see
-    /// <see cref="ScrimOpacitySlider_ValueChanged"/>.
+    /// Writes a size into the box — the one the preview then draws — and greys whichever arrow has
+    /// reached its end of the range.
     /// </summary>
-    private void FixedFontSizeSlider_ValueChanged(
-        object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void ShowFixedFontSize(int size)
     {
-        if (_syncingFontSize) return;
-
-        if (_draggingFontSize) RenderColours();
-        else PersistFixedFontSize();
-    }
-
-    /// <summary>Puts the stored size on the slider without that reading as the user setting it.</summary>
-    private void SyncFixedFontSize()
-    {
+        _shownFixedFontSize = ClampFixedFontSize(size);
         _syncingFontSize = true;
-        FixedFontSizeSlider.Value = SettingsService.Instance.Current.Realtime.FixedFontSize;
+        FixedFontSizeInput.Text = _shownFixedFontSize.ToString(CultureInfo.InvariantCulture);
+        FixedFontSizeInput.CaretIndex = FixedFontSizeInput.Text.Length;
         _syncingFontSize = false;
+        FixedFontSizeUp.IsEnabled = _shownFixedFontSize < RealtimeSettings.MaxFixedFontSize;
+        FixedFontSizeDown.IsEnabled = _shownFixedFontSize > RealtimeSettings.MinFixedFontSize;
     }
+
+    private static int ClampFixedFontSize(int size) =>
+        Math.Clamp(size, RealtimeSettings.MinFixedFontSize, RealtimeSettings.MaxFixedFontSize);
 
     private void PersistFixedFontSize() =>
-        Persist(s => s.Realtime.FixedFontSize = CurrentFixedFontSize);
+        Persist(s => s.Realtime.FixedFontSize = _shownFixedFontSize);
 
-    /// <summary>What the slider is showing — see <see cref="CurrentScrimOpacity"/>.</summary>
-    private int CurrentFixedFontSize =>
-        Math.Clamp(
-            (int)Math.Round(FixedFontSizeSlider.Value),
-            RealtimeSettings.MinFixedFontSize, RealtimeSettings.MaxFixedFontSize);
+    /// <summary>Whole numbers only — no sign, point or space — so what is in the box is always a size or on its way to one.</summary>
+    private void FixedFontSizeInput_PreviewTextInput(object sender, TextCompositionEventArgs e) =>
+        e.Handled = !IsDigits(e.Text);
+
+    /// <summary>A paste with anything but digits in it is refused whole rather than filtered: half a pasted number is a different number.</summary>
+    private void FixedFontSizeInput_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (e.DataObject.GetData(DataFormats.UnicodeText) is not string text || !IsDigits(text))
+            e.CancelCommand();
+    }
+
+    private static bool IsDigits(string text) => text.Length > 0 && text.All(char.IsAsciiDigit);
+
+    /// <summary>
+    /// The preview follows what is being typed, held inside the range, without saving it: "3" on
+    /// the way to "32" is not a size anyone asked for. Enter or leaving the box is what saves.
+    /// </summary>
+    private void FixedFontSizeInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncingFontSize) return;
+        if (!int.TryParse(FixedFontSizeInput.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var typed))
+            return;
+
+        _shownFixedFontSize = ClampFixedFontSize(typed);
+        FixedFontSizeUp.IsEnabled = _shownFixedFontSize < RealtimeSettings.MaxFixedFontSize;
+        FixedFontSizeDown.IsEnabled = _shownFixedFontSize > RealtimeSettings.MinFixedFontSize;
+        RenderColours();
+    }
+
+    /// <summary>
+    /// Enter, or leaving the box: what was typed, held inside the range, is shown and saved. A box
+    /// left empty goes back to the size that was saved before, rather than to a minimum nobody chose.
+    /// </summary>
+    private void CommitFixedFontSize()
+    {
+        var size = int.TryParse(FixedFontSizeInput.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var typed)
+            ? typed
+            : SettingsService.Instance.Current.Realtime.FixedFontSize;
+        ShowFixedFontSize(size);
+        PersistFixedFontSize();
+    }
+
+    /// <summary>Up and down step by one and save, as a press of an arrow does; Enter commits; a space is refused.</summary>
+    /// <remarks>A space never raises PreviewTextInput's filter on its own, so it is stopped here.</remarks>
+    private void FixedFontSizeInput_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Up: StepFixedFontSize(+1, persist: true); e.Handled = true; break;
+            case Key.Down: StepFixedFontSize(-1, persist: true); e.Handled = true; break;
+            case Key.Enter: CommitFixedFontSize(); e.Handled = true; break;
+            case Key.Space: e.Handled = true; break;
+        }
+    }
+
+    /// <summary>
+    /// The wheel steps the size only while the box has the focus. Otherwise it is the page's: a
+    /// reader scrolling down past the row would change a setting they never touched.
+    /// </summary>
+    private void FixedFontSizeInput_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (!FixedFontSizeInput.IsKeyboardFocusWithin) return;
+        StepFixedFontSize(Math.Sign(e.Delta), persist: true);
+        e.Handled = true;
+    }
+
+    private void FixedFontSizeUp_Click(object sender, RoutedEventArgs e) => StepFixedFontSize(+1, persist: false);
+
+    private void FixedFontSizeDown_Click(object sender, RoutedEventArgs e) => StepFixedFontSize(-1, persist: false);
+
+    /// <summary>One step from what the box shows, held inside the range; saved now or by the caller later.</summary>
+    private void StepFixedFontSize(int delta, bool persist)
+    {
+        ShowFixedFontSize(_shownFixedFontSize + delta);
+        if (persist) PersistFixedFontSize();
+        else RenderColours();
+    }
 
     /// <summary>
     /// Opens the system colour picker on the current value and reports what came back.
@@ -1092,18 +1172,14 @@ public partial class RealtimePage : UserControl
 
         ScrimOpacityValue.Text = $"{opacity}%";
 
-        // The size from the slider for the reason the opacity is, so the preview follows a drag. A
-        // bare number: the unit is WPF's own, which means nothing to anyone reading it, and the
-        // preview is what says how large it is.
-        var fixedFontSize = CurrentFixedFontSize;
+        // The size the box is showing rather than the one stored, for the reason the opacity is
+        // read off its slider: the preview follows a number while it is being typed.
+        var fixedFontSize = _shownFixedFontSize;
         var fixedFontMode = realtime.FontSizeMode == RealtimeFontSizeMode.Fixed;
-        FixedFontSizeValue.Text = fixedFontSize.ToString(System.Globalization.CultureInfo.CurrentCulture);
         PreviewText.FontSize = fixedFontMode ? fixedFontSize : PreviewAutoFontSize;
 
-        // Dimmed and disabled in 自動 for the reason the opacity row is: there is no fixed size for
-        // it to set.
-        FixedFontSizeRow.IsEnabled = fixedFontMode;
-        FixedFontSizeRow.Opacity = fixedFontMode ? 1.0 : 0.45;
+        // Greyed in 自動, as the colour box beside 文字顏色 is: there is no fixed size for it to set.
+        FixedFontSizeBox.IsEnabled = fixedFontMode;
 
         // The swatch shows the colour the user picked, so it is drawn opaque even for the scrim —
         // the preview below is where its translucency is on display.

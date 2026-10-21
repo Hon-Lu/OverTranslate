@@ -165,7 +165,7 @@ public class RealtimeSettings
         set => _fixedFontSize = Math.Clamp(value, MinFixedFontSize, MaxFixedFontSize);
     }
 
-    private int _fixedFontSize = 20;
+    private int _fixedFontSize = 24;
 
     /// <summary>Which of the two capture sources the user last chose. Step 1 on the page.</summary>
     public RealtimeCaptureMode CaptureMode { get; set; } = RealtimeCaptureMode.Screen;

@@ -163,12 +163,12 @@ public class RealtimeFixedFontSizeTests
     {
         var settings = new RealtimeSettings();
         Assert.Equal(RealtimeFontSizeMode.Auto, settings.FontSizeMode);
-        Assert.Equal(20, settings.FixedFontSize);
+        Assert.Equal(24, settings.FixedFontSize);
 
         // A file from before these keys reads as the overlay it always drew.
         var old = SettingsService.Parse("""{"Realtime":{"ScrimColor":"#1E3A5F"}}""");
         Assert.Equal(RealtimeFontSizeMode.Auto, old.Realtime.FontSizeMode);
-        Assert.Equal(20, old.Realtime.FixedFontSize);
+        Assert.Equal(24, old.Realtime.FixedFontSize);
 
         var stored = SettingsService.Parse("""{"Realtime":{"FontSizeMode":"Fixed","FixedFontSize":32}}""");
         Assert.Equal(RealtimeFontSizeMode.Fixed, stored.Realtime.FontSizeMode);

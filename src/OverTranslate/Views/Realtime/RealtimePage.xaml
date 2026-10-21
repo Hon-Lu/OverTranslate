@@ -493,7 +493,9 @@
                                      than it is. -->
                                 <!-- At least, rather than exactly, 96 high: 文字大小 → 固定 sets the
                                      preview at the size chosen, and at the top of the range the
-                                     line wraps, as it would in a session. -->
+                                     line wraps, as it would in a session. Only the band may make it
+                                     taller — see the canvas round the 自動 scene for why that takes
+                                     care. -->
                                 <Border x:Name="PreviewBackdrop"
                                         MinHeight="96"
                                         CornerRadius="4"
@@ -508,8 +510,18 @@
                                              the markup. Every piece is oversized and hangs past the
                                              frame, so the blur melts the shapes into each other
                                              instead of fading the frame out at its own edges — the
-                                             Border above clips whatever spills. -->
-                                        <Grid x:Name="PreviewScene" Visibility="Collapsed">
+                                             Border above clips whatever spills.
+
+                                             Inside a canvas, sized to it by binding, because those
+                                             oversized pieces are also measured: with the frame no
+                                             longer a fixed 96 high, a 170-high ellipse made it 170
+                                             high in 自動 too. A canvas asks its parent for no room
+                                             at all, so the frame is sized by the band alone and the
+                                             scene is laid over whatever that comes to. -->
+                                        <Canvas x:Name="PreviewSceneHost">
+                                        <Grid x:Name="PreviewScene" Visibility="Collapsed"
+                                              Width="{Binding ActualWidth, ElementName=PreviewSceneHost}"
+                                              Height="{Binding ActualHeight, ElementName=PreviewSceneHost}">
                                             <Grid.Effect>
                                                 <BlurEffect Radius="26"/>
                                             </Grid.Effect>
@@ -555,10 +567,15 @@
                                                 </Rectangle.Fill>
                                             </Rectangle>
                                         </Grid>
+                                        </Canvas>
 
+                                        <!-- The margin only shows once the band is taller than the
+                                             frame's 96, where it keeps the band off the frame's
+                                             edges; below that the band is centred either way. -->
                                         <Border x:Name="PreviewScrim"
                                                 CornerRadius="3"
                                                 Padding="14,6"
+                                                Margin="0,10"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center">
                                             <TextBlock x:Name="PreviewText"
@@ -655,14 +672,14 @@
                             </Grid>
                         </Border>
 
-                        <!-- 文字大小 and the size itself, in one group, built as 底色 below is: the
-                             tray in the same column as the other two, and the slider under a rule
-                             as a second question inside the group. The colour column is left empty
-                             but kept, so the tray lines up with the trays above and below it. The
-                             slider goes dim in 自動 for the reason the opacity's does — there is no
-                             one size for it to set. -->
+                        <!-- 文字大小, built as 文字顏色 above is: the tray, and beside it the value
+                             it fixes, in the column the colour box sits in — so the right edge of
+                             the card reads as one column of answers. A number rather than a slider:
+                             a size is something the reader knows ("the game's text is about 14"),
+                             not something judged by eye the way how heavy a band is drawn is, and a
+                             slider needed a second line of its own to say so. Greyed in 自動 like the
+                             colour box, for the same reason: in 自動 it is not what is being set. -->
                         <Border Style="{StaticResource ToggleRowBorder}">
-                            <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -708,45 +725,115 @@
                                                          Content="{DynamicResource S.Realtime.ColorFixed}"/>
                                         </Grid>
                                     </Border>
-                                </Grid>
 
-                                <Border Height="1"
-                                        Background="{DynamicResource AppSubtleBorder}"
-                                        Margin="0,12,0,12"/>
-
-                                <Grid x:Name="FixedFontSizeRow">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" MaxWidth="360" VerticalAlignment="Center">
-                                        <TextBlock Text="{DynamicResource S.Realtime.FixedFontSize}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   Foreground="{DynamicResource AppTextPrimary}"/>
-                                        <TextBlock Text="{DynamicResource S.Realtime.FixedFontSizeHint}"
-                                                   Style="{StaticResource FieldHint}"
-                                                   Margin="0,3,16,0"/>
-                                    </StackPanel>
-                                    <Slider Grid.Column="1"
-                                            x:Name="FixedFontSizeSlider"
-                                            Style="{StaticResource AppSlider}"
+                                    <!-- Drawn as the colour box beside it is drawn — the same height,
+                                         margin, corners and fill — and stretched across the column
+                                         they share, so the two right edges meet. The arrows sit
+                                         where that box's chevron does, small for the same reason:
+                                         the number is what the box is for. -->
+                                    <Border Grid.Column="3"
+                                            x:Name="FixedFontSizeBox"
+                                            Height="34"
+                                            Margin="12,0,0,0"
                                             VerticalAlignment="Center"
-                                            Margin="16,0,0,0"
-                                            Minimum="10"
-                                            Maximum="48"
-                                            TickFrequency="1"
-                                            IsSnapToTickEnabled="True"
-                                            AutomationProperties.Name="{DynamicResource S.Realtime.FixedFontSize}"/>
-                                    <TextBlock Grid.Column="2"
-                                               x:Name="FixedFontSizeValue"
-                                               Style="{StaticResource FieldLabel}"
-                                               MinWidth="42"
-                                               TextAlignment="Right"
-                                               Margin="16,0,2,0"/>
+                                            HorizontalAlignment="Stretch"
+                                            CornerRadius="6"
+                                            BorderThickness="1"
+                                            Background="{DynamicResource AppButtonBg}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid Margin="10,0,4,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     x:Name="FixedFontSizeInput"
+                                                     Background="Transparent"
+                                                     BorderThickness="0"
+                                                     Padding="0"
+                                                     MinWidth="24"
+                                                     MaxLength="2"
+                                                     VerticalAlignment="Center"
+                                                     VerticalContentAlignment="Center"
+                                                     TextAlignment="Right"
+                                                     FontFamily="{DynamicResource AppFont}"
+                                                     FontSize="{StaticResource AppFontSize}"
+                                                     Foreground="{DynamicResource AppTextPrimary}"
+                                                     CaretBrush="{DynamicResource AppTextPrimary}"
+                                                     SelectionBrush="{DynamicResource AppAccent}"
+                                                     InputMethod.IsInputMethodEnabled="False"
+                                                     AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="px"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       FontSize="{StaticResource AppFontSize}"
+                                                       Foreground="{DynamicResource AppTextSecondary}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="4,0,6,0"/>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <StackPanel.Resources>
+                                                    <Style TargetType="RepeatButton">
+                                                        <Setter Property="Width" Value="18"/>
+                                                        <Setter Property="Height" Value="13"/>
+                                                        <Setter Property="Focusable" Value="False"/>
+                                                        <Setter Property="Cursor" Value="Hand"/>
+                                                        <Setter Property="Delay" Value="400"/>
+                                                        <Setter Property="Interval" Value="60"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="RepeatButton">
+                                                                    <Border x:Name="Root" Background="Transparent" CornerRadius="3">
+                                                                        <TextBlock Text="{TemplateBinding Content}"
+                                                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                                   FontSize="9"
+                                                                                   Foreground="{TemplateBinding Foreground}"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="Root" Property="Background"
+                                                                                    Value="{DynamicResource AppButtonHoverBg}"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsPressed" Value="True">
+                                                                            <Setter TargetName="Root" Property="Background"
+                                                                                    Value="{DynamicResource AppButtonPressedBg}"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsEnabled" Value="False">
+                                                                            <Setter Property="Opacity" Value="0.35"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </StackPanel.Resources>
+                                                <RepeatButton x:Name="FixedFontSizeUp"
+                                                              Content="&#xE70E;"
+                                                              AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
+                                                              Click="FixedFontSizeUp_Click"/>
+                                                <RepeatButton x:Name="FixedFontSizeDown"
+                                                              Content="&#xE70D;"
+                                                              AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
+                                                              Click="FixedFontSizeDown_Click"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
-                            </StackPanel>
                         </Border>
 
                         <!-- 底色 and how heavy it is drawn, in one group. The slider is not a setting of
