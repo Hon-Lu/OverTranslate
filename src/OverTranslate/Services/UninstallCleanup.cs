@@ -13,6 +13,9 @@ namespace OverTranslate.Services;
 /// them up again, and they are a few kilobytes. The downloads are hundreds of megabytes that nothing
 /// else will ever use.</para>
 ///
+/// <para>The notification registration goes too (<see cref="NotificationIdentityService"/>): it
+/// names an icon inside the folder being removed.</para>
+///
 /// <para>Run from Velopack's before-uninstall hook (see App.Main), which starts this executable with
 /// an argument, waits for it, and ends the process straight after: before WPF, before settings are
 /// loaded, with no window to show anything in. So this does nothing but delete: no UI, no logging,
@@ -39,6 +42,18 @@ internal static class UninstallCleanup
             using var run = Registry.CurrentUser.OpenSubKey(StartupService.RunKey, writable: true);
             if (run is not null)
                 StartupService.RemoveIfPointsInto(run, InstallRoot(AppContext.BaseDirectory));
+        }
+        catch
+        {
+            // As above.
+        }
+
+        try
+        {
+            var aumid = NotificationIdentityService.CurrentAumid;
+            using var aumids = Registry.CurrentUser.OpenSubKey(NotificationIdentityService.AumidKeyPath, writable: true);
+            if (aumids is not null && !string.IsNullOrEmpty(aumid))
+                NotificationIdentityService.RemoveIfPointsInto(aumids, aumid, InstallRoot(AppContext.BaseDirectory));
         }
         catch
         {
