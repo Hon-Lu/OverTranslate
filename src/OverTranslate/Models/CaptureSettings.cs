@@ -31,7 +31,7 @@ public class CaptureSettings
 
     /// <summary>
     /// Whether the capture toolbar grows its footer saying which model will read the selection.
-    /// On by default; set from the toolbar's 顯示更多 menu.
+    /// On by default; set from the toolbar's 設定 menu.
     /// </summary>
     /// <remarks>
     /// The capture toolbar's alone. The line under the source picker on the realtime page is always
@@ -42,7 +42,7 @@ public class CaptureSettings
 
     /// <summary>
     /// Whether 截圖 ends the capture once the picture is on the clipboard. Off by default; set from
-    /// the toolbar's 顯示更多 menu (#323).
+    /// the toolbar's 設定 menu (#323).
     /// </summary>
     /// <remarks>
     /// <para>For someone who captures to paste the picture somewhere, for whom 截圖 then Esc is two
@@ -55,7 +55,7 @@ public class CaptureSettings
     /// </remarks>
     public bool CloseAfterCopy { get; set; } = false;
 
-    /// <summary>Whether 偵錯輔助 in the 顯示更多 menu was left unfolded.</summary>
+    /// <summary>Whether 偵錯輔助 in the 設定 menu was left unfolded.</summary>
     /// <remarks>
     /// Folded by default: the boxes are for reporting a problem, and unfolded they took half the
     /// menu from everyone who never does. Remembered so that whoever is reporting one is not folding

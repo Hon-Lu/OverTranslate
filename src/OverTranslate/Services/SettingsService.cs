@@ -223,7 +223,7 @@ public class SettingsService
 
     /// <summary>
     /// Raised when 自動翻譯, 儲存截圖 or 複製截圖後關閉 changes. The first two are set from two
-    /// places — the settings page and the capture toolbar's 顯示更多 panel — and each has to show
+    /// places — the settings page and the capture toolbar's 設定 panel — and each has to show
     /// what the other just wrote.
     /// </summary>
     public event EventHandler? CaptureOptionsChanged;

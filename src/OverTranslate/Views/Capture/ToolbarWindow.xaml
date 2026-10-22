@@ -538,12 +538,17 @@
                             </StackPanel>
                         </Button>
 
+                        <!-- A gear and 設定, where this was ⋯ and 顯示更多. Everything behind it is a
+                             switch that is kept between captures, which is what a gear promises; ⋯
+                             promises more things to do, and people looking for a setting did not look
+                             there. Just 設定: the bar is already 截圖翻譯's, so there is nothing else
+                             it could be the settings of. -->
                         <Button x:Name="MoreBtn" Style="{StaticResource ToolbarIconButton}"
                                 Width="30" Height="30" Margin="2,0,0,0"
-                                ToolTip="{DynamicResource S.Toolbar.ShowMore}"
-                                AutomationProperties.Name="{DynamicResource S.Toolbar.ShowMore}"
+                                ToolTip="{DynamicResource S.Shell.Settings}"
+                                AutomationProperties.Name="{DynamicResource S.Shell.Settings}"
                                 Click="MoreBtn_Click">
-                            <TextBlock Text="&#xE712;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20"/>
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/>
                         </Button>
                         <!-- What capture translation keeps between captures, as opposed to what the bar
                              asks for each one. A menu rather than a settings sheet: one line per switch,

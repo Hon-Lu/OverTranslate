@@ -906,7 +906,7 @@ public partial class SettingsPage : UserControl
     }
 
     /// <summary>
-    /// The capture toolbar's 顯示更多 panel sets the same two switches, and this page may be open
+    /// The capture toolbar's 設定 panel sets the same two switches, and this page may be open
     /// behind the capture while it does.
     /// </summary>
     private void OnCaptureOptionsChanged(object? sender, EventArgs e)
