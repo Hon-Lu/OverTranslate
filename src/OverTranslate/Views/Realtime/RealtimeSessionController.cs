@@ -182,43 +182,60 @@ internal sealed class RealtimeSessionController
             LogStayOnTopStall();
             UpdateBlockVisibility();
 
+            // Anything of ours opened over the session goes up first and the layers in under it —
+            // see RaiseCompanions for why they are not raised and then covered again.
+            var below = RaiseCompanions();
+            void Raise(Window window)
+            {
+                if (below == IntPtr.Zero || !AlwaysOnTop.PlaceBehind(window, below))
+                    AlwaysOnTop.Reassert(window);
+            }
+
             // The control bar last, so it ends up above the block layers it may overlap. A block put
             // away by UpdateBlockVisibility is left where it is: raising it is what used to keep it
             // over the window that had covered its source.
             foreach (var block in _blockWindows.Values)
-                if (block.IsVisible) AlwaysOnTop.Reassert(block);
-            if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
-            if (_control is { } control) AlwaysOnTop.Reassert(control);
+                if (block.IsVisible) Raise(block);
+            if (_edit is { } edit) Raise(edit);
+            if (_control is { } control) Raise(control);
 
             // Every tooltip after every window: the control bar is owned by the edit layer, and
             // raising it brings the layer up too — over any tooltip of the layer's raised before it.
             if (_edit is { } editTips) AlwaysOnTop.ReassertToolTips(editTips);
             if (_control is { } controlTips) AlwaysOnTop.ReassertToolTips(controlTips);
 
-            RaiseCompanions();
             LogEditLayerCovered();
         };
     }
 
     /// <summary>
-    /// Puts every other window of ours that is on top back above the session's layers: 取詞翻譯's
-    /// popup, 替換翻譯's card, a list one of them has dropped down (#326).
+    /// Puts every other window of ours that is on top at the front: 取詞翻譯's popup, 替換翻譯's
+    /// card, a list one of them has dropped down (#326). Returns the backmost of them, for the
+    /// session's layers to go in behind — or zero when there are none.
     /// </summary>
     /// <remarks>
-    /// The user summoned these over a running session to use them now, and the tick that has just
-    /// raised the block layers would otherwise cover them a second after they opened. Back to front,
-    /// so they keep their order among themselves — a dropped-down list stays over its popup.
+    /// The user summoned these over a running session to use them now, so the layers must not come
+    /// up over them. They used to — raised to the front and the popup raised back over them in the
+    /// same tick — and any frame the compositor presented in between showed the subtitles on top: a
+    /// flicker that came and went. Raising these first and placing the layers behind them never puts
+    /// the layers in front at all. Back to front, so they keep their order among themselves — a
+    /// dropped-down list stays over its popup.
     /// </remarks>
-    private void RaiseCompanions()
+    private IntPtr RaiseCompanions()
     {
         var layers = Volatile.Read(ref _overlayHandles);
         var visible = OwnTopLevelWindows.Visible();
+        var backmost = IntPtr.Zero;
 
         for (var i = visible.Count - 1; i >= 0; i--)
         {
-            if (!layers.Contains(visible[i]) && OwnTopLevelWindows.IsTopmost(visible[i]))
-                AlwaysOnTop.Reassert(visible[i]);
+            if (layers.Contains(visible[i]) || !OwnTopLevelWindows.IsTopmost(visible[i])) continue;
+
+            AlwaysOnTop.Reassert(visible[i]);
+            if (backmost == IntPtr.Zero) backmost = visible[i];
         }
+
+        return backmost;
     }
 
     /// <summary>
