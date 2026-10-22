@@ -679,7 +679,7 @@
 
     <sys:String x:Key="S.Toolbar.DebugAssist">認識補助</sys:String>
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} 件オン</sys:String>
-    <sys:String x:Key="S.Toolbar.CloseAfterCopy">コピー後に閉じる</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopy">スクリーンショット後に閉じる</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">「スクリーンショット」でクリップボードにコピーしたら、そのまま終了します</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻訳</sys:String>

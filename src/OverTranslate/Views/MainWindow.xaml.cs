@@ -1369,7 +1369,7 @@ public partial class MainWindow : Window
             var settings = SettingsService.Instance.Current;
             if (!settings.SaveScreenshotToDisk)
             {
-                // 複製截圖後關閉 (#323): the copy is the whole of what was asked for, and the notice
+                // 截圖後自動關閉 (#323): the copy is the whole of what was asked for, and the notice
                 // would only flash on a toolbar that is about to go.
                 if (settings.Capture.CloseAfterCopy)
                 {

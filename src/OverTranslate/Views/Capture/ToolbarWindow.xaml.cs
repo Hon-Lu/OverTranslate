@@ -809,7 +809,10 @@ public partial class ToolbarWindow : Window
         if (_ignoreMoreClick) { _ignoreMoreClick = false; return; }
         // Right edge under the button's right edge, so the menu comes out of what opened it.
         var buttonRight = MoreBtn.TranslatePoint(new System.Windows.Point(MoreBtn.ActualWidth, 0), BarSurface).X;
-        MorePopup.HorizontalOffset = Math.Max(0, buttonRight - MorePanel.Width);
+        // Measured rather than read off the markup: the panel is as wide as its longest line,
+        // which depends on the language.
+        MorePanel.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        MorePopup.HorizontalOffset = Math.Max(0, buttonRight - MorePanel.DesiredSize.Width);
         MorePopup.IsOpen = !MorePopup.IsOpen;
     }
 
@@ -823,6 +826,12 @@ public partial class ToolbarWindow : Window
     {
         SyncDebugSwitches(sender, e);
         SyncCaptureSwitches(sender, e);
+
+        // Again now that the panel is laid out in its own window: before the first opening its
+        // strings may not have resolved, and the measure in MoreBtn_Click would be short of them.
+        MorePanel.UpdateLayout();
+        var buttonRight = MoreBtn.TranslatePoint(new System.Windows.Point(MoreBtn.ActualWidth, 0), BarSurface).X;
+        MorePopup.HorizontalOffset = Math.Max(0, buttonRight - MorePanel.ActualWidth);
     }
 
     private void MorePopup_Closed(object? sender, EventArgs e)

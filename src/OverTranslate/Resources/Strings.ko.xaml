@@ -679,7 +679,7 @@
 
     <sys:String x:Key="S.Toolbar.DebugAssist">인식 보조</sys:String>
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0}개 켜짐</sys:String>
-    <sys:String x:Key="S.Toolbar.CloseAfterCopy">복사 후 닫기</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopy">스크린샷 후 자동으로 닫기</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">‘스크린샷’으로 클립보드에 복사한 뒤 바로 종료합니다</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">일반</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">자동 번역</sys:String>

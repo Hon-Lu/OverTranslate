@@ -567,7 +567,9 @@
                                Placement="Bottom" VerticalOffset="6"
                                AllowsTransparency="True" StaysOpen="False"
                                Opened="MorePopup_Opened" Closed="MorePopup_Closed">
-                            <Border x:Name="MorePanel" Width="280" Background="{DynamicResource ToolbarBg}"
+                            <!-- At least 280 and otherwise as wide as its longest line: the switch names are one line
+                                 each, and a fixed width cut the Korean ones off at the switch. -->
+                            <Border x:Name="MorePanel" MinWidth="280" Background="{DynamicResource ToolbarBg}"
                                     BorderBrush="{DynamicResource ToolbarBorder}" BorderThickness="1" CornerRadius="12"
                                     Padding="6" PreviewKeyDown="MorePopup_KeyDown">
                                 <StackPanel>
