@@ -68,6 +68,13 @@ public class OcrDebugBoxesTests
             .Single(element => (string?)element.Attribute(x + "Name") == "DebugToolsFold");
 
         Assert.Equal("Collapsed", (string?)fold.Attribute("Visibility"));
+
+        // And the card itself is off the page: its settings live in the capture toolbar's 設定
+        // menu, where the boxes can be seen. See the comment on DebugToolsCard.
+        var card = XDocument.Load(page)
+            .Descendants()
+            .Single(element => (string?)element.Attribute(x + "Name") == "DebugToolsCard");
+        Assert.Equal("Collapsed", (string?)card.Attribute("Visibility"));
         Assert.Equal("0", (string?)fold.Attribute("Height"));
         // Clipped, or the content would spill out of the card while the height is animating.
         Assert.Equal("True", (string?)fold.Attribute("ClipToBounds"));

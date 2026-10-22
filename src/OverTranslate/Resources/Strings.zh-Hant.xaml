@@ -477,7 +477,6 @@
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">按下快捷鍵開始[[截圖翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">開啟翻譯視窗</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkeyHint">按下快捷鍵開啟[[翻譯視窗]]</sys:String>
-    <sys:String x:Key="S.Settings.AutoTranslate">自動翻譯</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">截圖翻譯框選完成時立即翻譯，不需要再手動點擊。</sys:String>
     <sys:String x:Key="S.Settings.Startup">開機啟動</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">開機時自動啟動</sys:String>
@@ -699,7 +698,9 @@
     <sys:String x:Key="S.Lang.Ukrainian">烏克蘭文</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">偵錯輔助</sys:String>
-    <sys:String x:Key="S.Toolbar.ShowMore">顯示更多</sys:String>
+    <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} 項開啟</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopy">截圖後自動關閉</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">按下「截圖」複製到剪貼簿後，直接結束截圖翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">儲存截圖</sys:String>

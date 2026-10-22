@@ -457,7 +457,6 @@
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">ショートカットキーで[[キャプチャ翻訳]]を開始する</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">翻訳ウィンドウを開く</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkeyHint">ショートカットキーで[[翻訳ウィンドウ]]を開く</sys:String>
-    <sys:String x:Key="S.Settings.AutoTranslate">自動翻訳</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">キャプチャ翻訳で範囲を選び終えた時点ですぐ翻訳し、クリックの手間をなくします。</sys:String>
     <sys:String x:Key="S.Settings.Startup">スタートアップ</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Windows の起動時に自動で開始する</sys:String>
@@ -679,7 +678,9 @@
     <sys:String x:Key="S.Lang.Ukrainian">ウクライナ語</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">認識補助</sys:String>
-    <sys:String x:Key="S.Toolbar.ShowMore">もっと表示</sys:String>
+    <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} 件オン</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopy">スクリーンショット後に閉じる</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">「スクリーンショット」でクリップボードにコピーしたら、そのまま終了します</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻訳</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">スクリーンショットを保存</sys:String>

@@ -1369,6 +1369,14 @@ public partial class MainWindow : Window
             var settings = SettingsService.Instance.Current;
             if (!settings.SaveScreenshotToDisk)
             {
+                // 截圖後自動關閉 (#323): the copy is the whole of what was asked for, and the notice
+                // would only flash on a toolbar that is about to go.
+                if (settings.Capture.CloseAfterCopy)
+                {
+                    CloseAll("copy and close");
+                    return;
+                }
+
                 ShowNotice(
                     LocalizationService.Get("S.Main.CopiedTitle"),
                     LocalizationService.Get("S.Main.CopiedBody"), NoticeKind.Success);
@@ -1379,6 +1387,15 @@ public partial class MainWindow : Window
             try
             {
                 var savedPath = ScreenshotSaveService.Save(result, settings.ScreenshotSavePath);
+
+                // Closed only once the file is written. A failed save below keeps the capture up,
+                // since its notice is the only place the user would learn the file is not there.
+                if (settings.Capture.CloseAfterCopy)
+                {
+                    CloseAll("copy and close");
+                    return;
+                }
+
                 ShowNotice(
                     LocalizationService.Get("S.Main.CopiedTitle"),
                     LocalizationService.Format("S.Main.CopiedAndSavedBody", savedPath), NoticeKind.Success);

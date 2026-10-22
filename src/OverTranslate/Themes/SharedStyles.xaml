@@ -300,7 +300,7 @@
          (drag a region), not a camera, which would promise a photo rather than a translation. -->
     <Geometry x:Key="CaptureMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M8,5.4 V10.6 M5.4,8 H10.6</Geometry>
 
-    <!-- 顯示更多's two debug boxes, cut from the 截圖翻譯 mark above so they read as the same family:
+    <!-- 設定's two debug boxes, cut from the 截圖翻譯 mark above so they read as the same family:
          its four framing corners without the crosshair - a region, which is what a group box
          outlines - and the same corners with one line across the middle for the OCR box, which
          outlines a single recognised line of text. -->
@@ -2080,7 +2080,7 @@
         </Setter>
     </Style>
 
-    <!-- One row of the capture toolbar's 顯示更多 menu: icon, name, and a switch at the far end. The
+    <!-- One row of the capture toolbar's 設定 menu: icon, name, and a switch at the far end. The
          whole row is the control, not just the switch - it is a menu, and a menu is pressed anywhere
          along the line. The switch drawn in it is the settings page's ToggleSwitch, shown rather
          than used: it takes no input of its own and only follows the row, so there is one control
