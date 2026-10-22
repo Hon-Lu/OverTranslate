@@ -293,6 +293,12 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.TextColor">Text colour</sys:String>
     <sys:String x:Key="S.Realtime.TextColorHint">Sets the colour of the translated text. Automatic keeps the colour of the original text on screen.</sys:String>
     <sys:String x:Key="S.Realtime.TextColorMode">Text colour mode</sys:String>
+    <sys:String x:Key="S.Realtime.FontSize">Text size</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeHint">Sets the size of the translated text. Automatic follows the size of the original text.</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeMode">Text size mode</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeValue">Text size (px)</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeIncrease">Increase text size</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeDecrease">Decrease text size</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">Background colour</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorHint">Sets the colour of the band behind the translation. Automatic rebuilds the background from the surrounding picture instead.</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorMode">Background colour mode</sys:String>

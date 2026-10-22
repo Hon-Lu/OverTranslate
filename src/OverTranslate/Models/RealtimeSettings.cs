@@ -31,6 +31,20 @@ public enum RealtimeBorderColorMode
     Fixed,
 }
 
+/// <summary>How the translation's type size is chosen — 顯示外觀 → 文字大小.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum RealtimeFontSizeMode
+{
+    /// <summary>Sized from the source line, and made smaller when a sentence will not fit.</summary>
+    Auto,
+
+    /// <summary>
+    /// Every horizontal line at <see cref="RealtimeSettings.FixedFontSize"/>, wrapping rather than
+    /// shrinking when a sentence will not fit. Vertical writing stays on <see cref="Auto"/>.
+    /// </summary>
+    Fixed,
+}
+
 /// <summary>
 /// Everything 即時翻譯 keeps between sittings, under one key.
 /// </summary>
@@ -116,6 +130,42 @@ public class RealtimeSettings
 
     /// <summary>The colour used in <see cref="RealtimeBorderColorMode.Fixed"/>, "#RRGGBB".</summary>
     public string BorderColor { get; set; } = Services.Realtime.RealtimeSubtitleColors.DefaultBorder;
+
+    /// <summary>
+    /// 自動 unless the user asks for one size — see <see cref="RealtimeFontSizeMode"/>.
+    /// </summary>
+    /// <remarks>
+    /// 自動 by default because it is what every build before this one drew, and a settings file
+    /// carried across must not arrive at a different-looking overlay. What 固定 is for is the
+    /// complaint 自動 earns over dialogue: a long sentence is shrunk to fit its band and a short one
+    /// is not, so consecutive lines of the same speaker come out at different sizes.
+    /// </remarks>
+    public RealtimeFontSizeMode FontSizeMode { get; set; } = RealtimeFontSizeMode.Auto;
+
+    /// <summary>Smallest and largest <see cref="FixedFontSize"/> — the page's slider obeys this pair.</summary>
+    /// <remarks>
+    /// In WPF's device-independent units, the same as a FontSize, so it grows with Windows' display
+    /// scaling like the rest of the overlay. The range is set by what is being read: a small game
+    /// interface is written at about 12–14, and a visual novel's dialogue or a video's subtitles on a
+    /// 1080p screen at about 28–40.
+    /// </remarks>
+    public const int MinFixedFontSize = 10;
+
+    /// <inheritdoc cref="MinFixedFontSize"/>
+    public const int MaxFixedFontSize = 48;
+
+    /// <summary>The size used in <see cref="RealtimeFontSizeMode.Fixed"/>, 10–48.</summary>
+    /// <remarks>
+    /// Clamped as it is read, so a hand-edited file cannot hand the overlay a size the slider could
+    /// never have set.
+    /// </remarks>
+    public int FixedFontSize
+    {
+        get => _fixedFontSize;
+        set => _fixedFontSize = Math.Clamp(value, MinFixedFontSize, MaxFixedFontSize);
+    }
+
+    private int _fixedFontSize = 24;
 
     /// <summary>Which of the two capture sources the user last chose. Step 1 on the page.</summary>
     public RealtimeCaptureMode CaptureMode { get; set; } = RealtimeCaptureMode.Screen;

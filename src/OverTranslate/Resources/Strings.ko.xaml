@@ -297,6 +297,12 @@
     <sys:String x:Key="S.Realtime.TextColor">글자 색</sys:String>
     <sys:String x:Key="S.Realtime.TextColorHint">번역문의 글자 색을 설정합니다. '자동'은 화면 속 원문의 글자 색을 그대로 사용합니다.</sys:String>
     <sys:String x:Key="S.Realtime.TextColorMode">글자 색 방식</sys:String>
+    <sys:String x:Key="S.Realtime.FontSize">글자 크기</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeHint">번역문의 글자 크기를 설정합니다. '자동'은 원문 글자 크기에 맞춥니다.</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeMode">글자 크기 방식</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeValue">글자 크기(px)</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeIncrease">글자 크게</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeDecrease">글자 작게</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">배경 색</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorHint">번역문의 배경 색을 설정합니다. '자동'은 주변 화면으로 배경을 채워 번역문을 화면에 어울리게 합니다.</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorMode">배경 색 방식</sys:String>

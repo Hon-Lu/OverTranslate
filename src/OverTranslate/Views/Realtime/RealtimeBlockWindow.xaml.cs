@@ -140,6 +140,14 @@ public partial class RealtimeBlockWindow : Window
     private readonly bool _border;
     private readonly SolidColorBrush? _fixedBorderBrush;
 
+    // 顯示外觀 → 文字大小, held per session like the colours: the size every line is set at, or null
+    // for 自動 — see RealtimeFixedFontLayout for a line across and BuildVerticalLine for a column.
+    // A vertical block takes it too, lines across it included. A balloon on a comic page is cut
+    // close round its text, and a size picked larger than the page's lettering spreads the
+    // translation over more columns than the balloon has, onto the picture beside it. That is the
+    // reader's choice to make, and not one this window second-guesses by quietly going back to 自動.
+    private readonly double? _fixedFontSize;
+
     // Each translation box as drawn — a line's text and band or patch, or a panel group's rows and
     // their one patch — for hiding one box when another window touches it. See ApplyCovers.
     private List<FrameworkElement[]> _boxes = [];
@@ -180,6 +188,9 @@ public partial class RealtimeBlockWindow : Window
     /// <see cref="RealtimeBlockPlacement.CompareScale"/>. Ignored without a location: over the block
     /// itself the translation is always the block's size.
     /// </param>
+    /// <param name="fixedFontSize">
+    /// The size 顯示外觀 → 文字大小 → 固定 asked for, in device-independent units; null for 自動.
+    /// </param>
     public RealtimeBlockWindow(
         int regionId,
         System.Drawing.Rectangle physBounds,
@@ -196,7 +207,8 @@ public partial class RealtimeBlockWindow : Window
         string? borderColor = null,
         RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal,
         System.Drawing.Point? displayLocation = null,
-        double displayScale = 1.0)
+        double displayScale = 1.0,
+        double? fixedFontSize = null)
     {
         InitializeComponent();
         // Shown again over a game after its source was covered (see the session controller's
@@ -204,6 +216,7 @@ public partial class RealtimeBlockWindow : Window
         ShowActivated = false;
         _mode = mode;
         _orientation = orientation;
+        _fixedFontSize = fixedFontSize;
         _border = border;
         _fixedBorderBrush = border && borderColor is not null
             ? Freeze(new SolidColorBrush(RealtimeSubtitleColors.Border(borderColor)))
@@ -496,7 +509,26 @@ public partial class RealtimeBlockWindow : Window
         // A grouped block wraps by definition; a single source line only wraps when it has run out
         // of every other way to stay whole, which the branch below decides.
         bool wrapped = isGrouped;
-        if (isGrouped)
+        if (_fixedFontSize is { } fixedSize)
+        {
+            // 固定: the size is the user's and width is bought back by wrapping, with shrinking only
+            // once the wrapped text would run past the block — see RealtimeFixedFontLayout. The
+            // cover below still takes the larger of the source and the text, so a size smaller
+            // than the source leaves the band as tall as the line it hides, and a larger one grows
+            // it round the source's centre, kept inside the block.
+            var fit = isGrouped
+                ? RealtimeFixedFontLayout.Group(
+                    fixedSize, Math.Max(sourceWidth, 20), maxWidth, maxTextHeight, MinFontSize,
+                    (size, width) => Measure(line.TranslatedText, typeface, size, width))
+                : RealtimeFixedFontLayout.Line(
+                    fixedSize, maxWidth, maxTextHeight, MinFontSize,
+                    (size, width) => Measure(line.TranslatedText, typeface, size, width));
+            fontSize = fit.FontSize;
+            wrapped = fit.Wrapped;
+            textWidth = fit.TextWidth;
+            textHeight = fit.TextHeight;
+        }
+        else if (isGrouped)
         {
             // Keep the group's own width and let the translation wrap inside it, shrinking only if
             // wrapping alone cannot make it fit the source's height.
@@ -701,13 +733,32 @@ public partial class RealtimeBlockWindow : Window
         double fontGlyphHeight = GetFontGlyphHeight(line, boxHeight);
         double fontSize = SourceFontScale.Calculate(fontGlyphHeight, _latinSourceToCjkTarget);
         // A single line is held to the height of the line it replaces, as a level one is.
-        if (!isGrouped)
+        if (!isGrouped && _fixedFontSize is null)
             fontSize = Math.Max(MinFontSize, Math.Min(fontSize, fontGlyphHeight * MaxHeightOverSource));
 
         var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
         double textWidth = Math.Max(20, boxWidth);
         bool wrapped = isGrouped;
-        if (!isGrouped)
+        if (_fixedFontSize is { } fixedSize)
+        {
+            // 固定, on the same ladder a level line climbs — see RealtimeFixedFontLayout — with the
+            // card's line length as the width to wrap at. Only the size and whether it wraps are
+            // taken from it: the box below stays the card's full width either way, because the band
+            // is set against the card's margin and has to reach across the comment it covers, which
+            // a box narrowed to the text would not. The room is the block, as for a level line,
+            // since a tilted band is not held inside the window and anything past it is not drawn.
+            double room = Math.Max(boxHeight, canvasHeight - ScrimPaddingY * 2);
+            var fit = isGrouped
+                ? RealtimeFixedFontLayout.Group(
+                    fixedSize, textWidth, textWidth, room, MinFontSize,
+                    (size, width) => Measure(line.TranslatedText, typeface, size, width))
+                : RealtimeFixedFontLayout.Line(
+                    fixedSize, textWidth, room, MinFontSize,
+                    (size, width) => Measure(line.TranslatedText, typeface, size, width));
+            fontSize = fit.FontSize;
+            wrapped = fit.Wrapped;
+        }
+        else if (!isGrouped)
         {
             // One line stays one line while it can, shrinking to the readability floor first — a
             // wrap inside the height of one line is two lines cut in half.
@@ -716,7 +767,7 @@ public partial class RealtimeBlockWindow : Window
                 fontSize = Math.Max(MinFontSize, fontSize * textWidth / measured);
             wrapped = Measure(line.TranslatedText, typeface, fontSize, null).Width > textWidth;
         }
-        if (wrapped)
+        if (wrapped && _fixedFontSize is null)
             fontSize = FitWrapped(line.TranslatedText, typeface, fontSize, textWidth, boxHeight * MaxHeightOverSource);
         double textHeight = Measure(line.TranslatedText, typeface, fontSize, wrapped ? textWidth : null).Height;
 
@@ -854,7 +905,7 @@ public partial class RealtimeBlockWindow : Window
             }
             else if (_mode == RealtimeBlockMode.Panel)
             {
-                double fontSize = Math.Max(1, Math.Min(
+                double fontSize = _fixedFontSize ?? Math.Max(1, Math.Min(
                     SourceFontScale.Calculate(GetFontGlyphHeight(block, block.Bounds.Height / _dpiY),
                         _latinSourceToCjkTarget),
                     (block.SourceLineBounds ?? [block.Bounds]).Min(r => r.Height) / _dpiY / LineHeightRatio));
@@ -867,14 +918,41 @@ public partial class RealtimeBlockWindow : Window
                     if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
                     continue;
                 }
-                // Keep one font size across the paragraph, including uneven row widths.
-                foreach (var row in rows)
+                // 固定 keeps the size and gives up the rows instead: one row too long for the source
+                // row it sits on would otherwise shrink the whole paragraph — the very thing the
+                // reader turned 自動 off to stop. The group drawn as one wrapped block is what a
+                // panel that cannot be split falls back to anyway, and it is set at the fixed size.
+                //
+                // A row too short for the size is not by itself a reason to give the rows up:
+                // interface text is often set in rows barely taller than its letters, and over a
+                // menu each of those becoming a band centred on its source moved every short item
+                // off the left margin the menu is read down. The row's box grows to the size
+                // instead — see BuildPanelLine.
+                //
+                // Only while the grown box still fits between its neighbours, though. Past the
+                // distance to the next row's centre it reaches into that row's own box, and two
+                // grown rows drawn over each other are unreadable — a size picked for dialogue, 32,
+                // over a menu with rows 20px apart. The group is the honest answer there too.
+                if (_fixedFontSize is not null && rows.Any(row => row.SourceLineBounds is not { Count: > 1 }
+                    && (Measure(row.TranslatedText, typeface, fontSize, null) is var measured)
+                    && (measured.Width > row.Bounds.Width / _dpiX
+                        || measured.Height > NearestRowPitch(row.Bounds, block, rows) / _dpiY)))
                 {
-                    var measured = Measure(row.TranslatedText, typeface, fontSize, null);
-                    double scale = Math.Min(1, Math.Min(
-                        row.Bounds.Width / _dpiX / Math.Max(1, measured.Width),
-                        row.Bounds.Height / _dpiY / Math.Max(1, measured.Height)));
-                    fontSize *= scale;
+                    if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
+                    continue;
+                }
+                // Keep one font size across the paragraph, including uneven row widths. 固定 has
+                // nothing to do here: every row was just found to fit at the size it has.
+                if (_fixedFontSize is null)
+                {
+                    foreach (var row in rows)
+                    {
+                        var measured = Measure(row.TranslatedText, typeface, fontSize, null);
+                        double scale = Math.Min(1, Math.Min(
+                            row.Bounds.Width / _dpiX / Math.Max(1, measured.Width),
+                            row.Bounds.Height / _dpiY / Math.Max(1, measured.Height)));
+                        fontSize *= scale;
+                    }
                 }
                 // One patch over the whole group, as the wrapped block drew before rows were split:
                 // per-row patches left the gaps between OCR boxes and their ragged widths showing,
@@ -893,6 +971,38 @@ public partial class RealtimeBlockWindow : Window
             else if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } visual)
                 yield return visual;
         }
+    }
+
+    /// <summary>
+    /// What a column group is fitted with: the cell it starts from, how long a column may run, the
+    /// width it is kept to if it can be, and the block's width it is never let past.
+    /// </summary>
+    /// <remarks>
+    /// <para>自動 starts from the source's own character pitch and keeps to the source's width,
+    /// shrinking before it takes a column the balloon did not have — see
+    /// <see cref="VerticalTextGrid.FitWithin"/>.</para>
+    ///
+    /// <para>固定 is the horizontal rule turned on its side: the reader's size, more columns when the
+    /// sentence is too long for one, and smaller only when even the block's width will not take it —
+    /// <see cref="RealtimeFixedFontLayout"/> is the same three steps across. So it starts from the
+    /// fixed size over the fill, which draws its glyph at exactly that size and makes 24 down look as
+    /// large as 24 across, and it is kept to the block's width instead of the source's, which leaves
+    /// FitWithin shrinking only where the block runs out. The columns stay the source's length: a
+    /// longer translation is wider, never taller, for the reason the column length is the source's
+    /// in the first place.</para>
+    /// </remarks>
+    private (double Cell, double ColumnLength, double ColumnRoom, double MaxWidth) VerticalFit(
+        double cellPreferred, double sourceWidth, double sourceLength, double canvasWidth)
+    {
+        double sourceRoom = Math.Max(cellPreferred, sourceWidth);
+        double maxWidth = Math.Max(sourceRoom, canvasWidth - ScrimPaddingX * 2);
+        if (_fixedFontSize is { } fixedSize)
+        {
+            double fixedCell = fixedSize / VerticalGlyphFill;
+            return (fixedCell, Math.Max(fixedCell, sourceLength), maxWidth, maxWidth);
+        }
+
+        return (cellPreferred, Math.Max(cellPreferred, sourceLength), sourceRoom, maxWidth);
     }
 
     /// <summary>
@@ -945,9 +1055,9 @@ public partial class RealtimeBlockWindow : Window
         // The source's own width is handed over for the same reason: a translation too long for the
         // balloon is set smaller inside it before it is allowed to take a column beside it, because
         // the column beside it is picture. Only the block bounds how far that may finally reach.
-        double columnLength = Math.Max(cellPreferred, Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2));
-        double columnRoom = Math.Max(cellPreferred, sourceWidth);
-        double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
+        // That is 自動's order; 固定 takes the columns first — see VerticalFit.
+        var (cell, columnLength, columnRoom, maxWidth) = VerticalFit(
+            cellPreferred, sourceWidth, Math.Min(sourceHeight, canvasHeight - ScrimPaddingY * 2), canvasWidth);
 
         // A hanging comma or full stop takes a row under the columns, past the source's own length.
         // It is allowed that row only while the grid still ends inside the block with the
@@ -956,7 +1066,7 @@ public partial class RealtimeBlockWindow : Window
         double hangingReach = canvasHeight - ScrimPaddingY - Math.Max(0, top);
 
         var (cellSize, gridWidth, gridHeight, breaks) = VerticalTextGrid.FitWithin(
-            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs, hangingReach);
+            columnRoom, columnLength, maxWidth, cell, MinFontSize, glyphs, hangingReach);
 
         // Top of the source, centred across it, kept inside the block — the rule
         // VerticalTextGrid.Cells sets a grid by, applied here because the grid handed to it is cut
@@ -1077,14 +1187,13 @@ public partial class RealtimeBlockWindow : Window
         if (glyphs.Length == 0) return null;
 
         double cellPreferred = Math.Max(MinFontSize, GetGlyphHeight(line, sourceWidth));
-        double columnLength = Math.Max(cellPreferred, sourceHeight);
-        double columnRoom = Math.Max(cellPreferred, sourceWidth);
-        double maxWidth = Math.Max(columnRoom, canvasWidth - ScrimPaddingX * 2);
+        var (cell, columnLength, columnRoom, maxWidth) = VerticalFit(
+            cellPreferred, sourceWidth, sourceHeight, canvasWidth);
         // No reach, so nothing hangs, and the breaks are not passed on: a tilted group is set as it
         // always was. Without a hanging row the size is the one the columns would have broken
         // plainly at, so the two still agree.
         var (cellSize, gridWidth, gridHeight, _) = VerticalTextGrid.FitWithin(
-            columnRoom, columnLength, maxWidth, cellPreferred, MinFontSize, glyphs);
+            columnRoom, columnLength, maxWidth, cell, MinFontSize, glyphs);
 
         // Top of the source, centred across it — VerticalTextGrid.Cells' rule, in the level frame.
         double gridLeft = left + (sourceWidth - gridWidth) / 2;
@@ -1349,6 +1458,30 @@ public partial class RealtimeBlockWindow : Window
         return new LineVisual(background, textLayer, patchBounds, replate);
     }
 
+    /// <summary>
+    /// How far, in physical pixels, a panel row's centre is from the nearest row above or below it:
+    /// the other rows of its own block and every row of the other blocks on screen, since a menu
+    /// is as often read as one block per item as one block for the lot. Only rows that share some
+    /// of its width count — a column beside it is not in its way. Infinite with no such row.
+    /// </summary>
+    private double NearestRowPitch(Rect row, TranslatedBlock block, IReadOnlyList<TranslatedBlock> rows)
+    {
+        var others = rows.Select(other => other.Bounds)
+            .Concat(_lines.Where(line => !ReferenceEquals(line, block))
+                .SelectMany(line => line.SourceLineBounds ?? [line.Bounds]));
+
+        double centre = row.Y + row.Height / 2;
+        double nearest = double.PositiveInfinity;
+        foreach (var other in others)
+        {
+            if (other == row || other.Right <= row.Left || other.Left >= row.Right) continue;
+            double pitch = Math.Abs(other.Y + other.Height / 2 - centre);
+            // Two boxes on one line are the same row read twice, not a neighbour.
+            if (pitch > 0.5) nearest = Math.Min(nearest, pitch);
+        }
+        return nearest;
+    }
+
     private LineVisual? BuildPanelLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
         double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame)
@@ -1358,6 +1491,21 @@ public partial class RealtimeBlockWindow : Window
         if (cell.IsEmpty || cell.Width <= 0 || cell.Height <= 0) return null;
         double left = cell.X / _dpiX, top = cell.Y / _dpiY;
         double width = cell.Width / _dpiX, height = cell.Height / _dpiY;
+
+        // 固定 in a row shorter than the size's own line: the box grows round the row's centre
+        // rather than leaving the Viewbox below to shrink the text back down to fit it. The width
+        // was checked before the rows were kept — see BuildVisuals — so only the height can be short.
+        if (_fixedFontSize is not null)
+        {
+            var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
+            double needed = Measure(line.TranslatedText, typeface, fontSize, null).Height;
+            if (needed > height)
+            {
+                top -= (needed - height) / 2;
+                height = needed;
+            }
+        }
+
         var (foreground, edge) = SampleForeground(frame, line);
         Border? background = null;
         var patchBounds = default(System.Drawing.Rectangle);

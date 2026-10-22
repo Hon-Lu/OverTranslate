@@ -297,6 +297,12 @@
     <sys:String x:Key="S.Realtime.TextColor">文字色</sys:String>
     <sys:String x:Key="S.Realtime.TextColorHint">訳文の文字色を設定します。「自動」では画面上の原文の文字色を引き継ぎます。</sys:String>
     <sys:String x:Key="S.Realtime.TextColorMode">文字色の選び方</sys:String>
+    <sys:String x:Key="S.Realtime.FontSize">文字サイズ</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeHint">訳文の文字サイズを設定します。「自動」では原文の文字サイズに合わせます。</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeMode">文字サイズの選び方</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeValue">文字サイズ（px）</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeIncrease">文字を大きくする</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeDecrease">文字を小さくする</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColor">背景色</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorHint">訳文の背景色を設定します。「自動」では周囲の映像から背景を補い、訳文を画面になじませます。</sys:String>
     <sys:String x:Key="S.Realtime.ScrimColorMode">背景色の選び方</sys:String>
