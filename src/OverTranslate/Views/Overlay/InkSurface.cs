@@ -275,8 +275,7 @@ public sealed class InkSurface
                 // across a point it never moved off, so there is nothing to lay down.
                 if (stroke.IsShape && stroke.Points.Count == 2)
                 {
-                    dc.DrawGeometry(null, pen,
-                        AnnotationStroke.ShapeGeometry(stroke.Tool, stroke.Points[0], stroke.Points[1], stroke.Thickness));
+                    AnnotationStroke.DrawShape(dc, pen, stroke.Tool, stroke.Points[0], stroke.Points[1]);
                 }
                 else if (stroke.Points.Count == 1)
                 {

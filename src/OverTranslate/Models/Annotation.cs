@@ -92,58 +92,94 @@ public sealed class AnnotationStroke
 
     /// <summary>The outline a shape tool draws for a drag from <paramref name="start"/> to <paramref name="end"/>.</summary>
     /// <param name="thickness">The nib, which only an arrow needs: its head is sized from it.</param>
+    /// <remarks>
+    /// For an arrow this is the shaft and the head together, which is what the bounds and the eraser
+    /// need; drawing one goes through <see cref="DrawShape"/>, because the head is stroked heavier
+    /// than the shaft.
+    /// </remarks>
     public static Geometry ShapeGeometry(AnnotationTool tool, Point start, Point end, double thickness)
     {
         Geometry geometry = tool switch
         {
             AnnotationTool.Rectangle => new RectangleGeometry(new Rect(start, end)),
             AnnotationTool.Ellipse   => new EllipseGeometry(new Rect(start, end)),
-            AnnotationTool.Arrow     => ArrowGeometry(start, end, thickness),
+            AnnotationTool.Arrow     => new GeometryGroup { Children = [ArrowShaft(start, end), ArrowHead(start, end, thickness).Geometry] },
             _                        => new LineGeometry(start, end),
         };
         geometry.Freeze();
         return geometry;
     }
 
+    /// <summary>Draws a shape tool's mark with <paramref name="pen"/>, the head of an arrow included.</summary>
+    public static void DrawShape(DrawingContext dc, Pen pen, AnnotationTool tool, Point start, Point end)
+    {
+        if (tool != AnnotationTool.Arrow)
+        {
+            dc.DrawGeometry(null, pen, ShapeGeometry(tool, start, end, pen.Thickness));
+            return;
+        }
+
+        dc.DrawGeometry(null, pen, ArrowShaft(start, end));
+
+        var (head, headThickness) = ArrowHead(start, end, pen.Thickness);
+        var headPen = pen.Clone();
+        headPen.Thickness = headThickness;
+        headPen.Freeze();
+        dc.DrawGeometry(null, headPen, head);
+    }
+
+    private static Geometry ArrowShaft(Point start, Point end)
+    {
+        var shaft = new LineGeometry(start, end);
+        shaft.Freeze();
+        return shaft;
+    }
+
     /// <summary>
-    /// The shaft and an open head, drawn as strokes rather than a filled triangle.
+    /// An arrow's open head, and how heavy a stroke it is drawn with (#323).
     /// </summary>
     /// <remarks>
-    /// Open because everything else 標記 draws is a stroke: the head is then the same ink at the same
-    /// width as the shaft, with the same round ends, and the eraser, the undo history and the copy
-    /// all take it without knowing an arrow from a line.
+    /// <para>Open, the two wings stroked like the shaft, because everything else 標記 draws is a
+    /// stroke with round ends: the head then belongs with the line, the box and the ellipse beside
+    /// it, and the eraser, the undo history and the copy take it as they take a line.</para>
     ///
-    /// The head grows with the nib — a thick line under a thin-line head reads as a stick with a
-    /// splinter on it — but never below a size that still points at something on a thin line, and
-    /// never longer than the shaft, so a short flick is still an arrow and not a pair of wings.
+    /// <para>What makes it read as an arrow rather than a line with a splinter on it is weight, not
+    /// only length: the wings are stroked heavier than the shaft and spread wide. Longer alone was
+    /// tried and still looked small. But the heavier the line, the less extra it needs — a 13 px
+    /// shaft under a head half as heavy again turns into a block — so the extra weight, the spread
+    /// and the length all ease off from 4 px up to the slider's 13 px. Thin lines, where an arrow
+    /// looked smallest, keep all of it.</para>
+    ///
+    /// <para>Never longer than most of the shaft, so a short flick is still an arrow and not a pair
+    /// of wings.</para>
     /// </remarks>
-    private static Geometry ArrowGeometry(Point start, Point end, double thickness)
+    private static (Geometry Geometry, double Thickness) ArrowHead(Point start, Point end, double thickness)
     {
         var shaft = end - start;
         double length = shaft.Length;
-        if (length < 1e-9) return new LineGeometry(start, end);
 
-        double head = Math.Min(Math.Max(ArrowHeadMin, thickness * ArrowHeadPerThickness), length);
-        var back = -shaft / length * head;
+        // 0 at 4 px and below, 1 at the slider's 13 px.
+        double heavy = Math.Clamp((thickness - 4) / 9, 0, 1);
+        double angle  = Lerp(38, 36, heavy) * Math.PI / 180;
+        double reach  = Math.Max(ArrowHeadMin, thickness * Lerp(4.4, 4.0, heavy));
+        double weight = Math.Max(thickness * Lerp(1.6, 1.3, heavy), thickness + 1.5);
 
         var geometry = new StreamGeometry();
-        using (var ctx = geometry.Open())
+        if (length >= 1e-9)
         {
-            ctx.BeginFigure(start, isFilled: false, isClosed: false);
+            var back = -shaft / length * Math.Min(reach, length * 0.6);
+            using var ctx = geometry.Open();
+            ctx.BeginFigure(end + Rotate(back, angle), isFilled: false, isClosed: false);
             ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
-
-            ctx.BeginFigure(end + Rotate(back, ArrowHeadAngle), isFilled: false, isClosed: false);
-            ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
-            ctx.LineTo(end + Rotate(back, -ArrowHeadAngle), isStroked: true, isSmoothJoin: true);
+            ctx.LineTo(end + Rotate(back, -angle), isStroked: true, isSmoothJoin: true);
         }
-        return geometry;
+        geometry.Freeze();
+        return (geometry, weight);
     }
 
-    private const double ArrowHeadMin = 10;
-    private const double ArrowHeadPerThickness = 3.6;
+    private const double ArrowHeadMin = 15;
 
-    /// <summary>Each wing's angle off the shaft, in radians — 28°, a head that points rather than blunts.</summary>
-    private const double ArrowHeadAngle = 28 * Math.PI / 180;
+    private static double Lerp(double from, double to, double t) => from + (to - from) * t;
 
     private static Vector Rotate(Vector v, double angle)
     {
@@ -207,12 +243,18 @@ public sealed class AnnotationStroke
             // own soft rim have somewhere to land.
             double pad = Thickness / 2 + 1;
 
-            // An arrow's head reaches out sideways past the box its two ends span.
+            // An arrow's head reaches out sideways past the box its two ends span, and is stroked
+            // heavier than the shaft.
             if (Tool == AnnotationTool.Arrow && Points.Count == 2)
             {
-                var head = ShapeGeometry(Tool, Points[0], Points[1], Thickness).Bounds;
-                minX = Math.Min(minX, head.Left);  minY = Math.Min(minY, head.Top);
-                maxX = Math.Max(maxX, head.Right); maxY = Math.Max(maxY, head.Bottom);
+                var (geometry, weight) = ArrowHead(Points[0], Points[1], Thickness);
+                var head = geometry.Bounds;
+                if (!head.IsEmpty)
+                {
+                    minX = Math.Min(minX, head.Left);  minY = Math.Min(minY, head.Top);
+                    maxX = Math.Max(maxX, head.Right); maxY = Math.Max(maxY, head.Bottom);
+                }
+                pad = weight / 2 + 1;
             }
 
             return new Rect(minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2);
@@ -277,6 +319,13 @@ public sealed class AnnotationStroke
     {
         double reach = radius + Thickness / 2;
         double reachSq = reach * reach;
+
+        if (Tool == AnnotationTool.Arrow && Points.Count == 2)
+        {
+            var (head, weight) = ArrowHead(Points[0], Points[1], Thickness);
+            return ArrowShaft(Points[0], Points[1]).StrokeContains(new Pen(Brushes.Black, reach * 2), point)
+                || head.StrokeContains(new Pen(Brushes.Black, (radius + weight / 2) * 2), point);
+        }
 
         // A shape's two points are the corners of its box, not a path along it.
         if (IsShape && Points.Count == 2)

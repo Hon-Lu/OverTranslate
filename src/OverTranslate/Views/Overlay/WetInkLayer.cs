@@ -139,7 +139,7 @@ internal sealed class WetInkLayer : FrameworkElement
         if (_pen is null || _active is null) return;
 
         using var dc = _active.RenderOpen();
-        dc.DrawGeometry(null, _pen, AnnotationStroke.ShapeGeometry(_shapeTool, start, end, _pen.Thickness));
+        AnnotationStroke.DrawShape(dc, _pen, _shapeTool, start, end);
     }
 
     /// <summary>Takes the stroke away, which is what happens once it has been committed.</summary>

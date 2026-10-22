@@ -131,14 +131,14 @@ public class AnnotationShapeTests
     {
         OnStaThread(() =>
         {
-            // 4px: the head is 3.6 × 4 = 14.4 long, each wing 28° off the shaft.
+            // 4px: the head is 4.4 × 4 = 17.6 long, each wing 38° off the shaft and stroked 6.4 wide.
             var surface = Laid(Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150)));
 
             Assert.True(InkAt(surface, 200, 150));    // the shaft
-            Assert.True(InkAt(surface, 294, 146.6));  // halfway along the upper wing
-            Assert.True(InkAt(surface, 294, 153.4));  // and the lower one
-            Assert.False(InkAt(surface, 106, 146.6)); // no head at the start
-            Assert.False(InkAt(surface, 280, 135));   // and nothing filled in past the wings
+            Assert.True(InkAt(surface, 293, 144.6));  // halfway along the upper wing
+            Assert.True(InkAt(surface, 293, 155.4));  // and the lower one
+            Assert.False(InkAt(surface, 107, 144.6)); // no head at the start
+            Assert.False(InkAt(surface, 284, 145.5)); // and the head is open, not filled in
         });
     }
 
@@ -149,9 +149,23 @@ public class AnnotationShapeTests
         {
             var stroke = Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150));
 
-            // A level shaft spans no height; the wings reach 14.4 × sin 28° ≈ 6.8 above and below.
-            Assert.True(stroke.Bounds.Top < 150 - 6.7);
-            Assert.True(stroke.Bounds.Bottom > 150 + 6.7);
+            // A level shaft spans no height; the wings reach 17.6 × sin 38° ≈ 10.8 above and below,
+            // and half of their 6.4 stroke past that.
+            Assert.True(stroke.Bounds.Top < 150 - 10.8 - 3.2);
+            Assert.True(stroke.Bounds.Bottom > 150 + 10.8 + 3.2);
+        });
+    }
+
+    [Fact]
+    public void ArrowHead_IsStrokedHeavierThanTheShaft()
+    {
+        OnStaThread(() =>
+        {
+            var surface = Laid(Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150)));
+
+            // 2.6 off the line: outside the 4px shaft, inside the 6.4px wing.
+            Assert.False(InkAt(surface, 200, 152.6));
+            Assert.True(InkAt(surface, 293 + 2.6 * Math.Sin(38 * Math.PI / 180), 155.4 - 2.6 * Math.Cos(38 * Math.PI / 180)));
         });
     }
 
