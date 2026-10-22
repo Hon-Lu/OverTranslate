@@ -11,6 +11,8 @@ description: "Write OverTranslate GitHub release notes from the commits between 
 
 路徑都以 repo 根目錄為準。
 
+**不准寫入 GitHub Release。** 這個 skill 只產出文字與檔案，內文由使用者自己貼進 release。`gh` 只能拿來讀（`gh release view`），不得建立、編輯、刪除 release，也不得上傳或刪除 assets、改標題或 pre-release 標記。
+
 ## 判斷現在是 A 還是 B
 
 | 使用者說的話 | 模式 |
