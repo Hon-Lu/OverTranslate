@@ -411,7 +411,9 @@ public partial class OverlayWindow
             // A line by its length, a box by its longer side: a long, flat box is still a deliberate
             // drag, however little it is tall.
             double dx = Math.Abs(shapeEnd.X - shapeStart.X), dy = Math.Abs(shapeEnd.Y - shapeStart.Y);
-            double extent = _annotationTool == AnnotationTool.Line ? Math.Sqrt(dx * dx + dy * dy) : Math.Max(dx, dy);
+            double extent = _annotationTool is AnnotationTool.Line or AnnotationTool.Arrow
+                ? Math.Sqrt(dx * dx + dy * dy)
+                : Math.Max(dx, dy);
             if (extent < MinShapeExtent) return;
 
             var shape = new AnnotationStroke

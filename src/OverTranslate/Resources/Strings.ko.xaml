@@ -190,6 +190,7 @@
     <sys:String x:Key="S.Annotate.Pen">펜</sys:String>
     <sys:String x:Key="S.Annotate.Highlighter">형광펜</sys:String>
     <sys:String x:Key="S.Annotate.Line">직선</sys:String>
+    <sys:String x:Key="S.Annotate.Arrow">화살표</sys:String>
     <sys:String x:Key="S.Annotate.Rectangle">사각형</sys:String>
     <sys:String x:Key="S.Annotate.Ellipse">타원</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">지우개</sys:String>

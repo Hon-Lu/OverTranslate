@@ -28,6 +28,9 @@ public enum AnnotationTool
     /// <summary>A straight line from where the drag started to where it ends.</summary>
     Line,
 
+    /// <summary>A <see cref="Line"/> with an open head at the end the drag finished on (#323).</summary>
+    Arrow,
+
     /// <summary>The outline of the box the drag spans.</summary>
     Rectangle,
 
@@ -85,19 +88,67 @@ public sealed class AnnotationStroke
     public bool IsShape => IsShapeTool(Tool);
 
     public static bool IsShapeTool(AnnotationTool tool) =>
-        tool is AnnotationTool.Line or AnnotationTool.Rectangle or AnnotationTool.Ellipse;
+        tool is AnnotationTool.Line or AnnotationTool.Arrow or AnnotationTool.Rectangle or AnnotationTool.Ellipse;
 
     /// <summary>The outline a shape tool draws for a drag from <paramref name="start"/> to <paramref name="end"/>.</summary>
-    public static Geometry ShapeGeometry(AnnotationTool tool, Point start, Point end)
+    /// <param name="thickness">The nib, which only an arrow needs: its head is sized from it.</param>
+    public static Geometry ShapeGeometry(AnnotationTool tool, Point start, Point end, double thickness)
     {
         Geometry geometry = tool switch
         {
             AnnotationTool.Rectangle => new RectangleGeometry(new Rect(start, end)),
             AnnotationTool.Ellipse   => new EllipseGeometry(new Rect(start, end)),
+            AnnotationTool.Arrow     => ArrowGeometry(start, end, thickness),
             _                        => new LineGeometry(start, end),
         };
         geometry.Freeze();
         return geometry;
+    }
+
+    /// <summary>
+    /// The shaft and an open head, drawn as strokes rather than a filled triangle.
+    /// </summary>
+    /// <remarks>
+    /// Open because everything else 標記 draws is a stroke: the head is then the same ink at the same
+    /// width as the shaft, with the same round ends, and the eraser, the undo history and the copy
+    /// all take it without knowing an arrow from a line.
+    ///
+    /// The head grows with the nib — a thick line under a thin-line head reads as a stick with a
+    /// splinter on it — but never below a size that still points at something on a thin line, and
+    /// never longer than the shaft, so a short flick is still an arrow and not a pair of wings.
+    /// </remarks>
+    private static Geometry ArrowGeometry(Point start, Point end, double thickness)
+    {
+        var shaft = end - start;
+        double length = shaft.Length;
+        if (length < 1e-9) return new LineGeometry(start, end);
+
+        double head = Math.Min(Math.Max(ArrowHeadMin, thickness * ArrowHeadPerThickness), length);
+        var back = -shaft / length * head;
+
+        var geometry = new StreamGeometry();
+        using (var ctx = geometry.Open())
+        {
+            ctx.BeginFigure(start, isFilled: false, isClosed: false);
+            ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
+
+            ctx.BeginFigure(end + Rotate(back, ArrowHeadAngle), isFilled: false, isClosed: false);
+            ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
+            ctx.LineTo(end + Rotate(back, -ArrowHeadAngle), isStroked: true, isSmoothJoin: true);
+        }
+        return geometry;
+    }
+
+    private const double ArrowHeadMin = 10;
+    private const double ArrowHeadPerThickness = 3.6;
+
+    /// <summary>Each wing's angle off the shaft, in radians — 28°, a head that points rather than blunts.</summary>
+    private const double ArrowHeadAngle = 28 * Math.PI / 180;
+
+    private static Vector Rotate(Vector v, double angle)
+    {
+        double cos = Math.Cos(angle), sin = Math.Sin(angle);
+        return new Vector(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
     }
 
     /// <summary>
@@ -112,7 +163,7 @@ public sealed class AnnotationStroke
     {
         double dx = end.X - start.X, dy = end.Y - start.Y;
 
-        if (tool == AnnotationTool.Line)
+        if (tool is AnnotationTool.Line or AnnotationTool.Arrow)
         {
             double length = Math.Sqrt(dx * dx + dy * dy);
             if (length < 1e-9) return end;
@@ -155,6 +206,15 @@ public sealed class AnnotationStroke
             // Half a nib each way for the width, and one more DIP so the round caps and the mask's
             // own soft rim have somewhere to land.
             double pad = Thickness / 2 + 1;
+
+            // An arrow's head reaches out sideways past the box its two ends span.
+            if (Tool == AnnotationTool.Arrow && Points.Count == 2)
+            {
+                var head = ShapeGeometry(Tool, Points[0], Points[1], Thickness).Bounds;
+                minX = Math.Min(minX, head.Left);  minY = Math.Min(minY, head.Top);
+                maxX = Math.Max(maxX, head.Right); maxY = Math.Max(maxY, head.Bottom);
+            }
+
             return new Rect(minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2);
         }
     }
@@ -220,7 +280,7 @@ public sealed class AnnotationStroke
 
         // A shape's two points are the corners of its box, not a path along it.
         if (IsShape && Points.Count == 2)
-            return ShapeGeometry(Tool, Points[0], Points[1])
+            return ShapeGeometry(Tool, Points[0], Points[1], Thickness)
                 .StrokeContains(new Pen(Brushes.Black, reach * 2), point);
 
         if (Points.Count == 1)

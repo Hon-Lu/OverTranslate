@@ -276,7 +276,7 @@ public sealed class InkSurface
                 if (stroke.IsShape && stroke.Points.Count == 2)
                 {
                     dc.DrawGeometry(null, pen,
-                        AnnotationStroke.ShapeGeometry(stroke.Tool, stroke.Points[0], stroke.Points[1]));
+                        AnnotationStroke.ShapeGeometry(stroke.Tool, stroke.Points[0], stroke.Points[1], stroke.Thickness));
                 }
                 else if (stroke.Points.Count == 1)
                 {

@@ -127,6 +127,46 @@ public class AnnotationShapeTests
     }
 
     [Fact]
+    public void Arrow_HasAnOpenHeadAtTheEndTheDragFinishedOn()
+    {
+        OnStaThread(() =>
+        {
+            // 4px: the head is 3.6 × 4 = 14.4 long, each wing 28° off the shaft.
+            var surface = Laid(Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150)));
+
+            Assert.True(InkAt(surface, 200, 150));    // the shaft
+            Assert.True(InkAt(surface, 294, 146.6));  // halfway along the upper wing
+            Assert.True(InkAt(surface, 294, 153.4));  // and the lower one
+            Assert.False(InkAt(surface, 106, 146.6)); // no head at the start
+            Assert.False(InkAt(surface, 280, 135));   // and nothing filled in past the wings
+        });
+    }
+
+    [Fact]
+    public void ArrowBounds_TakeInTheHeadsReachPastTheShaft()
+    {
+        OnStaThread(() =>
+        {
+            var stroke = Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150));
+
+            // A level shaft spans no height; the wings reach 14.4 × sin 28° ≈ 6.8 above and below.
+            Assert.True(stroke.Bounds.Top < 150 - 6.7);
+            Assert.True(stroke.Bounds.Bottom > 150 + 6.7);
+        });
+    }
+
+    [Fact]
+    public void ShiftedArrow_SnapsLikeALine()
+    {
+        var start = new Point(50, 50);
+        var raw = new Point(140, 160);
+
+        Assert.Equal(
+            AnnotationStroke.ConstrainShape(AnnotationTool.Line, start, raw),
+            AnnotationStroke.ConstrainShape(AnnotationTool.Arrow, start, raw));
+    }
+
+    [Fact]
     public void ShapeBounds_CoverTheWholeOutline()
     {
         var stroke = Shape(AnnotationTool.Rectangle, 10, new Point(300, 200), new Point(100, 100));
