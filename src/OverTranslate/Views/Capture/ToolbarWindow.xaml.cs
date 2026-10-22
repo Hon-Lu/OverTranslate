@@ -733,6 +733,34 @@ public partial class ToolbarWindow : Window
         // 顯示範圍 only says where the boxes are drawn; with neither ticked there is nothing for it
         // to act on, so it is switched off rather than left to be chosen for no effect.
         DebugScopePanel.IsEnabled = debug.ShowGroupBoxes || debug.ShowLineBoxes;
+        RenderDebugAssist();
+    }
+
+    /// <summary>Unfolds or folds 偵錯輔助 and says, while it is folded, how many boxes are on.</summary>
+    private void RenderDebugAssist()
+    {
+        var expanded = SettingsService.Instance.Current.Capture.DebugAssistExpanded;
+        var debug = SettingsService.Instance.Current.OcrDebug;
+        var on = (debug.ShowGroupBoxes ? 1 : 0) + (debug.ShowLineBoxes ? 1 : 0);
+
+        _syncingDebug = true;
+        DebugAssistToggle.IsChecked = expanded;
+        _syncingDebug = false;
+
+        DebugAssistBody.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        DebugAssistChevron.RenderTransform = new System.Windows.Media.RotateTransform(expanded ? 180 : 0);
+        DebugAssistSummary.Text = !expanded && on > 0
+            ? LocalizationService.Format("S.Toolbar.DebugAssistOn", on)
+            : "";
+    }
+
+    private void DebugAssistToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingDebug) return;
+
+        SettingsService.Instance.Current.Capture.DebugAssistExpanded = DebugAssistToggle.IsChecked == true;
+        SettingsService.Instance.Save();
+        RenderDebugAssist();
     }
 
     private void DebugGroupsSwitch_Changed(object sender, RoutedEventArgs e)
@@ -750,6 +778,7 @@ public partial class ToolbarWindow : Window
         _syncingCapture = true;
         AutoTranslateSwitch.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
         SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
+        CloseAfterCopySwitch.IsChecked = SettingsService.Instance.Current.Capture.CloseAfterCopy;
         ModelHintSwitch.IsChecked = SettingsService.Instance.Current.Capture.ShowModelHint;
         _syncingCapture = false;
     }
@@ -768,6 +797,11 @@ public partial class ToolbarWindow : Window
     private void SaveScreenshotSwitch_Changed(object sender, RoutedEventArgs e)
     {
         if (!_syncingCapture) SettingsService.Instance.UpdateCaptureOptions(saveScreenshot: SaveScreenshotSwitch.IsChecked == true);
+    }
+
+    private void CloseAfterCopySwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingCapture) SettingsService.Instance.UpdateCaptureOptions(closeAfterCopy: CloseAfterCopySwitch.IsChecked == true);
     }
 
     private void MoreBtn_Click(object sender, RoutedEventArgs e)

@@ -582,6 +582,14 @@
                                               Content="{DynamicResource S.Toolbar.AutoTranslate}"
                                               ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
                                               Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
+                                    <!-- Before 儲存截圖: both say what 截圖 does once the picture is
+                                         copied, and this one decides whether there is anything left
+                                         on screen afterwards. See CaptureSettings.CloseAfterCopy. -->
+                                    <CheckBox x:Name="CloseAfterCopySwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE8C8;"
+                                              Content="{DynamicResource S.Toolbar.CloseAfterCopy}"
+                                              ToolTip="{DynamicResource S.Toolbar.CloseAfterCopyTip}"
+                                              Checked="CloseAfterCopySwitch_Changed" Unchecked="CloseAfterCopySwitch_Changed"/>
                                     <!-- Where to change the folder, not the folder itself. A folder picker
                                          or an Explorer window opened from this bar would land under the
                                          capture overlay, which is full screen and topmost; and the notice
@@ -610,10 +618,54 @@
                                         </CheckBox.Tag>
                                     </CheckBox>
 
-                                    <!-- No rule between the sections: the heading and the gap above it
-                                         already divide them, and a line on top of both read as a seam. -->
-                                    <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}" Style="{StaticResource MoreSectionHeader}"
-                                               Margin="10,14,10,4"/>
+                                    <!-- 偵錯輔助 folds: the boxes are for reporting a problem, and open
+                                         they took half the menu from everyone else (#323). The heading
+                                         is the fold's handle, so the section keeps its place and its
+                                         name either way; while folded it says how many boxes are on,
+                                         because a box left on changes every capture and a folded
+                                         section would otherwise hide that it was. No rule between the
+                                         sections: the heading and the gap above it already divide
+                                         them, and a line on top of both read as a seam. -->
+                                    <ToggleButton x:Name="DebugAssistToggle"
+                                                  Margin="4,8,4,0"
+                                                  Cursor="Hand"
+                                                  Focusable="False"
+                                                  AutomationProperties.Name="{DynamicResource S.Toolbar.DebugAssist}"
+                                                  Checked="DebugAssistToggle_Changed" Unchecked="DebugAssistToggle_Changed">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border x:Name="Root" Background="Transparent" CornerRadius="8" Padding="6,6,10,6">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{DynamicResource S.Toolbar.DebugAssist}"
+                                                       Style="{StaticResource MoreSectionHeader}" Margin="0"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" x:Name="DebugAssistSummary"
+                                                       Style="{StaticResource MoreSectionHeader}" Margin="0,0,8,0"
+                                                       VerticalAlignment="Center"/>
+                                            <Path Grid.Column="2" x:Name="DebugAssistChevron"
+                                                  Style="{StaticResource DrawnMark}"
+                                                  Stroke="{DynamicResource AppTextSecondary}"
+                                                  StrokeThickness="1.2"
+                                                  Width="10" Height="6"
+                                                  Data="M1,1 L5,5 L9,1"
+                                                  RenderTransformOrigin="0.5,0.5"/>
+                                        </Grid>
+                                    </ToggleButton>
+                                    <StackPanel x:Name="DebugAssistBody" Visibility="Collapsed">
                                     <CheckBox x:Name="DebugGroupsSwitch" Style="{StaticResource ToolbarMenuToggle}"
                                               Content="{DynamicResource S.Settings.TextGroupBoxes}"
                                               ToolTip="{DynamicResource S.Settings.TextGroupBoxesHint}"
@@ -655,6 +707,7 @@
                                             <RadioButton x:Name="DebugSourceAndTranslation" Grid.Column="2" GroupName="DebugScope" Style="{StaticResource ToolbarMenuRadio}"
                                                          Content="{DynamicResource S.Debug.SourceAndTranslation}" Checked="DebugScope_Changed"/>
                                         </Grid>
+                                    </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

@@ -677,6 +677,9 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Lang.Ukrainian">Ukrainian</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">Debug aids</sys:String>
+    <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} on</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopy">Close after copying</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">Ends the capture once "Screenshot" has copied it to the clipboard</sys:String>
     <sys:String x:Key="S.Toolbar.ShowMore">Show more</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">General</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">Auto-translate</sys:String>

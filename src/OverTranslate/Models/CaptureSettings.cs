@@ -40,6 +40,29 @@ public class CaptureSettings
     /// </remarks>
     public bool ShowModelHint { get; set; } = true;
 
+    /// <summary>
+    /// Whether 截圖 ends the capture once the picture is on the clipboard. Off by default; set from
+    /// the toolbar's 顯示更多 menu (#323).
+    /// </summary>
+    /// <remarks>
+    /// <para>For someone who captures to paste the picture somewhere, for whom 截圖 then Esc is two
+    /// steps every time. Off by default because the other habit is just as common: copy the picture,
+    /// then go on reading the translation it came with.</para>
+    ///
+    /// <para>A setting rather than a key held while clicking. A modifier on the button would do the
+    /// same and nobody would ever find it; a switch in the menu beside 儲存截圖 is where the other
+    /// things that happen after a copy are already decided.</para>
+    /// </remarks>
+    public bool CloseAfterCopy { get; set; } = false;
+
+    /// <summary>Whether 偵錯輔助 in the 顯示更多 menu was left unfolded.</summary>
+    /// <remarks>
+    /// Folded by default: the boxes are for reporting a problem, and unfolded they took half the
+    /// menu from everyone who never does. Remembered so that whoever is reporting one is not folding
+    /// it open again on every capture.
+    /// </remarks>
+    public bool DebugAssistExpanded { get; set; } = false;
+
     /// <summary>How the 標記 tools were last set up.</summary>
     /// <remarks>
     /// The user's preferences for the tools, not the state of a drawing: the colour, each tool's
