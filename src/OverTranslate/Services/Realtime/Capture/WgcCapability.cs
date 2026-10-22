@@ -55,9 +55,10 @@ public static class WgcCapability
 
     /// <summary>
     /// Whether the yellow capture indicator around a captured window can be turned off. Present from
-    /// Windows 11 21H2 — and present is not permitted: doing it also needs
-    /// <c>GraphicsCaptureAccess.RequestAccessAsync(Borderless)</c>, which is granted against a
-    /// package identity that an unpackaged Velopack build does not have.
+    /// Windows 11 21H2; turning it off also needs <c>GraphicsCaptureAccess.RequestAccessAsync
+    /// (Borderless)</c>, which the documentation ties to a package identity this unpackaged build
+    /// does not have but which was measured to come back Allowed regardless — see
+    /// <see cref="WgcCaptureBorder"/>.
     /// </summary>
     public static bool CanRequestBorderless => BorderlessRequestable.Value;
 

@@ -131,9 +131,6 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     private readonly FreshFrameRequest _freshFrame = new();
     private int _freshRestarts;
 
-    // Whether the capture indicator was turned off, so a capture started again keeps it off.
-    private bool _borderHidden;
-
     // Which adapter the frames are being asked for on, and the first thing a frame handler failed
     // with, if it failed. Both exist for the log line that a capture producing nothing leaves
     // behind: without them "no frame at all" is the whole of what a report can say.
@@ -407,51 +404,26 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     }
 
     /// <summary>
-    /// Asks Windows to stop drawing its capture indicator around the source window, and says what
-    /// happened.
+    /// Turns the capture indicator off on the running session, if Windows allows it, and says what
+    /// Windows said. For WgcProbe: the app itself never needs to call this, since every session is
+    /// started with the indicator already off — see <see cref="WgcCaptureBorder"/>.
     /// </summary>
-    /// <remarks>
-    /// The indicator is a coloured frame Windows puts around anything being captured, and it is
-    /// there for a good reason — a user should be able to see that something is reading their
-    /// screen. For this application it is also a real cost: a realtime session runs for hours over a
-    /// game, and that frame is around the game for all of it.
-    ///
-    /// Removing it is gated twice. The property is Windows 11 21H2 and later, and setting it needs
-    /// consent granted against the <c>graphicsCaptureWithoutBorder</c> package capability — which
-    /// this application, shipped unpackaged through Velopack, has no identity to declare. So this is
-    /// expected to be refused, is written to be refused safely, and returns the refusal in words so
-    /// the log and the probe can record what a given system actually said.
-    /// </remarks>
     public string TryHideCaptureBorder()
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 20348))
-            return "unavailable (needs Windows 11 21H2)";
-
         try
         {
-            var access = GraphicsCaptureAccess
-                .RequestAccessAsync(GraphicsCaptureAccessKind.Borderless)
-                .AsTask().GetAwaiter().GetResult();
-
-            if (access != Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
-                return $"denied ({access})";
-
-            var set = _thread.Invoke(() =>
+            _thread.Invoke(() =>
             {
-                if (_session is null) return false;
-                _session.IsBorderRequired = false;
-                _borderHidden = true;
+                if (_session is not null) WgcCaptureBorder.Apply(_session);
                 return true;
             }, ThreadCallTimeout);
-
-            return set ? "allowed" : "no session";
         }
         catch (Exception ex)
         {
-            // Refusal arrives as an exception on some systems rather than a status, and the caller
-            // is asking a question, not performing an operation that may fail.
             return $"failed ({ex.GetType().Name}: {ex.Message.Trim()})";
         }
+
+        return WgcCaptureBorder.Status;
     }
 
     public string DescribeSteps() =>
@@ -497,12 +469,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
 
         _session = _pool.CreateCaptureSession(item);
         WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
-        if (_borderHidden)
-        {
-            // Allowed once already for this application; a capture started again keeps it off.
-            try { _session.IsBorderRequired = false; }
-            catch (Exception ex) { Log.Debug(ex, "Capture indicator could not be turned off again"); }
-        }
+        WgcCaptureBorder.Apply(_session);
         _session.StartCapture();
 
         Log.Info(
