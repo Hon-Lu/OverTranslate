@@ -320,7 +320,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.Step1">1. Click "Select blocks" and drag over the areas you want translated.</sys:String>
     <sys:String x:Key="S.Realtime.Step2">2. Click "Start" on the floating bar. Each block is re-read and updated whenever its content changes.</sys:String>
     <sys:String x:Key="S.Realtime.Step3">3. Translated areas do not intercept clicks, so games and other apps keep working. Click "Edit" to adjust the blocks.</sys:String>
-    <sys:String x:Key="S.Realtime.Step4">4. Press {0} while translating to pause and resume. Pausing puts the original text back on screen.</sys:String>
+    <sys:String x:Key="S.Realtime.Step4">4. Or press {0}: once to select blocks, again to start translating, and while translating to pause and resume. Pausing puts the original text back on screen.</sys:String>
 
     <sys:String x:Key="S.Realtime.SelectBlocks">Select blocks</sys:String>
     <sys:String x:Key="S.Realtime.StopSession">Stop</sys:String>
@@ -434,9 +434,9 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyRecordTip">Click to record a new shortcut</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKinds">A shortcut can pair Ctrl / Alt / Shift with another key, and also supports a single function key, a mouse button, or a gamepad button.</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKindsExample">For example: Ctrl+Alt+A, Shift+A, F1, middle / side mouse buttons, XInput... etc.</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkey">Pause / resume</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Pause or resume [[realtime translation]]</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">"Pause / resume" only works while realtime translation is running. (a way to read the original text)</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Start [[realtime translation]], then pause or resume it</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Press it once to select blocks, again to start translating, and while translating to pause or resume. (a way to read the original text)</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>

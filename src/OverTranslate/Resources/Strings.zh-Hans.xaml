@@ -320,7 +320,7 @@
     <sys:String x:Key="S.Realtime.Step1">1. 点击“选取翻译区块”，在画面上框选要翻译的区域。</sys:String>
     <sys:String x:Key="S.Realtime.Step2">2. 点击浮动窗口栏的“开始翻译”，内容变化时会自动重新识别并更新译文。</sys:String>
     <sys:String x:Key="S.Realtime.Step3">3. 翻译中的区域不会影响游戏或界面操作，如需调整翻译区块，请点击“编辑”。</sys:String>
-    <sys:String x:Key="S.Realtime.Step4">4. 翻译中按 {0} 可暂停／继续，暂停时会还原画面原文内容。</sys:String>
+    <sys:String x:Key="S.Realtime.Step4">4. 也可以按 {0}：未启动时开始框选，框选时开始翻译，翻译中可暂停／继续；暂停时会还原画面原文内容。</sys:String>
 
     <sys:String x:Key="S.Realtime.SelectBlocks">选取翻译区块</sys:String>
     <sys:String x:Key="S.Realtime.StopSession">结束实时翻译</sys:String>
@@ -434,9 +434,9 @@
     <sys:String x:Key="S.Settings.HotkeyRecordTip">点击重新录制快捷键</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKinds">快捷键可使用 Ctrl／Alt／Shift 搭配其他按键，也支持单个功能键、鼠标按键以及游戏手柄。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKindsExample">例如：Ctrl+Alt+A、Shift+A、F1、鼠标中键／侧键、XInput...等。</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkey">暂停 / 继续</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">暂停或继续[[实时翻译]]</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">“暂停 / 继续”仅在实时翻译进行中可用。(可用于显示原文)</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkey">实时翻译</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">启动[[实时翻译]]，翻译中可暂停或继续</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未启动时按下会开始框选，框选时再按一次开始翻译；翻译中按下可暂停或继续。(可用于显示原文)</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取词翻译</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷键打开[[取词翻译]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若已选中文字，打开窗口时会自动带入并翻译。</sys:String>

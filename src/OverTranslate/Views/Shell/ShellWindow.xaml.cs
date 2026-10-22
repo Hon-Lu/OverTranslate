@@ -240,6 +240,9 @@ public partial class ShellWindow : Window
     /// shortcut is recorded — the rail is visible the whole time the user is on 設定, so waiting
     /// for the next navigation would leave the wrong shortcut on screen next to the button.
     /// </summary>
+    /// <summary>Puts the 即時翻譯 shortcut's refusal on the realtime page — see MainWindow.</summary>
+    public void ShowRealtimeShortcutRefusal(string key) => _realtimePage.ShowShortcutRefusal(key);
+
     public void RefreshHotkeyHints()
     {
         var settings = SettingsService.Instance.Current;

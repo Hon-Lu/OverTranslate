@@ -378,18 +378,26 @@ public partial class RealtimePage : UserControl
 
     /// <summary>Detaches from the controller when the shell window is destroyed.</summary>
     /// <remarks>
-    /// The kept block layout goes with the window, which is the whole of its scope: it exists so
-    /// that ending a session to change something on this page does not cost the user their blocks,
-    /// and closing the window is the end of that errand. A session already running is left alone —
-    /// it owns its own blocks, and closing this window has never been a request to stop it.
+    /// The kept block layout stays. It used to go with the window, on the reasoning that it exists
+    /// so ending a session to change something here does not cost the user their blocks, and closing
+    /// the window ended that errand. The shortcut undid the premise (#324): a session can be started
+    /// with this window closed, and that is exactly who the layout is kept for now. A session already
+    /// running is left alone as before — it owns its own blocks, and closing this window has never
+    /// been a request to stop it.
     /// </remarks>
     public void Teardown()
     {
         RealtimeSessionController.Instance.StateChanged -= OnSessionStateChanged;
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
-        RealtimeSessionController.Instance.ForgetBlocks();
     }
+
+    /// <summary>
+    /// Says why the 即時翻譯 shortcut did not start a session, on the line the button's own refusals
+    /// use — see <see cref="RealtimeQuickStart"/>.
+    /// </summary>
+    public void ShowShortcutRefusal(string key) =>
+        SetStatus(LocalizationService.Get(key), isError: true);
 
     private void ProviderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -773,27 +781,15 @@ public partial class RealtimePage : UserControl
             framingBounds = screen.Bounds;
         }
 
-        var settings = SettingsService.Instance.Current;
-        var request = new RealtimeStartRequest(
+        var request = RealtimeQuickStart.Build(
+            SettingsService.Instance.Current,
             framingBounds,
             _blockCount,
             LanguageData.GetValidOcrSourceCode(sourceLanguage),
             LanguageData.GetValidTargetCode(TgtLangBox.SelectedValue as string),
             ProviderBox.SelectedValue as TranslationProvider? ?? DefaultProvider,
-            settings.Realtime.TextColor,
-            settings.Realtime.ScrimColor,
-            settings.Realtime.ScrimOpacity,
-            settings.Realtime.NaturalBackgroundEnabled,
-            settings.Realtime.SampleSourceTextColor,
             WindowMode ? RealtimeCaptureMode.Window : RealtimeCaptureMode.Screen,
-            sourceWindow,
-            settings.Realtime.BorderEnabled,
-            settings.Realtime.BorderColorMode == RealtimeBorderColorMode.Fixed
-                ? settings.Realtime.BorderColor
-                : null,
-            settings.Realtime.FontSizeMode == RealtimeFontSizeMode.Fixed
-                ? settings.Realtime.FixedFontSize
-                : null);
+            sourceWindow);
 
         // The shell is handed over to be hidden: it is almost certainly sitting on the screen the
         // user is about to frame blocks on, and it comes back when the session ends.
