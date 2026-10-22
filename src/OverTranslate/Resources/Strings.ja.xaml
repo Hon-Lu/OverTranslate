@@ -324,7 +324,7 @@
     <sys:String x:Key="S.Realtime.Step1">1.「ブロックを選択」を押し、画面上で翻訳したい範囲をドラッグします。</sys:String>
     <sys:String x:Key="S.Realtime.Step2">2. フローティングバーの「開始」を押すと、内容が変わるたびに読み直して訳文を更新します。</sys:String>
     <sys:String x:Key="S.Realtime.Step3">3. 翻訳中の範囲はクリックを遮らないため、ゲームやほかのアプリはそのまま操作できます。範囲を変えるときは「編集」を押します。</sys:String>
-    <sys:String x:Key="S.Realtime.Step4">4. 翻訳中に {0} を押すと一時停止／再開できます。一時停止すると画面の原文が戻ります。</sys:String>
+    <sys:String x:Key="S.Realtime.Step4">4. {0} でも操作できます。停止中はブロック選択、選択中は翻訳開始、翻訳中は一時停止／再開です。一時停止すると画面の原文が戻ります。</sys:String>
 
     <sys:String x:Key="S.Realtime.SelectBlocks">ブロックを選択</sys:String>
     <sys:String x:Key="S.Realtime.StopSession">終了</sys:String>
@@ -438,9 +438,9 @@
     <sys:String x:Key="S.Settings.HotkeyRecordTip">クリックしてショートカットキーを録り直す</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKinds">ショートカットキーは Ctrl／Alt／Shift と他のキーの組み合わせのほか、単独のファンクションキー、マウスボタン、ゲームパッドのボタンにも対応しています。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKindsExample">例：Ctrl+Alt+A、Shift+A、F1、マウスの中ボタン／サイドボタン、XInput など。</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkey">一時停止 / 再開</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">[[リアルタイム翻訳]]を一時停止／再開する</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">「一時停止 / 再開」はリアルタイム翻訳の実行中のみ使えます。(原文を確認したいときに便利です)</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkey">リアルタイム翻訳</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">ショートカットでブロックを選択して翻訳</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">停止中にショートカットを押すとブロック選択を開始し、選択中にもう一度押すと翻訳を開始します。翻訳中は一時停止／再開できます。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">ショートカットキーで[[ポップアップ翻訳]]を開く</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">テキストを選択していると、ウィンドウを開いたときに自動で読み込んで翻訳します。</sys:String>

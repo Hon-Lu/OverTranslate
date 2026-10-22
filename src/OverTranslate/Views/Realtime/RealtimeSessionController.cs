@@ -667,8 +667,9 @@ internal sealed class RealtimeSessionController
     /// Drops the layout kept from the last sitting, so the next one starts on an empty screen.
     /// </summary>
     /// <remarks>
-    /// Called when the block count changes, and when the translation window closes. Both are the
-    /// same statement: what was drawn was drawn for a set-up that no longer exists. The count is
+    /// Called when the block count changes: what was drawn was drawn for a set-up that no longer
+    /// exists. Closing the translation window used to say the same and no longer does — the shortcut
+    /// starts sessions without it, see RealtimePage.Teardown. The count is
     /// not checked when the blocks are offered back, deliberately — the user asked for them to go
     /// the moment the count moved, and 2 → 3 → 2 leaving old blocks behind would be a set-up they
     /// had told the program to forget reappearing because they changed their mind twice.
@@ -761,6 +762,22 @@ internal sealed class RealtimeSessionController
         // for hours next to an application that needs its own Esc key.
         DisposeEscapeHook();
         _escapeHook = GlobalEscapeHook.Install(Stop);
+    }
+
+    /// <summary>
+    /// The 即時翻譯 shortcut pressed while blocks are being framed: the edit bar's 開始翻譯 (#324).
+    /// </summary>
+    /// <remarks>
+    /// So one key walks the whole way — framing, translating, paused and back — each press the next
+    /// step from wherever the session is. Refused the same way the button is when nothing is framed.
+    /// </remarks>
+    /// <returns>Whether there was a framing session to start.</returns>
+    public bool StartTranslatingFromShortcut()
+    {
+        if (!IsActive || IsTranslating) return false;
+
+        StartTranslating();
+        return true;
     }
 
     private void StartTranslating()

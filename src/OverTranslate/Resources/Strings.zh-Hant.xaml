@@ -336,7 +336,7 @@
          浮動控制列與浮動視窗，讀的人無從知道講的是不是同一個東西。 -->
     <sys:String x:Key="S.Realtime.Step2">2. 點擊浮動視窗列的「開始翻譯」，內容變更時會自動重新辨識並更新譯文。</sys:String>
     <sys:String x:Key="S.Realtime.Step3">3. 翻譯中的區域不會影響遊戲或介面操作，如需調整翻譯區塊，請按「編輯」。</sys:String>
-    <sys:String x:Key="S.Realtime.Step4">4. 翻譯中按 {0} 可暫停／繼續，暫停時會還原畫面原文內容。</sys:String>
+    <sys:String x:Key="S.Realtime.Step4">4. 也可以按 {0}：未啟動時開始框選，框選時開始翻譯，翻譯中可暫停／繼續；暫停時會還原畫面原文內容。</sys:String>
 
     <sys:String x:Key="S.Realtime.SelectBlocks">選取翻譯區塊</sys:String>
     <sys:String x:Key="S.Realtime.StopSession">結束即時翻譯</sys:String>
@@ -456,9 +456,9 @@
     <sys:String x:Key="S.Settings.HotkeyRecordTip">點一下重新錄製快捷鍵</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKinds">快捷鍵可使用 Ctrl／Alt／Shift 搭配其他按鍵，也支援單一功能鍵、滑鼠按鍵以及遊戲手把。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKindsExample">例如：Ctrl+Alt+A、Shift+A、F1、滑鼠中鍵／側鍵、XInput...等。</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkey">暫停 / 繼續</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">暫停或繼續[[即時翻譯]]</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">「暫停 / 繼續」僅在即時翻譯進行中可用。(可用於顯示原文)</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkey">即時翻譯</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷鍵開始框選翻譯</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷鍵開啟[[取詞翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>

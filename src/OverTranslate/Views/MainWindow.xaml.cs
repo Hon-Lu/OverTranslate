@@ -365,16 +365,53 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Pauses a running realtime session, or resumes a paused one.
+    /// The 即時翻譯 shortcut: each press is the next step from wherever a session is (#324).
     /// </summary>
     /// <remarks>
-    /// Silent when there is no session, and while blocks are being framed: there is nothing running
-    /// to pause, and a key named after one action has nothing to say about a mode it does not apply
-    /// to. <see cref="Views.Realtime.RealtimeSessionController.TogglePause"/> is what decides that,
-    /// and the bar's own button is the other way in.
+    /// <para>No session: block framing, as 選取翻譯區塊 on the page would — with the blocks from
+    /// the last sitting put back, which is most of what makes this worth a key. Framing: 開始翻譯.
+    /// Translating: pause and resume, which is all this key used to do. Ending stays with the bar's
+    /// close button, as before.</para>
+    ///
+    /// <para>The first press frames rather than translating outright, even with blocks remembered.
+    /// They are physical pixels from an earlier sitting over whatever was on the screen then; a
+    /// press that put them back and started reading would translate the wrong places the moment
+    /// the scene had moved, with nothing to show it had. One more press is the price of seeing
+    /// them first.</para>
+    ///
+    /// <para>When the settings cannot start a session — no window picked, the picked one not open —
+    /// the translation window opens on the page that can fix it, saying why. Not a notification:
+    /// the press already asked for the screen to change, and the next thing the user has to do is
+    /// on that page anyway. Silent only while a capture is up, which is the one rule every other
+    /// shortcut here keeps too.</para>
     /// </remarks>
     private void OnRealtimePauseHotkeyPressed(object? sender, EventArgs e) =>
-        Dispatcher.Invoke(() => Views.Realtime.RealtimeSessionController.Instance.TogglePause());
+        Dispatcher.Invoke(OnRealtimeShortcut);
+
+    private void OnRealtimeShortcut()
+    {
+        var controller = Views.Realtime.RealtimeSessionController.Instance;
+        if (controller.IsActive)
+        {
+            if (controller.IsTranslating) controller.TogglePause();
+            else controller.StartTranslatingFromShortcut();
+            return;
+        }
+
+        if (IsCapturing) return;
+
+        var quickStart = Views.Realtime.RealtimeQuickStart.From(SettingsService.Instance.Current);
+        if (quickStart.Request is not { } request)
+        {
+            Log.Info("Realtime shortcut did not start a session: {Reason}", quickStart.RefusalKey);
+            ShellWindow.ShowOrActivate(ShellPage.Realtime).ShowRealtimeShortcutRefusal(quickStart.RefusalKey!);
+            return;
+        }
+
+        // Null when the shell is closed to the tray, which is the common case for a shortcut and
+        // means there is nothing to put away.
+        controller.Start(request, ShellWindow.Current);
+    }
 
     /// <summary>
     /// Brings 取詞翻譯's popup up over whatever the user is reading, unpinned.
