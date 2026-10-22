@@ -144,16 +144,15 @@ public sealed class AnnotationStroke
     /// it, and the eraser, the undo history and the copy take it as they take a line.</para>
     ///
     /// <para>What makes it read as an arrow rather than a line with a splinter on it is weight, not
-    /// only length: the wings are stroked heavier than the shaft and spread wide. Longer alone was
-    /// tried and still looked small. But the heavier the line, the less extra it needs — a 13 px
-    /// shaft under a head half as heavy again turns into a block — so the extra weight, the spread
-    /// and the length all ease off from 4 px up to the slider's 13 px. Thin lines, where an arrow
-    /// looked smallest, keep all of it.</para>
+    /// only length: on a thin line the wings are stroked heavier than the shaft and spread wide.
+    /// Longer alone was tried and still looked small. But a line that is already heavy needs no
+    /// extra, and gets top-heavy with it — so the extra weight is gone by the slider's default 6 px,
+    /// where head and shaft are one width, and the spread and the length ease off on up to 13 px.</para>
     ///
     /// <para>Never longer than most of the shaft, so a short flick is still an arrow and not a pair
     /// of wings.</para>
     /// </remarks>
-    private static (Geometry Geometry, double Thickness) ArrowHead(Point start, Point end, double thickness)
+    internal static (Geometry Geometry, double Thickness) ArrowHead(Point start, Point end, double thickness)
     {
         var shaft = end - start;
         double length = shaft.Length;
@@ -162,7 +161,9 @@ public sealed class AnnotationStroke
         double heavy = Math.Clamp((thickness - 4) / 9, 0, 1);
         double angle  = Lerp(38, 36, heavy) * Math.PI / 180;
         double reach  = Math.Max(ArrowHeadMin, thickness * Lerp(4.4, 4.0, heavy));
-        double weight = Math.Max(thickness * Lerp(1.6, 1.3, heavy), thickness + 1.5);
+
+        // 1.6 times the shaft at the slider's 2 px, down to the shaft's own width at its default 6.
+        double weight = thickness * Lerp(1.6, 1, Math.Clamp((thickness - 2) / 4, 0, 1));
 
         var geometry = new StreamGeometry();
         if (length >= 1e-9)

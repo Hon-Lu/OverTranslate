@@ -131,7 +131,7 @@ public class AnnotationShapeTests
     {
         OnStaThread(() =>
         {
-            // 4px: the head is 4.4 × 4 = 17.6 long, each wing 38° off the shaft and stroked 6.4 wide.
+            // 4px: the head is 4.4 × 4 = 17.6 long, each wing 38° off the shaft and stroked 5.2 wide.
             var surface = Laid(Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150)));
 
             Assert.True(InkAt(surface, 200, 150));    // the shaft
@@ -150,23 +150,21 @@ public class AnnotationShapeTests
             var stroke = Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150));
 
             // A level shaft spans no height; the wings reach 17.6 × sin 38° ≈ 10.8 above and below,
-            // and half of their 6.4 stroke past that.
-            Assert.True(stroke.Bounds.Top < 150 - 10.8 - 3.2);
-            Assert.True(stroke.Bounds.Bottom > 150 + 10.8 + 3.2);
+            // and half of their 5.2 stroke past that.
+            Assert.True(stroke.Bounds.Top < 150 - 10.8 - 2.6);
+            Assert.True(stroke.Bounds.Bottom > 150 + 10.8 + 2.6);
         });
     }
 
-    [Fact]
-    public void ArrowHead_IsStrokedHeavierThanTheShaft()
+    [Theory]
+    [InlineData(2, 3.2)]    // the thinnest line: the head half as heavy again
+    [InlineData(4, 5.2)]
+    [InlineData(6, 6)]      // the default: head and shaft one width
+    [InlineData(13, 13)]    // and so on up
+    public void ArrowHead_IsHeavierOnlyOnLinesThinnerThanTheDefault(double thickness, double head)
     {
-        OnStaThread(() =>
-        {
-            var surface = Laid(Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150)));
-
-            // 2.6 off the line: outside the 4px shaft, inside the 6.4px wing.
-            Assert.False(InkAt(surface, 200, 152.6));
-            Assert.True(InkAt(surface, 293 + 2.6 * Math.Sin(38 * Math.PI / 180), 155.4 - 2.6 * Math.Cos(38 * Math.PI / 180)));
-        });
+        var (_, weight) = AnnotationStroke.ArrowHead(new Point(0, 0), new Point(200, 0), thickness);
+        Assert.Equal(head, weight, precision: 6);
     }
 
     [Fact]
