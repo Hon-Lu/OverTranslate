@@ -110,7 +110,7 @@
                             </StackPanel>
                         </ToggleButton>
 
-                        <!-- 形狀: the three drag-out shapes behind one button, which wears whichever
+                        <!-- 形狀: the four drag-out shapes behind one button, which wears whichever
                              of them is in hand (or was last) so the button says what a press will
                              give. The chevron is what says there is a choice behind it. -->
                         <ToggleButton x:Name="ShapeTool"
@@ -122,6 +122,9 @@
                                     <Path x:Name="ShapeIconLine"
                                           Style="{StaticResource ToolbarToolStroke}"
                                           Data="M2.6,15.4 L15.4,2.6"/>
+                                    <Path x:Name="ShapeIconArrow"
+                                          Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M2.6,15.4 L15.4,2.6 M8.7,4.6 L15.4,2.6 L13.4,9.3"/>
                                     <Path x:Name="ShapeIconRectangle"
                                           Style="{StaticResource ToolbarToolStroke}"
                                           Data="M2.2,3.8 H15.8 V14.2 H2.2 Z"/>
@@ -312,6 +315,20 @@
                                   </Grid>
                                 </Grid>
                                 <TextBlock Text="{DynamicResource S.Annotate.Line}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <ToggleButton x:Name="ArrowTool"
+                                      Style="{StaticResource ToolbarStackToggleButton}"
+                                      Click="ShapeChoice_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <Path Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M2.6,15.4 L15.4,2.6 M8.7,4.6 L15.4,2.6 L13.4,9.3"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Annotate.Arrow}"/>
                             </StackPanel>
                         </ToggleButton>
 

@@ -196,6 +196,7 @@
     <sys:String x:Key="S.Annotate.Pen">筆</sys:String>
     <sys:String x:Key="S.Annotate.Highlighter">螢光筆</sys:String>
     <sys:String x:Key="S.Annotate.Line">直線</sys:String>
+    <sys:String x:Key="S.Annotate.Arrow">箭頭</sys:String>
     <sys:String x:Key="S.Annotate.Rectangle">方框</sys:String>
     <sys:String x:Key="S.Annotate.Ellipse">圓框</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">橡皮擦</sys:String>

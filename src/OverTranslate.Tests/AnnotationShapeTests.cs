@@ -127,6 +127,58 @@ public class AnnotationShapeTests
     }
 
     [Fact]
+    public void Arrow_HasAnOpenHeadAtTheEndTheDragFinishedOn()
+    {
+        OnStaThread(() =>
+        {
+            // 4px: the head is 4.4 × 4 = 17.6 long, each wing 38° off the shaft and stroked 5.2 wide.
+            var surface = Laid(Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150)));
+
+            Assert.True(InkAt(surface, 200, 150));    // the shaft
+            Assert.True(InkAt(surface, 293, 144.6));  // halfway along the upper wing
+            Assert.True(InkAt(surface, 293, 155.4));  // and the lower one
+            Assert.False(InkAt(surface, 107, 144.6)); // no head at the start
+            Assert.False(InkAt(surface, 284, 145.5)); // and the head is open, not filled in
+        });
+    }
+
+    [Fact]
+    public void ArrowBounds_TakeInTheHeadsReachPastTheShaft()
+    {
+        OnStaThread(() =>
+        {
+            var stroke = Shape(AnnotationTool.Arrow, 4, new Point(100, 150), new Point(300, 150));
+
+            // A level shaft spans no height; the wings reach 17.6 × sin 38° ≈ 10.8 above and below,
+            // and half of their 5.2 stroke past that.
+            Assert.True(stroke.Bounds.Top < 150 - 10.8 - 2.6);
+            Assert.True(stroke.Bounds.Bottom > 150 + 10.8 + 2.6);
+        });
+    }
+
+    [Theory]
+    [InlineData(2, 3.2)]    // the thinnest line: the head half as heavy again
+    [InlineData(4, 5.2)]
+    [InlineData(6, 6)]      // the default: head and shaft one width
+    [InlineData(13, 13)]    // and so on up
+    public void ArrowHead_IsHeavierOnlyOnLinesThinnerThanTheDefault(double thickness, double head)
+    {
+        var (_, weight) = AnnotationStroke.ArrowHead(new Point(0, 0), new Point(200, 0), thickness);
+        Assert.Equal(head, weight, precision: 6);
+    }
+
+    [Fact]
+    public void ShiftedArrow_SnapsLikeALine()
+    {
+        var start = new Point(50, 50);
+        var raw = new Point(140, 160);
+
+        Assert.Equal(
+            AnnotationStroke.ConstrainShape(AnnotationTool.Line, start, raw),
+            AnnotationStroke.ConstrainShape(AnnotationTool.Arrow, start, raw));
+    }
+
+    [Fact]
     public void ShapeBounds_CoverTheWholeOutline()
     {
         var stroke = Shape(AnnotationTool.Rectangle, 10, new Point(300, 200), new Point(100, 100));

@@ -357,6 +357,7 @@ public partial class AnnotationPanelWindow : Window
         Tool = sender switch
         {
             _ when ReferenceEquals(sender, LineTool)    => AnnotationTool.Line,
+            _ when ReferenceEquals(sender, ArrowTool)   => AnnotationTool.Arrow,
             _ when ReferenceEquals(sender, EllipseTool) => AnnotationTool.Ellipse,
             _                                           => AnnotationTool.Rectangle,
         };
@@ -490,15 +491,18 @@ public partial class AnnotationPanelWindow : Window
         EraserTool.IsChecked      = Tool == AnnotationTool.Eraser;
         ShapeTool.IsChecked       = shape;
         LineTool.IsChecked        = Tool == AnnotationTool.Line;
+        ArrowTool.IsChecked       = Tool == AnnotationTool.Arrow;
         RectangleTool.IsChecked   = Tool == AnnotationTool.Rectangle;
         EllipseTool.IsChecked     = Tool == AnnotationTool.Ellipse;
 
         ShapeIconLine.Visibility      = _lastShape == AnnotationTool.Line      ? Visibility.Visible : Visibility.Collapsed;
+        ShapeIconArrow.Visibility     = _lastShape == AnnotationTool.Arrow     ? Visibility.Visible : Visibility.Collapsed;
         ShapeIconRectangle.Visibility = _lastShape == AnnotationTool.Rectangle ? Visibility.Visible : Visibility.Collapsed;
         ShapeIconEllipse.Visibility   = _lastShape == AnnotationTool.Ellipse   ? Visibility.Visible : Visibility.Collapsed;
         ShapeLabel.Text = LocalizationService.Get(_lastShape switch
         {
             AnnotationTool.Line    => "S.Annotate.Line",
+            AnnotationTool.Arrow   => "S.Annotate.Arrow",
             AnnotationTool.Ellipse => "S.Annotate.Ellipse",
             _                      => "S.Annotate.Rectangle",
         });

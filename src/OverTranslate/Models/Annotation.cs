@@ -28,6 +28,9 @@ public enum AnnotationTool
     /// <summary>A straight line from where the drag started to where it ends.</summary>
     Line,
 
+    /// <summary>A <see cref="Line"/> with an open head at the end the drag finished on (#323).</summary>
+    Arrow,
+
     /// <summary>The outline of the box the drag spans.</summary>
     Rectangle,
 
@@ -85,19 +88,104 @@ public sealed class AnnotationStroke
     public bool IsShape => IsShapeTool(Tool);
 
     public static bool IsShapeTool(AnnotationTool tool) =>
-        tool is AnnotationTool.Line or AnnotationTool.Rectangle or AnnotationTool.Ellipse;
+        tool is AnnotationTool.Line or AnnotationTool.Arrow or AnnotationTool.Rectangle or AnnotationTool.Ellipse;
 
     /// <summary>The outline a shape tool draws for a drag from <paramref name="start"/> to <paramref name="end"/>.</summary>
-    public static Geometry ShapeGeometry(AnnotationTool tool, Point start, Point end)
+    /// <param name="thickness">The nib, which only an arrow needs: its head is sized from it.</param>
+    /// <remarks>
+    /// For an arrow this is the shaft and the head together, which is what the bounds and the eraser
+    /// need; drawing one goes through <see cref="DrawShape"/>, because the head is stroked heavier
+    /// than the shaft.
+    /// </remarks>
+    public static Geometry ShapeGeometry(AnnotationTool tool, Point start, Point end, double thickness)
     {
         Geometry geometry = tool switch
         {
             AnnotationTool.Rectangle => new RectangleGeometry(new Rect(start, end)),
             AnnotationTool.Ellipse   => new EllipseGeometry(new Rect(start, end)),
+            AnnotationTool.Arrow     => new GeometryGroup { Children = [ArrowShaft(start, end), ArrowHead(start, end, thickness).Geometry] },
             _                        => new LineGeometry(start, end),
         };
         geometry.Freeze();
         return geometry;
+    }
+
+    /// <summary>Draws a shape tool's mark with <paramref name="pen"/>, the head of an arrow included.</summary>
+    public static void DrawShape(DrawingContext dc, Pen pen, AnnotationTool tool, Point start, Point end)
+    {
+        if (tool != AnnotationTool.Arrow)
+        {
+            dc.DrawGeometry(null, pen, ShapeGeometry(tool, start, end, pen.Thickness));
+            return;
+        }
+
+        dc.DrawGeometry(null, pen, ArrowShaft(start, end));
+
+        var (head, headThickness) = ArrowHead(start, end, pen.Thickness);
+        var headPen = pen.Clone();
+        headPen.Thickness = headThickness;
+        headPen.Freeze();
+        dc.DrawGeometry(null, headPen, head);
+    }
+
+    private static Geometry ArrowShaft(Point start, Point end)
+    {
+        var shaft = new LineGeometry(start, end);
+        shaft.Freeze();
+        return shaft;
+    }
+
+    /// <summary>
+    /// An arrow's open head, and how heavy a stroke it is drawn with (#323).
+    /// </summary>
+    /// <remarks>
+    /// <para>Open, the two wings stroked like the shaft, because everything else 標記 draws is a
+    /// stroke with round ends: the head then belongs with the line, the box and the ellipse beside
+    /// it, and the eraser, the undo history and the copy take it as they take a line.</para>
+    ///
+    /// <para>What makes it read as an arrow rather than a line with a splinter on it is weight, not
+    /// only length: on a thin line the wings are stroked heavier than the shaft and spread wide.
+    /// Longer alone was tried and still looked small. But a line that is already heavy needs no
+    /// extra, and gets top-heavy with it — so the extra weight is gone by the slider's default 6 px,
+    /// where head and shaft are one width, and the spread and the length ease off on up to 13 px.</para>
+    ///
+    /// <para>Never longer than most of the shaft, so a short flick is still an arrow and not a pair
+    /// of wings.</para>
+    /// </remarks>
+    internal static (Geometry Geometry, double Thickness) ArrowHead(Point start, Point end, double thickness)
+    {
+        var shaft = end - start;
+        double length = shaft.Length;
+
+        // 0 at 4 px and below, 1 at the slider's 13 px.
+        double heavy = Math.Clamp((thickness - 4) / 9, 0, 1);
+        double angle  = Lerp(38, 36, heavy) * Math.PI / 180;
+        double reach  = Math.Max(ArrowHeadMin, thickness * Lerp(4.4, 4.0, heavy));
+
+        // 1.6 times the shaft at the slider's 2 px, down to the shaft's own width at its default 6.
+        double weight = thickness * Lerp(1.6, 1, Math.Clamp((thickness - 2) / 4, 0, 1));
+
+        var geometry = new StreamGeometry();
+        if (length >= 1e-9)
+        {
+            var back = -shaft / length * Math.Min(reach, length * 0.6);
+            using var ctx = geometry.Open();
+            ctx.BeginFigure(end + Rotate(back, angle), isFilled: false, isClosed: false);
+            ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
+            ctx.LineTo(end + Rotate(back, -angle), isStroked: true, isSmoothJoin: true);
+        }
+        geometry.Freeze();
+        return (geometry, weight);
+    }
+
+    private const double ArrowHeadMin = 15;
+
+    private static double Lerp(double from, double to, double t) => from + (to - from) * t;
+
+    private static Vector Rotate(Vector v, double angle)
+    {
+        double cos = Math.Cos(angle), sin = Math.Sin(angle);
+        return new Vector(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
     }
 
     /// <summary>
@@ -112,7 +200,7 @@ public sealed class AnnotationStroke
     {
         double dx = end.X - start.X, dy = end.Y - start.Y;
 
-        if (tool == AnnotationTool.Line)
+        if (tool is AnnotationTool.Line or AnnotationTool.Arrow)
         {
             double length = Math.Sqrt(dx * dx + dy * dy);
             if (length < 1e-9) return end;
@@ -155,6 +243,21 @@ public sealed class AnnotationStroke
             // Half a nib each way for the width, and one more DIP so the round caps and the mask's
             // own soft rim have somewhere to land.
             double pad = Thickness / 2 + 1;
+
+            // An arrow's head reaches out sideways past the box its two ends span, and is stroked
+            // heavier than the shaft.
+            if (Tool == AnnotationTool.Arrow && Points.Count == 2)
+            {
+                var (geometry, weight) = ArrowHead(Points[0], Points[1], Thickness);
+                var head = geometry.Bounds;
+                if (!head.IsEmpty)
+                {
+                    minX = Math.Min(minX, head.Left);  minY = Math.Min(minY, head.Top);
+                    maxX = Math.Max(maxX, head.Right); maxY = Math.Max(maxY, head.Bottom);
+                }
+                pad = weight / 2 + 1;
+            }
+
             return new Rect(minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2);
         }
     }
@@ -218,9 +321,16 @@ public sealed class AnnotationStroke
         double reach = radius + Thickness / 2;
         double reachSq = reach * reach;
 
+        if (Tool == AnnotationTool.Arrow && Points.Count == 2)
+        {
+            var (head, weight) = ArrowHead(Points[0], Points[1], Thickness);
+            return ArrowShaft(Points[0], Points[1]).StrokeContains(new Pen(Brushes.Black, reach * 2), point)
+                || head.StrokeContains(new Pen(Brushes.Black, (radius + weight / 2) * 2), point);
+        }
+
         // A shape's two points are the corners of its box, not a path along it.
         if (IsShape && Points.Count == 2)
-            return ShapeGeometry(Tool, Points[0], Points[1])
+            return ShapeGeometry(Tool, Points[0], Points[1], Thickness)
                 .StrokeContains(new Pen(Brushes.Black, reach * 2), point);
 
         if (Points.Count == 1)
