@@ -277,6 +277,14 @@ public class RealtimeSettings
     public bool CompareDisplay { get; set; } = false;
 
     /// <summary>
+    /// Whether the floating bar's running capsule is collapsed to its status dot, expand button and
+    /// ✕. Kept between sittings like <see cref="CompareDisplay"/> and for the same reason: someone
+    /// who folds it away over a game wants it folded the next time too, and it is written on the
+    /// press from the bar that owns the button.
+    /// </summary>
+    public bool ControlBarCollapsed { get; set; } = false;
+
+    /// <summary>
     /// Whether the band behind a subtitle is replaced by a repair of the picture underneath: the
     /// source line is erased and filled in from the pixels around it, and the translation is drawn
     /// back where it was.

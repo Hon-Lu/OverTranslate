@@ -466,10 +466,12 @@
                                 Style="{StaticResource HeaderIconButton}"
                                 Click="SettingsBtn_Click"/>
 
+                        <!-- E8BB, not E711: E711 sits 0.41px up and left of centre, E8BB exactly on
+                             it. 9 keeps E711's 8.9px of ink at 13. -->
                         <Button x:Name="CloseBtn"
                                 Style="{StaticResource HeaderIconButton}"
-                                Content="&#xE711;"
-                                FontSize="13"
+                                Content="&#xE8BB;"
+                                FontSize="9"
                                 ToolTip="{DynamicResource S.Common.Close}"
                                 Click="CloseBtn_Click"/>
                     </StackPanel>

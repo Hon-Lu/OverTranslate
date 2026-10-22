@@ -359,6 +359,8 @@
     <sys:String x:Key="S.Realtime.Pause">暫停即時翻譯</sys:String>
     <sys:String x:Key="S.Realtime.Resume">繼續即時翻譯</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">編輯翻譯區塊</sys:String>
+    <sys:String x:Key="S.Realtime.CollapseBar">收合浮動視窗列</sys:String>
+    <sys:String x:Key="S.Realtime.ExpandBar">展開浮動視窗列</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">暫停框選，改為操作下方畫面</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">恢復框選</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文對照</sys:String>

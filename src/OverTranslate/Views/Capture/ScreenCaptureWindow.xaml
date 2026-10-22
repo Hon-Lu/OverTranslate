@@ -175,8 +175,13 @@
                         <StackPanel Orientation="Horizontal">
                             <!-- Leading position: before a selection exists this is the only
                                  clickable way out, so it reads first instead of trailing the copy. -->
-                            <Button Content="✕"
+                            <!-- E8BB rather than a typed ✕, which in the UI font sits 0.90px below
+                                 the button's centre; E8BB is exactly on it at every size. 10 keeps
+                                 the old glyph's 10.1px of ink. -->
+                            <Button Content="&#xE8BB;"
                                     Style="{StaticResource IconButton}"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    FontSize="10"
                                     VerticalAlignment="Center"
                                     ToolTip="{DynamicResource S.Capture.CancelTip}"
                                     Click="CancelCaptureBtn_Click"/>

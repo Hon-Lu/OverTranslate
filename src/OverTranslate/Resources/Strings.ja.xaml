@@ -344,6 +344,8 @@
     <sys:String x:Key="S.Realtime.Pause">リアルタイム翻訳を一時停止</sys:String>
     <sys:String x:Key="S.Realtime.Resume">リアルタイム翻訳を再開</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">ブロックを編集</sys:String>
+    <sys:String x:Key="S.Realtime.CollapseBar">フローティングバーを折りたたむ</sys:String>
+    <sys:String x:Key="S.Realtime.ExpandBar">フローティングバーを展開</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">範囲選択を止めて下のアプリを操作する</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">範囲選択を再開</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文対照</sys:String>

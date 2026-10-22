@@ -105,8 +105,11 @@
                             ToolTip="{DynamicResource S.Toast.CopyMessage}"
                             Click="CopyButton_Click"/>
 
-                    <Button Content="&#xE711;"
+                    <!-- E8BB, not E711, which sits 0.34px up and left of centre; 7.5 keeps
+                         E711's 7.6px of ink at the style's 11. -->
+                    <Button Content="&#xE8BB;"
                             Style="{StaticResource HintIconButton}"
+                            FontSize="7.5"
                             ToolTip="{DynamicResource S.Common.Close}"
                             Click="CloseButton_Click"/>
                 </StackPanel>

@@ -317,6 +317,10 @@ public partial class ToolbarWindow
     // Folds away like the timed close, rather than vanishing under the pointer that pressed it.
     private void NoticeCloseBtn_Click(object sender, RoutedEventArgs e) => FadeOutNotice();
 
+    // Segoe Fluent Icons, set on the button in XAML: Copy, and CheckMark for a copy that worked. The
+    // same pair 替換翻譯's hint uses, and like that one both are exactly centred on the button.
+    private const string NoticeCopyGlyph = "";
+
     /// <remarks>
     /// The clipboard belongs to whatever else is running, and any of it can hold the clipboard open
     /// long enough for this to fail — WPF already retries for about a second before throwing. Left
@@ -330,7 +334,7 @@ public partial class ToolbarWindow
         // Answered on the button itself: a second notice announcing the copy would replace this one
         // and lose the message just copied. On a failure the message is still there beside it,
         // which is where the reader gets it from instead.
-        NoticeCopyBtn.Content = copied ? "✓" : "⧉";
+        NoticeCopyBtn.Content = copied ? "" : NoticeCopyGlyph;
         NoticeCopyBtn.SetResourceReference(ForegroundProperty, copied ? "AppSuccess" : "AppError");
         NoticeCopyBtn.SetResourceReference(ToolTipProperty, copied ? "S.Toast.Copied" : "S.Toast.CopyFailed");
 
@@ -342,7 +346,7 @@ public partial class ToolbarWindow
     private void ResetNoticeCopyButton()
     {
         _noticeCopyTimer?.Stop();
-        NoticeCopyBtn.Content = "⧉";
+        NoticeCopyBtn.Content = NoticeCopyGlyph;
         NoticeCopyBtn.ClearValue(ForegroundProperty);
         NoticeCopyBtn.SetResourceReference(ToolTipProperty, "S.Toast.CopyMessage");
     }
