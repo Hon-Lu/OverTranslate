@@ -1746,22 +1746,14 @@ public partial class QuickLookupWindow : Window
             : LocalizationService.Format(
                 "S.QuickLookup.BilingualStatusPair",
                 LanguageData.GetTargetDisplayName(_bilingualSource),
-                LanguageData.GetTargetDisplayName(TargetOppositeOf(_bilingualSource)));
+                LanguageData.GetTargetDisplayName(Pair.TargetFor(_bilingualSource)));
 
         BilingualStatusBtn.ToolTip =
             LocalizationService.Format("S.QuickLookup.BilingualStatusTip", first, second);
     }
 
-    /// <summary>Which of the pair a text in <paramref name="source"/> is translated into.</summary>
-    /// <remarks>
-    /// The whole of what 雙語互譯 decides, in one line. The second language is the answer only for
-    /// text already in the first; everything else — including the languages the pair does not
-    /// mention at all — goes to the first, which is what makes it the first.
-    /// </remarks>
-    private string TargetOppositeOf(string source) =>
-        string.Equals(source, _bilingualFirst, StringComparison.OrdinalIgnoreCase)
-            ? _bilingualSecond
-            : _bilingualFirst;
+    /// <summary>The pair as this window currently holds it — see <see cref="BilingualPair"/>.</summary>
+    private BilingualPair Pair => new(_bilingualFirst, _bilingualSecond);
 
     /// <summary>Records which of the two languages the text turned out to be in.</summary>
     /// <remarks>
@@ -1790,60 +1782,18 @@ public partial class QuickLookupWindow : Window
         SetBilingualSource(
             BilingualDirection.ResolveSource(text, _bilingualFirst, _bilingualSecond));
 
-        return _bilingualSource is null
-            ? _bilingualFirst
-            : TargetOppositeOf(_bilingualSource);
+        return Pair.TargetFor(_bilingualSource);
     }
 
     /// <summary>
-    /// What the translation should have been asked for, once the engine has said what the text was.
+    /// What the translation should have been asked for, once the engine has said what the text was
+    /// — see <see cref="BilingualPair.Correct"/>.
     /// </summary>
-    /// <returns>
-    /// The language to ask again in, or null when the guess already stands — which is the ordinary
-    /// case, and the whole reason the characters are consulted first.
-    /// </returns>
-    /// <remarks>
-    /// An OpenAI-compatible server reports nothing here and this does nothing, leaving the guess in
-    /// place. For a pair written in two scripts that guess was never in doubt; for one written in
-    /// the same script it means the mode stays on the first language, which is what the settings
-    /// panel says happens to anything it cannot place.
-    /// </remarks>
     private string? CorrectedBilingualTarget(string? detected, string sentTarget)
     {
-        if (string.IsNullOrEmpty(detected)) return null;
-
-        var key = LanguageKey(detected);
-        var isFirst = LanguageKey(_bilingualFirst) == key;
-        var isSecond = LanguageKey(_bilingualSecond) == key;
-
-        // 繁體 and 簡體 are both 「ZH」 to every engine that reports one, so on that pair this
-        // answer cannot separate what OpenCC already separated from the characters. It stands aside
-        // rather than overwriting a better answer with a coarser one.
-        if (isFirst && isSecond) return null;
-
-        var source = isFirst ? _bilingualFirst
-                   : isSecond ? _bilingualSecond
-                   : LanguageData.MapSourceToTargetCode(detected);
-
+        var wanted = Pair.Correct(detected, sentTarget, out var source);
         if (source is not null) SetBilingualSource(source);
-
-        var wanted = isFirst ? _bilingualSecond : _bilingualFirst;
-        return wanted.Equals(sentTarget, StringComparison.OrdinalIgnoreCase) ? null : wanted;
-    }
-
-    /// <summary>
-    /// A language code reduced to the language it names, so the pair and the engine can be compared.
-    /// </summary>
-    /// <remarks>
-    /// The pair is stored in target codes (EN-US, PT-BR) and an engine reports source codes (EN,
-    /// PT), so neither side can be matched against the other as written. 繁體 and 簡體 both fold to
-    /// ZH deliberately: an engine saying 「Chinese」 has not said which, and pretending otherwise is
-    /// how this would come to re-translate 中文 into 中文.
-    /// </remarks>
-    private static string LanguageKey(string code)
-    {
-        var upper = code.ToUpperInvariant();
-        return upper.StartsWith("ZH", StringComparison.Ordinal) ? "ZH" : upper.Split('-')[0];
+        return wanted;
     }
 
     /// <remarks>
@@ -1857,20 +1807,8 @@ public partial class QuickLookupWindow : Window
     private void LoadBilingualPair()
     {
         var quickLookup = SettingsService.Instance.Current.QuickLookup;
-        var first  = LanguageData.GetValidTargetCode(quickLookup.BilingualFirstLanguage);
-        var second = LanguageData.GetValidTargetCode(quickLookup.BilingualSecondLanguage);
-
-        // One language twice is a pair that translates nothing into itself. The pickers cannot
-        // produce it — see ApplyBilingualPick — so it can only come from a hand-edited settings
-        // file, and the second slot is the one to move: the first is also the fallback, and
-        // redirecting that would change what every lookup does rather than just this pair.
-        if (string.Equals(first, second, StringComparison.OrdinalIgnoreCase))
-        {
-            second = string.Equals(first, QuickLookupSettings.DefaultSecondLanguage,
-                                   StringComparison.OrdinalIgnoreCase)
-                ? QuickLookupSettings.DefaultFirstLanguage
-                : QuickLookupSettings.DefaultSecondLanguage;
-        }
+        var (first, second) = BilingualPair.Load(
+            quickLookup.BilingualFirstLanguage, quickLookup.BilingualSecondLanguage);
 
         SetBilingualPair(first, second);
     }
@@ -1893,18 +1831,7 @@ public partial class QuickLookupWindow : Window
     {
         if (string.IsNullOrEmpty(picked)) return;
 
-        var first  = firstSlot ? picked : _bilingualFirst;
-        var second = firstSlot ? _bilingualSecond : picked;
-
-        // Picking the language the other slot is already holding is how the pair gets turned around.
-        // There is no reading of 「英文 ⇄ 英文」 that translates anything, and the one thing the user
-        // can have meant is that the language they just displaced goes to the other side — which is
-        // also the only way to change which of the two is the fallback.
-        if (string.Equals(first, second, StringComparison.OrdinalIgnoreCase))
-        {
-            if (firstSlot) second = _bilingualFirst;
-            else           first  = _bilingualSecond;
-        }
+        var (first, second) = Pair.Pick(picked, firstSlot);
 
         SetBilingualPair(first, second);
 

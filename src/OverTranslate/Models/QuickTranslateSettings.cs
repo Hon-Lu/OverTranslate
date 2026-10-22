@@ -12,4 +12,19 @@ public class QuickTranslateSettings
 {
     public string SourceLanguage { get; set; } = LanguageData.DefaultSourceLanguage;
     public string TargetLanguage { get; set; } = "EN-US";
+
+    /// <summary>
+    /// Whether the replacement picks the direction itself out of <see cref="BilingualFirstLanguage"/>
+    /// and <see cref="BilingualSecondLanguage"/> instead of translating along the fixed pair above
+    /// (#322). The same 雙語互譯 as 取詞翻譯's, with a pair of its own: each feature already keeps
+    /// its own languages, and one pair quietly steering both would be a setting changed in one place
+    /// and felt in another.
+    /// </summary>
+    public bool BilingualEnabled { get; set; } = false;
+
+    /// <inheritdoc cref="QuickLookupSettings.BilingualFirstLanguage"/>
+    public string BilingualFirstLanguage { get; set; } = QuickLookupSettings.DefaultFirstLanguage;
+
+    /// <inheritdoc cref="QuickLookupSettings.BilingualFirstLanguage"/>
+    public string BilingualSecondLanguage { get; set; } = QuickLookupSettings.DefaultSecondLanguage;
 }

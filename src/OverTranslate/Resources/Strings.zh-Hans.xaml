@@ -444,6 +444,7 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">仅适用于可输入文字的字段，非输入区域则无法粘贴。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻译设置</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此设置仅适用于替换翻译，不会影响截图翻译、文字翻译或实时翻译。</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">自动判断选中文字的语言，在指定的两种语言之间互译</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 单个按键只能是 F1–F24、Pause 或 Scroll Lock，其他按键请搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">常规设置</sys:String>
