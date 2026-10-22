@@ -678,15 +678,15 @@
 
                                             <!-- The whole of the left part takes a click for the box,
                                                  not only the two digits: the field is as wide as it
-                                                 looks. The number's ink starts 23 in from the box's
-                                                 inner edge: 21 here, and the TextBox's own inset and
+                                                 looks. The number's ink starts 26 in from the box's
+                                                 inner edge: 24 here, and the TextBox's own inset and
                                                  the digit's side bearing make up the rest. -->
                                             <Grid Grid.Column="0"
                                                   Background="Transparent"
                                                   Cursor="IBeam"
                                                   MouseLeftButtonDown="FixedFontSizeField_MouseLeftButtonDown">
                                                 <StackPanel Orientation="Horizontal"
-                                                            Margin="21,0,0,0"
+                                                            Margin="24,0,0,0"
                                                             VerticalAlignment="Center">
                                                     <TextBox x:Name="FixedFontSizeInput"
                                                              Background="Transparent"
