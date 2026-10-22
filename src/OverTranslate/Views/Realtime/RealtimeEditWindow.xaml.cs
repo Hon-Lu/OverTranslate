@@ -1471,9 +1471,12 @@ public partial class RealtimeEditWindow : Window
 
         private static ControlTemplate BuildRemoveTemplate(double removeSize, double uiScale)
         {
+            // E8BB rather than a typed ✕, which sits 0.71px below the chip's centre at this size;
+            // E8BB is exactly on it, and 8 keeps the old glyph's 8px of ink.
             var glyph = new FrameworkElementFactory(typeof(TextBlock));
-            glyph.SetValue(TextBlock.TextProperty, "✕");
-            glyph.SetValue(TextBlock.FontSizeProperty, 11.0 * uiScale);
+            glyph.SetValue(TextBlock.TextProperty, "");
+            glyph.SetValue(TextBlock.FontFamilyProperty, new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"));
+            glyph.SetValue(TextBlock.FontSizeProperty, 8.0 * uiScale);
             glyph.SetValue(TextBlock.ForegroundProperty, RemoveForeground);
             glyph.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             glyph.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
