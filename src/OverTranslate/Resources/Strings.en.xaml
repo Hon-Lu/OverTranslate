@@ -340,6 +340,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.Pause">Pause realtime translation</sys:String>
     <sys:String x:Key="S.Realtime.Resume">Resume realtime translation</sys:String>
     <sys:String x:Key="S.Realtime.EditBlocks">Edit blocks</sys:String>
+    <sys:String x:Key="S.Realtime.CollapseBar">Collapse the floating bar</sys:String>
+    <sys:String x:Key="S.Realtime.ExpandBar">Expand the floating bar</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">Pause framing and use the app underneath</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Resume framing</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">Compare with original</sys:String>

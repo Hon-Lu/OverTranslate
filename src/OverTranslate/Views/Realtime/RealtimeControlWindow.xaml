@@ -179,8 +179,14 @@
                             </StackPanel>
                         </Border>
 
-                        <Button Content="✕"
+                        <!-- E8BB rather than a typed ✕: the ✕ in the UI font came in 0.83px below the
+                             button's centre, measured, which next to the chevron on the collapsed
+                             capsule read as crooked. E8BB lands its ink exactly on the centre at every
+                             size (see TranslationPage); 9.5 matches the old glyph's 9.4px of ink. -->
+                        <Button Content="&#xE8BB;"
                                 Style="{StaticResource ToolbarIconButton}"
+                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                FontSize="9.5"
                                 ToolTip="{DynamicResource S.Realtime.StopSession}"
                                 Click="CloseBtn_Click"/>
                     </StackPanel>
@@ -198,108 +204,172 @@
                                  VerticalAlignment="Center"
                                  Fill="{DynamicResource AppAccent}"/>
 
-                        <!-- The language pair, and the transient messages, share this one slot: only one
-                             of the two is ever visible. -->
-                        <TextBlock x:Name="RunStatusText"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0"
-                                   FontFamily="{DynamicResource AppFont}"
-                                   FontSize="12.5"
-                                   Foreground="{DynamicResource AppTextPrimary}"
-                                   Text="{DynamicResource S.Realtime.Running}"/>
-
-                        <!-- Source and target are not two equal labels: the target is the thing on screen
-                             from here on, so it keeps the primary colour and the source steps back one
-                             level to secondary. Not to muted — that brush is #666 on a #2A2A2A bar,
-                             2.4:1, and this is 12.5px CJK floating over whatever the user is watching.
-                             Secondary reaches 5.9:1 dark / 6.4:1 light and still reads as subordinate. The
-                             arrow between them is drawn rather than typed — U+2192 is not in the UI font,
-                             so it used to fall back to a CJK face, which renders it full-width and
-                             centred on the em box: too much air on both sides and sitting visibly high
-                             against 12.5px text. A Path has no fallback to lose and its weight and
-                             height are ours to set. -->
-                        <StackPanel x:Name="LangPairPanel"
+                        <!-- Everything between the dot and the two buttons on the right, as one group:
+                             it is what collapsing the capsule takes away (see SetCollapsed). The dot
+                             stays, because its colour is the one signal that has to survive — a failure
+                             still turns it red — and so do the toggle and ✕, so a collapsed session can
+                             be ended without opening it first. -->
+                        <StackPanel x:Name="RunDetails"
                                     Orientation="Horizontal"
-                                    VerticalAlignment="Center"
-                                    Margin="0,0,8,0"
-                                    Visibility="Collapsed">
-                            <TextBlock x:Name="SourceLangText"
+                                    VerticalAlignment="Center">
+
+                            <!-- The language pair, and the transient messages, share this one slot: only one
+                                 of the two is ever visible. -->
+                            <TextBlock x:Name="RunStatusText"
                                        VerticalAlignment="Center"
+                                       Margin="0,0,8,0"
                                        FontFamily="{DynamicResource AppFont}"
                                        FontSize="12.5"
-                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                                       Foreground="{DynamicResource AppTextPrimary}"
+                                       Text="{DynamicResource S.Realtime.Running}"/>
 
-                            <!-- Half-pixel coordinates so the 1px stroke lands on a pixel row rather than
-                                 straddling two. Bottom margin of 1 lifts it off the text box's centre and
-                                 onto the CJK glyphs' optical centre, which sits above it. -->
-                            <!-- Secondary dimmed, rather than the muted brush it wants to be: muted is the
-                                 same #666 the source label just left for being unreadable here, and an
-                                 arrow nobody can see is not restraint, it is a missing arrow. 0.7 lands
-                                 it at 3.7:1 dark / 3.3:1 light — over the 3:1 a 1px non-text stroke
-                                 needs, still a step below the label it separates. -->
-                            <Path VerticalAlignment="Center"
-                                  Margin="5.5,0,5.5,1"
-                                  Width="10.6" Height="9"
-                                  Stretch="None"
-                                  Stroke="{DynamicResource AppTextSecondary}"
-                                  Opacity="0.7"
-                                  StrokeThickness="1"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"
-                                  Data="M0,4.5 H9.1 M6.8,2.6 L9.6,4.5 L6.8,6.4"/>
+                            <!-- Source and target are not two equal labels: the target is the thing on screen
+                                 from here on, so it keeps the primary colour and the source steps back one
+                                 level to secondary. Not to muted — that brush is #666 on a #2A2A2A bar,
+                                 2.4:1, and this is 12.5px CJK floating over whatever the user is watching.
+                                 Secondary reaches 5.9:1 dark / 6.4:1 light and still reads as subordinate. The
+                                 arrow between them is drawn rather than typed — U+2192 is not in the UI font,
+                                 so it used to fall back to a CJK face, which renders it full-width and
+                                 centred on the em box: too much air on both sides and sitting visibly high
+                                 against 12.5px text. A Path has no fallback to lose and its weight and
+                                 height are ours to set. -->
+                            <StackPanel x:Name="LangPairPanel"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0"
+                                        Visibility="Collapsed">
+                                <TextBlock x:Name="SourceLangText"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="12.5"
+                                           Foreground="{DynamicResource AppTextSecondary}"/>
 
-                            <TextBlock x:Name="TargetLangText"
-                                       VerticalAlignment="Center"
-                                       FontFamily="{DynamicResource AppFont}"
-                                       FontSize="12.5"
-                                       Foreground="{DynamicResource AppTextPrimary}"/>
+                                <!-- Half-pixel coordinates so the 1px stroke lands on a pixel row rather than
+                                     straddling two. Bottom margin of 1 lifts it off the text box's centre and
+                                     onto the CJK glyphs' optical centre, which sits above it. -->
+                                <!-- Secondary dimmed, rather than the muted brush it wants to be: muted is the
+                                     same #666 the source label just left for being unreadable here, and an
+                                     arrow nobody can see is not restraint, it is a missing arrow. 0.7 lands
+                                     it at 3.7:1 dark / 3.3:1 light — over the 3:1 a 1px non-text stroke
+                                     needs, still a step below the label it separates. -->
+                                <Path VerticalAlignment="Center"
+                                      Margin="5.5,0,5.5,1"
+                                      Width="10.6" Height="9"
+                                      Stretch="None"
+                                      Stroke="{DynamicResource AppTextSecondary}"
+                                      Opacity="0.7"
+                                      StrokeThickness="1"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Data="M0,4.5 H9.1 M6.8,2.6 L9.6,4.5 L6.8,6.4"/>
+
+                                <TextBlock x:Name="TargetLangText"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="12.5"
+                                           Foreground="{DynamicResource AppTextPrimary}"/>
+                            </StackPanel>
+
+                            <!-- 截圖翻譯, from inside the session. The blocks were framed once and loosely,
+                                 around where text usually appears; whatever falls outside them, or comes out
+                                 wrong at the size they were drawn at, has no second chance here, because the
+                                 session only ever shows its latest reading. A capture is that second chance
+                                 — one frame the user picked, at a size they picked, repeatable until it
+                                 comes out right. Pressing this stands the session down for as long as the
+                                 capture is up and puts it back exactly as it was; see
+                                 Services.Realtime.RealtimeCaptureInterlude.
+
+                                 Leftmost of the four, because the right edge is the one pinned as the bar
+                                 changes width (see OnWindowPosChanging): a button added on this side leaves
+                                 暫停, 編輯 and ✕ exactly where the hand already knows they are.
+
+                                 The mark is the one 截圖翻譯 carries in the nav rail, so this reads as that
+                                 feature rather than as a third session control. Drawn rather than typed for
+                                 the same reason as the two buttons in the edit tray: MDL2 has no framing
+                                 corners, and a Path has no font fallback to lose. -->
+                            <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
+                                 who wants to compare usually finds out while watching, not while framing,
+                                 and the switch moves the translation without stopping anything. Left of
+                                 截圖翻譯, for the reason that one is leftmost: the right edge is pinned, so
+                                 a button added here leaves the others where the hand knows them. -->
+                            <Button x:Name="CompareRunBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    Margin="0,0,4,0"
+                                    Click="CompareBtn_Click">
+                                <Path Width="18" Height="18"
+                                      Data="{StaticResource RealtimeCompareGlyph}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.05"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"/>
+                            </Button>
+
+                            <Button x:Name="CaptureBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    Margin="0,0,4,0"
+                                    ToolTip="{DynamicResource S.Shell.CaptureTranslate}"
+                                    AutomationProperties.Name="{DynamicResource S.Shell.CaptureTranslate}"
+                                    Click="CaptureBtn_Click">
+                                <Path Width="13" Height="13"
+                                      Stretch="Uniform"
+                                      Data="{StaticResource CaptureMarkGeometry}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"/>
+                            </Button>
+
+                            <!-- Icon-only keeps the running capsule compact. Its tooltip names both the
+                                 action and the user's configured keyboard equivalent. The glyph is the
+                                 action, not the state: a running session shows ⏸ because that is what
+                                 pressing it does — the state is said by the dot and the text beside it. -->
+                            <Button x:Name="PauseBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    FontSize="13"
+                                    Content="&#xE769;"
+                                    Margin="0,0,4,0"
+                                    AutomationProperties.Name="{DynamicResource S.Realtime.Pause}"
+                                    Click="PauseBtn_Click"/>
+
+                            <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
+                                 be read at a glance and one word set in a flat button among icons was the
+                                 only thing on it drawing the eye. The pencil is the same one Windows uses
+                                 for edit everywhere else, and the tooltip carries the word it replaced. -->
+                            <Button x:Name="EditBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    FontSize="13"
+                                    Content="&#xE70F;"
+                                    Margin="0,0,4,0"
+                                    ToolTip="{DynamicResource S.Realtime.EditBlocks}"
+                                    AutomationProperties.Name="{DynamicResource S.Realtime.EditBlocks}"
+                                    Click="EditBtn_Click"/>
                         </StackPanel>
 
-                        <!-- 截圖翻譯, from inside the session. The blocks were framed once and loosely,
-                             around where text usually appears; whatever falls outside them, or comes out
-                             wrong at the size they were drawn at, has no second chance here, because the
-                             session only ever shows its latest reading. A capture is that second chance
-                             — one frame the user picked, at a size they picked, repeatable until it
-                             comes out right. Pressing this stands the session down for as long as the
-                             capture is up and puts it back exactly as it was; see
-                             Services.Realtime.RealtimeCaptureInterlude.
+                        <!-- Collapse / expand, immediately left of ✕. The right edge is the one pinned
+                             as the width changes (see OnWindowPosChanging), so in both states this
+                             button sits in the same spot: the press that collapsed the capsule can be
+                             repeated without moving the pointer to open it again. The chevron points
+                             the way the capsule is about to move — › as it folds towards the right
+                             edge, ‹ as it grows back out to the left.
 
-                             Leftmost of the four, because the right edge is the one pinned as the bar
-                             changes width (see OnWindowPosChanging): a button added on this side leaves
-                             暫停, 編輯 and ✕ exactly where the hand already knows they are.
-
-                             The mark is the one 截圖翻譯 carries in the nav rail, so this reads as that
-                             feature rather than as a third session control. Drawn rather than typed for
-                             the same reason as the two buttons in the edit tray: MDL2 has no framing
-                             corners, and a Path has no font fallback to lose. -->
-                        <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
-                             who wants to compare usually finds out while watching, not while framing,
-                             and the switch moves the translation without stopping anything. Left of
-                             截圖翻譯, for the reason that one is leftmost: the right edge is pinned, so
-                             a button added here leaves the others where the hand knows them. -->
-                        <Button x:Name="CompareRunBtn"
+                             Drawn rather than taken from the icon font. The font's chevron was the
+                             thinnest mark on the bar at the size the others are set at, and enlarging
+                             it did not travel: at 14 it is 10.5px tall in Segoe Fluent Icons and 14px
+                             in Segoe MDL2 Assets, which is what Windows 10 falls back to. Drawn, it
+                             is the same on both, 10px tall and centred on the button, with the 1.2
+                             stroke the 截圖翻譯 mark beside it uses. The geometry is set in code —
+                             see ApplyCollapsed. -->
+                        <Button x:Name="CollapseBtn"
                                 Style="{StaticResource ToolbarIconButton}"
-                                Margin="0,0,4,0"
-                                Click="CompareBtn_Click">
-                            <Path Width="18" Height="18"
-                                  Data="{StaticResource RealtimeCompareGlyph}"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.05"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Button>
-
-                        <Button x:Name="CaptureBtn"
-                                Style="{StaticResource ToolbarIconButton}"
-                                Margin="0,0,4,0"
-                                ToolTip="{DynamicResource S.Shell.CaptureTranslate}"
-                                AutomationProperties.Name="{DynamicResource S.Shell.CaptureTranslate}"
-                                Click="CaptureBtn_Click">
-                            <Path Width="13" Height="13"
-                                  Stretch="Uniform"
-                                  Data="{StaticResource CaptureMarkGeometry}"
+                                Click="CollapseBtn_Click">
+                            <Path x:Name="CollapseGlyph"
+                                  Width="14" Height="14"
+                                  Stretch="None"
                                   Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                   StrokeThickness="1.2"
                                   StrokeStartLineCap="Round"
@@ -307,35 +377,21 @@
                                   StrokeLineJoin="Round"/>
                         </Button>
 
-                        <!-- Icon-only keeps the running capsule compact. Its tooltip names both the
-                             action and the user's configured keyboard equivalent. The glyph is the
-                             action, not the state: a running session shows ⏸ because that is what
-                             pressing it does — the state is said by the dot and the text beside it. -->
-                        <Button x:Name="PauseBtn"
+                        <!-- Sets the toggle and ✕ apart from the session's own controls: those two act
+                             on the bar, the rest on the translation. Margins make the gap from the
+                             chevron's ink and from the ✕'s ink the same, 13.15 and 13.25px, measured. -->
+                        <Rectangle Width="1"
+                                   Margin="2,7,4,7"
+                                   Fill="{DynamicResource ToolbarDivider}"/>
+
+                        <!-- E8BB rather than a typed ✕: the ✕ in the UI font came in 0.83px below the
+                             button's centre, measured, which next to the chevron on the collapsed
+                             capsule read as crooked. E8BB lands its ink exactly on the centre at every
+                             size (see TranslationPage); 9.5 matches the old glyph's 9.4px of ink. -->
+                        <Button Content="&#xE8BB;"
                                 Style="{StaticResource ToolbarIconButton}"
                                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                FontSize="13"
-                                Content="&#xE769;"
-                                Margin="0,0,4,0"
-                                AutomationProperties.Name="{DynamicResource S.Realtime.Pause}"
-                                Click="PauseBtn_Click"/>
-
-                        <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
-                             be read at a glance and one word set in a flat button among icons was the
-                             only thing on it drawing the eye. The pencil is the same one Windows uses
-                             for edit everywhere else, and the tooltip carries the word it replaced. -->
-                        <Button x:Name="EditBtn"
-                                Style="{StaticResource ToolbarIconButton}"
-                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                FontSize="13"
-                                Content="&#xE70F;"
-                                Margin="0,0,4,0"
-                                ToolTip="{DynamicResource S.Realtime.EditBlocks}"
-                                AutomationProperties.Name="{DynamicResource S.Realtime.EditBlocks}"
-                                Click="EditBtn_Click"/>
-
-                        <Button Content="✕"
-                                Style="{StaticResource ToolbarIconButton}"
+                                FontSize="9.5"
                                 ToolTip="{DynamicResource S.Realtime.StopSession}"
                                 Click="CloseBtn_Click"/>
                     </StackPanel>

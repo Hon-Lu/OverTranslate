@@ -394,6 +394,8 @@ internal sealed class RealtimeSessionController
         // button is on the bar and on the capsule, and both are this one state.
         control.CompareDisplayToggleRequested += (_, _) => ToggleCompareDisplay();
         control.SetCompareDisplay(_compareDisplay);
+        control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
+        control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
         _control = control;
         control.Show();
 
@@ -865,6 +867,14 @@ internal sealed class RealtimeSessionController
 
         return [.. _blocks.Select((block, index) => new System.Drawing.Point(
             block.Bounds.X + offsets[index].X, block.Bounds.Y + offsets[index].Y))];
+    }
+
+    private static void SaveControlBarCollapsed(bool collapsed)
+    {
+        var settings = SettingsService.Instance;
+        if (settings.Current.Realtime.ControlBarCollapsed == collapsed) return;
+        settings.Current.Realtime.ControlBarCollapsed = collapsed;
+        settings.Save();
     }
 
     /// <summary>

@@ -101,6 +101,10 @@ public partial class RealtimeControlWindow : Window
     // What the session last said through SetBusy; the dot also pulses while the models load.
     private bool _busy;
 
+    // Whether the capsule is folded down to its dot, toggle and ✕. Edit mode ignores it: the bar
+    // there is the framing controls, every one of which is in use while framing.
+    private bool _collapsed;
+
     // Whether the edit layer is still taking the mouse. Owned here rather than by the layer: the
     // button that changes it lives on this bar, and the bar has to say so in its own hint text.
     private bool _crosshairEnabled = true;
@@ -148,6 +152,7 @@ public partial class RealtimeControlWindow : Window
         _screenBounds = screenBounds;
         ApplyPauseButton();
         ApplyCrosshairButton();
+        ApplyCollapsed();
         RestoreText();
 
         _messageTimer = new DispatcherTimer { Interval = MessageDuration };
@@ -197,6 +202,12 @@ public partial class RealtimeControlWindow : Window
     /// to reach whichever layers are up, none of which this window owns.
     /// </summary>
     public event EventHandler? CompareDisplayToggleRequested;
+
+    /// <summary>
+    /// Raised with the capsule's new state when the user collapses or expands it, for the session
+    /// to keep between sittings. Not raised by <see cref="SetCollapsed"/>.
+    /// </summary>
+    public event EventHandler<bool>? CollapsedChanged;
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -491,6 +502,73 @@ public partial class RealtimeControlWindow : Window
         }
     }
 
+    /// <summary>
+    /// Folds the running capsule down to its dot, the expand button and ✕, or opens it again.
+    /// </summary>
+    /// <remarks>
+    /// <para>For a session left running over a game or a video, where even the capsule is in the
+    /// way. What stays is chosen so collapsed is a state the user can live in rather than pass
+    /// through: the dot still pulses and still turns red on a failure, which is the one thing worth
+    /// noticing from across the screen, and ✕ is there so ending the session does not mean opening
+    /// it first. Everything else — the pair, 截圖翻譯, 暫停, 編輯 — is one press away. 暫停 is
+    /// left out on purpose: it has its own shortcut, and a fourth button would undo most of what
+    /// collapsing saves.</para>
+    ///
+    /// <para>The words the capsule would have shown move to its tooltip, so a red dot can still be
+    /// read without expanding. No size animation: this is a layered window, and stepping its size
+    /// frame by frame costs more than the motion is worth. The right edge is pinned as the width
+    /// changes, so the toggle and ✕ stay under the pointer either way.</para>
+    /// </remarks>
+    public void SetCollapsed(bool collapsed)
+    {
+        if (_collapsed == collapsed) return;
+        _collapsed = collapsed;
+        ApplyCollapsed();
+    }
+
+    // In the glyph's 14×14 box: 4.5 wide and 10 tall, centred on (7, 7) so the ink sits on the
+    // button's centre in both directions.
+    private static readonly Geometry CollapseChevron = FreezeGeometry("M4.75,2 L9.25,7 L4.75,12");
+    private static readonly Geometry ExpandChevron = FreezeGeometry("M9.25,2 L4.75,7 L9.25,12");
+
+    private static Geometry FreezeGeometry(string data)
+    {
+        var geometry = Geometry.Parse(data);
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private void ApplyCollapsed()
+    {
+        RunDetails.Visibility = _collapsed ? Visibility.Collapsed : Visibility.Visible;
+
+        // › to fold towards the right edge, ‹ to grow back out to the left.
+        CollapseGlyph.Data = _collapsed ? ExpandChevron : CollapseChevron;
+        var label = LocalizationService.Get(_collapsed ? "S.Realtime.ExpandBar" : "S.Realtime.CollapseBar");
+        CollapseBtn.ToolTip = label;
+        System.Windows.Automation.AutomationProperties.SetName(CollapseBtn, label);
+
+        UpdateCollapsedToolTip();
+    }
+
+    /// <summary>
+    /// Puts whatever the capsule's text slot is saying on the capsule's tooltip while that slot is
+    /// hidden. The buttons keep their own tooltips; this one answers for the dot and the space
+    /// around it.
+    /// </summary>
+    private void UpdateCollapsedToolTip()
+    {
+        if (!_collapsed)
+        {
+            RunPanel.ToolTip = null;
+            return;
+        }
+
+        RunPanel.ToolTip = LangPairPanel.Visibility == Visibility.Visible
+            ? $"{SourceLangText.Text} → {TargetLangText.Text}"
+            : RunStatusText.Text;
+    }
+
     // Spaced either side of the slash: at 12px the bare 1/1 reads as one glyph cluster rather than
     // as a count out of a limit, which is the one thing this line is here to say.
     public void SetBlockCount(int count, int max) => BlockCountText.Text = $"· {count} / {max}";
@@ -554,6 +632,7 @@ public partial class RealtimeControlWindow : Window
             // a glance from across a full-screen window, so a failure is worth spending its colour
             // on; it goes back to accent when the message does.
             SetDotState(kind == RealtimeMessageKind.Failure);
+            UpdateCollapsedToolTip();
         }
 
         _messageShowing = true;
@@ -611,6 +690,7 @@ public partial class RealtimeControlWindow : Window
         RunStatusText.Visibility = showPair ? Visibility.Collapsed : Visibility.Visible;
 
         SetDotState(failed: false);
+        UpdateCollapsedToolTip();
     }
 
     // SetResourceReference rather than an assigned brush: the theme can still be switched from the
@@ -754,6 +834,12 @@ public partial class RealtimeControlWindow : Window
         RestoreText();
 
         CrosshairToggleRequested?.Invoke(this, _crosshairEnabled);
+    }
+
+    private void CollapseBtn_Click(object sender, RoutedEventArgs e)
+    {
+        SetCollapsed(!_collapsed);
+        CollapsedChanged?.Invoke(this, _collapsed);
     }
 
     private void CloseBtn_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
