@@ -457,7 +457,6 @@
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">단축키로 [[캡처 번역]] 시작</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">번역 창 열기</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkeyHint">단축키로 [[번역 창]] 열기</sys:String>
-    <sys:String x:Key="S.Settings.AutoTranslate">자동 번역</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">캡처 번역에서 영역을 다 지정하면 곧바로 번역해, 따로 누를 필요가 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.Startup">시작 프로그램</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Windows 시작 시 자동 실행</sys:String>

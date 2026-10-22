@@ -457,7 +457,6 @@
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">ショートカットキーで[[キャプチャ翻訳]]を開始する</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">翻訳ウィンドウを開く</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkeyHint">ショートカットキーで[[翻訳ウィンドウ]]を開く</sys:String>
-    <sys:String x:Key="S.Settings.AutoTranslate">自動翻訳</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">キャプチャ翻訳で範囲を選び終えた時点ですぐ翻訳し、クリックの手間をなくします。</sys:String>
     <sys:String x:Key="S.Settings.Startup">スタートアップ</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Windows の起動時に自動で開始する</sys:String>

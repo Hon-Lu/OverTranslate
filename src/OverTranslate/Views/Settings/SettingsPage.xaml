@@ -904,28 +904,6 @@
                         <Border Height="1" Margin="0,14,0,12"
                                 Background="{DynamicResource AppSeparator}"/>
 
-                        <!-- 框選完成自動翻譯 -->
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <CheckBox  Grid.Column="0" x:Name="AutoTranslateCheckBox"
-                                       Style="{StaticResource ModernCheckBox}"
-                                       VerticalAlignment="Top"
-                                       ToolTip="{DynamicResource S.Settings.AutoTranslate}"
-                                       Checked="AutoTranslate_Toggled"
-                                       Unchecked="AutoTranslate_Toggled"/>
-                            <TextBlock Grid.Column="1" Text="&#xE774;" Style="{StaticResource OptionGlyph}"/>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="{DynamicResource S.Settings.AutoTranslate}"
-                                           Style="{StaticResource OptionTitle}"/>
-                                <TextBlock Text="{DynamicResource S.Settings.AutoTranslateCheck}"
-                                           Style="{StaticResource OptionDescription}"/>
-                            </StackPanel>
-                        </Grid>
-
                         <!-- 開機自動啟動 -->
                         <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
@@ -1586,8 +1564,15 @@
                      The header opens it. The fold is deliberately not remembered, so nobody returns
                      to this page and finds the app looking like a debugger because of a click weeks
                      ago; what is inside the fold is remembered, because that part is a preference. -->
+                <!-- Hidden, not deleted. Everything in it is also in the capture toolbar's 設定 menu
+                     under 偵錯輔助 — the same settings, written from either place — and that is where
+                     it is any use: the boxes only show on a capture, so switching them here showed
+                     nothing. The markup and its code stay because the card is a design worth having
+                     to hand: a full-width fold with an animated open, which another feature may yet
+                     want. Delete it outright if nothing has by the time it is in the way. -->
                 <Border x:Name="DebugToolsCard"
                         Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2"
+                        Visibility="Collapsed"
                         Style="{StaticResource CardBorder}">
                     <StackPanel>
                         <!-- A ToggleButton and not a clickable Border: the fold is a two-state

@@ -229,7 +229,6 @@ public partial class SettingsPage : UserControl
 
             StartupCheckBox.IsChecked = StartupService.IsEnabled;
 
-            AutoTranslateCheckBox.IsChecked = s.AutoTranslateAfterSelection;
 
             SaveScreenshotCheckBox.IsChecked = s.SaveScreenshotToDisk;
             ScreenshotPathBox.Text = ScreenshotSaveService.ResolveDirectory(s.ScreenshotSavePath);
@@ -586,13 +585,6 @@ public partial class SettingsPage : UserControl
 
     // ── General ──────────────────────────────────────────────────────────────
 
-    private void AutoTranslate_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-        SettingsService.Instance.UpdateCaptureOptions(autoTranslate: AutoTranslateCheckBox.IsChecked == true);
-        FlashSaved();
-    }
-
     // Startup lives in the registry rather than the settings file, so it saves on its own path
     private void Startup_Toggled(object sender, RoutedEventArgs e)
     {
@@ -906,8 +898,9 @@ public partial class SettingsPage : UserControl
     }
 
     /// <summary>
-    /// The capture toolbar's 設定 panel sets the same two switches, and this page may be open
-    /// behind the capture while it does.
+    /// The capture toolbar's 設定 panel sets 儲存截圖 too, and this page may be open behind the
+    /// capture while it does. 自動翻譯 is that panel's alone now: it is a capture behaviour, and the
+    /// toolbar is where it is changed and seen to take effect.
     /// </summary>
     private void OnCaptureOptionsChanged(object? sender, EventArgs e)
     {
@@ -915,7 +908,6 @@ public partial class SettingsPage : UserControl
         _loading = true;
         try
         {
-            AutoTranslateCheckBox.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
             SaveScreenshotCheckBox.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
         }
         finally { _loading = loading; }

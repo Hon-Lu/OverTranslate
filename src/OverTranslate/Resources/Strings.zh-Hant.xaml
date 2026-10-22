@@ -477,7 +477,6 @@
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">按下快捷鍵開始[[截圖翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">開啟翻譯視窗</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkeyHint">按下快捷鍵開啟[[翻譯視窗]]</sys:String>
-    <sys:String x:Key="S.Settings.AutoTranslate">自動翻譯</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">截圖翻譯框選完成時立即翻譯，不需要再手動點擊。</sys:String>
     <sys:String x:Key="S.Settings.Startup">開機啟動</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">開機時自動啟動</sys:String>

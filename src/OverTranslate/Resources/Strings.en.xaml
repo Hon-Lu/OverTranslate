@@ -453,7 +453,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">Press this shortcut to start a [[screen capture translation]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Open window</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkeyHint">Press this shortcut to open the [[translation window]]</sys:String>
-    <sys:String x:Key="S.Settings.AutoTranslate">Auto</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">Translate as soon as a screen capture region is selected, with nothing left to click.</sys:String>
     <sys:String x:Key="S.Settings.Startup">Startup</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Launch when Windows starts</sys:String>
