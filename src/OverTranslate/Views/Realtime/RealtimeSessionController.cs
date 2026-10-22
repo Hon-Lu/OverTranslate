@@ -195,8 +195,48 @@ internal sealed class RealtimeSessionController
             if (_edit is { } editTips) AlwaysOnTop.ReassertToolTips(editTips);
             if (_control is { } controlTips) AlwaysOnTop.ReassertToolTips(controlTips);
 
+            RaiseCompanions();
             LogEditLayerCovered();
         };
+    }
+
+    /// <summary>
+    /// Puts every other window of ours that is on top back above the session's layers: 取詞翻譯's
+    /// popup, 替換翻譯's card, a list one of them has dropped down (#326).
+    /// </summary>
+    /// <remarks>
+    /// The user summoned these over a running session to use them now, and the tick that has just
+    /// raised the block layers would otherwise cover them a second after they opened. Back to front,
+    /// so they keep their order among themselves — a dropped-down list stays over its popup.
+    /// </remarks>
+    private void RaiseCompanions()
+    {
+        var layers = Volatile.Read(ref _overlayHandles);
+        var visible = OwnTopLevelWindows.Visible();
+
+        for (var i = visible.Count - 1; i >= 0; i--)
+        {
+            if (!layers.Contains(visible[i]) && OwnTopLevelWindows.IsTopmost(visible[i]))
+                AlwaysOnTop.Reassert(visible[i]);
+        }
+    }
+
+    /// <summary>
+    /// What a monitor capture is told to leave out: the session's own layers, then every other window
+    /// of ours on the screen.
+    /// </summary>
+    /// <remarks>
+    /// The others are 取詞翻譯's popup, 替換翻譯's card and anything they drop down, which may open
+    /// over a running session (#326) — usually inside a block, since the text they act on is the text
+    /// being watched. Left in the frames, the session would read their words and lay a translation of
+    /// them over the very popup showing it. Asked of the system on every poll rather than recorded as
+    /// they open, so no window of ours can be missing from the list for even one poll. In handle order
+    /// after the layers, so the backend sees the same list for the same windows whatever their z-order.
+    /// </remarks>
+    internal static IReadOnlyList<IntPtr> ExclusionList(IReadOnlyList<IntPtr> layers, IEnumerable<IntPtr> ownVisible)
+    {
+        var others = ownVisible.Where(hwnd => !layers.Contains(hwnd)).Distinct().Order().ToList();
+        return others.Count == 0 ? layers : [.. layers, .. others];
     }
 
     /// <summary>
@@ -1032,7 +1072,7 @@ internal sealed class RealtimeSessionController
         // same rectangle.
         var backend = WgcMonitorCaptureBackend.TryCreate(
             () => WgcMonitorCaptureBackend.MonitorFor(screenBounds),
-            () => Volatile.Read(ref _overlayHandles));
+            () => ExclusionList(Volatile.Read(ref _overlayHandles), OwnTopLevelWindows.Visible()));
 
         if (backend is null) return null;
 

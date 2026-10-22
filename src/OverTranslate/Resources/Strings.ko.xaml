@@ -249,7 +249,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">시스템 트레이로 최소화했습니다. {0} 키로 캡처 번역을 시작할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">설정한 단축키</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">실시간 번역 실행 중</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">실시간 번역을 종료한 뒤 팝업 번역을 사용하세요.</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">블록 편집 중에는 팝업 번역을 사용할 수 없습니다.</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">API 키가 없습니다</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">설정에서 API 키를 입력하세요.</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">인식 실패</sys:String>
