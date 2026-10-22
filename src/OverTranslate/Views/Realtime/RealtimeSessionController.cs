@@ -220,6 +220,12 @@ internal sealed class RealtimeSessionController
     /// flicker that came and went. Raising these first and placing the layers behind them never puts
     /// the layers in front at all. Back to front, so they keep their order among themselves — a
     /// dropped-down list stays over its popup.
+    ///
+    /// Windows owned by one of the layers are left out. Windows keeps an owned window above its owner
+    /// by itself, and raising it brings the owner up too, to just beneath it — so raising one owned
+    /// by a block layer put that layer back over the popup until the layers were placed behind it
+    /// again, the same flicker by another route. Visual Studio's in-app toolbar, on every window of a
+    /// debugged build, is one.
     /// </remarks>
     private IntPtr RaiseCompanions()
     {
@@ -229,7 +235,9 @@ internal sealed class RealtimeSessionController
 
         for (var i = visible.Count - 1; i >= 0; i--)
         {
-            if (layers.Contains(visible[i]) || !OwnTopLevelWindows.IsTopmost(visible[i])) continue;
+            if (layers.Contains(visible[i])
+                || !OwnTopLevelWindows.IsTopmost(visible[i])
+                || OwnTopLevelWindows.IsOwnedByAny(visible[i], layers)) continue;
 
             AlwaysOnTop.Reassert(visible[i]);
             if (backmost == IntPtr.Zero) backmost = visible[i];

@@ -39,6 +39,30 @@ internal static class OwnTopLevelWindows
     public static bool IsTopmost(IntPtr hwnd) =>
         (GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64() & WS_EX_TOPMOST) != 0;
 
+    /// <summary>
+    /// Whether <paramref name="hwnd"/> is owned, directly or further up, by one of
+    /// <paramref name="owners"/>.
+    /// </summary>
+    /// <remarks>
+    /// The chain rather than having an owner at all: WPF gives every window shown with
+    /// ShowInTaskbar off a hidden owner of its own, so 取詞翻譯's popup is owned too, by nothing
+    /// that matters.
+    /// </remarks>
+    public static bool IsOwnedByAny(IntPtr hwnd, IReadOnlyList<IntPtr> owners)
+    {
+        for (var owner = GetWindow(hwnd, GW_OWNER); owner != IntPtr.Zero; owner = GetWindow(owner, GW_OWNER))
+        {
+            if (owners.Contains(owner)) return true;
+        }
+
+        return false;
+    }
+
+    private const uint GW_OWNER = 4;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindow(IntPtr hwnd, uint command);
+
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
