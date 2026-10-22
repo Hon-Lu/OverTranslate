@@ -1,24 +1,25 @@
 ---
 name: git-release-overtranslate
-description: "Write OverTranslate GitHub release notes from the commits between two tags, for end users rather than developers. Two modes: A drafts the Traditional Chinese body for review, B renders the agreed body into the five-language release template as a file. Examples: \"整理 2.2.1-beta.1 到 2.2.1-beta.2 的更新內容\", \"幫我寫這個版本的發布說明\", \"內容確定了，產出最終版\""
+description: "Write OverTranslate GitHub release notes from the commits between two tags, for end users rather than developers. Three modes: A drafts the Traditional Chinese body for review, B renders the agreed body into the five-language release template as a file, C (publish) replaces the CI placeholder in the GitHub release body with that file. Examples: \"整理 2.2.1-beta.1 到 2.2.1-beta.2 的更新內容\", \"幫我寫這個版本的發布說明\", \"內容確定了，產出最終版\", \"發布到 GitHub\""
 ---
 
 # OverTranslate 發布說明
 
-從兩個 tag 之間的 commit 產出 GitHub Release 的內文。分兩趟走：先只寫繁體中文正文給使用者過目，改到定案，再一次產出五語系完整版。
+從兩個 tag 之間的 commit 產出 GitHub Release 的內文。分兩趟走：先只寫繁體中文正文給使用者過目，改到定案，再一次產出五語系完整版。完整版可以再用 publish 換進 GitHub Release 的內文。
 
 **這份內文是給一般使用者看的，不是給開發者看的。** 讀的人只想知道「更新後多了什麼、哪裡變好了」，不在乎怎麼做到的、為什麼會壞、什麼條件下才生效。commit 是開發者的語言，照著它寫一定太長、太技術；下面所有規則都是從這一點推出來的，拿不準時就回來問這一句。
 
 路徑都以 repo 根目錄為準。
 
-## 判斷現在是 A 還是 B
+## 判斷現在是哪個模式
 
 | 使用者說的話 | 模式 |
 |---|---|
 | 「整理 X 到 Y 的內容」「幫我寫發布說明」——第一次提到這個版本 | **A** |
 | 「就這樣」「沒問題了」「產出最終版」——正文已經討論過 | **B** |
+| 「publish」「發布」「更新到 GitHub」——完整版已經產出 | **C（publish）** |
 
-同一個版本的 B 一定發生在 A 之後。使用者若直接要求最終版而正文還沒定案，先跑 A 讓他們看過。
+同一個版本的 B 一定發生在 A 之後，C 一定發生在 B 之後。使用者若直接要求最終版而正文還沒定案，先跑 A 讓他們看過。
 
 ## 模式 A：繁體中文正文
 
@@ -183,11 +184,44 @@ python .codex/skills/git-release-overtranslate/build.py \
 
 **只回報檔案路徑與一句話摘要，不要把整份內容印在對話裡。** 那是一份要複製貼上的長文，印出來只是讓使用者滾過去兩次。
 
+## 模式 C：publish（換進 GitHub Release）
+
+把 B 產出的完整版換進 GitHub Release 的內文。這是對外公開的動作，**只在使用者明確說要發布時才做**。
+
+CI 壓 tag 後建立 release，內文只有佔位與出處（`.github/workflows/release.yml` 的 `$notes`）：
+
+```
+## TODO
+- TODO
+
+---
+
+- commit: <sha>
+- 觸發：push
+```
+
+publish 把最後一條 `---` 以上整段換成完整版（`template.md` 本身就以 `---` 結尾），出處原樣保留。
+
+```bash
+python .codex/skills/git-release-overtranslate/publish.py --version 2.2.1-beta.2 --notes <B 的輸出檔> --check
+python .codex/skills/git-release-overtranslate/publish.py --version 2.2.1-beta.2 --notes <B 的輸出檔>
+```
+
+先跑 `--check`：確認遠端有這個 tag、release 已經建立、內文還是佔位、完整版的標題對得上版本，全部通過才拿掉 `--check` 送出。
+
+**只准改內文。** 腳本只送 `body` 一個欄位，送出前後比對標題、pre-release／draft、tag 與每個 asset，有任何變動就回報失敗。不要用 `gh release edit`、`gh release upload` 或其他方式碰 release——標題、pre-release 標記、assets 一律不動。
+
+- **release 還沒建立**：tag 推上去後 CI 還要打包十幾分鐘。告訴使用者等 CI 跑完，不要自己建 release。
+- **內文已經不是佔位**：之前發過一次。只有使用者明確要改寫已發布的內文時才加 `--replace`。
+
+交出去：回報腳本印出的 release 網址與那行確認訊息就好。
+
 ## Gotchas
 
 - **commit 有的東西不代表使用者有**。做完又用旗標關掉的功能，在 `git log` 裡是十幾個 feat，在使用者手上不存在。`2.2.1-beta.2` 的「一般／介面」切換就是這樣——照著 commit 寫會宣傳一個打不開的功能，只有讀目標 tag 的原始碼才看得出來。
 - **`collect.py` 濾掉的是類型不是內容**。它擋 `chore:`／`test:`／`docs:`／`refactor:` 開頭與提到內部工具的 commit，但 `fix:` 一律留著——即使那條 fix 是修一個從沒發布過的功能，使用者根本沒遇過那個 bug。判斷還是你的事。
 - **合併分支數會比 PR 數多**。同一個 PR 分支若分兩次合併（例如 #151 與 #152 都是 `feat/ui-languages-zh-hans-ja-ko`），清單裡會出現兩列，是同一件事。
+- **CI 的佔位與 publish 綁在一起**。`publish.py` 認的是「最後一條 `---` 以下有 `- commit:`」與 `## TODO`／`- TODO` 佔位。改 `release.yml` 的 `$notes` 時要一起改它，不然 publish 會停下來說找不到要換的段落。
 - **`build.py` 輸出 LF**。樣板檔本身是 CRLF（照 repo 慣例），但貼進 GitHub release body 的內容用 CRLF 會在程式碼區塊裡多出空行，所以組檔時轉成 LF。
 - **樣板只有 `template.md` 一份**。要改安裝章節或加語言就改它，不要在對話裡重打——五段 CJK 樣板手抄一定會壞掉一個字，而且看起來完全正常。
 - **這個 skill 有兩份**：`.claude/skills/git-release-overtranslate/` 與 `.codex/skills/git-release-overtranslate/`，內容相同，只有指令裡的路徑不同。**改了一份就要改另一份**——兩份都進版控，沒同步的那份會安靜地照舊行為做事。
@@ -200,4 +234,7 @@ python .codex/skills/git-release-overtranslate/build.py \
 | `缺少正文：…body.zh-Hans.md` | 五個語系少寫一個。檔名要完全相符，`zh-Hant`／`zh-Hans` 的大小寫也算。 |
 | `正文還留著 TODO` | 樣板的佔位字沒換掉。 |
 | `body.en.md 的結構與 body.zh-Hant.md 不一致` | 某個語系漏了一整段或漏了一條，訊息會印出兩邊的段數與每段條數，對一下就知道差在哪。 |
+| `tag … 在，但 release 還沒建立` | CI 還在打包，等它跑完再 publish。 |
+| `內文已經不是佔位` | 這個 release 之前 publish 過。要改寫已發布的內文才加 `--replace`。 |
+| `內文以外的東西變了` | 不該發生——腳本只送 body。代表有人或 CI 同時在改這個 release，到 GitHub 上手動確認。 |
 | `UnicodeDecodeError` 出現在 `collect.py` | 不會發生了，`run()` 已固定用 UTF-8 解 git 輸出。若你另外寫了 git 呼叫，記得比照辦理——Windows 的 Python 預設會挑到 cp950，中文 commit 訊息直接炸。 |
