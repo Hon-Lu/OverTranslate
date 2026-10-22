@@ -466,6 +466,7 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">僅適用於可輸入文字的欄位，非輸入區域則無法貼上。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻譯設定</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此設定僅適用於替換翻譯，不會影響截圖翻譯、文字翻譯或即時翻譯。</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">自動判斷選取文字的語言，在指定的兩種語言之間互譯</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 單一按鍵只能是 F1–F24、Pause 或 Scroll Lock，其他按鍵請搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般設定</sys:String>

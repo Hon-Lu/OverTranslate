@@ -78,11 +78,7 @@ internal static class QuickTranslateFlow
 
         try
         {
-            var (results, _) = await AppServices.Translation.TranslateAsync(
-                [new OcrTextBlock(source, new Rect())],
-                LanguageData.GetValidSourceCode(settings.QuickTranslate.SourceLanguage),
-                LanguageData.GetValidTargetCode(settings.QuickTranslate.TargetLanguage),
-                settings.ApiKey);
+            var (results, _) = await TranslateAsync(source, settings);
 
             if (seq != _seq) return;
 
@@ -124,6 +120,48 @@ internal static class QuickTranslateFlow
                 LanguageData.GetProviderDisplay(settings.Provider),
                 ex.Message));
         }
+    }
+
+    /// <summary>Translates the selection along the fixed pair, or under 雙語互譯 when it is on.</summary>
+    /// <remarks>
+    /// 雙語互譯 here is 取詞翻譯's, rule for rule — see <see cref="BilingualPair"/>. The source side
+    /// stays 自動 so that a wrong guess can only ever produce the other of the user's own two
+    /// languages; and where the engine then reports the text was in the language the guess sent it
+    /// to, the round trip is spent again before anything is pasted. That matters more here than in
+    /// the popup: there a wrong answer is something to read past, here it is the user's own text
+    /// replaced with the same thing in the same language.
+    /// </remarks>
+    private static async Task<(List<TranslatedBlock> Blocks, string DetectedLang)> TranslateAsync(
+        string source, AppSettings settings)
+    {
+        var quickTranslate = settings.QuickTranslate;
+        var block = new OcrTextBlock(source, new Rect());
+
+        if (!quickTranslate.BilingualEnabled)
+        {
+            return await AppServices.Translation.TranslateAsync(
+                [block],
+                LanguageData.GetValidSourceCode(quickTranslate.SourceLanguage),
+                LanguageData.GetValidTargetCode(quickTranslate.TargetLanguage),
+                settings.ApiKey);
+        }
+
+        var pair = BilingualPair.Load(quickTranslate.BilingualFirstLanguage,
+                                      quickTranslate.BilingualSecondLanguage);
+        var target = pair.TargetFor(
+            BilingualDirection.ResolveSource(source, pair.First, pair.Second));
+
+        var answer = await AppServices.Translation.TranslateAsync(
+            [block], LanguageData.AutomaticSourceLanguage, target, settings.ApiKey);
+
+        var corrected = pair.Correct(answer.DetectedLang, target, out _);
+        if (corrected is null) return answer;
+
+        Log.Debug("替換翻譯 is translating again into {Target}: the service read the selection as {Detected}",
+            corrected, answer.DetectedLang);
+
+        return await AppServices.Translation.TranslateAsync(
+            [block], LanguageData.AutomaticSourceLanguage, corrected, settings.ApiKey);
     }
 
     /// <summary>

@@ -448,6 +448,7 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">글자를 입력할 수 있는 칸에서만 동작하며, 입력란이 아니면 붙여넣을 수 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">번역 설정</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">이 언어 설정은 대치 번역에만 적용되며 스크린샷, 텍스트 또는 실시간 번역에는 영향을 주지 않습니다.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">선택한 텍스트의 언어를 판별해 지정한 두 언어 사이에서 번역합니다</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 단독으로 쓸 수 있는 키는 F1–F24, Pause, Scroll Lock뿐입니다. 다른 키는 Ctrl／Alt／Shift와 함께 사용하세요</sys:String>
 
     <sys:String x:Key="S.Settings.General">일반</sys:String>

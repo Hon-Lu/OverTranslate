@@ -444,6 +444,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Only in fields that accept typed text; nothing can be pasted outside an input area.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Translation settings</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">These languages apply only to in-place translation, without affecting screenshot, text or real-time translation.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">Detects the language of the selected text and translates between the two languages you choose</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ A single key can only be F1–F24, Pause or Scroll Lock — other keys need Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">General</sys:String>
