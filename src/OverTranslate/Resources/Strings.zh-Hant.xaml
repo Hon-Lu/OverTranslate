@@ -457,8 +457,8 @@
     <sys:String x:Key="S.Settings.HotkeyKinds">快捷鍵可使用 Ctrl／Alt／Shift 搭配其他按鍵，也支援單一功能鍵、滑鼠按鍵以及遊戲手把。</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKindsExample">例如：Ctrl+Alt+A、Shift+A、F1、滑鼠中鍵／側鍵、XInput...等。</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">即時翻譯</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">啟動[[即時翻譯]]，翻譯中可暫停或繼續</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下會開始框選，框選時再按一次開始翻譯；翻譯中按下可暫停或繼續。(可用於顯示原文)</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷鍵開始框選翻譯</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷鍵開啟[[取詞翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>

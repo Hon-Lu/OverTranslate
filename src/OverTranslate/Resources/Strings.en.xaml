@@ -435,8 +435,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKinds">A shortcut can pair Ctrl / Alt / Shift with another key, and also supports a single function key, a mouse button, or a gamepad button.</sys:String>
     <sys:String x:Key="S.Settings.HotkeyKindsExample">For example: Ctrl+Alt+A, Shift+A, F1, middle / side mouse buttons, XInput... etc.</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Start [[realtime translation]], then pause or resume it</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Press it once to select blocks, again to start translating, and while translating to pause or resume. (a way to read the original text)</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to select blocks and translate</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>

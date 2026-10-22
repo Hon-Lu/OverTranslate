@@ -816,7 +816,7 @@
 
                                     <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
                                         <Path Style="{StaticResource DrawnMark}"
-                                              Data="{StaticResource PlayPauseMarkGeometry}"
+                                              Data="{StaticResource RealtimeMarkGeometry}"
                                               Stroke="{DynamicResource AppAccent}"/>
                                     </Border>
 

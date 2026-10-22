@@ -351,29 +351,17 @@
          for you. -->
     <Geometry x:Key="TextTranslateMarkGeometry">M4.2,1.2 H11.8 A3,3 0 0 1 14.8,4.2 V11.8 A3,3 0 0 1 11.8,14.8 H4.2 A3,3 0 0 1 1.2,11.8 V4.2 A3,3 0 0 1 4.2,1.2 Z M5.6,5.5 H10.4 M8,5.5 V10.5</Geometry>
 
-    <!-- 即時翻譯: a running waveform. The one mark in the set that says "still going" rather than
-         "happens once", which is the only thing separating this from the other three. -->
-    <Geometry x:Key="RealtimeMarkGeometry">M3,5.8 V10.2 M5.5,3.4 V12.6 M8,1.9 V14.1 M10.5,4.4 V11.6 M13,6.4 V9.6</Geometry>
+    <!-- 即時翻譯: 截圖翻譯's corners around a play mark (#324). The corners say what the feature
+         works on — a framed part of the screen, the same as capture — and the play mark is what
+         sets it apart: capture happens once, this keeps going once started. It is also what the
+         shortcut does, a frame and then a start, which is why the one mark serves the nav rail and
+         the 設定 row both. It replaced a waveform here and a play-and-pause mark there, the second
+         of which stopped being true once the key started sessions as well as pausing them.
 
-    <!-- 暫停/繼續. Segoe has Play (E768) and Pause (E769) and nothing that shows both, but the
-         設定 row names one shortcut that does either, so neither glyph on its own is honest. The
-         gap after the triangle is wider than the one between the bars, so the mark reads as two
-         symbols rather than one crowded shape.
-
-         The triangle's corners are curved in the geometry rather than left to StrokeLineJoin,
-         which only ever rounds by half the stroke width — 0.6 here, against the 1.4 corners of
-         截圖翻譯 and the 3.0 of 文字翻譯. Read next to those, a join-rounded triangle is the one
-         hard shape in the set. Curve radius 1.2 softens the apex without blunting it — 1.8
-         was tried and goes blobby, and a filled triangle reads as a foreign body in a set
-         that is otherwise all outline.
-
-         The triangle is 7.0 wide and 11.6 tall, and the bars are held to 10.2 — shorter than
-         the triangle rather than level with it. A triangle carries less optical weight than a
-         bar of the same height, so drawing all three to one height makes the play half look
-         undersized next to the pause half. The whole mark still sits a little shorter than the
-         other four, which stand about 13: play-pause is a wide shape, and matching their
-         height outright would make it the loudest row in the list. -->
-    <Geometry x:Key="PlayPauseMarkGeometry">M3.57,3.83 L7.49,7.08 Q8.6,8 7.49,8.92 L3.57,12.17 Q1.6,13.8 1.6,11.25 L1.6,4.75 Q1.6,2.2 3.57,3.83 Z M11.9,2.9 V13.1 M14.5,2.9 V13.1</Geometry>
+         The triangle's corners are curved in the geometry rather than left to StrokeLineJoin, which
+         only rounds by half the stroke width: next to the corners' 1.4 radius a join-rounded
+         triangle is the one hard shape in the set. -->
+    <Geometry x:Key="RealtimeMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M6.6,5.6 Q6.1,5.3 6.1,5.9 V10.1 Q6.1,10.7 6.6,10.4 L10.1,8.4 Q10.6,8 10.1,7.6 Z</Geometry>
 
     <!-- ═══════════════════════════════════════════ -->
     <!--  SERVICE TILE                               -->
