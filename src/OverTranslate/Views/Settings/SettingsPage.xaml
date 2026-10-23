@@ -585,6 +585,10 @@
                                                 <StackPanel Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,1,0,0">
                                                     <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideSharedNote}" Style="{StaticResource HotkeyGuideText}"/>
                                                     <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideSharedExample}" Style="{StaticResource HotkeyGuideNote}"/>
+                                                    <!-- The double-press keys read as examples, the way the other rows' keys do, so this
+                                                         says they are the whole list — here, beside the reason: they are shared, and a
+                                                         shared key pressed twice runs the program's own action twice too. -->
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideSharedDouble}" Style="{StaticResource HotkeyGuideNote}"/>
                                                 </StackPanel>
                                             </Grid>
                                     </Border>
@@ -1156,7 +1160,9 @@
                                    Style="{StaticResource FieldLabel}"
                                    Margin="0,0,0,7"/>
                         <ComboBox x:Name="UiLanguageBox"
+                                  ctl:ComboBoxSearch.IsEnabled="True"
                                   Style="{StaticResource ModernComboBox}"
+                                  AutomationProperties.Name="{DynamicResource S.Settings.UiLanguage}"
                                   SelectedValuePath="Code"
                                   SelectionChanged="UiLanguageBox_SelectionChanged"/>
 
