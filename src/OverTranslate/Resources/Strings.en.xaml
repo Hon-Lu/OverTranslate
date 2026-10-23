@@ -627,7 +627,7 @@ same settings, the same seed usually gives the same output.</sys:String>
 
     <!-- Settings page, composed in code-behind -->
     <sys:String x:Key="S.Settings.Saved">✓ Saved</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">Press a keyboard key, a middle / side mouse button, or a gamepad button…</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">Press a shortcut…</sys:String>
     <sys:String x:Key="S.Settings.MouseMiddle">Middle Mouse</sys:String>
     <sys:String x:Key="S.Settings.MouseX1">Mouse Side 1</sys:String>
     <sys:String x:Key="S.Settings.MouseX2">Mouse Side 2</sys:String>

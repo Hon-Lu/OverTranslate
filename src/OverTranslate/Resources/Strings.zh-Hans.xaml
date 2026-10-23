@@ -625,7 +625,7 @@
 
     <!-- Settings page, composed in code-behind -->
     <sys:String x:Key="S.Settings.Saved">✓ 已保存</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">请按键盘按键、鼠标中键／侧键或游戏手柄按键…</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">请按下快捷键…</sys:String>
     <sys:String x:Key="S.Settings.MouseMiddle">鼠标中键</sys:String>
     <sys:String x:Key="S.Settings.MouseX1">鼠标侧键 1</sys:String>
     <sys:String x:Key="S.Settings.MouseX2">鼠标侧键 2</sys:String>

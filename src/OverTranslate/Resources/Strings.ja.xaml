@@ -629,7 +629,7 @@
 
     <!-- Settings page, composed in code-behind -->
     <sys:String x:Key="S.Settings.Saved">✓ 保存しました</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">キーボードのキー、マウスの中ボタン／サイドボタン、またはゲームパッドのボタンを押してください…</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">ショートカットを入力…</sys:String>
     <sys:String x:Key="S.Settings.MouseMiddle">マウス中ボタン</sys:String>
     <sys:String x:Key="S.Settings.MouseX1">マウスサイドボタン 1</sys:String>
     <sys:String x:Key="S.Settings.MouseX2">マウスサイドボタン 2</sys:String>

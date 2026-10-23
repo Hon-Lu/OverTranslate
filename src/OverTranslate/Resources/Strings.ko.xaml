@@ -629,7 +629,7 @@
 
     <!-- Settings page, composed in code-behind -->
     <sys:String x:Key="S.Settings.Saved">✓ 저장됨</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">키보드 키, 마우스 가운데／옆 버튼, 게임패드 버튼을 눌러 주세요…</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">단축키를 누르세요…</sys:String>
     <sys:String x:Key="S.Settings.MouseMiddle">마우스 가운데 버튼</sys:String>
     <sys:String x:Key="S.Settings.MouseX1">마우스 옆 버튼 1</sys:String>
     <sys:String x:Key="S.Settings.MouseX2">마우스 옆 버튼 2</sys:String>
