@@ -341,8 +341,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.CollapseBar">Collapse the floating bar</sys:String>
     <sys:String x:Key="S.Realtime.ExpandBar">Expand the floating bar</sys:String>
     <sys:String x:Key="S.Realtime.ChangeSourceLanguage">Change source language</sys:String>
-    <sys:String x:Key="S.Realtime.ChangeTargetLanguage">Change translation language</sys:String>
-    <sys:String x:Key="S.Realtime.SourceMenuHeader">Source language</sys:String>
+    <sys:String x:Key="S.Realtime.ChangeTargetLanguage">Change target language</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">No results for “{0}”</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">Pause framing and use the app underneath</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Resume framing</sys:String>

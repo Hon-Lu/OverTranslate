@@ -346,7 +346,6 @@
     <sys:String x:Key="S.Realtime.ExpandBar">フローティングバーを展開</sys:String>
     <sys:String x:Key="S.Realtime.ChangeSourceLanguage">翻訳元の言語を変更</sys:String>
     <sys:String x:Key="S.Realtime.ChangeTargetLanguage">翻訳先の言語を変更</sys:String>
-    <sys:String x:Key="S.Realtime.SourceMenuHeader">翻訳元の言語</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">「{0}」は見つかりません</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">範囲選択を止めて下のアプリを操作する</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">範囲選択を再開</sys:String>

@@ -359,9 +359,8 @@
     <sys:String x:Key="S.Realtime.EditBlocks">編輯翻譯區塊</sys:String>
     <sys:String x:Key="S.Realtime.CollapseBar">收合浮動視窗列</sys:String>
     <sys:String x:Key="S.Realtime.ExpandBar">展開浮動視窗列</sys:String>
-    <sys:String x:Key="S.Realtime.ChangeSourceLanguage">更換原文語言</sys:String>
-    <sys:String x:Key="S.Realtime.ChangeTargetLanguage">更換翻譯語言</sys:String>
-    <sys:String x:Key="S.Realtime.SourceMenuHeader">原文語言</sys:String>
+    <sys:String x:Key="S.Realtime.ChangeSourceLanguage">更換來源語言</sys:String>
+    <sys:String x:Key="S.Realtime.ChangeTargetLanguage">更換目標語言</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">找不到「{0}」</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">暫停框選，改為操作下方畫面</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">恢復框選</sys:String>

@@ -82,7 +82,7 @@ internal partial class RealtimeLanguageMenu : Window
         // Five names need no search box, and without one the list needs a word to say what it is a
         // list of: the capsule shows the pair without labels.
         HeaderText.Visibility = searchable ? Visibility.Collapsed : Visibility.Visible;
-        HeaderText.Text = LocalizationService.Get("S.Realtime.SourceMenuHeader");
+        HeaderText.Text = LocalizationService.Get("S.Realtime.SourceLanguage");
 
         foreach (var entry in _entries)
         {

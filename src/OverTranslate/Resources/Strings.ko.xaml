@@ -346,7 +346,6 @@
     <sys:String x:Key="S.Realtime.ExpandBar">플로팅 바 펼치기</sys:String>
     <sys:String x:Key="S.Realtime.ChangeSourceLanguage">원본 언어 변경</sys:String>
     <sys:String x:Key="S.Realtime.ChangeTargetLanguage">번역할 언어 변경</sys:String>
-    <sys:String x:Key="S.Realtime.SourceMenuHeader">원본 언어</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">“{0}”에 대한 결과가 없습니다</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">영역 선택을 멈추고 아래 화면 조작하기</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">영역 선택 다시 시작</sys:String>
