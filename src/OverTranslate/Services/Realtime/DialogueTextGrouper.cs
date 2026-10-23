@@ -56,6 +56,11 @@ internal static class DialogueTextGrouper
                     joinsRow = false;
                     refused = "row-items";
                 }
+                else if (joinsRow && ColumnStart(segments[^1][^1].LayoutBounds, block.LayoutBounds, row, rows))
+                {
+                    joinsRow = false;
+                    refused = "column-gutter";
+                }
                 if (segments.Count > 0) RecordRow(decisions, segments[^1][^1], block, joinsRow, refused);
                 if (!joinsRow) segments.Add([block]);
                 else segments[^1].Add(block);
@@ -192,6 +197,35 @@ internal static class DialogueTextGrouper
         return itemRows.Any(items =>
             Math.Max(items.Top - r.Bottom, r.Top - items.Bottom) <= Math.Max(items.Height, r.Height) * 1.5 &&
             Math.Min(items.Right, r.Right) - Math.Max(items.Left, r.Left) >= items.Width * 0.5);
+    }
+
+    /// <summary>
+    /// The right column of a two-column list: the next box starts where, in at least three rows
+    /// nearby, a box starts after a wide gap too.
+    /// </summary>
+    /// <remarks>
+    /// A status screen's "label value" pairs sit 1.33–1.43 heights from the next column's, inside
+    /// the 1.5-height join. One aligned row is not enough: a visual novel's quick menu has a G and
+    /// a C icon above it, and the C lines up with QUIT, which would cut the menu in two. Three rows
+    /// changed no corpus frame; two would have done as well.
+    /// </remarks>
+    private static bool ColumnStart(Rect a, Rect b, List<OcrTextBlock> row, List<List<OcrTextBlock>> rows)
+    {
+        double height = Math.Max(a.Height, b.Height);
+        if (b.Left - a.Right < height * 0.9) return false;
+        int aligned = 0;
+        foreach (var other in rows)
+        {
+            if (ReferenceEquals(other, row)) continue;
+            for (int i = 1; i < other.Count; i++)
+            {
+                Rect p = other[i - 1].LayoutBounds, c = other[i].LayoutBounds;
+                if (Math.Abs(c.Left - b.Left) > height * 0.5) continue;
+                if (Math.Max(c.Top - b.Bottom, b.Top - c.Bottom) > height * 4) continue;
+                if (c.Left - p.Right >= Math.Max(p.Height, c.Height) * 0.9) { aligned++; break; }
+            }
+        }
+        return aligned >= 3;
     }
 
     private static bool HasLetter(string text) => text.Any(char.IsLetter);

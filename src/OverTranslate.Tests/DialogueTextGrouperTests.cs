@@ -178,6 +178,22 @@ public class DialogueTextGrouperTests
         Assert.Contains("開発度は下げることも可能", texts);
     }
 
+    // The top of the same status screen: a two-column list whose right column the other rows
+    // reach across a wide gap. main read 巫女のお勤め4回絶頂142回 as one item.
+    [Fact]
+    public void RightColumnOfAListStartsItsOwnItem()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("性防率", 65, 75, 96, 28), Block("97%", 170, 77, 53, 28), Block("ピストン数24759回", 272, 79, 211, 25),
+            Block("射精された量4637ml", 269, 99, 224, 29), Block("発情回数 9回", 58, 120, 137, 30),
+            Block("最大チン長285mm", 271, 122, 194, 27), Block("巫女のお勤め", 58, 142, 135, 30), Block("4回", 192, 144, 40, 28),
+            Block("絶頂142回", 269, 144, 135, 27), Block("売春 2回", 60, 168, 96, 26), Block("膣内出し123回", 271, 168, 172, 25),
+        ]).Select(b => b.Text).ToList();
+        Assert.Contains("巫女のお勤め4回", texts);
+        Assert.Contains("絶頂142回", texts);
+    }
+
     // A scoreboard's letterless 26/3/19 over TK / K / A (screen-subtitle-ko), with no slot labels
     // anywhere: grouped as before.
     [Fact]
