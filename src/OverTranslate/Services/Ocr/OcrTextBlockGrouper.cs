@@ -261,10 +261,7 @@ internal static class OcrTextBlockGrouper
         // stray word to the right of a sentence missing its ending. The word's box is short because
         // the word has no descender, which is a property of the letters, not of whether they belong
         // to the line.
-        var heightRatio = Math.Min(previous.LayoutBounds.Height, current.LayoutBounds.Height) /
-                          Math.Max(previous.LayoutBounds.Height, current.LayoutBounds.Height);
-
-        return heightRatio >= MinimumRowHeightRatio &&
+        return LineMeasure.HeightRatio(previous.LayoutBounds, current.LayoutBounds) >= MinimumRowHeightRatio &&
                VerticalOverlapRate(previous, current) >= MinimumRowVerticalOverlap;
     }
 
@@ -342,17 +339,16 @@ internal static class OcrTextBlockGrouper
     {
         var height = (left.LayoutBounds.Height + right.LayoutBounds.Height) / 2;
         if (!SharesVisualRow(left, right) || NormalizedGap(left, right) > 1.2 ||
-            left.LayoutBounds.Width < left.LayoutBounds.Height * 8 ||
-            right.LayoutBounds.Width < right.LayoutBounds.Height * 8)
+            !LineMeasure.Spans(left.LayoutBounds, LineMeasure.WrappedLineMinAspect) ||
+            !LineMeasure.Spans(right.LayoutBounds, LineMeasure.WrappedLineMinAspect))
             return false;
         var row = Rect.Union(left.LayoutBounds, right.LayoutBounds);
         return blocks.Any(next =>
             next.LayoutBounds.Top >= row.Bottom - height * 0.2 &&
-            next.LayoutBounds.Top - row.Top <= height * 1.65 &&
+            next.LayoutBounds.Top - row.Top <= height * SpanningRowMaxAdvance &&
             Math.Abs(next.LayoutBounds.Left - row.Left) <= height * 0.35 &&
             Math.Abs(next.LayoutBounds.Right - row.Right) <= height * 0.75 &&
-            next.LayoutBounds.Height >= height * 0.75 &&
-            next.LayoutBounds.Height <= height * 1.35);
+            LineMeasure.WithinSizeBand(next.LayoutBounds.Height, height));
     }
 
     // Use several original visual rows, not the result of speculative merges. A complete
@@ -366,7 +362,7 @@ internal static class OcrTextBlockGrouper
         if (NormalizedGap(left, right) > 1.5 || !SharesVisualRow(left, right)) return false;
         var bounds = RowBounds(row);
         var height = bounds.Height;
-        if (bounds.Width < height * 12 || row.Any(b => b.LayoutScript != OcrLayoutScript.Latin)) return false;
+        if (!LineMeasure.Spans(bounds, LineMeasure.ParagraphRowMinAspect) || row.Any(b => b.LayoutScript != OcrLayoutScript.Latin)) return false;
         var cut = (left.LayoutBounds.Right + right.LayoutBounds.Left) / 2;
         var supporting = new List<List<OcrTextBlock>>();
         foreach (var other in rows)
@@ -374,7 +370,7 @@ internal static class OcrTextBlockGrouper
             if (ReferenceEquals(row, other)) continue;
             var box = RowBounds(other);
             if (other.Any(b => b.LayoutScript != OcrLayoutScript.Latin) ||
-                box.Height < height * 0.75 || box.Height > height * 1.35 ||
+                !LineMeasure.WithinSizeBand(box.Height, height) ||
                 Math.Abs(box.Top - bounds.Top) < height * 0.5 ||
                 Math.Abs(box.Top - bounds.Top) > height * 2.5 ||
                 Math.Abs(box.Left - bounds.Left) > height * 0.5 ||
@@ -390,7 +386,7 @@ internal static class OcrTextBlockGrouper
         if (supporting.Count < 2 || !supporting.Any(r => r.Count == 1)) return false;
         var tops = supporting.Select(RowBounds).Append(bounds).OrderBy(b => b.Top).ToArray();
         for (var i = 1; i < tops.Length; i++)
-            if (tops[i].Top - tops[i - 1].Top > Math.Min(tops[i].Height, tops[i - 1].Height) * 1.45)
+            if (tops[i].Top - tops[i - 1].Top > Math.Min(tops[i].Height, tops[i - 1].Height) * ParagraphRowMaxAdvance)
                 return false;
         return true;
 
@@ -622,7 +618,8 @@ internal static class OcrTextBlockGrouper
         var avgHeight = (previous.LayoutBounds.Height + current.LayoutBounds.Height) / 2.0;
         var verticalGap = current.LayoutBounds.Y - previous.LayoutBounds.Bottom;
 
-        return verticalGap >= -avgHeight * 0.5 && verticalGap <= Math.Max(avgHeight * 0.8, 10);
+        return verticalGap >= -avgHeight * MaxLineOverlap &&
+               verticalGap <= Math.Max(avgHeight * MaxLineGap, MaxLineGapFloorPixels);
     }
 
     /// <summary>
@@ -863,7 +860,7 @@ internal static class OcrTextBlockGrouper
             previous.LayoutScript != current.LayoutScript &&
             previous.LayoutBounds.Width < current.LayoutBounds.Width &&
             previous.LayoutInkHeight is > 0 && current.LayoutInkHeight is > 0 &&
-            current.LayoutInkHeight < previous.LayoutInkHeight * 0.85)
+            current.LayoutInkHeight < previous.LayoutInkHeight * VisibleHeadingInkRatio)
             return (false, "visible heading size");
         if (sizeRatio < Math.Min(MinTextSizeRatio, profile.TightlySetMinTextSizeRatio) && !paragraphFinal)
             return (false, "text size");
@@ -883,7 +880,7 @@ internal static class OcrTextBlockGrouper
         // than on either edge. Those row-mates are what this really has to keep out; the same-line
         // merge takes most of them first, and this is the backstop for the rest.
         var verticalGap = current.LayoutBounds.Y - (previous.LayoutBounds.Y + previous.LayoutBounds.Height);
-        if (verticalGap < -avgHeight * 0.5 || verticalGap > Math.Max(avgHeight * 0.8, 10))
+        if (verticalGap < -avgHeight * MaxLineOverlap || verticalGap > Math.Max(avgHeight * MaxLineGap, MaxLineGapFloorPixels))
             return (false, "vertical gap");
 
         var japaneseProse = IsJapaneseProseContinuation(previous, current, profile);
@@ -1057,21 +1054,6 @@ internal static class OcrTextBlockGrouper
             : (false, "leading");
     }
 
-    /// <summary>
-    /// Whether a line is long enough that running out of room — and so wrapping — is plausible.
-    /// </summary>
-    /// <remarks>
-    /// <para>Measured in line heights rather than characters so that one number serves every script:
-    /// a CJK line runs about one character per line height, a Latin one about two. So this asks for
-    /// roughly eight CJK characters, or sixteen Latin ones.</para>
-    ///
-    /// <para>Across the 329-image corpus the two populations are far apart: every genuinely wrapped
-    /// sentence reached 16.6 and every stacked label stopped at 6.8, with nothing in between. The
-    /// threshold sits at the low end of that empty band on purpose. Letting a label through costs
-    /// two crowded words in one bubble; keeping a real wrapped sentence apart costs the translator
-    /// half a sentence, which is the far worse failure — it is the whole of #74.</para>
-    /// </remarks>
-    private const double WrappedLineMinAspect = 8.0;
 
     /// <summary>
     /// The most leading a shorter following line can have and still be the end of the paragraph
@@ -1154,7 +1136,7 @@ internal static class OcrTextBlockGrouper
             !previous.Text.Any(LayoutScriptDetection.IsKana) ||
             !current.Text.Any(LayoutScriptDetection.IsKana) ||
             !IsLongEnoughToHaveWrapped(previous) ||
-            current.LayoutBounds.Width < current.LayoutBounds.Height * 6 ||
+            !LineMeasure.Spans(current.LayoutBounds, LineMeasure.SubstantialLineMinAspect) ||
             !(EndsWithSentenceTerminator(previous.Text.Trim()) ||
               EndsWithContinuationPunctuation(previous.Text.Trim())))
             return false;
@@ -1176,12 +1158,12 @@ internal static class OcrTextBlockGrouper
     {
         if (!(profile.TakesProseEvidence &&
         previous.LayoutScript == OcrLayoutScript.Latin && current.LayoutScript == OcrLayoutScript.Latin &&
-        previous.LayoutBounds.Width >= previous.LayoutBounds.Height * 20 &&
-        current.LayoutBounds.Width >= current.LayoutBounds.Height * 8 &&
+        LineMeasure.Spans(previous.LayoutBounds, LineMeasure.ProseLineMinAspect) &&
+        LineMeasure.Spans(current.LayoutBounds, LineMeasure.WrappedLineMinAspect) &&
         Math.Abs(previous.LayoutBounds.Left - current.LayoutBounds.Left) <=
             Math.Max(3, Math.Min(previous.LayoutBounds.Height, current.LayoutBounds.Height) * 0.2) &&
         TextSizeRatio(previous, current) >= MinTextSizeRatio &&
-        LineAdvanceRatio(previous, current) <= 1.65))
+        LineAdvanceRatio(previous, current) <= LooseProseMaxAdvance))
             return false;
 
         // Learn the body leading from comparable neighbours in this column. A larger gap
@@ -1195,15 +1177,16 @@ internal static class OcrTextBlockGrouper
         {
             var upper = column[i - 1];
             var lower = column[i];
-            if (upper.LayoutBounds.Width < upper.LayoutBounds.Height * 8 ||
-                LineAdvanceRatio(upper, lower) < 0.8 || LineAdvanceRatio(upper, lower) > 1.8)
+            if (!LineMeasure.Spans(upper.LayoutBounds, LineMeasure.WrappedLineMinAspect) ||
+                LineAdvanceRatio(upper, lower) < ColumnLeadingSampleMin ||
+                LineAdvanceRatio(upper, lower) > ColumnLeadingSampleMax)
                 continue;
             advances.Add(lower.LayoutBounds.Top - upper.LayoutBounds.Top);
         }
         if (advances.Count < 3) return false;
         advances.Sort();
         var typical = advances[(advances.Count - 1) / 4];
-        return current.LayoutBounds.Top - previous.LayoutBounds.Top <= typical * 1.2;
+        return current.LayoutBounds.Top - previous.LayoutBounds.Top <= typical * ColumnLeadingSlack;
     }
 
     // Use the established paragraph, not just an ambiguous isolated pair.
@@ -1224,11 +1207,10 @@ internal static class OcrTextBlockGrouper
             current.LayoutBounds.Width > previous.LayoutBounds.Width * 0.5 ||
             Math.Abs(previous.LayoutBounds.Left - current.LayoutBounds.Left) > previous.LayoutBounds.Height * 0.2)
             return false;
-        var heightRatio = Math.Min(previous.LayoutBounds.Height, current.LayoutBounds.Height) /
-            Math.Max(previous.LayoutBounds.Height, current.LayoutBounds.Height);
+        var heightRatio = LineMeasure.HeightRatio(previous.LayoutBounds, current.LayoutBounds);
         var lastAdvance = previous.LayoutBounds.Top - before.LayoutBounds.Top;
         var advance = current.LayoutBounds.Top - previous.LayoutBounds.Top;
-        return heightRatio >= 0.85 && TextSizeRatio(before, previous) >= MinTextSizeRatio &&
+        return heightRatio >= ParagraphFinalHeightRatio && TextSizeRatio(before, previous) >= MinTextSizeRatio &&
             lastAdvance > 0 && advance >= lastAdvance * 0.85 && advance <= lastAdvance * 1.15;
     }
 
@@ -1325,7 +1307,7 @@ internal static class OcrTextBlockGrouper
     /// names as the thing this must keep out.</para>
     ///
     /// <para>What is left to ask them is length, and it is not a new threshold: it is
-    /// <see cref="WrappedLineMinAspect"/>, asked of the two lines added together. A balloon's line
+    /// <see cref="LineMeasure.WrappedLineMinAspect"/>, asked of the two lines added together. A balloon's line
     /// is short because the balloon is narrow, so no single line of one reaches that figure; the
     /// text as a whole does. Measured, the two populations are on opposite sides of it without the
     /// number being chosen to put them there — every pair the comic sets and the subtitle and prose
@@ -1341,7 +1323,8 @@ internal static class OcrTextBlockGrouper
     /// on the other side.</para>
     /// </remarks>
     private static bool WouldHaveWrappedTogether(OcrTextBlock previous, OcrTextBlock current) =>
-        Aspect(previous) + Aspect(current) >= WrappedLineMinAspect;
+        LineMeasure.Aspect(previous.LayoutBounds) + LineMeasure.Aspect(current.LayoutBounds) >=
+        LineMeasure.WrappedLineMinAspect;
 
     /// <summary>
     /// The most leading two lines can have and still read as set solid, one under the other.
@@ -1461,12 +1444,50 @@ internal static class OcrTextBlockGrouper
     /// </remarks>
     private const double SetSolidMaxCentringOffset = 0.20;
 
-    private static bool IsLongEnoughToHaveWrapped(OcrTextBlock line) =>
-        Aspect(line) >= WrappedLineMinAspect;
+    // The leading limits below are each the figure their own rule was measured with. Several sit
+    // close together and answer nearly the same question — is this pair inside a paragraph's
+    // leading — but they were named here without being merged: merging them moves verdicts, and
+    // that is a measured change of its own rather than a tidy-up.
 
-    /// <summary>A line's length in its own line heights, which is the unit the length test uses.</summary>
-    private static double Aspect(OcrTextBlock line) =>
-        line.LayoutBounds.Height > 0 ? line.LayoutBounds.Width / line.LayoutBounds.Height : 0;
+    /// <summary>
+    /// How far two lines may overlap and still be one under the other, and how wide the gap between
+    /// them may be, in line heights; with a pixel floor for small text. See <see cref="JudgeNextLine"/>.
+    /// </summary>
+    private const double MaxLineOverlap = 0.5;
+
+    /// <inheritdoc cref="MaxLineOverlap"/>
+    private const double MaxLineGap = 0.8;
+
+    /// <inheritdoc cref="MaxLineOverlap"/>
+    private const double MaxLineGapFloorPixels = 10;
+
+    /// <summary>The furthest a line spanning both halves of a cut row may sit below it, in line heights.</summary>
+    private const double SpanningRowMaxAdvance = 1.65;
+
+    /// <summary>The widest step between the rows that vouch for a cut row being one line of a paragraph.</summary>
+    private const double ParagraphRowMaxAdvance = 1.45;
+
+    /// <summary>The loosest leading a body line may have and still be asked about its column's own.</summary>
+    private const double LooseProseMaxAdvance = 1.65;
+
+    /// <summary>Which steps down a column count as samples of its leading, in line heights.</summary>
+    private const double ColumnLeadingSampleMin = 0.8;
+
+    /// <inheritdoc cref="ColumnLeadingSampleMin"/>
+    private const double ColumnLeadingSampleMax = 1.8;
+
+    /// <summary>How far past its column's typical leading a body line may sit and still continue it.</summary>
+    private const double ColumnLeadingSlack = 1.2;
+
+    /// <summary>How much smaller a different-script line's ink may be before the line above is a heading over it.</summary>
+    private const double VisibleHeadingInkRatio = 0.85;
+
+    /// <summary>How close in box height a paragraph's short last line has to be to the line above it.</summary>
+    private const double ParagraphFinalHeightRatio = 0.85;
+
+    /// <inheritdoc cref="LineMeasure.WrappedLineMinAspect"/>
+    private static bool IsLongEnoughToHaveWrapped(OcrTextBlock line) =>
+        LineMeasure.Aspect(line.LayoutBounds) >= LineMeasure.WrappedLineMinAspect;
 
     private static bool HasUnclosedDelimiter(string text) =>
         Count(text, '「') > Count(text, '」') ||
