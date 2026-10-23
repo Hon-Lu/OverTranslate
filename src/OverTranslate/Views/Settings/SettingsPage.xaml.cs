@@ -1689,7 +1689,8 @@ public partial class SettingsPage : UserControl
 
         // Ctrl+C+C rather than Ctrl+C ×2: the plus says Ctrl stays held, where "×2" reads as Ctrl+C
         // pressed twice over — and letting go of Ctrl in between is exactly what does not count.
-        var display = hit.Kind == ShortcutInputKind.CtrlCC ? "Ctrl+C+C" : "Ctrl ×2";
+        // Ctrl+Ctrl follows suit; a key cannot be held twice, so it can only mean pressed twice.
+        var display = hit.Kind == ShortcutInputKind.CtrlCC ? "Ctrl+C+C" : "Ctrl+Ctrl";
         CommitShortcut(recording, ShortcutTrigger.KeySequence(hit.Kind), display);
         return true;
     }
