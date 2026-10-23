@@ -51,7 +51,7 @@ internal static class DialogueTextGrouper
             {
                 var joinsRow = segments.Count > 0 && Adjacent(segments[^1][^1].LayoutBounds, block.LayoutBounds);
                 string? refused = null;
-                if (joinsRow && items && SpacedItems(segments[^1][^1].LayoutBounds, block.LayoutBounds))
+                if (joinsRow && items && SpacedItems(segments[^1][^1], block))
                 {
                     joinsRow = false;
                     refused = "row-items";
@@ -174,8 +174,15 @@ internal static class DialogueTextGrouper
     // Measured labels reach 1.95 heights; a 0.9-height gap is under the narrowest label gap, 0.95.
     private static bool ShortItem(Rect r) => r.Width <= r.Height * 2.2;
 
-    private static bool SpacedItems(Rect a, Rect b) =>
-        ShortItem(a) && ShortItem(b) && b.Left - a.Right >= Math.Max(a.Height, b.Height) * 0.9;
+    // Both items have to be words. A status row's HP and EP are short and set apart from their
+    // numbers too (Dragon Quest XI, Trails of Cold Steel), and cutting a label from its value turns
+    // one stat into two meaningless pieces.
+    private static bool SpacedItems(OcrTextBlock left, OcrTextBlock right)
+    {
+        Rect a = left.LayoutBounds, b = right.LayoutBounds;
+        return ShortItem(a) && ShortItem(b) && HasLetter(left.Text) && HasLetter(right.Text) &&
+            b.Left - a.Right >= Math.Max(a.Height, b.Height) * 0.9;
+    }
 
     private static Rect Span(List<OcrTextBlock> row) => row.Select(b => b.LayoutBounds).Aggregate(Rect.Union);
 

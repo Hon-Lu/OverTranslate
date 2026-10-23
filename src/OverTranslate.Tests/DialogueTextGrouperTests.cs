@@ -163,6 +163,26 @@ public class DialogueTextGrouperTests
         ], OcrService.GroupRealtime([.. frame], 839, RealtimeBlockMode.Subtitle).Select(b => b.Text));
     }
 
+    // A party status row (web-row-items/ja-dq11-2d-status-row-region.png): names over HP and MP,
+    // each label short and set apart from its number. The labels are not cut from their values.
+    [Fact]
+    public void StatLabelsStayWithTheirValues()
+    {
+        OcrTextBlock[] frame =
+        [
+            Block("ベロ二カ", 627, 3, 135, 45, 0.82), Block("カミュ", 401, 6, 106, 43), Block("イレブ", 151, 8, 104, 37),
+            Block("セーニヤ", 861, 9, 137, 39, 0.94), Block("HP", 593, 52, 88, 42, 0.98), Block("379", 217, 55, 92, 41, 1.0),
+            Block(":315", 425, 56, 125, 38), Block("253", 693, 56, 97, 39, 0.84), Block("HP", 835, 57, 67, 36, 1.0),
+            Block("HP", 118, 58, 68, 36, 1.0), Block("33", 935, 58, 65, 36, 0.97), Block("HP", 358, 59, 65, 33, 1.0),
+            Block("31", 986, 60, 44, 31, 0.93), Block("279", 692, 103, 95, 39, 1.0), Block("MP", 348, 105, 75, 37, 1.0),
+            Block("25", 933, 105, 67, 36, 1.0), Block("：145", 175, 106, 137, 33, 0.95), Block(") 6", 506, 106, 42, 31, 0.92),
+            Block("lMP :", 575, 106, 117, 33, 0.82), Block("MP", 836, 106, 65, 32, 1.0), Block("MP", 114, 107, 72, 31, 1.0),
+        ];
+        Assert.Equal(
+            ["ベロ二カ", "カミュ", "イレブ", "セーニヤ", "HP 379 HP:315 HP 253 HP 33 31", ") 6 lMP :279 MP 25", "MP：145 MP"],
+            OcrService.GroupRealtime([.. frame], 144, RealtimeBlockMode.Subtitle).Select(b => b.Text));
+    }
+
     // The same status screen at a larger scale: the slot labels already part, but the one-box row
     // of percentages was stacked with the note under it.
     [Fact]
