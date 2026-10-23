@@ -1156,7 +1156,9 @@
                                    Style="{StaticResource FieldLabel}"
                                    Margin="0,0,0,7"/>
                         <ComboBox x:Name="UiLanguageBox"
+                                  ctl:ComboBoxSearch.IsEnabled="True"
                                   Style="{StaticResource ModernComboBox}"
+                                  AutomationProperties.Name="{DynamicResource S.Settings.UiLanguage}"
                                   SelectedValuePath="Code"
                                   SelectionChanged="UiLanguageBox_SelectionChanged"/>
 

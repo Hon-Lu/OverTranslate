@@ -1,5 +1,6 @@
 using OverTranslate.Controls;
 using OverTranslate.Models;
+using OverTranslate.Services;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -82,5 +83,26 @@ public class ComboBoxSearchTests
 
         foreach (var lang in all)
             Assert.True(ComboBoxSearch.Matches(lang, lang.Code), lang.Code);
+    }
+
+    // The interface-language picker shows each language only in itself, so the search has to reach
+    // it by the names that are not on screen: its English name and its code.
+    [Theory]
+    [InlineData("日本語")]
+    [InlineData("japanese")]
+    [InlineData("ja")]
+    public void Matches_FindsAnInterfaceLanguageByNamesItDoesNotShow(string query)
+    {
+        var japanese = LocalizationService.Options.Single(o => o.Code == LocalizationService.Japanese);
+        Assert.True(ComboBoxSearch.Matches(japanese, query));
+    }
+
+    // A key that does not resolve comes back as itself, and the search would quietly lose the name
+    // in the reader's own language (日文 in a Chinese interface) without anything else failing.
+    [Fact]
+    public void EveryInterfaceLanguageHasANameInTheInterface()
+    {
+        foreach (var option in LocalizationService.Options)
+            Assert.NotEqual(option.NameKey, LocalizationService.Get(option.NameKey));
     }
 }

@@ -15,7 +15,25 @@ namespace OverTranslate.Services;
 /// able to find their way back out, and "繁體中文" is legible from an English interface in a way
 /// that "Traditional Chinese" is not from a Chinese one.
 /// </remarks>
-public record UiLanguageOption(string Code, string Display);
+/// <param name="NameKey">
+/// Resource key for the language's name in the interface's current language, the same S.Lang.* key
+/// the translation pickers use. Only searched, never shown — see <see cref="SearchText"/>.
+/// </param>
+/// <param name="English">Its English name, also only searched.</param>
+public record UiLanguageOption(string Code, string Display, string NameKey, string English)
+    : OverTranslate.Models.ISearchableItem
+{
+    /// <summary>
+    /// The code, the name written in itself, its name in the current interface language and its
+    /// English name.
+    /// </summary>
+    /// <remarks>
+    /// The list shows each language only in itself, which is the one spelling a searcher is least
+    /// likely to type: someone in a Chinese interface looking for Japanese types 日文, not 日本語, and
+    /// an English one types "japanese".
+    /// </remarks>
+    public string SearchText => $"{Code} {Display} {LocalizationService.Get(NameKey)} {English}";
+}
 
 /// <summary>
 /// The UI language, swapped exactly the way <see cref="ThemeService"/> swaps colours.
@@ -51,12 +69,12 @@ public static class LocalizationService
     /// </remarks>
     public static readonly List<UiLanguageOption> Options =
     [
-        new(TraditionalChinese, "繁體中文"),
-        new(SimplifiedChinese,  "简体中文"),
-        new(English,            "English"),
-        new(Japanese,           "日本語"),
-        new(Korean,             "한국어"),
-        new(Russian,            "Русский"),
+        new(TraditionalChinese, "繁體中文", "S.Lang.TraditionalChinese", "Traditional Chinese"),
+        new(SimplifiedChinese,  "简体中文", "S.Lang.SimplifiedChinese",  "Simplified Chinese"),
+        new(English,            "English",  "S.Lang.English",            "English"),
+        new(Japanese,           "日本語",   "S.Lang.Japanese",           "Japanese"),
+        new(Korean,             "한국어",   "S.Lang.Korean",             "Korean"),
+        new(Russian,            "Русский",  "S.Lang.Russian",            "Russian"),
     ];
 
     /// <summary>The dictionary each language is served by, and the set of languages that exist.</summary>
