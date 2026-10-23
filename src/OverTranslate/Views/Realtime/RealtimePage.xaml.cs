@@ -109,11 +109,6 @@ public partial class RealtimePage : UserControl
     /// </summary>
     private const TranslationProvider DefaultProvider = TranslationProvider.Microsoft;
 
-    private const int MinBlocks = RealtimeSettings.MinBlockCount;
-    private const int MaxBlocks = RealtimeSettings.MaxBlockCount;
-
-    private int _blockCount = MinBlocks;
-
     private bool _windowsLoaded;
 
     // True while this page is filling the capture pickers from stored values rather than the user
@@ -253,10 +248,6 @@ public partial class RealtimePage : UserControl
             ProviderBox.SelectedValue = DefaultProvider;
         if (ProviderBox.SelectedValue == null) ProviderBox.SelectedIndex = 0;
         RenderProviderHint();
-
-        // Clamped rather than trusted: this is a settings-file value and the stepper's range is the
-        // one that has to hold. RenderBlockCount runs later, from Reload.
-        _blockCount = Math.Clamp(settings.Realtime.BlockCount, MinBlocks, MaxBlocks);
 
         // Before the restore below, which needs to know whether the saved mode is one this machine
         // can still honour.
@@ -784,7 +775,6 @@ public partial class RealtimePage : UserControl
         var request = RealtimeQuickStart.Build(
             SettingsService.Instance.Current,
             framingBounds,
-            _blockCount,
             LanguageData.GetValidOcrSourceCode(sourceLanguage),
             LanguageData.GetValidTargetCode(TgtLangBox.SelectedValue as string),
             ProviderBox.SelectedValue as TranslationProvider? ?? DefaultProvider,
@@ -1380,45 +1370,6 @@ public partial class RealtimePage : UserControl
             && string.Equals(realtime.BorderColor, defaults.BorderColor, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void BlockCountDown_Click(object sender, RoutedEventArgs e) => StepBlockCount(-1);
-
-    private void BlockCountUp_Click(object sender, RoutedEventArgs e) => StepBlockCount(+1);
-
-    private void StepBlockCount(int delta)
-    {
-        var next = Math.Clamp(_blockCount + delta, MinBlocks, MaxBlocks);
-        if (next == _blockCount) return;
-
-        _blockCount = next;
-
-        // Kept, unlike the rest of a sitting: the shortcut has to offer the same number of blocks as
-        // this stepper and cannot read it off a page that is not open. See AppSettings.
-        SaveTranslationPreference(settings => settings.Realtime.BlockCount = next);
-
-        // The blocks kept from the last sitting were drawn to fill a different count, so they are
-        // no longer an answer to the question being asked. Dropped as the count moves rather than
-        // checked when they are offered back, so the user sees the rule they were given.
-        RealtimeSessionController.Instance.ForgetBlocks();
-
-        RenderBlockCount();
-    }
-
-    /// <summary>
-    /// Shows the count and switches off whichever button would do nothing.
-    /// </summary>
-    /// <remarks>
-    /// Disabled rather than silently ignored at the ends: a button that still looks pressable and
-    /// then does nothing reads as the application having missed the click.
-    /// </remarks>
-    private void RenderBlockCount()
-    {
-        var active = RealtimeSessionController.Instance.IsActive;
-
-        BlockCountText.Text = _blockCount.ToString();
-        BlockCountDown.IsEnabled = !active && _blockCount > MinBlocks;
-        BlockCountUp.IsEnabled = !active && _blockCount < MaxBlocks;
-    }
-
     private void OnSessionStateChanged(object? sender, EventArgs e) =>
         Dispatcher.BeginInvoke(RenderState);
 
@@ -1435,7 +1386,6 @@ public partial class RealtimePage : UserControl
         TgtLangBox.IsEnabled = !active;
         ProviderBox.IsEnabled = !active;
         ScreenBox.IsEnabled = !active;
-        RenderBlockCount();
 
         // Nothing can start without a source language, so the button says so by being unavailable
         // rather than by refusing after the fact, and the field keeps its prompt until answered.

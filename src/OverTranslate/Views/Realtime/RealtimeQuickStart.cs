@@ -78,7 +78,6 @@ internal readonly record struct RealtimeQuickStart(RealtimeStartRequest? Request
             Build(
                 settings,
                 bounds,
-                realtime.BlockCount,
                 source,
                 LanguageData.GetValidTargetCode(realtime.TargetLanguage),
                 realtime.Provider,
@@ -98,7 +97,6 @@ internal readonly record struct RealtimeQuickStart(RealtimeStartRequest? Request
     public static RealtimeStartRequest Build(
         AppSettings settings,
         System.Drawing.Rectangle bounds,
-        int blockCount,
         string sourceLanguage,
         string targetLanguage,
         TranslationProvider provider,
@@ -108,7 +106,6 @@ internal readonly record struct RealtimeQuickStart(RealtimeStartRequest? Request
         var realtime = settings.Realtime;
         return new RealtimeStartRequest(
             bounds,
-            Math.Clamp(blockCount, RealtimeSettings.MinBlockCount, RealtimeSettings.MaxBlockCount),
             sourceLanguage,
             targetLanguage,
             provider,

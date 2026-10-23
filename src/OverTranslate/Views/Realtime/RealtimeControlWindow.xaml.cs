@@ -570,8 +570,11 @@ public partial class RealtimeControlWindow : Window
     }
 
     // Spaced either side of the slash: at 12px the bare 1/1 reads as one glyph cluster rather than
-    // as a count out of a limit, which is the one thing this line is here to say.
-    public void SetBlockCount(int count, int max) => BlockCountText.Text = $"· {count} / {max}";
+    // as a count out of a limit, which is the one thing this line is here to say. Named, too: the
+    // limit is no longer one the user set on the page, so a bare 1 / 3 could as well be a step or a
+    // page number.
+    public void SetBlockCount(int count, int max) =>
+        BlockCountText.Text = "· " + LocalizationService.Format("S.Realtime.BlockCountProgress", count, max);
 
     /// <summary>Pulses the status dot while a recognition or translation pass is in flight.</summary>
     public void SetBusy(bool busy)

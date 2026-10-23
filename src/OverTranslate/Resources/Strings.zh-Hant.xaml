@@ -293,10 +293,7 @@
     <sys:String x:Key="S.Realtime.Provider">翻譯服務</sys:String>
 
     <sys:String x:Key="S.Realtime.ScreenHint">即時翻譯目前只支援單一螢幕畫面。</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCount">區塊數量</sys:String>
-    <sys:String x:Key="S.Realtime.DecreaseBlocks">減少區塊數量</sys:String>
-    <sys:String x:Key="S.Realtime.IncreaseBlocks">增加區塊數量</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCountHint">最多可同時建立 3 個翻譯區塊。</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCountProgress">區塊 {0} / {1}</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">顯示外觀</sys:String>
     <sys:String x:Key="S.Realtime.Preview">預覽</sys:String>
@@ -393,9 +390,6 @@
     <sys:String x:Key="S.Realtime.Step2Label">步驟 2</sys:String>
     <sys:String x:Key="S.Realtime.Step2Name">選擇畫面或視窗</sys:String>
     <sys:String x:Key="S.Realtime.Step2Desc">依照上一步選的方式，指定要擷取的螢幕或視窗。</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Label">步驟 3</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Name">設定翻譯區塊</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Desc">設定畫面中要進行翻譯的區塊數量。</sys:String>
     <sys:String x:Key="S.Realtime.ScreenPrompt">選擇要擷取的螢幕。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPromptLine">選擇要擷取的視窗。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPrompt">請選擇視窗</sys:String>
