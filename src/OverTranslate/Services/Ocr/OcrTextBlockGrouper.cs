@@ -413,10 +413,56 @@ internal static class OcrTextBlockGrouper
 
         // The floor is for text too small for a ratio to mean much. It was 18px, which at the sizes
         // it applied to was itself wide enough to cross a menu.
-        return horizontalGap <= Math.Max(avgHeight * threshold, MinimumRowGapPixels)
-            ? (true, "same row")
-            : (false, "horizontal gap");
+        if (horizontalGap > Math.Max(avgHeight * threshold, MinimumRowGapPixels))
+            return (false, "horizontal gap");
+
+        return IsSizeBreakInRow(previous, current, horizontalGap, avgHeight)
+            ? (false, "different size")
+            : (true, "same row");
     }
+
+    /// <summary>
+    /// Whether two neighbours on one row, a word space or more apart, are set at sizes too
+    /// different to be words of one line.
+    /// </summary>
+    /// <remarks>
+    /// <para>The gap test alone cannot see these, because what sits between them is often an icon
+    /// the detector did not read — a dropdown arrow, a key glyph, a stat symbol — which brings the
+    /// space down to word spacing. A game screen's title beside its explanation (「装備」 over 「装備する
+    /// 武器・ジーンの確認や変更を行います」, 0.57 of its size), two stat values in different
+    /// faces (1159 and 20583, 0.53 to 0.59) and a site's nav entries ("ToolsAbout" beside "Blog",
+    /// 0.52) were all joined into one string.</para>
+    ///
+    /// <para>Only past <see cref="SizeBreakMinGap"/> of a line height. Pieces the detector cut out
+    /// of one cell overlap or touch — "Lvl 100" and its level badge "50", "Rec." and "200", sizes
+    /// 0.41 to 0.76 of each other, all at a gap of 0.10 or less — and they belong together. Across
+    /// the hand-marked captures (the 59 UI ones and the 37 marked earlier) no correct same-row join
+    /// sat both further apart than that and under <see cref="SizeBreakMaxRatio"/>; the nearest, "①
+    /// Lvl 100" beside "M. Lvl 50 Eugen", is 0.98 the size.</para>
+    ///
+    /// <para>A Latin word under <see cref="SizeBreakMinGlyphs"/> letters is not compared at all: its
+    /// size is estimated from the box and a letter count too small to average anything, so "to"
+    /// beside "session" in a line the detector boxed word by word reads as a different size when
+    /// it is not. A CJK box is square to its characters, so two of them are enough.</para>
+    /// </remarks>
+    private static bool IsSizeBreakInRow(
+        OcrTextBlock previous, OcrTextBlock current, double horizontalGap, double avgHeight) =>
+        horizontalGap > avgHeight * SizeBreakMinGap &&
+        HasSteadySize(previous) && HasSteadySize(current) &&
+        TextSizeRatio(previous, current) < SizeBreakMaxRatio;
+
+    private static bool HasSteadySize(OcrTextBlock line) =>
+        line.LayoutScript != OcrLayoutScript.Latin ||
+        line.Text.Count(c => !char.IsWhiteSpace(c)) >= SizeBreakMinGlyphs;
+
+    /// <inheritdoc cref="IsSizeBreakInRow"/>
+    private const double SizeBreakMinGap = 0.15;
+
+    /// <inheritdoc cref="IsSizeBreakInRow"/>
+    private const double SizeBreakMaxRatio = 0.7;
+
+    /// <inheritdoc cref="IsSizeBreakInRow"/>
+    private const int SizeBreakMinGlyphs = 4;
 
     /// <summary>
     /// How close in text size two lines have to be before one can be the other wrapping.

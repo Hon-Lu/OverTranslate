@@ -431,6 +431,42 @@ public class OcrTextBlockGrouperTests
         Assert.Equal(2, grouped.Count);
     }
 
+    /// <summary>
+    /// A game screen's title and the explanation beside it, an icon's width apart: word spacing,
+    /// but one is set at 0.57 the size of the other. Coordinates and size estimates from the capture.
+    /// </summary>
+    [Fact]
+    public void TitleBesideASmallerExplanation_IsNotOneLine()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("装備", new Rect(107, 15, 105, 61), OcrLayoutScript.Cjk, 50.02),
+            Measured("装備する武器・ジーンの確認や変更を行います", new Rect(224, 39, 510, 36), OcrLayoutScript.Cjk, 28.66),
+        };
+
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.General).Count);
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.Realtime).Count);
+    }
+
+    /// <summary>
+    /// The level and the badge the detector cut out of the same cell overlap, so they stay one
+    /// however different their sizes are.
+    /// </summary>
+    [Fact]
+    public void PiecesOfOneCell_StillJoinAtAnySize()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("Lvl 100", new Rect(493, 209, 94, 39), OcrLayoutScript.Latin, 20.37),
+            Measured("50", new Rect(572, 214, 39, 29), OcrLayoutScript.Latin, 14.5),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    private static OcrTextBlock Measured(string text, Rect box, OcrLayoutScript script, double glyph) =>
+        new(text, box, LayoutScript: script, LayoutBounds: box, LayoutGlyphHeight: glyph);
+
     private static List<OcrTextBlock> GroupDetected(IReadOnlyList<OcrTextBlock> blocks) =>
         OcrTextBlockGrouper.Group(blocks.AsDetected(), GroupingProfile.Interface);
 
