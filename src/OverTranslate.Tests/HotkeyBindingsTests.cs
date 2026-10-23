@@ -266,4 +266,37 @@ public class HotkeyBindingsTests
         Assert.True(HotkeyBindings.Resolve(settings)
             .Single(b => b.Action == HotkeyAction.RealtimePause).IsActive);
     }
+
+    [Fact]
+    public void AKeySequenceIsReadBackAsItselfWhateverKeyIsStoredBesideIt()
+    {
+        // The keyboard fields keep whatever was recorded before; the kind is what decides.
+        var settings = new AppSettings
+        {
+            QuickLookupHotkeyInputKind = ShortcutInputKind.CtrlCC,
+            QuickTranslateHotkeyInputKind = ShortcutInputKind.CtrlDoubleTap,
+        };
+
+        Assert.Equal(
+            ShortcutTrigger.KeySequence(ShortcutInputKind.CtrlCC),
+            HotkeyBindings.TriggerFor(settings, HotkeyAction.QuickLookup));
+        Assert.Equal(
+            ShortcutTrigger.KeySequence(ShortcutInputKind.CtrlDoubleTap),
+            HotkeyBindings.TriggerFor(settings, HotkeyAction.QuickTranslate));
+        Assert.True(HotkeyBindings.IsBindable(ShortcutTrigger.KeySequence(ShortcutInputKind.CtrlCC)));
+    }
+
+    [Fact]
+    public void OneKeySequenceCannotDoTwoThings()
+    {
+        var settings = new AppSettings
+        {
+            QuickLookupHotkeyInputKind = ShortcutInputKind.CtrlCC,
+            QuickTranslateHotkeyInputKind = ShortcutInputKind.CtrlCC,
+        };
+
+        var replace = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.QuickTranslate);
+
+        Assert.Equal(HotkeyAction.QuickLookup, replace.ShadowedBy);
+    }
 }

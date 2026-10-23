@@ -30,8 +30,14 @@ public readonly record struct ShortcutTrigger(ShortcutInputKind Kind, uint Modif
     public static ShortcutTrigger Gamepad(GamepadShortcutButton button) =>
         new(ShortcutInputKind.Gamepad, 0, (uint)button);
 
+    /// <summary>Ctrl twice, or Ctrl+C+C — the sequence being the kind itself, as with the mouse.</summary>
+    public static ShortcutTrigger KeySequence(ShortcutInputKind kind) => new(kind, 0, 0);
+
     /// <summary>Whether this trigger is one of the observed mouse buttons.</summary>
     public bool IsMouse => Kind.IsMouse();
+
+    /// <summary>Whether this trigger is one of the observed key sequences.</summary>
+    public bool IsKeySequence => Kind.IsKeySequence();
 
     public uint VirtualKey => Kind == ShortcutInputKind.Keyboard ? Code : 0;
     public GamepadShortcutButton GamepadButton => Kind == ShortcutInputKind.Gamepad
@@ -46,6 +52,11 @@ public static class ShortcutInputKinds
         ShortcutInputKind.MouseMiddle or
         ShortcutInputKind.MouseX1 or
         ShortcutInputKind.MouseX2;
+
+    /// <summary>Which shortcut kinds the keyboard hook is responsible for.</summary>
+    public static bool IsKeySequence(this ShortcutInputKind kind) => kind is
+        ShortcutInputKind.CtrlDoubleTap or
+        ShortcutInputKind.CtrlCC;
 }
 
 /// <param name="ShadowedBy">
@@ -170,6 +181,7 @@ public static class HotkeyBindings
         GamepadShortcutButton gamepadButton) => kind switch
     {
         _ when kind.IsMouse() => ShortcutTrigger.Mouse(kind),
+        _ when kind.IsKeySequence() => ShortcutTrigger.KeySequence(kind),
         ShortcutInputKind.Gamepad when gamepadButton != GamepadShortcutButton.None =>
             ShortcutTrigger.Gamepad(gamepadButton),
         // A malformed/old setting that says Gamepad but has no button is safer as the keyboard it

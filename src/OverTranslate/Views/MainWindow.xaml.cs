@@ -232,7 +232,11 @@ public partial class MainWindow : Window
         _auxiliaryHotkeys.Register(resolved);
     }
 
-    private void OnAuxiliaryHotkeyPressed(HotkeyAction action)
+    /// <param name="copiedSince">
+    /// Set when the shortcut was Ctrl+C+C, whose first Ctrl+C already copied the selection — see
+    /// <see cref="SelectedTextReader.ReadAsync"/>. Only the two features that read a selection use it.
+    /// </param>
+    private void OnAuxiliaryHotkeyPressed(HotkeyAction action, uint? copiedSince)
     {
         switch (action)
         {
@@ -246,10 +250,10 @@ public partial class MainWindow : Window
                 OnRealtimePauseHotkeyPressed(this, EventArgs.Empty);
                 break;
             case HotkeyAction.QuickLookup:
-                OnQuickLookupHotkeyPressed(this, EventArgs.Empty);
+                StartQuickLookup(pinned: false, copiedSince);
                 break;
             case HotkeyAction.QuickTranslate:
-                OnQuickTranslateHotkeyPressed(this, EventArgs.Empty);
+                RunQuickTranslate(copiedSince);
                 break;
         }
     }
@@ -439,13 +443,15 @@ public partial class MainWindow : Window
     /// leaves the card out of what it reads. Silently in both cases: this shortcut is silent whenever
     /// it has nothing to do, and one refusal that talks would be the exception nobody expects.
     /// </remarks>
-    private void OnQuickTranslateHotkeyPressed(object? sender, EventArgs e) =>
+    private void OnQuickTranslateHotkeyPressed(object? sender, EventArgs e) => RunQuickTranslate(null);
+
+    private void RunQuickTranslate(uint? copiedSince) =>
         Dispatcher.Invoke(async () =>
         {
             if (HasActiveSession) return;
             if (RealtimeSessionController.Instance is { IsActive: true, IsTranslating: false }) return;
 
-            await Views.QuickTranslate.QuickTranslateFlow.RunAsync();
+            await Views.QuickTranslate.QuickTranslateFlow.RunAsync(copiedSince);
         });
 
     /// <summary>
@@ -484,13 +490,13 @@ public partial class MainWindow : Window
     /// would have read the popup back as part of the screen; it leaves every window of ours out of
     /// what it reads now, and keeps the popup above its subtitles.
     /// </remarks>
-    private void StartQuickLookup(bool pinned) =>
+    private void StartQuickLookup(bool pinned, uint? copiedSince = null) =>
         Dispatcher.Invoke(async () =>
         {
             if (HasActiveSession) return;
             if (RefuseWhileFramingBlocks()) return;
 
-            await Views.QuickLookup.QuickLookupWindow.SummonAsync(pinned);
+            await Views.QuickLookup.QuickLookupWindow.SummonAsync(pinned, copiedSince);
         });
 
     /// <summary>

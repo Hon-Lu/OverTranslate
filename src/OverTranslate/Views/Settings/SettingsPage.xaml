@@ -597,6 +597,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
                                 </Grid>
@@ -638,6 +639,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -748,6 +750,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -976,6 +979,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -1037,6 +1041,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 

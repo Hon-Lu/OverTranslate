@@ -70,8 +70,15 @@ internal static class SelectedTextReader
     /// </remarks>
     /// <param name="maxLength">Where the text is cut.</param>
     /// <param name="keepLineBreaks">Whether the text keeps its lines — see <see cref="KeepLines"/>.</param>
-    public static async Task<string> ReadAsync(int maxLength, bool keepLineBreaks = false)
+    /// <param name="copiedSince">
+    /// Set when the shortcut was Ctrl+C+C: the clipboard's sequence number from before the user's own
+    /// copy. See <see cref="ReadUserCopyAsync"/>.
+    /// </param>
+    public static async Task<string> ReadAsync(int maxLength, bool keepLineBreaks = false, uint? copiedSince = null)
     {
+        if (copiedSince is { } userCopyBefore)
+            return await ReadUserCopyAsync(userCopyBefore, maxLength, keepLineBreaks);
+
         object? snapshot;
         uint before;
 
@@ -113,6 +120,45 @@ internal static class SelectedTextReader
         finally
         {
             ClipboardBackup.Restore(snapshot);
+        }
+    }
+
+    /// <summary>
+    /// Reads the copy the user has just made with the first Ctrl+C of Ctrl+C+C.
+    /// </summary>
+    /// <remarks>
+    /// <para>The user has already done what <see cref="ReadAsync"/> would do for them, so nothing is
+    /// sent and the clipboard is not borrowed: what they copied is theirs to keep, which is what the
+    /// key they pressed means everywhere else. Sending another Ctrl+C here would also arrive while
+    /// they are still holding Ctrl and C, and leave the system believing both were released.</para>
+    ///
+    /// <para>The clipboard is not simply read, though. With nothing selected the copy changes nothing,
+    /// and reading would hand back whatever was copied last, from anywhere, as if it were the
+    /// selection. <paramref name="before"/> is the sequence number from just before that copy reached
+    /// the application, so the same poll that waits out a slow copy also tells "copied" from "nothing
+    /// to copy". The copy started a key press ago, so the wait is usually already over.</para>
+    /// </remarks>
+    private static async Task<string> ReadUserCopyAsync(uint before, int maxLength, bool keepLineBreaks)
+    {
+        try
+        {
+            var maxStartPolls = (int)Math.Ceiling(
+                CopyStartTimeout.TotalMilliseconds / PollInterval.TotalMilliseconds);
+            var maxCompletionPolls = (int)Math.Ceiling(
+                CopyCompletionTimeout.TotalMilliseconds / PollInterval.TotalMilliseconds);
+            var text = await PollForCopiedTextAsync(
+                before,
+                GetClipboardSequenceNumber,
+                ReadClipboardTextIfAvailable,
+                () => Task.Delay(PollInterval),
+                maxStartPolls,
+                maxCompletionPolls);
+            return Sanitize(text, maxLength, keepLineBreaks);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Reading the user's copy failed; it is read as empty");
+            return "";
         }
     }
 

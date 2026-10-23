@@ -40,6 +40,15 @@ public partial class SettingsPage : UserControl
     private readonly DispatcherTimer _hotkeyGamepadRecordTimer;
     private readonly ushort[] _recordGamepadButtons = new ushort[4];
 
+    // Recognises Ctrl twice and Ctrl+C+C while a box records — the same detector the global hook
+    // uses, so what can be recorded is exactly what will fire. New for each recording.
+    private KeySequenceDetector? _recordSequences;
+
+    // Ctrl+C is held back this long before it is committed, because it may be the start of Ctrl+C+C.
+    // Longer than the detector's own window, so a second C inside it always gets there first.
+    private readonly DispatcherTimer _ctrlCCommitTimer;
+    private (HotkeyField Field, ShortcutTrigger Trigger, string Display)? _pendingCtrlC;
+
     /// <summary>
     /// One editable shortcut: the controls that edit it and the settings it reads and writes.
     /// </summary>
@@ -149,6 +158,11 @@ public partial class SettingsPage : UserControl
 
         _hotkeyGamepadRecordTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(45) };
         _hotkeyGamepadRecordTimer.Tick += (_, _) => PollRecordingGamepad();
+        _ctrlCCommitTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(KeySequenceDetector.RepeatMaxGap + 100),
+        };
+        _ctrlCCommitTimer.Tick += (_, _) => CommitPendingCtrlC();
 
         _statusHold = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1600) };
         _statusHold.Tick += (_, _) => { _statusHold.Stop(); FadeStatusOut(); };
@@ -1452,6 +1466,11 @@ public partial class SettingsPage : UserControl
         field.Box.Text = LocalizationService.Get("S.Settings.HotkeyPromptAnyInput");
         field.Box.Focus();
 
+        _recordSequences = new KeySequenceDetector(
+            () => 0,
+            key => Keyboard.IsKeyDown(KeyInterop.KeyFromVirtualKey((int)key)));
+        GlobalAuxiliaryHotkeys.Paused = true;
+
         for (int i = 0; i < _recordGamepadButtons.Length; i++)
             _recordGamepadButtons[i] = GamepadInput.TryGetButtons(i, out var buttons) ? buttons : (ushort)0;
         _hotkeyGamepadRecordTimer.Start();
@@ -1466,6 +1485,10 @@ public partial class SettingsPage : UserControl
     private void StopRecording()
     {
         _hotkeyGamepadRecordTimer.Stop();
+        _ctrlCCommitTimer.Stop();
+        _pendingCtrlC = null;
+        _recordSequences = null;
+        GlobalAuxiliaryHotkeys.Paused = false;
         if (_recording is not { } field) return;
 
         field.Box.Text = field.Display(SettingsService.Instance.Current);
@@ -1592,6 +1615,12 @@ public partial class SettingsPage : UserControl
             return;
         }
 
+        if (RecordSequence(key, down: true, e.Timestamp)) return;
+
+        // A held key repeats. Only Ctrl+C has anything left to wait for, and its repeat is not
+        // the second C of Ctrl+C+C — the detector has already said so.
+        if (e.IsRepeat) return;
+
         if (key == Key.LeftCtrl || key == Key.RightCtrl ||
             key == Key.LeftAlt  || key == Key.RightAlt  ||
             key == Key.LeftShift || key == Key.RightShift ||
@@ -1619,7 +1648,58 @@ public partial class SettingsPage : UserControl
 
         var prefix = GlobalHotkey.ModifiersToString(mods);
         var display = string.IsNullOrEmpty(prefix) ? key.ToString() : $"{prefix}+{key}";
+
+        if (mods == GlobalHotkey.MOD_CONTROL && key == Key.C)
+        {
+            _pendingCtrlC = (recording, trigger, display);
+            _ctrlCCommitTimer.Stop();
+            _ctrlCCommitTimer.Start();
+            return;
+        }
+
         CommitShortcut(recording, trigger, display);
+    }
+
+    private void HotkeyBox_PreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        if (_recording is not { } recording || !ReferenceEquals(recording.Box, sender)) return;
+        e.Handled = true;
+
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        RecordSequence(key, down: false, e.Timestamp);
+    }
+
+    /// <summary>
+    /// Feeds one key to the recording's sequence detector, committing Ctrl twice or Ctrl+C+C if it
+    /// completes one. Returns whether it did.
+    /// </summary>
+    /// <remarks>
+    /// The sequences are shown the way the 可用按鍵說明 panel draws them, not as text to translate:
+    /// key names are the same in every language this application speaks.
+    /// </remarks>
+    private bool RecordSequence(Key key, bool down, int timestamp)
+    {
+        if (_recording is not { } recording || _recordSequences is not { } sequences) return false;
+
+        var vk = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (vk == 0 || sequences.OnKey(vk, down, unchecked((uint)timestamp)) is not { } hit) return false;
+
+        _ctrlCCommitTimer.Stop();
+        _pendingCtrlC = null;
+
+        var display = hit.Kind == ShortcutInputKind.CtrlCC ? "Ctrl+C ×2" : "Ctrl ×2";
+        CommitShortcut(recording, ShortcutTrigger.KeySequence(hit.Kind), display);
+        return true;
+    }
+
+    /// <summary>No second C came: it was Ctrl+C after all.</summary>
+    private void CommitPendingCtrlC()
+    {
+        _ctrlCCommitTimer.Stop();
+        if (_pendingCtrlC is not { } pending || !ReferenceEquals(_recording, pending.Field)) return;
+
+        _pendingCtrlC = null;
+        CommitShortcut(pending.Field, pending.Trigger, pending.Display);
     }
 
     /// <remarks>
