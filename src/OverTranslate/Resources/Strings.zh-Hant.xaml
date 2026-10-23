@@ -362,6 +362,7 @@
     <sys:String x:Key="S.Realtime.ChangeSourceLanguage">更換來源語言</sys:String>
     <sys:String x:Key="S.Realtime.ChangeTargetLanguage">更換目標語言</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">找不到「{0}」</sys:String>
+    <sys:String x:Key="S.Realtime.DismissMessage">按一下收起訊息</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">暫停框選，改為操作下方畫面</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">恢復框選</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文對照</sys:String>

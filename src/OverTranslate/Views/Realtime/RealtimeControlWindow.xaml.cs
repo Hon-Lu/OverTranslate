@@ -128,8 +128,12 @@ public partial class RealtimeControlWindow : Window
     // A failure the session is still retrying, and whether it is what the bar shows right now. Kept
     // apart from the transient messages so one of those passing over it puts it back when it times
     // out, and so clearing it never takes down a message that is not it.
-    private string? _failure;
+    private readonly RealtimeFailureNotice _failure = new();
     private bool _failureShowing;
+
+    // Whether the press under way began on a message in the pair's place: released without a drag,
+    // it clicks the message away — see DismissMessage.
+    private bool _pressOnMessage;
 
     // The scale WPF renders this window at, which is the DPI of whatever monitor it currently sits
     // on — not necessarily the one the session runs on. Everything that converts between the window's
@@ -457,7 +461,7 @@ public partial class RealtimeControlWindow : Window
         // its timer would restore the old text on top of the new state a moment later. Nor does a
         // failure: nothing is retried while paused, and a resumed session reports its own.
         _messageTimer.Stop();
-        _failure = null;
+        _failure.Set(null);
         RestoreText();
         // Nothing is in flight once paused, and a pulse left running would go on saying there is.
         SetBusy(false);
@@ -495,7 +499,7 @@ public partial class RealtimeControlWindow : Window
         ApplyCrosshairButton();
 
         _messageTimer.Stop();
-        _failure = null;
+        _failure.Set(null);
         RestoreText();
         SetBusy(false);
 
@@ -679,6 +683,9 @@ public partial class RealtimeControlWindow : Window
             SetDotState(kind == RealtimeMessageKind.Failure);
             UpdateCollapsedToolTip();
             CloseMenuIfPairHidden();
+
+            RunStatusText.Cursor = System.Windows.Input.Cursors.Hand;
+            RunStatusText.SetResourceReference(ToolTipProperty, "S.Realtime.DismissMessage");
         }
 
         _messageShowing = true;
@@ -695,17 +702,18 @@ public partial class RealtimeControlWindow : Window
     /// <remarks>Only while running and not paused; both of those leaving clear it.</remarks>
     public void SetFailure(string? message)
     {
-        if (_failure == message) return;
-        _failure = message;
+        if (!_failure.Set(message)) return;
         if (_mode != RealtimeControlMode.Running || _isPaused) return;
 
         if (message is not null) ShowFailure();
-        else if (_failureShowing) RestoreText();
+        // A transient message showing puts the bar back itself when it times out; otherwise the bar
+        // may be the pair under a dot still red for a failure that was clicked away.
+        else if (_failureShowing || !_messageShowing) RestoreText();
     }
 
     private void ShowFailure()
     {
-        ShowMessage(_failure!, RealtimeMessageKind.Failure, sticky: true);
+        ShowMessage(_failure.Message!, RealtimeMessageKind.Failure, sticky: true);
         _failureShowing = true;
     }
 
@@ -719,7 +727,8 @@ public partial class RealtimeControlWindow : Window
     private void RestoreText()
     {
         // The bar's own text, unless a failure is still being retried: then that is its own text.
-        if (_failure is not null && _mode == RealtimeControlMode.Running && !_isPaused)
+        var failing = _failure.Message is not null && _mode == RealtimeControlMode.Running && !_isPaused;
+        if (failing && _failure.StandsInForPair)
         {
             ShowFailure();
             return;
@@ -738,9 +747,26 @@ public partial class RealtimeControlWindow : Window
         LangPairPanel.Visibility = showPair ? Visibility.Visible : Visibility.Collapsed;
         RunStatusText.Visibility = showPair && !_isPaused ? Visibility.Collapsed : Visibility.Visible;
 
-        SetDotState(failed: false);
+        // Red still, for a failure that was clicked away: it is set aside, not over.
+        SetDotState(failed: failing);
         UpdateCollapsedToolTip();
         CloseMenuIfPairHidden();
+
+        RunStatusText.Cursor = null;
+        RunStatusText.ClearValue(ToolTipProperty);
+    }
+
+    /// <summary>
+    /// Takes a message off the pair's place on a click. The one that matters is the failure being
+    /// retried, which otherwise stays until it clears — and when it is a service refusing the
+    /// language pair, it never does, while covering the pair the user would change to fix it.
+    /// </summary>
+    private void DismissMessage()
+    {
+        if (!_messageShowing) return;
+        if (_failureShowing) _failure.Dismiss();
+        _messageTimer.Stop();
+        RestoreText();
     }
 
     // ── Language lists (#345) ────────────────────────────────────────────────────────────────────
@@ -916,6 +942,8 @@ public partial class RealtimeControlWindow : Window
     // own position in screen pixels, and mixing in a DIP delta would drift on a scaled display.
     private void Chrome_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _pressOnMessage = _messageShowing && _mode == RealtimeControlMode.Running
+            && ReferenceEquals(e.OriginalSource, RunStatusText);
         _isDragging = true;
         _dragStartMouse = System.Windows.Forms.Control.MousePosition;
         _dragStartPosition = _position;
@@ -938,6 +966,13 @@ public partial class RealtimeControlWindow : Window
         if (!_isDragging) return;
         _isDragging = false;
         ((UIElement)sender).ReleaseMouseCapture();
+
+        // A press that went nowhere was a click; one that moved the bar was a drag, whatever it began on.
+        var mouse = System.Windows.Forms.Control.MousePosition;
+        var slop = SystemParameters.MinimumHorizontalDragDistance * _windowScale;
+        var clicked = Math.Abs(mouse.X - _dragStartMouse.X) <= slop && Math.Abs(mouse.Y - _dragStartMouse.Y) <= slop;
+        if (_pressOnMessage && clicked) DismissMessage();
+        _pressOnMessage = false;
     }
 
     private void StartBtn_Click(object sender, RoutedEventArgs e) => StartRequested?.Invoke(this, EventArgs.Empty);

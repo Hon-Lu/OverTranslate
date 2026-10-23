@@ -343,6 +343,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ChangeSourceLanguage">Change source language</sys:String>
     <sys:String x:Key="S.Realtime.ChangeTargetLanguage">Change target language</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">No results for “{0}”</sys:String>
+    <sys:String x:Key="S.Realtime.DismissMessage">Click to dismiss</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">Pause framing and use the app underneath</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Resume framing</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">Compare with original</sys:String>

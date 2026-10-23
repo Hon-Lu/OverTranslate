@@ -340,6 +340,7 @@
     <sys:String x:Key="S.Realtime.ChangeSourceLanguage">Сменить язык оригинала</sys:String>
     <sys:String x:Key="S.Realtime.ChangeTargetLanguage">Сменить язык перевода</sys:String>
     <sys:String x:Key="S.Realtime.LanguageNoMatch">По запросу «{0}» ничего не найдено</sys:String>
+    <sys:String x:Key="S.Realtime.DismissMessage">Нажмите, чтобы скрыть</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">Приостановить выделение и работать с программой под ним</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Продолжить выделение</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">Сравнение с оригиналом</sys:String>
