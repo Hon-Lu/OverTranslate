@@ -451,7 +451,7 @@
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">按键仍会传给当前程序，可能同时触发原本的功能</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：鼠标侧键设为截图翻译时，浏览器也会跟着返回上一页</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">实时翻译</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷键开始框选翻译</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷键开始[[框选翻译]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未启动时按下快捷键开始框选，框选时再按一次开始翻译；翻译中可暂停或继续。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取词翻译</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷键打开[[取词翻译]]</sys:String>

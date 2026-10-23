@@ -451,7 +451,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">The keys still reach the current program and may trigger what they do there too</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">E.g. with a side button set to Capture, your browser also goes back a page</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to select blocks and translate</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to [[select blocks and translate]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>

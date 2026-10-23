@@ -455,7 +455,7 @@
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">키가 현재 프로그램에도 전달되어 원래 기능이 함께 실행될 수 있습니다</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">예: 옆 버튼을 캡처 번역으로 설정하면 브라우저도 이전 페이지로 돌아갑니다</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">실시간 번역</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">단축키를 눌러 블록을 선택하고 번역</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">단축키를 눌러 [[블록을 선택하고 번역]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">중지 상태에서 단축키를 누르면 블록 선택을 시작하고, 선택 중에 다시 누르면 번역을 시작합니다. 번역 중에는 일시 정지·재개할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">팝업 번역</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">단축키로 [[팝업 번역]] 열기</sys:String>
