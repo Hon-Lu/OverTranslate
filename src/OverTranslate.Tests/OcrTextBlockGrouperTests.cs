@@ -464,6 +464,38 @@ public class OcrTextBlockGrouperTests
         Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
     }
 
+    /// <summary>
+    /// A Hacker News "points by" line over the next story's title. The left edges are 1.7 line
+    /// heights apart and only the centres meet, by the chance of the two lengths, 0.29 of a line
+    /// height off. Coordinates and size estimates from the capture.
+    /// </summary>
+    [Fact]
+    public void ListLinesWhoseCentresMeetByChance_AreNotSetSolid()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("126 points by Bluestein 9 hours ago | hide | 21 comments", new Rect(157, 406, 284, 20), OcrLayoutScript.Latin, 8.20),
+            Measured("12.▲The efficient frontier of LLM inference (baseten.co)", new Rect(123, 426, 364, 21), OcrLayoutScript.Latin, 9.46),
+        };
+
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.General).Count);
+    }
+
+    /// <summary>
+    /// Centred speech whose centres are 0.08 of a line height apart still reads as set solid.
+    /// </summary>
+    [Fact]
+    public void CentredSpeech_StillSetsSolidOnItsCentre()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("YOU PICKING ON", new Rect(300, 358, 300, 50), OcrLayoutScript.Latin, 38),
+            Measured("AN INNOCENT", new Rect(330, 408, 248, 50), OcrLayoutScript.Latin, 38),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
     private static OcrTextBlock Measured(string text, Rect box, OcrLayoutScript script, double glyph) =>
         new(text, box, LayoutScript: script, LayoutBounds: box, LayoutGlyphHeight: glyph);
 

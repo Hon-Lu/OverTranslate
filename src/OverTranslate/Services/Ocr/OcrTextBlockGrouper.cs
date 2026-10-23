@@ -1519,12 +1519,42 @@ internal static class OcrTextBlockGrouper
     private const double SetSolidMaxAlignment = 0.35;
 
     /// <summary>
-    /// Whether two lines share an edge — left, right or centre — to within
-    /// <see cref="SetSolidMaxAlignment"/>: the alignment lines set one under the other have.
+    /// Whether two lines share an edge — left or right to within <see cref="SetSolidMaxAlignment"/>,
+    /// or their centre to within <see cref="SetSolidMaxCentreAlignment"/>: the alignment lines set
+    /// one under the other have.
     /// </summary>
-    private static bool SharesAnEdge(OcrTextBlock previous, OcrTextBlock current) =>
-        AlignmentDelta(previous, current) <=
-        Math.Max((previous.LayoutBounds.Height + current.LayoutBounds.Height) / 2.0 * SetSolidMaxAlignment, 6);
+    /// <remarks>
+    /// <para>The centre is held tighter than the edges, because it is the one a list matches by
+    /// chance. A flush-left list whose entries alternate between two indents — a Hacker News title
+    /// and the "points by" line under it, again and again — has every left edge 1.7 to 2 line heights
+    /// from its neighbour's, but each line's centre lands wherever its length puts it, and some land
+    /// within a third of a line of the next one's. Such pairs were joined as set solid: a "points by"
+    /// line and the next story at 0.29, a "PLAYER" tag over the character row it labels at 0.34, a
+    /// thumbnail's logo over its caption.</para>
+    ///
+    /// <para>Text that is really centred is centred more closely, because a centre is the average of
+    /// two edges and the detector's padding on each side mostly cancels. The comic pages' centred
+    /// speech sits within 0.11 of a line height; the loosest centred pair found anywhere is a
+    /// subtitle box's two lines at 0.17, large type whose boxes were padded unevenly. 0.15 split that
+    /// subtitle, so the limit sits above it: 0.20 and 0.25 score the same on every hand-marked set,
+    /// and the higher keeps the margin. Two HN pairs at 0.16 and 0.17 stay joined — the same 0.17 —
+    /// and are not separable from the subtitle by alignment alone. The floor is in pixels for small
+    /// text, half the edges' floor for the same reason.</para>
+    /// </remarks>
+    private static bool SharesAnEdge(OcrTextBlock previous, OcrTextBlock current)
+    {
+        var avgHeight = (previous.LayoutBounds.Height + current.LayoutBounds.Height) / 2.0;
+        var edges = Math.Min(
+            Math.Abs(previous.LayoutBounds.Left - current.LayoutBounds.Left),
+            Math.Abs(previous.LayoutBounds.Right - current.LayoutBounds.Right));
+
+        return edges <= Math.Max(avgHeight * SetSolidMaxAlignment, 6) ||
+               Math.Abs(CenterX(previous) - CenterX(current)) <=
+               Math.Max(avgHeight * SetSolidMaxCentreAlignment, 3);
+    }
+
+    /// <inheritdoc cref="SharesAnEdge"/>
+    private const double SetSolidMaxCentreAlignment = 0.25;
 
     /// <summary>
     /// How far the narrower line must sit inside the wider one, in line heights, before the two
