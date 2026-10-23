@@ -307,11 +307,11 @@ internal static class OcrTextBlockGrouper
         {
             var (joined, rule) = JudgeSameLine(row[i - 1], row[i], threshold);
             if (!joined && rule == "horizontal gap" &&
-                profile.SolidLineAdvanceWhenWrapped > SolidLineAdvance &&
+                profile.TakesProseEvidence &&
                 HasSpanningProseContinuation(row[i - 1], row[i], blocks))
                 (joined, rule) = (true, "spanning prose continuation");
             if (!joined && rule == "horizontal gap" &&
-                profile.SolidLineAdvanceWhenWrapped > SolidLineAdvance &&
+                profile.TakesProseEvidence &&
                 HasParagraphRowEvidence(row, i, rows, threshold))
                 (joined, rule) = (true, "paragraph row evidence");
             decisions?.Add(SameLineDecision(row[i - 1], row[i], joined, rule, trace));
@@ -859,7 +859,7 @@ internal static class OcrTextBlockGrouper
         // whether the pair is set solid at all, because that is the only path a profile may relax.
         var sizeRatio = TextSizeRatio(previous, current);
         // A shorter, visibly larger heading above a different-script body.
-        if (profile.SolidLineAdvanceWhenWrapped > SolidLineAdvance &&
+        if (profile.TakesProseEvidence &&
             previous.LayoutScript != current.LayoutScript &&
             previous.LayoutBounds.Width < current.LayoutBounds.Width &&
             previous.LayoutInkHeight is > 0 && current.LayoutInkHeight is > 0 &&
@@ -1150,7 +1150,7 @@ internal static class OcrTextBlockGrouper
     private static bool IsJapaneseProseContinuation(
         OcrTextBlock previous, OcrTextBlock current, GroupingProfile profile)
     {
-        if (profile.SolidLineAdvanceWhenWrapped <= SolidLineAdvance ||
+        if (!profile.TakesProseEvidence ||
             !previous.Text.Any(LayoutScriptDetection.IsKana) ||
             !current.Text.Any(LayoutScriptDetection.IsKana) ||
             !IsLongEnoughToHaveWrapped(previous) ||
@@ -1174,7 +1174,7 @@ internal static class OcrTextBlockGrouper
         OcrTextBlock previous, OcrTextBlock current, GroupingProfile profile,
         IReadOnlyList<OcrTextBlock> lines)
     {
-        if (!(profile.SolidLineAdvanceWhenWrapped > SolidLineAdvance &&
+        if (!(profile.TakesProseEvidence &&
         previous.LayoutScript == OcrLayoutScript.Latin && current.LayoutScript == OcrLayoutScript.Latin &&
         previous.LayoutBounds.Width >= previous.LayoutBounds.Height * 20 &&
         current.LayoutBounds.Width >= current.LayoutBounds.Height * 8 &&
@@ -1210,7 +1210,7 @@ internal static class OcrTextBlockGrouper
     private static bool IsEstablishedParagraphFinalLine(
         IReadOnlyList<OcrTextBlock> group, OcrTextBlock current, GroupingProfile profile)
     {
-        if (profile.SolidLineAdvanceWhenWrapped <= SolidLineAdvance || group.Count < 3 ||
+        if (!profile.TakesProseEvidence || group.Count < 3 ||
             current.LayoutScript != OcrLayoutScript.Latin)
             return false;
         var text = current.Text.Trim();
