@@ -1012,13 +1012,6 @@ internal sealed class RealtimeSessionController
     public event EventHandler? LanguagesChanged;
 
     /// <summary>
-    /// The pair the session is running with, or null with no session — for a capture taken from
-    /// inside it, which reads with the same pair (#345).
-    /// </summary>
-    public (string Source, string Target)? CurrentLanguages =>
-        _request is { } request ? (request.SourceLanguage, request.TargetLanguage) : null;
-
-    /// <summary>
     /// Switches the language pair from the running capsule, without ending anything (#345).
     /// </summary>
     /// <remarks>
