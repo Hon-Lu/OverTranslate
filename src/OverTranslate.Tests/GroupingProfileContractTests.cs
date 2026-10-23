@@ -132,8 +132,9 @@ public class GroupingProfileContractTests
     /// </remarks>
     /// <para>The fourth arrived the same way: <see cref="GroupingProfile.RefuseSpeakerLineStarts"/>,
     /// measured on the chat-room captures, where the live panel path joined 11 pairs of separate
-    /// messages across five hand-marked images. It is content evidence rather than a threshold, and
-    /// only the live panel profile takes it.</para>
+    /// messages across five hand-marked images. It is content evidence rather than a threshold. The
+    /// live panel profile took it first; the screenshot general mode followed once the chat logs were
+    /// hand-marked as screenshots too.</para>
     /// <para>The fifth, <see cref="GroupingProfile.TakesProseEvidence"/>, is not a new threshold: it
     /// is the switch six prose rules and the ink measurement used to read off
     /// <see cref="GroupingProfile.SolidLineAdvanceWhenWrapped"/>, given its own name so the leading
@@ -176,10 +177,10 @@ public class GroupingProfileContractTests
     }
 
     [Fact]
-    public void OnlyTheRealtimeProfile_RefusesSpeakerLineStarts()
+    public void TheRealtimeAndGeneralProfiles_RefuseSpeakerLineStarts()
     {
         Assert.True(GroupingProfile.Realtime.RefuseSpeakerLineStarts);
-        Assert.False(GroupingProfile.General.RefuseSpeakerLineStarts);
+        Assert.True(GroupingProfile.General.RefuseSpeakerLineStarts);
         Assert.False(GroupingProfile.Interface.RefuseSpeakerLineStarts);
         Assert.False(GroupingProfile.Vertical.RefuseSpeakerLineStarts);
     }

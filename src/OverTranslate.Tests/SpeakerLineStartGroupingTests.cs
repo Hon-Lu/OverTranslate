@@ -21,6 +21,28 @@ public class SpeakerLineStartGroupingTests
         Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.Interface));
     }
 
+    [Theory]
+    [InlineData("[GLOBAL] Xa-mul: I mean hes above water")]
+    [InlineData("Aa119119: 酸黃瓜先生 不要上網查")]
+    public void ChatEntrySetSolidUnderTheOneAbove_StaysApartInAScreenshotToo(string next)
+    {
+        var blocks = new[] { Row("[21:35] Bob: the first message in the log", 0), Row(next, 26) };
+
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.General).Count);
+    }
+
+    [Fact]
+    public void WrappedSentence_StillJoinsInAScreenshot()
+    {
+        var blocks = new[]
+        {
+            Row("You have items remaining in Temporary Quest", 0),
+            Row("Storage and should move them to another one", 26),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
     [Fact]
     public void BareSpeakerLabel_KeepsItsMessageOnItsOwnRows()
     {

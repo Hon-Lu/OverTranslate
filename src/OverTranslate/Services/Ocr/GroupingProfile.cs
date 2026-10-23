@@ -71,9 +71,16 @@ namespace OverTranslate.Services.Ocr;
 /// <para>MEASURED CASE: the 22 chat-room captures under <c>.ai/test-images/chat-room</c>, five of
 /// them hand-marked. Chat entries sit at 0.62 to 1.16 line heights, one edge, one size — inside every
 /// set-solid limit — so the live panel path joined 11 pairs of separate messages across the five, all
-/// nine rows of one English log into a single string. Only the live panel path takes it: the
-/// screenshot modes have no chat corpus behind them and the interface mode's figures are its v1
-/// behaviour.</para>
+/// nine rows of one English log into a single string. The interface mode does not take it: its
+/// figures are its v1 behaviour.</para>
+///
+/// <para>The screenshot general mode takes it too, since there is now a chat corpus to measure it
+/// on: all 23 captures hand-marked one message per group (<c>GT-ui</c>). Grouped as a screenshot,
+/// those logs had 69 pairs of separate messages joined — the general mode relaxes set solid, so it
+/// strung them together more readily than the live path ever did — and refusing speaker line
+/// starts takes that to 10, with no group changing across the 72 earlier screenshots (comics, web
+/// pages, game panels). It costs one: a wrapped Chinese line reading 「Line詢問：…」 opens like a
+/// name, which the live path already pays.</para>
 /// </param>
 /// <param name="TakesProseEvidence">
 /// <para>Whether the rules written for page prose run at all: a row cut in two by a dash the
@@ -170,7 +177,7 @@ internal sealed record GroupingProfile(
         TightlySetMinTextSizeRatio: 0.80,
         WaiveLengthTestWhenSetSolid: true,
         SolidLineAdvanceWhenWrapped: 1.45,
-        RefuseSpeakerLineStarts: false,
+        RefuseSpeakerLineStarts: true,
         TakesProseEvidence: true);
 
     /// <summary>
