@@ -25,6 +25,13 @@ internal readonly record struct AcrossInColumnsRoom(double Left, double Right, d
     ///
     /// <para>Below, a neighbour counts only if it shares some of the source's width — a balloon
     /// further down the page in the same strip.</para>
+    ///
+    /// <para>A neighbour whose box overlaps the source's closes the sides it is on altogether: left
+    /// or right by where its centre is, and below too when its centre is lower. That is two reading
+    /// blocks of one balloon, which the manga reader pads, so their boxes cross: neither was beside
+    /// or below the other by the rules above, and each was handed the whole page on that side. On
+    /// vertical-image-ja2 page 19 14 55 the balloon's two blocks (711–794 and 637–718 across,
+    /// overlapping by 7px) set their translations straight over each other.</para>
     /// </remarks>
     public static AcrossInColumnsRoom Within(Rect source, IEnumerable<Rect> others, Rect limit)
     {
@@ -44,6 +51,12 @@ internal readonly record struct AcrossInColumnsRoom(double Left, double Right, d
                 right = Math.Min(right, (other.Left - source.Right) / 2);
             else if (sharesWidth && other.Top >= source.Bottom)
                 below = Math.Min(below, other.Top - source.Bottom);
+            else if (sharesHeight && sharesWidth)
+            {
+                if (other.Left + other.Right < source.Left + source.Right) left = 0;
+                else right = 0;
+                if (other.Top + other.Bottom > source.Top + source.Bottom) below = 0;
+            }
         }
 
         return new(left, right, below);
@@ -81,7 +94,8 @@ internal readonly record struct AcrossInColumnsFit(
 /// plus one preferred size a side.</item>
 /// <item>The same, as wide as the room beside the source allows.</item>
 /// <item>The same again, now also allowed to run down into the room below.</item>
-/// <item>The same once more, now letting a word wider than all of that room break inside it.</item>
+/// <item>The same once more, now letting a word wider than all of that room break inside it —
+/// first only at sizes where it breaks once, then wherever it has to.</item>
 /// <item>Below the readable floor, down to the emergency size, in all of that room.</item>
 /// <item>The emergency size, as wide as the room allows, however tall that comes out. The box is
 /// never cut short: a bubble that runs past its balloon is visible, a sentence that stops early
@@ -92,7 +106,12 @@ internal readonly record struct AcrossInColumnsFit(
 /// or Finnish compound in a one-column balloon by the page edge. Shrinking it whole to the
 /// emergency size was tried first and rejected on the rendered page: a 34-letter compound came out
 /// as one line of type too small to read, where broken across two lines at a readable size it is
-/// merely broken. The TextBlock does the breaking, as it does for any run wider than its line.</para>
+/// merely broken. Breaking it at the largest size that fits the height was rejected too, on the
+/// same page: "Donaudampfschifffahrtsgesellschaft!" came out in four pieces, which reads as four
+/// words. So a size is given up first for a word in two pieces, and only after that for more.
+/// The TextBlock does the breaking, as it does for any run wider than its line, and without a
+/// hyphen: WPF hyphenates only with a language dictionary it does not have for most targets, and
+/// the measurement would have to agree with it.</para>
 ///
 /// <para>The measurement is handed in as a delegate — text, size, and the width to wrap at or null
 /// for one line — because in the windows it is a TextBlock's (see <see cref="WrappedTextMeasure"/>),
@@ -139,8 +158,9 @@ internal static class AcrossInColumnsLayout
             Search(preferredFontSize, readableFontSize, comfortable, sourceHeight)
             ?? Search(preferredFontSize, readableFontSize, widest, sourceHeight)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest)
-            ?? Search(preferredFontSize, readableFontSize, widest, tallest, breakWords: true)
-            ?? Search(readableFontSize - SizeStep, emergencyFontSize, widest, tallest, breakWords: true);
+            ?? Search(preferredFontSize, readableFontSize, widest, tallest, maxPieces: 2)
+            ?? Search(preferredFontSize, readableFontSize, widest, tallest, maxPieces: int.MaxValue)
+            ?? Search(readableFontSize - SizeStep, emergencyFontSize, widest, tallest, maxPieces: int.MaxValue);
 
         if (found is not { } fit)
         {
@@ -153,14 +173,15 @@ internal static class AcrossInColumnsLayout
         return Place(fit.Size, fit.Width, fit.Height);
 
         (double Size, double Width, double Height)? Search(
-            double from, double to, double maxWidth, double maxHeight, bool breakWords = false)
+            double from, double to, double maxWidth, double maxHeight, int maxPieces = 1)
         {
             for (double size = from; size >= to - 0.001; size -= SizeStep)
             {
                 double narrowest = Math.Max(sourceWidth, LongestWord(size));
                 if (narrowest > maxWidth)
                 {
-                    if (!breakWords) continue;
+                    // How many lines the longest word would take at the widest the room allows.
+                    if (narrowest > maxWidth * maxPieces) continue;
                     narrowest = Math.Max(sourceWidth, maxWidth);
                 }
 

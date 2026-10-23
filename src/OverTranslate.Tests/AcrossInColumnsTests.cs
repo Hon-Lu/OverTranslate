@@ -189,6 +189,46 @@ public class AcrossInColumnsTests
         Assert.Equal(24, fixedSize.FontSize);
     }
 
+    /// <summary>
+    /// Two reading blocks of one balloon, padded until their boxes cross — the right-hand balloon
+    /// of vertical-image-ja2 page 19 14 55 as the manga reader returns it. Each closes the sides the
+    /// other is on, so neither sets its words over the other's.
+    /// </summary>
+    [Fact]
+    public void Overlapping_blocks_of_one_balloon_close_the_sides_they_are_on()
+    {
+        var upper = new Rect(711, 573.5, 83, 206);
+        var lower = new Rect(637.5, 682, 80.5, 204);
+        var page = new Rect(0, 0, 827, 1276);
+
+        var forUpper = AcrossInColumnsRoom.Within(upper, [lower], page);
+        var forLower = AcrossInColumnsRoom.Within(lower, [upper], page);
+
+        Assert.Equal(0, forUpper.Left);
+        Assert.Equal(0, forUpper.Below);
+        Assert.Equal(827 - 794, forUpper.Right, 3);
+        Assert.Equal(0, forLower.Right);
+        Assert.Equal(637.5, forLower.Left, 3);
+        Assert.Equal(1276 - 886, forLower.Below, 3);
+    }
+
+    /// <summary>
+    /// A word that no readable size holds whole is broken in two at a smaller size before it is
+    /// broken in more pieces at a larger one.
+    /// </summary>
+    [Fact]
+    public void A_word_too_long_for_any_room_breaks_once_before_it_breaks_more()
+    {
+        const string word = "Donaudampfschifffahrtsgesellschaft!";
+
+        var fit = AcrossInColumnsLayout.Fit(word, 60, 300, 26, 9.5, 7, new(20, 20, 0), Mono);
+
+        double whole = Mono(word, fit.FontSize, null).Width;
+        Assert.True(whole > fit.Width, "the case is meant to need a break");
+        Assert.True(whole <= fit.Width * 2 + 0.01, $"the word takes {whole / fit.Width:0.#} lines at {fit.FontSize}px");
+        Assert.True(fit.FontSize >= 9.5);
+    }
+
     [Fact]
     public void Room_beside_a_neighbour_is_half_the_gap_and_the_edge_is_taken_whole()
     {
