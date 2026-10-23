@@ -432,8 +432,24 @@
     <sys:String x:Key="S.Settings.HotkeyDisable">停用此快捷键</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">点击重新录制快捷键</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKinds">快捷键可使用 Ctrl／Alt／Shift 搭配其他按键，也支持单个功能键、鼠标按键以及游戏手柄。</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKindsExample">例如：Ctrl+Alt+A、Shift+A、F1、鼠标中键／侧键、XInput...等。</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuide">可用按键说明</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideCombo">组合键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideComboNote">Ctrl、Alt、Shift 可同时按多个，再加上一个按键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSingle">单个按键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDouble">连按两下</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDoubleNote">快速连按两下 Ctrl，或按住 Ctrl 连按两下 C</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouse">鼠标</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseMiddle">中键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX1">侧键 1</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX2">侧键 2</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepad">游戏手柄</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepadNote">Xbox 兼容（XInput）手柄的任意按键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusive">独占</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveNote">其他程序收不到这组按键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">例：设为 Ctrl+Alt+A 后，其他程序的 Ctrl+Alt+A 会失效</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideShared">不拦截</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">按键仍会传给当前程序，可能同时触发原本的功能</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：鼠标侧键设为截图翻译时，浏览器也会跟着返回上一页</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">实时翻译</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷键开始框选翻译</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未启动时按下快捷键开始框选，框选时再按一次开始翻译；翻译中可暂停或继续。</sys:String>

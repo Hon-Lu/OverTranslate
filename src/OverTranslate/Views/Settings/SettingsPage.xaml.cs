@@ -1478,6 +1478,61 @@ public partial class SettingsPage : UserControl
         if (field.Box.IsKeyboardFocused) Keyboard.ClearFocus();
     }
 
+    // Set when the click that pressed 可用按鍵 is the same one that closed its panel, so the click
+    // does not open it again straight away. See HotkeyGuidePopup_Closed.
+    private bool _ignoreHotkeyGuideClick;
+
+    private void HotkeyGuideBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ignoreHotkeyGuideClick) { _ignoreHotkeyGuideClick = false; return; }
+
+        // Measured rather than read off the markup: the panel is as wide as its longest line, which
+        // depends on the language. The frame's padding is shadow room, so the panel's own right
+        // edge is the frame's less that padding.
+        HotkeyGuideFrame.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        HotkeyGuidePopup.HorizontalOffset = HotkeyGuideBtn.ActualWidth
+            - HotkeyGuideFrame.DesiredSize.Width
+            + HotkeyGuideFrame.Padding.Right;
+        HotkeyGuidePopup.IsOpen = !HotkeyGuidePopup.IsOpen;
+    }
+
+    /// <summary>
+    /// Grows the panel out of its button's corner rather than switching it on.
+    /// </summary>
+    /// <remarks>
+    /// Short and without overshoot: it is information appearing, not something the user threw.
+    /// With animations turned off in Windows it simply appears.
+    /// </remarks>
+    private void HotkeyGuidePopup_Opened(object? sender, EventArgs e)
+    {
+        var scale = (ScaleTransform)HotkeyGuidePanel.RenderTransform;
+
+        if (SystemParameters.ClientAreaAnimation)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(160);
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            HotkeyGuidePanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        }
+
+        // So Esc reaches the panel: the popup is its own window and has no focus of its own.
+        HotkeyGuidePanel.Focus();
+    }
+
+    private void HotkeyGuidePopup_Closed(object? sender, EventArgs e)
+    {
+        _ignoreHotkeyGuideClick = HotkeyGuideBtn.IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed;
+    }
+
+    private void HotkeyGuidePanel_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        HotkeyGuidePopup.IsOpen = false;
+        HotkeyGuideBtn.Focus();
+        e.Handled = true;
+    }
+
     /// <summary>
     /// Every click on a focused box toggles recording — start, then stop, then start again.
     /// </summary>

@@ -436,8 +436,24 @@
     <sys:String x:Key="S.Settings.HotkeyDisable">이 단축키 사용 안 함</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">클릭해서 단축키 다시 지정</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKinds">단축키는 Ctrl／Alt／Shift와 다른 키의 조합은 물론, 단독 기능 키, 마우스 버튼, 게임패드 버튼도 지원합니다.</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKindsExample">예: Ctrl+Alt+A, Shift+A, F1, 마우스 가운데／옆 버튼, XInput 등.</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuide">사용 가능한 키 안내</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideCombo">조합 키</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideComboNote">Ctrl, Alt, Shift를 여러 개 함께 누르고 키 하나를 더합니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSingle">단일 키</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDouble">두 번 누르기</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDoubleNote">Ctrl을 빠르게 두 번 누르거나, Ctrl을 누른 채 C를 두 번 누릅니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouse">마우스</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseMiddle">가운데 버튼</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX1">옆 버튼 1</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX2">옆 버튼 2</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepad">게임패드</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepadNote">Xbox 호환(XInput) 컨트롤러의 모든 버튼</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusive">독점</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveNote">다른 프로그램에는 키가 전달되지 않습니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">예: Ctrl+Alt+A로 설정하면 다른 프로그램의 Ctrl+Alt+A는 작동하지 않습니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideShared">공유</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">키가 현재 프로그램에도 전달되어 원래 기능이 함께 실행될 수 있습니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">예: 옆 버튼을 캡처 번역으로 설정하면 브라우저도 이전 페이지로 돌아갑니다</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">실시간 번역</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">단축키를 눌러 블록을 선택하고 번역</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">중지 상태에서 단축키를 누르면 블록 선택을 시작하고, 선택 중에 다시 누르면 번역을 시작합니다. 번역 중에는 일시 정지·재개할 수 있습니다.</sys:String>
