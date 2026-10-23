@@ -1472,9 +1472,36 @@ public partial class SettingsPage : UserControl
         field.Box.Text = field.Display(settings);
 
         var trigger = field.Trigger(settings);
-        field.ElevatedNote.Visibility = trigger.IsMouse || trigger.IsKeySequence
+        field.ElevatedNote.Visibility = (trigger.IsMouse || trigger.IsKeySequence) && !RunsAsAdministrator
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Whether this process holds administrator rights, in which case no other program outranks it
+    /// and the listened-for shortcuts hear programs run as administrator too.
+    /// </summary>
+    /// <remarks>
+    /// True both when the user started OverTranslate as administrator and when UAC is off, which
+    /// gives every program an administrator's full rights. With UAC on and an ordinary start the
+    /// token is the filtered one and this is false, even for an account in Administrators.
+    /// Read once: a process's rights do not change while it runs.
+    /// </remarks>
+    private static readonly bool RunsAsAdministrator = ReadRunsAsAdministrator();
+
+    private static bool ReadRunsAsAdministrator()
+    {
+        try
+        {
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            return new System.Security.Principal.WindowsPrincipal(identity)
+                .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch (Exception)
+        {
+            // Not knowing is no reason to hide a warning that may apply.
+            return false;
+        }
     }
 
     private void StartRecording(HotkeyField field)
