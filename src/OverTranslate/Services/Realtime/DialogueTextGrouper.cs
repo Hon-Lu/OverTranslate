@@ -43,10 +43,17 @@ internal static class DialogueTextGrouper
         foreach (var row in rows)
         {
             var segments = new List<List<OcrTextBlock>>();
+            var items = ItemRow(row, rows);
             foreach (var block in row)
             {
                 var joinsRow = segments.Count > 0 && Adjacent(segments[^1][^1].LayoutBounds, block.LayoutBounds);
-                if (segments.Count > 0) RecordRow(decisions, segments[^1][^1], block, joinsRow);
+                string? refused = null;
+                if (joinsRow && items && SpacedItems(segments[^1][^1].LayoutBounds, block.LayoutBounds))
+                {
+                    joinsRow = false;
+                    refused = "row-items";
+                }
+                if (segments.Count > 0) RecordRow(decisions, segments[^1][^1], block, joinsRow, refused);
                 if (!joinsRow) segments.Add([block]);
                 else segments[^1].Add(block);
             }
@@ -116,6 +123,55 @@ internal static class DialogueTextGrouper
     private static bool Adjacent(Rect a, Rect b) =>
         SameRow(a, b) && Math.Min(a.Height, b.Height) >= Math.Max(a.Height, b.Height) * 0.6 &&
         b.Left - a.Right <= Math.Max(a.Height, b.Height) * 1.5;
+
+    /// <summary>
+    /// A row of separate short items — a status screen's tabs or slot labels — rather than one
+    /// line the detector broke at its spaces: several short boxes, with another itemised row right
+    /// above or below it.
+    /// </summary>
+    /// <remarks>
+    /// <para>The row alone cannot tell. A menu's labels sit 0.95–1.50 heights apart, straddling the
+    /// 1.5-height join in <see cref="Adjacent"/>, so the same screen joined different pairs at
+    /// different scales. But a subtitle written with doubled full-width spaces,
+    /// はい　　はい　　はい　　はい, is cut by the detector into four boxes 0.93–1.43 heights apart,
+    /// each as short as a label: every gap, width and count threshold tried split it too. Single
+    /// full-width spaces and English word gaps never reached the grouper as separate boxes.</para>
+    ///
+    /// <para>What a subtitle never has is a second row of items lined up with the first — the
+    /// percentages under the slot labels, kept whether the detector read them as seven boxes or
+    /// as one box of seven numbers. Over 410 corpus frames and 216 synthetic spaced subtitles this
+    /// changed nothing.</para>
+    /// </remarks>
+    private static bool ItemRow(List<OcrTextBlock> row, List<List<OcrTextBlock>> rows)
+    {
+        if (row.Count(b => ShortItem(b.LayoutBounds)) < 3) return false;
+        var span = Span(row);
+        return rows.Any(other => !ReferenceEquals(other, row) && Companion(span, other));
+    }
+
+    private static bool Companion(Rect items, List<OcrTextBlock> other)
+    {
+        var span = Span(other);
+        return Math.Max(span.Top - items.Bottom, items.Top - span.Bottom) <= items.Height * 1.5 &&
+            Math.Min(items.Right, span.Right) - Math.Max(items.Left, span.Left) >= items.Width * 0.5 &&
+            (other.Count >= 3 || other.Sum(b => DigitRuns(b.Text)) >= 3);
+    }
+
+    // Measured labels reach 1.95 heights; a 0.9-height gap is under the narrowest label gap, 0.95.
+    private static bool ShortItem(Rect r) => r.Width <= r.Height * 2.2;
+
+    private static bool SpacedItems(Rect a, Rect b) =>
+        ShortItem(a) && ShortItem(b) && b.Left - a.Right >= Math.Max(a.Height, b.Height) * 0.9;
+
+    private static Rect Span(List<OcrTextBlock> row) => row.Select(b => b.LayoutBounds).Aggregate(Rect.Union);
+
+    private static int DigitRuns(string text)
+    {
+        int runs = 0;
+        for (int i = 0; i < text.Length; i++)
+            if (char.IsDigit(text[i]) && (i == 0 || !char.IsDigit(text[i - 1]))) runs++;
+        return runs;
+    }
 
     private static bool NextRow(Rect a, Rect b, out string rule)
     {
@@ -191,16 +247,16 @@ internal static class DialogueTextGrouper
     // the harness prints its own legend saying so.
     private static void RecordRow(
         List<OcrTextBlockGrouper.NextLineDecision>? decisions,
-        OcrTextBlock previous, OcrTextBlock current, bool joined)
+        OcrTextBlock previous, OcrTextBlock current, bool joined, string? refused = null)
     {
         if (decisions is null) return;
         Rect a = previous.LayoutBounds, b = current.LayoutBounds;
         double height = Math.Max(a.Height, b.Height);
         if (height <= 0) return;
-        var rule = !SameRow(a, b) ? "not-same-row"
+        var rule = refused ?? (!SameRow(a, b) ? "not-same-row"
             : Math.Min(a.Height, b.Height) < height * 0.6 ? "row-height-mismatch"
             : b.Left - a.Right > height * 1.5 ? "row-gap-too-wide"
-            : "adjacent";
+            : "adjacent");
         decisions.Add(new OcrTextBlockGrouper.NextLineDecision(
             "row", previous.Text, current.Text, previous.LayoutScript, current.LayoutScript,
             VerticalGap: (b.Left - a.Right) / height,

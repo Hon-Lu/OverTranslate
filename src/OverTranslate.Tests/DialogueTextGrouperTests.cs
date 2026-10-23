@@ -93,6 +93,76 @@ public class DialogueTextGrouperTests
             Block("a facility to study that weird guitar...", 64, 127, 940, 78)]));
     }
 
+    // A status screen's slot labels over their percentages, as read at two scales (OCR coordinates
+    // from the report screenshot). main joined 乳口内 and 腔内肛門 at one scale, 口内クリ腔内肛門 at
+    // the other.
+    public static TheoryData<OcrTextBlock[]> SlotLabelRows => new()
+    {
+        new[]
+        {
+            Block("口内", 387, 20, 62, 40), Block("乳", 280, 22, 52, 38), Block("肛門", 723, 22, 61, 37),
+            Block("腔内", 610, 23, 59, 34), Block("耳", 858, 27, 30, 27), Block("96%", 117, 95, 97, 44),
+            Block("100%100%100%100%100%100%", 219, 95, 683, 44), Block("開発度は下げることも可能", 214, 127, 472, 47),
+        },
+        new[]
+        {
+            Block("腔内", 290, 5, 35, 22), Block("尻尾", 70, 6, 31, 20), Block("口内", 182, 6, 31, 18),
+            Block("クリ", 240, 7, 29, 17), Block("肛門", 351, 8, 29, 16), Block("乳", 138, 9, 16, 13),
+            Block("96%", 47, 42, 49, 24), Block("100%100%100%", 270, 42, 173, 25),
+            Block("100%100%", 103, 43, 116, 21), Block("100%", 212, 43, 60, 21),
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(SlotLabelRows))]
+    public void SlotLabelsOverARowOfValuesStaySeparate(OcrTextBlock[] blocks)
+    {
+        var texts = DialogueTextGrouper.Group(blocks).Select(b => b.Text).ToList();
+        foreach (var label in blocks.Where(b => !b.Text.Any(char.IsDigit) && b.Text.Length <= 2))
+            Assert.Contains(label.Text, texts);
+    }
+
+    // A subtitle written with doubled full-width spaces, cut by the detector into four boxes
+    // spaced like slot labels (measured on a rendered はい　　はい　　はい　　はい). Nothing itemised
+    // sits beside it, so it is left as the row rules already join it.
+    [Fact]
+    public void SpacedSubtitleWordsAreNotTakenForSlotLabels()
+    {
+        OcrTextBlock[] words =
+        [
+            Block("はい", 326, 39, 101, 55), Block("はい", 854, 39, 101, 55),
+            Block("はい", 502, 41, 99, 52), Block("はい", 682, 41, 97, 52),
+        ];
+        Assert.Equal(["はいはい", "はいはい"], DialogueTextGrouper.Group(words).Select(b => b.Text));
+        Assert.Equal(["はいはい", "はいはい", "そうだね、わかってるよ"],
+            DialogueTextGrouper.Group([.. words, Block("そうだね、わかってるよ", 330, 110, 620, 52)]).Select(b => b.Text));
+    }
+
+    // A visual novel's quick menu under its two icon letters (region-subtitle-ja-game/2.png): short
+    // buttons with a three-box row above, but that row covers too little of the menu to be its
+    // values. Grouped as before.
+    [Fact]
+    public void QuickMenuUnderIconLettersIsGroupedAsBefore()
+    {
+        OcrTextBlock[] frame =
+        [
+            Block("Summer Pockets REFLECTION BLUE羽未8月2日", 2, 0, 295, 24), Block("ろは", 460, 603, 62, 32, 1.0),
+            Block("「うん、じゃあ次はね……」", 285, 662, 346, 42, 1.0), Block("X CLOSE", 1336, 667, 91, 36, 0.92),
+            Block("VOICE", 1335, 709, 90, 31, 1.0), Block("LOG", 1334, 747, 78, 40, 0.81),
+            Block("G", 805, 792, 36, 32), Block("C", 881, 794, 26, 27, 0.91), Block("LOCK", 1366, 795, 53, 23, 1.0),
+            Block("TITLE", 800, 815, 45, 24), Block("QSAVE", 294, 816, 53, 23, 1.0), Block("AUTO", 656, 817, 45, 21, 1.0),
+            Block("SKIP", 732, 817, 38, 22, 1.0), Block("QUIT", 875, 817, 39, 21), Block("LOAD", 515, 818, 41, 19, 1.0),
+            Block("CONFIG", 939, 818, 58, 21, 1.0), Block("RECORD", 1008, 818, 62, 21, 1.0),
+            Block("TWITTER", 1077, 818, 67, 21, 1.0), Block("QLOAD", 366, 819, 53, 18, 0.94),
+            Block("SAVE", 446, 819, 34, 18, 1.0), Block("BACK", 589, 819, 38, 18, 1.0), Block("LOCK", 1162, 819, 42, 19, 1.0),
+        ];
+        Assert.Equal(
+        [
+            "Summer Pockets REFLECTION BLUE羽未8月2日", "ろは", "「うん、じゃあ次はね……」", "X CLOSE", "VOICE LOG",
+            "G", "C", "LOCK", "BACK AUTO SKIP TITLE QUIT CONFIG RECORD TWITTER LOCK", "QSAVE QLOAD SAVE", "LOAD",
+        ], OcrService.GroupRealtime([.. frame], 839, RealtimeBlockMode.Subtitle).Select(b => b.Text));
+    }
+
     private static OcrTextBlock Block(string text, double x, double y, double w, double h = 20, double confidence = 0.99) =>
         new(text, new Rect(x, y, w, h), Confidence: confidence, LayoutBounds: new Rect(x, y, w, h),
             LayoutScript: OcrLayoutScript.Latin, LayoutGlyphHeight: h * 0.82);
