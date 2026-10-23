@@ -449,7 +449,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">E.g. once set to Ctrl+Alt+A, Ctrl+Alt+A stops working elsewhere</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideShared">Shared</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">The keys still reach the current program and may trigger what they do there too</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">E.g. with a side button set to Capture, your browser also goes back a page</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">E.g. a side button may also take your browser back a page</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">Double press is limited to the two above, so programs don’t act twice</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">May not work in programs running as administrator</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to [[select blocks and translate]]</sys:String>

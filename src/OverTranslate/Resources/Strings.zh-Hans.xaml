@@ -449,7 +449,8 @@
     <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">例：设为 Ctrl+Alt+A 后，其他程序的 Ctrl+Alt+A 会失效</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideShared">不拦截</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">按键仍会传给当前程序，可能同时触发原本的功能</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：鼠标侧键设为截图翻译时，浏览器也会跟着返回上一页</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：鼠标侧键可能让浏览器返回上一页</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">连按两下仅支持以上两组，避免重复触发原有功能</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">在以管理员身份运行的程序中，此快捷键可能无法使用</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">实时翻译</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷键开始[[框选翻译]]</sys:String>

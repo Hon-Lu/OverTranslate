@@ -453,7 +453,8 @@
     <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">예: Ctrl+Alt+A로 설정하면 다른 프로그램의 Ctrl+Alt+A는 작동하지 않습니다</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideShared">공유</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">키가 현재 프로그램에도 전달되어 원래 기능이 함께 실행될 수 있습니다</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">예: 옆 버튼을 캡처 번역으로 설정하면 브라우저도 이전 페이지로 돌아갑니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">예: 옆 버튼을 누르면 브라우저가 이전 페이지로 돌아갈 수 있습니다</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">두 번 누르기는 위의 두 가지만 지원해 원래 기능이 중복 실행되지 않게 합니다</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">관리자 권한으로 실행 중인 프로그램에서는 이 단축키가 작동하지 않을 수 있습니다</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">실시간 번역</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">단축키를 눌러 [[블록을 선택하고 번역]]</sys:String>

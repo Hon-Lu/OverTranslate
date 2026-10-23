@@ -444,7 +444,8 @@
     <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">Например, после назначения Ctrl+Alt+A это сочетание перестает работать в других программах</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideShared">Совместно</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">Клавиши по-прежнему доходят до текущей программы и могут сработать и там</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">Например, если назначить боковую кнопку на снимок экрана, браузер заодно вернется на предыдущую страницу</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">Например, боковая кнопка может вернуть браузер на предыдущую страницу</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">Двойное нажатие — только два сочетания выше, чтобы ничего не срабатывало дважды</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">Может не работать в программах, запущенных от имени администратора</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Перевод в реальном времени</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Нажмите сочетание, чтобы [[выбрать области и перевести]]</sys:String>
