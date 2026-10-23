@@ -90,6 +90,41 @@ public class WebParagraphGroupingTests
         }
     }
 
+    // A page of body text set at 1.6 line heights: looser than any set-solid figure, and the step
+    // the page itself repeats. The texts carry no punctuation, so the leading is the only evidence.
+    private static OcrTextBlock[] LooselySetPage(int lines, double width, string text) =>
+        Enumerable.Range(0, lines)
+            .Select(i => new OcrTextBlock(text, new Rect(100, 100 + i * 48, width, 30)).AsDetected())
+            .ToArray();
+
+    [Fact]
+    public void ChineseBodyTextJoinsAtItsPagesOwnLeading()
+    {
+        var page = LooselySetPage(5, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
+        Assert.Equal("b0,b1,b2,b3,b4", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void ShortEntriesAtThatLeadingStayAList()
+    {
+        var page = LooselySetPage(5, 300, "清單裡的一個設定項目");
+        Assert.Equal("b0|b1|b2|b3|b4", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void APageWithTooFewStepsHasNoLeadingToRead()
+    {
+        var page = LooselySetPage(2, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
+        Assert.Equal("b0|b1", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void ThePagesLeadingIsReadByTheScreenshotModeOnly()
+    {
+        var page = LooselySetPage(5, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
+        Assert.Equal("b0|b1|b2|b3|b4", Members(page, GroupingProfile.Realtime));
+    }
+
     [Fact]
     public void SyntheticFlatBackgroundInkSeparatesHeadingWithoutChangingRenderMetrics()
     {
