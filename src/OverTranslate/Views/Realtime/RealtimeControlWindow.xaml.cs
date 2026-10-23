@@ -96,6 +96,16 @@ public partial class RealtimeControlWindow : Window
     // back to this. 已暫停 wins over it — see SetLoadingModels.
     private static string LoadingModelsStatus => LocalizationService.Get("S.Realtime.LoadingModels");
     private bool _hasLanguages;
+    // The codes behind the two names, for the lists to mark and for a pick to be told apart from
+    // the language already in use.
+    private string _sourceCode = "";
+    private string _targetCode = "";
+
+    // The language list dropped from one of the two names, while it is open (#345).
+    private RealtimeLanguageMenu? _menu;
+    // Which list a press on the capsule just closed, so the click that press ends in does not open
+    // the same list again: pressing an open list's own name closes it, as a menu button does.
+    private RealtimeLanguageMenuKind? _menuClosedByPress;
     private bool _isPaused;
     private bool _isLoadingModels;
     // What the session last said through SetBusy; the dot also pulses while the models load.
@@ -160,7 +170,27 @@ public partial class RealtimeControlWindow : Window
 
         _scaleFixupSettle = new DispatcherTimer { Interval = ScaleFixupSettle };
         _scaleFixupSettle.Tick += (_, _) => { _scaleFixupSettle.Stop(); QueueScaleFixup(); };
-        Closed += (_, _) => _scaleFixupSettle.Stop();
+        Closed += (_, _) =>
+        {
+            _scaleFixupSettle.Stop();
+            CloseMenu();
+        };
+
+        // A list left open over a capsule that has gone away — a capture standing the session down —
+        // would be a menu for a bar that is not there.
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) CloseMenu();
+        };
+
+        // The capsule never activates, so pressing it does not take activation from an open list and
+        // the list would never hear about the press. It is told here instead: any press on the
+        // capsule is a press outside the list.
+        PreviewMouseLeftButtonDown += (_, _) =>
+        {
+            _menuClosedByPress = _menu?.Kind;
+            CloseMenu();
+        };
 
         Loaded += (_, _) =>
         {
@@ -208,6 +238,13 @@ public partial class RealtimeControlWindow : Window
     /// to keep between sittings. Not raised by <see cref="SetCollapsed"/>.
     /// </summary>
     public event EventHandler<bool>? CollapsedChanged;
+
+    /// <summary>
+    /// Raised with the pair the user picked from one of the two language lists — the half they did
+    /// not touch unchanged. The session decides what follows and reports the pair back through
+    /// <see cref="SetLanguages"/>.
+    /// </summary>
+    public event EventHandler<(string Source, string Target)>? LanguagesChangeRequested;
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -392,6 +429,8 @@ public partial class RealtimeControlWindow : Window
     /// </remarks>
     public void SetLanguages(string sourceCode, string targetCode)
     {
+        _sourceCode = sourceCode;
+        _targetCode = targetCode;
         SourceLangText.Text = Models.LanguageData.GetSourceDisplayName(sourceCode);
         TargetLangText.Text = Models.LanguageData.GetTargetDisplayName(targetCode);
         _hasLanguages = SourceLangText.Text.Length > 0 && TargetLangText.Text.Length > 0;
@@ -440,6 +479,7 @@ public partial class RealtimeControlWindow : Window
     public void SetMode(RealtimeControlMode mode)
     {
         _mode = mode;
+        CloseMenu();
         EditPanel.Visibility = mode == RealtimeControlMode.Edit ? Visibility.Visible : Visibility.Collapsed;
         RunPanel.Visibility = mode == RealtimeControlMode.Running ? Visibility.Visible : Visibility.Collapsed;
 
@@ -549,6 +589,7 @@ public partial class RealtimeControlWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(CollapseBtn, label);
 
         UpdateCollapsedToolTip();
+        CloseMenuIfPairHidden();
     }
 
     /// <summary>
@@ -564,9 +605,10 @@ public partial class RealtimeControlWindow : Window
             return;
         }
 
-        RunPanel.ToolTip = LangPairPanel.Visibility == Visibility.Visible
-            ? $"{SourceLangText.Text} → {TargetLangText.Text}"
-            : RunStatusText.Text;
+        var pair = $"{SourceLangText.Text} → {TargetLangText.Text}";
+        RunPanel.ToolTip = LangPairPanel.Visibility != Visibility.Visible
+            ? RunStatusText.Text
+            : RunStatusText.Visibility == Visibility.Visible ? $"{RunStatusText.Text} · {pair}" : pair;
     }
 
     // Spaced either side of the slash: at 12px the bare 1/1 reads as one glyph cluster rather than
@@ -636,6 +678,7 @@ public partial class RealtimeControlWindow : Window
             // on; it goes back to accent when the message does.
             SetDotState(kind == RealtimeMessageKind.Failure);
             UpdateCollapsedToolTip();
+            CloseMenuIfPairHidden();
         }
 
         _messageShowing = true;
@@ -688,12 +731,94 @@ public partial class RealtimeControlWindow : Window
 
         RunStatusText.Text = _isPaused ? PausedStatus : _isLoadingModels ? LoadingModelsStatus : RunStatus;
 
-        var showPair = _hasLanguages && !_isPaused && !_isLoadingModels;
+        // Paused, the pair stays beside 已暫停 rather than giving way to it: the pair is the one place
+        // the languages can be changed from (#345), and a paused session is where someone who noticed
+        // the wrong one is most likely to stop and fix it before carrying on.
+        var showPair = _hasLanguages && !_isLoadingModels;
         LangPairPanel.Visibility = showPair ? Visibility.Visible : Visibility.Collapsed;
-        RunStatusText.Visibility = showPair ? Visibility.Collapsed : Visibility.Visible;
+        RunStatusText.Visibility = showPair && !_isPaused ? Visibility.Collapsed : Visibility.Visible;
 
         SetDotState(failed: false);
         UpdateCollapsedToolTip();
+        CloseMenuIfPairHidden();
+    }
+
+    // ── Language lists (#345) ────────────────────────────────────────────────────────────────────
+
+    private void SourceLangBtn_Click(object sender, RoutedEventArgs e) =>
+        ToggleMenu(RealtimeLanguageMenuKind.Source, SourceLangBtn);
+
+    private void TargetLangBtn_Click(object sender, RoutedEventArgs e) =>
+        ToggleMenu(RealtimeLanguageMenuKind.Target, TargetLangBtn);
+
+    private void ToggleMenu(RealtimeLanguageMenuKind kind, System.Windows.Controls.Button button)
+    {
+        // The press that started this click has already closed whatever list was open; when it was
+        // this one, closing it was the whole answer.
+        var closedByPress = _menuClosedByPress;
+        _menuClosedByPress = null;
+        if (closedByPress == kind) return;
+
+        CloseMenu();
+
+        var menu = new RealtimeLanguageMenu(
+            kind,
+            kind == RealtimeLanguageMenuKind.Source ? _sourceCode : _targetCode,
+            PhysicalRect(button),
+            PhysicalRect(Chrome),
+            _screenBounds);
+        menu.LanguagePicked += (_, code) => OnLanguagePicked(kind, code);
+        menu.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_menu, menu)) return;
+            _menu = null;
+            button.Tag = null;
+        };
+
+        _menu = menu;
+        button.Tag = "Open";
+        menu.Show();
+    }
+
+    private void OnLanguagePicked(RealtimeLanguageMenuKind kind, string code)
+    {
+        var source = kind == RealtimeLanguageMenuKind.Source ? code : _sourceCode;
+        var target = kind == RealtimeLanguageMenuKind.Target ? code : _targetCode;
+
+        // Picking the language already in use is a list closed, not a change.
+        if (string.Equals(source, _sourceCode, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(target, _targetCode, StringComparison.OrdinalIgnoreCase)) return;
+
+        LanguagesChangeRequested?.Invoke(this, (source, target));
+    }
+
+    // A list belongs to the name it dropped from; once that name is off the capsule — a message in
+    // its place, 載入模型中…, the capsule collapsed — the list is pointing at nothing.
+    private void CloseMenuIfPairHidden()
+    {
+        if (_menu is not null && (LangPairPanel.Visibility != Visibility.Visible || _collapsed))
+            CloseMenu();
+    }
+
+    private void CloseMenu()
+    {
+        var menu = _menu;
+        if (menu is null) return;
+        _menu = null;
+        SourceLangBtn.Tag = null;
+        TargetLangBtn.Tag = null;
+        menu.Dismiss(giveBackForeground: true);
+    }
+
+    // Screen pixels, through WPF's own transform to the device — which already carries this
+    // window's LayoutTransform and render scale.
+    private static System.Drawing.Rectangle PhysicalRect(FrameworkElement element)
+    {
+        var topLeft = element.PointToScreen(new System.Windows.Point(0, 0));
+        var bottomRight = element.PointToScreen(new System.Windows.Point(element.ActualWidth, element.ActualHeight));
+        return System.Drawing.Rectangle.FromLTRB(
+            (int)Math.Round(topLeft.X), (int)Math.Round(topLeft.Y),
+            (int)Math.Round(bottomRight.X), (int)Math.Round(bottomRight.Y));
     }
 
     // SetResourceReference rather than an assigned brush: the theme can still be switched from the

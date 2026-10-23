@@ -209,6 +209,7 @@ public partial class RealtimePage : UserControl
         RenderPauseHint();
 
         RealtimeSessionController.Instance.StateChanged += OnSessionStateChanged;
+        RealtimeSessionController.Instance.LanguagesChanged += OnSessionLanguagesChanged;
 
         // The direction is set on the edit layer, which says so through MangaModelOptions.
         MangaModelOptions.Changed += OnMangaModelOptionsChanged;
@@ -319,11 +320,8 @@ public partial class RealtimePage : UserControl
         var target   = TgtLangBox.SelectedValue;
         var provider = ProviderBox.SelectedValue;
 
-        LocalizationService.BindLocalizedItems(
-            SrcLangBox,
-            LanguageData.OcrSourceLanguages
-                .Where(language => !LanguageData.IsAutomaticSource(language.Code))
-                .ToList());
+        // The same list the running capsule's source menu offers — see RealtimeLanguageMenuItems.
+        LocalizationService.BindLocalizedItems(SrcLangBox, RealtimeLanguageMenuItems.SourceLanguages.ToList());
         LocalizationService.BindLocalizedItems(TgtLangBox,  LanguageData.TargetLanguages);
         // Also where a change to which services are offered lands, on the way back from the settings
         // page. A running session has this box locked, and keeps its own choice in the list anyway.
@@ -379,6 +377,7 @@ public partial class RealtimePage : UserControl
     public void Teardown()
     {
         RealtimeSessionController.Instance.StateChanged -= OnSessionStateChanged;
+        RealtimeSessionController.Instance.LanguagesChanged -= OnSessionLanguagesChanged;
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
     }
@@ -1372,6 +1371,20 @@ public partial class RealtimePage : UserControl
 
     private void OnSessionStateChanged(object? sender, EventArgs e) =>
         Dispatcher.BeginInvoke(RenderState);
+
+    /// <summary>
+    /// The running capsule changed the pair (#345): the pickers follow at once, locked as they are,
+    /// so the page says what the session is running with — and, after 結束, what the next one starts
+    /// on. The settings file already holds it, so the save the pickers' own handlers make on the way
+    /// past writes back the same values.
+    /// </summary>
+    private void OnSessionLanguagesChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(() =>
+        {
+            var realtime = SettingsService.Instance.Current.Realtime;
+            SrcLangBox.SelectedValue = LanguageData.GetValidRealtimeSourceCode(realtime.SourceLanguage);
+            TgtLangBox.SelectedValue = LanguageData.GetValidTargetCode(realtime.TargetLanguage);
+        });
 
     private void RenderState()
     {

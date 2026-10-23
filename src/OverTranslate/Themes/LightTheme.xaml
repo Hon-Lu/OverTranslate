@@ -112,6 +112,10 @@
     <SolidColorBrush x:Key="ToolbarGroupHoverBg"   Color="#E0E0E0"/>
     <SolidColorBrush x:Key="ToolbarGroupPressedBg" Color="#D4D4D4"/>
 
+    <!-- The edge of a menu dropped from a floating bar - see DarkTheme.xaml. Dark rather than white
+         here, which would vanish into a near-white menu. -->
+    <SolidColorBrush x:Key="ToolbarMenuBorder"     Color="#1F000000"/>
+
     <!-- The pill that marks the chosen half of a two-way switch, riding inside the tray above. White
          on a grey tray is only a small step in value, so here it does take a hairline border —
          without it the pill dissolves into the tray on a bright desktop, which is exactly where this
