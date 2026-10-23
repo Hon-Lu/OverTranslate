@@ -129,8 +129,12 @@ internal static class AcrossInColumnsLayout
     /// <param name="emergencyFontSize">The floor of everything.</param>
     /// <param name="room">How far past the source the text box may reach.</param>
     /// <param name="keepSize">
-    /// The size is the user's (realtime 固定): take all the room there is before giving any of the
-    /// size back, rather than shrinking within the comfortable width first.
+    /// The size is the user's (realtime 固定): take all the room there is, below as well as beside,
+    /// before giving any of the size back, rather than shrinking within the comfortable width and
+    /// the group's own height first. The size still goes before a word is broken: a fixed size that
+    /// has to put "exploratio" and "n." on two lines was measured in the real app and reads worse
+    /// than the same word a few pixels smaller — so the caller passes its usual readable floor, not
+    /// the fixed size, and the size is given back only where the room has run out.
     /// </param>
     public static AcrossInColumnsFit Fit(
         string text,
@@ -152,11 +156,12 @@ internal static class AcrossInColumnsLayout
         double widest = sourceWidth + room.Left + room.Right;
         double comfortable = keepSize ? widest : Math.Min(widest, sourceWidth + preferredFontSize * 2);
         double tallest = sourceHeight + room.Below;
+        double groupHeight = keepSize ? tallest : sourceHeight;
         string[] words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
         var found =
-            Search(preferredFontSize, readableFontSize, comfortable, sourceHeight)
-            ?? Search(preferredFontSize, readableFontSize, widest, sourceHeight)
+            Search(preferredFontSize, readableFontSize, comfortable, groupHeight)
+            ?? Search(preferredFontSize, readableFontSize, widest, groupHeight)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest, maxPieces: 2)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest, maxPieces: int.MaxValue)

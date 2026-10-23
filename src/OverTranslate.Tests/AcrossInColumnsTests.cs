@@ -183,10 +183,27 @@ public class AcrossInColumnsTests
     public void A_fixed_size_takes_the_room_before_it_gives_up_any_size()
     {
         var auto = AcrossInColumnsLayout.Fit(Sentence, 30, 120, 24, 9.5, 7, new(200, 200, 0), Mono);
-        var fixedSize = AcrossInColumnsLayout.Fit(Sentence, 30, 120, 24, 24, 7, new(200, 200, 0), Mono, keepSize: true);
+        var fixedSize = AcrossInColumnsLayout.Fit(Sentence, 30, 120, 24, 9.5, 7, new(200, 200, 0), Mono, keepSize: true);
 
         Assert.True(auto.FontSize < 24, "自動 was expected to shrink inside the balloon's margin");
         Assert.Equal(24, fixedSize.FontSize);
+    }
+
+    /// <summary>
+    /// 固定 runs down into the room below before it gives up any size, and gives up a little size
+    /// before it breaks a word.
+    /// </summary>
+    [Fact]
+    public void A_fixed_size_grows_down_first_and_shrinks_only_to_keep_a_word_whole()
+    {
+        var down = AcrossInColumnsLayout.Fit(Sentence, 120, 80, 24, 9.5, 7, new(0, 0, 400), Mono, keepSize: true);
+        Assert.Equal(24, down.FontSize);
+        Assert.True(down.Height > 80, "the text was expected to run into the room below");
+
+        const string text = "preparing for the next exploration.";
+        var word = AcrossInColumnsLayout.Fit(text, 100, 300, 24, 9.5, 7, AcrossInColumnsRoom.None, Mono, keepSize: true);
+        Assert.True(word.FontSize < 24, "nothing gave way for a word wider than the block");
+        Assert.True(Mono("exploration.", word.FontSize, null).Width <= word.Width, "the word was broken");
     }
 
     /// <summary>

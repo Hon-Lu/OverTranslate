@@ -1155,7 +1155,7 @@ public partial class RealtimeBlockWindow : Window
         var fit = AcrossInColumnsLayout.Fit(
             text, sourceWidth, sourceHeight,
             preferredFontSize: _fixedFontSize ?? cellPreferred * VerticalGlyphFill,
-            readableFontSize: _fixedFontSize ?? MinFontSize,
+            readableFontSize: MinFontSize,
             emergencyFontSize: MinFontSize,
             room,
             (part, size, width) => Measure(part, typeface, size, width),
@@ -1229,7 +1229,7 @@ public partial class RealtimeBlockWindow : Window
         var fit = AcrossInColumnsLayout.Fit(
             text, sourceWidth, sourceHeight,
             preferredFontSize: _fixedFontSize ?? cellPreferred * VerticalGlyphFill,
-            readableFontSize: _fixedFontSize ?? MinFontSize,
+            readableFontSize: MinFontSize,
             emergencyFontSize: MinFontSize,
             new AcrossInColumnsRoom(cellPreferred, cellPreferred, 0),
             (part, size, width) => Measure(part, typeface, size, width),
