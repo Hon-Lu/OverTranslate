@@ -15,6 +15,70 @@
              it is shown in, so the stroke is set directly: 1.05 here is 1.4 at 24. 18 rather than
              the bar's usual 16 because the 文 has too much detail to survive 16; the button itself is
              the same size as the others. -->
+        <!-- One half of the language pair, as a button that drops its list (#345). Flat until the
+             pointer is on it, then the tray's grey; one step lighter while its list is open (Tag
+             "Open", set in code), so the list reads as coming out of this one. AppBorder is that step
+             in both themes: #3C3C3C over #363636 here, #E0E0E0 under #EDEDED in the light one. Not
+             focusable: the capsule never takes the keyboard, and a focus ring it could never use
+             would only show up after a click. -->
+        <Style x:Key="RealtimeLangButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="Transparent"
+                                CornerRadius="7"
+                                Padding="6,3">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Open">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppBorder}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The source steps back to secondary like the label it replaces, and comes up to primary
+             while it is the thing being pointed at or chosen — see the pair's comment below. -->
+        <Style x:Key="RealtimeSourceLangButton" TargetType="Button" BasedOn="{StaticResource RealtimeLangButton}">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                </Trigger>
+                <Trigger Property="Tag" Value="Open">
+                    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The ⌄ after each name. Drawn for the arrow's reason: the font's chevron is a different
+             weight on Windows 10, and a Path has no fallback to lose. Dimmed so it marks the name as
+             pressable without competing with it. -->
+        <Style x:Key="RealtimeLangChevron" TargetType="Path">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Stretch" Value="None"/>
+            <Setter Property="Opacity" Value="0.55"/>
+            <Setter Property="StrokeThickness" Value="1.2"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="StrokeLineJoin" Value="Round"/>
+            <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+            <Setter Property="Data" Value="M1.2,2.8 L4,5.4 L6.8,2.8"/>
+        </Style>
+
         <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
     </Window.Resources>
 
@@ -233,16 +297,32 @@
                                  centred on the em box: too much air on both sides and sitting visibly high
                                  against 12.5px text. A Path has no fallback to lose and its weight and
                                  height are ours to set. -->
+                            <!-- Each name is a button that drops its own list (#345), so the user can
+                                 fix a pair they forgot to set without ending the session. The ⌄ is
+                                 the only thing that says so, and it costs the pair two small marks
+                                 rather than turning it into a pair of drop-down boxes. The buttons'
+                                 own padding replaces the spacing the bare labels had — the negative
+                                 left margin puts the first name back where it was — so the capsule
+                                 grows by the two marks and nothing else. -->
                             <StackPanel x:Name="LangPairPanel"
                                         Orientation="Horizontal"
                                         VerticalAlignment="Center"
-                                        Margin="0,0,8,0"
+                                        Margin="-6,0,2,0"
                                         Visibility="Collapsed">
-                                <TextBlock x:Name="SourceLangText"
-                                           VerticalAlignment="Center"
-                                           FontFamily="{DynamicResource AppFont}"
-                                           FontSize="12.5"
-                                           Foreground="{DynamicResource AppTextSecondary}"/>
+                                <Button x:Name="SourceLangBtn"
+                                        Style="{StaticResource RealtimeSourceLangButton}"
+                                        ToolTip="{DynamicResource S.Realtime.ChangeSourceLanguage}"
+                                        AutomationProperties.Name="{DynamicResource S.Realtime.ChangeSourceLanguage}"
+                                        Click="SourceLangBtn_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="SourceLangText"
+                                                   VerticalAlignment="Center"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="12.5"
+                                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                        <Path Style="{StaticResource RealtimeLangChevron}"/>
+                                    </StackPanel>
+                                </Button>
 
                                 <!-- Half-pixel coordinates so the 1px stroke lands on a pixel row rather than
                                      straddling two. Bottom margin of 1 lifts it off the text box's centre and
@@ -253,7 +333,7 @@
                                      it at 3.7:1 dark / 3.3:1 light — over the 3:1 a 1px non-text stroke
                                      needs, still a step below the label it separates. -->
                                 <Path VerticalAlignment="Center"
-                                      Margin="5.5,0,5.5,1"
+                                      Margin="1.5,0,1.5,1"
                                       Width="10.6" Height="9"
                                       Stretch="None"
                                       Stroke="{DynamicResource AppTextSecondary}"
@@ -264,11 +344,20 @@
                                       StrokeLineJoin="Round"
                                       Data="M0,4.5 H9.1 M6.8,2.6 L9.6,4.5 L6.8,6.4"/>
 
-                                <TextBlock x:Name="TargetLangText"
-                                           VerticalAlignment="Center"
-                                           FontFamily="{DynamicResource AppFont}"
-                                           FontSize="12.5"
-                                           Foreground="{DynamicResource AppTextPrimary}"/>
+                                <Button x:Name="TargetLangBtn"
+                                        Style="{StaticResource RealtimeLangButton}"
+                                        ToolTip="{DynamicResource S.Realtime.ChangeTargetLanguage}"
+                                        AutomationProperties.Name="{DynamicResource S.Realtime.ChangeTargetLanguage}"
+                                        Click="TargetLangBtn_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="TargetLangText"
+                                                   VerticalAlignment="Center"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="12.5"
+                                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                        <Path Style="{StaticResource RealtimeLangChevron}"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
 
                             <!-- 截圖翻譯, from inside the session. The blocks were framed once and loosely,

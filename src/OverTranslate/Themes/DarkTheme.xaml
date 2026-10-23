@@ -127,6 +127,11 @@
     <SolidColorBrush x:Key="ToolbarGroupHoverBg"   Color="#464646"/>
     <SolidColorBrush x:Key="ToolbarGroupPressedBg" Color="#505050"/>
 
+    <!-- The edge of a menu dropped from a floating bar (the realtime capsule's language lists). A
+         translucent hairline rather than ToolbarBorder: the menu sits over a picture, not over the
+         bar, and a grey edge that reads on the bar reads as a frame around a box over a scene. -->
+    <SolidColorBrush x:Key="ToolbarMenuBorder"     Color="#14FFFFFF"/>
+
     <!-- The pill that marks the chosen half of a two-way switch, riding inside the tray above. It
          has to read as raised out of the tray, so in this theme it is lighter than the tray and
          takes no border: an outline on a surface this small is one line too many, and the step in

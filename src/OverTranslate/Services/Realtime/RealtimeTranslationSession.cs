@@ -105,8 +105,9 @@ public sealed class RealtimeTranslationSession
     private Models.TranslationProvider _provider;
 
     // What Resume needs to put the loops back the way Start left them. A paused session is still
-    // the session the user framed: the blocks, the languages and the engine cannot change while it
-    // is paused, because everything that could change them lives on a page a session has hidden.
+    // the session the user framed: the blocks and the engine cannot change while it is paused,
+    // because everything that could change them lives on a page a session has hidden. The languages
+    // can, from the floating bar — see ChangeLanguages — and Resume starts on whatever they are now.
     private IReadOnlyList<RealtimeRegion> _regions = [];
     private string _sourceLanguage = "";
     private string _targetLanguage = "";
@@ -287,6 +288,54 @@ public sealed class RealtimeTranslationSession
 
         Log.Info("Realtime session resuming: every region read at once, from scratch");
         Start(_regions, _sourceLanguage, _targetLanguage, _provider, capture, readAtOnce: true);
+    }
+
+    /// <summary>The language this session reads, as <see cref="Resume"/> would start it with.</summary>
+    public string SourceLanguage => _sourceLanguage;
+
+    /// <summary>The language this session translates into, as <see cref="Resume"/> would start it with.</summary>
+    public string TargetLanguage => _targetLanguage;
+
+    /// <summary>
+    /// Changes the language pair from the floating bar, without ending the session (#345).
+    /// </summary>
+    /// <remarks>
+    /// <para>A running session starts again on the new pair at once, reading every region the way
+    /// <see cref="Resume"/> does — the user has just asked, and is watching for the words. Starting
+    /// again rather than patching the loops in place is what loads the recogniser and the manga
+    /// models the new source needs, and lets go of the ones it no longer does: see
+    /// <see cref="Start"/> and OcrService.KeepWarmForRealtime.</para>
+    ///
+    /// <para>A paused session stays paused and only remembers the pair: 繼續 is what starts it, on
+    /// the pair the user chose last. Loading models for a session the user has stopped would be
+    /// spending memory on a press they may never make.</para>
+    ///
+    /// <para>Either way the cache is fenced, as a pause does. A pass that was already in flight was
+    /// read and translated for the old pair; its answer must reach neither the screen nor the cache
+    /// the new pair's passes read from. The entries themselves are keyed by the pair, so nothing
+    /// already remembered can be served for the wrong one.</para>
+    /// </remarks>
+    /// <returns>The generation from here on, for rejecting older queued UI updates.</returns>
+    public int ChangeLanguages(string sourceLanguage, string targetLanguage)
+    {
+        var running = !IsPaused && _capture is not null;
+
+        // The loops first, then the fence: a loop that posted between the two would have taken the
+        // new generation for a pass read with the old pair.
+        if (running) StopLoops();
+        var generation = _translationCache.Fence();
+
+        Log.Info("Realtime session languages changed: {OldSrc}->{OldTgt} to {Src}->{Tgt}, {State}",
+            _sourceLanguage, _targetLanguage, sourceLanguage, targetLanguage,
+            running ? "restarting at once" : IsPaused ? "still paused" : "not started");
+
+        _sourceLanguage = sourceLanguage;
+        _targetLanguage = targetLanguage;
+
+        if (running)
+            Start(_regions, sourceLanguage, targetLanguage, _provider, _capture!, readAtOnce: true);
+
+        return generation;
     }
 
     /// <param name="releaseRecogniser">
@@ -1135,7 +1184,12 @@ public sealed class RealtimeTranslationSession
                         blocks, sourceLanguage, targetLanguage, generation, token);
                     var translateMs = (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
-                    if (translated is null || !session._translationCache.IsCurrent(generation))
+                    // A cancelled token is a run that has been stopped — paused, or started again on
+                    // another language pair. A pass that posted in the moment before that took the
+                    // fence's generation, and a reply served whole from the cache never awaits
+                    // anything that would notice the cancellation.
+                    if (translated is null || token.IsCancellationRequested ||
+                        !session._translationCache.IsCurrent(generation))
                     {
                         RequestRetry();
                         return;

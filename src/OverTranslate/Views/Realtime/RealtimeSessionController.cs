@@ -460,6 +460,7 @@ internal sealed class RealtimeSessionController
         control.SetCompareDisplay(_compareDisplay);
         control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
+        control.LanguagesChangeRequested += (_, pair) => ChangeLanguages(pair.Source, pair.Target);
         _control = control;
         control.Show();
 
@@ -1002,6 +1003,85 @@ internal sealed class RealtimeSessionController
         control.BringToFront();
 
         Log.Info("Realtime compare display switched {State} mid-session", _compareDisplay ? "on" : "off");
+    }
+
+    /// <summary>
+    /// Raised after the floating bar changed the session's language pair (#345), once the new pair
+    /// is in the settings file — for the page whose pickers show it.
+    /// </summary>
+    public event EventHandler? LanguagesChanged;
+
+    /// <summary>
+    /// The pair the session is running with, or null with no session — for a capture taken from
+    /// inside it, which reads with the same pair (#345).
+    /// </summary>
+    public (string Source, string Target)? CurrentLanguages =>
+        _request is { } request ? (request.SourceLanguage, request.TargetLanguage) : null;
+
+    /// <summary>
+    /// Switches the language pair from the running capsule, without ending anything (#345).
+    /// </summary>
+    /// <remarks>
+    /// <para>Written to the settings file on the press, like 對照顯示, so 結束 lands on a page whose
+    /// pickers already say what the session ended on — and the next session starts on it.</para>
+    ///
+    /// <para>The overlays are built again rather than reused, and built empty. Both languages decide
+    /// how a window draws — the target its font, its punctuation and whether a vertical block is set
+    /// down or across (#315), the pair together whether Latin is being set as CJK — and those are
+    /// fixed when a window is built. Unlike <see cref="ToggleCompareDisplay"/>, nothing is handed
+    /// back: what the windows were showing is the old pair's translation, and drawn in the new
+    /// pair's layout it would be the wrong words in the wrong shape. The session fences what was in
+    /// flight, so nothing read for the old pair reaches the new windows either; they stay empty
+    /// until the first reading in the new pair arrives.</para>
+    ///
+    /// <para>Paused, the session stays paused and the windows stay empty; 繼續 starts on the new
+    /// pair. The blocks — their modes and the direction the user drew them in — are left exactly as
+    /// they were: those describe the picture, and the picture has not changed.</para>
+    /// </remarks>
+    private void ChangeLanguages(string source, string target)
+    {
+        if (_request is not { } request || _control is not { } control || _session is not { } session) return;
+
+        // The bar is off the screen while a capture stands on the session, for the reason
+        // ToggleCompareDisplay gives.
+        if (_interlude.HideLayers || !IsTranslating) return;
+
+        source = Models.LanguageData.GetValidRealtimeSourceCode(source);
+        target = Models.LanguageData.GetValidTargetCode(target);
+        if (string.Equals(source, request.SourceLanguage, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(target, request.TargetLanguage, StringComparison.OrdinalIgnoreCase)) return;
+
+        var paused = session.IsPaused;
+        var updated = request with { SourceLanguage = source, TargetLanguage = target };
+        _request = updated;
+
+        var settings = SettingsService.Instance;
+        settings.Current.Realtime.SourceLanguage = source;
+        settings.Current.Realtime.TargetLanguage = target;
+        settings.Save();
+
+        // First, so nothing the old pair still had in flight can be drawn: updates carrying an
+        // older generation are refused by OnRegionUpdated from here on.
+        Volatile.Write(ref _visibleGeneration, session.ChangeLanguages(source, target));
+
+        var rebuilt = _blockWindows.Count > 0;
+        if (rebuilt)
+        {
+            CloseBlockWindows();
+            ShowBlockWindows(updated, Regions());
+            RefreshOverlayHandles();
+        }
+
+        control.SetLanguages(source, target);
+        // The new windows opened above the bar; it goes back on top of them.
+        control.BringToFront();
+        if (!paused) _loadingHint?.Wait(session.ModelsLoading);
+
+        Log.Info(
+            "Realtime languages switched mid-session: {OldSrc}->{OldTgt} to {Src}->{Tgt} (overlays rebuilt: {Rebuilt}, paused: {Paused})",
+            request.SourceLanguage, request.TargetLanguage, source, target, rebuilt, paused);
+
+        LanguagesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

@@ -344,6 +344,10 @@
     <sys:String x:Key="S.Realtime.EditBlocks">ブロックを編集</sys:String>
     <sys:String x:Key="S.Realtime.CollapseBar">フローティングバーを折りたたむ</sys:String>
     <sys:String x:Key="S.Realtime.ExpandBar">フローティングバーを展開</sys:String>
+    <sys:String x:Key="S.Realtime.ChangeSourceLanguage">翻訳元の言語を変更</sys:String>
+    <sys:String x:Key="S.Realtime.ChangeTargetLanguage">翻訳先の言語を変更</sys:String>
+    <sys:String x:Key="S.Realtime.LanguageNoMatch">「{0}」は見つかりません</sys:String>
+    <sys:String x:Key="S.Realtime.DismissMessage">クリックで閉じる</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">範囲選択を止めて下のアプリを操作する</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">範囲選択を再開</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文対照</sys:String>
