@@ -70,6 +70,7 @@ public class StringsParityTests
         EnglishFile,
         "Strings.ja.xaml",
         "Strings.ko.xaml",
+        "Strings.ru.xaml",
     ];
 
     /// <summary>The dictionaries held against the authored one, which is every other one.</summary>
@@ -314,6 +315,7 @@ public class StringsParityTests
     [InlineData("Strings.en.xaml", "(?i)floating (?!bar)", "floating bar")]
     [InlineData("Strings.ja.xaml", "フローティング(?!バー)", "フローティングバー")]
     [InlineData("Strings.ko.xaml", "플로팅(?! 바)", "플로팅 바")]
+    [InlineData("Strings.ru.xaml", "(?i)плавающ(?!(ая|ую|ей|ой) панел)", "плавающая панель")]
     public void The_floating_bar_is_called_the_same_thing_everywhere(
         string file, string pattern, string agreedName)
     {
@@ -352,6 +354,7 @@ public class StringsParityTests
     [InlineData("Strings.zh-Hans.xaml", "(?i)(?<!System )(?<!User )prompt", "提示词")]
     [InlineData("Strings.ja.xaml", "(?i)(?<!System )(?<!User )prompt", "プロンプト")]
     [InlineData("Strings.ko.xaml", "(?i)(?<!System )(?<!User )prompt", "프롬프트")]
+    [InlineData("Strings.ru.xaml", "(?i)(?<!System )(?<!User )prompt", "промпт")]
     // English says "prompt" and not a synonym for it: "wording" and "instruction" are both what it
     // was called at one point or another in the code that produces this string.
     [InlineData("Strings.en.xaml", "(?i)wording|(?i)instruction", "prompt")]

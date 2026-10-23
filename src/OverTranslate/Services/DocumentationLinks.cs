@@ -14,8 +14,12 @@ public static class DocumentationLinks
     private const string Blob = "https://github.com/Hon-Lu/OverTranslate/blob/main/";
 
     /// <summary>
-    /// Paths under the repository root, one per interface language.
+    /// Paths under the repository root, for the languages the guide is written in.
     /// </summary>
+    /// <remarks>
+    /// Not every interface language has one: the documents are kept to these, and any other
+    /// interface is sent to the English guide.
+    /// </remarks>
     private static readonly Dictionary<string, string> OllamaGuidePaths = new(StringComparer.OrdinalIgnoreCase)
     {
         [LocalizationService.TraditionalChinese] = "docs/guides/OLLAMA_GUIDE.md",
@@ -32,5 +36,5 @@ public static class DocumentationLinks
     internal static string OllamaGuidePath(string language) =>
         OllamaGuidePaths.TryGetValue(language, out var path)
             ? path
-            : OllamaGuidePaths[LocalizationService.TraditionalChinese];
+            : OllamaGuidePaths[LocalizationService.English];
 }

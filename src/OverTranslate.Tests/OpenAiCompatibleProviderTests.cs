@@ -88,16 +88,14 @@ public class OpenAiCompatibleProviderTests
     /// <see cref="IntoTraditionalChinese"/> pins whole sentences for the two languages where the
     /// names are truthful here.
     ///
-    /// 日本語 and 한국어 share the English fragment on purpose: the model's documentation publishes a
-    /// prompt for Chinese and for English and none for those two.
+    /// Every language but the two Chinese ones shares the English fragment on purpose: the model's
+    /// documentation publishes a prompt for Chinese and for English and none for any other.
     /// </remarks>
-    private static readonly Dictionary<string, string> WordingMarkers = new()
+    private static string WordingMarker(string language) => language switch
     {
-        [LocalizationService.TraditionalChinese] = "注意只需要輸出翻譯後的結果，不要額外解釋：",
-        [LocalizationService.SimplifiedChinese]  = "注意只需要输出翻译后的结果，不要额外解释：",
-        [LocalizationService.English]            = "without any additional explanation:",
-        [LocalizationService.Japanese]           = "without any additional explanation:",
-        [LocalizationService.Korean]             = "without any additional explanation:",
+        LocalizationService.TraditionalChinese => "注意只需要輸出翻譯後的結果，不要額外解釋：",
+        LocalizationService.SimplifiedChinese  => "注意只需要输出翻译后的结果，不要额外解释：",
+        _                                      => "without any additional explanation:",
     };
 
     /// <summary>The whole built-in sentence, into Traditional Chinese, for the two interface
@@ -108,7 +106,7 @@ public class OpenAiCompatibleProviderTests
     /// down to the colon that ends them — what follows it is the text being translated, so losing it
     /// would run the instruction into the first line on screen.
     ///
-    /// Only two entries, for the reason <see cref="WordingMarkers"/> gives: English resolves names
+    /// Only two entries, for the reason <see cref="WordingMarker"/> gives: English resolves names
     /// from a plain property rather than the dictionaries, and zh-Hant is what the dictionaries fall
     /// back to, so both are the same here as they are in the running app.
     /// </remarks>
@@ -148,11 +146,7 @@ public class OpenAiCompatibleProviderTests
     /// edited into having one.
     /// </remarks>
     [Theory]
-    [InlineData(LocalizationService.TraditionalChinese)]
-    [InlineData(LocalizationService.SimplifiedChinese)]
-    [InlineData(LocalizationService.English)]
-    [InlineData(LocalizationService.Japanese)]
-    [InlineData(LocalizationService.Korean)]
+    [MemberData(nameof(LocalizationServiceTests.InterfaceLanguages), MemberType = typeof(LocalizationServiceTests))]
     public void BuiltIn_SendsTheInstructionAsTheUserMessageAndNoSystemMessage(string uiLanguage)
     {
         WithInterfaceLanguage(uiLanguage, () =>
@@ -175,11 +169,7 @@ public class OpenAiCompatibleProviderTests
     /// drift.
     /// </remarks>
     [Theory]
-    [InlineData(LocalizationService.TraditionalChinese)]
-    [InlineData(LocalizationService.SimplifiedChinese)]
-    [InlineData(LocalizationService.English)]
-    [InlineData(LocalizationService.Japanese)]
-    [InlineData(LocalizationService.Korean)]
+    [MemberData(nameof(LocalizationServiceTests.InterfaceLanguages), MemberType = typeof(LocalizationServiceTests))]
     public void BuildPrompts_UsesTheWordingForTheInterfaceLanguage(string uiLanguage)
     {
         WithInterfaceLanguage(uiLanguage, () =>
@@ -187,7 +177,7 @@ public class OpenAiCompatibleProviderTests
             var explicitSource = BuiltIn("JA").User;
             var automatic = BuiltIn("AUTO").User;
 
-            Assert.Contains(WordingMarkers[uiLanguage], explicitSource);
+            Assert.Contains(WordingMarker(uiLanguage), explicitSource);
             Assert.Equal(explicitSource, automatic);
 
             if (IntoTraditionalChinese.TryGetValue(uiLanguage, out var whole))
@@ -196,28 +186,33 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
-    /// Three wordings for five interfaces: 日本語 and 한국어 are served the English one.
+    /// Three wordings in all: every interface but the two Chinese ones is served the English one.
     /// </summary>
     /// <remarks>
     /// The owner's decision, and the kind that looks like an oversight to whoever reads the table
     /// next — so it is pinned from both sides. The three that are meant to differ must differ, which
-    /// catches two entries pasted from each other; and the two that are meant to match must match,
-    /// so that inventing a Japanese wording is a deliberate edit to this test rather than a silent
-    /// guess at a prompt format the model's own documentation does not publish.
+    /// catches two entries pasted from each other; and the rest must match English, so that inventing
+    /// a Japanese wording is a deliberate edit to this test rather than a silent guess at a prompt
+    /// format the model's own documentation does not publish.
     /// </remarks>
     [Fact]
-    public void BuildPrompts_ServesJapaneseAndKoreanTheEnglishWording()
+    public void BuildPrompts_ServesEveryOtherInterfaceTheEnglishWording()
     {
         // The unfilled wording, not a filled one: the language names inside come from dictionaries
         // that fall back to zh-Hant in this process, so two identical wordings would come back
-        // different — see WordingMarkers.
+        // different — see WordingMarker.
         static string For(string language) => WithInterfaceLanguage(
             language, () => OpenAiCompatibleProvider.BuiltInProfile().Auto.UserPrompt);
 
         var english = For(LocalizationService.English);
 
-        Assert.Equal(english, For(LocalizationService.Japanese));
-        Assert.Equal(english, For(LocalizationService.Korean));
+        foreach (var option in LocalizationService.Options)
+        {
+            if (option.Code is LocalizationService.TraditionalChinese or LocalizationService.SimplifiedChinese)
+                continue;
+
+            Assert.Equal(english, For(option.Code));
+        }
 
         Assert.Equal(3, new[]
         {
@@ -241,11 +236,7 @@ public class OpenAiCompatibleProviderTests
     /// lines puts a break where the model expects prose.
     /// </remarks>
     [Theory]
-    [InlineData(LocalizationService.TraditionalChinese)]
-    [InlineData(LocalizationService.SimplifiedChinese)]
-    [InlineData(LocalizationService.English)]
-    [InlineData(LocalizationService.Japanese)]
-    [InlineData(LocalizationService.Korean)]
+    [MemberData(nameof(LocalizationServiceTests.InterfaceLanguages), MemberType = typeof(LocalizationServiceTests))]
     public void BuildPrompts_EndTheWordingWithTheBreakTheTextStartsAfter(string uiLanguage)
     {
         WithInterfaceLanguage(uiLanguage, () =>
@@ -313,8 +304,8 @@ public class OpenAiCompatibleProviderTests
     /// Both directions are asserted. Only checking that a Chinese interface produces 繁體中文 would
     /// still pass if the names had simply been hard-coded to Chinese.
     ///
-    /// Two interface languages rather than five, for the reason <see cref="WordingMarkers"/> gives:
-    /// the other three resolve their names through dictionaries that are not loaded here.
+    /// Two interface languages rather than all of them, for the reason <see cref="WordingMarker"/>
+    /// gives: the others resolve their names through dictionaries that are not loaded here.
     /// </remarks>
     [Fact]
     public void BuildPrompts_NamesLanguagesInTheInterfaceLanguage()

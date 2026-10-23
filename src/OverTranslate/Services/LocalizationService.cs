@@ -38,27 +38,16 @@ public static class LocalizationService
     public const string English            = "en";
     public const string Japanese           = "ja";
     public const string Korean             = "ko";
-
-    /// <summary>The dictionary each language is served by, and the set of languages that exist.</summary>
-    /// <remarks>
-    /// One table rather than a field per language and a switch beside it: <see cref="Apply"/>,
-    /// <see cref="Options"/> and <see cref="IsSupported"/> all have to agree on which codes are real,
-    /// and a language added to one place but not another is exactly the kind of half-addition that
-    /// ships as an interface that silently stays in the previous language.
-    /// </remarks>
-    private static readonly Dictionary<string, Uri> Dictionaries = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [TraditionalChinese] = new("Resources/Strings.zh-Hant.xaml", UriKind.Relative),
-        [SimplifiedChinese]  = new("Resources/Strings.zh-Hans.xaml", UriKind.Relative),
-        [English]            = new("Resources/Strings.en.xaml",      UriKind.Relative),
-        [Japanese]           = new("Resources/Strings.ja.xaml",      UriKind.Relative),
-        [Korean]             = new("Resources/Strings.ko.xaml",      UriKind.Relative),
-    };
+    public const string Russian            = "ru";
 
     /// <summary>The languages offered in settings, in the order they are listed.</summary>
     /// <remarks>
     /// The two Chinese entries sit together because a reader scanning for one of them is scanning
     /// for the script, and splitting them across the list makes the second look like it is missing.
+    ///
+    /// Adding a language is an entry here and its Resources/Strings.{code}.xaml. Everything that
+    /// varies by language — fonts, documentation, the OpenAI prompt — falls back to what English
+    /// gets, so a language needs its own entry there only when it should differ from English.
     /// </remarks>
     public static readonly List<UiLanguageOption> Options =
     [
@@ -67,7 +56,21 @@ public static class LocalizationService
         new(English,            "English"),
         new(Japanese,           "日本語"),
         new(Korean,             "한국어"),
+        new(Russian,            "Русский"),
     ];
+
+    /// <summary>The dictionary each language is served by, and the set of languages that exist.</summary>
+    /// <remarks>
+    /// Derived from <see cref="Options"/> rather than written out beside it: <see cref="Apply"/>,
+    /// <see cref="Options"/> and <see cref="IsSupported"/> all have to agree on which codes are real,
+    /// and a language added to one place but not another is exactly the kind of half-addition that
+    /// ships as an interface that silently stays in the previous language. Declared after
+    /// <see cref="Options"/> because static fields initialise in order.
+    /// </remarks>
+    private static readonly Dictionary<string, Uri> Dictionaries = Options.ToDictionary(
+        option => option.Code,
+        option => new Uri($"Resources/Strings.{option.Code}.xaml", UriKind.Relative),
+        StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Whether <paramref name="language"/> is one this app actually has strings for.</summary>
     public static bool IsSupported(string? language) =>
@@ -86,7 +89,7 @@ public static class LocalizationService
     ///
     /// English keeps the Traditional Chinese family it already had. Nothing in an English interface
     /// is Han to begin with; what reaches it is the text the user is translating, and that was
-    /// already being set this way.
+    /// already being set this way. A language with no entry is set the way English is.
     ///
     /// Japanese is Yu Gothic UI, which is what Windows sets its own interface in. It is the narrowed
     /// "UI" cut of Yu Gothic and looks tighter than the Chinese families beside it here — that is
@@ -139,7 +142,8 @@ public static class LocalizationService
     /// cannot read: Windows reports zh-TW, zh-HK and zh-MO for the Traditional-writing regions and
     /// zh-CN, zh-SG and plain zh for the rest, so the region list is the script list. A Chinese
     /// tag nobody thought of lands on Simplified, which is what the unlisted ones overwhelmingly
-    /// are. Japanese and Korean match on the language alone; everything else gets English.
+    /// are. Any other language this app has strings for matches on the language alone; everything
+    /// else gets English.
     ///
     /// CurrentUICulture, not InstalledUICulture: the latter is the language Windows was installed
     /// in and does not move when the user changes their display language afterwards, so someone
@@ -151,13 +155,12 @@ public static class LocalizationService
     {
         var culture = CultureInfo.CurrentUICulture;
 
-        return culture.TwoLetterISOLanguageName.ToLowerInvariant() switch
-        {
-            "zh" => IsTraditionalScript(culture) ? TraditionalChinese : SimplifiedChinese,
-            "ja" => Japanese,
-            "ko" => Korean,
-            _    => English,
-        };
+        var language = culture.TwoLetterISOLanguageName.ToLowerInvariant();
+
+        if (language == "zh")
+            return IsTraditionalScript(culture) ? TraditionalChinese : SimplifiedChinese;
+
+        return IsSupported(language) ? language : English;
     }
 
     /// <summary>
@@ -204,7 +207,7 @@ public static class LocalizationService
         // reason — a StaticResource would have been resolved once, at parse time, and would keep
         // whichever font the app started in.
         Application.Current.Resources["AppFont"] = new FontFamily(
-            Fonts.TryGetValue(language, out var font) ? font : Fonts[TraditionalChinese]);
+            Fonts.TryGetValue(language, out var font) ? font : Fonts[English]);
 
         LanguageChanged?.Invoke(null, EventArgs.Empty);
     }

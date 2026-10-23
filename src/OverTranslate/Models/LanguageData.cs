@@ -367,8 +367,8 @@ public static class LanguageData
     /// </summary>
     /// <param name="inEnglish">
     /// Names it in English regardless of the interface language, for a caller whose sentence is in
-    /// English while the interface is not — the built-in prompt templates, which ship in three
-    /// wordings for five interface languages and must not end up naming a language in a sixth.
+    /// English while the interface is not — the built-in prompt templates, whose English wording
+    /// serves several interface languages and must not name a language in a different one.
     /// </param>
     public static string GetSourceDisplayName(string? code, bool inEnglish = false) =>
         NameIn(OcrSourceLanguages, code, inEnglish);

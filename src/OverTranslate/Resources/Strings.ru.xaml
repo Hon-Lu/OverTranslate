@@ -1,0 +1,711 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Mirror of Strings.zh-Hant.xaml in Russian. Same keys, same {0} placeholders in the same
+         meaning — StringsParityTests fails the build if the dictionaries drift apart.
+
+         Written as Russian software rather than as a translation of the English: buttons are verbs
+         in the infinitive (Сохранить, Закрыть), tooltips say what the control does, quotes are «».
+         Feature names are fixed — Перевод снимка экрана, Всплывающий перевод, Перевод с заменой,
+         Перевод в реальном времени, Перевод текста, плавающая панель — and a screen that invents its
+         own wording for one of them is the thing to catch in review.
+
+         Russian runs longer than English, and field labels sit in a shared-width column that sizes
+         itself to the longest one: prefer the noun over the sentence. -->
+
+    <!-- ── Shared ── -->
+    <sys:String x:Key="S.Common.Reset">Сбросить</sys:String>
+    <sys:String x:Key="S.Common.Close">Закрыть</sys:String>
+    <sys:String x:Key="S.Common.Cancel">Отмена</sys:String>
+    <sys:String x:Key="S.Common.Save">Сохранить</sys:String>
+    <sys:String x:Key="S.Common.Configure">Настроить</sys:String>
+    <sys:String x:Key="S.Common.ApiKey">Ключ API</sys:String>
+    <sys:String x:Key="S.Common.SearchLanguage">Поиск языка</sys:String>
+    <sys:String x:Key="S.Common.SearchNoMatch">Язык не найден</sys:String>
+
+    <!-- ── Shell window ── -->
+    <sys:String x:Key="S.Shell.About">О программе</sys:String>
+    <sys:String x:Key="S.Shell.QuickTools">Быстрые инструменты</sys:String>
+    <sys:String x:Key="S.Shell.CaptureTranslate">Снимок</sys:String>
+    <sys:String x:Key="S.Shell.QuickLookup">Всплывающий</sys:String>
+    <sys:String x:Key="S.Shell.TextTranslate">Текст</sys:String>
+    <sys:String x:Key="S.Shell.RealtimeTranslate">Реальное время</sys:String>
+    <sys:String x:Key="S.Shell.Settings">Настройки</sys:String>
+    <sys:String x:Key="S.Shell.HideSidebar">Скрыть боковую панель</sys:String>
+    <sys:String x:Key="S.Shell.ShowSidebar">Показать боковую панель</sys:String>
+    <sys:String x:Key="S.Shell.Pin">Закрепить окно поверх остальных</sys:String>
+    <sys:String x:Key="S.Shell.Unpin">Открепить</sys:String>
+    <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">Идет выбор областей для перевода в реальном времени — нажмите «Запустить», прежде чем делать снимок экрана</sys:String>
+    <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">Идет перевод в реальном времени — остановите его, чтобы воспользоваться всплывающим переводом</sys:String>
+    <sys:String x:Key="S.Shell.UpdateAvailable">Обновить до v{0}</sys:String>
+
+    <!-- ── Tray menu ── -->
+    <sys:String x:Key="S.Tray.OpenWindow">Открыть окно перевода</sys:String>
+    <sys:String x:Key="S.Tray.RealtimeWindow">Окно перевода в реальном времени</sys:String>
+    <sys:String x:Key="S.Tray.Settings">Настройки</sys:String>
+    <sys:String x:Key="S.Tray.Exit">Выход</sys:String>
+
+    <!-- ── About ── -->
+    <sys:String x:Key="S.About.Website">Открыть сайт</sys:String>
+    <sys:String x:Key="S.About.Star">Звезда на GitHub</sys:String>
+    <sys:String x:Key="S.About.Sponsor">Поддержать</sys:String>
+    <sys:String x:Key="S.About.SponsorTip">Поддержать через Buy Me a Coffee</sys:String>
+    <sys:String x:Key="S.About.Version">Версия {0}</sys:String>
+    <sys:String x:Key="S.About.OpenSource">Бесплатно и с открытым исходным кодом.</sys:String>
+
+    <!-- ── Toast ── -->
+    <sys:String x:Key="S.Toast.CopyMessage">Копировать сообщение</sys:String>
+    <sys:String x:Key="S.Toast.Copied">Скопировано в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toast.CopyFailed">Не удалось скопировать. Повторите попытку позже.</sys:String>
+
+    <!-- ── Update ── -->
+    <sys:String x:Key="S.Update.WindowTitle">Доступно обновление</sys:String>
+    <sys:String x:Key="S.Update.Heading">Доступно обновление</sys:String>
+    <sys:String x:Key="S.Update.Explanation">«Обновить сейчас» скачает и установит обновление, после чего программа перезапустится.</sys:String>
+    <sys:String x:Key="S.Update.NotesBefore" xml:space="preserve">Что нового? </sys:String>
+    <sys:String x:Key="S.Update.NotesLink">Посмотреть список изменений</sys:String>
+    <sys:String x:Key="S.Update.Later">Позже</sys:String>
+    <sys:String x:Key="S.Update.Now">Обновить сейчас</sys:String>
+    <sys:String x:Key="S.Update.Skip">Пропустить эту версию и больше не напоминать</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">Загрузка обновления {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">Загрузка полного установщика {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.Patching">Применение обновления...</sys:String>
+    <sys:String x:Key="S.Update.Preparing">Подготовка к установке...</sys:String>
+    <sys:String x:Key="S.Update.Applying">Установка...</sys:String>
+    <sys:String x:Key="S.Update.FellBackToFull">Не удалось применить файл обновления — выполняется полное обновление</sys:String>
+    <sys:String x:Key="S.Update.SlowBefore" xml:space="preserve">Загрузка идет медленно? </sys:String>
+    <sys:String x:Key="S.Update.SlowLink">Скачайте вручную с GitHub</sys:String>
+    <sys:String x:Key="S.Update.Cancel">Отменить обновление</sys:String>
+    <sys:String x:Key="S.Update.Cancelling">Отмена...</sys:String>
+    <sys:String x:Key="S.Update.Retry">Повторить</sys:String>
+    <sys:String x:Key="S.Update.Failed">Не удалось скачать обновление: {0}</sys:String>
+    <sys:String x:Key="S.Update.CloseBlocked">Идет обновление — по завершении программа перезапустится сама</sys:String>
+
+    <!-- ── Service errors ── -->
+    <sys:String x:Key="S.Error.OpenAiHttp">API, совместимый с OpenAI, вернул {0}: {1}</sys:String>
+    <sys:String x:Key="S.Error.OpenAiUnparsable">Не удалось разобрать ответ API, совместимого с OpenAI.</sys:String>
+    <sys:String x:Key="S.Error.OpenAiNoTranslation">API, совместимый с OpenAI, не вернул перевод.</sys:String>
+    <sys:String x:Key="S.Error.OpenAiTimeout">API, совместимый с OpenAI, не ответил за {0} с. Время ожидания можно изменить в настройках службы перевода.</sys:String>
+    <sys:String x:Key="S.Error.OpenAiBadUrl">Адрес API, совместимого с OpenAI, должен быть корректным URL-адресом HTTP или HTTPS.</sys:String>
+    <sys:String x:Key="S.Error.OpenAiNoModel">Не указано имя модели. Введите модель в настройках службы перевода.</sys:String>
+    <sys:String x:Key="S.Error.UnknownError">Неизвестная ошибка</sys:String>
+    <sys:String x:Key="S.Error.NoErrorContent">Подробности ошибки отсутствуют</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">Распознавание текста сейчас поддерживает только AUTO, EN, ZH, ZH-HANT, JA и KO; «{0}» пока не поддерживается.</sys:String>
+    <sys:String x:Key="S.Error.OcrSwapTimeout">Истекло время ожидания завершения другого распознавания перед сменой модели OCR.</sys:String>
+    <sys:String x:Key="S.Error.OcrImageConvert">Не удалось преобразовать изображение в формат, понятный ONNX OCR.</sys:String>
+    <sys:String x:Key="S.Error.OcrModelMissing">Файл модели OCR не найден: {0}</sys:String>
+    <sys:String x:Key="S.Error.NotTranslated">Не переведено</sys:String>
+
+    <!-- ── Text translation page ── -->
+    <sys:String x:Key="S.Translation.Title">Перевод текста</sys:String>
+    <sys:String x:Key="S.Translation.Subtitle">Введите или вставьте текст для перевода. Сюда же попадают результаты снимков экрана.</sys:String>
+    <sys:String x:Key="S.Translation.SwapTip">Поменять местами языки и текст</sys:String>
+    <sys:String x:Key="S.Translation.ClearSource">Очистить исходный текст</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSource">Прочитать исходный текст вслух</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">Со службой OpenAI выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceUnknown">Язык исходного текста пока не определен. Его можно будет прочитать вслух, когда придет перевод.</sys:String>
+    <sys:String x:Key="S.Translation.Source">Оригинал</sys:String>
+    <sys:String x:Key="S.Translation.SpeakResult">Прочитать перевод вслух</sys:String>
+    <sys:String x:Key="S.Translation.Result">Перевод</sys:String>
+    <sys:String x:Key="S.Translation.Retry">↻ Повторить</sys:String>
+    <sys:String x:Key="S.Translation.MissingApiKey">Нет ключа API — сначала введите его в настройках</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} сейчас недоступен. Попробуйте другую службу перевода.
+Ошибка перевода: {1}</sys:String>
+    <sys:String x:Key="S.Translation.Translating">Перевод...</sys:String>
+    <sys:String x:Key="S.Translation.SpeakFailed">Не удалось прочитать вслух: {0}</sys:String>
+
+    <!-- ── In-place translation ── -->
+    <sys:String x:Key="S.QuickTranslate.Replaced">Переведено и вставлено.</sys:String>
+    <sys:String x:Key="S.QuickTranslate.EmptyResult">Перевод пришел пустым; ваш текст оставлен без изменений.</sys:String>
+    <sys:String x:Key="S.QuickTranslate.FocusMoved">Вы переключились на другое окно, поэтому перевод не удалось вставить.</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ClipboardBusy">Буфер обмена недоступен, поэтому ничего не вставлено.</sys:String>
+
+    <!-- ── Rich dictionary ── -->
+    <sys:String x:Key="S.Dictionary.Alternatives">Другие варианты перевода</sys:String>
+    <sys:String x:Key="S.Dictionary.NoResult">Словарная статья для этого слова не найдена.</sys:String>
+    <sys:String x:Key="S.Dictionary.Unavailable">Словарная статья для этого слова не найдена.</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Adjective">Прилагательное</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Adverb">Наречие</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Article">Артикль</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Conjunction">Союз</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Determiner">Определитель</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Interjection">Междометие</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.ModalVerb">Модальный глагол</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Noun">Существительное</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Other">Другое</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Phrase">Словосочетание</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Preposition">Предлог</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Pronoun">Местоимение</sys:String>
+    <sys:String x:Key="S.Dictionary.PartOfSpeech.Verb">Глагол</sys:String>
+
+    <!-- ── Quick lookup popup ── -->
+    <sys:String x:Key="S.QuickLookup.Placeholder">Введите текст для перевода...</sys:String>
+    <sys:String x:Key="S.QuickLookup.Settings">Настройки всплывающего перевода</sys:String>
+    <sys:String x:Key="S.QuickLookup.BackToResult">Вернуться к переводу</sys:String>
+    <sys:String x:Key="S.QuickLookup.Pin">Закрепить, чтобы окно не закрывалось само</sys:String>
+    <sys:String x:Key="S.QuickLookup.Unpin">Открепить</sys:String>
+    <sys:String x:Key="S.QuickLookup.Copy">Копировать</sys:String>
+    <sys:String x:Key="S.QuickLookup.Copied">Скопировано</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSource">Прочитать оригинал</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakResult">Прочитать перевод</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceTip">Прочитать оригинал вслух</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">Со службой OpenAI выберите язык оригинала, чтобы прочитать его вслух.</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">Язык оригинала пока не определен. Его можно будет прочитать вслух, когда придет перевод.</sys:String>
+    <sys:String x:Key="S.QuickLookup.Provider">Служба перевода</sys:String>
+    <sys:String x:Key="S.QuickLookup.ProviderHint">Общая с переводом снимка экрана и переводом текста</sys:String>
+    <sys:String x:Key="S.QuickLookup.AutoCopy">Автоматически копировать перевод</sys:String>
+    <sys:String x:Key="S.QuickLookup.AutoCopyHint">По завершении перевода результат копируется в буфер обмена</sys:String>
+    <sys:String x:Key="S.QuickLookup.MultilineInput">Многострочный ввод</sys:String>
+    <sys:String x:Key="S.QuickLookup.MultilineInputHint">Сохраняет переносы строк в выделенном тексте и позволяет вводить несколько строк</sys:String>
+    <sys:String x:Key="S.QuickLookup.Bilingual">Двусторонний перевод</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualHint">Определяет язык введенного текста и переводит между двумя выбранными языками</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFallback">Текст на любом другом языке переводится на язык слева — {0}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualFirst">Первый язык</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualSecond">Второй язык</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusIdle">Двусторонний: определение</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusPair">Двусторонний: {0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickLookup.BilingualStatusTip">Направление выбирается автоматически между языками {0} и {1}. Нажмите, чтобы сменить языки.</sys:String>
+    <sys:String x:Key="S.QuickLookup.Collapse">Свернуть</sys:String>
+    <sys:String x:Key="S.QuickLookup.Expand">Развернуть</sys:String>
+    <sys:String x:Key="S.QuickLookup.TranslationCopied">Скопировано в буфер обмена</sys:String>
+    <sys:String x:Key="S.QuickLookup.OpenFullSettings">Все настройки</sys:String>
+    <sys:String x:Key="S.QuickLookup.SettingsHint">Открывается по {0}. Закрывается при переходе в другое окно; закрепите его, чтобы оно оставалось на экране.</sys:String>
+
+    <!-- ── Capture toolbar ── -->
+    <sys:String x:Key="S.Toolbar.Translate">Перевести</sys:String>
+    <sys:String x:Key="S.Toolbar.Translating">Перевод...</sys:String>
+    <sys:String x:Key="S.Toolbar.Recognising">Распознавание...</sys:String>
+    <sys:String x:Key="S.Toolbar.Retranslate">Перевести заново</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSource">Показать оригинал</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslation">Показать перевод</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyText">Копировать текст</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslation">Копировать перевод</sys:String>
+    <sys:String x:Key="S.Toolbar.Annotate">Пометки</sys:String>
+    <sys:String x:Key="S.Toolbar.AnnotateHint">Рисовать пометки поверх выделенной области</sys:String>
+    <sys:String x:Key="S.Annotate.Pen">Перо</sys:String>
+    <sys:String x:Key="S.Annotate.Highlighter">Маркер</sys:String>
+    <sys:String x:Key="S.Annotate.Line">Линия</sys:String>
+    <sys:String x:Key="S.Annotate.Arrow">Стрелка</sys:String>
+    <sys:String x:Key="S.Annotate.Rectangle">Прямоугольник</sys:String>
+    <sys:String x:Key="S.Annotate.Ellipse">Эллипс</sys:String>
+    <sys:String x:Key="S.Annotate.Eraser">Ластик</sys:String>
+    <sys:String x:Key="S.Annotate.Undo">Отменить</sys:String>
+    <sys:String x:Key="S.Annotate.Redo">Повторить</sys:String>
+    <sys:String x:Key="S.Annotate.Thickness">Толщина</sys:String>
+    <sys:String x:Key="S.Annotate.Thin">Тонко</sys:String>
+    <sys:String x:Key="S.Annotate.Thick">Толсто</sys:String>
+    <sys:String x:Key="S.Annotate.Opacity">Непрозрачность</sys:String>
+    <sys:String x:Key="S.Annotate.Faint">Слабо</sys:String>
+    <sys:String x:Key="S.Annotate.Strong">Сильно</sys:String>
+    <sys:String x:Key="S.Annotate.Size">Размер</sys:String>
+    <sys:String x:Key="S.Annotate.Small">Мелко</sys:String>
+    <sys:String x:Key="S.Annotate.Large">Крупно</sys:String>
+    <sys:String x:Key="S.Toolbar.Screenshot">Снимок</sys:String>
+    <sys:String x:Key="S.Toolbar.OpenWindow">Окно</sys:String>
+    <sys:String x:Key="S.Toolbar.OpenWindowHint">Открыть этот перевод в окне</sys:String>
+    <sys:String x:Key="S.Toolbar.Swap">Поменять местами исходный и целевой языки</sys:String>
+    <sys:String x:Key="S.Toolbar.Close">Завершить перевод снимка экрана</sys:String>
+    <sys:String x:Key="S.Toolbar.Direction">Направление письма оригинала</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontal">Горизонтально</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVertical">Вертикально</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">Текст идет по строкам слева направо</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">Текст идет столбцами сверху вниз, справа налево (японские книги и манга)</sys:String>
+    <sys:String x:Key="S.Toolbar.LayoutMode">Содержимое выделения</sys:String>
+    <sys:String x:Key="S.Toolbar.LayoutModeGeneral">Обычное</sys:String>
+    <sys:String x:Key="S.Toolbar.LayoutModeInterface">Интерфейс</sys:String>
+    <sys:String x:Key="S.Toolbar.LayoutModeGeneralHint">Располагает текст в порядке чтения и объединяет соседние строки, если они относятся друг к другу. Подходит для статей, манги, диалогов и большинства обычных снимков.</sys:String>
+    <sys:String x:Key="S.Toolbar.LayoutModeInterfaceHint">Сохраняет исходное расположение и разделение блоков, строже решает, что объединять. Подходит для игрового интерфейса, меню и многоколоночных экранов.</sys:String>
+    <sys:String x:Key="S.Toolbar.Speak">Озвучить</sys:String>
+    <sys:String x:Key="S.Toolbar.SpeakStopLabel">Стоп</sys:String>
+    <sys:String x:Key="S.Toolbar.SpeakHint">Прочитать распознанный исходный текст вслух</sys:String>
+    <sys:String x:Key="S.Toolbar.SpeakStop">Остановить чтение</sys:String>
+    <sys:String x:Key="S.Toolbar.SpeakAutomatic">Нельзя прочитать вслух, пока язык оригинала — «Авто». Сначала выберите конкретный язык.</sys:String>
+    <sys:String x:Key="S.Toolbar.SpeakNoText">Распознанного текста для чтения пока нет</sys:String>
+    <sys:String x:Key="S.Toolbar.BackupBadge">⚡Резерв</sys:String>
+    <sys:String x:Key="S.Toolbar.BackupTooltip">«{0}» не смог перевести все, поэтому остальное перевел «{1}».
+Фактически использовано в этот раз: {2}</sys:String>
+
+    <!-- ── Capture overlay ── -->
+    <sys:String x:Key="S.Capture.CancelTip">Отменить снимок</sys:String>
+    <sys:String x:Key="S.Capture.DragPrompt">Выделите мышью область для перевода</sys:String>
+    <sys:String x:Key="S.Capture.PressPrefix">Нажмите</sys:String>
+    <sys:String x:Key="S.Capture.CancelSuffix">для отмены</sys:String>
+    <sys:String x:Key="S.Overlay.Recognising">Распознавание</sys:String>
+
+    <!-- ── Secret box ── -->
+    <sys:String x:Key="S.Secret.Show">Показать</sys:String>
+    <sys:String x:Key="S.Secret.Hide">Скрыть</sys:String>
+
+    <!-- ── Tray notifications and capture balloons ── -->
+    <sys:String x:Key="S.Main.MinimizedTitle">OverTranslate продолжает работать</sys:String>
+    <sys:String x:Key="S.Main.MinimizedBody">Программа свернута в область уведомлений. Нажмите {0}, чтобы начать перевод снимка экрана.</sys:String>
+    <sys:String x:Key="S.Main.DefaultShortcutName">сочетание клавиш</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningTitle">Идет перевод в реальном времени</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">Всплывающий перевод недоступен во время редактирования областей.</sys:String>
+    <sys:String x:Key="S.Main.MissingApiKeyTitle">Нет ключа API</sys:String>
+    <sys:String x:Key="S.Main.MissingApiKeyBody">Введите ключ API в настройках.</sys:String>
+    <sys:String x:Key="S.Main.RecogniseFailedTitle">Ошибка распознавания</sys:String>
+    <sys:String x:Key="S.Main.NoImageBody">Выделенное изображение отсутствует. Выделите область еще раз.</sys:String>
+    <sys:String x:Key="S.Main.Recognising">Распознавание</sys:String>
+    <sys:String x:Key="S.Main.NoTextTitle">Текст не найден</sys:String>
+    <sys:String x:Key="S.Main.NoTextBody">В выделенной области нет распознаваемого текста.</sys:String>
+    <sys:String x:Key="S.Main.Translating">Перевод</sys:String>
+    <sys:String x:Key="S.Main.TranslateFailedTitle">Ошибка перевода</sys:String>
+    <sys:String x:Key="S.Main.TranslateFailedBody">Текущая служба перевода может быть временно недоступна.
+Выберите другую службу и повторите попытку.
+Подробности: {0}</sys:String>
+    <sys:String x:Key="S.Main.CopiedTitle">Скопировано</sys:String>
+    <sys:String x:Key="S.Main.CopiedBody">Выделенная область скопирована в буфер обмена.</sys:String>
+    <sys:String x:Key="S.Main.TextCopiedBody">Распознанный текст скопирован в буфер обмена.</sys:String>
+    <sys:String x:Key="S.Main.TranslationCopiedBody">Перевод скопирован в буфер обмена.</sys:String>
+    <sys:String x:Key="S.Main.CopiedAndSavedBody">Скопировано в буфер обмена и сохранено в:
+{0}</sys:String>
+    <sys:String x:Key="S.Main.CopiedSaveFailedTitle">Скопировано (не сохранено)</sys:String>
+    <sys:String x:Key="S.Main.CopiedSaveFailedBody">Скопировано в буфер обмена, но сохранить не удалось: {0}</sys:String>
+    <sys:String x:Key="S.Main.CopyFailedTitle">Ошибка копирования</sys:String>
+    <sys:String x:Key="S.Main.CopyFailedBody">Не удалось скопировать снимок: {0}</sys:String>
+    <sys:String x:Key="S.Main.CopyTextFailedBody">Буфер обмена сейчас недоступен. Повторите попытку чуть позже.</sys:String>
+    <sys:String x:Key="S.Main.SpeakFailedTitle">Не удалось прочитать вслух</sys:String>
+    <sys:String x:Key="S.Main.SpeakFailedBody">Этот текст не удалось прочитать вслух: {0}</sys:String>
+
+    <!-- ── Realtime translation ── -->
+    <sys:String x:Key="S.Realtime.Title">Перевод в реальном времени</sys:String>
+    <sys:String x:Key="S.Realtime.Subtitle">Выберите области экрана — они будут переводиться заново при каждом изменении текста. Для видео, игр и всего, что постоянно меняется.</sys:String>
+
+    <sys:String x:Key="S.Realtime.TranslationSettings">Перевод</sys:String>
+    <sys:String x:Key="S.Realtime.SourceLanguage">Язык оригинала</sys:String>
+    <sys:String x:Key="S.Realtime.SourceLanguagePrompt">Выберите язык оригинала</sys:String>
+    <sys:String x:Key="S.Realtime.TargetLanguage">Язык перевода</sys:String>
+    <sys:String x:Key="S.Realtime.Provider">Служба</sys:String>
+
+    <sys:String x:Key="S.Realtime.ScreenHint">Перевод в реальном времени сейчас работает только с одним экраном.</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCount">Количество</sys:String>
+    <sys:String x:Key="S.Realtime.DecreaseBlocks">Меньше областей</sys:String>
+    <sys:String x:Key="S.Realtime.IncreaseBlocks">Больше областей</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCountHint">Не более 3 областей одновременно.</sys:String>
+
+    <sys:String x:Key="S.Realtime.Appearance">Внешний вид</sys:String>
+    <sys:String x:Key="S.Realtime.Preview">Предпросмотр</sys:String>
+    <sys:String x:Key="S.Realtime.PreviewText">Так текст будет выглядеть на экране</sys:String>
+    <sys:String x:Key="S.Realtime.TextColor">Цвет текста</sys:String>
+    <sys:String x:Key="S.Realtime.TextColorHint">Задает цвет переведенного текста. «Авто» сохраняет цвет исходного текста на экране.</sys:String>
+    <sys:String x:Key="S.Realtime.TextColorMode">Режим цвета текста</sys:String>
+    <sys:String x:Key="S.Realtime.FontSize">Размер текста</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeHint">Задает размер переведенного текста. «Авто» следует размеру исходного текста.</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeMode">Режим размера текста</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeValue">Размер текста (пкс)</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeIncrease">Увеличить размер текста</sys:String>
+    <sys:String x:Key="S.Realtime.FontSizeDecrease">Уменьшить размер текста</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimColor">Цвет фона</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimColorHint">Задает цвет полосы под переводом. «Авто» вместо этого восстанавливает фон по окружающему изображению.</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimColorMode">Режим цвета фона</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimOpacity">Непрозрачность фона</sys:String>
+    <sys:String x:Key="S.Realtime.ScrimOpacityHint">Чем выше значение, тем плотнее фон под переводом.</sys:String>
+    <sys:String x:Key="S.Realtime.ColorAuto">Авто</sys:String>
+    <sys:String x:Key="S.Realtime.ColorFixed">Свой</sys:String>
+    <sys:String x:Key="S.Realtime.Border">Рамка</sys:String>
+    <sys:String x:Key="S.Realtime.BorderHint">Обводит перевод рамкой, чтобы он выделялся на фоне изображения.</sys:String>
+    <sys:String x:Key="S.Realtime.BorderMode">Режим цвета рамки</sys:String>
+    <sys:String x:Key="S.Realtime.BorderRandom">Случайный</sys:String>
+    <sys:String x:Key="S.Realtime.BorderFixed">Свой</sys:String>
+    <sys:String x:Key="S.Realtime.BorderColor">Цвет рамки</sys:String>
+    <sys:String x:Key="S.Realtime.ResetAppearance">Сбросить внешний вид</sys:String>
+    <sys:String x:Key="S.Realtime.AutoModeBestFor">Цвет текста и фон, подобранные в режиме «Авто», подходят не для каждого изображения: на некоторых видео или пестром фоне текст бывает трудно читать, а стертая область может выглядеть чужеродно. Для таких сцен выберите «Свой».</sys:String>
+
+    <sys:String x:Key="S.Realtime.HowItWorks">Как это работает</sys:String>
+    <sys:String x:Key="S.Realtime.Step1">1. Нажмите «Выбрать области» и выделите мышью участки, которые нужно переводить.</sys:String>
+    <sys:String x:Key="S.Realtime.Step2">2. Нажмите «Запустить» на плавающей панели. Каждая область перечитывается и обновляется при изменении содержимого.</sys:String>
+    <sys:String x:Key="S.Realtime.Step3">3. Переведенные области не перехватывают щелчки, поэтому игры и другие программы продолжают работать. Чтобы изменить области, нажмите «Изменить области».</sys:String>
+    <sys:String x:Key="S.Realtime.Step4">4. Или нажмите {0}: первое нажатие — выбор областей, второе — запуск перевода, а во время перевода — пауза и продолжение. На паузе на экране снова виден исходный текст.</sys:String>
+
+    <sys:String x:Key="S.Realtime.SelectBlocks">Выбрать области</sys:String>
+    <sys:String x:Key="S.Realtime.StopSession">Остановить</sys:String>
+    <sys:String x:Key="S.Realtime.ActiveHint">Перевод запущен. Управляйте им или остановите его с плавающей панели на экране.</sys:String>
+    <sys:String x:Key="S.Realtime.NoApiKey">Ключ API не задан. Введите его в настройках, иначе перевод в реальном времени не сможет получать переводы.</sys:String>
+    <sys:String x:Key="S.Realtime.ScreenItem">Экран {0} · {1}×{2}</sys:String>
+    <sys:String x:Key="S.Realtime.ScreenItemPrimary">Экран {0} · {1}×{2} (основной)</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureInProgress">Идет перевод снимка экрана. Завершите его, прежде чем запускать перевод в реальном времени.</sys:String>
+    <sys:String x:Key="S.Realtime.ChooseSourceFirst">Сначала выберите язык оригинала.</sys:String>
+    <sys:String x:Key="S.Realtime.NoScreens">Не найдено подходящих экранов. Откройте эту страницу заново.</sys:String>
+
+    <!-- Floating control bar -->
+    <sys:String x:Key="S.Realtime.EditHint">Выделите мышью на экране области, которые нужно переводить</sys:String>
+    <sys:String x:Key="S.Realtime.StartTranslating">Запустить</sys:String>
+    <sys:String x:Key="S.Realtime.Running">Перевод</sys:String>
+    <sys:String x:Key="S.Realtime.Paused">Пауза</sys:String>
+    <sys:String x:Key="S.Realtime.LoadingModels">Загрузка моделей…</sys:String>
+    <sys:String x:Key="S.Realtime.Pause">Приостановить перевод в реальном времени</sys:String>
+    <sys:String x:Key="S.Realtime.Resume">Продолжить перевод в реальном времени</sys:String>
+    <sys:String x:Key="S.Realtime.EditBlocks">Изменить области</sys:String>
+    <sys:String x:Key="S.Realtime.CollapseBar">Свернуть плавающую панель</sys:String>
+    <sys:String x:Key="S.Realtime.ExpandBar">Развернуть плавающую панель</sys:String>
+    <sys:String x:Key="S.Realtime.CrosshairOff">Приостановить выделение и работать с программой под ним</sys:String>
+    <sys:String x:Key="S.Realtime.CrosshairOn">Продолжить выделение</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplay">Сравнение с оригиналом</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOn">Вкл.</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOff">Выкл.</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOnHint">Сравнение с оригиналом: выключите, чтобы показывать перевод прямо поверх оригинала</sys:String>
+    <sys:String x:Key="S.Realtime.CompareDisplayOffHint">Сравнение с оригиналом: включите, чтобы оригинал оставался видимым, а перевод показывался в отдельной области сравнения</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyHint">Перетащите, чтобы переместить окно сравнения. Дважды щелкните эту метку, чтобы вернуть его на место автоматически</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHideBlock">Отключить сравнение для этой области</sys:String>
+    <sys:String x:Key="S.Realtime.CompareShowBlock">Показать сравнение для этой области</sys:String>
+    <sys:String x:Key="S.Realtime.CompareCopyCenter">Здесь появится перевод</sys:String>
+    <sys:String x:Key="S.Realtime.CrosshairOffHint">Выделение приостановлено — мышь управляет программой под ним</sys:String>
+
+    <!-- Control bar and edit window messages -->
+    <sys:String x:Key="S.Realtime.MovedToFront">Окна перевода в реальном времени перенесены на передний план</sys:String>
+    <sys:String x:Key="S.Realtime.TooManyBlocks">Не более {0} областей — сначала удалите одну</sys:String>
+    <sys:String x:Key="S.Realtime.NeedOneBlock">Сначала выделите мышью хотя бы одну область</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureSourceLost">Переводимое окно закрыто — перевод в реальном времени остановлен</sys:String>
+    <sys:String x:Key="S.Realtime.ScreenCaptureUnavailable">Эта система не может считывать весь экран для перевода в реальном времени. Выберите «Одно окно» и укажите окно, которое нужно переводить</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureSourceScreen">Весь экран</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureSourceWindow">Одно окно</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureSourceScreenHint">Все, что есть на экране.</sys:String>
+    <sys:String x:Key="S.Realtime.ScreenModeUnsupported">Эта система пока не поддерживает захват всего экрана.</sys:String>
+    <sys:String x:Key="S.Realtime.RealtimeUnsupported">Для перевода в реальном времени нужен захват экрана, которого нет в этой версии Windows</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureSourceWindowHint">Даже если окно перекрыто.</sys:String>
+    <sys:String x:Key="S.Realtime.Step1Label">Шаг 1</sys:String>
+    <sys:String x:Key="S.Realtime.Step1Name">Источник захвата</sys:String>
+    <sys:String x:Key="S.Realtime.Step1Desc">Укажите, откуда считывать текст.</sys:String>
+    <sys:String x:Key="S.Realtime.Step2Label">Шаг 2</sys:String>
+    <sys:String x:Key="S.Realtime.Step2Name">Экран или окно</sys:String>
+    <sys:String x:Key="S.Realtime.Step2Desc">Укажите экран или окно в соответствии с выбором выше.</sys:String>
+    <sys:String x:Key="S.Realtime.Step3Label">Шаг 3</sys:String>
+    <sys:String x:Key="S.Realtime.Step3Name">Области перевода</sys:String>
+    <sys:String x:Key="S.Realtime.Step3Desc">Сколько участков изображения будет переводиться.</sys:String>
+    <sys:String x:Key="S.Realtime.ScreenPrompt">Выберите экран для считывания.</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureWindowPromptLine">Выберите окно для считывания.</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureWindowPrompt">Выберите окно</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureWindowHint">Список окон обновляется по кнопке «Обновить». Если вы только что открыли другую программу, обновите список перед выбором.</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureWindowNone">Нет окон, доступных для захвата. Сначала откройте программу, затем обновите список.</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureWindowDetail">из {0}</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureWindowOnScreen">Области будут выделяться на: {0}.</sys:String>
+    <sys:String x:Key="S.Realtime.RefreshWindows">Обновить</sys:String>
+    <sys:String x:Key="S.Realtime.ChooseWindowFirst">Сначала выберите окно для перевода</sys:String>
+    <sys:String x:Key="S.Realtime.WindowCaptureUnsupported">Эта версия Windows не поддерживает захват экрана.</sys:String>
+    <sys:String x:Key="S.Realtime.WindowCaptureGone">Это окно закрыто или свернуто. Выберите окно заново.</sys:String>
+    <sys:String x:Key="S.Realtime.WindowCaptureFailed">Это окно не удается захватить. Переключите его в режим «окно без рамки» или «в окне» и повторите попытку.</sys:String>
+    <sys:String x:Key="S.Realtime.WindowCaptureFullscreen">Этот режим отображения нельзя захватить. Переключитесь в режим «окно без рамки» или «в окне» и повторите попытку.</sys:String>
+    <sys:String x:Key="S.Realtime.WindowCaptureNoFrame">Не удалось получить изображение из этого окна. Переключите его в режим «окно без рамки» или «в окне» и повторите попытку.</sys:String>
+    <sys:String x:Key="S.Realtime.SessionEndedTitle">Перевод в реальном времени завершен</sys:String>
+    <sys:String x:Key="S.Realtime.RemoveBlock">Удалить эту область</sys:String>
+
+    <!-- Block mode picker -->
+    <sys:String x:Key="S.Realtime.ModeSubtitle">Субтитры / манга</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUi">Игра / интерфейс</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">Один фрагмент, который сменяется следующим — субтитры, сюжетные диалоги, манга</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiSummary">Отдельные короткие надписи по всему экрану — HUD, меню, описания предметов, чат</sys:String>
+    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">Для субтитров видео, сюжетных диалогов в играх и реплик в манге — текста, который читается подряд.</sys:String>
+    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">Для игровых экранов, окон чата, меню и текста интерфейса — всего, что не является субтитрами, диалогами или мангой.</sys:String>
+    <sys:String x:Key="S.Realtime.CollapseGuidance">Скрыть описание режимов</sys:String>
+    <sys:String x:Key="S.Realtime.ExpandGuidance">Показать описание режимов</sys:String>
+
+    <!-- Session failures -->
+    <sys:String x:Key="S.Realtime.SessionAborted">Перевод в реальном времени остановлен: {0}</sys:String>
+    <sys:String x:Key="S.Realtime.MissingApiKey">Нет ключа API. Сначала введите его в настройках.</sys:String>
+    <sys:String x:Key="S.Realtime.RetryingAfterFailure">Перевод пока не удался, повторные попытки продолжаются: {0}</sys:String>
+
+    <!-- ── Translation providers ── -->
+    <sys:String x:Key="S.Provider.Google">Google Переводчик (стандартный)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google Переводчик (бета)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChromeHint">Звучит естественнее, но имена могут быть изменены или пропущены</sys:String>
+    <sys:String x:Key="S.Provider.Bing">Bing Переводчик</sys:String>
+    <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">Youdao Translate</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">Tencent Translate</sys:String>
+    <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">Нужен ключ API от DeepL</sys:String>
+    <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
+    <sys:String x:Key="S.Provider.OpenAIHint">Любой API, совместимый с OpenAI (Ollama, LM Studio, OpenRouter…). Рекомендуется локальная LLM.</sys:String>
+
+    <!-- ── Settings page ── -->
+    <sys:String x:Key="S.Settings.Title">Настройки</sys:String>
+    <sys:String x:Key="S.Settings.Subtitle">Сочетания клавиш, службы перевода, внешний вид и дополнительные параметры</sys:String>
+
+    <sys:String x:Key="S.Settings.Hotkeys">Сочетания клавиш</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyEnable">Включить это сочетание</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyDisable">Отключить это сочетание</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyRecordTip">Нажмите, чтобы записать новое сочетание</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuide">Доступные клавиши</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideCombo">Сочетание</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideComboNote">Одна или несколько из клавиш Ctrl, Alt и Shift плюс еще одна клавиша</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSingle">Одна клавиша</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDouble">Двойное нажатие</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDoubleNote">Быстро нажмите Ctrl дважды или удерживайте Ctrl и дважды нажмите C</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouse">Мышь</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseMiddle">Средняя</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX1">Боковая 1</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX2">Боковая 2</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepad">Геймпад</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepadNote">Любая кнопка Xbox-совместимого (XInput) контроллера</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusive">Монопольно</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveNote">Другие программы не получают эти клавиши</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">Например, после назначения Ctrl+Alt+A это сочетание перестает работать в других программах</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideShared">Совместно</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">Клавиши по-прежнему доходят до текущей программы и могут сработать и там</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">Например, если назначить боковую кнопку на снимок экрана, браузер заодно вернется на предыдущую страницу</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyElevatedNote">Может не работать в программах, запущенных от имени администратора</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkey">Перевод в реальном времени</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Нажмите сочетание, чтобы [[выбрать области и перевести]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Если перевод не запущен, первое нажатие выбирает области, второе запускает перевод; во время перевода — пауза и продолжение.</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkey">Всплывающий перевод</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Нажмите сочетание, чтобы открыть [[всплывающий перевод]]</sys:String>
+    <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">Если выделен текст, он сразу подставляется и переводится при открытии окна.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkey">Перевод с заменой</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">Переводит [[выделенный текст]] и вставляет перевод вместо оригинала</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Работает только в полях для ввода текста; вне поля ввода вставить ничего нельзя.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateSettings">Настройки перевода</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">Эти языки используются только для перевода с заменой и не влияют на перевод снимка экрана, текста и перевод в реальном времени.</sys:String>
+    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">Определяет язык выделенного текста и переводит между двумя выбранными языками</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ Одной клавишей можно назначить только F1–F24, Pause или Scroll Lock — для остальных нужны Ctrl/Alt/Shift</sys:String>
+
+    <sys:String x:Key="S.Settings.General">Общие</sys:String>
+    <sys:String x:Key="S.Settings.CaptureHotkey">Снимок экрана</sys:String>
+    <sys:String x:Key="S.Settings.CaptureHotkeyHint">Нажмите это сочетание, чтобы начать [[перевод снимка экрана]]</sys:String>
+    <sys:String x:Key="S.Settings.WindowHotkey">Открыть окно</sys:String>
+    <sys:String x:Key="S.Settings.WindowHotkeyHint">Нажмите это сочетание, чтобы открыть [[окно перевода]]</sys:String>
+    <sys:String x:Key="S.Settings.AutoTranslateCheck">Переводить сразу после выделения области снимка, без лишних нажатий.</sys:String>
+    <sys:String x:Key="S.Settings.Startup">Автозапуск</sys:String>
+    <sys:String x:Key="S.Settings.StartupCheck">Запускать вместе с Windows</sys:String>
+
+    <sys:String x:Key="S.Settings.ServiceSetup">Службы перевода</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuHint">Отключение службы только скрывает ее из меню. Текущая служба не меняется, а скрытая служба по-прежнему может использоваться как резервная или для поиска в словаре.</sys:String>
+    <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Оставьте хотя бы одну службу</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">Общие службы</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">Настраиваемые службы</sys:String>
+    <sys:String x:Key="S.Settings.ServiceNeedsSetup">Требует настройки</sys:String>
+    <sys:String x:Key="S.Settings.ServiceReady">Настроено</sys:String>
+    <sys:String x:Key="S.Settings.ServiceDefault">По умолчанию</sys:String>
+    <sys:String x:Key="S.Settings.ServiceDialogTitle">Настройки {0}</sys:String>
+    <sys:String x:Key="S.Settings.ApiBaseUrl">URL API</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeout">Тайм-аут</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">с</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiTimeoutMin">Не менее {0} с</sys:String>
+    <sys:String x:Key="S.Settings.ModelName">Модель</sys:String>
+    <sys:String x:Key="S.Settings.CopyModelName">Копировать имя модели</sys:String>
+    <sys:String x:Key="S.Settings.ModelRequired">Обязательно</sys:String>
+    <sys:String x:Key="S.Settings.OllamaGuide">Руководство по локальной LLM (англ.)</sys:String>
+    <sys:String x:Key="S.Settings.PromptAuto">Оригинал: авто</sys:String>
+    <sys:String x:Key="S.Settings.PromptExplicit">Оригинал: задан</sys:String>
+    <sys:String x:Key="S.Settings.PromptAutoHint">Этот промпт используется, только когда язык оригинала — «Авто».</sys:String>
+    <sys:String x:Key="S.Settings.PromptExplicitHint">Этот промпт используется, только когда язык оригинала задан, например английский.</sys:String>
+    <sys:String x:Key="S.Settings.ModelProfiles">Настройки модели</sys:String>
+    <sys:String x:Key="S.Settings.ProfileInUse">Используемые настройки</sys:String>
+    <sys:String x:Key="S.Settings.ProfileListTitle">Сохраненные настройки</sys:String>
+    <sys:String x:Key="S.Settings.ProfileAdd">Добавить настройки ({0}/{1})</sys:String>
+    <sys:String x:Key="S.Settings.ProfileSnapshotTitle">Встроенные настройки меняются с каждой версией</sys:String>
+    <sys:String x:Key="S.Settings.ProfileSnapshotBody">Чтобы сохранить текущие встроенные настройки, добавьте их копию как свои.</sys:String>
+    <sys:String x:Key="S.Settings.ProfileSnapshotAction">Копировать встроенные</sys:String>
+    <sys:String x:Key="S.Settings.ProfileSnapshotName">Встроенные v{0}</sys:String>
+    <sys:String x:Key="S.Settings.PromptAutoScope">Используется, только когда язык оригинала — «Авто».</sys:String>
+    <sys:String x:Key="S.Settings.PromptExplicitScope">Используется, только когда язык оригинала задан, например английский.</sys:String>
+    <sys:String x:Key="S.Settings.PromptDeleteTitle">Удалить промпт</sys:String>
+    <sys:String x:Key="S.Settings.PromptDeleteConfirm">Удалить «{0}»? Это действие нельзя отменить.</sys:String>
+    <sys:String x:Key="S.Settings.PromptDefaultName">Встроенные</sys:String>
+    <sys:String x:Key="S.Settings.PromptReadOnly">Только чтение</sys:String>
+    <sys:String x:Key="S.Settings.PromptAddTitle">Новые настройки</sys:String>
+    <sys:String x:Key="S.Settings.PromptEditTitle">Изменить настройки</sys:String>
+    <sys:String x:Key="S.Settings.PromptDelete">Удалить</sys:String>
+    <sys:String x:Key="S.Settings.PromptName">Название</sys:String>
+    <sys:String x:Key="S.Settings.PromptNamePlaceholder">Название промпта</sys:String>
+    <sys:String x:Key="S.Settings.PromptContent">Текст промпта</sys:String>
+    <sys:String x:Key="S.Settings.PromptRoleEmpty">Не задано</sys:String>
+    <sys:String x:Key="S.Settings.PromptSourceLanguage">Язык оригинала</sys:String>
+    <sys:String x:Key="S.Settings.PromptSourceAuto">Авто</sys:String>
+    <sys:String x:Key="S.Settings.PromptSourceExplicit">Задан</sys:String>
+    <sys:String x:Key="S.Settings.PromptSystemPlaceholder">Системный промпт…</sys:String>
+    <sys:String x:Key="S.Settings.PromptUserPlaceholder">Пользовательский промпт…</sys:String>
+    <sys:String x:Key="S.Settings.PromptNeedOne">Заполните System Prompt или User Prompt</sys:String>
+    <sys:String x:Key="S.Settings.PromptOtherEmpty">Промпт «{0}» пуст</sys:String>
+    <sys:String x:Key="S.Settings.PromptSystemTip">Задайте системный промпт в формате, рекомендованном для выбранной модели, или оставьте поле пустым, если он не нужен.</sys:String>
+    <sys:String x:Key="S.Settings.PromptUserTip">Задайте пользовательский промпт в формате, рекомендованном для выбранной модели, или оставьте поле пустым, если он не нужен.</sys:String>
+    <sys:String x:Key="S.Settings.PromptNewName">Мой промпт {0}</sys:String>
+    <sys:String x:Key="S.Settings.PromptLoadDefault">Загрузить встроенный промпт</sys:String>
+    <sys:String x:Key="S.Settings.PromptParams">Доступные параметры</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTip">Перед отправкой запроса заменяются фактически используемыми языками.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCol1">Параметр</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCol2">Описание</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCol3">Пример</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamSourceName">Название языка оригинала</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamSourceCode">Код языка оригинала</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTargetName">Название языка перевода</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTargetCode">Код языка перевода</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamSourceNameExample">Английский</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Японский</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiAdvanced">Дополнительно</sys:String>
+    <sys:String x:Key="S.Settings.ModelResetTip">Использовать рекомендуемую модель</sys:String>
+    <sys:String x:Key="S.Settings.AdvancedHint">Невключенный параметр не передается в запросе. Модели различаются тем, какие параметры они принимают, в каком диапазоне и с какими значениями, — ориентируйтесь на документацию своей модели.</sys:String>
+    <sys:String x:Key="S.Settings.ParamEnable">Включить</sys:String>
+    <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
+    <sys:String x:Key="S.Settings.TemperatureRange">Диапазон: 0.0 ~ 2.0</sys:String>
+    <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">Насколько сильно модель предпочитает самую вероятную формулировку. Чем ниже значение,
+тем точнее она держится самого вероятного варианта; чем выше, тем больше шансов
+у других вариантов.</sys:String>
+    <sys:String x:Key="S.Settings.TopP">Top P</sys:String>
+    <sys:String x:Key="S.Settings.TopPRange">Диапазон: 0.0 ~ 1.0</sys:String>
+    <sys:String x:Key="S.Settings.TopPTip" xml:space="preserve">Из скольких вариантов модель может выбирать. Чем ниже значение, тем меньше
+самых вероятных вариантов остается; чем выше, тем шире выбор.</sys:String>
+    <sys:String x:Key="S.Settings.Seed">Seed</sys:String>
+    <sys:String x:Key="S.Settings.SeedRange">Целое число</sys:String>
+    <sys:String x:Key="S.Settings.SeedTip" xml:space="preserve">Помогает воспроизвести результат. С той же моделью, теми же промптами и теми же
+настройками одинаковый seed обычно дает одинаковый результат.</sys:String>
+
+    <sys:String x:Key="S.Settings.SaveScreenshot">Сохранение</sys:String>
+    <sys:String x:Key="S.Settings.SaveScreenshotCheck">Сохранять копию каждого снимка</sys:String>
+    <sys:String x:Key="S.Settings.SavePath">Папка</sys:String>
+    <sys:String x:Key="S.Settings.SavePathTip">Нажмите, чтобы выбрать папку</sys:String>
+    <sys:String x:Key="S.Settings.OpenFolderTip">Открыть папку</sys:String>
+    <sys:String x:Key="S.Settings.MangaModels">Модели для манги</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc1">Созданы для японской манги с вертикальным текстом: полнее и быстрее.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2">Требуется 1 ГБ видеопамяти, рекомендуется 2 ГБ.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">Нет видеокарты с DirectX 12; используется стандартное распознавание.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">Вертикальный японский</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFeatureMissed">Меньше пропусков</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFeatureFast">Быстрее</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownload">Скачать ({0} МБ)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsCancel">Отмена</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDelete">Удалить модели</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsRetry">Повторить</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDeleteFailed">Не удалось удалить модели: {0}</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNotDownloaded">Не скачаны</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDownloading">Загрузка</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReady">Готово</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsDisabled">Выкл.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsNoGpu">Недоступно</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsFailed">Ошибка загрузки</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUnsupported">Не поддерживается</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsOutdated">Есть обновление</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsUpdated">Модели обновлены. Пока используется стандартная модель.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsProgress">{0} / {1} МБ · {2}%</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsEnabled">Модели для манги включены</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsSwitchedOff">Выкл. (стандартная модель)</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReasonLoadFailed">Не удалось загрузить модели на {0}; для вертикального текста используется стандартное распознавание.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsReasonReadFailed">Ошибка распознавания на {0}; для вертикального текста используется стандартное распознавание.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsErrorNetwork">Не удалось подключиться к серверу загрузки. Проверьте подключение и повторите попытку.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsErrorServer">Сервер загрузки вернул ошибку ({0}).</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsErrorChecksum">Скачанный файл неполный или поврежден.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsErrorDisk">Не удалось сохранить модели. Проверьте, достаточно ли места на диске.</sys:String>
+    <sys:String x:Key="S.Settings.MangaModelsErrorOther">Загрузка не завершилась. Повторите попытку.</sys:String>
+
+    <sys:String x:Key="S.Settings.Appearance">Внешний вид</sys:String>
+    <sys:String x:Key="S.Settings.Theme">Тема</sys:String>
+    <sys:String x:Key="S.Settings.ThemeLight">Светлая</sys:String>
+    <sys:String x:Key="S.Settings.ThemeDark">Темная</sys:String>
+    <sys:String x:Key="S.Settings.UiLanguage">Язык интерфейса</sys:String>
+
+    <sys:String x:Key="S.Settings.Advanced">Дополнительно</sys:String>
+    <sys:String x:Key="S.Settings.Logging">Журнал</sys:String>
+    <sys:String x:Key="S.Settings.LoggingCheck">Записывать подробную информацию</sys:String>
+    <sys:String x:Key="S.Settings.LoggingHint">Записывает больше сведений о работе программы; рекомендуется только при поиске неполадок.</sys:String>
+    <sys:String x:Key="S.Settings.OcrLineBoxes">Рамки OCR</sys:String>
+    <sys:String x:Key="S.Settings.OcrLineBoxesHint">Показывать области исходного текста, найденные OCR.</sys:String>
+    <sys:String x:Key="S.Settings.TextGroupBoxes">Рамки групп текста</sys:String>
+    <sys:String x:Key="S.Settings.TextGroupBoxesHint">Показывать, какой исходный текст объединен для перевода.</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsHint">При экспорте файлы журнала, сведения о системе и текущие настройки собираются в файл диагностики, который можно приложить к сообщению о проблеме. Конфиденциальные данные, например ключи API, не включаются, и ничего не отправляется автоматически.</sys:String>
+    <sys:String x:Key="S.Settings.ExportDiagnostics">Экспорт диагностики</sys:String>
+    <sys:String x:Key="S.Settings.OpenDiagnosticsFolder">Открыть папку</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsUploadHint" xml:space="preserve">Диагностика содержит файлы журнала, сведения о системе и текущие настройки, конфиденциальные данные в ней заменены.&#x0a;Файл диагностики хранится на вашем устройстве и автоматически удаляется через 30 дней.</sys:String>
+    <sys:String x:Key="S.Settings.UploadBundle">Отправить</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsCodeLabel">Код отчета</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsExportedTitle">Экспортировано, еще не отправлено</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsExportedHint">Файл сохранен на вашем устройстве и не отправлен. «Отправить» передает диагностику разработчику вместе с вашим описанием проблемы; «Открыть файл» показывает, что в нем содержится.</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsNoEndpointHint">Файл находится на вашем устройстве, ничего не отправлено. Сообщите о проблеме на GitHub или форуме и приложите файл. «Открыть файл» показывает, что в нем содержится.</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsUploadFailedTitle">Диагностика экспортирована</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsUploadedHint">Диагностика отправлена. Если хотите что-то добавить, укажите этот код отчета на GitHub или форуме. «Открыть файл» показывает, что было экспортировано в этот раз.</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsNotUploadedHint" xml:space="preserve">Диагностика экспортирована, но отправить ее не удалось. Сообщите о проблеме на GitHub или форуме и приложите файл. «Открыть файл» откроет то, что было экспортировано в этот раз.</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsRetention">Файлы автоматически удаляются через 30 дней</sys:String>
+    <sys:String x:Key="S.Settings.CopyCode">Копировать</sys:String>
+    <sys:String x:Key="S.Settings.OpenBundle">Открыть файл</sys:String>
+
+    <sys:String x:Key="S.Settings.AutoSaveHint">Изменения сохраняются автоматически</sys:String>
+
+    <!-- Settings page, composed in code-behind -->
+    <sys:String x:Key="S.Settings.Saved">✓ Сохранено</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">Нажмите сочетание…</sys:String>
+    <sys:String x:Key="S.Settings.MouseMiddle">Средняя кнопка мыши</sys:String>
+    <sys:String x:Key="S.Settings.MouseX1">Боковая кнопка 1</sys:String>
+    <sys:String x:Key="S.Settings.MouseX2">Боковая кнопка 2</sys:String>
+    <sys:String x:Key="S.Settings.GamepadButton">Геймпад {0}</sys:String>
+    <sys:String x:Key="S.Settings.FolderPickerTitle">Выберите папку для сохранения снимков</sys:String>
+    <sys:String x:Key="S.Settings.LoggingEnvOverride">Уровень журнала сейчас задан переменной среды OVERTRANSLATE_LOGLEVEL, поэтому этот параметр не действует.</sys:String>
+    <sys:String x:Key="S.Settings.StartupFailed">✗ Не удалось изменить параметр автозапуска: {0}</sys:String>
+    <sys:String x:Key="S.Settings.OpenFolderFailed">✗ Не удалось открыть папку: {0}</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsExported">✓ Диагностика экспортирована</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsFailed">✗ Не удалось экспортировать диагностику: {0}</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsExporting">Сбор диагностики…</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsUploaded">✓ Отправлено — код {0}</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsCodeCopied">✓ Код скопирован</sys:String>
+    <sys:String x:Key="S.Settings.CopyFailed">✗ Не удалось скопировать — перепишите код из поля выше.</sys:String>
+    <sys:String x:Key="S.Settings.DiagnosticsUploadFailed">⚠ Диагностика экспортирована, но отправить ее не удалось</sys:String>
+
+    <!-- ── Diagnostics note ── -->
+    <sys:String x:Key="S.Settings.NoteTitle">Сообщить о проблеме</sys:String>
+    <sys:String x:Key="S.Settings.NoteIntro">Написанное здесь отправляется вместе с диагностикой и используется только для поиска причины проблемы.</sys:String>
+    <sys:String x:Key="S.Settings.NotePlaceholder">Опишите, что вы делали, когда возникла проблема, или что-нибудь еще, что может быть с ней связано, — это поможет разработчику быстрее найти причину. Поле можно оставить пустым.</sys:String>
+    <sys:String x:Key="S.Settings.NoteSending">Отправка…</sys:String>
+    <sys:String x:Key="S.Settings.NoteUploadFailed">Отправить не удалось. Файл остался на вашем устройстве, можно попробовать еще раз.</sys:String>
+    <sys:String x:Key="S.Settings.NoteAttachFailed">Не удалось записать ваше сообщение в файл, поэтому ничего не отправлено. Повторите попытку.</sys:String>
+    <sys:String x:Key="S.Settings.NoteReportManually">Сообщить на GitHub</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyTaken">✗ {0} уже назначено для «{1}»</sys:String>
+
+    <!-- ── Language names ── -->
+    <sys:String x:Key="S.Lang.Automatic">Авто</sys:String>
+    <sys:String x:Key="S.Lang.AutomaticOcr">Авто (ZH/EN/JA)</sys:String>
+    <sys:String x:Key="S.Lang.English">Английский</sys:String>
+    <sys:String x:Key="S.Lang.Japanese">Японский</sys:String>
+    <sys:String x:Key="S.Lang.Korean">Корейский</sys:String>
+    <sys:String x:Key="S.Lang.TraditionalChinese">Китайский (трад.)</sys:String>
+    <sys:String x:Key="S.Lang.SimplifiedChinese">Китайский (упрощ.)</sys:String>
+    <sys:String x:Key="S.Lang.Bulgarian">Болгарский</sys:String>
+    <sys:String x:Key="S.Lang.Czech">Чешский</sys:String>
+    <sys:String x:Key="S.Lang.Danish">Датский</sys:String>
+    <sys:String x:Key="S.Lang.German">Немецкий</sys:String>
+    <sys:String x:Key="S.Lang.Greek">Греческий</sys:String>
+    <sys:String x:Key="S.Lang.Spanish">Испанский</sys:String>
+    <sys:String x:Key="S.Lang.Estonian">Эстонский</sys:String>
+    <sys:String x:Key="S.Lang.Finnish">Финский</sys:String>
+    <sys:String x:Key="S.Lang.French">Французский</sys:String>
+    <sys:String x:Key="S.Lang.Hungarian">Венгерский</sys:String>
+    <sys:String x:Key="S.Lang.Indonesian">Индонезийский</sys:String>
+    <sys:String x:Key="S.Lang.Italian">Итальянский</sys:String>
+    <sys:String x:Key="S.Lang.Lithuanian">Литовский</sys:String>
+    <sys:String x:Key="S.Lang.Latvian">Латышский</sys:String>
+    <sys:String x:Key="S.Lang.Norwegian">Норвежский</sys:String>
+    <sys:String x:Key="S.Lang.Dutch">Нидерландский</sys:String>
+    <sys:String x:Key="S.Lang.Polish">Польский</sys:String>
+    <sys:String x:Key="S.Lang.Portuguese">Португальский</sys:String>
+    <sys:String x:Key="S.Lang.Romanian">Румынский</sys:String>
+    <sys:String x:Key="S.Lang.Russian">Русский</sys:String>
+    <sys:String x:Key="S.Lang.Slovak">Словацкий</sys:String>
+    <sys:String x:Key="S.Lang.Slovenian">Словенский</sys:String>
+    <sys:String x:Key="S.Lang.Swedish">Шведский</sys:String>
+    <sys:String x:Key="S.Lang.Turkish">Турецкий</sys:String>
+    <sys:String x:Key="S.Lang.Ukrainian">Украинский</sys:String>
+
+    <sys:String x:Key="S.Toolbar.DebugAssist">Отладка</sys:String>
+    <sys:String x:Key="S.Toolbar.DebugAssistOn">Включено: {0}</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopy">Закрывать после снимка</sys:String>
+    <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">Завершает снимок экрана, как только «Снимок» скопирует его в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">Общие</sys:String>
+    <sys:String x:Key="S.Toolbar.AutoTranslate">Автоперевод</sys:String>
+    <sys:String x:Key="S.Toolbar.SaveScreenshot">Сохранять снимки</sys:String>
+    <sys:String x:Key="S.Toolbar.SavePathInSettings">Папку можно изменить в настройках</sys:String>
+    <sys:String x:Key="S.Toolbar.ModelHintSwitch">Подсказки о модели</sys:String>
+    <sys:String x:Key="S.Toolbar.ModelHintSwitchTip">Под языком оригинала показывается, какая модель будет распознавать текст.</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintChooseJapanese">Сейчас стандартная модель; выберите японский, чтобы перейти на модели для манги</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintApplied">Используются модели для манги</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintDownloading">Модели для манги загружаются</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintNotInstalled">Модели для манги не установлены; см. настройки</sys:String>
+    <sys:String x:Key="S.Toolbar.MangaHintOutdated">Модели для манги обновлены; пока стандартная модель, скачайте заново в настройках</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintApplied">Используются модели для манги (для горизонтального текста — стандартная модель)</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintNotInstalled">Модели для манги не установлены; см. настройки (для горизонтального текста — стандартная модель, скачивать не нужно)</sys:String>
+    <sys:String x:Key="S.Realtime.MangaHintOutdated">Модели для манги обновлены; пока стандартная модель, скачайте заново в настройках</sys:String>
+    <sys:String x:Key="S.Debug.DisplayScope">Где показывать</sys:String>
+    <sys:String x:Key="S.Debug.BoxDisplayScope">Где показывать рамки</sys:String>
+    <sys:String x:Key="S.Debug.SourceOnly">Только оригинал</sys:String>
+    <sys:String x:Key="S.Debug.SourceAndTranslation">Оригинал и перевод</sys:String>
+    <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
+         collapses the &#x0A; away and the two sentences run together. -->
+    <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">Только оригинал: рамки рисуются только в окне оригинала.&#x0A;Оригинал и перевод: рамки рисуются и в окне оригинала, и в окне перевода</sys:String>
+</ResourceDictionary>
