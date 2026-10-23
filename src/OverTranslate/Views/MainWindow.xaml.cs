@@ -76,6 +76,10 @@ public partial class MainWindow : Window
     private double _lastSelPhysWidth;
     private double _lastSelPhysHeight;
     private bool _lastVerticalText;
+    // The target those bubbles are in. Restoring them after a failed re-translation into another
+    // target used to draw them in the new target's font and punctuation forms — Japanese columns
+    // in Segoe UI, once the new target was one set across (#315).
+    private string _lastTargetLang = "";
     private int _selectionSessionId;
 
     public MainWindow()
@@ -796,6 +800,7 @@ public partial class MainWindow : Window
         _annotationTool = AnnotationPanelWindow.DefaultTool;
 
         var settings = SettingsService.Instance.Current;
+        _lastTargetLang = settings.TargetLanguage;
         ShowOverlay(
             blocks,
             ocrBlocks,
@@ -1062,6 +1067,7 @@ public partial class MainWindow : Window
 
             _lastColoredBlocks = coloredTranslated;
             _lastVerticalText = req.IsVerticalText;
+            _lastTargetLang = req.TargetLang;
             _lastBackdrop = backdrop;
             ShowOverlay(
                 coloredTranslated,
@@ -1120,7 +1126,7 @@ public partial class MainWindow : Window
                 _lastSelPhysWidth,
                 _lastSelPhysHeight,
                 req.SourceLang,
-                req.TargetLang,
+                _lastTargetLang,
                 _lastVerticalText,
                 _lastBackdrop);
             requestToolbar?.SetTranslationState(_lastColoredBlocks.Count > 0);
