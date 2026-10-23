@@ -246,6 +246,22 @@ public class AcrossInColumnsTests
         Assert.True(fit.FontSize >= 9.5);
     }
 
+    /// <summary>
+    /// An ordinary word goes under the readable floor whole rather than in two pieces at a larger
+    /// size — "Yesterd / ay's" on a narrow narration card, seen on the Win10 VM.
+    /// </summary>
+    [Fact]
+    public void An_ordinary_word_shrinks_whole_before_it_is_broken()
+    {
+        const string text = "Yesterday's thoughts still linger in my mind.";
+
+        // 52px of room: "Yesterday's" is 11 letters, whole only under 9.5px in this face.
+        var fit = AcrossInColumnsLayout.Fit(text, 52, 400, 16, 9.5, 7, AcrossInColumnsRoom.None, Mono);
+
+        Assert.True(fit.FontSize < 9.5, $"expected under the readable floor, got {fit.FontSize}px");
+        Assert.True(Mono("Yesterday's", fit.FontSize, null).Width <= fit.Width, "the word was broken");
+    }
+
     [Fact]
     public void Room_beside_a_neighbour_is_half_the_gap_and_the_edge_is_taken_whole()
     {

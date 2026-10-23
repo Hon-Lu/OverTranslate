@@ -94,15 +94,17 @@ internal readonly record struct AcrossInColumnsFit(
 /// plus one preferred size a side.</item>
 /// <item>The same, as wide as the room beside the source allows.</item>
 /// <item>The same again, now also allowed to run down into the room below.</item>
-/// <item>The same once more, now letting a word wider than all of that room break inside it —
-/// first only at sizes where it breaks once, then wherever it has to.</item>
+/// <item>For a sentence of ordinary words only: below the readable floor, down to the emergency
+/// size, every word still whole.</item>
+/// <item>The readable sizes once more, now letting a word wider than all of that room break
+/// inside it — first only at sizes where it breaks once, then wherever it has to.</item>
 /// <item>Below the readable floor, down to the emergency size, in all of that room.</item>
 /// <item>The emergency size, as wide as the room allows, however tall that comes out. The box is
 /// never cut short: a bubble that runs past its balloon is visible, a sentence that stops early
 /// reads as a finished one.</item>
 /// </list>
 ///
-/// <para>A word is split only when no readable size holds it whole in the room — a long German
+/// <para>A long word is split only when no readable size holds it whole in the room — a German
 /// or Finnish compound in a one-column balloon by the page edge. Shrinking it whole to the
 /// emergency size was tried first and rejected on the rendered page: a 34-letter compound came out
 /// as one line of type too small to read, where broken across two lines at a readable size it is
@@ -113,6 +115,12 @@ internal readonly record struct AcrossInColumnsFit(
 /// hyphen: WPF hyphenates only with a language dictionary it does not have for most targets, and
 /// the measurement would have to agree with it.</para>
 ///
+/// <para>An ordinary word is never split while any size holds it whole. "Yesterd" and "ay's"
+/// on two lines of a narrow narration card, on the Win10 VM, read as two fragments, where the
+/// whole word a size or two under the readable floor still reads as a word; the compound that
+/// justified breaking was 34 letters, and nothing that short can be read in pieces. Long means
+/// more than <see cref="OrdinaryWordLength"/> letters.</para>
+///
 /// <para>The measurement is handed in as a delegate — text, size, and the width to wrap at or null
 /// for one line — because in the windows it is a TextBlock's (see <see cref="WrappedTextMeasure"/>),
 /// while these rules have nothing to do with WPF.</para>
@@ -120,6 +128,13 @@ internal readonly record struct AcrossInColumnsFit(
 internal static class AcrossInColumnsLayout
 {
     private const double SizeStep = 0.5;
+
+    /// <summary>
+    /// The longest word that is never broken while some size holds it whole. Twelve letters takes in
+    /// almost every everyday word of the Latin, Cyrillic and Greek targets with its punctuation
+    /// ("exploration.", "Yesterday's"), and leaves out the compounds German and Finnish build.
+    /// </summary>
+    internal const int OrdinaryWordLength = 12;
 
     /// <param name="text">The translation.</param>
     /// <param name="sourceWidth">The column group's width.</param>
@@ -163,6 +178,9 @@ internal static class AcrossInColumnsLayout
             Search(preferredFontSize, readableFontSize, comfortable, groupHeight)
             ?? Search(preferredFontSize, readableFontSize, widest, groupHeight)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest)
+            ?? (words.All(word => word.Length <= OrdinaryWordLength)
+                ? Search(readableFontSize - SizeStep, emergencyFontSize, widest, tallest)
+                : null)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest, maxPieces: 2)
             ?? Search(preferredFontSize, readableFontSize, widest, tallest, maxPieces: int.MaxValue)
             ?? Search(readableFontSize - SizeStep, emergencyFontSize, widest, tallest, maxPieces: int.MaxValue);
