@@ -356,11 +356,12 @@ public partial class MainWindow : Window
     /// </remarks>
     private async Task RunCaptureYieldingRealtimeAsync(string origin)
     {
-        if (!RealtimeSessionController.Instance.TryYieldToCapture()) return;
+        var realtime = RealtimeSessionController.Instance;
+        if (!realtime.TryYieldToCapture()) return;
 
         try
         {
-            await RunCaptureSessionAsync(origin);
+            await RunCaptureSessionAsync(origin, realtime.IsTranslating ? realtime.CurrentLanguages : null);
         }
         finally
         {
@@ -660,7 +661,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task RunCaptureSessionAsync(string origin = "hotkey")
+    /// <param name="languages">
+    /// The pair the toolbar opens on, or null for the one 截圖翻譯 last used. Set when the capture is
+    /// taken from inside a realtime session: the user is reading the same screen, and the pair they
+    /// set on the capsule — possibly a moment ago (#345) — is the one they mean.
+    /// </param>
+    private async Task RunCaptureSessionAsync(
+        string origin = "hotkey", (string Source, string Target)? languages = null)
     {
         if (HasActiveSession)
         {
@@ -762,7 +769,8 @@ public partial class MainWindow : Window
 
             var settings      = SettingsService.Instance.Current;
             var selection     = captureWindow.Selection;
-            EnterOverlayState(captureWindow, selection, [], [], settings.SourceLanguage, hasTranslated: false);
+            var (srcLang, tgtLang) = languages ?? (settings.SourceLanguage, settings.TargetLanguage);
+            EnterOverlayState(captureWindow, selection, [], [], srcLang, tgtLang, hasTranslated: false);
 
             // Fire in the same pass that built the overlay, before it paints: the toolbar's first
             // frame already reads "翻譯中..." and the overlay's first frame already shows "辨識中".
@@ -785,6 +793,7 @@ public partial class MainWindow : Window
         List<TranslatedBlock> blocks,
         List<OcrTextBlock> ocrBlocks,
         string srcLang,
+        string tgtLang,
         bool hasTranslated)
     {
         _selectionSessionId++;
@@ -799,8 +808,7 @@ public partial class MainWindow : Window
 
         _annotationTool = AnnotationPanelWindow.DefaultTool;
 
-        var settings = SettingsService.Instance.Current;
-        _lastTargetLang = settings.TargetLanguage;
+        _lastTargetLang = tgtLang;
         ShowOverlay(
             blocks,
             ocrBlocks,
@@ -809,7 +817,7 @@ public partial class MainWindow : Window
             selection.Width,
             selection.Height,
             srcLang,
-            settings.TargetLanguage,
+            tgtLang,
             verticalText: false);
 
         _overlayWindow?.SetAnnotationBounds(
@@ -817,7 +825,7 @@ public partial class MainWindow : Window
 
         var toolbar  = new ToolbarWindow(
             selection.Left, selection.Top, selection.Width, selection.Height,
-            srcLang, settings.TargetLanguage);
+            srcLang, tgtLang);
         toolbar.Owner = captureWindow;
         toolbar.TranslateRequested      += OnTranslateRequested;
         toolbar.OpenWindowRequested     += OnOpenWindowRequested;
