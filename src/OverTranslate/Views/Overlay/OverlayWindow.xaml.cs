@@ -345,7 +345,10 @@ public partial class OverlayWindow : Window
             // across, by the ordinary path below, and falls through to it here. Both passes are
             // handed the whole list so each still sees the other's boxes when it asks what its
             // neighbours are; each draws only its own kind.
-            if (!blocks.Any(block => block.RunsAcross))
+            //
+            // So does a column whose target is not written downwards (#315): it is set across too,
+            // in the column's place — see BuildAcrossInColumns.
+            if (!blocks.Any(block => block.RunsAcross || block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns))
                 return;
         }
 
@@ -358,6 +361,13 @@ public partial class OverlayWindow : Window
         foreach (var block in blocks)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+            // Before the tilt: a turned column group is still a column group, and what decides how
+            // it is set across is its shape, not its angle.
+            if (block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns)
+            {
+                BuildAcrossInColumns(block, blocks, translatedFont, selScreenX, selScreenY, selScreenWidth, selScreenHeight);
+                continue;
+            }
             // Drawn as a column already; here only to be counted as a neighbour.
             if (_currentVerticalText && !block.RunsAcross) continue;
 
@@ -800,6 +810,174 @@ public partial class OverlayWindow : Window
         BubbleTextCanvas.Children.Add(text);
     }
 
+    /// <summary>
+    /// A column group whose target is not written downwards, set across in its place — see
+    /// <see cref="AcrossInColumnsLayout"/> for how a translation is fitted to a narrow, tall box.
+    /// </summary>
+    /// <remarks>
+    /// <para>The bubble covers both the source, which is what has to be hidden, and the text, which
+    /// may be wider than a one-column balloon. The text is a box of its own over it rather than the
+    /// bubble's child, positioned where the layout put it and never clipped: the layout's last
+    /// resort is a text box taller than the room, and clipping it would cut the sentence short.</para>
+    ///
+    /// <para>A column group off a tilted card is set across in the card's own frame and turned onto
+    /// it, as its columns would have been — see <see cref="BuildTiltedAcrossInColumns"/>.</para>
+    /// </remarks>
+    private void BuildAcrossInColumns(
+        TranslatedBlock block, IReadOnlyList<TranslatedBlock> blocks, System.Windows.Media.FontFamily translatedFont,
+        double selScreenX, double selScreenY, double selScreenWidth, double selScreenHeight)
+    {
+        if (block.Tilt is { Column: true } tilt)
+        {
+            BuildTiltedAcrossInColumns(block, tilt, translatedFont, selScreenX, selScreenY);
+            return;
+        }
+
+        double canvasX = (selScreenX + block.Bounds.X - _physBounds.Left) / _dpiX;
+        double canvasY = (selScreenY + block.Bounds.Y - _physBounds.Top) / _dpiY;
+        double wpfW = block.Bounds.Width / _dpiX;
+        double wpfH = block.Bounds.Height / _dpiY;
+        if (wpfW <= 0 || wpfH <= 0) return;
+
+        // The cell the columns were written in. A column group's line bounds are its columns, so
+        // without a pitch of its own the median of them is a column's length, not a glyph's.
+        double glyph = Math.Min(GetSourceFontReferenceHeight(block, wpfW), wpfW);
+
+        // In the selection's pixels, then in this window's units, less the bubble's own padding on
+        // each side so the bubble round the text stays inside what the room allows.
+        var neighbours = blocks
+            .Where(other => !ReferenceEquals(other, block) && !string.IsNullOrWhiteSpace(other.TranslatedText))
+            .Select(other => other.Bounds);
+        var limit = new Rect(0, 0, selScreenWidth, selScreenHeight);
+        limit.Intersect(new Rect(
+            _physBounds.Left - selScreenX + OverlayPadding * _dpiX,
+            _physBounds.Top - selScreenY + OverlayPadding * _dpiY,
+            Math.Max(0, _physBounds.Width - OverlayPadding * 2 * _dpiX),
+            Math.Max(0, _physBounds.Height - OverlayPadding * 2 * _dpiY)));
+        var room = limit.IsEmpty
+            ? AcrossInColumnsRoom.None
+            : AcrossInColumnsRoom.Within(block.Bounds, neighbours, limit);
+        double padX = BubbleHorizontalPadding / 2;
+        double padY = BubbleVerticalPadding / 2;
+        room = new(
+            Math.Max(0, room.Left / _dpiX - padX),
+            Math.Max(0, room.Right / _dpiX - padX),
+            Math.Max(0, room.Below / _dpiY - padY));
+
+        var typeface = new Typeface(translatedFont, FontStyles.Normal, TranslatedWeight, FontStretches.Normal);
+        string text = block.TranslatedText.Trim();
+        // Started at the size the columns would have been drawn at, so a target set across comes
+        // out as large as one set downwards over the same balloon.
+        var fit = AcrossInColumnsLayout.Fit(
+            text, wpfW, wpfH,
+            preferredFontSize: glyph * 0.92,
+            readableFontSize: SingleLineAbsoluteMinFontSize,
+            emergencyFontSize: GroupedEmergencyMinFontSize,
+            room,
+            (part, size, width) => MeasureText(part, typeface, size, width));
+
+        double textLeft = canvasX + fit.Left;
+        double textTop = canvasY + fit.Top;
+        double left = Math.Min(canvasX - BubbleExpand, textLeft - padX);
+        double top = Math.Min(canvasY - BubbleExpand, textTop - padY);
+        double right = Math.Max(canvasX + wpfW + BubbleExpand, textLeft + fit.Width + padX);
+        double bottom = Math.Max(canvasY + wpfH + BubbleExpand, textTop + fit.Height + padY);
+
+        var background = block.BackgroundColor.A == 0 ? Colors.White : block.BackgroundColor;
+        var textColor = block.TextColor.A != 0
+            ? block.TextColor
+            : (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255.0 > 0.5
+                ? Colors.Black
+                : Colors.White;
+        var (backgroundBorder, plateText) = BubbleBackground(
+            left, top, right - left, bottom - top, background, textColor,
+            glyph * _dpiY, fit.Height * _dpiY, selScreenX, selScreenY);
+        BubbleBackgroundCanvas.Children.Add(backgroundBorder);
+
+        var written = new TextBlock
+        {
+            Text = text,
+            Width = fit.Width,
+            FontSize = fit.FontSize,
+            FontWeight = TranslatedWeight,
+            FontFamily = translatedFont,
+            Foreground = new SolidColorBrush(plateText),
+            TextWrapping = TextWrapping.Wrap,
+            TextTrimming = TextTrimming.None,
+            // Every line centred: this is a balloon, lettered the way a balloon is, not a paragraph.
+            TextAlignment = TextAlignment.Center,
+        };
+        Canvas.SetLeft(written, textLeft);
+        Canvas.SetTop(written, textTop);
+        BubbleTextCanvas.Children.Add(written);
+    }
+
+    /// <summary>
+    /// A tilted column group whose target is not written downwards: set across in the group's level
+    /// box and turned back onto the card with its bubble, as <see cref="BuildTiltedColumn"/> turns
+    /// the columns.
+    /// </summary>
+    /// <remarks>
+    /// No room past the group's own box: the size gives way instead. Past the group on a turned card
+    /// is the card's margin, then the page or the next card, and an upright box round it is a poor
+    /// guide to either. A character's width a side was tried first; in the live overlay it carried
+    /// the plate onto the dark corridor beside a white narration card in vertical-image-ja4, where
+    /// the backdrop then turned down the plate and painted a dark card instead.
+    /// </remarks>
+    private void BuildTiltedAcrossInColumns(
+        TranslatedBlock block, Services.Ocr.TiltedText tilt, System.Windows.Media.FontFamily translatedFont,
+        double selScreenX, double selScreenY)
+    {
+        var level = tilt.Box;
+        double wpfW = level.Width / _dpiX;
+        double wpfH = level.Height / _dpiY;
+        if (wpfW <= 0 || wpfH <= 0) return;
+
+        double glyph = Math.Min(GetSourceFontReferenceHeight(block, wpfW), wpfW);
+        var typeface = new Typeface(translatedFont, FontStyles.Normal, TranslatedWeight, FontStretches.Normal);
+        string text = block.TranslatedText.Trim();
+        var fit = AcrossInColumnsLayout.Fit(
+            text, wpfW, wpfH,
+            preferredFontSize: glyph * 0.92,
+            readableFontSize: SingleLineAbsoluteMinFontSize,
+            emergencyFontSize: GroupedEmergencyMinFontSize,
+            AcrossInColumnsRoom.None,
+            (part, size, width) => MeasureText(part, typeface, size, width));
+
+        // The bubble in the level frame, in this window's units from the level box's corner: the
+        // source grown by the bubble's margin, and the text grown by its padding.
+        double padX = BubbleHorizontalPadding / 2;
+        double padY = BubbleVerticalPadding / 2;
+        double left = Math.Min(-BubbleExpand, fit.Left - padX);
+        double top = Math.Min(-BubbleExpand, fit.Top - padY);
+        double borderW = Math.Max(wpfW + BubbleExpand, fit.Left + fit.Width + padX) - left;
+        double borderH = Math.Max(wpfH + BubbleExpand, fit.Top + fit.Height + padY) - top;
+        var bubble = new Rect(level.X + left * _dpiX, level.Y + top * _dpiY, borderW * _dpiX, borderH * _dpiY);
+        var (corner, turn, textColor) = TiltedColumnSurface(
+            block, tilt, bubble, borderW, borderH, glyph, selScreenX, selScreenY);
+
+        var written = new TextBlock
+        {
+            Text = text,
+            Width = fit.Width,
+            FontSize = fit.FontSize,
+            FontWeight = TranslatedWeight,
+            FontFamily = translatedFont,
+            Foreground = new SolidColorBrush(textColor),
+            TextWrapping = TextWrapping.Wrap,
+            TextTrimming = TextTrimming.None,
+            TextAlignment = TextAlignment.Center,
+        };
+        Canvas.SetLeft(written, fit.Left - left);
+        Canvas.SetTop(written, fit.Top - top);
+        // Laid out level in the bubble and turned with it; not clipped, as the upright one is not.
+        var layer = new Canvas { Width = borderW, Height = borderH, RenderTransform = turn };
+        layer.Children.Add(written);
+        Canvas.SetLeft(layer, corner.X);
+        Canvas.SetTop(layer, corner.Y);
+        BubbleTextCanvas.Children.Add(layer);
+    }
+
     private void BuildVerticalOverlay(
         IReadOnlyList<TranslatedBlock> blocks,
         double selScreenX,
@@ -828,8 +1006,9 @@ public partial class OverlayWindow : Window
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText))
                 continue;
-            // Horizontal writing on a vertical page: the ordinary path sets it across.
-            if (block.RunsAcross)
+            // Horizontal writing on a vertical page, or a target not written downwards: the
+            // ordinary path sets it across.
+            if (block.RunsAcross || block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns)
                 continue;
 
             if (block.Tilt is { Column: true } tilt)
@@ -950,10 +1129,6 @@ public partial class OverlayWindow : Window
         TranslatedBlock block, Services.Ocr.TiltedText tilt, System.Windows.Media.FontFamily translatedFont,
         double selScreenX, double selScreenY)
     {
-        System.Windows.Point ToCanvas(System.Windows.Point pixel) => new(
-            (selScreenX + pixel.X - _physBounds.Left) / _dpiX,
-            (selScreenY + pixel.Y - _physBounds.Top) / _dpiY);
-
         var level = tilt.Box;
         double wpfW = level.Width / _dpiX;
         double wpfH = level.Height / _dpiY;
@@ -978,6 +1153,55 @@ public partial class OverlayWindow : Window
             level.Y - BubbleExpand * _dpiY,
             borderW * _dpiX,
             borderH * _dpiY);
+        var (corner, turn, textColor) = TiltedColumnSurface(
+            block, tilt, bubble, borderW, borderH, sourceGlyphSize, selScreenX, selScreenY);
+
+        // The grid as an upright group's sits in its bubble, laid out level and turned with it.
+        var cells = new Canvas { Width = borderW, Height = borderH, RenderTransform = turn };
+        Canvas.SetLeft(cells, corner.X);
+        Canvas.SetTop(cells, corner.Y);
+        var foreground = new SolidColorBrush(textColor);
+        var gridBounds = new Rect(BubbleExpand + widthPadding, BubbleExpand, wpfW, grid.Height);
+        double fontSize = grid.CellSize * 0.92;
+        foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, grid.CellSize))
+        {
+            var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _currentTargetLanguage);
+            var cell = new TextBlock
+            {
+                Text = drawn.Glyph.ToString(),
+                FontSize = fontSize,
+                FontWeight = drawn.WeightOr(TranslatedWeight),
+                Foreground = foreground,
+                TextAlignment = TextAlignment.Center,
+                FontFamily = drawn.Font ?? translatedFont,
+            };
+            if (drawn.Rotates)
+            {
+                cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+                cell.RenderTransform = new RotateTransform(90);
+            }
+
+            PositionVerticalGlyph(cell, cellBounds);
+            cells.Children.Add(cell);
+        }
+        BubbleTextCanvas.Children.Add(cells);
+    }
+
+    /// <summary>
+    /// What goes under a tilted column group's translation, set down or across: the plate cut to the
+    /// turned bubble where there is a backdrop, and the bubble itself, turned, where there is not.
+    /// Added to the background canvas; hands back where the level bubble's corner lands, the turn
+    /// that puts it on the card, and the colour to write in.
+    /// </summary>
+    /// <param name="bubble">The bubble in the level frame, in captured pixels.</param>
+    private (System.Windows.Point Corner, Transform Turn, System.Windows.Media.Color Text) TiltedColumnSurface(
+        TranslatedBlock block, Services.Ocr.TiltedText tilt, Rect bubble, double borderW, double borderH,
+        double sourceGlyphSize, double selScreenX, double selScreenY)
+    {
+        System.Windows.Point ToCanvas(System.Windows.Point pixel) => new(
+            (selScreenX + pixel.X - _physBounds.Left) / _dpiX,
+            (selScreenY + pixel.Y - _physBounds.Top) / _dpiY);
+
         var corner = ToCanvas(bubble.TopLeft);
         var turn = TiltedPlacement.For(tilt, ToCanvas, corner.X, corner.Y);
         var outline = tilt.Corners(bubble);
@@ -1034,35 +1258,7 @@ public partial class OverlayWindow : Window
         }
         BubbleBackgroundCanvas.Children.Add(surface);
 
-        // The grid as an upright group's sits in its bubble, laid out level and turned with it.
-        var cells = new Canvas { Width = borderW, Height = borderH, RenderTransform = turn };
-        Canvas.SetLeft(cells, corner.X);
-        Canvas.SetTop(cells, corner.Y);
-        var foreground = new SolidColorBrush(textColor);
-        var gridBounds = new Rect(BubbleExpand + widthPadding, BubbleExpand, wpfW, grid.Height);
-        double fontSize = grid.CellSize * 0.92;
-        foreach (var (glyph, cellBounds) in VerticalCells(text, gridBounds, grid.CellSize))
-        {
-            var drawn = VerticalTextGrid.VerticalGlyphFor(glyph, _currentTargetLanguage);
-            var cell = new TextBlock
-            {
-                Text = drawn.Glyph.ToString(),
-                FontSize = fontSize,
-                FontWeight = drawn.WeightOr(TranslatedWeight),
-                Foreground = foreground,
-                TextAlignment = TextAlignment.Center,
-                FontFamily = drawn.Font ?? translatedFont,
-            };
-            if (drawn.Rotates)
-            {
-                cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-                cell.RenderTransform = new RotateTransform(90);
-            }
-
-            PositionVerticalGlyph(cell, cellBounds);
-            cells.Children.Add(cell);
-        }
-        BubbleTextCanvas.Children.Add(cells);
+        return (corner, turn, textColor);
     }
 
     // The vertical setting rules live in Layout/VerticalTextGrid now, because the live overlay lays

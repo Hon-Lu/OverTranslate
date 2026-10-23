@@ -207,7 +207,7 @@ public class VerticalAcrossRowsTests
         var column = new TranslatedBlock("縦書き", "直排譯文", new Rect(300, 10, 20, 60),
             SourceLineBounds: [new Rect(300, 10, 20, 30), new Rect(300, 40, 20, 30)]);
 
-        var placed = OverlayPlacement.Place([caption, column], CaptureLayoutMode.General, verticalText: true);
+        var placed = OverlayPlacement.Place([caption, column], CaptureLayoutMode.General, verticalText: true, "JA");
 
         Assert.Equal(OverlayLayoutIntent.GroupReflow, placed[0].LayoutIntent);
         Assert.Equal(column, placed[1]);

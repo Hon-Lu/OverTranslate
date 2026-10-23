@@ -25,4 +25,11 @@ public enum OverlayLayoutIntent
     /// past it. The box is a speech balloon, so what lies to its right is picture, not free space.
     /// </summary>
     GroupReflow,
+
+    /// <summary>
+    /// A vertical source whose translation is set across in its place, because the target is not
+    /// written downwards — see <see cref="VerticalTargetLanguages"/> and
+    /// <see cref="AcrossInColumnsLayout"/>. The block is still the column group it was read as.
+    /// </summary>
+    AcrossInColumns,
 }

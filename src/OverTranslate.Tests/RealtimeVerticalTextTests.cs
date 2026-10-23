@@ -250,7 +250,7 @@ public class RealtimeVerticalTextTests
     private static string DrawAcross(TranslatedBlock block)
     {
         var window = new RealtimeBlockWindow(
-            0, ColumnBlock, _ => null, "JA", "ZH-TW",
+            0, ColumnBlock, _ => null, "JA", "ZH-HANT",
             RealtimeSubtitleColors.DefaultText,
             RealtimeSubtitleColors.DefaultScrim,
             RealtimeSubtitleColors.DefaultScrimOpacity,
@@ -326,7 +326,7 @@ public class RealtimeVerticalTextTests
             // 進階選項 off, as in the horizontal fitting tests: this is about where the glyphs land,
             // not about what is drawn behind them.
             var window = new RealtimeBlockWindow(
-                0, ColumnBlock, _ => null, "JA", "ZH-TW",
+                0, ColumnBlock, _ => null, "JA", "ZH-HANT",
                 RealtimeSubtitleColors.DefaultText,
                 RealtimeSubtitleColors.DefaultScrim,
                 RealtimeSubtitleColors.DefaultScrimOpacity,

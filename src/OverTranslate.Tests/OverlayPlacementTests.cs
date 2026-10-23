@@ -25,7 +25,7 @@ public class OverlayPlacementTests
     public void GeneralMode_AsksForTheWholeGroupToBeReset()
     {
         var placed = OverlayPlacement.Place(
-            [Group(TwoLines)], CaptureLayoutMode.General, verticalText: false);
+            [Group(TwoLines)], CaptureLayoutMode.General, verticalText: false, "ZH-HANT");
 
         Assert.Equal(OverlayLayoutIntent.GroupReflow, Assert.Single(placed).LayoutIntent);
     }
@@ -40,7 +40,7 @@ public class OverlayPlacementTests
         var line = new TranslatedBlock("SOURCE", "譯文", new Rect(10, 10, 200, 28));
 
         var placed = OverlayPlacement.Place(
-            [line], CaptureLayoutMode.General, verticalText: false);
+            [line], CaptureLayoutMode.General, verticalText: false, "ZH-HANT");
 
         Assert.Equal(OverlayLayoutIntent.Default, Assert.Single(placed).LayoutIntent);
     }
@@ -58,7 +58,7 @@ public class OverlayPlacementTests
     public void InterfaceMode_PutsEachSourceLineBackInItsOwnBox()
     {
         var placed = OverlayPlacement.Place(
-            [Group(TwoLines)], CaptureLayoutMode.Interface, verticalText: false);
+            [Group(TwoLines)], CaptureLayoutMode.Interface, verticalText: false, "ZH-HANT");
 
         Assert.Equal(2, placed.Count);
         Assert.Equal(TwoLines, placed.Select(block => block.Bounds));
@@ -80,10 +80,10 @@ public class OverlayPlacementTests
     public void AModeThisBuildDoesNotKnow_IsDrawnTheWayTheDefaultIs()
     {
         var placed = OverlayPlacement.Place(
-            [Group(TwoLines)], (CaptureLayoutMode)99, verticalText: false);
+            [Group(TwoLines)], (CaptureLayoutMode)99, verticalText: false, "ZH-HANT");
 
         Assert.Equal(
-            OverlayPlacement.Place([Group(TwoLines)], CaptureLayoutMode.General, verticalText: false),
+            OverlayPlacement.Place([Group(TwoLines)], CaptureLayoutMode.General, verticalText: false, "ZH-HANT"),
             placed);
         Assert.Equal(OverlayLayoutIntent.GroupReflow, Assert.Single(placed).LayoutIntent);
     }
@@ -111,7 +111,7 @@ public class OverlayPlacementTests
         };
         var column = new TranslatedBlock("縦書き", "直排譯文", new Rect(80, 10, 20, 60), cells);
 
-        var placed = OverlayPlacement.Place([column], mode, verticalText: true);
+        var placed = OverlayPlacement.Place([column], mode, verticalText: true, "JA");
 
         var only = Assert.Single(placed);
         Assert.Equal(OverlayLayoutIntent.Default, only.LayoutIntent);

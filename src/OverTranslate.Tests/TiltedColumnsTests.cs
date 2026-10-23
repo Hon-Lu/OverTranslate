@@ -199,6 +199,38 @@ public class TiltedColumnsTests
         });
     }
 
+    /// <summary>
+    /// #315: a tilted group whose target is set across is still turned onto its card, in both
+    /// overlays — the text as one wrapped line set level in the group's box, turned with its bubble.
+    /// </summary>
+    [Fact]
+    public void AColumnSetAcrossIsTurnedOntoTheCardInBothOverlays()
+    {
+        var group = Assert.Single(VerticalColumnGrouping.Group(Narration(-6.2), frameWidth: 941));
+        var line = Translated(group) with { TranslatedText = "Yesterday's thoughts still linger in my mind." };
+
+        OnStaThread(() =>
+        {
+            var (background, layer) = Capture(line, "EN-US");
+            Assert.Equal(-6.26, Assert.IsType<RotateTransform>(background.RenderTransform).Angle, tolerance: 0.01);
+            Assert.Equal(-6.26, Assert.IsType<RotateTransform>(layer.RenderTransform).Angle, tolerance: 0.01);
+            var written = Assert.IsType<TextBlock>(Assert.Single(Assert.IsType<Canvas>(layer).Children));
+            Assert.Equal(line.TranslatedText, written.Text);
+
+            foreach (var natural in new[] { false, true })
+            {
+                var window = Window([line], natural, border: false, target: "EN-US");
+                var text = Assert.IsType<Border>(Assert.Single(((Canvas)window.FindName("TextCanvas")).Children));
+                Assert.Equal(-6.26, Assert.IsType<RotateTransform>(text.RenderTransform).Angle, tolerance: 0.01);
+                Assert.Equal(line.TranslatedText, Assert.IsType<TextBlock>(text.Child).Text);
+                var band = Assert.IsType<Border>(Assert.Single(((Canvas)window.FindName("ScrimCanvas")).Children));
+                if (natural) Assert.NotNull(band.Clip);
+                else Assert.Equal(-6.26, Assert.IsType<RotateTransform>(band.RenderTransform).Angle, tolerance: 0.01);
+            }
+            return 0;
+        });
+    }
+
     [Fact]
     public void AStraightColumnIsDrawnAsBefore()
     {
@@ -240,13 +272,14 @@ public class TiltedColumnsTests
         });
     }
 
-    private static (FrameworkElement Background, FrameworkElement Cells) Capture(TranslatedBlock line)
+    private static (FrameworkElement Background, FrameworkElement Cells) Capture(TranslatedBlock line, string target = "ZH-HANT")
     {
-        var window = new OverlayWindow([], [], 0, 0, 941, 1672, "JA", "ZH-HANT", true);
+        var window = new OverlayWindow([], [], 0, 0, 941, 1672, "JA", target, true);
         try
         {
             typeof(OverlayWindow).GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
-            window.UpdateBlocks([line], [], 0, 0, 941, 1672, "JA", "ZH-HANT", true);
+            var placed = Layout.OverlayPlacement.Place([line], CaptureLayoutMode.General, verticalText: true, target);
+            window.UpdateBlocks(placed, [], 0, 0, 941, 1672, "JA", target, true);
             var background = Assert.IsAssignableFrom<FrameworkElement>(
                 Assert.Single(((Canvas)window.FindName("BubbleBackgroundCanvas")).Children));
             var texts = ((Canvas)window.FindName("BubbleTextCanvas")).Children.Cast<FrameworkElement>().ToList();
@@ -259,10 +292,11 @@ public class TiltedColumnsTests
         }
     }
 
-    private static RealtimeBlockWindow Window(IReadOnlyList<TranslatedBlock> lines, bool natural, bool border)
+    private static RealtimeBlockWindow Window(
+        IReadOnlyList<TranslatedBlock> lines, bool natural, bool border, string target = "ZH-HANT")
     {
         var window = new RealtimeBlockWindow(
-            0, new System.Drawing.Rectangle(0, 0, 941, 1672), _ => null, "JA", "ZH-TW",
+            0, new System.Drawing.Rectangle(0, 0, 941, 1672), _ => null, "JA", target,
             RealtimeSubtitleColors.DefaultText,
             RealtimeSubtitleColors.DefaultScrim,
             RealtimeSubtitleColors.DefaultScrimOpacity,
