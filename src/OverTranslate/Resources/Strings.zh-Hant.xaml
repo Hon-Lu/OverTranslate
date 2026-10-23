@@ -472,6 +472,7 @@
     <sys:String x:Key="S.Settings.HotkeyGuideShared">不攔截</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">按鍵仍會傳給目前的程式，可能同時觸發原本的功能</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：滑鼠側鍵設為截圖翻譯時，瀏覽器也會跟著回到上一頁</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyElevatedNote">在以系統管理員身分執行的程式中，此快捷鍵可能無法使用</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">即時翻譯</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷鍵開始[[框選翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>

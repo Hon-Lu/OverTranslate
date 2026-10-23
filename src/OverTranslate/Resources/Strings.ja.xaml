@@ -454,6 +454,7 @@
     <sys:String x:Key="S.Settings.HotkeyGuideShared">共有</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">キーは操作中のアプリにも届くため、本来の機能も同時に動くことがあります</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：サイドボタンをキャプチャ翻訳に設定すると、ブラウザーも前のページに戻ります</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyElevatedNote">管理者として実行中のアプリでは、このショートカットが使えないことがあります</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">リアルタイム翻訳</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">ショートカットで[[ブロックを選択して翻訳]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">停止中にショートカットを押すとブロック選択を開始し、選択中にもう一度押すと翻訳を開始します。翻訳中は一時停止／再開できます。</sys:String>

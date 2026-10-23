@@ -121,6 +121,46 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="ToolTip"           Value="{DynamicResource S.Settings.HotkeyRecordTip}"/>
         </Style>
+        <!-- Under a row whose shortcut is listened for rather than registered: Ctrl+Ctrl, Ctrl+C+C and
+             the mouse buttons. Windows keeps a program from seeing input meant for one running with
+             more rights than it has, so while a program run as administrator is in front these
+             shortcuts do nothing at all — tested, not supposed. Warning-coloured and with its own
+             mark rather than the row's grey ⓘ, so it does not read as one more description; shown
+             only when it applies (see ShowStoredShortcut). The gamepad is polled, not hooked, and
+             is not affected. -->
+        <Style x:Key="HotkeyElevatedNote" TargetType="ContentControl">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="Focusable"  Value="False"/>
+            <Setter Property="Margin"     Value="0,8,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="&#xE7BA;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource AppWarning}"
+                                       VerticalAlignment="Top"
+                                       Margin="0,1.5,8,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{DynamicResource S.Settings.HotkeyElevatedNote}"
+                                       Style="{StaticResource FieldHint}"
+                                       Foreground="{DynamicResource AppWarning}"
+                                       Margin="0"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{DynamicResource S.Settings.HotkeyElevatedNote}"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- 可用按鍵, at the right end of the shortcut card's heading. Quiet like the heading it sits
              in — no fill or border until the pointer is on it — with a chevron saying it opens
              something below rather than taking the user somewhere. The pressed state lands on the
@@ -601,6 +641,8 @@
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
                                 </Grid>
+
+                                <ContentControl x:Name="CaptureElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -681,6 +723,8 @@
                                                ToolTip="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
                                                VerticalAlignment="Top"/>
                                 </Grid>
+
+                                <ContentControl x:Name="QuickLookupElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -933,6 +977,8 @@
                                         </StackPanel>
                                     </Border>
                                 </Border>
+
+                                <ContentControl x:Name="QuickTranslateElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -993,6 +1039,8 @@
                                                   Unchecked="HotkeyEnabled_Toggled"/>
                                     </StackPanel>
                                 </Grid>
+
+                                <ContentControl x:Name="WindowElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -1084,6 +1132,8 @@
                                                ToolTip="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
                                                VerticalAlignment="Top"/>
                                 </Grid>
+
+                                <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 

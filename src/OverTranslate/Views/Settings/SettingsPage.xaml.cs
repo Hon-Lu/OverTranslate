@@ -81,6 +81,7 @@ public partial class SettingsPage : UserControl
         HotkeyAction Action,
         string NameKey,
         TextBox Box,
+        FrameworkElement ElevatedNote,
         Func<AppSettings, string> Display,
         Func<AppSettings, ShortcutTrigger> Trigger,
         Action<AppSettings, ShortcutTrigger, string> Apply,
@@ -110,6 +111,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.Capture,
                 "S.Settings.CaptureHotkey",
                 HotkeyBox,
+                CaptureElevatedNote,
                 s => s.HotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.Capture),
                 ApplyCaptureTrigger,
@@ -118,6 +120,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.QuickLookup,
                 "S.Settings.QuickLookupHotkey",
                 QuickLookupHotkeyBox,
+                QuickLookupElevatedNote,
                 s => s.QuickLookupHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.QuickLookup),
                 ApplyQuickLookupTrigger,
@@ -128,6 +131,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.QuickTranslate,
                 "S.Settings.QuickTranslateHotkey",
                 QuickTranslateHotkeyBox,
+                QuickTranslateElevatedNote,
                 s => s.QuickTranslateHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.QuickTranslate),
                 ApplyQuickTranslateTrigger,
@@ -138,6 +142,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.TranslationWindow,
                 "S.Settings.WindowHotkey",
                 WindowHotkeyBox,
+                WindowElevatedNote,
                 s => s.TranslationWindowHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.TranslationWindow),
                 ApplyWindowTrigger,
@@ -148,6 +153,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.RealtimePause,
                 "S.Settings.RealtimePauseHotkey",
                 RealtimePauseHotkeyBox,
+                RealtimePauseElevatedNote,
                 s => s.RealtimePauseHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.RealtimePause),
                 ApplyRealtimePauseTrigger,
@@ -205,7 +211,7 @@ public partial class SettingsPage : UserControl
         {
             var s = SettingsService.Instance.Current;
 
-            foreach (var field in _hotkeyFields) field.Box.Text = field.Display(s);
+            foreach (var field in _hotkeyFields) ShowStoredShortcut(field, s);
 
             // The ticks, then the "a shortcut above took this" lines the ticks can change. The
             // availability pass is explicit because the toggle handler ignores changes made while
@@ -1456,6 +1462,21 @@ public partial class SettingsPage : UserControl
         }
     }
 
+    /// <summary>
+    /// Puts the stored shortcut in its box, and the administrator warning under the row when the
+    /// shortcut is one that is listened for rather than registered — see the HotkeyElevatedNote
+    /// style for why.
+    /// </summary>
+    private static void ShowStoredShortcut(HotkeyField field, AppSettings settings)
+    {
+        field.Box.Text = field.Display(settings);
+
+        var trigger = field.Trigger(settings);
+        field.ElevatedNote.Visibility = trigger.IsMouse || trigger.IsKeySequence
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
     private void StartRecording(HotkeyField field)
     {
         // Only one at a time: two boxes both asking to be pressed would leave the next key press
@@ -1491,7 +1512,7 @@ public partial class SettingsPage : UserControl
         GlobalAuxiliaryHotkeys.Paused = false;
         if (_recording is not { } field) return;
 
-        field.Box.Text = field.Display(SettingsService.Instance.Current);
+        ShowStoredShortcut(field, SettingsService.Instance.Current);
         _recording = null;
 
         // The box asks to be pressed by being focused, so it has to stop being focused once it has
