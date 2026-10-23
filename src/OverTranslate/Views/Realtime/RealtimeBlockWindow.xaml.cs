@@ -1110,8 +1110,9 @@ public partial class RealtimeBlockWindow : Window
     /// </summary>
     /// <remarks>
     /// <para>Kept inside the block, as every line here is, and away from the other lines on screen,
-    /// which are as likely as not further balloons being set across too. A tilted group is set
-    /// level on its upright box, as the screenshot overlay sets it.</para>
+    /// which are as likely as not further balloons being set across too. A tilted group is set in
+    /// its level box and turned onto the card, as the screenshot overlay sets it — see
+    /// <see cref="BuildTiltedAcrossInColumnsLine"/>.</para>
     ///
     /// <para>固定 takes all the room before any of the size, as it does down a column (see
     /// <see cref="VerticalFit"/>); 自動 shrinks within the balloon's own margin first.</para>
@@ -1121,6 +1122,9 @@ public partial class RealtimeBlockWindow : Window
         System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
         Lazy<CaptureBubbleBackdrop?> backdrop)
     {
+        if (line.Tilt is { Column: true } tilt)
+            return BuildTiltedAcrossInColumnsLine(line, tilt, frame, repairedFrame, backdrop);
+
         double left = line.Bounds.X / _dpiX;
         double top = line.Bounds.Y / _dpiY;
         double sourceWidth = line.Bounds.Width / _dpiX;
@@ -1189,6 +1193,75 @@ public partial class RealtimeBlockWindow : Window
                 // Every line centred: a balloon is lettered that way, not set as a paragraph.
                 TextAlignment = TextAlignment.Center,
             }),
+        };
+        Canvas.SetLeft(written, textLeft);
+        Canvas.SetTop(written, textTop);
+
+        return new LineVisual(background, written, patchBounds, replate);
+    }
+
+    /// <summary>
+    /// A tilted column group whose target is not written downwards: set across in the group's level
+    /// box, on the background a tilted column gets, and turned onto the card with it — see
+    /// <see cref="BuildTiltedVerticalLine"/>.
+    /// </summary>
+    /// <remarks>
+    /// The room is a character's width either side and nothing below, as the screenshot overlay
+    /// gives a tilted group: past the card's margin is the page, or the next card.
+    /// </remarks>
+    private LineVisual? BuildTiltedAcrossInColumnsLine(
+        TranslatedBlock line, Services.Ocr.TiltedText tilt,
+        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        Lazy<CaptureBubbleBackdrop?> backdrop)
+    {
+        Point ToCanvas(Point pixel) => new(pixel.X / _dpiX, pixel.Y / _dpiY);
+
+        var level = tilt.Box;
+        double left = level.X / _dpiX, top = level.Y / _dpiY;
+        double sourceWidth = level.Width / _dpiX, sourceHeight = level.Height / _dpiY;
+        if (sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+        string text = line.TranslatedText.Trim();
+        if (text.Length == 0) return null;
+
+        double cellPreferred = Math.Max(MinFontSize, Math.Min(GetGlyphHeight(line, sourceWidth), sourceWidth));
+        var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
+        var fit = AcrossInColumnsLayout.Fit(
+            text, sourceWidth, sourceHeight,
+            preferredFontSize: _fixedFontSize ?? cellPreferred * VerticalGlyphFill,
+            readableFontSize: _fixedFontSize ?? MinFontSize,
+            emergencyFontSize: MinFontSize,
+            new AcrossInColumnsRoom(cellPreferred, cellPreferred, 0),
+            (part, size, width) => Measure(part, typeface, size, width),
+            keepSize: _fixedFontSize is not null);
+
+        // The band in the level frame, round both the source and the text, as an upright one is.
+        double textLeft = left + fit.Left;
+        double textTop = top + fit.Top;
+        double scrimLeft = Math.Min(textLeft, left) - ScrimPaddingX;
+        double scrimTop = Math.Min(textTop, top) - ScrimPaddingY;
+        double scrimWidth = Math.Max(textLeft + fit.Width, left + sourceWidth) + ScrimPaddingX - scrimLeft;
+        double scrimHeight = Math.Max(textTop + fit.Height, top + sourceHeight) + ScrimPaddingY - scrimTop;
+
+        var (background, patchBounds, foreground, edge, replate) = TiltedColumnBackground(
+            line, tilt, frame, repairedFrame, backdrop, cellPreferred, sourceWidth,
+            scrimLeft, scrimTop, scrimWidth, scrimHeight);
+
+        var written = new Border
+        {
+            Width = fit.Width,
+            Child = Outlined(edge, fit.FontSize, () => new TextBlock
+            {
+                Text = text,
+                FontFamily = _textFont,
+                FontSize = fit.FontSize,
+                FontWeight = _textWeight,
+                Foreground = foreground,
+                TextWrapping = TextWrapping.Wrap,
+                TextTrimming = TextTrimming.None,
+                TextAlignment = TextAlignment.Center,
+            }),
+            RenderTransform = TiltedPlacement.For(tilt, ToCanvas, textLeft, textTop),
         };
         Canvas.SetLeft(written, textLeft);
         Canvas.SetTop(written, textTop);
@@ -1325,9 +1398,29 @@ public partial class RealtimeBlockWindow : Window
         double scrimTop = Math.Min(gridTop, top) - ScrimPaddingY;
         double scrimWidth = Math.Max(gridLeft + gridWidth, left + sourceWidth) + ScrimPaddingX - scrimLeft;
         double scrimHeight = Math.Max(gridTop + gridHeight, top + sourceHeight) + ScrimPaddingY - scrimTop;
+        var turnText = TiltedPlacement.For(tilt, ToCanvas, gridLeft, gridTop);
+        var (background, patchBounds, foreground, edge, replate) = TiltedColumnBackground(
+            line, tilt, frame, repairedFrame, backdrop, cellPreferred, sourceWidth,
+            scrimLeft, scrimTop, scrimWidth, scrimHeight);
+        return VerticalVisual(line, background, patchBounds, foreground, edge,
+            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, replate, turnText);
+    }
+
+    /// <summary>
+    /// What goes under a tilted column group's translation, set down or across: the plate cut to the
+    /// turned band, the repaired patch clipped to it and to what the repair erased, or the band
+    /// turned onto the card — see <see cref="BuildTiltedVerticalLine"/>. Placed on the canvas already.
+    /// </summary>
+    /// <param name="scrimLeft">The band in the level frame, in this window's units, as the next three are.</param>
+    private (Border Background, System.Drawing.Rectangle PatchBounds, SolidColorBrush Foreground,
+        SolidColorBrush? Edge, Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? Replate) TiltedColumnBackground(
+        TranslatedBlock line, Services.Ocr.TiltedText tilt, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        Lazy<CaptureBubbleBackdrop?> backdrop, double cellPreferred, double sourceWidth,
+        double scrimLeft, double scrimTop, double scrimWidth, double scrimHeight)
+    {
+        Point ToCanvas(Point pixel) => new(pixel.X / _dpiX, pixel.Y / _dpiY);
         // The band in capture pixels, in the level frame.
         var band = new Rect(scrimLeft * _dpiX, scrimTop * _dpiY, scrimWidth * _dpiX, scrimHeight * _dpiY);
-        var turnText = TiltedPlacement.For(tilt, ToCanvas, gridLeft, gridTop);
         var (foreground, edge) = SampleForeground(frame, line);
 
         // Round the band, as a tilted line's patch is, rather than round the upright element it is
@@ -1371,11 +1464,10 @@ public partial class RealtimeBlockWindow : Window
                 Canvas.SetLeft(surface, plateLeft);
                 Canvas.SetTop(surface, plateTop);
                 Outline(surface, plateLeft, plateTop);
-                return VerticalVisual(line, surface,
+                return (surface,
                     ToPhysicalPatchBounds(plateLeft, plateTop, area.Width / _dpiX, area.Height / _dpiY),
                     Freeze(new SolidColorBrush(plate.Text)), null,
-                    glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight,
-                    next => next.Plate(area, wash, text, glyphPixels, band.Height, [outline])?.Brush, turnText);
+                    next => next.Plate(area, wash, text, glyphPixels, band.Height, [outline])?.Brush);
             }
 
             // Read from inside the card: the upright box round the band is partly the page.
@@ -1392,12 +1484,10 @@ public partial class RealtimeBlockWindow : Window
                 Canvas.SetLeft(surface, scrimLeft);
                 Canvas.SetTop(surface, scrimTop);
                 ApplyBorder(surface, line);
-                return VerticalVisual(line, surface,
+                return (surface,
                     ToPhysicalPatchBounds(scrimLeft, scrimTop, scrimWidth, scrimHeight),
                     Freeze(new SolidColorBrush(card.Text)), null,
-                    glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight,
-                    next => next.Card(sample, text) is { } again ? Freeze(new SolidColorBrush(again.Background)) : null,
-                    turnText);
+                    next => next.Card(sample, text) is { } again ? Freeze(new SolidColorBrush(again.Background)) : null);
             }
         }
 
@@ -1443,8 +1533,7 @@ public partial class RealtimeBlockWindow : Window
             ApplyBorder(background, line);
         }
 
-        return VerticalVisual(line, background, patchBounds, foreground, edge,
-            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, null, turnText);
+        return (background, patchBounds, foreground, edge, null);
     }
 
     /// <summary>
