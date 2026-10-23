@@ -130,10 +130,10 @@ internal static class QuickTranslateFlow
     /// <remarks>
     /// 雙語互譯 here is 取詞翻譯's, rule for rule — see <see cref="BilingualPair"/>. The source side
     /// stays 自動 so that a wrong guess can only ever produce the other of the user's own two
-    /// languages; and where the engine then reports the text was in the language the guess sent it
-    /// to, the round trip is spent again before anything is pasted. That matters more here than in
-    /// the popup: there a wrong answer is something to read past, here it is the user's own text
-    /// replaced with the same thing in the same language.
+    /// languages; and every extra round trip <see cref="BilingualTranslation"/> spends is spent
+    /// before anything is pasted. That matters more here than in the popup: there a wrong answer is
+    /// something to read past, here it is the user's own text replaced with the same thing in the
+    /// same language.
     /// </remarks>
     private static async Task<(List<TranslatedBlock> Blocks, string DetectedLang)> TranslateAsync(
         string source, AppSettings settings)
@@ -152,20 +152,11 @@ internal static class QuickTranslateFlow
 
         var pair = BilingualPair.Load(quickTranslate.BilingualFirstLanguage,
                                       quickTranslate.BilingualSecondLanguage);
-        var target = pair.TargetFor(
-            BilingualDirection.ResolveSource(source, pair.First, pair.Second));
+        var answer = await BilingualTranslation.TranslateAsync(source, pair,
+            (from, target) => AppServices.Translation.TranslateAsync(
+                [block], BilingualTranslation.SourceCode(from), target, settings.ApiKey));
 
-        var answer = await AppServices.Translation.TranslateAsync(
-            [block], LanguageData.AutomaticSourceLanguage, target, settings.ApiKey);
-
-        var corrected = pair.Correct(answer.DetectedLang, target, out _);
-        if (corrected is null) return answer;
-
-        Log.Debug("替換翻譯 is translating again into {Target}: the service read the selection as {Detected}",
-            corrected, answer.DetectedLang);
-
-        return await AppServices.Translation.TranslateAsync(
-            [block], LanguageData.AutomaticSourceLanguage, corrected, settings.ApiKey);
+        return (answer.Blocks, answer.DetectedLang);
     }
 
     /// <summary>

@@ -80,4 +80,50 @@ public class BilingualPairTests
         var pair = new BilingualPair(Hant, Hans);
         Assert.Null(pair.Correct("ZH", Hans, out _));
     }
+
+    // #339: Google reads 「вода」 as Macedonian. Under Russian ⇄ English that is a third language,
+    // so Correct sends it into Russian — and Russian into Russian is the word itself.
+    [Fact]
+    public void AMisreadWordIsSentIntoTheLanguageItIsAlreadyIn()
+    {
+        var pair = new BilingualPair("RU", English);
+        Assert.Equal("RU", pair.Correct("mk", English, out _));
+    }
+
+    [Theory]
+    [InlineData("вода", "вода")]
+    [InlineData("вода", "Вода")]         // capitalised on the way back
+    [InlineData("вода", "вода.")]        // or given a full stop
+    [InlineData("вода", " вода ")]
+    [InlineData("Hund", "ＨＵＮＤ")]      // full width
+    [InlineData("élève", "eleve")]       // accents dropped
+    [InlineData("вода", "")]             // nothing back at all
+    [InlineData("вода", null)]
+    public void AnAnswerThatIsTheTextItselfIsNotWorthKeeping(string text, string? retranslated)
+    {
+        Assert.False(BilingualPair.IsWorthKeeping(text, retranslated));
+    }
+
+    // German under English ⇄ Russian is a genuine third language: sent into English it comes back
+    // translated, and that is what the settings promise for anything outside the pair.
+    [Theory]
+    [InlineData("Hund", "Dog")]
+    [InlineData("вода", "water")]
+    [InlineData("水", "water")]
+    public void ARealTranslationIsWorthKeeping(string text, string retranslated)
+    {
+        Assert.True(BilingualPair.IsWorthKeeping(text, retranslated));
+    }
+
+    [Theory]
+    [InlineData("RU", true)]
+    [InlineData("ru", true)]
+    [InlineData("EN", true)]             // source code for the EN-US end
+    [InlineData("mk", false)]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    public void IncludesMatchesEitherEndBySourceOrTargetCode(string? code, bool expected)
+    {
+        Assert.Equal(expected, new BilingualPair("RU", English).Includes(code));
+    }
 }

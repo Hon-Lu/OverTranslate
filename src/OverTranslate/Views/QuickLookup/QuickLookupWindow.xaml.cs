@@ -1062,26 +1062,31 @@ public partial class QuickLookupWindow : Window
 
         try
         {
-            var (results, detected) = await AppServices.Translation.TranslateAsync(
-                [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey);
+            List<TranslatedBlock> results;
+            string? detected;
 
-            if (seq != _seq) return;
-
-            // The characters were only ever a guess, and the engine has now said what the text
-            // actually was. Where the two disagree about which way this should have gone, the round
-            // trip is spent again rather than showing the answer to the wrong question — the result
-            // has not been put on screen yet, so nothing flickers; the spinner simply runs longer.
             if (bilingual)
             {
-                var corrected = CorrectedBilingualTarget(detected, tgtLang);
-                if (corrected is not null)
-                {
-                    tgtLang = corrected;
-                    (results, detected) = await AppServices.Translation.TranslateAsync(
-                        [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey);
+                // The characters were only ever a guess, and the engine has its own say about what
+                // the text was — see BilingualTranslation for how the two are settled. Any extra
+                // round trip happens before the result is put on screen, so nothing flickers; the
+                // spinner simply runs longer.
+                var answer = await BilingualTranslation.TranslateAsync(text, Pair,
+                    (source, target) => AppServices.Translation.TranslateAsync(
+                        [new OcrTextBlock(text, new Rect())], BilingualTranslation.SourceCode(source), target,
+                        settings.ApiKey));
 
-                    if (seq != _seq) return;
-                }
+                if (seq != _seq) return;
+
+                (results, detected, tgtLang) = (answer.Blocks, answer.DetectedLang, answer.Target);
+                SetBilingualSource(answer.Source);
+            }
+            else
+            {
+                (results, detected) = await AppServices.Translation.TranslateAsync(
+                    [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey);
+
+                if (seq != _seq) return;
             }
 
             SetTranslationLoading(false);
@@ -1095,6 +1100,13 @@ public partial class QuickLookupWindow : Window
             ShowResult();
 
             var dictionarySource = LanguageData.IsAutomaticSource(srcLang) ? _detectedLang : srcLang;
+
+            // Where the engine named a language outside the pair and the characters had placed the
+            // text inside it, the characters are the better answer — 「вода」 looked up as Macedonian
+            // finds nothing (#339).
+            if (bilingual && !Pair.Includes(_detectedLang) && Pair.Includes(_bilingualSource))
+                dictionarySource = LanguageData.MapTargetToSourceCode(_bilingualSource!) ?? dictionarySource;
+
             await LoadDictionaryAsync(seq, text, dictionarySource, tgtLang, settings.Provider);
         }
         catch (Exception ex)
@@ -1787,17 +1799,6 @@ public partial class QuickLookupWindow : Window
             BilingualDirection.ResolveSource(text, _bilingualFirst, _bilingualSecond));
 
         return Pair.TargetFor(_bilingualSource);
-    }
-
-    /// <summary>
-    /// What the translation should have been asked for, once the engine has said what the text was
-    /// — see <see cref="BilingualPair.Correct"/>.
-    /// </summary>
-    private string? CorrectedBilingualTarget(string? detected, string sentTarget)
-    {
-        var wanted = Pair.Correct(detected, sentTarget, out var source);
-        if (source is not null) SetBilingualSource(source);
-        return wanted;
     }
 
     /// <remarks>
