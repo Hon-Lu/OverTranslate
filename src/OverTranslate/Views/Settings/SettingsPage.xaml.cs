@@ -1687,7 +1687,9 @@ public partial class SettingsPage : UserControl
         _ctrlCCommitTimer.Stop();
         _pendingCtrlC = null;
 
-        var display = hit.Kind == ShortcutInputKind.CtrlCC ? "Ctrl+C ×2" : "Ctrl ×2";
+        // Ctrl+C+C rather than Ctrl+C ×2: the plus says Ctrl stays held, where "×2" reads as Ctrl+C
+        // pressed twice over — and letting go of Ctrl in between is exactly what does not count.
+        var display = hit.Kind == ShortcutInputKind.CtrlCC ? "Ctrl+C+C" : "Ctrl ×2";
         CommitShortcut(recording, ShortcutTrigger.KeySequence(hit.Kind), display);
         return true;
     }
