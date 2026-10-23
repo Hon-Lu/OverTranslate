@@ -1,3 +1,4 @@
+using System.Globalization;
 using OverTranslate.Models;
 
 namespace OverTranslate.Services;
@@ -108,6 +109,46 @@ internal readonly record struct BilingualPair(string First, string Second)
 
         var wanted = isFirst ? Second : First;
         return wanted.Equals(sentTarget, StringComparison.OrdinalIgnoreCase) ? null : wanted;
+    }
+
+    /// <summary>
+    /// Whether a translation is worth showing — see <see cref="BilingualTranslation"/> for where it
+    /// is asked.
+    /// </summary>
+    /// <remarks>
+    /// An engine's reported language is a guess too, and on a single word it can be a wrong one:
+    /// Google reads 「вода」 as Macedonian (#339). Under a Russian ⇄ English pair that names a third
+    /// language, so the text is sent again into the first language — Russian — and comes back as
+    /// itself, replacing the 「water」 the characters had already got right. The answer coming back
+    /// unchanged is the tell: whatever the engine thought the text was, translating it into that
+    /// language did nothing, so the language it is already in is the one it was sent away from.
+    ///
+    /// Compared loosely — case, width, accents, spaces and punctuation aside — because an engine
+    /// handing a word back will often capitalise it or put a full stop after it, and that is still
+    /// the same word. An empty answer is not worth keeping either.
+    /// </remarks>
+    public static bool IsWorthKeeping(string text, string? retranslated) =>
+        !string.IsNullOrWhiteSpace(retranslated) &&
+        CultureInfo.InvariantCulture.CompareInfo.Compare(text, retranslated, LooseComparison) != 0;
+
+    private const CompareOptions LooseComparison =
+        CompareOptions.IgnoreCase | CompareOptions.IgnoreWidth |
+        CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreSymbols;
+
+    /// <summary>The other of the two, or null when <paramref name="language"/> is neither.</summary>
+    public string? Other(string language) =>
+        string.Equals(language, First, StringComparison.OrdinalIgnoreCase) ? Second
+        : string.Equals(language, Second, StringComparison.OrdinalIgnoreCase) ? First
+        : null;
+
+    /// <summary>Whether <paramref name="code"/> names one of the two languages.</summary>
+    /// <remarks>Takes target and source codes alike — see <see cref="LanguageKey"/>.</remarks>
+    public bool Includes(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return false;
+
+        var key = LanguageKey(code);
+        return LanguageKey(First) == key || LanguageKey(Second) == key;
     }
 
     /// <summary>
