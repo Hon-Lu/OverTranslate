@@ -234,7 +234,7 @@ public class RealtimeFixedFontSizeTests
         // A name plate on a vertical page: RunsAcross sends it down the horizontal branch, which
         // now sets it at the reader's size like any other line across.
         var window = new RealtimeBlockWindow(0, new System.Drawing.Rectangle(0, 0, 600, 300),
-            _ => null, "JA", "ZH-TW", "#FFFFFF", "#000000", 70,
+            _ => null, "JA", "ZH-HANT", "#FFFFFF", "#000000", 70,
             orientation: RealtimeTextOrientation.Vertical, fixedFontSize: 32);
         try
         {
@@ -326,7 +326,7 @@ public class RealtimeFixedFontSizeTests
 
     private static DrawnColumns DrawVertical(double fixedFontSize, Rect source, string translation, double glyphSize)
     {
-        var window = new RealtimeBlockWindow(0, VerticalBlock, _ => null, "JA", "ZH-TW", "#FFFFFF", "#000000", 70,
+        var window = new RealtimeBlockWindow(0, VerticalBlock, _ => null, "JA", "ZH-HANT", "#FFFFFF", "#000000", 70,
             orientation: RealtimeTextOrientation.Vertical, fixedFontSize: fixedFontSize);
         try
         {

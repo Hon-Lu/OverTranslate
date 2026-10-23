@@ -262,7 +262,7 @@ public class TiltedColumnsTests
     private static RealtimeBlockWindow Window(IReadOnlyList<TranslatedBlock> lines, bool natural, bool border)
     {
         var window = new RealtimeBlockWindow(
-            0, new System.Drawing.Rectangle(0, 0, 941, 1672), _ => null, "JA", "ZH-TW",
+            0, new System.Drawing.Rectangle(0, 0, 941, 1672), _ => null, "JA", "ZH-HANT",
             RealtimeSubtitleColors.DefaultText,
             RealtimeSubtitleColors.DefaultScrim,
             RealtimeSubtitleColors.DefaultScrimOpacity,

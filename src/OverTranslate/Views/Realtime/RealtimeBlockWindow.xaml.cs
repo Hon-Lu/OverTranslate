@@ -91,6 +91,9 @@ public partial class RealtimeBlockWindow : Window
     private readonly FontWeight _textWeight;
     // Kept for vertical writing, which draws some punctuation differently by target language.
     private readonly string _targetLanguage;
+    // Whether a vertical block's translation is set downwards at all — see VerticalTargetLanguages.
+    // Fixed with the target, for the same reason the font is.
+    private readonly bool _setsDown;
 
     // The block the user drew, which is what the picture under this window is read from — every
     // grab, and every patch rectangle cut out of one, is in this rectangle's coordinates.
@@ -246,6 +249,7 @@ public partial class RealtimeBlockWindow : Window
         _textFont = TranslatedTextFont.For(targetLanguage);
         _textWeight = TranslatedTextFont.WeightFor(targetLanguage);
         _targetLanguage = targetLanguage;
+        _setsDown = VerticalTargetLanguages.SetsDown(targetLanguage);
         _textBrush = Freeze(new SolidColorBrush(RealtimeSubtitleColors.Text(textColor)));
         _scrimBrush = Freeze(new SolidColorBrush(
             RealtimeSubtitleColors.Scrim(scrimColor, scrimOpacity)));
@@ -892,8 +896,14 @@ public partial class RealtimeBlockWindow : Window
                 // about lines that run across — one wraps a paragraph into rows, the other fits a
                 // band to the row it replaces — and neither question exists for a column. What the
                 // mode still decides for a vertical block is upstream, in how the frame was read.
-                if (BuildVerticalLine(block, canvasWidth, canvasHeight, frame, repairedFrame, backdrop) is { } column)
-                    yield return column;
+                //
+                // Which way the translation then runs is the target's: one not written downwards
+                // is set across in the column's place (#315, VerticalTargetLanguages).
+                var column = _setsDown
+                    ? BuildVerticalLine(block, canvasWidth, canvasHeight, frame, repairedFrame, backdrop)
+                    : BuildAcrossInColumnsLine(block, canvasWidth, canvasHeight, frame, repairedFrame, backdrop);
+                if (column is { } drawn)
+                    yield return drawn;
             }
             else if (block.Tilt is not null)
             {
@@ -1087,6 +1097,121 @@ public partial class RealtimeBlockWindow : Window
         double scrimWidth = Math.Max(0, scrimRight - scrimLeft);
         double scrimHeight = Math.Max(0, scrimBottom - scrimTop);
 
+        var (background, patchBounds, foreground, edge, replate) = ColumnBackground(
+            line, frame, repairedFrame, backdrop, cellPreferred, sourceWidth,
+            scrimLeft, scrimTop, scrimWidth, scrimHeight, canvasWidth, canvasHeight);
+        return VerticalVisual(line, background, patchBounds, foreground, edge,
+            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, replate, breaks: breaks);
+    }
+
+    /// <summary>
+    /// A column group whose target is not written downwards: the translation set across in its
+    /// place, on the background a column gets — see <see cref="AcrossInColumnsLayout"/> for the fit.
+    /// </summary>
+    /// <remarks>
+    /// <para>Kept inside the block, as every line here is, and away from the other lines on screen,
+    /// which are as likely as not further balloons being set across too. A tilted group is set
+    /// level on its upright box, as the screenshot overlay sets it.</para>
+    ///
+    /// <para>固定 takes all the room before any of the size, as it does down a column (see
+    /// <see cref="VerticalFit"/>); 自動 shrinks within the balloon's own margin first.</para>
+    /// </remarks>
+    private LineVisual? BuildAcrossInColumnsLine(
+        TranslatedBlock line, double canvasWidth, double canvasHeight,
+        System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        Lazy<CaptureBubbleBackdrop?> backdrop)
+    {
+        double left = line.Bounds.X / _dpiX;
+        double top = line.Bounds.Y / _dpiY;
+        double sourceWidth = line.Bounds.Width / _dpiX;
+        double sourceHeight = line.Bounds.Height / _dpiY;
+        if (sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+        string text = line.TranslatedText.Trim();
+        if (text.Length == 0) return null;
+
+        // The column's character pitch, as BuildVerticalLine sizes its cell from — never wider than
+        // the group, whose line bounds are columns and whose median is a column's length.
+        double cellPreferred = Math.Max(MinFontSize, Math.Min(GetGlyphHeight(line, sourceWidth), sourceWidth));
+
+        // In the block's pixels, then in this window's units, less the band's padding so the band
+        // round the text stays inside the block.
+        var limit = new Rect(
+            ScrimPaddingX * _dpiX, ScrimPaddingY * _dpiY,
+            Math.Max(0, _sourceBounds.Width - ScrimPaddingX * 2 * _dpiX),
+            Math.Max(0, _sourceBounds.Height - ScrimPaddingY * 2 * _dpiY));
+        var room = AcrossInColumnsRoom.Within(
+            line.Bounds,
+            _lines.Where(other => !ReferenceEquals(other, line) && !string.IsNullOrWhiteSpace(other.TranslatedText))
+                .Select(other => other.Bounds),
+            limit);
+        room = new(room.Left / _dpiX, room.Right / _dpiX, room.Below / _dpiY);
+
+        var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
+        var fit = AcrossInColumnsLayout.Fit(
+            text, sourceWidth, sourceHeight,
+            preferredFontSize: _fixedFontSize ?? cellPreferred * VerticalGlyphFill,
+            readableFontSize: _fixedFontSize ?? MinFontSize,
+            emergencyFontSize: MinFontSize,
+            room,
+            (part, size, width) => Measure(part, typeface, size, width),
+            keepSize: _fixedFontSize is not null);
+
+        double textLeft = left + fit.Left;
+        double textTop = top + fit.Top;
+        double scrimLeft = Math.Max(0, Math.Min(textLeft, left) - ScrimPaddingX);
+        double scrimTop = Math.Max(0, Math.Min(textTop, top) - ScrimPaddingY);
+        double scrimRight = Math.Min(
+            canvasWidth, Math.Max(textLeft + fit.Width, left + sourceWidth) + ScrimPaddingX);
+        double scrimBottom = Math.Min(
+            canvasHeight, Math.Max(textTop + fit.Height, top + sourceHeight) + ScrimPaddingY);
+        double scrimWidth = Math.Max(0, scrimRight - scrimLeft);
+        double scrimHeight = Math.Max(0, scrimBottom - scrimTop);
+
+        var (background, patchBounds, foreground, edge, replate) = ColumnBackground(
+            line, frame, repairedFrame, backdrop, cellPreferred, sourceWidth,
+            scrimLeft, scrimTop, scrimWidth, scrimHeight, canvasWidth, canvasHeight);
+
+        // Not clipped: the fit's last resort is taller than the room, and the sentence is worth more
+        // than the edge of the band — see AcrossInColumnsLayout.
+        var written = new Border
+        {
+            Width = fit.Width,
+            Child = Outlined(edge, fit.FontSize, () => new TextBlock
+            {
+                Text = text,
+                FontFamily = _textFont,
+                FontSize = fit.FontSize,
+                FontWeight = _textWeight,
+                Foreground = foreground,
+                TextWrapping = TextWrapping.Wrap,
+                TextTrimming = TextTrimming.None,
+                // Every line centred: a balloon is lettered that way, not set as a paragraph.
+                TextAlignment = TextAlignment.Center,
+            }),
+        };
+        Canvas.SetLeft(written, textLeft);
+        Canvas.SetTop(written, textTop);
+
+        return new LineVisual(background, written, patchBounds, replate);
+    }
+
+    /// <summary>
+    /// What goes under a column group's translation, set down or across: the capture overlay's plate
+    /// when 進階選項 can build one, the repaired patch when it cannot, and the band otherwise — with the
+    /// colour to write in on it. Placed on the canvas already.
+    /// </summary>
+    /// <remarks>
+    /// The guard round the patch is the column's whichever way the translation runs: it is there for
+    /// the source's detached marks, and those sit where the source's writing puts them.
+    /// </remarks>
+    private (Border Background, System.Drawing.Rectangle PatchBounds, SolidColorBrush Foreground,
+        SolidColorBrush? Edge, Func<CaptureBubbleBackdrop, System.Windows.Media.Brush?>? Replate) ColumnBackground(
+        TranslatedBlock line, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        Lazy<CaptureBubbleBackdrop?> backdrop, double cellPreferred, double sourceWidth,
+        double scrimLeft, double scrimTop, double scrimWidth, double scrimHeight,
+        double canvasWidth, double canvasHeight)
+    {
         double patchLeft = scrimLeft;
         double patchTop = scrimTop;
         double patchWidth = scrimWidth;
@@ -1104,8 +1229,7 @@ public partial class RealtimeBlockWindow : Window
             foreground = plated.Text;
             edge = null;
             ApplyBorder(plated.Surface, line);
-            return VerticalVisual(line, plated.Surface, plated.Bounds, foreground, edge,
-                glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, plated.Replate, breaks: breaks);
+            return (plated.Surface, plated.Bounds, foreground, edge, plated.Replate);
         }
 
         if (_naturalBackground)
@@ -1148,8 +1272,7 @@ public partial class RealtimeBlockWindow : Window
 
         Canvas.SetLeft(background, patchLeft);
         Canvas.SetTop(background, patchTop);
-        return VerticalVisual(line, background, patchBounds, foreground, edge,
-            glyphs, cellSize, gridLeft, gridTop, gridWidth, gridHeight, null, breaks: breaks);
+        return (background, patchBounds, foreground, edge, null);
     }
 
     /// <summary>
