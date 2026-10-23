@@ -86,15 +86,22 @@ public class AppSettings
     public bool RealtimePauseHotkeyEnabled { get; set; } = true;
 
     /// <summary>
-    /// Summons 取詞翻譯's popup over whatever the user is reading. Ctrl+Alt+Q by default.
+    /// Summons 取詞翻譯's popup over whatever the user is reading. Ctrl+C+C by default (#321).
     /// </summary>
     /// <remarks>
     /// Flat, with every other shortcut: 設定 owns them as one set on one page, and a shortcut filed
     /// under the feature it starts would be the only one of the four the user could not find beside
     /// its siblings.
     ///
-    /// Q because the three combinations already taken are the letters of what they do (A, W, S) and
-    /// this one is the 取 of 取詞 — and because Ctrl+Alt+Q is claimed by nothing on a stock Windows.
+    /// Ctrl+C+C because selecting and copying is what someone about to look a word up is already
+    /// doing, and the first Ctrl+C is the copy the popup then reads — nothing is synthesised and the
+    /// clipboard is left as the user made it. It also claims no combination from anyone. The cost is
+    /// programs run as administrator, which a listened-for shortcut cannot hear while they are in
+    /// front; the settings row says so. Only new installations get it: every saved settings file
+    /// carries the lookup kind, so one that has Ctrl+Alt+Q keeps it.
+    ///
+    /// The keyboard fields keep Ctrl+Alt+Q, Q being the 取 of 取詞, as what a user who switches the
+    /// kind back to the keyboard would have had.
     /// </remarks>
     public uint QuickLookupHotkeyModifiers { get; set; } = 3;
 
@@ -102,8 +109,8 @@ public class AppSettings
     public uint QuickLookupHotkeyVirtualKey { get; set; } = 0x51;
 
     /// <inheritdoc cref="QuickLookupHotkeyModifiers"/>
-    public string QuickLookupHotkeyDisplay { get; set; } = "Ctrl+Alt+Q";
-    public ShortcutInputKind QuickLookupHotkeyInputKind { get; set; } = ShortcutInputKind.Keyboard;
+    public string QuickLookupHotkeyDisplay { get; set; } = "Ctrl+C+C";
+    public ShortcutInputKind QuickLookupHotkeyInputKind { get; set; } = ShortcutInputKind.CtrlCC;
     public GamepadShortcutButton QuickLookupHotkeyGamepadButton { get; set; } = GamepadShortcutButton.None;
 
     /// <inheritdoc cref="TranslationWindowHotkeyEnabled"/>

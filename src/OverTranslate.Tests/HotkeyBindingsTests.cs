@@ -29,9 +29,11 @@ public class HotkeyBindingsTests
     {
         // 取詞翻譯 shipped after the other three, so its default is the one that has to give way:
         // an existing installation may already have recorded Ctrl+Alt+Q somewhere else, and that is
-        // a combination its owner picked against one they have never seen.
+        // a combination its owner picked against one they have never seen. (New installations get
+        // Ctrl+C+C instead; an existing one keeps the Ctrl+Alt+Q stored here.)
         var settings = new AppSettings
         {
+            QuickLookupHotkeyInputKind = ShortcutInputKind.Keyboard,
             TranslationWindowHotkeyModifiers = CtrlAlt,
             TranslationWindowHotkeyVirtualKey = 0x51,
             TranslationWindowHotkeyDisplay = "Ctrl+Alt+Q",

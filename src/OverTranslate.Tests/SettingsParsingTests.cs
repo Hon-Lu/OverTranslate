@@ -758,6 +758,25 @@ public class SettingsParsingTests
             .RealtimePauseHotkeyDisplay);
     }
 
+    // 取詞翻譯 defaults to Ctrl+C+C (#321) for a new installation only. Every saved file carries the
+    // lookup kind, so one that has been running on Ctrl+Alt+Q stays on it.
+    [Fact]
+    public void LookupDefaultsToCtrlCCButAStoredKeyboardShortcutStays()
+    {
+        var fresh = SettingsService.Parse("""{"Theme":"Light"}""");
+        Assert.Equal(ShortcutInputKind.CtrlCC, fresh.QuickLookupHotkeyInputKind);
+        Assert.Equal("Ctrl+C+C", fresh.QuickLookupHotkeyDisplay);
+
+        var existing = SettingsService.Parse("""
+            {"QuickLookupHotkeyModifiers":3,"QuickLookupHotkeyVirtualKey":81,
+             "QuickLookupHotkeyDisplay":"Ctrl+Alt+Q","QuickLookupHotkeyInputKind":"Keyboard"}
+            """);
+        Assert.Equal(
+            ShortcutTrigger.Keyboard(3, 0x51),
+            HotkeyBindings.TriggerFor(existing, HotkeyAction.QuickLookup));
+        Assert.Equal("Ctrl+Alt+Q", existing.QuickLookupHotkeyDisplay);
+    }
+
     // Expanded on a file written before the setting existed: someone who has never been shown the
     // framing guidance must not have it folded away on their behalf.
     [Fact]
