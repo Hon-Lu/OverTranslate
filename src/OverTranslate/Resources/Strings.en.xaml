@@ -432,10 +432,27 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyDisable">Disable this shortcut</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">Click to record a new shortcut</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKinds">A shortcut can pair Ctrl / Alt / Shift with another key, and also supports a single function key, a mouse button, or a gamepad button.</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKindsExample">For example: Ctrl+Alt+A, Shift+A, F1, middle / side mouse buttons, XInput... etc.</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuide">Supported keys</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideCombo">Combination</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideComboNote">One or more of Ctrl, Alt and Shift, plus one more key</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSingle">Single key</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDouble">Double press</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDoubleNote">Press Ctrl twice quickly, or hold Ctrl and press C twice</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouse">Mouse</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseMiddle">Middle</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX1">Side 1</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX2">Side 2</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepad">Gamepad</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepadNote">Any button on an Xbox-compatible (XInput) controller</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusive">Exclusive</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveNote">Other programs won’t receive these keys</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">E.g. once set to Ctrl+Alt+A, Ctrl+Alt+A stops working elsewhere</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideShared">Shared</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">The keys still reach the current program and may trigger what they do there too</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">E.g. with a side button set to Capture, your browser also goes back a page</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyElevatedNote">May not work in programs running as administrator</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to select blocks and translate</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to [[select blocks and translate]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>
@@ -611,7 +628,7 @@ same settings, the same seed usually gives the same output.</sys:String>
 
     <!-- Settings page, composed in code-behind -->
     <sys:String x:Key="S.Settings.Saved">✓ Saved</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">Press a keyboard key, a middle / side mouse button, or a gamepad button…</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">Press a shortcut…</sys:String>
     <sys:String x:Key="S.Settings.MouseMiddle">Middle Mouse</sys:String>
     <sys:String x:Key="S.Settings.MouseX1">Mouse Side 1</sys:String>
     <sys:String x:Key="S.Settings.MouseX2">Mouse Side 2</sys:String>

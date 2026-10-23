@@ -436,10 +436,27 @@
     <sys:String x:Key="S.Settings.HotkeyDisable">このショートカットキーを無効にする</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">クリックしてショートカットキーを録り直す</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKinds">ショートカットキーは Ctrl／Alt／Shift と他のキーの組み合わせのほか、単独のファンクションキー、マウスボタン、ゲームパッドのボタンにも対応しています。</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyKindsExample">例：Ctrl+Alt+A、Shift+A、F1、マウスの中ボタン／サイドボタン、XInput など。</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuide">使用できるキーの説明</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideCombo">組み合わせ</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideComboNote">Ctrl・Alt・Shift は複数同時に使えます。さらにキーを 1 つ加えます</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSingle">単独キー</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDouble">2 回押し</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideDoubleNote">Ctrl をすばやく 2 回押すか、Ctrl を押したまま C を 2 回押します</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouse">マウス</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseMiddle">中ボタン</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX1">サイドボタン 1</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideMouseX2">サイドボタン 2</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepad">ゲームパッド</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideGamepadNote">Xbox 互換（XInput）コントローラーの任意のボタン</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusive">占有</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveNote">ほかのアプリにはキーが届きません</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideExclusiveExample">例：Ctrl+Alt+A に設定すると、ほかのアプリの Ctrl+Alt+A は効かなくなります</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideShared">共有</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedNote">キーは操作中のアプリにも届くため、本来の機能も同時に動くことがあります</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyGuideSharedExample">例：サイドボタンをキャプチャ翻訳に設定すると、ブラウザーも前のページに戻ります</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyElevatedNote">管理者として実行中のアプリでは、このショートカットが使えないことがあります</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">リアルタイム翻訳</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">ショートカットでブロックを選択して翻訳</sys:String>
+    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">ショートカットで[[ブロックを選択して翻訳]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">停止中にショートカットを押すとブロック選択を開始し、選択中にもう一度押すと翻訳を開始します。翻訳中は一時停止／再開できます。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">ショートカットキーで[[ポップアップ翻訳]]を開く</sys:String>
@@ -613,7 +630,7 @@
 
     <!-- Settings page, composed in code-behind -->
     <sys:String x:Key="S.Settings.Saved">✓ 保存しました</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">キーボードのキー、マウスの中ボタン／サイドボタン、またはゲームパッドのボタンを押してください…</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPromptAnyInput">ショートカットを入力…</sys:String>
     <sys:String x:Key="S.Settings.MouseMiddle">マウス中ボタン</sys:String>
     <sys:String x:Key="S.Settings.MouseX1">マウスサイドボタン 1</sys:String>
     <sys:String x:Key="S.Settings.MouseX2">マウスサイドボタン 2</sys:String>

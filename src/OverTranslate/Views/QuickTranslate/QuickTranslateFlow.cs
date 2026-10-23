@@ -45,13 +45,17 @@ internal static class QuickTranslateFlow
     private static int _seq;
 
     /// <summary>Reads the selection, translates it, and pastes the result over it.</summary>
-    public static async Task RunAsync()
+    /// <param name="copiedSince">
+    /// Set when the shortcut was Ctrl+C+C, whose first Ctrl+C already copied the selection — see
+    /// <see cref="SelectedTextReader.ReadAsync"/>.
+    /// </param>
+    public static async Task RunAsync(uint? copiedSince = null)
     {
         var seq = ++_seq;
 
         // Before anything is shown. Putting a window on the screen takes the foreground away from
         // the application holding the selection, and the copy would then be sent to our own card.
-        var source = await SelectedTextReader.ReadAsync(SelectedTextReader.MaxLength);
+        var source = await SelectedTextReader.ReadAsync(SelectedTextReader.MaxLength, copiedSince: copiedSince);
         var foreground = GetForegroundWindow();
 
         if (source.Length == 0)

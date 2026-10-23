@@ -81,6 +81,13 @@ internal static class KeyboardInput
             Log.Debug("SendInput accepted {SentCount} of {RequestedCount} keyboard events", sent, inputs.Length);
     }
 
+    /// <summary>
+    /// Tags every key sent from here, so <see cref="GlobalAuxiliaryHotkeys"/>' keyboard hook can tell
+    /// them from the user's. The Ctrl in a synthesised copy is otherwise indistinguishable from a
+    /// real one, and could complete a Ctrl twice nobody pressed.
+    /// </summary>
+    public static readonly IntPtr InjectedMarker = new(0x4F544B49); // "OTKI"
+
     public static INPUT Key(ushort virtualKey, bool up) => new()
     {
         type = INPUT_KEYBOARD,
@@ -90,6 +97,7 @@ internal static class KeyboardInput
             {
                 wVk = virtualKey,
                 dwFlags = up ? KEYEVENTF_KEYUP : 0,
+                dwExtraInfo = InjectedMarker,
             },
         },
     };

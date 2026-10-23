@@ -40,6 +40,15 @@ public partial class SettingsPage : UserControl
     private readonly DispatcherTimer _hotkeyGamepadRecordTimer;
     private readonly ushort[] _recordGamepadButtons = new ushort[4];
 
+    // Recognises Ctrl twice and Ctrl+C+C while a box records — the same detector the global hook
+    // uses, so what can be recorded is exactly what will fire. New for each recording.
+    private KeySequenceDetector? _recordSequences;
+
+    // Ctrl+C is held back this long before it is committed, because it may be the start of Ctrl+C+C.
+    // Longer than the detector's own window, so a second C inside it always gets there first.
+    private readonly DispatcherTimer _ctrlCCommitTimer;
+    private (HotkeyField Field, ShortcutTrigger Trigger, string Display)? _pendingCtrlC;
+
     /// <summary>
     /// One editable shortcut: the controls that edit it and the settings it reads and writes.
     /// </summary>
@@ -72,6 +81,7 @@ public partial class SettingsPage : UserControl
         HotkeyAction Action,
         string NameKey,
         TextBox Box,
+        FrameworkElement ElevatedNote,
         Func<AppSettings, string> Display,
         Func<AppSettings, ShortcutTrigger> Trigger,
         Action<AppSettings, ShortcutTrigger, string> Apply,
@@ -101,6 +111,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.Capture,
                 "S.Settings.CaptureHotkey",
                 HotkeyBox,
+                CaptureElevatedNote,
                 s => s.HotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.Capture),
                 ApplyCaptureTrigger,
@@ -109,6 +120,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.QuickLookup,
                 "S.Settings.QuickLookupHotkey",
                 QuickLookupHotkeyBox,
+                QuickLookupElevatedNote,
                 s => s.QuickLookupHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.QuickLookup),
                 ApplyQuickLookupTrigger,
@@ -119,6 +131,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.QuickTranslate,
                 "S.Settings.QuickTranslateHotkey",
                 QuickTranslateHotkeyBox,
+                QuickTranslateElevatedNote,
                 s => s.QuickTranslateHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.QuickTranslate),
                 ApplyQuickTranslateTrigger,
@@ -129,6 +142,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.TranslationWindow,
                 "S.Settings.WindowHotkey",
                 WindowHotkeyBox,
+                WindowElevatedNote,
                 s => s.TranslationWindowHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.TranslationWindow),
                 ApplyWindowTrigger,
@@ -139,6 +153,7 @@ public partial class SettingsPage : UserControl
                 HotkeyAction.RealtimePause,
                 "S.Settings.RealtimePauseHotkey",
                 RealtimePauseHotkeyBox,
+                RealtimePauseElevatedNote,
                 s => s.RealtimePauseHotkeyDisplay,
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.RealtimePause),
                 ApplyRealtimePauseTrigger,
@@ -149,6 +164,11 @@ public partial class SettingsPage : UserControl
 
         _hotkeyGamepadRecordTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(45) };
         _hotkeyGamepadRecordTimer.Tick += (_, _) => PollRecordingGamepad();
+        _ctrlCCommitTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(KeySequenceDetector.RepeatMaxGap + 100),
+        };
+        _ctrlCCommitTimer.Tick += (_, _) => CommitPendingCtrlC();
 
         _statusHold = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1600) };
         _statusHold.Tick += (_, _) => { _statusHold.Stop(); FadeStatusOut(); };
@@ -191,7 +211,7 @@ public partial class SettingsPage : UserControl
         {
             var s = SettingsService.Instance.Current;
 
-            foreach (var field in _hotkeyFields) field.Box.Text = field.Display(s);
+            foreach (var field in _hotkeyFields) ShowStoredShortcut(field, s);
 
             // The ticks, then the "a shortcut above took this" lines the ticks can change. The
             // availability pass is explicit because the toggle handler ignores changes made while
@@ -1442,6 +1462,48 @@ public partial class SettingsPage : UserControl
         }
     }
 
+    /// <summary>
+    /// Puts the stored shortcut in its box, and the administrator warning under the row when the
+    /// shortcut is one that is listened for rather than registered — see the HotkeyElevatedNote
+    /// style for why.
+    /// </summary>
+    private static void ShowStoredShortcut(HotkeyField field, AppSettings settings)
+    {
+        field.Box.Text = field.Display(settings);
+
+        var trigger = field.Trigger(settings);
+        field.ElevatedNote.Visibility = (trigger.IsMouse || trigger.IsKeySequence) && !RunsAsAdministrator
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Whether this process holds administrator rights, in which case no other program outranks it
+    /// and the listened-for shortcuts hear programs run as administrator too.
+    /// </summary>
+    /// <remarks>
+    /// True both when the user started OverTranslate as administrator and when UAC is off, which
+    /// gives every program an administrator's full rights. With UAC on and an ordinary start the
+    /// token is the filtered one and this is false, even for an account in Administrators.
+    /// Read once: a process's rights do not change while it runs.
+    /// </remarks>
+    private static readonly bool RunsAsAdministrator = ReadRunsAsAdministrator();
+
+    private static bool ReadRunsAsAdministrator()
+    {
+        try
+        {
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            return new System.Security.Principal.WindowsPrincipal(identity)
+                .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch (Exception)
+        {
+            // Not knowing is no reason to hide a warning that may apply.
+            return false;
+        }
+    }
+
     private void StartRecording(HotkeyField field)
     {
         // Only one at a time: two boxes both asking to be pressed would leave the next key press
@@ -1451,6 +1513,11 @@ public partial class SettingsPage : UserControl
         _recording = field;
         field.Box.Text = LocalizationService.Get("S.Settings.HotkeyPromptAnyInput");
         field.Box.Focus();
+
+        _recordSequences = new KeySequenceDetector(
+            () => 0,
+            key => Keyboard.IsKeyDown(KeyInterop.KeyFromVirtualKey((int)key)));
+        GlobalAuxiliaryHotkeys.Paused = true;
 
         for (int i = 0; i < _recordGamepadButtons.Length; i++)
             _recordGamepadButtons[i] = GamepadInput.TryGetButtons(i, out var buttons) ? buttons : (ushort)0;
@@ -1466,9 +1533,13 @@ public partial class SettingsPage : UserControl
     private void StopRecording()
     {
         _hotkeyGamepadRecordTimer.Stop();
+        _ctrlCCommitTimer.Stop();
+        _pendingCtrlC = null;
+        _recordSequences = null;
+        GlobalAuxiliaryHotkeys.Paused = false;
         if (_recording is not { } field) return;
 
-        field.Box.Text = field.Display(SettingsService.Instance.Current);
+        ShowStoredShortcut(field, SettingsService.Instance.Current);
         _recording = null;
 
         // The box asks to be pressed by being focused, so it has to stop being focused once it has
@@ -1476,6 +1547,61 @@ public partial class SettingsPage : UserControl
         // waiting for one. Only when the focus is still here — the path in from LostFocus runs
         // after the user has already put it somewhere else, and clearing then would take it back.
         if (field.Box.IsKeyboardFocused) Keyboard.ClearFocus();
+    }
+
+    // Set when the click that pressed 可用按鍵 is the same one that closed its panel, so the click
+    // does not open it again straight away. See HotkeyGuidePopup_Closed.
+    private bool _ignoreHotkeyGuideClick;
+
+    private void HotkeyGuideBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_ignoreHotkeyGuideClick) { _ignoreHotkeyGuideClick = false; return; }
+
+        // Measured rather than read off the markup: the panel is as wide as its longest line, which
+        // depends on the language. The frame's padding is shadow room, so the panel's own right
+        // edge is the frame's less that padding.
+        HotkeyGuideFrame.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        HotkeyGuidePopup.HorizontalOffset = HotkeyGuideBtn.ActualWidth
+            - HotkeyGuideFrame.DesiredSize.Width
+            + HotkeyGuideFrame.Padding.Right;
+        HotkeyGuidePopup.IsOpen = !HotkeyGuidePopup.IsOpen;
+    }
+
+    /// <summary>
+    /// Grows the panel out of its button's corner rather than switching it on.
+    /// </summary>
+    /// <remarks>
+    /// Short and without overshoot: it is information appearing, not something the user threw.
+    /// With animations turned off in Windows it simply appears.
+    /// </remarks>
+    private void HotkeyGuidePopup_Opened(object? sender, EventArgs e)
+    {
+        var scale = (ScaleTransform)HotkeyGuidePanel.RenderTransform;
+
+        if (SystemParameters.ClientAreaAnimation)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(160);
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            HotkeyGuidePanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        }
+
+        // So Esc reaches the panel: the popup is its own window and has no focus of its own.
+        HotkeyGuidePanel.Focus();
+    }
+
+    private void HotkeyGuidePopup_Closed(object? sender, EventArgs e)
+    {
+        _ignoreHotkeyGuideClick = HotkeyGuideBtn.IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed;
+    }
+
+    private void HotkeyGuidePanel_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        HotkeyGuidePopup.IsOpen = false;
+        HotkeyGuideBtn.Focus();
+        e.Handled = true;
     }
 
     /// <summary>
@@ -1537,6 +1663,12 @@ public partial class SettingsPage : UserControl
             return;
         }
 
+        if (RecordSequence(key, down: true, e.Timestamp)) return;
+
+        // A held key repeats. Only Ctrl+C has anything left to wait for, and its repeat is not
+        // the second C of Ctrl+C+C — the detector has already said so.
+        if (e.IsRepeat) return;
+
         if (key == Key.LeftCtrl || key == Key.RightCtrl ||
             key == Key.LeftAlt  || key == Key.RightAlt  ||
             key == Key.LeftShift || key == Key.RightShift ||
@@ -1564,7 +1696,61 @@ public partial class SettingsPage : UserControl
 
         var prefix = GlobalHotkey.ModifiersToString(mods);
         var display = string.IsNullOrEmpty(prefix) ? key.ToString() : $"{prefix}+{key}";
+
+        if (mods == GlobalHotkey.MOD_CONTROL && key == Key.C)
+        {
+            _pendingCtrlC = (recording, trigger, display);
+            _ctrlCCommitTimer.Stop();
+            _ctrlCCommitTimer.Start();
+            return;
+        }
+
         CommitShortcut(recording, trigger, display);
+    }
+
+    private void HotkeyBox_PreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        if (_recording is not { } recording || !ReferenceEquals(recording.Box, sender)) return;
+        e.Handled = true;
+
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        RecordSequence(key, down: false, e.Timestamp);
+    }
+
+    /// <summary>
+    /// Feeds one key to the recording's sequence detector, committing Ctrl twice or Ctrl+C+C if it
+    /// completes one. Returns whether it did.
+    /// </summary>
+    /// <remarks>
+    /// The sequences are shown the way the 可用按鍵說明 panel draws them, not as text to translate:
+    /// key names are the same in every language this application speaks.
+    /// </remarks>
+    private bool RecordSequence(Key key, bool down, int timestamp)
+    {
+        if (_recording is not { } recording || _recordSequences is not { } sequences) return false;
+
+        var vk = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (vk == 0 || sequences.OnKey(vk, down, unchecked((uint)timestamp)) is not { } hit) return false;
+
+        _ctrlCCommitTimer.Stop();
+        _pendingCtrlC = null;
+
+        // Ctrl+C+C rather than Ctrl+C ×2: the plus says Ctrl stays held, where "×2" reads as Ctrl+C
+        // pressed twice over — and letting go of Ctrl in between is exactly what does not count.
+        // Ctrl+Ctrl follows suit; a key cannot be held twice, so it can only mean pressed twice.
+        var display = hit.Kind == ShortcutInputKind.CtrlCC ? "Ctrl+C+C" : "Ctrl+Ctrl";
+        CommitShortcut(recording, ShortcutTrigger.KeySequence(hit.Kind), display);
+        return true;
+    }
+
+    /// <summary>No second C came: it was Ctrl+C after all.</summary>
+    private void CommitPendingCtrlC()
+    {
+        _ctrlCCommitTimer.Stop();
+        if (_pendingCtrlC is not { } pending || !ReferenceEquals(_recording, pending.Field)) return;
+
+        _pendingCtrlC = null;
+        CommitShortcut(pending.Field, pending.Trigger, pending.Display);
     }
 
     /// <remarks>

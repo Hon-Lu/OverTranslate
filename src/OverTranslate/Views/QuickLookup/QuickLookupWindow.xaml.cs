@@ -209,10 +209,14 @@ public partial class QuickLookupWindow : Window
     /// popup they pinned must not quietly take that back.
     /// </para>
     /// </param>
-    public static async Task SummonAsync(bool pinned = false)
+    /// <param name="copiedSince">
+    /// Set when the shortcut was Ctrl+C+C, whose first Ctrl+C already copied the selection — see
+    /// <see cref="SelectedTextReader.ReadAsync"/>.
+    /// </param>
+    public static async Task SummonAsync(bool pinned = false, uint? copiedSince = null)
     {
         var selection = await SelectedTextReader.ReadAsync(
-            SourceTextLimit.MaxLength, SettingsService.Instance.Current.QuickLookup.MultilineInput);
+            SourceTextLimit.MaxLength, SettingsService.Instance.Current.QuickLookup.MultilineInput, copiedSince);
 
         if (_current is { _closing: false } open)
         {

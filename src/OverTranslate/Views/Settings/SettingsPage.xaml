@@ -121,6 +121,169 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="ToolTip"           Value="{DynamicResource S.Settings.HotkeyRecordTip}"/>
         </Style>
+        <!-- Under a row whose shortcut is listened for rather than registered: Ctrl+Ctrl, Ctrl+C+C and
+             the mouse buttons. Windows keeps a program from seeing input meant for one running with
+             more rights than it has, so while a program run as administrator is in front these
+             shortcuts do nothing at all — tested, not supposed. Warning-coloured and with its own
+             mark rather than the row's grey ⓘ, so it does not read as one more description; shown
+             only when it applies (see ShowStoredShortcut). The gamepad is polled, not hooked, and
+             is not affected. -->
+        <Style x:Key="HotkeyElevatedNote" TargetType="ContentControl">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="Focusable"  Value="False"/>
+            <Setter Property="Margin"     Value="0,8,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="&#xE7BA;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource AppWarning}"
+                                       VerticalAlignment="Top"
+                                       Margin="0,1.5,8,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{DynamicResource S.Settings.HotkeyElevatedNote}"
+                                       Style="{StaticResource FieldHint}"
+                                       Foreground="{DynamicResource AppWarning}"
+                                       Margin="0"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{DynamicResource S.Settings.HotkeyElevatedNote}"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 可用按鍵, at the right end of the shortcut card's heading. Quiet like the heading it sits
+             in — no fill or border until the pointer is on it — with a chevron saying it opens
+             something below rather than taking the user somewhere. The pressed state lands on the
+             press, not the release. -->
+        <Style x:Key="HotkeyGuideFocusVisual">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Rectangle Stroke="{DynamicResource AppAccent}"
+                                   StrokeThickness="1"
+                                   StrokeDashArray="2 2"
+                                   RadiusX="6"
+                                   RadiusY="6"
+                                   SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="HotkeyGuideButton" TargetType="Button">
+            <Setter Property="FontFamily"       Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"         Value="12"/>
+            <Setter Property="Foreground"       Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="Background"       Value="Transparent"/>
+            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource HotkeyGuideFocusVisual}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Hit"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="8,4,7,4">
+                            <StackPanel Orientation="Horizontal">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                                <TextBlock Text="&#xE70D;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="9"
+                                           Margin="6,1,0,0"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Hit" Property="Background"
+                                        Value="{DynamicResource AppSurfaceBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Hit" Property="Background"
+                                        Value="{DynamicResource AppSubtleBorder}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- The guide panel's row names: a column of short nouns the eye runs down to find the
+             kind of input it is after. Top-aligned with the first line of keys beside it. -->
+        <Style x:Key="HotkeyGuideLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily"        Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"          Value="12"/>
+            <Setter Property="Foreground"        Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin"            Value="0,4,16,0"/>
+        </Style>
+        <Style x:Key="HotkeyGuideText" TargetType="TextBlock">
+            <Setter Property="FontFamily"        Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"          Value="12"/>
+            <Setter Property="Foreground"        Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="TextWrapping"      Value="Wrap"/>
+            <Setter Property="LineHeight"        Value="18"/>
+        </Style>
+        <Style x:Key="HotkeyGuideNote" TargetType="TextBlock">
+            <Setter Property="FontFamily"   Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"     Value="11"/>
+            <Setter Property="Foreground"   Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin"       Value="0,3,0,0"/>
+        </Style>
+        <Style x:Key="HotkeyGuidePlus" TargetType="TextBlock">
+            <Setter Property="FontSize"          Value="11"/>
+            <Setter Property="Foreground"        Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin"            Value="0,0,4,0"/>
+        </Style>
+        <!-- Whether an input is taken from other programs or only listened to. Taken is the plain
+             one, as every ordinary shortcut is; listened-to is tinted, being the one that can make
+             two things happen at once. -->
+        <Style x:Key="HotkeyGuideTag" TargetType="Border">
+            <Setter Property="BorderBrush"            Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness"        Value="1"/>
+            <Setter Property="CornerRadius"           Value="9"/>
+            <Setter Property="Padding"                Value="8,1,8,2"/>
+            <Setter Property="Margin"                 Value="12,2,0,0"/>
+            <Setter Property="VerticalAlignment"      Value="Top"/>
+            <Setter Property="HorizontalAlignment"    Value="Right"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource AppTextSecondary}"/>
+        </Style>
+        <Style x:Key="HotkeyGuideSharedTag" TargetType="Border" BasedOn="{StaticResource HotkeyGuideTag}">
+            <Setter Property="Background"             Value="{DynamicResource AppAccentSubtle}"/>
+            <Setter Property="BorderBrush"            Value="{DynamicResource AppAccentSubtle}"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource AppAccent}"/>
+        </Style>
+        <Style x:Key="HotkeyGuideTagText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"   Value="11"/>
+        </Style>
+        <!-- A key drawn as a key: the inputs read at a glance as things to press, where the same
+             names in a sentence have to be read. The heavier bottom edge is the keycap's side. -->
+        <Style x:Key="HotkeyGuideKey" TargetType="Border">
+            <Setter Property="Background"      Value="{DynamicResource AppButtonBg}"/>
+            <Setter Property="BorderBrush"     Value="{DynamicResource AppButtonBorder}"/>
+            <Setter Property="BorderThickness" Value="1,1,1,2"/>
+            <Setter Property="CornerRadius"    Value="4"/>
+            <Setter Property="Padding"         Value="6,1,6,1"/>
+            <Setter Property="Margin"          Value="0,2,4,2"/>
+        </Style>
+        <Style x:Key="HotkeyGuideKeyText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+        </Style>
         <!-- The keyboard ring for a service row, drawn just outside its border. -->
         <Style x:Key="ProviderCardFocusVisual">
             <Setter Property="Control.Template">
@@ -300,53 +463,134 @@
                         Style="{StaticResource CardBorder}"
                         Margin="0,0,12,12">
                     <StackPanel>
-                        <StackPanel Style="{StaticResource CardHeaderRow}">
-                            <TextBlock Text="&#xE765;" Style="{StaticResource CardHeaderIcon}"/>
-                            <TextBlock Text="{DynamicResource S.Settings.Hotkeys}"
-                                       Style="{StaticResource CardTitle}"/>
+                        <!-- What a shortcut may be at all is behind 可用按鍵 rather than in a tooltip:
+                             it is several kinds of input and two ways of being heard, which is more
+                             than a tooltip can be read in before the pointer moves off it. -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <TextBlock Text="&#xE765;" Style="{StaticResource CardHeaderIcon}"/>
+                                <TextBlock Text="{DynamicResource S.Settings.Hotkeys}"
+                                           Style="{StaticResource CardTitle}"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" x:Name="HotkeyGuideBtn"
+                                    Style="{StaticResource HotkeyGuideButton}"
+                                    Content="{DynamicResource S.Settings.HotkeyGuide}"
+                                    VerticalAlignment="Center"
+                                    Margin="0,-4,-6,-4"
+                                    Click="HotkeyGuideBtn_Click"/>
 
-                            <!-- What a shortcut may be at all, on the heading rather than in a
-                                 panel of its own. It is the same answer for all three rows, and it
-                                 is read once and then never again — a card spelling it out sat
-                                 above the rows for good, taking the room the rows are in.
+                            <!-- Right edge under the button's right edge, so the panel comes out
+                                 of what opened it (HotkeyGuideBtn_Click). The margin around the
+                                 panel is room for its shadow inside the popup's own window. -->
+                            <Popup x:Name="HotkeyGuidePopup"
+                                   PlacementTarget="{Binding ElementName=HotkeyGuideBtn}"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   StaysOpen="False"
+                                   Opened="HotkeyGuidePopup_Opened"
+                                   Closed="HotkeyGuidePopup_Closed">
+                                <Border x:Name="HotkeyGuideFrame" Padding="14,4,14,18">
+                                    <Border x:Name="HotkeyGuidePanel"
+                                            Background="{DynamicResource AppSurfaceBg}"
+                                            BorderBrush="{DynamicResource AppBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="10"
+                                            Padding="16,14,18,14"
+                                            Focusable="True"
+                                            FocusVisualStyle="{x:Null}"
+                                            RenderTransformOrigin="1,0"
+                                            PreviewKeyDown="HotkeyGuidePanel_KeyDown">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform/>
+                                        </Border.RenderTransform>
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="18" ShadowDepth="4"
+                                                              Direction="270" Opacity="0.28"/>
+                                        </Border.Effect>
 
-                                 Background="Transparent", not left null: a TextBlock with no
-                                 background is only hit-testable where the glyph's own strokes are,
-                                 so the tooltip would appear over parts of a 13px "i" and nowhere
-                                 else. Padding widens that box to something a mouse can find. -->
-                            <TextBlock Text="&#xE946;"
-                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource AppTextSecondary}"
-                                       Background="Transparent"
-                                       Padding="4,2"
-                                       Margin="7,1,0,0"
-                                       VerticalAlignment="Center"
-                                       Cursor="Help">
-                                <controls:HoverToolTip.Content>
-                                    <!-- Two blocks rather than one string: the second is an example
-                                         of the first, and they were two lines in the card this
-                                         replaced for the same reason. MaxWidth because a tooltip
-                                         given a long sentence otherwise runs the width of the
-                                         screen. No Foreground — the tooltip's own is whatever the
-                                         system paints its background with. -->
-                                    <StackPanel MaxWidth="420">
-                                        <TextBlock Text="{DynamicResource S.Settings.HotkeyKinds}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   TextWrapping="Wrap"
-                                                   LineHeight="18"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.HotkeyKindsExample}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="11"
-                                                   Opacity="0.85"
-                                                   TextWrapping="Wrap"
-                                                   LineHeight="16"
-                                                   Margin="0,5,0,0"/>
-                                    </StackPanel>
-                                </controls:HoverToolTip.Content>
-                            </TextBlock>
-                        </StackPanel>
+                                            <!-- Three columns: what kind of input, examples of it drawn as keys, and whether it is
+                                                 taken from other programs or only listened to. The legend under the line says what
+                                                 the two tags mean, with an example of each. -->
+                                            <Grid MaxWidth="460">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Text="{DynamicResource S.Settings.HotkeyGuideCombo}" Style="{StaticResource HotkeyGuideLabel}"/>
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
+                                                    <WrapPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Ctrl" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="+" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Alt" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="+" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="A" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Shift" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="+" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="F2" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                    </WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideComboNote}" Style="{StaticResource HotkeyGuideNote}"/>
+                                                </StackPanel>
+                                                <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource HotkeyGuideTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideExclusive}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <TextBlock Grid.Row="1" Text="{DynamicResource S.Settings.HotkeyGuideSingle}" Style="{StaticResource HotkeyGuideLabel}"/>
+                                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10">
+                                                    <WrapPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="F1" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="–" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="F24" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Pause" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Scroll Lock" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                                <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource HotkeyGuideTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideExclusive}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <TextBlock Grid.Row="2" Text="{DynamicResource S.Settings.HotkeyGuideDouble}" Style="{StaticResource HotkeyGuideLabel}"/>
+                                                <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,10">
+                                                    <WrapPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Ctrl" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="+" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Ctrl" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Ctrl" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="+" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="C" Style="{StaticResource HotkeyGuideKeyText}"/></Border><TextBlock Text="+" Style="{StaticResource HotkeyGuidePlus}"/><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="C" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                    </WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideDoubleNote}" Style="{StaticResource HotkeyGuideNote}"/>
+                                                </StackPanel>
+                                                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource HotkeyGuideSharedTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideShared}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <TextBlock Grid.Row="3" Text="{DynamicResource S.Settings.HotkeyGuideMouse}" Style="{StaticResource HotkeyGuideLabel}"/>
+                                                <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,10">
+                                                    <WrapPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideMouseMiddle}" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideMouseX1}" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideMouseX2}" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                                <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource HotkeyGuideSharedTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideShared}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <TextBlock Grid.Row="4" Text="{DynamicResource S.Settings.HotkeyGuideGamepad}" Style="{StaticResource HotkeyGuideLabel}"/>
+                                                <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,10">
+                                                    <WrapPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,14,0"><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="A" Style="{StaticResource HotkeyGuideKeyText}"/></Border><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="B" Style="{StaticResource HotkeyGuideKeyText}"/></Border><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="X" Style="{StaticResource HotkeyGuideKeyText}"/></Border><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Y" Style="{StaticResource HotkeyGuideKeyText}"/></Border><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="LB" Style="{StaticResource HotkeyGuideKeyText}"/></Border><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="RB" Style="{StaticResource HotkeyGuideKeyText}"/></Border><Border Style="{StaticResource HotkeyGuideKey}"><TextBlock Text="Start" Style="{StaticResource HotkeyGuideKeyText}"/></Border></StackPanel>
+                                                    </WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideGamepadNote}" Style="{StaticResource HotkeyGuideNote}"/>
+                                                </StackPanel>
+                                                <Border Grid.Row="4" Grid.Column="2" Style="{StaticResource HotkeyGuideSharedTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideShared}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <Border Grid.Row="5" Grid.ColumnSpan="3" Height="1" Margin="0,2,0,12" Background="{DynamicResource AppSeparator}"/>
+                                                <Border Grid.Row="6" HorizontalAlignment="Left" Margin="0,0,16,0" Style="{StaticResource HotkeyGuideTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideExclusive}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,1,0,10">
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideExclusiveNote}" Style="{StaticResource HotkeyGuideText}"/>
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideExclusiveExample}" Style="{StaticResource HotkeyGuideNote}"/>
+                                                </StackPanel>
+                                                <Border Grid.Row="7" HorizontalAlignment="Left" Margin="0,0,16,0" Style="{StaticResource HotkeyGuideSharedTag}"><TextBlock Text="{DynamicResource S.Settings.HotkeyGuideShared}" Style="{StaticResource HotkeyGuideTagText}"/></Border>
+                                                <StackPanel Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,1,0,0">
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideSharedNote}" Style="{StaticResource HotkeyGuideText}"/>
+                                                    <TextBlock Text="{DynamicResource S.Settings.HotkeyGuideSharedExample}" Style="{StaticResource HotkeyGuideNote}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                    </Border>
+                                </Border>
+                            </Popup>
+                        </Grid>
 
                         <!-- Capture has no on/off tick at all: this is the feature the application
                              is for. Its last column is empty and still here, so the three rows'
@@ -393,9 +637,12 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
                                 </Grid>
+
+                                <ContentControl x:Name="CaptureElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -434,6 +681,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -475,6 +723,8 @@
                                                ToolTip="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
                                                VerticalAlignment="Top"/>
                                 </Grid>
+
+                                <ContentControl x:Name="QuickLookupElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -544,6 +794,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -726,6 +977,8 @@
                                         </StackPanel>
                                     </Border>
                                 </Border>
+
+                                <ContentControl x:Name="QuickTranslateElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -772,6 +1025,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -785,6 +1039,8 @@
                                                   Unchecked="HotkeyEnabled_Toggled"/>
                                     </StackPanel>
                                 </Grid>
+
+                                <ContentControl x:Name="WindowElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
@@ -833,6 +1089,7 @@
                                              Style="{StaticResource HotkeyBox}"
                                              PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                              PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                              GotFocus="HotkeyBox_GotFocus"
                                              LostFocus="HotkeyBox_LostFocus"/>
 
@@ -875,6 +1132,8 @@
                                                ToolTip="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
                                                VerticalAlignment="Top"/>
                                 </Grid>
+
+                                <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                             </StackPanel>
                         </Border>
 
