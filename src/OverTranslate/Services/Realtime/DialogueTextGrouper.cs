@@ -40,10 +40,13 @@ internal static class DialogueTextGrouper
         // Lines built from more than one detected block. A speaker label is one word the detector
         // read in one piece; see SpeakerLabel.
         var joinedLines = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
+        // The rows ItemRow took for slot labels; see ValuesBesideItems.
+        var itemRows = new List<Rect>();
         foreach (var row in rows)
         {
             var segments = new List<List<OcrTextBlock>>();
             var items = ItemRow(row, rows);
+            if (items) itemRows.Add(Span(row));
             foreach (var block in row)
             {
                 var joinsRow = segments.Count > 0 && Adjacent(segments[^1][^1].LayoutBounds, block.LayoutBounds);
@@ -93,6 +96,12 @@ internal static class DialogueTextGrouper
                 {
                     joins = false;
                     rule = "speaker-label";
+                }
+                if (joins && HasLetter(groups[i][^1].Text) != HasLetter(line.Block.Text) &&
+                    (ValuesBesideItems(groups[i][^1], itemRows) || ValuesBesideItems(line.Block, itemRows)))
+                {
+                    joins = false;
+                    rule = "numeric-line";
                 }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;
@@ -164,6 +173,28 @@ internal static class DialogueTextGrouper
         ShortItem(a) && ShortItem(b) && b.Left - a.Right >= Math.Max(a.Height, b.Height) * 0.9;
 
     private static Rect Span(List<OcrTextBlock> row) => row.Select(b => b.LayoutBounds).Aggregate(Rect.Union);
+
+    /// <summary>
+    /// The row of values that made a row of slot labels itemised (see <see cref="ItemRow"/>):
+    /// numbers only, no letters, right beside those labels.
+    /// </summary>
+    /// <remarks>
+    /// Such a row is wide enough to be stacked with the note under it as "two substantial rows",
+    /// and then the note was translated with seven percentages in front of it. Refusing every
+    /// letterless line instead would also part a Korean scoreboard's 26/3/19 from the TK / K / A
+    /// under it, which nothing about slot labels said; tying it to an item row changed no corpus
+    /// frame.
+    /// </remarks>
+    private static bool ValuesBesideItems(OcrTextBlock line, List<Rect> itemRows)
+    {
+        if (HasLetter(line.Text) || DigitRuns(line.Text) < 3) return false;
+        Rect r = line.LayoutBounds;
+        return itemRows.Any(items =>
+            Math.Max(items.Top - r.Bottom, r.Top - items.Bottom) <= Math.Max(items.Height, r.Height) * 1.5 &&
+            Math.Min(items.Right, r.Right) - Math.Max(items.Left, r.Left) >= items.Width * 0.5);
+    }
+
+    private static bool HasLetter(string text) => text.Any(char.IsLetter);
 
     private static int DigitRuns(string text)
     {

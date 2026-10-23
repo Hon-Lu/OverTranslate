@@ -163,6 +163,43 @@ public class DialogueTextGrouperTests
         ], OcrService.GroupRealtime([.. frame], 839, RealtimeBlockMode.Subtitle).Select(b => b.Text));
     }
 
+    // The same status screen at a larger scale: the slot labels already part, but the one-box row
+    // of percentages was stacked with the note under it.
+    [Fact]
+    public void ValuesUnderSlotLabelsAreNotStackedWithTheNoteBelow()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("腔内", 920, 33, 88, 51), Block("尻尾", 250, 34, 85, 52), Block("口内", 588, 34, 81, 50),
+            Block("肛門", 1091, 35, 82, 48), Block("乳", 424, 36, 72, 51), Block("クリ", 761, 36, 77, 47),
+            Block("96%100%100%100%100%100%100%", 171, 140, 1180, 68), Block("開発度は下げることも可能", 325, 196, 705, 62),
+        ]).Select(b => b.Text).ToList();
+        Assert.Contains("96%100%100%100%100%100%100%", texts);
+        Assert.Contains("開発度は下げることも可能", texts);
+    }
+
+    // A scoreboard's letterless 26/3/19 over TK / K / A (screen-subtitle-ko), with no slot labels
+    // anywhere: grouped as before.
+    [Fact]
+    public void NumbersAwayFromSlotLabelsAreGroupedAsBefore()
+    {
+        OcrTextBlock[] frame =
+        [
+            Block("RTX", 1812, 20, 38, 22, 1.0), Block("VSR", 1809, 34, 44, 27), Block("대상지정 불가", 665, 148, 180, 46, 0.83),
+            Block("257s", 597, 232, 57, 31, 0.96), Block("#2", 249, 400, 71, 55, 1.0), Block("26/3/19", 1004, 426, 206, 51, 1.0),
+            Block("27,003 841695", 1247, 461, 402, 56, 0.96), Block("랭크", 250, 467, 83, 53, 0.98),
+            Block("TK / K / A", 1003, 491, 180, 49, 0.86), Block("20", 689, 522, 70, 50, 0.98), Block("21:54", 249, 529, 114, 50, 1.0),
+            Block("딜량", 1246, 530, 84, 52, 0.95), Block("RP", 1441, 533, 61, 46, 1.0), Block("T3", 1016, 557, 74, 47, 1.0),
+            Block("1일전", 250, 581, 112, 54, 1.0), Block("아이작", 598, 586, 110, 47, 1.0),
+            Block("지금처럼 도파민은 없을 거야 울랄랄라", 284, 835, 1296, 117, 0.95),
+        ];
+        Assert.Equal(
+        [
+            "RTX", "VSR", "대상지정 불가", "257s", "#2", "26/3/19 TK / K / A T3", "27,003 841695", "랭크", "20", "21:54",
+            "딜량", "RP", "1일전", "아이작", "지금처럼 도파민은 없을 거야 울랄랄라",
+        ], OcrService.GroupRealtime([.. frame], 1035, RealtimeBlockMode.Subtitle).Select(b => b.Text));
+    }
+
     private static OcrTextBlock Block(string text, double x, double y, double w, double h = 20, double confidence = 0.99) =>
         new(text, new Rect(x, y, w, h), Confidence: confidence, LayoutBounds: new Rect(x, y, w, h),
             LayoutScript: OcrLayoutScript.Latin, LayoutGlyphHeight: h * 0.82);
