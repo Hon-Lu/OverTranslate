@@ -249,7 +249,7 @@
     <sys:String x:Key="S.Main.MinimizedBody">タスクトレイに最小化しました。{0} でキャプチャ翻訳を開始できます。</sys:String>
     <sys:String x:Key="S.Main.DefaultShortcutName">設定したショートカットキー</sys:String>
     <sys:String x:Key="S.Main.RealtimeRunningTitle">リアルタイム翻訳の実行中</sys:String>
-    <sys:String x:Key="S.Main.RealtimeRunningBody">リアルタイム翻訳を終了してからポップアップ翻訳をご利用ください。</sys:String>
+    <sys:String x:Key="S.Main.RealtimeRunningBody">ブロックの編集中はポップアップ翻訳を使用できません。</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyTitle">API キーがありません</sys:String>
     <sys:String x:Key="S.Main.MissingApiKeyBody">設定で API キーを入力してください。</sys:String>
     <sys:String x:Key="S.Main.RecogniseFailedTitle">認識に失敗しました</sys:String>

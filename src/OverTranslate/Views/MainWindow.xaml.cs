@@ -433,16 +433,17 @@ public partial class MainWindow : Window
     /// </summary>
     /// <remarks>
     /// Turned away in the same two states as 取詞翻譯 and for the same reasons — a capture in
-    /// progress is a gesture of the user's not to be interrupted, and a realtime session composes
-    /// the monitor without this application's own layers, so a card created afterwards would be read
-    /// back into the subtitles. Silently in both cases: this shortcut is silent whenever it has
-    /// nothing to do, and one refusal that talks would be the exception nobody expects.
+    /// progress is a gesture of the user's not to be interrupted, and so are blocks being framed.
+    /// A realtime session that is translating is not one of them (#326): replying in a chat whose
+    /// other side is being translated is what someone would want both for at once, and the session
+    /// leaves the card out of what it reads. Silently in both cases: this shortcut is silent whenever
+    /// it has nothing to do, and one refusal that talks would be the exception nobody expects.
     /// </remarks>
     private void OnQuickTranslateHotkeyPressed(object? sender, EventArgs e) =>
         Dispatcher.Invoke(async () =>
         {
             if (HasActiveSession) return;
-            if (RealtimeSessionController.Instance.IsActive) return;
+            if (RealtimeSessionController.Instance is { IsActive: true, IsTranslating: false }) return;
 
             await Views.QuickTranslate.QuickTranslateFlow.RunAsync();
         });
@@ -472,20 +473,22 @@ public partial class MainWindow : Window
     /// The one way in to 取詞翻譯, holding the guards both doors have to pass.
     /// </summary>
     /// <remarks>
-    /// Turned away in the two states where a window of ours must not appear, and for two different
-    /// reasons. During a capture the user is framing or reading a screen of their own and a popup
+    /// Turned away in the two states where a window of ours must not appear, both of them gestures
+    /// in progress. During a capture the user is framing or reading a screen of their own and a popup
     /// dropped into it takes the foreground away mid-gesture — the same reason the translation
-    /// window stays out, and silent for the same reason. During a realtime session it is the session
-    /// that cannot afford it: a monitor capture is composed without this application's own overlays
-    /// (#94), a popup created afterwards is not on that list, and a session would end up reading and
-    /// translating this window's text back to the user. That one is announced, because the shortcut
-    /// is otherwise available everywhere and silence would read as breakage.
+    /// window stays out, and silent for the same reason. Framing realtime blocks is the same kind of
+    /// moment, on a layer over the whole screen; that one is announced, because the shortcut is
+    /// otherwise available everywhere and silence would read as breakage.
+    ///
+    /// A session that is translating no longer turns it away (#326). It used to, because the session
+    /// would have read the popup back as part of the screen; it leaves every window of ours out of
+    /// what it reads now, and keeps the popup above its subtitles.
     /// </remarks>
     private void StartQuickLookup(bool pinned) =>
         Dispatcher.Invoke(async () =>
         {
             if (HasActiveSession) return;
-            if (RefuseWhileRealtimeRuns()) return;
+            if (RefuseWhileFramingBlocks()) return;
 
             await Views.QuickLookup.QuickLookupWindow.SummonAsync(pinned);
         });
@@ -541,21 +544,20 @@ public partial class MainWindow : Window
         });
 
     /// <summary>
-    /// Turns 取詞翻譯 away while a realtime session owns the screen, and says why.
+    /// Turns 取詞翻譯 away while realtime blocks are being framed, and says why.
     /// </summary>
     /// <remarks>
-    /// Not about the OCR engine, which is what this used to be for and what
-    /// <see cref="Services.Realtime.RealtimeCaptureInterlude"/> now answers for captures. What rules
-    /// a popup out is the screen: a session composes the monitor without this application's own
-    /// layers (#94), a popup created afterwards is not on that list, and the session would end up
-    /// reading its text back to the user as if it were part of what they are watching.
+    /// Only framing: a session that is translating leaves the popup out of what it reads (#326).
+    /// Framing is a layer over the whole screen that the user is drawing on, and a popup opened into
+    /// it would be under that layer a second later.
     ///
     /// Told rather than ignored, because the shortcut is otherwise available everywhere and silence
     /// would read as breakage — see <see cref="StartQuickLookup"/>, which is the only way in here.
     /// </remarks>
-    private bool RefuseWhileRealtimeRuns()
+    private bool RefuseWhileFramingBlocks()
     {
-        if (!Views.Realtime.RealtimeSessionController.Instance.IsActive) return false;
+        if (Views.Realtime.RealtimeSessionController.Instance is not { IsActive: true, IsTranslating: false })
+            return false;
 
         ShowTrayNotification(
             LocalizationService.Get("S.Main.RealtimeRunningTitle"),

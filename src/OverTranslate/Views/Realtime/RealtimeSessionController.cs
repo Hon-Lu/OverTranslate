@@ -182,13 +182,22 @@ internal sealed class RealtimeSessionController
             LogStayOnTopStall();
             UpdateBlockVisibility();
 
+            // Anything of ours opened over the session goes up first and the layers in under it —
+            // see RaiseCompanions for why they are not raised and then covered again.
+            var below = RaiseCompanions();
+            void Raise(Window window)
+            {
+                if (below == IntPtr.Zero || !AlwaysOnTop.PlaceBehind(window, below))
+                    AlwaysOnTop.Reassert(window);
+            }
+
             // The control bar last, so it ends up above the block layers it may overlap. A block put
             // away by UpdateBlockVisibility is left where it is: raising it is what used to keep it
             // over the window that had covered its source.
             foreach (var block in _blockWindows.Values)
-                if (block.IsVisible) AlwaysOnTop.Reassert(block);
-            if (_edit is { } edit) AlwaysOnTop.Reassert(edit);
-            if (_control is { } control) AlwaysOnTop.Reassert(control);
+                if (block.IsVisible) Raise(block);
+            if (_edit is { } edit) Raise(edit);
+            if (_control is { } control) Raise(control);
 
             // Every tooltip after every window: the control bar is owned by the edit layer, and
             // raising it brings the layer up too — over any tooltip of the layer's raised before it.
@@ -197,6 +206,62 @@ internal sealed class RealtimeSessionController
 
             LogEditLayerCovered();
         };
+    }
+
+    /// <summary>
+    /// Puts every other window of ours that is on top at the front: 取詞翻譯's popup, 替換翻譯's
+    /// card, a list one of them has dropped down (#326). Returns the backmost of them, for the
+    /// session's layers to go in behind — or zero when there are none.
+    /// </summary>
+    /// <remarks>
+    /// The user summoned these over a running session to use them now, so the layers must not come
+    /// up over them. They used to — raised to the front and the popup raised back over them in the
+    /// same tick — and any frame the compositor presented in between showed the subtitles on top: a
+    /// flicker that came and went. Raising these first and placing the layers behind them never puts
+    /// the layers in front at all. Back to front, so they keep their order among themselves — a
+    /// dropped-down list stays over its popup.
+    ///
+    /// Windows owned by one of the layers are left out. Windows keeps an owned window above its owner
+    /// by itself, and raising it brings the owner up too, to just beneath it — so raising one owned
+    /// by a block layer put that layer back over the popup until the layers were placed behind it
+    /// again, the same flicker by another route. Visual Studio's in-app toolbar, on every window of a
+    /// debugged build, is one.
+    /// </remarks>
+    private IntPtr RaiseCompanions()
+    {
+        var layers = Volatile.Read(ref _overlayHandles);
+        var visible = OwnTopLevelWindows.Visible();
+        var backmost = IntPtr.Zero;
+
+        for (var i = visible.Count - 1; i >= 0; i--)
+        {
+            if (layers.Contains(visible[i])
+                || !OwnTopLevelWindows.IsTopmost(visible[i])
+                || OwnTopLevelWindows.IsOwnedByAny(visible[i], layers)) continue;
+
+            AlwaysOnTop.Reassert(visible[i]);
+            if (backmost == IntPtr.Zero) backmost = visible[i];
+        }
+
+        return backmost;
+    }
+
+    /// <summary>
+    /// What a monitor capture is told to leave out: the session's own layers, then every other window
+    /// of ours on the screen.
+    /// </summary>
+    /// <remarks>
+    /// The others are 取詞翻譯's popup, 替換翻譯's card and anything they drop down, which may open
+    /// over a running session (#326) — usually inside a block, since the text they act on is the text
+    /// being watched. Left in the frames, the session would read their words and lay a translation of
+    /// them over the very popup showing it. Asked of the system on every poll rather than recorded as
+    /// they open, so no window of ours can be missing from the list for even one poll. In handle order
+    /// after the layers, so the backend sees the same list for the same windows whatever their z-order.
+    /// </remarks>
+    internal static IReadOnlyList<IntPtr> ExclusionList(IReadOnlyList<IntPtr> layers, IEnumerable<IntPtr> ownVisible)
+    {
+        var others = ownVisible.Where(hwnd => !layers.Contains(hwnd)).Distinct().Order().ToList();
+        return others.Count == 0 ? layers : [.. layers, .. others];
     }
 
     /// <summary>
@@ -1032,7 +1097,7 @@ internal sealed class RealtimeSessionController
         // same rectangle.
         var backend = WgcMonitorCaptureBackend.TryCreate(
             () => WgcMonitorCaptureBackend.MonitorFor(screenBounds),
-            () => Volatile.Read(ref _overlayHandles));
+            () => ExclusionList(Volatile.Read(ref _overlayHandles), OwnTopLevelWindows.Visible()));
 
         if (backend is null) return null;
 
