@@ -918,9 +918,11 @@ public partial class OverlayWindow : Window
     /// the columns.
     /// </summary>
     /// <remarks>
-    /// The room beside the group is the card's margin rather than the page: a character's width a
-    /// side, and nothing below. What is past that on a turned card is the page, or the next card,
-    /// and an upright box round it is a poor guide to either.
+    /// No room past the group's own box: the size gives way instead. Past the group on a turned card
+    /// is the card's margin, then the page or the next card, and an upright box round it is a poor
+    /// guide to either. A character's width a side was tried first; in the live overlay it carried
+    /// the plate onto the dark corridor beside a white narration card in vertical-image-ja4, where
+    /// the backdrop then turned down the plate and painted a dark card instead.
     /// </remarks>
     private void BuildTiltedAcrossInColumns(
         TranslatedBlock block, Services.Ocr.TiltedText tilt, System.Windows.Media.FontFamily translatedFont,
@@ -939,7 +941,7 @@ public partial class OverlayWindow : Window
             preferredFontSize: glyph * 0.92,
             readableFontSize: SingleLineAbsoluteMinFontSize,
             emergencyFontSize: GroupedEmergencyMinFontSize,
-            new AcrossInColumnsRoom(glyph, glyph, 0),
+            AcrossInColumnsRoom.None,
             (part, size, width) => MeasureText(part, typeface, size, width));
 
         // The bubble in the level frame, in this window's units from the level box's corner: the

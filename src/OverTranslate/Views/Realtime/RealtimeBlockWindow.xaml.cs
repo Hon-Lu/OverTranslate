@@ -1206,8 +1206,8 @@ public partial class RealtimeBlockWindow : Window
     /// <see cref="BuildTiltedVerticalLine"/>.
     /// </summary>
     /// <remarks>
-    /// The room is a character's width either side and nothing below, as the screenshot overlay
-    /// gives a tilted group: past the card's margin is the page, or the next card.
+    /// No room past the group's own box, as the screenshot overlay gives a tilted group — see its
+    /// BuildTiltedAcrossInColumns for why.
     /// </remarks>
     private LineVisual? BuildTiltedAcrossInColumnsLine(
         TranslatedBlock line, Services.Ocr.TiltedText tilt,
@@ -1231,7 +1231,7 @@ public partial class RealtimeBlockWindow : Window
             preferredFontSize: _fixedFontSize ?? cellPreferred * VerticalGlyphFill,
             readableFontSize: MinFontSize,
             emergencyFontSize: MinFontSize,
-            new AcrossInColumnsRoom(cellPreferred, cellPreferred, 0),
+            AcrossInColumnsRoom.None,
             (part, size, width) => Measure(part, typeface, size, width),
             keepSize: _fixedFontSize is not null);
 
