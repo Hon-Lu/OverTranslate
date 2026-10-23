@@ -50,6 +50,37 @@ public class DialogueTextGrouperTests
     }
 
     [Fact]
+    public void SpeakerNameStickingOutOverIndentedDialogueStaysSeparate()
+    {
+        // Ren'Py's default name plate (#341), at a framing where the heights pass the 0.75 floor.
+        var groups = DialogueTextGrouper.Group([Block("Eileen", 10, 0, 124, 48), Block("What would you like to see?", 41, 56, 389, 37)]);
+        Assert.Equal(["Eileen", "What would you like to see?"], groups.Select(g => g.Text));
+    }
+
+    [Theory]
+    [InlineData("HEY,", 80, 0, 40, 20, "WHAT ARE YOU DOING HERE", 0, 24, 200, 20)] // centred bubble
+    [InlineData("その音はどこかおぞましく、", 575, 1158, 594, 58, "不穏なものが接近していることをエマたちに感じさせた。", 566, 1229, 1207, 64)]
+    [InlineData("エマもヒロも身を強張らせ、", 559, 1140, 608, 83, "その視線が、ゆるゆると、通路に向けられる。", 663, 1230, 968, 63)]
+    [InlineData("「ねえ", 0, 0, 90, 40, "聞いてる？」", 40, 46, 230, 40)] // hanging indent
+    [InlineData("stevencastle**", 204, 107, 177, 33, "IF YOU'D SEEN HIM CRAWLING FORWARD AFTER", 202, 133, 493, 36)] // flush name
+    public void ShortFirstLinesThatAreNotSpeakerLabelsStayJoined(
+        string first, double x1, double y1, double w1, double h1,
+        string second, double x2, double y2, double w2, double h2)
+    {
+        Assert.Single(DialogueTextGrouper.Group([Block(first, x1, y1, w1, h1), Block(second, x2, y2, w2, h2)]));
+    }
+
+    [Fact]
+    public void ShortMiddleLineOfAParagraphIsNotTakenForASpeakerLabel()
+    {
+        // The second line alone would pass as a name over the third; it already belongs to a paragraph.
+        Assert.Single(DialogueTextGrouper.Group([
+            Block("This is the first line of", 10, 0, 200),
+            Block("a short", 0, 24, 60),
+            Block("paragraph that continues here", 20, 48, 200)]));
+    }
+
+    [Fact]
     public void DifferentSizedUiRowsStaySeparate()
     {
         Assert.Equal(3, DialogueTextGrouper.Group([Block("미스틸", 113, 0, 207, 52), Block("×××", 171, 58, 96, 32), Block("RP 8932-680", 59, 103, 369, 53)]).Count);

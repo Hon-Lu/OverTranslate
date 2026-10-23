@@ -37,6 +37,9 @@ internal static class DialogueTextGrouper
             else row.Add(block);
         }
         var lines = new List<(OcrTextBlock Block, bool Unresolved)>();
+        // Lines built from more than one detected block. A speaker label is one word the detector
+        // read in one piece; see SpeakerLabel.
+        var joinedLines = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
         foreach (var row in rows)
         {
             var segments = new List<List<OcrTextBlock>>();
@@ -55,7 +58,10 @@ internal static class DialogueTextGrouper
             {
                 var line = OcrTextBlockGrouper.BuildGroup(segment);
                 if (segment.Count > 1)
+                {
                     line = line with { Text = segment.Select(b => b.Text.Trim()).Aggregate(OcrTextBlockGrouper.JoinInlineText) };
+                    joinedLines.Add(line);
+                }
                 trace?.RegisterLine(line, segment);
                 lines.Add((line, segments.Count > 1));
             }
@@ -73,6 +79,14 @@ internal static class DialogueTextGrouper
                 var previous = groups[i][^1].LayoutBounds;
                 var current = line.Block.LayoutBounds;
                 var joins = NextRow(previous, current, out var rule);
+                // Only a group of that one line can be a name: the last line of a paragraph that
+                // happens to be short and unpunctuated is still that paragraph's.
+                if (joins && groups[i].Count == 1 && !joinedLines.Contains(groups[i][^1]) &&
+                    SpeakerLabel(groups[i][^1], line.Block))
+                {
+                    joins = false;
+                    rule = "speaker-label";
+                }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;
                 var distance = current.Y - previous.Y;
@@ -133,6 +147,42 @@ internal static class DialogueTextGrouper
         rule = substantialRows ? "stacked-substantial" : "stacked";
         return true;
     }
+
+    /// <summary>
+    /// A name plate over indented dialogue, as Ren'Py draws it by default (issue #341): one short
+    /// unpunctuated word sticking out to the left of a much longer line.
+    /// </summary>
+    /// <remarks>
+    /// <para>The name's box height swings across the 0.75 height floor with the capture's scale and
+    /// framing — 17 of 28 measured variants of the one screen got past it — so size alone cannot
+    /// keep it apart.</para>
+    ///
+    /// <para>Sticking out, not merely left-aligned. A short line flush with the one below is also
+    /// how a left-aligned paragraph starts: a dialogue game's two-line sentence broken after
+    /// その音はどこかおぞましく、 has the same geometry as the name over a comment in a comic
+    /// screenshot's comment section, and splitting either breaks a corpus result. The name measured
+    /// 0.49–0.72 heights left of its dialogue; no short first line in the corpus stuck out more than
+    /// 0.10. A centred speech bubble's short first line sits to the right instead. Plates flush with
+    /// their dialogue are left joined on purpose: a missed name is the lesser harm.</para>
+    ///
+    /// <para>The punctuation and quote checks guard a hanging indent. エマもヒロも身を強張らせ、
+    /// sticks out 1.25 heights over its own continuation and is stopped only by its width; a
+    /// shorter clause would be stopped by its comma, and 「ねえ over an indented 聞いてる？」 by
+    /// its bracket. Names carry neither.</para>
+    /// </remarks>
+    private static bool SpeakerLabel(OcrTextBlock previous, OcrTextBlock current)
+    {
+        Rect a = previous.LayoutBounds, b = current.LayoutBounds;
+        double height = Math.Max(a.Height, b.Height);
+        var text = previous.Text.Trim();
+        return text.Length > 0 && a.Width < b.Width * 0.5 &&
+            !SpeakerLabelEnds.Contains(text[^1]) && !SpeakerLabelOpens.Contains(text[0]) &&
+            a.Left <= b.Left - height * 0.4 &&
+            Math.Abs((a.Left + a.Right - b.Left - b.Right) / 2) >= height * 1.5;
+    }
+
+    private const string SpeakerLabelEnds = ".!?。！？…‥\"”」』)）~～♪♥,、，;；";
+    private const string SpeakerLabelOpens = "「『“\"＂（(";
 
     // The two verdicts, in the record the harness already knows how to print. "row" puts the
     // HORIZONTAL gap in VerticalGap and the vertical overlap in LeftDelta, because that is what the
