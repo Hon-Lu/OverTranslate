@@ -43,6 +43,21 @@ internal partial class RealtimeLanguageMenu : Window
     // Between the capsule's edge and the menu's.
     private const double Gap = 6;
 
+    // What stands between each surface's edge and its text, so the menu can be set where the names
+    // line up rather than the boxes: the menu's border and padding (Chrome), a row's padding
+    // (LanguageRow), and the padding of the capsule's language button (RealtimeLangButton). Each
+    // mirrors its template's value.
+    private const double MenuBorder = 1;
+    private const double MenuPadding = 6;
+    private const double RowPadding = 10;
+    private const double AnchorPadding = 6;
+
+    /// <summary>
+    /// How far left of the pressed button the menu's edge goes, in DIPs, so the names in the list
+    /// start where the name on the button does.
+    /// </summary>
+    internal const double TextAlignmentOffset = MenuBorder + MenuPadding + RowPadding - AnchorPadding;
+
     private readonly IReadOnlyList<RealtimeLanguageMenuEntry> _entries;
     private readonly List<Button> _rows = [];
     private readonly System.Drawing.Rectangle _anchor;
@@ -55,7 +70,7 @@ internal partial class RealtimeLanguageMenu : Window
 
     /// <param name="kind">Which half of the pair this menu changes.</param>
     /// <param name="selectedCode">The language in use, marked in the list.</param>
-    /// <param name="anchor">The pressed button, in physical pixels: the menu's left edge lines up with it.</param>
+    /// <param name="anchor">The pressed button, in physical pixels: the names in the menu line up with the one on it.</param>
     /// <param name="bar">The capsule's visible surface, in physical pixels: the menu opens clear of it.</param>
     /// <param name="screen">The session's screen, which the menu has to stay on.</param>
     public RealtimeLanguageMenu(
@@ -150,8 +165,7 @@ internal partial class RealtimeLanguageMenu : Window
         bool opensUp = below + chromeHeight > _screen.Bottom && above >= _screen.Top;
         int chromeTop = opensUp ? above : below;
 
-        int chromeLeft = Math.Clamp(
-            _anchor.Left, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
+        int chromeLeft = ChromeLeft(_anchor.Left, Physical(TextAlignmentOffset), chromeWidth, _screen);
 
         // Cast upwards when the menu opens upwards, so the shadow falls on the side away from the bar.
         Shadow.Direction = opensUp ? 90 : 270;
@@ -165,6 +179,14 @@ internal partial class RealtimeLanguageMenu : Window
             FocusFirst();
         }
     }
+
+    /// <summary>
+    /// The menu's left edge, in physical pixels: the text-aligned spot left of the button, held on
+    /// the screen — flush with its left edge when the offset would push past it, and pulled in from
+    /// the right edge when the menu is wider than the room there.
+    /// </summary>
+    internal static int ChromeLeft(int anchorLeft, int offset, int chromeWidth, System.Drawing.Rectangle screen) =>
+        Math.Clamp(anchorLeft - offset, screen.Left, Math.Max(screen.Left, screen.Right - chromeWidth));
 
     private Button BuildRow(RealtimeLanguageMenuEntry entry)
     {

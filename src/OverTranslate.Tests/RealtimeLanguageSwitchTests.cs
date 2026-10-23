@@ -88,6 +88,32 @@ public class RealtimeLanguageSwitchTests
             RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Target, "EN-US"),
             e => RealtimeLanguageMenuItems.Matches(e, "zzz"));
 
+    // ── Where the list opens ─────────────────────────────────────────────────
+
+    private static readonly Rectangle Screen = new(0, 0, 1920, 1080);
+
+    // Border 1 + padding 6 + row padding 10 on the menu, less the button's own padding 6.
+    [Fact]
+    public void TheNamesInTheList_StartWhereTheNameOnTheButtonDoes() =>
+        Assert.Equal(11, RealtimeLanguageMenu.TextAlignmentOffset);
+
+    [Fact]
+    public void TheMenu_SitsLeftOfTheButton_ByTheTextOffset() =>
+        Assert.Equal(400 - 17, RealtimeLanguageMenu.ChromeLeft(anchorLeft: 400, offset: 17, chromeWidth: 330, Screen));
+
+    [Fact]
+    public void AButtonNearTheLeftEdge_PutsTheMenuFlushWithIt() =>
+        Assert.Equal(0, RealtimeLanguageMenu.ChromeLeft(anchorLeft: 8, offset: 17, chromeWidth: 330, Screen));
+
+    [Fact]
+    public void AButtonNearTheRightEdge_PullsTheMenuBackOn() =>
+        Assert.Equal(1920 - 330, RealtimeLanguageMenu.ChromeLeft(anchorLeft: 1800, offset: 17, chromeWidth: 330, Screen));
+
+    [Fact]
+    public void ASecondScreenOnTheLeft_IsHeldToItsOwnEdge() =>
+        Assert.Equal(-1920, RealtimeLanguageMenu.ChromeLeft(
+            anchorLeft: -1915, offset: 17, chromeWidth: 330, new Rectangle(-1920, 0, 1920, 1080)));
+
     // ── The session ──────────────────────────────────────────────────────────
 
     private static readonly RealtimeRegion Block =
