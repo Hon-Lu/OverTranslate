@@ -7,6 +7,20 @@ namespace OverTranslate.Services.Realtime;
 /// Dialogue-box geometry, independent of screenshot paragraph, punctuation and heading rules.
 /// Horizontal rows are completed first. An unresolved row is never partially joined vertically.
 /// </summary>
+/// <remarks>
+/// <para>One content test is shared with the other grouper: a line that opens like a chat entry —
+/// timestamp, channel tag, @handle, name and colon (<see cref="SpeakerLineStart"/>) — does not
+/// continue the line above it. A chat log framed in this mode is stacked rows of one size and one
+/// edge, which is exactly what this grouper joins, so the 23 hand-marked chat captures came back
+/// with one message per group in 14 of 245 cases. With the test, 123. Across the subtitle and comic
+/// captures (the 410 frames of the speaker-name probe, every subtitle set, all four comic sets) it
+/// changes nothing; elsewhere it parts a Hacker News title from the line above and a wiki list
+/// entry 「フランス革命：…」 from the one before, both correctly.</para>
+///
+/// <para>The other half the panel path has — a line holding only a speaker refuses to be
+/// continued — is not taken here. That is the name-over-its-message layout #341 left joined on
+/// purpose, and whether it should part is still an open question.</para>
+/// </remarks>
 internal static class DialogueTextGrouper
 {
     /// <param name="decisions">
@@ -111,6 +125,11 @@ internal static class DialogueTextGrouper
                 {
                     joins = false;
                     rule = "numeric-line";
+                }
+                if (joins && SpeakerLineStart.Opens(line.Block.Text))
+                {
+                    joins = false;
+                    rule = "speaker line start";
                 }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;

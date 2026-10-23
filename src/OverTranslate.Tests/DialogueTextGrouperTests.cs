@@ -359,6 +359,23 @@ public class DialogueTextGrouperTests
     }
 
     [Fact]
+    public void ChatEntriesStackedOneSizeOneEdge_StayOneMessageEach()
+    {
+        var first = Block("[GLOBAL] Xa-mul: And on Very High settings", 0, 0, 300);
+        var second = Block("[GLOBAL] Vespy238: heya yall", 0, 24, 200);
+        var third = Block("@alice: another message here", 0, 48, 220);
+        Assert.Equal(3, DialogueTextGrouper.Group([first, second, third]).Count);
+    }
+
+    [Fact]
+    public void ANameOverItsMessage_IsStillLeftAsItWas()
+    {
+        var name = Block("[GLOBAL] Conor_Braxton:", 0, 0, 200);
+        var message = Block("feels good making over 1m off a 33k rental ship", 0, 24, 300);
+        Assert.Single(DialogueTextGrouper.Group([name, message]));
+    }
+
+    [Fact]
     public void DoesNotSkipAnInterveningSpeakerLabel()
     {
         var top = Block("Previous dialogue", 0, 0, 200);
