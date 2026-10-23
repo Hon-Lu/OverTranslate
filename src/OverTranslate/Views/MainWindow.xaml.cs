@@ -1016,7 +1016,7 @@ public partial class MainWindow : Window
             // Placement is what decides the boxes the overlay will draw, and a colour sampled from
             // a box that is about to be cut into four is the average of four backgrounds — the
             // group box of a wrapped paragraph spans whatever the page put between its lines.
-            var placed = OverlayPlacement.Place(translated, CaptureLayoutPolicy.ForApplication(req.LayoutMode), req.IsVerticalText);
+            var placed = OverlayPlacement.Place(translated, CaptureLayoutPolicy.ForApplication(req.LayoutMode), req.IsVerticalText, req.TargetLang);
 
             // Re-use sampled colours from the previous overlay, but only where the block at that
             // index is recognisably the same block. Re-translating after switching capture mode,

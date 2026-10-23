@@ -22,15 +22,27 @@ namespace OverTranslate.Layout;
 /// grouped the way a horizontal capture groups its lines (see
 /// <c>VerticalColumnGrouping.WithRowsSetAcross</c>), so a caption of several lines is one sentence
 /// and is drawn the way General draws one.</para>
+///
+/// <para>And a column whose translation is not written downwards: a target with no vertical
+/// tradition is set across in the column's place (#315, <see cref="VerticalTargetLanguages"/>).
+/// Only the drawing changes. The block keeps its columns and everything else the reading stage
+/// gave it, so what is erased, where the colour is read from and how the page was cut stay the
+/// source's decisions; the intent is all the renderer is told.</para>
 /// </remarks>
 internal static class OverlayPlacement
 {
     public static List<TranslatedBlock> Place(
-        IReadOnlyList<TranslatedBlock> blocks, CaptureLayoutMode mode, bool verticalText)
+        IReadOnlyList<TranslatedBlock> blocks, CaptureLayoutMode mode, bool verticalText, string targetLanguage)
     {
         // Not a fast path — a hard condition. See the remarks above.
         if (verticalText)
-            return [.. blocks.Select(block => block.RunsAcross ? AsGroupReflow(block) : block)];
+        {
+            bool setsDown = VerticalTargetLanguages.SetsDown(targetLanguage);
+            return [.. blocks.Select(block =>
+                block.RunsAcross ? AsGroupReflow(block)
+                : setsDown ? block
+                : block with { LayoutIntent = OverlayLayoutIntent.AcrossInColumns })];
+        }
 
         return mode switch
         {
