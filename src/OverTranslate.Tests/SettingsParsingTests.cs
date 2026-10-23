@@ -364,12 +364,12 @@ public class SettingsParsingTests
         var settings = SettingsService.Parse(
             """
             {"ApiKey":"secret",
-             "Realtime":{"BlockMode":"Webtoon","TextOrientation":"Vertical","BlockCount":3}}
+             "Realtime":{"BlockMode":"Webtoon","TextOrientation":"Vertical","ScrimOpacity":12}}
             """);
 
         Assert.Equal(RealtimeBlockMode.Subtitle, settings.Realtime.BlockMode);
         Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
-        Assert.Equal(3, settings.Realtime.BlockCount);
+        Assert.Equal(12, settings.Realtime.ScrimOpacity);
         Assert.Equal("secret", settings.ApiKey);
     }
 
@@ -564,7 +564,6 @@ public class SettingsParsingTests
             },
             Realtime =
             {
-                BlockCount = 3,
                 GuidanceExpanded = false,
                 TargetLanguage = "JA",
                 Provider = TranslationProvider.OpenAI,
@@ -603,7 +602,6 @@ public class SettingsParsingTests
         Assert.True(settings.Capture.VerticalText);
         Assert.True(settings.QuickLookup.AutoCopyTranslation);
         Assert.True(settings.QuickLookup.ResultsCollapsed);
-        Assert.Equal(3, settings.Realtime.BlockCount);
         Assert.Equal(RealtimeCaptureMode.Window, settings.Realtime.CaptureMode);
         Assert.Equal(@"\\.\DISPLAY2", settings.Realtime.CaptureScreenDeviceName);
         Assert.Equal("chrome", settings.Realtime.CaptureWindowProcess);
@@ -617,18 +615,18 @@ public class SettingsParsingTests
     {
         // The reason the reader descends into groups instead of deserialising them whole: handing a
         // group to the serialiser makes the group the unit that fails, so one hand-edited nonsense
-        // capture mode would take the block count and the switches down with it.
+        // capture mode would take the scrim opacity and the switches down with it.
         var settings = SettingsService.Parse(
             "{\n"
             + "  \"Realtime\": {\n"
             + "    \"CaptureMode\": \"Telepathy\",\n"
-            + "    \"BlockCount\": 3,\n"
+            + "    \"ScrimOpacity\": 12,\n"
             + "    \"NaturalBackgroundEnabled\": true\n"
             + "  }\n"
             + "}");
 
         Assert.Equal(RealtimeCaptureMode.Screen, settings.Realtime.CaptureMode);
-        Assert.Equal(3, settings.Realtime.BlockCount);
+        Assert.Equal(12, settings.Realtime.ScrimOpacity);
         Assert.True(settings.Realtime.NaturalBackgroundEnabled);
     }
 
@@ -663,7 +661,6 @@ public class SettingsParsingTests
         Assert.Equal("Ctrl+Shift+D", settings.RealtimePauseHotkeyDisplay);
 
         // Moved, so a file written before the move no longer says anything about them.
-        Assert.Equal(1, settings.Realtime.BlockCount);
         Assert.Equal(LanguageData.DefaultTargetLanguage, settings.Realtime.TargetLanguage);
         Assert.Equal(
             OverTranslate.Services.Realtime.RealtimeSubtitleColors.DefaultScrimOpacity,

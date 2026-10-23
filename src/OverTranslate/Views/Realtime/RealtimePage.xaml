@@ -368,55 +368,6 @@
                     </Grid>
                 </Border>
 
-                <!-- ── 步驟 3：設定翻譯區塊 ── -->
-                <Border Style="{StaticResource CardBorder}" Padding="16,14">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Margin="0,0,20,0">
-                            <StackPanel Orientation="Horizontal">
-                                <Border Style="{StaticResource StepBadge}">
-                                    <TextBlock Text="3" Style="{StaticResource StepBadgeText}"/>
-                                </Border>
-                                <TextBlock Text="{DynamicResource S.Realtime.Step3Label}" Style="{StaticResource StepLabel}"/>
-                            </StackPanel>
-                            <TextBlock Text="{DynamicResource S.Realtime.Step3Name}" Style="{StaticResource StepTitle}"/>
-                            <TextBlock Text="{DynamicResource S.Realtime.Step3Desc}" Style="{StaticResource StepDescription}"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="{DynamicResource S.Realtime.BlockCount}" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
-                            <!-- A stepper rather than a text field: the value is one of three, and a
-                                 box that accepts typing invites 0, 99 and empty, each of which then
-                                 needs its own rule. The number is display-only and the two buttons
-                                 are the only way in, so no input can be wrong. -->
-                            <Border Style="{StaticResource StepperBorder}" HorizontalAlignment="Left">
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="BlockCountDown"
-                                            Style="{StaticResource StepperButton}"
-                                            Content="&#xE949;"
-                                            AutomationProperties.Name="{DynamicResource S.Realtime.DecreaseBlocks}"
-                                            Click="BlockCountDown_Click"/>
-                                    <TextBlock x:Name="BlockCountText"
-                                               Style="{StaticResource StepperValue}"
-                                               Text="1"/>
-                                    <Button x:Name="BlockCountUp"
-                                            Style="{StaticResource StepperButton}"
-                                            Content="&#xE948;"
-                                            AutomationProperties.Name="{DynamicResource S.Realtime.IncreaseBlocks}"
-                                            Click="BlockCountUp_Click"/>
-                                </StackPanel>
-                            </Border>
-                            <TextBlock Text="{DynamicResource S.Realtime.BlockCountHint}"
-                                       Style="{StaticResource FieldHint}"
-                                       Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="16"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
                 <!-- ── 顯示外觀 ── -->
                 <!-- The one card on this page whose values are kept — see the class remarks for the
                      rule that separates these from the session parameters above. -->

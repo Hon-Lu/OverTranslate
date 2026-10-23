@@ -280,10 +280,7 @@
     <sys:String x:Key="S.Realtime.Provider">Служба</sys:String>
 
     <sys:String x:Key="S.Realtime.ScreenHint">Перевод в реальном времени сейчас работает только с одним экраном.</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCount">Количество</sys:String>
-    <sys:String x:Key="S.Realtime.DecreaseBlocks">Меньше областей</sys:String>
-    <sys:String x:Key="S.Realtime.IncreaseBlocks">Больше областей</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCountHint">Не более 3 областей одновременно.</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCountProgress">Области {0} / {1}</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">Внешний вид</sys:String>
     <sys:String x:Key="S.Realtime.Preview">Предпросмотр</sys:String>
@@ -371,9 +368,6 @@
     <sys:String x:Key="S.Realtime.Step2Label">Шаг 2</sys:String>
     <sys:String x:Key="S.Realtime.Step2Name">Экран или окно</sys:String>
     <sys:String x:Key="S.Realtime.Step2Desc">Укажите экран или окно в соответствии с выбором выше.</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Label">Шаг 3</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Name">Области перевода</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Desc">Сколько участков изображения будет переводиться.</sys:String>
     <sys:String x:Key="S.Realtime.ScreenPrompt">Выберите экран для считывания.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPromptLine">Выберите окно для считывания.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPrompt">Выберите окно</sys:String>

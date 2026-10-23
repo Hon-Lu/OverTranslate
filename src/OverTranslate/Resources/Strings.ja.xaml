@@ -287,10 +287,7 @@
     <sys:String x:Key="S.Realtime.Provider">翻訳サービス</sys:String>
 
     <sys:String x:Key="S.Realtime.ScreenHint">リアルタイム翻訳は現在、一度に 1 つの画面のみ対応しています。</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCount">ブロック数</sys:String>
-    <sys:String x:Key="S.Realtime.DecreaseBlocks">ブロックを減らす</sys:String>
-    <sys:String x:Key="S.Realtime.IncreaseBlocks">ブロックを増やす</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCountHint">同時に作成できるブロックは 3 つまでです。</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCountProgress">ブロック {0} / {1}</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">表示スタイル</sys:String>
     <sys:String x:Key="S.Realtime.Preview">プレビュー</sys:String>
@@ -378,9 +375,6 @@
     <sys:String x:Key="S.Realtime.Step2Label">ステップ 2</sys:String>
     <sys:String x:Key="S.Realtime.Step2Name">画面またはウィンドウを選ぶ</sys:String>
     <sys:String x:Key="S.Realtime.Step2Desc">前の手順で選んだ方法に合わせて、取り込む画面またはウィンドウを指定します。</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Label">ステップ 3</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Name">ブロックを設定する</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Desc">画面のうち翻訳するブロックの数を決めます。</sys:String>
     <sys:String x:Key="S.Realtime.ScreenPrompt">取り込む画面を選びます。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPromptLine">取り込むウィンドウを選びます。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPrompt">ウィンドウを選択</sys:String>

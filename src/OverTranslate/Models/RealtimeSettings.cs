@@ -194,23 +194,14 @@ public class RealtimeSettings
     /// <inheritdoc cref="CaptureWindowProcess"/>
     public string CaptureWindowTitle { get; set; } = "";
 
-    /// <summary>Fewest and most blocks a session may frame — the page's stepper obeys this pair.</summary>
-    public const int MinBlockCount = 1;
-
-    /// <inheritdoc cref="MinBlockCount"/>
-    public const int MaxBlockCount = 3;
-
-    /// <summary>
-    /// How many blocks a session is set up to frame, 1–3. Step 3 on the page.
-    /// </summary>
+    /// <summary>Most blocks a session may frame at once.</summary>
     /// <remarks>
-    /// Kept, unlike the framing itself, because the value is a preference about how the user works
-    /// rather than a fact about the picture they were watching.
-    ///
-    /// One of the values that moved out of a shipped flat key: everyone updating gets 1 back once,
-    /// and 1 is both the default and one press away from anything else.
+    /// Fixed rather than a setting (#338). It was a stepper on the page, defaulting to 1, and all it
+    /// ever did was refuse a second drag: how many blocks a sitting uses is decided while framing,
+    /// where they are drawn and removed. A setting that only stood in the way of that is gone; an old
+    /// file's BlockCount is simply not read.
     /// </remarks>
-    public int BlockCount { get; set; } = MinBlockCount;
+    public const int MaxBlockCount = 3;
 
     /// <summary>
     /// What a newly drawn block is set to read, and which way its text runs: whatever the user last

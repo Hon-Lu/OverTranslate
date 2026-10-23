@@ -64,7 +64,7 @@ public class RealtimeQuickStartTests
     }
 
     [Fact]
-    public void TheRequestCarriesTheSettingsAndKeepsTheBlockCountInRange()
+    public void TheRequestCarriesTheSettings()
     {
         var settings = new AppSettings();
         settings.Realtime.TextColor = "#123456";
@@ -75,14 +75,12 @@ public class RealtimeQuickStartTests
         var request = RealtimeQuickStart.Build(
             settings,
             new System.Drawing.Rectangle(0, 0, 100, 100),
-            blockCount: 9,
             "JA",
             "ZH-HANT",
             TranslationProvider.Microsoft,
             RealtimeCaptureMode.Screen,
             IntPtr.Zero);
 
-        Assert.Equal(RealtimeSettings.MaxBlockCount, request.MaxBlocks);
         Assert.Equal("#123456", request.TextColor);
         Assert.True(request.Border);
         Assert.Equal("#ABCDEF", request.FixedBorderColor);

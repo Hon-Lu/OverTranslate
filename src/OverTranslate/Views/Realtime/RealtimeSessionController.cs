@@ -53,7 +53,6 @@ namespace OverTranslate.Views.Realtime;
 /// </param>
 public sealed record RealtimeStartRequest(
     System.Drawing.Rectangle ScreenBounds,
-    int MaxBlocks,
     string SourceLanguage,
     string TargetLanguage,
     Models.TranslationProvider Provider,
@@ -421,8 +420,8 @@ internal sealed class RealtimeSessionController
         if (IsActive) return;
 
         Log.Info(
-            "Realtime session starting on screen {Screen}, max {Max} block(s), {Src}->{Tgt}",
-            request.ScreenBounds, request.MaxBlocks, request.SourceLanguage, request.TargetLanguage);
+            "Realtime session starting on screen {Screen}, {Src}->{Tgt}",
+            request.ScreenBounds, request.SourceLanguage, request.TargetLanguage);
 
         _request = request;
         _blocks = _remembered is { } kept && kept.Screen == request.ScreenBounds
@@ -728,23 +727,6 @@ internal sealed class RealtimeSessionController
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// Drops the layout kept from the last sitting, so the next one starts on an empty screen.
-    /// </summary>
-    /// <remarks>
-    /// Called when the block count changes: what was drawn was drawn for a set-up that no longer
-    /// exists. Closing the translation window used to say the same and no longer does — the shortcut
-    /// starts sessions without it, see RealtimePage.Teardown. The count is
-    /// not checked when the blocks are offered back, deliberately — the user asked for them to go
-    /// the moment the count moved, and 2 → 3 → 2 leaving old blocks behind would be a set-up they
-    /// had told the program to forget reappearing because they changed their mind twice.
-    ///
-    /// Only the memory. A session that happens to be running keeps its own blocks and carries on:
-    /// closing the shell window has never been a request to end a session, and this does not make
-    /// it one.
-    /// </remarks>
-    public void ForgetBlocks() => _remembered = null;
-
     // ── Modes ────────────────────────────────────────────────────────────────────────────────────
 
     private void EnterEditMode()
@@ -772,7 +754,7 @@ internal sealed class RealtimeSessionController
         var settings = SettingsService.Instance;
 
         var edit = new RealtimeEditWindow(
-            request.ScreenBounds, _blocks, request.MaxBlocks,
+            request.ScreenBounds, _blocks, Models.RealtimeSettings.MaxBlockCount,
             settings.Current.Realtime.GuidanceExpanded,
             settings.Current.Realtime.BlockMode,
             settings.Current.Realtime.TextOrientation,
@@ -780,7 +762,7 @@ internal sealed class RealtimeSessionController
         edit.BlocksChanged += (_, _) =>
         {
             _blocks = [.. edit.GetPhysicalBlocks()];
-            control.SetBlockCount(_blocks.Count, request.MaxBlocks);
+            control.SetBlockCount(_blocks.Count, Models.RealtimeSettings.MaxBlockCount);
         };
         // Written on the press rather than at the end of the session: a session over a full-screen
         // game is as likely to end with the machine being shut down as with 結束即時翻譯.
@@ -802,7 +784,7 @@ internal sealed class RealtimeSessionController
             settings.Save();
         };
         edit.LimitReached += (_, _) =>
-            control.ShowMessage(LocalizationService.Format("S.Realtime.TooManyBlocks", request.MaxBlocks));
+            control.ShowMessage(LocalizationService.Format("S.Realtime.TooManyBlocks", Models.RealtimeSettings.MaxBlockCount));
         _edit = edit;
         edit.Show();
         RefreshOverlayHandles();
@@ -816,7 +798,7 @@ internal sealed class RealtimeSessionController
         control.Owner = edit;
 
         control.SetMode(RealtimeControlMode.Edit);
-        control.SetBlockCount(_blocks.Count, request.MaxBlocks);
+        control.SetBlockCount(_blocks.Count, Models.RealtimeSettings.MaxBlockCount);
         // Belt and braces alongside the ownership above: cheap, and the failure it guards against is
         // a control bar the user cannot reach at all.
         control.BringToFront();

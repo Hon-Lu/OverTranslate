@@ -283,10 +283,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.Provider">Provider</sys:String>
 
     <sys:String x:Key="S.Realtime.ScreenHint">Realtime translation currently covers one screen at a time.</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCount">How many</sys:String>
-    <sys:String x:Key="S.Realtime.DecreaseBlocks">Fewer blocks</sys:String>
-    <sys:String x:Key="S.Realtime.IncreaseBlocks">More blocks</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCountHint">Up to 3 blocks at a time.</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCountProgress">Blocks {0} / {1}</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">Appearance</sys:String>
     <sys:String x:Key="S.Realtime.Preview">Preview</sys:String>
@@ -374,9 +371,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.Step2Label">Step 2</sys:String>
     <sys:String x:Key="S.Realtime.Step2Name">Choose the screen or window</sys:String>
     <sys:String x:Key="S.Realtime.Step2Desc">Name the screen or window to read, following the choice above.</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Label">Step 3</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Name">Set up the blocks</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Desc">How many areas of the picture will be translated.</sys:String>
     <sys:String x:Key="S.Realtime.ScreenPrompt">Choose the screen to read.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPromptLine">Choose the window to read.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPrompt">Choose a window</sys:String>

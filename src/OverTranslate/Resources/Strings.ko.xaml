@@ -287,10 +287,7 @@
     <sys:String x:Key="S.Realtime.Provider">번역 서비스</sys:String>
 
     <sys:String x:Key="S.Realtime.ScreenHint">실시간 번역은 현재 한 번에 화면 하나만 지원합니다.</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCount">블록 수</sys:String>
-    <sys:String x:Key="S.Realtime.DecreaseBlocks">블록 줄이기</sys:String>
-    <sys:String x:Key="S.Realtime.IncreaseBlocks">블록 늘리기</sys:String>
-    <sys:String x:Key="S.Realtime.BlockCountHint">블록은 한 번에 최대 3개까지 만들 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.BlockCountProgress">블록 {0} / {1}</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">표시 모양</sys:String>
     <sys:String x:Key="S.Realtime.Preview">미리 보기</sys:String>
@@ -378,9 +375,6 @@
     <sys:String x:Key="S.Realtime.Step2Label">2단계</sys:String>
     <sys:String x:Key="S.Realtime.Step2Name">화면 또는 창 선택</sys:String>
     <sys:String x:Key="S.Realtime.Step2Desc">앞 단계에서 고른 방식에 맞춰 가져올 화면이나 창을 지정합니다.</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Label">3단계</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Name">번역 블록 설정</sys:String>
-    <sys:String x:Key="S.Realtime.Step3Desc">화면에서 번역할 블록의 개수를 정합니다.</sys:String>
     <sys:String x:Key="S.Realtime.ScreenPrompt">가져올 화면을 선택합니다.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPromptLine">가져올 창을 선택합니다.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowPrompt">창을 선택하세요</sys:String>
