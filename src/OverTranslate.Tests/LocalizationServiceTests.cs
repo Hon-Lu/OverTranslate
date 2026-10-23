@@ -10,6 +10,14 @@ namespace OverTranslate.Tests;
 /// </summary>
 public class LocalizationServiceTests
 {
+    /// <summary>Every interface language on offer, for tests that hold each one to something.</summary>
+    public static TheoryData<string> InterfaceLanguages()
+    {
+        var data = new TheoryData<string>();
+        foreach (var option in LocalizationService.Options) data.Add(option.Code);
+        return data;
+    }
+
     /// <remarks>
     /// Chinese is split by script, and the script has to be read off the region because Windows
     /// reports zh-TW and zh-CN far more often than it reports zh-Hant. Everything unlisted is
@@ -27,6 +35,7 @@ public class LocalizationServiceTests
     [InlineData("zh", LocalizationService.SimplifiedChinese)]
     [InlineData("ja-JP", LocalizationService.Japanese)]
     [InlineData("ko-KR", LocalizationService.Korean)]
+    [InlineData("ru-RU", LocalizationService.Russian)]
     [InlineData("en-US", LocalizationService.English)]
     [InlineData("de-DE", LocalizationService.English)]
     [InlineData("", LocalizationService.English)]
@@ -45,11 +54,7 @@ public class LocalizationServiceTests
     }
 
     [Theory]
-    [InlineData(LocalizationService.TraditionalChinese)]
-    [InlineData(LocalizationService.SimplifiedChinese)]
-    [InlineData(LocalizationService.English)]
-    [InlineData(LocalizationService.Japanese)]
-    [InlineData(LocalizationService.Korean)]
+    [MemberData(nameof(InterfaceLanguages))]
     public void IsSupported_AcceptsEveryLanguageOnOffer(string language) =>
         Assert.True(LocalizationService.IsSupported(language));
 
@@ -90,7 +95,7 @@ public class LocalizationServiceTests
     public void EveryLanguageIsNamedInItself()
     {
         Assert.Equal(
-            new[] { "繁體中文", "简体中文", "English", "日本語", "한국어" },
+            new[] { "繁體中文", "简体中文", "English", "日本語", "한국어", "Русский" },
             LocalizationService.Options.Select(o => o.Display));
     }
 }

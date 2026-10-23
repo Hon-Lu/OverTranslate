@@ -15,17 +15,23 @@ namespace OverTranslate.Tests;
 public class DocumentationLinkTests
 {
     [Theory]
-    [InlineData(LocalizationService.TraditionalChinese)]
-    [InlineData(LocalizationService.SimplifiedChinese)]
-    [InlineData(LocalizationService.English)]
-    [InlineData(LocalizationService.Japanese)]
-    [InlineData(LocalizationService.Korean)]
+    [MemberData(nameof(LocalizationServiceTests.InterfaceLanguages), MemberType = typeof(LocalizationServiceTests))]
     public void EveryLanguagesOllamaGuideExists(string language)
     {
         var path = Path.Combine(RepositoryRoot(), DocumentationLinks.OllamaGuidePath(language));
 
         Assert.True(File.Exists(path), $"{language}: {path} is missing");
     }
+
+    /// <summary>
+    /// The guide is kept to a few languages; any other interface is sent to the English one rather
+    /// than to the Traditional Chinese the strings are authored in.
+    /// </summary>
+    [Fact]
+    public void ALanguageWithoutAGuideGetsTheEnglishOne() =>
+        Assert.Equal(
+            DocumentationLinks.OllamaGuidePath(LocalizationService.English),
+            DocumentationLinks.OllamaGuidePath("xx"));
 
     /// <summary>
     /// The guide the settings page links to is the one for the language on screen.

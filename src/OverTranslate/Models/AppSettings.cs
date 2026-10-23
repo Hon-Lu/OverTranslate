@@ -204,7 +204,7 @@ public class AppSettings
     public string Theme { get; set; } = "Dark";
     /// <summary>
     /// The interface language — one of the codes in
-    /// <see cref="Services.LocalizationService.Options"/> ("zh-Hant", "zh-Hans", "en", "ja", "ko").
+    /// <see cref="Services.LocalizationService.Options"/>, such as "zh-Hant" or "en".
     /// Empty means "not chosen yet".
     /// </summary>
     /// <remarks>

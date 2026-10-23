@@ -416,11 +416,12 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// language the instruction is written in, and the interface language is the closest thing this
     /// application has to the language its user thinks in.
     ///
-    /// 日本語 and 한국어 are served the English wording on purpose: the model's own documentation
-    /// publishes a prompt for Chinese and for English and none for these two, and inventing a
-    /// translation of it would be guessing at a format on the user's behalf. The language the prompt
-    /// names still follows the interface — see <see cref="Fill"/> — so a Japanese interface sends an
-    /// English sentence naming 日本語, which is the owner's decision and not an oversight.
+    /// Every interface other than the two Chinese ones is served the English wording on purpose: the
+    /// model's own documentation publishes a prompt for Chinese and for English and none for any
+    /// other language, and inventing a translation of it would be guessing at a format on the user's
+    /// behalf. The language the prompt names still follows the interface — see <see cref="Fill"/> —
+    /// so a Japanese interface sends an English sentence naming 日本語, which is the owner's decision
+    /// and not an oversight.
     ///
     /// Branching on <see cref="LocalizationService.Current"/> rather than reading the string
     /// dictionaries, even though these are translations of one sentence: the dictionaries fall back
@@ -447,9 +448,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         LocalizationService.SimplifiedChinese =>
             $"将以下文本翻译为{TargetPlaceholder}，注意只需要输出翻译后的结果，不要额外解释：\n\n",
 
-        // English is also the default arm, which is what a language this build has no dictionary for
-        // would take — unreachable in practice, since LocalizationService.Current resolves the stored
-        // code against the same table first, and present because a switch has to be exhaustive.
+        // English, and every other interface language.
         _ =>
             $"Translate the following text into {TargetPlaceholder}. Note that you should only " +
             "output the translated result without any additional explanation:\n\n",
