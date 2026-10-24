@@ -164,7 +164,7 @@ public partial class ToolbarWindow
         _copyShotTimer.Stop();
         _copyShotTimer.Start();
 
-        FlashLabel(CopyShotBtn, OverTranslate.Services.LocalizationService.Get("S.Main.CopiedTitle"));
+        Labels.Flash(CopyShotBtn, OverTranslate.Services.LocalizationService.Get("S.Main.CopiedTitle"));
     }
 
     /// <summary>Gives the screenshot button its camera back.</summary>

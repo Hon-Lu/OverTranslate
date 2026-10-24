@@ -1,6 +1,7 @@
 <Window x:Class="OverTranslate.Views.Realtime.RealtimeControlWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:OverTranslate.Controls"
         WindowStyle="None"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
@@ -247,7 +248,8 @@
                              button's centre, measured, which next to the chevron on the collapsed
                              capsule read as crooked. E8BB lands its ink exactly on the centre at every
                              size (see TranslationPage); 9.5 matches the old glyph's 9.4px of ink. -->
-                        <Button Content="&#xE8BB;"
+                        <Button x:Name="EditCloseBtn"
+                                Content="&#xE8BB;"
                                 Style="{StaticResource ToolbarIconButton}"
                                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                 FontSize="9.5"
@@ -477,13 +479,19 @@
                              button's centre, measured, which next to the chevron on the collapsed
                              capsule read as crooked. E8BB lands its ink exactly on the centre at every
                              size (see TranslationPage); 9.5 matches the old glyph's 9.4px of ink. -->
-                        <Button Content="&#xE8BB;"
+                        <Button x:Name="RunCloseBtn"
+                                Content="&#xE8BB;"
                                 Style="{StaticResource ToolbarIconButton}"
                                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                 FontSize="9.5"
                                 ToolTip="{DynamicResource S.Realtime.StopSession}"
                                 Click="CloseBtn_Click"/>
                     </StackPanel>
+
+                    <!-- The name of whatever the pointer is on, and a line on what it does: the same
+                         card as the capture toolbar's, so the two bars answer a hover the same way.
+                         See Controls/ToolbarLabel. -->
+                    <ctl:ToolbarLabel x:Name="Labels"/>
                 </Grid>
             </Border>
         </Grid>
