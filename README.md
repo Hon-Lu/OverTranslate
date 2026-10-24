@@ -86,7 +86,8 @@ Once the selection is done, the toolbar offers:
 
 - **Copy text:** copies the recognized text straight to the clipboard, no translation needed
 - **Screenshot:** copies the selected area to the clipboard, and also saves an image file when "Save screenshots" is turned on in the settings
-- **Annotate:** mark up the capture directly with the pen, highlighter or shapes such as lines, rectangles and ellipses, then copy or save what you drew with Screenshot; some settings are remembered
+- **Annotate:** mark up the capture directly with the pen, highlighter or shapes such as lines, arrows, rectangles and ellipses, then copy or save what you drew with Screenshot; some settings are remembered
+- **Settings (gear icon):** toggles Auto-translate (translates as soon as the selection is done), Close after screenshot, Save screenshots, and Debug aids, which draw the OCR boxes on the result
 
 ![截圖翻譯-標記.png](docs/images/截圖翻譯-標記.png)
 
@@ -103,7 +104,7 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 
 ### Translation Block Modes (area selection)
 
-> While real-time translation is running, use the hotkey (default Ctrl + Alt + S) to pause / resume translation,  
+> The real-time translation hotkey (default Ctrl + Alt + S) starts selecting blocks when it isn't running, and starts translating when pressed again during selection; while translating, it pauses / resumes,  
 > When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
 
 Translation blocks come with several modes and layouts:
@@ -143,7 +144,7 @@ Turn on "Compare with original" from the floating bar to keep the original scree
 > Video source: [millsage「everscape」](https://www.youtube.com/watch?v=nPv1dBYawZQ)
 
 ## Quick Lookup
-> The hotkey (default `Ctrl + Alt + Q`) opens it on top of whatever is on screen.
+> The hotkey (default `Ctrl + C + C`: hold Ctrl and press C twice) opens it on top of whatever is on screen.
 
 Select some text and press the hotkey and it is picked up and translated straight away; with nothing selected, you can type the text in yourself.  
 The window closes itself when you switch to another window; pin it if you need it to stay on screen.
@@ -176,21 +177,19 @@ built-in text to speech (TTS) reads both the original text and the translation a
 
 | Setting | Description |
 |---------|-------------|
-| Interface language | Traditional Chinese / Simplified Chinese / English / Japanese / Korean, applied immediately (on first launch it follows your Windows display language) |
+| Interface language | Traditional Chinese / Simplified Chinese / English / Japanese / Korean / Russian, applied immediately (on first launch it follows your Windows display language) |
 | Screenshot translation (hotkey) | Starts a selection and translates it (default `Ctrl + Alt + A`) |
 | Open translation window (hotkey) | Brings up the main window on the page you left it on (default `Ctrl + Alt + W`); while real-time translation is running, it brings the floating bar to the front |
-| Pause / resume (hotkey) | Pauses or resumes **real-time translation** (default `Ctrl + Alt + S`); while paused you can read the original text |
-| Quick lookup (hotkey) | Opens the **quick lookup** window (default `Ctrl + Alt + Q`); any text you have selected is picked up automatically |
+| Real-time translation (hotkey) | Starts selecting blocks when **real-time translation** isn't running, starts translating when pressed again during selection, and pauses / resumes while translating (default `Ctrl + Alt + S`); while paused you can read the original text |
+| Quick lookup (hotkey) | Opens the **quick lookup** window (default `Ctrl + C + C`); any text you have selected is picked up automatically |
 | In-place translation (hotkey) | Replaces the selected text with its translation (default `Ctrl + Alt + E`), and can use its own source and target language |
-| Auto translate | Translates immediately once the screenshot area is selected, with nothing left to click (off by default) |
 | Run at startup | Launch automatically when Windows starts |
 | Save screenshots | Save captures automatically, to a folder of your choice (off by default) |
 | Service setup | Choose which services appear in the translation service menus, and set the key, endpoint, and model for DeepL and OpenAI |
 | Theme | Light / Dark |
 | Logging | Records more detailed information about what the app is doing; recommended only while troubleshooting (off by default) |
-| Debug tools | Draws the OCR boxes and text group boxes on top of the **screenshot translation** result (off by default) |
 
-> As well as key combinations, a shortcut can be a single key (F1 ~ F24, Pause, Scroll Lock), the middle or side mouse buttons, or a gamepad button.
+> As well as key combinations, a shortcut can be a single key (F1 ~ F24, Pause, Scroll Lock), a double press (Ctrl + Ctrl, Ctrl + C + C), the middle or side mouse buttons, or a gamepad button.
 
 > Logs are stored on your machine only and are never uploaded automatically; what **Record detailed information** adds also stays on your machine. To report a problem, press **Export diagnostics** and **Upload** on the settings page.
 
