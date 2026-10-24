@@ -152,9 +152,6 @@
                                        Style="{StaticResource FieldHint}"
                                        Foreground="{DynamicResource AppWarning}"
                                        Margin="0"
-                                       TextWrapping="NoWrap"
-                                       TextTrimming="CharacterEllipsis"
-                                       ToolTip="{DynamicResource S.Settings.HotkeyElevatedNote}"
                                        VerticalAlignment="Top"/>
                         </Grid>
                     </ControlTemplate>
@@ -722,9 +719,6 @@
                                                Text="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
                                                Style="{StaticResource FieldHint}"
                                                Margin="0"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
                                                VerticalAlignment="Top"/>
                                 </Grid>
 
@@ -1131,9 +1125,6 @@
                                                Text="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
                                                Style="{StaticResource FieldHint}"
                                                Margin="0"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
                                                VerticalAlignment="Top"/>
                                 </Grid>
 
