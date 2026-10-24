@@ -40,13 +40,15 @@ internal static class DialogueTextGrouper
         // Lines built from more than one detected block. A speaker label is one word the detector
         // read in one piece; see SpeakerLabel.
         var joinedLines = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
-        // The rows ItemRow took for slot labels; see ValuesBesideItems.
-        var itemRows = new List<Rect>();
+        // The rows ItemRow took for slot labels, and the row each line came from; see
+        // ValuesBesideItems.
+        var itemRows = new List<(Rect Span, List<OcrTextBlock> Row)>();
+        var lineRows = new Dictionary<OcrTextBlock, List<OcrTextBlock>>(ReferenceEqualityComparer.Instance);
         foreach (var row in rows)
         {
             var segments = new List<List<OcrTextBlock>>();
             var items = ItemRow(row, rows);
-            if (items) itemRows.Add(Span(row));
+            if (items && row.Any(b => HasLetter(b.Text))) itemRows.Add((Span(row), row));
             foreach (var block in row)
             {
                 var joinsRow = segments.Count > 0 && Adjacent(segments[^1][^1].LayoutBounds, block.LayoutBounds);
@@ -79,6 +81,7 @@ internal static class DialogueTextGrouper
                 }
                 trace?.RegisterLine(line, segment);
                 lines.Add((line, segments.Count > 1));
+                lineRows[line] = row;
             }
         }
         var groups = new List<List<OcrTextBlock>>();
@@ -103,7 +106,7 @@ internal static class DialogueTextGrouper
                     rule = "speaker-label";
                 }
                 if (joins && HasLetter(groups[i][^1].Text) != HasLetter(line.Block.Text) &&
-                    (ValuesBesideItems(groups[i][^1], itemRows) || ValuesBesideItems(line.Block, itemRows)))
+                    (ValuesBesideItems(groups[i][^1], itemRows, lineRows) || ValuesBesideItems(line.Block, itemRows, lineRows)))
                 {
                     joins = false;
                     rule = "numeric-line";
@@ -202,12 +205,18 @@ internal static class DialogueTextGrouper
     /// letterless line instead would also part a Korean scoreboard's 26/3/19 from the TK / K / A
     /// under it, which nothing about slot labels said; tying it to an item row changed no corpus
     /// frame.
+    /// <para>Only a row with words in it counts as the labels, and never the values' own row. A
+    /// scoreboard's two rows of bare numbers itemise each other, and either row would otherwise
+    /// count as labels beside the other, or beside itself, and be parted from the header under
+    /// them.</para>
     /// </remarks>
-    private static bool ValuesBesideItems(OcrTextBlock line, List<Rect> itemRows)
+    private static bool ValuesBesideItems(OcrTextBlock line, List<(Rect Span, List<OcrTextBlock> Row)> itemRows,
+        Dictionary<OcrTextBlock, List<OcrTextBlock>> lineRows)
     {
         if (HasLetter(line.Text) || DigitRuns(line.Text) < 3) return false;
         Rect r = line.LayoutBounds;
-        return itemRows.Any(items =>
+        var own = lineRows.GetValueOrDefault(line);
+        return itemRows.Where(i => !ReferenceEquals(i.Row, own)).Select(i => i.Span).Any(items =>
             Math.Max(items.Top - r.Bottom, r.Top - items.Bottom) <= Math.Max(items.Height, r.Height) * 1.5 &&
             Math.Min(items.Right, r.Right) - Math.Max(items.Left, r.Left) >= items.Width * 0.5);
     }

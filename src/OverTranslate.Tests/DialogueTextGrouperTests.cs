@@ -244,6 +244,19 @@ public class DialogueTextGrouperTests
         Assert.Contains("絶頂142回", texts);
     }
 
+    // A scoreboard of two rows of bare numbers over its header: the rows itemise each other, but
+    // neither is a row of labels, so the header is not parted from them.
+    [Fact]
+    public void ScoreRowsAreNotTakenForSlotLabels()
+    {
+        Assert.Equal(["26 3 19 12 5 7 TK / K / A"], DialogueTextGrouper.Group(
+        [
+            Block("26", 1000, 40, 60, 50), Block("3", 1090, 40, 30, 50), Block("19", 1150, 40, 60, 50),
+            Block("12", 1000, 100, 60, 50), Block("5", 1090, 100, 30, 50), Block("7", 1150, 100, 30, 50),
+            Block("TK / K / A", 1000, 160, 180, 49),
+        ]).Select(b => b.Text));
+    }
+
     // A scoreboard's letterless 26/3/19 over TK / K / A (screen-subtitle-ko), with no slot labels
     // anywhere: grouped as before.
     [Fact]
