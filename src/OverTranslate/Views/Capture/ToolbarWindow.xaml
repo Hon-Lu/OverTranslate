@@ -682,14 +682,9 @@
                         <Popup x:Name="LabelPopup" PlacementTarget="{Binding ElementName=BarSurface}"
                                Placement="Relative" AllowsTransparency="True" StaysOpen="True"
                                Focusable="False" IsHitTestVisible="False" PopupAnimation="None">
+                            <!-- No transform, animated or otherwise: it comes and goes by fading only.
+                                 See PlaceLabel for why. -->
                             <capture:ToolbarLabelPanel x:Name="LabelPanel" IsHitTestVisible="False">
-                                <!-- Coming in and going out only; where it is, is the panel's. -->
-                                <capture:ToolbarLabelPanel.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform x:Name="LabelScale"/>
-                                        <TranslateTransform x:Name="LabelLift"/>
-                                    </TransformGroup>
-                                </capture:ToolbarLabelPanel.RenderTransform>
 
                                 <Grid x:Name="LabelCard">
                                     <!-- Shadow on an empty twin, as on the bar itself. -->

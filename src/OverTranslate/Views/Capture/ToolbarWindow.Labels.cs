@@ -283,14 +283,13 @@ public partial class ToolbarWindow
             return;
         }
 
-        // Grows out of the button: scaled about the arrow's tip, and drawn a few pixels towards it.
-        var duration = TimeSpan.FromMilliseconds(LabelInMs);
-        LabelPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
-        var grow = new DoubleAnimation(0.97, 1, duration) { EasingFunction = ease };
-        LabelScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, grow);
-        LabelScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, grow);
-        LabelLift.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-            new DoubleAnimation(LabelPanel.Above ? 4 : -4, 0, duration) { EasingFunction = ease });
+        // Faded in, and nothing else. It used to rise a few pixels towards the button as well, and
+        // text under a moving transform is drawn the way WPF draws animated text, then eased back to
+        // its sharp form about a second after the movement stops: measured, the name stayed blurred
+        // until 950ms with the lift and was sharp by 350ms without it. A fade leaves the text where
+        // it is.
+        LabelPanel.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(LabelInMs)) { EasingFunction = ease });
     }
 
     /// <summary>
@@ -315,9 +314,6 @@ public partial class ToolbarWindow
         LabelPopup.VerticalOffset = above
             ? top - LabelGap - height - ToolbarLabelPanel.Edge
             : top + button.ActualHeight + LabelGap - ToolbarLabelPanel.Edge;
-
-        LabelScale.CenterX = ToolbarLabelPanel.SideRoom + LabelPanel.Anchor;
-        LabelScale.CenterY = above ? ToolbarLabelPanel.Edge + height : ToolbarLabelPanel.Edge;
     }
 
     /// <summary>Whether the card goes over the button rather than under it.</summary>
