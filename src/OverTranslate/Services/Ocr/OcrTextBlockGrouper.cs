@@ -76,14 +76,10 @@ internal static class OcrTextBlockGrouper
 
         trace?.OrderLines(sorted);
 
-        // Read once per page, and only by the mode that takes prose evidence at all.
-        IReadOnlyList<(OcrTextBlock Upper, OcrTextBlock Lower)> leadingSamples =
-            profile.TakesProseEvidence ? PageLeadingSamples(sorted) : [];
-
         var groups = new List<List<OcrTextBlock>>();
         foreach (var block in sorted)
         {
-            var target = GroupThisLineContinues(groups, block, sorted, leadingSamples, profile, decisions, trace);
+            var target = GroupThisLineContinues(groups, block, sorted, profile, decisions, trace);
             if (target is not null)
                 target.Add(block);
             else
@@ -601,7 +597,6 @@ internal static class OcrTextBlockGrouper
         List<List<OcrTextBlock>> groups,
         OcrTextBlock current,
         IReadOnlyList<OcrTextBlock> lines,
-        IReadOnlyList<(OcrTextBlock Upper, OcrTextBlock Lower)> leadingSamples,
         GroupingProfile profile,
         List<NextLineDecision>? decisions,
         GroupingTrace? trace)
@@ -624,7 +619,7 @@ internal static class OcrTextBlockGrouper
             if (!NothingLiesBetween(previous, current, lines))
                 continue;
 
-            if (!CanJoinNextLine(group, current, profile, decisions, trace, lines, leadingSamples))
+            if (!CanJoinNextLine(group, current, profile, decisions, trace, lines))
                 continue;
 
             var avgHeight = (previous.LayoutBounds.Height + current.LayoutBounds.Height) / 2.0;
@@ -772,12 +767,11 @@ internal static class OcrTextBlockGrouper
         GroupingProfile profile,
         List<NextLineDecision>? decisions,
         GroupingTrace? trace,
-        IReadOnlyList<OcrTextBlock> lines,
-        IReadOnlyList<(OcrTextBlock Upper, OcrTextBlock Lower)> leadingSamples)
+        IReadOnlyList<OcrTextBlock> lines)
     {
         var previous = group[^1];
         var paragraphFinal = IsEstablishedParagraphFinalLine(group, current, profile);
-        var looseProse = IsLooselySetProse(previous, current, profile, leadingSamples);
+        var looseProse = IsLooselySetProse(previous, current, profile, lines);
         var (joined, rule) = JudgeNextLine(previous, current, profile, paragraphFinal, looseProse);
         if (joined && looseProse && LineAdvanceRatio(previous, current) > SolidBarFor(previous, profile))
             rule = "regular prose leading";
@@ -1204,19 +1198,22 @@ internal static class OcrTextBlockGrouper
     }
 
     /// <summary>
-    /// Whether two long lines sit no further apart than this page sets lines of their size: body
-    /// text whose leading is looser than <see cref="SolidBarFor"/> allows, judged against the page
-    /// it is on rather than against a constant.
+    /// Whether two long lines sit no further apart than their own column sets lines of their size:
+    /// body text whose leading is looser than <see cref="SolidBarFor"/> allows, judged against the
+    /// column it is in rather than against a constant.
     /// </summary>
     /// <remarks>
     /// <para>Browsers set body text looser than interface text, so a web paragraph can sit at 1.5
     /// to 1.6 line heights per line where every set-solid figure stops. A constant cannot follow
-    /// that, because the same advance is also what separates a stack of interface labels; the page
-    /// itself can, because a paragraph's lines are the most frequent step down a page of prose. So
-    /// the bar is the first quartile of the steps between this page's stacked, aligned lines of the
-    /// same size (<see cref="PageLeadingSamples"/>), with <see cref="PageLeadingSlack"/> on top.
-    /// Fewer than <see cref="MinPageLeadingSamples"/> and the page has no leading to read, and the
-    /// pair is left to the set-solid figures.</para>
+    /// that, because the same advance is also what separates a stack of interface labels; the
+    /// column itself can, because a paragraph's lines are the most frequent step down it. So the
+    /// bar is the first quartile of the steps between the lines of this size that share an edge
+    /// with the line above (its column), counting only steps from a line at least
+    /// <see cref="LineMeasure.WrappedLineMinAspect"/> long, with <see cref="ColumnLeadingSlack"/>
+    /// on top. Fewer than <see cref="MinColumnLeadingSamples"/> and the column has no leading to
+    /// read, and the pair is left to the set-solid figures. Reading the whole page instead bought
+    /// nothing on the corpus, and it lets a side column of short labels set at 1.0 pull the bar
+    /// under the body's own leading, or a column of headlines borrow the body's.</para>
     ///
     /// <para>Only a line at least <see cref="LineMeasure.ProseLineMinAspect"/> long earns this,
     /// and that gate is load-bearing. A page of list entries has a pitch too — the list's own —
@@ -1224,12 +1221,12 @@ internal static class OcrTextBlockGrouper
     /// 72 screenshots: lowering the gate to 12 or 8 line heights adds 1 and 3 wrong joins to the
     /// one-entry-per-line panel; raising it to 25 splits ten web-v3 paragraphs back apart.</para>
     ///
-    /// <para>This used to be Latin only and to read its samples off lines flush left with the line
+    /// <para>This used to be Latin only and to read its column off lines flush left with the line
     /// above. Neither is needed. Lifting the script gate changed no group across the Japanese and
     /// Chinese pages of the corpus (region-web-ja, web-v2's zh and ja pages, web-v3); reading the
     /// alignment on any edge rather than the left one joined a paragraph's short last line back on
-    /// (web-v2 en2, "GPU. See PP-OCRv6 Technical Documentation"). Whatever the page says, it still
-    /// stops at <see cref="LooseProseMaxAdvance"/>: the vertical-gap gate in
+    /// (web-v2 en2, "GPU. See PP-OCRv6 Technical Documentation"). Whatever the column says, it
+    /// still stops at <see cref="LooseProseMaxAdvance"/>: the vertical-gap gate in
     /// <see cref="JudgeNextLine"/> lets lines of one size through up to 1.8 line heights apart, and
     /// a stack of long unpunctuated headlines at 1.7 under body set at 1.5 would otherwise read as
     /// one paragraph. It never crosses a sentence end either:
@@ -1237,7 +1234,7 @@ internal static class OcrTextBlockGrouper
     /// </remarks>
     private static bool IsLooselySetProse(
         OcrTextBlock previous, OcrTextBlock current, GroupingProfile profile,
-        IReadOnlyList<(OcrTextBlock Upper, OcrTextBlock Lower)> leadingSamples)
+        IReadOnlyList<OcrTextBlock> lines)
     {
         if (!profile.TakesProseEvidence ||
             !LineMeasure.Spans(previous.LayoutBounds, LineMeasure.ProseLineMinAspect) ||
@@ -1247,56 +1244,25 @@ internal static class OcrTextBlockGrouper
             LineAdvanceRatio(previous, current) > LooseProseMaxAdvance)
             return false;
 
-        var advances = leadingSamples
-            .Where(pair => TextSizeRatio(previous, pair.Upper) >= MinTextSizeRatio &&
-                           TextSizeRatio(pair.Upper, pair.Lower) >= MinTextSizeRatio)
-            .Select(pair => pair.Lower.LayoutBounds.Top - pair.Upper.LayoutBounds.Top)
-            .Order()
-            .ToArray();
-        if (advances.Length < MinPageLeadingSamples)
+        var column = lines.Where(b => TextSizeRatio(previous, b) >= MinTextSizeRatio && SharesAnEdge(previous, b))
+            .OrderBy(b => b.LayoutBounds.Top).ToArray();
+        var advances = new List<double>();
+        for (var i = 1; i < column.Length; i++)
+        {
+            var upper = column[i - 1];
+            var lower = column[i];
+            if (!LineMeasure.Spans(upper.LayoutBounds, LineMeasure.WrappedLineMinAspect) ||
+                LineAdvanceRatio(upper, lower) < ColumnLeadingSampleMin ||
+                LineAdvanceRatio(upper, lower) > ColumnLeadingSampleMax)
+                continue;
+            advances.Add(lower.LayoutBounds.Top - upper.LayoutBounds.Top);
+        }
+        if (advances.Count < MinColumnLeadingSamples)
             return false;
 
-        var typical = advances[(advances.Length - 1) / 4];
-        return current.LayoutBounds.Top - previous.LayoutBounds.Top <= typical * PageLeadingSlack;
-    }
-
-    /// <summary>
-    /// The steps down this page that can say what its leading is: each line and the nearest line
-    /// below that overlaps it across, when the two share an edge and sit a plausible line advance
-    /// apart.
-    /// </summary>
-    /// <remarks>
-    /// Size is not filtered here, because which size counts depends on the line asking; see
-    /// <see cref="IsLooselySetProse"/>. Nearest by the top edge, so a line has at most one step
-    /// below it and a two-column page contributes each column's steps rather than the jumps
-    /// between them.
-    /// </remarks>
-    private static List<(OcrTextBlock Upper, OcrTextBlock Lower)> PageLeadingSamples(
-        IReadOnlyList<OcrTextBlock> lines)
-    {
-        var samples = new List<(OcrTextBlock, OcrTextBlock)>();
-        foreach (var upper in lines)
-        {
-            OcrTextBlock? lower = null;
-            foreach (var line in lines)
-            {
-                if (ReferenceEquals(line, upper) ||
-                    line.LayoutBounds.Top < upper.LayoutBounds.Top +
-                        Math.Min(upper.LayoutBounds.Height, line.LayoutBounds.Height) / 2 ||
-                    Math.Min(upper.LayoutBounds.Right, line.LayoutBounds.Right) <=
-                        Math.Max(upper.LayoutBounds.Left, line.LayoutBounds.Left))
-                    continue;
-                if (lower is null || line.LayoutBounds.Top < lower.LayoutBounds.Top)
-                    lower = line;
-            }
-
-            if (lower is null || !SharesAnEdge(upper, lower))
-                continue;
-            var advance = LineAdvanceRatio(upper, lower);
-            if (advance >= LeadingSampleMinAdvance && advance <= LeadingSampleMaxAdvance)
-                samples.Add((upper, lower));
-        }
-        return samples;
+        advances.Sort();
+        var typical = advances[(advances.Count - 1) / 4];
+        return current.LayoutBounds.Top - previous.LayoutBounds.Top <= typical * ColumnLeadingSlack;
     }
 
     // Use the established paragraph, not just an ambiguous isolated pair.
@@ -1615,20 +1581,20 @@ internal static class OcrTextBlockGrouper
     /// <summary>The widest step between the rows that vouch for a cut row being one line of a paragraph.</summary>
     private const double ParagraphRowMaxAdvance = 1.45;
 
-    /// <summary>The loosest leading a body line may have and still be asked about its page's own.</summary>
+    /// <summary>The loosest leading a body line may have and still be asked about its column's own.</summary>
     private const double LooseProseMaxAdvance = 1.65;
 
-    /// <summary>Which steps down a page count as samples of its leading, in line heights.</summary>
-    private const double LeadingSampleMinAdvance = 0.8;
+    /// <summary>Which steps down a column count as samples of its leading, in line heights.</summary>
+    private const double ColumnLeadingSampleMin = 0.8;
 
-    /// <inheritdoc cref="LeadingSampleMinAdvance"/>
-    private const double LeadingSampleMaxAdvance = 1.8;
+    /// <inheritdoc cref="ColumnLeadingSampleMin"/>
+    private const double ColumnLeadingSampleMax = 1.8;
 
-    /// <summary>How few samples still say what a page's leading is; under this the page has none to read.</summary>
-    private const int MinPageLeadingSamples = 3;
+    /// <summary>How few samples still say what a column's leading is; under this it has none to read.</summary>
+    private const int MinColumnLeadingSamples = 3;
 
-    /// <summary>How far past its page's typical leading a body line may sit and still continue it.</summary>
-    private const double PageLeadingSlack = 1.2;
+    /// <summary>How far past its column's typical leading a body line may sit and still continue it.</summary>
+    private const double ColumnLeadingSlack = 1.2;
 
     /// <summary>How much smaller a different-script line's ink may be before the line above is a heading over it.</summary>
     private const double VisibleHeadingInkRatio = 0.85;

@@ -134,6 +134,19 @@ public class WebParagraphGroupingTests
     }
 
     [Fact]
+    public void ANavigationColumnBesideTheBodyDoesNotSetTheBodysLeading()
+    {
+        // Short labels stacked at 1.0 in a side column; the body beside them is set at 1.5 and
+        // reads its leading off its own column, not off the labels.
+        var page = Enumerable.Range(0, 6)
+            .Select(i => new OcrTextBlock("導覽項目", new Rect(20, 100 + i * 30, 120, 30)).AsDetected())
+            .Concat(Enumerable.Range(0, 4)
+                .Select(i => new OcrTextBlock("這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容", new Rect(300, 100 + i * 45, 700, 30)).AsDetected()))
+            .ToArray();
+        Assert.Contains("b6,b7,b8,b9", Members(page, GroupingProfile.General).Split('|'));
+    }
+
+    [Fact]
     public void ThePagesLeadingIsReadByTheScreenshotModeOnly()
     {
         var page = LooselySetPage(5, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
