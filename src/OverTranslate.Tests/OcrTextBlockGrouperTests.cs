@@ -498,6 +498,27 @@ public class OcrTextBlockGrouperTests
     }
 
     /// <summary>
+    /// With no glyph estimate on either side, the size is read off the boxes, and a box's height
+    /// jumps from frame to frame (0.68 to 1.00 for one pair). A row that joined on one frame and
+    /// broke on the next would flicker on the live overlay, so boxes alone never break a row.
+    /// </summary>
+    [Theory]
+    [InlineData(27)]
+    [InlineData(40)]
+    public void BoxHeightsAloneNeverBreakARow_SoTheLiveOverlayDoesNotFlicker(double height)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            new("設定", new Rect(100, 100, 80, 40), LayoutScript: OcrLayoutScript.Cjk, LayoutBounds: new Rect(100, 100, 80, 40)),
+            new("畫面與聲音的各項選項", new Rect(192, 100 + (40 - height) / 2, 260, height),
+                LayoutScript: OcrLayoutScript.Cjk, LayoutBounds: new Rect(192, 100 + (40 - height) / 2, 260, height)),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.Realtime));
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
     /// The level and the badge the detector cut out of the same cell overlap, so they stay one
     /// however different their sizes are.
     /// </summary>

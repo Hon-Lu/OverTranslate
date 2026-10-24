@@ -438,6 +438,11 @@ internal static class OcrTextBlockGrouper
     /// sat both further apart than that and under <see cref="SizeBreakMaxRatio"/>; the nearest, "①
     /// Lvl 100" beside "M. Lvl 50 Eugen", is 0.98 the size.</para>
     ///
+    /// <para>Only on the glyph estimates (<see cref="TextSizeBasis.Glyph"/>). Without one on both
+    /// sides the size is read off the boxes, and a box's height jumps from frame to frame — 0.68 to
+    /// 1.00 for one pair on the live path — so a row would join on one frame and break on the next,
+    /// and the overlay would flicker. The cases this is for were all measured on estimates.</para>
+    ///
     /// <para>Both sides need letters enough to have a size (<see cref="HasSteadySize"/>). A box
     /// of symbols only — a dash, a bar, a star the detector boxed on its own — has none: it is
     /// thinner and shorter than the words beside it, so "2019 - 2024" and a nav bar's separators
@@ -454,8 +459,8 @@ internal static class OcrTextBlockGrouper
     {
         if (horizontalGap <= avgHeight * SizeBreakMinGap)
             return false;
-        var ratio = TextSizeRatio(previous, current, out _, out var previousSize, out var currentSize);
-        if (ratio >= SizeBreakMaxRatio)
+        var ratio = TextSizeRatio(previous, current, out var basis, out var previousSize, out var currentSize);
+        if (ratio >= SizeBreakMaxRatio || basis != TextSizeBasis.Glyph)
             return false;
         var previousIsSmaller = previousSize < currentSize;
         return HasSteadySize(previous, previousIsSmaller) && HasSteadySize(current, !previousIsSmaller);
