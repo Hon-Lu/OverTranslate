@@ -40,20 +40,12 @@ public partial class ToolbarWindow
     // Between the button and the card's edge; the arrow lives in it.
     private const double LabelGap = 9;
 
-    // Room around the card inside the popup for its shadow, and above or below it for the arrow.
-    private const double LabelEdge = 10;
-
-    // How far the arrow keeps from either end of the card: past the 9 of the rounded corner, by
-    // half its own width and a little more, so it always leaves from a straight edge.
-    private const double LabelArrowInset = 18;
-
-    // Room either side of the bar inside the popup, for a card let out past the bar's end so its
-    // arrow can stay off the corner — at most the inset plus the half a button it is centred on.
-    private const double LabelSideRoom = 40;
-
     private readonly List<LabelTarget> _labelTargets = new();
     private LabelTarget? _labelCurrent;
     private LabelTarget? _labelSuppressed;
+
+    // The button the card is on, or sliding to.
+    private FrameworkElement? _labelButton;
     private bool _labelVisible;
     private bool _labelWarm;
     private bool _labelFlashing;
@@ -95,6 +87,10 @@ public partial class ToolbarWindow
         BarSurface.MouseLeave += (_, _) => LeaveLabels();
         BarSurface.PreviewMouseLeftButtonDown += (_, _) => PressLabel();
         LocationChanged += (_, _) => HideLabel(animate: false);
+
+        // Which side, and how far up, follow the card's height — known for certain only once it has
+        // been laid out with its text, which for a popup just opened can be a pass later.
+        LabelPanel.SizeChanged += (_, _) => PlaceLabelVertically();
         Closed += (_, _) =>
         {
             foreach (var timer in new[] { _labelShowTimer, _labelHideTimer, _labelCoolTimer, _labelFlashTimer })
@@ -235,83 +231,93 @@ public partial class ToolbarWindow
         LabelDescription.Text = description ?? "";
         LabelDescription.Visibility = description is null ? Visibility.Collapsed : Visibility.Visible;
 
-        LabelCard.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-        double width = LabelCard.DesiredSize.Width;
-        double height = LabelCard.DesiredSize.Height;
-        double barWidth = BarSurface.ActualWidth;
-
         var element = target.Element;
-        var origin = element.TranslatePoint(new System.Windows.Point(0, 0), BarSurface);
-        double centre = origin.X + element.ActualWidth / 2;
+        _labelButton = element;
+        double anchor = element.TranslatePoint(new System.Windows.Point(0, 0), BarSurface).X
+            + element.ActualWidth / 2;
 
-        // Kept inside the bar's span where it can be, but never at the cost of the arrow: the arrow
-        // stays clear of the card's rounded corners, and where a button at the end of the bar would
-        // put it on one, the card is let out past the bar's end instead.
-        double left = Math.Clamp(centre - width / 2, 0, Math.Max(0, barWidth - width));
-        left = Math.Clamp(left, centre - (width - LabelArrowInset), centre - LabelArrowInset);
-        bool above = LabelGoesAbove(origin.Y, element.ActualHeight, height);
-        double top = above
-            ? origin.Y - LabelGap - height
-            : origin.Y + element.ActualHeight + LabelGap;
-
-        LabelCanvas.Width = barWidth + 2 * LabelSideRoom;
-        LabelCanvas.Height = height + 2 * LabelEdge;
-        Canvas.SetTop(LabelCard, LabelEdge);
-        LabelPopup.HorizontalOffset = -LabelSideRoom;
-        LabelPopup.VerticalOffset = top - LabelEdge;
-
-        double arrowX = centre - left;
-        LabelArrow.VerticalAlignment = above ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-        LabelArrow.Margin = above ? new Thickness(0, 0, 0, -6) : new Thickness(0, -6, 0, 0);
-        LabelArrowShift.X = arrowX - LabelArrow.Width / 2;
-        LabelArrowFlip.ScaleY = above ? -1 : 1;
-
-        double x = LabelSideRoom + left;
+        bool wasVisible = _labelVisible;
         bool animate = SystemParameters.ClientAreaAnimation;
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-        if (slide && _labelVisible && animate)
+        LabelPanel.Span = BarSurface.ActualWidth;
+        LabelPopup.HorizontalOffset = -ToolbarLabelPanel.SideRoom;
+
+        if (wasVisible && slide && animate)
         {
-            // From where it is now, so a pass that changes its mind halfway does not jump.
-            var slideTo = new DoubleAnimation(x, TimeSpan.FromMilliseconds(LabelSlideMs)) { EasingFunction = ease };
-            LabelShift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, slideTo);
-            LabelCard.BeginAnimation(OpacityProperty, null);
-            LabelCard.Opacity = 1;
-        }
-        else if (_labelVisible)
-        {
-            LabelShift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
-            LabelShift.X = x;
+            // From where it is now, so a pass that changes its mind halfway does not jump. The panel
+            // lays the card and the arrow out again at every step, so the two travel as one.
+            LabelPanel.BeginAnimation(ToolbarLabelPanel.AnchorProperty,
+                new DoubleAnimation(anchor, TimeSpan.FromMilliseconds(LabelSlideMs)) { EasingFunction = ease });
         }
         else
         {
-            LabelShift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
-            LabelShift.X = x;
-            LabelPopup.IsOpen = true;
+            LabelPanel.BeginAnimation(ToolbarLabelPanel.AnchorProperty, null);
+            LabelPanel.Anchor = anchor;
+        }
 
-            if (animate)
-            {
-                // Grows out of the button: scaled about the arrow's tip, and drawn a few pixels
-                // towards the button.
-                LabelScale.CenterX = arrowX;
-                LabelScale.CenterY = above ? height : 0;
-                var duration = TimeSpan.FromMilliseconds(LabelInMs);
-                LabelCard.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
-                var grow = new DoubleAnimation(0.97, 1, duration) { EasingFunction = ease };
-                LabelScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, grow);
-                LabelScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, grow);
-                LabelShift.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-                    new DoubleAnimation(above ? 4 : -4, 0, duration) { EasingFunction = ease });
-            }
-            else
-            {
-                LabelCard.BeginAnimation(OpacityProperty, null);
-                LabelCard.Opacity = 1;
-            }
+        if (!wasVisible)
+        {
+            // Opened unseen and laid out before anything is shown, so the first frame already has
+            // the card's size, side and place.
+            LabelPanel.BeginAnimation(OpacityProperty, null);
+            LabelPanel.Opacity = 0;
+            LabelPopup.IsOpen = true;
         }
 
         _labelVisible = true;
         _labelWarm = true;
+        LabelPanel.UpdateLayout();
+        PlaceLabelVertically();
+
+        if (wasVisible)
+        {
+            LabelPanel.BeginAnimation(OpacityProperty, null);
+            LabelPanel.Opacity = 1;
+            return;
+        }
+
+        if (!animate)
+        {
+            LabelPanel.Opacity = 1;
+            return;
+        }
+
+        // Grows out of the button: scaled about the arrow's tip, and drawn a few pixels towards it.
+        var duration = TimeSpan.FromMilliseconds(LabelInMs);
+        LabelPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        var grow = new DoubleAnimation(0.97, 1, duration) { EasingFunction = ease };
+        LabelScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, grow);
+        LabelScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, grow);
+        LabelLift.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
+            new DoubleAnimation(LabelPanel.Above ? 4 : -4, 0, duration) { EasingFunction = ease });
+    }
+
+    /// <summary>
+    /// Puts the card under or over its button, from the card's measured height.
+    /// </summary>
+    /// <remarks>
+    /// Run again whenever the card changes size, not only when it is placed: the height is the one
+    /// number the popup's position depends on that only layout can supply.
+    /// </remarks>
+    private void PlaceLabelVertically()
+    {
+        if (!_labelVisible || _labelButton is not { } button) return;
+        if (PresentationSource.FromVisual(BarSurface) is null) return;
+
+        double height = LabelPanel.CardHeight;
+        if (height <= 0) return;
+
+        double top = button.TranslatePoint(new System.Windows.Point(0, 0), BarSurface).Y;
+        bool above = LabelGoesAbove(top, button.ActualHeight, height);
+
+        LabelPanel.Above = above;
+        LabelPopup.VerticalOffset = above
+            ? top - LabelGap - height - ToolbarLabelPanel.Edge
+            : top + button.ActualHeight + LabelGap - ToolbarLabelPanel.Edge;
+
+        LabelScale.CenterX = ToolbarLabelPanel.SideRoom + LabelPanel.Anchor;
+        LabelScale.CenterY = above ? ToolbarLabelPanel.Edge + height : ToolbarLabelPanel.Edge;
     }
 
     /// <summary>Whether the card goes over the button rather than under it.</summary>
@@ -347,13 +353,13 @@ public partial class ToolbarWindow
 
         if (!animate || !SystemParameters.ClientAreaAnimation)
         {
-            LabelCard.BeginAnimation(OpacityProperty, null);
+            LabelPanel.BeginAnimation(OpacityProperty, null);
             LabelPopup.IsOpen = false;
             return;
         }
 
         var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(LabelOutMs));
         fade.Completed += (_, _) => { if (!_labelVisible) LabelPopup.IsOpen = false; };
-        LabelCard.BeginAnimation(OpacityProperty, fade);
+        LabelPanel.BeginAnimation(OpacityProperty, fade);
     }
 }
