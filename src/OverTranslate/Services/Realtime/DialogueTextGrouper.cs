@@ -155,6 +155,11 @@ internal static class DialogueTextGrouper
     /// percentages under the slot labels, kept whether the detector read them as seven boxes or
     /// as one box of seven numbers. Over 410 corpus frames and 216 synthetic spaced subtitles this
     /// changed nothing.</para>
+    ///
+    /// <para>That second row has to be values, with no letters in it. A line under a spaced one can
+    /// carry three numbers (10時30分に3番線へ), and the next line of a spaced subtitle has three
+    /// boxes of its own; either would otherwise vouch for the line above. This gives up a web
+    /// page's tab rows, whose neighbours are tabs too.</para>
     /// </remarks>
     private static bool ItemRow(List<OcrTextBlock> row, List<List<OcrTextBlock>> rows)
     {
@@ -168,7 +173,7 @@ internal static class DialogueTextGrouper
         var span = Span(other);
         return Math.Max(span.Top - items.Bottom, items.Top - span.Bottom) <= items.Height * 1.5 &&
             Math.Min(items.Right, span.Right) - Math.Max(items.Left, span.Left) >= items.Width * 0.5 &&
-            (other.Count >= 3 || other.Sum(b => DigitRuns(b.Text)) >= 3);
+            !other.Any(b => HasLetter(b.Text)) && (other.Count >= 3 || other.Sum(b => DigitRuns(b.Text)) >= 3);
     }
 
     // Measured labels reach 1.95 heights; a 0.9-height gap is under the narrowest label gap, 0.95.

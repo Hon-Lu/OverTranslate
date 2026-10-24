@@ -138,6 +138,19 @@ public class DialogueTextGrouperTests
             DialogueTextGrouper.Group([.. words, Block("そうだね、わかってるよ", 330, 110, 620, 52)]).Select(b => b.Text));
     }
 
+    // A spaced subtitle line over a line of text: three numbers in a time, or three boxes of the
+    // next spaced line, do not make the text a row of values beside it.
+    [Fact]
+    public void SpacedSubtitleOverOrdinaryTextIsNotTakenForSlotLabels()
+    {
+        OcrTextBlock[] hai = [Block("はい", 400, 40, 100, 55), Block("はい", 577, 40, 100, 55), Block("はい", 754, 40, 100, 55)];
+        Assert.Equal(["はいはいはい 10時30分に3番線へ"],
+            DialogueTextGrouper.Group([.. hai, Block("10時30分に3番線へ", 350, 110, 560, 55)]).Select(b => b.Text));
+        Assert.Equal(["はいはいはい いやいやいや"],
+            DialogueTextGrouper.Group([.. hai, Block("いや", 400, 110, 100, 55), Block("いや", 577, 110, 100, 55),
+                Block("いや", 754, 110, 100, 55)]).Select(b => b.Text));
+    }
+
     // A visual novel's quick menu under its two icon letters (region-subtitle-ja-game/2.png): short
     // buttons with a three-box row above, but that row covers too little of the menu to be its
     // values. Grouped as before.
