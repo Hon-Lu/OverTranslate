@@ -7,6 +7,27 @@ namespace OverTranslate.Services.Realtime;
 /// Dialogue-box geometry, independent of screenshot paragraph, punctuation and heading rules.
 /// Horizontal rows are completed first. An unresolved row is never partially joined vertically.
 /// </summary>
+/// <remarks>
+/// <para>One content test is shared with the other grouper: a line that opens like a chat entry —
+/// timestamp, channel tag, @handle, name and colon (<see cref="SpeakerLineStart"/>) — does not
+/// continue the line above it. A chat log framed in this mode is stacked rows of one size and one
+/// edge, which is exactly what this grouper joins, so the 23 hand-marked chat captures came back
+/// with one message per group in 14 of 245 cases. With the test, 123. Across the subtitle and comic
+/// captures (the 410 frames of the speaker-name probe, every subtitle set, all four comic sets) it
+/// changes nothing; elsewhere it parts a Hacker News title from the line above and a wiki list
+/// entry 「フランス革命：…」 from the one before, both correctly.</para>
+///
+/// <para>The other half the panel path has is taken too: a line holding only a speaker in that
+/// form (「[GLOBAL] Conor_Braxton:」) is not continued, so a name on its own line stays apart from
+/// its message. #341 had left that layout joined; the name-plate rule there is about Ren'Py's
+/// plain name over indented dialogue and is unchanged.</para>
+///
+/// <para>Both halves use the strict form of a bare name (<see cref="SpeakerLineStart.OpensUnmistakably"/>,
+/// <see cref="SpeakerLineStart.IsUnmistakablyBareLabel"/>): subtitles wrap after a colon in running
+/// text — 「他回頭對我說：」 over 「「快走！」」, 「也就是說：…」, "this: never give up" — and here a
+/// sentence cut at its colon is worse than a chat entry left joined. A channel tag, an @handle or
+/// a timestamp is taken as it is.</para>
+/// </remarks>
 internal static class DialogueTextGrouper
 {
     /// <param name="decisions">
@@ -112,6 +133,16 @@ internal static class DialogueTextGrouper
                     joins = false;
                     rule = "numeric-line";
                 }
+                if (joins && SpeakerLineStart.OpensUnmistakably(line.Block.Text))
+                {
+                    joins = false;
+                    rule = "speaker line start";
+                }
+                if (joins && SpeakerLineStart.IsUnmistakablyBareLabel(groups[i][^1].Text))
+                {
+                    joins = false;
+                    rule = "speaker label";
+                }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;
                 var distance = current.Y - previous.Y;
@@ -139,7 +170,7 @@ internal static class DialogueTextGrouper
         Math.Abs((a.Top + a.Bottom - b.Top - b.Bottom) / 2) <= Math.Max(a.Height, b.Height) * 0.35;
 
     private static bool Adjacent(Rect a, Rect b) =>
-        SameRow(a, b) && Math.Min(a.Height, b.Height) >= Math.Max(a.Height, b.Height) * 0.6 &&
+        SameRow(a, b) && LineMeasure.HeightsWithin(a, b, RowHeightRatio) &&
         b.Left - a.Right <= Math.Max(a.Height, b.Height) * 1.5;
 
     /// <summary>
@@ -288,16 +319,15 @@ internal static class DialogueTextGrouper
         // Long subtitle rows can have quite different detector padding even at the same font
         // size. Give two substantial, similarly wide rows extra height tolerance; a short name
         // or isolated symbol cannot borrow it from the dialogue beside it.
-        bool substantialRows = a.Width >= a.Height * 6 && b.Width >= b.Height * 6 &&
-            Math.Min(a.Width, b.Width) >= Math.Max(a.Width, b.Width) * 0.5;
+        bool substantialRows = SubstantialRows(a, b);
         // Named one test at a time rather than as a single condition, so a refusal can say which
         // test refused it. The order and the numbers are unchanged.
         if (height <= 0 || b.Y <= a.Y) { rule = "not-below"; return false; }
         if (SameRow(a, b)) { rule = "same-row"; return false; }
-        if (Math.Min(a.Height, b.Height) < height * (substantialRows ? 0.6 : 0.75))
+        if (!LineMeasure.HeightsWithin(a, b, substantialRows ? SubstantialStackHeightRatio : StackHeightRatio))
         { rule = "height-mismatch"; return false; }
-        if (b.Top - a.Bottom > height * 0.65) { rule = "gap-too-wide"; return false; }
-        if (b.Top - a.Bottom < -height * 0.25) { rule = "overlaps-above"; return false; }
+        if (b.Top - a.Bottom > height * MaxStackGap) { rule = "gap-too-wide"; return false; }
+        if (b.Top - a.Bottom < -height * MaxStackOverlap) { rule = "overlaps-above"; return false; }
         var overlap = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
         if (overlap < Math.Min(a.Width, b.Width) * 0.5) { rule = "no-column-overlap"; return false; }
         var alignment = Math.Min(Math.Abs(a.Left - b.Left), Math.Min(Math.Abs(a.Right - b.Right),
@@ -311,6 +341,33 @@ internal static class DialogueTextGrouper
         rule = substantialRows ? "stacked-substantial" : "stacked";
         return true;
     }
+
+    /// <summary>
+    /// Two rows long enough, and close enough in width, to be given extra tolerance on height and
+    /// alignment — which a short name or an isolated symbol beside them must not borrow.
+    /// </summary>
+    private static bool SubstantialRows(Rect a, Rect b) =>
+        LineMeasure.Spans(a, LineMeasure.SubstantialLineMinAspect) &&
+        LineMeasure.Spans(b, LineMeasure.SubstantialLineMinAspect) &&
+        Math.Min(a.Width, b.Width) >= Math.Max(a.Width, b.Width) * 0.5;
+
+    /// <summary>How close in box height two pieces of one row have to be.</summary>
+    private const double RowHeightRatio = 0.6;
+
+    /// <summary>
+    /// How close in box height two stacked rows have to be: the ordinary figure, and the one two
+    /// substantial rows get (see <see cref="SubstantialRows"/>).
+    /// </summary>
+    private const double StackHeightRatio = 0.75;
+
+    /// <inheritdoc cref="StackHeightRatio"/>
+    private const double SubstantialStackHeightRatio = 0.6;
+
+    /// <summary>The widest gap, and the most overlap, between two stacked rows, in line heights.</summary>
+    private const double MaxStackGap = 0.65;
+
+    /// <inheritdoc cref="MaxStackGap"/>
+    private const double MaxStackOverlap = 0.25;
 
     /// <summary>
     /// A name plate over indented dialogue, as Ren'Py draws it by default (issue #341): one short
@@ -362,7 +419,7 @@ internal static class DialogueTextGrouper
         double height = Math.Max(a.Height, b.Height);
         if (height <= 0) return;
         var rule = refused ?? (!SameRow(a, b) ? "not-same-row"
-            : Math.Min(a.Height, b.Height) < height * 0.6 ? "row-height-mismatch"
+            : !LineMeasure.HeightsWithin(a, b, RowHeightRatio) ? "row-height-mismatch"
             : b.Left - a.Right > height * 1.5 ? "row-gap-too-wide"
             : "adjacent");
         decisions.Add(new OcrTextBlockGrouper.NextLineDecision(
@@ -386,8 +443,7 @@ internal static class DialogueTextGrouper
         if (height <= 0) return;
         double left = Math.Abs(a.Left - b.Left), right = Math.Abs(a.Right - b.Right);
         double centre = Math.Abs((a.Left + a.Right - b.Left - b.Right) / 2);
-        bool substantialRows = a.Width >= a.Height * 6 && b.Width >= b.Height * 6 &&
-            Math.Min(a.Width, b.Width) >= Math.Max(a.Width, b.Width) * 0.5;
+        bool substantialRows = SubstantialRows(a, b);
         decisions.Add(new OcrTextBlockGrouper.NextLineDecision(
             "next", previous.Text, current.Text, previous.LayoutScript, current.LayoutScript,
             VerticalGap: (b.Top - a.Bottom) / height,
@@ -398,7 +454,7 @@ internal static class DialogueTextGrouper
             LineAdvance: (b.Y - a.Y) / height,
             // The two gates this grouper actually runs, in the columns the screenshot flow uses for
             // its own: the height floor it was judged against, and the alignment ceiling.
-            LeadingBar: substantialRows ? 0.6 : 0.75,
+            LeadingBar: substantialRows ? SubstantialStackHeightRatio : StackHeightRatio,
             SolidBar: substantialRows ? 2.5 : 1.25,
             Joined: joined, Rule: rule));
     }

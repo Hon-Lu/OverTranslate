@@ -193,11 +193,15 @@ args = [.. args.Where(argument => argument != "--trace")];
 // other two are conservative: these sweeps report a group count as a sanity check beside detection
 // numbers, and a sweep run before that change and one run after it must not differ for a reason
 // that has nothing to do with the detector.
+//
+// No prose evidence, for the same reason: before that switch had a name it was read off the leading
+// figure, and with the unrelaxed 1.20 here it was off.
 var harnessGroupingBaseline = new GroupingProfile(
     TightlySetMinTextSizeRatio: 0.88,
     WaiveLengthTestWhenSetSolid: false,
     SolidLineAdvanceWhenWrapped: 1.20,
-    RefuseSpeakerLineStarts: false);
+    RefuseSpeakerLineStarts: false,
+    TakesProseEvidence: false);
 
 // Which language to read as. It picks the recognition model, and that is not a detail on a Korean
 // dump: the general model carries no Hangul at all, so a Korean frame read as EN comes back as

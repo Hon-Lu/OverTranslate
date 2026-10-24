@@ -359,6 +359,62 @@ public class DialogueTextGrouperTests
     }
 
     [Fact]
+    public void ChatEntriesStackedOneSizeOneEdge_StayOneMessageEach()
+    {
+        var first = Block("[GLOBAL] Xa-mul: And on Very High settings", 0, 0, 300);
+        var second = Block("[GLOBAL] Vespy238: heya yall", 0, 24, 200);
+        var third = Block("@alice: another message here", 0, 48, 220);
+        Assert.Equal(3, DialogueTextGrouper.Group([first, second, third]).Count);
+    }
+
+    [Theory]
+    [InlineData("[GLOBAL] Conor_Braxton:")]
+    [InlineData("@alice:")]
+    [InlineData("Aa119119:")]
+    public void ANameOnItsOwnLine_StaysApartFromItsMessage(string speaker)
+    {
+        var name = Block(speaker, 0, 0, 200);
+        var message = Block("feels good making over 1m off a 33k rental ship", 0, 24, 300);
+        Assert.Equal(2, DialogueTextGrouper.Group([name, message]).Count);
+    }
+
+    /// <summary>
+    /// A colon in running text is not a speaker. A subtitle that wraps after 「說：」 or on 「也就是說：」,
+    /// or an English line that wraps on a lowercase word and a colon, is still one sentence.
+    /// </summary>
+    [Theory]
+    [InlineData("他回頭對我說：", "「快走！」")]
+    [InlineData("這件事情的重點只有一個", "也就是說：大家都要小心")]
+    [InlineData("她小聲地說道：", "「我不會再回來了。」")]
+    [InlineData("and the last thing he told me was", "this: never give up")]
+    [InlineData("he wrote one word on the note:", "remember")]
+    public void AColonInsideASentence_IsNotASpeaker(string upper, string lower)
+    {
+        var first = Block(upper, 0, 0, 300);
+        var second = Block(lower, 0, 24, 260);
+        Assert.Single(DialogueTextGrouper.Group([first, second]));
+    }
+
+    [Theory]
+    [InlineData("雲中日：醃黃瓜先生")]
+    [InlineData("Shashaca: hi")]
+    [InlineData("Klaudia : Honestly though, I do appreciate this.")]
+    public void AShortNameAndAColon_StillOpensAnEntry(string next)
+    {
+        var first = Block("Tomlin10320: hey there everyone", 0, 0, 300);
+        var second = Block(next, 0, 24, 300);
+        Assert.Equal(2, DialogueTextGrouper.Group([first, second]).Count);
+    }
+
+    [Fact]
+    public void ALineThatOnlyStartsWithAName_StillTakesItsWrap()
+    {
+        var first = Block("[GLOBAL] Xa-mul: And on Very High settings it runs", 0, 0, 300);
+        var wrap = Block("just fine on my old card", 0, 24, 200);
+        Assert.Single(DialogueTextGrouper.Group([first, wrap]));
+    }
+
+    [Fact]
     public void DoesNotSkipAnInterveningSpeakerLabel()
     {
         var top = Block("Previous dialogue", 0, 0, 200);

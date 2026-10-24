@@ -431,6 +431,166 @@ public class OcrTextBlockGrouperTests
         Assert.Equal(2, grouped.Count);
     }
 
+    /// <summary>
+    /// A game screen's title and the explanation beside it, an icon's width apart: word spacing,
+    /// but one is set at 0.57 the size of the other. Coordinates and size estimates from the capture.
+    /// </summary>
+    [Fact]
+    public void TitleBesideASmallerExplanation_IsNotOneLine()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("装備", new Rect(107, 15, 105, 61), OcrLayoutScript.Cjk, 50.02),
+            Measured("装備する武器・ジーンの確認や変更を行います", new Rect(224, 39, 510, 36), OcrLayoutScript.Cjk, 28.66),
+        };
+
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.General).Count);
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.Realtime).Count);
+    }
+
+    /// <summary>
+    /// A separator the detector boxed on its own — a dash, a bar, a star — is thinner and shorter
+    /// than the words beside it, so its box reads as a much smaller size. It carries no letters to
+    /// measure a size from, so it does not cut the row.
+    /// </summary>
+    [Theory]
+    [InlineData("2019", "-", "2024", OcrLayoutScript.Latin)]
+    [InlineData("首頁", "|", "新聞", OcrLayoutScript.Cjk)]
+    [InlineData("ホーム", "・", "ニュース", OcrLayoutScript.Cjk)]
+    public void ASeparatorBoxedOnItsOwn_DoesNotCutTheRow(string left, string separator, string right, OcrLayoutScript script)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured(left, new Rect(100, 100, 60, 24), script, 17),
+            new(separator, new Rect(165, 104, 8, 16), LayoutScript: OcrLayoutScript.Unknown, LayoutBounds: new Rect(165, 104, 8, 16)),
+            Measured(right, new Rect(178, 100, 60, 24), script, 17),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void AStarBeforeAWord_DoesNotCutTheRow()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            new("★", new Rect(100, 104, 14, 14), LayoutScript: OcrLayoutScript.Unknown, LayoutBounds: new Rect(100, 104, 14, 14)),
+            Measured("Recommended", new Rect(120, 100, 140, 24), OcrLayoutScript.Latin, 17),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// One or two CJK characters set smaller beside a number — a unit, a counter word — are too few
+    /// to say what size they are set at, and stay on the line.
+    /// </summary>
+    [Fact]
+    public void AShortSmallerCjkSuffix_DoesNotCutTheRow()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("12,800", new Rect(100, 100, 90, 30), OcrLayoutScript.Latin, 22),
+            Measured("円", new Rect(196, 110, 18, 18), OcrLayoutScript.Cjk, 13),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// With no glyph estimate on either side, the size is read off the boxes, and a box's height
+    /// jumps from frame to frame (0.68 to 1.00 for one pair). A row that joined on one frame and
+    /// broke on the next would flicker on the live overlay, so boxes alone never break a row.
+    /// </summary>
+    [Theory]
+    [InlineData(27)]
+    [InlineData(40)]
+    public void BoxHeightsAloneNeverBreakARow_SoTheLiveOverlayDoesNotFlicker(double height)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            new("設定", new Rect(100, 100, 80, 40), LayoutScript: OcrLayoutScript.Cjk, LayoutBounds: new Rect(100, 100, 80, 40)),
+            new("畫面與聲音的各項選項", new Rect(192, 100 + (40 - height) / 2, 260, height),
+                LayoutScript: OcrLayoutScript.Cjk, LayoutBounds: new Rect(192, 100 + (40 - height) / 2, 260, height)),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.Realtime));
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// The level and the badge the detector cut out of the same cell overlap, so they stay one
+    /// however different their sizes are.
+    /// </summary>
+    [Fact]
+    public void PiecesOfOneCell_StillJoinAtAnySize()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("Lvl 100", new Rect(493, 209, 94, 39), OcrLayoutScript.Latin, 20.37),
+            Measured("50", new Rect(572, 214, 39, 29), OcrLayoutScript.Latin, 14.5),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// A Hacker News "points by" line over the next story's title. The left edges are 1.7 line
+    /// heights apart and only the centres meet, by the chance of the two lengths, 0.29 of a line
+    /// height off. Coordinates and size estimates from the capture.
+    /// </summary>
+    [Fact]
+    public void ListLinesWhoseCentresMeetByChance_AreNotSetSolid()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("126 points by Bluestein 9 hours ago | hide | 21 comments", new Rect(157, 406, 284, 20), OcrLayoutScript.Latin, 8.20),
+            Measured("12.▲The efficient frontier of LLM inference (baseten.co)", new Rect(123, 426, 364, 21), OcrLayoutScript.Latin, 9.46),
+        };
+
+        Assert.Equal(2, OcrTextBlockGrouper.Group(blocks, GroupingProfile.General).Count);
+    }
+
+    /// <summary>
+    /// Centred speech whose centres are 0.08 of a line height apart still reads as set solid.
+    /// </summary>
+    [Fact]
+    public void CentredSpeech_StillSetsSolidOnItsCentre()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("YOU PICKING ON", new Rect(300, 358, 300, 50), OcrLayoutScript.Latin, 38),
+            Measured("AN INNOCENT", new Rect(330, 408, 248, 50), OcrLayoutScript.Latin, 38),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// Small centred text — a low-resolution subtitle, a caption under a picture — whose boxes
+    /// were padded unevenly, so the centres sit 4 to 5 pixels apart: a few pixels of padding, not
+    /// a list matching by chance, and the two lines are still one caption.
+    /// </summary>
+    [Theory]
+    [InlineData(12, 4)]
+    [InlineData(12, 5)]
+    [InlineData(14, 4)]
+    [InlineData(14, 5)]
+    public void SmallCentredLinesPaddedUnevenly_StillSetSolid(double height, double offset)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("the small centred caption under the", new Rect(130, 100, 200, height), OcrLayoutScript.Latin, height * 0.7),
+            Measured("picture goes on for a longer second line", new Rect(100 + offset, 100 + height * 1.15, 260, height), OcrLayoutScript.Latin, height * 0.7),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.Realtime));
+    }
+
+    private static OcrTextBlock Measured(string text, Rect box, OcrLayoutScript script, double glyph) =>
+        new(text, box, LayoutScript: script, LayoutBounds: box, LayoutGlyphHeight: glyph);
+
     private static List<OcrTextBlock> GroupDetected(IReadOnlyList<OcrTextBlock> blocks) =>
         OcrTextBlockGrouper.Group(blocks.AsDetected(), GroupingProfile.Interface);
 

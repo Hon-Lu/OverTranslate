@@ -90,6 +90,69 @@ public class WebParagraphGroupingTests
         }
     }
 
+    // A page of body text set at 1.6 line heights: looser than any set-solid figure, and the step
+    // the page itself repeats. The texts carry no punctuation, so the leading is the only evidence.
+    private static OcrTextBlock[] LooselySetPage(int lines, double width, string text) =>
+        Enumerable.Range(0, lines)
+            .Select(i => new OcrTextBlock(text, new Rect(100, 100 + i * 48, width, 30)).AsDetected())
+            .ToArray();
+
+    [Fact]
+    public void ChineseBodyTextJoinsAtItsPagesOwnLeading()
+    {
+        var page = LooselySetPage(5, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
+        Assert.Equal("b0,b1,b2,b3,b4", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void ShortEntriesAtThatLeadingStayAList()
+    {
+        var page = LooselySetPage(5, 300, "清單裡的一個設定項目");
+        Assert.Equal("b0|b1|b2|b3|b4", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void APageWithTooFewStepsHasNoLeadingToRead()
+    {
+        var page = LooselySetPage(2, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
+        Assert.Equal("b0|b1", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void HeadlinesFurtherApartThanTheCapStayApartOnALooselySetPage()
+    {
+        // Body at 1.5 line heights reads the page's leading as loose; a stack of long headlines
+        // under it at 1.7 must not borrow it, however loose the page.
+        const string body = "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容";
+        const string headline = "一則獨立的新聞標題沒有任何標點但長得跟正文一樣";
+        var page = Enumerable.Range(0, 5)
+            .Select(i => new OcrTextBlock(body, new Rect(100, 100 + i * 45, 700, 30)).AsDetected())
+            .Concat(Enumerable.Range(0, 3)
+                .Select(i => new OcrTextBlock(headline, new Rect(100, 400 + i * 51, 700, 30)).AsDetected()))
+            .ToArray();
+        Assert.Equal("b0,b1,b2,b3,b4|b5|b6|b7", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void ANavigationColumnBesideTheBodyDoesNotSetTheBodysLeading()
+    {
+        // Short labels stacked at 1.0 in a side column; the body beside them is set at 1.5 and
+        // reads its leading off its own column, not off the labels.
+        var page = Enumerable.Range(0, 6)
+            .Select(i => new OcrTextBlock("導覽項目", new Rect(20, 100 + i * 30, 120, 30)).AsDetected())
+            .Concat(Enumerable.Range(0, 4)
+                .Select(i => new OcrTextBlock("這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容", new Rect(300, 100 + i * 45, 700, 30)).AsDetected()))
+            .ToArray();
+        Assert.Contains("b6,b7,b8,b9", Members(page, GroupingProfile.General).Split('|'));
+    }
+
+    [Fact]
+    public void ThePagesLeadingIsReadByTheScreenshotModeOnly()
+    {
+        var page = LooselySetPage(5, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
+        Assert.Equal("b0|b1|b2|b3|b4", Members(page, GroupingProfile.Realtime));
+    }
+
     [Fact]
     public void SyntheticFlatBackgroundInkSeparatesHeadingWithoutChangingRenderMetrics()
     {

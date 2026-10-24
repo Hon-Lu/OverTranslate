@@ -471,8 +471,7 @@ public class OcrService : IDisposable
             ? TextInkMetrics.Annotate(bitmap, blocks)
             : blocks;
 
-    private static bool MeasuresInk(GroupingProfile profile) =>
-        profile.SolidLineAdvanceWhenWrapped > OcrTextBlockGrouper.SolidLineAdvance;
+    private static bool MeasuresInk(GroupingProfile profile) => profile.TakesProseEvidence;
 
     /// <summary>
     /// Detects columns in the original frame; only recognition crops change orientation.

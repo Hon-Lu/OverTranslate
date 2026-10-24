@@ -31,13 +31,37 @@ internal static class SpeakerLineStart
 
     private static readonly Regex[] Patterns = [Timestamp, Channel, Handle, Name];
 
+    // The strict forms of a bare name, for the dialogue grouper, where a colon inside a wrapped
+    // subtitle is common and cutting the sentence there is worse than missing a chat entry. A Latin
+    // name is one capitalised Latin word ("this: never give up" is a sentence); a CJK one is a
+    // run of up to eight letters that does not end on a verb of saying or a particle, so
+    // 「他回頭對我說：」 and 「也就是說：」 are sentences and 「雲中日：」 is a name.
+    private static readonly Regex LatinName = new(
+        @"^\s*[A-ZÀ-Þ][A-Za-zÀ-ɏ0-9_.'\-]{0,31}\s*[:：](?!//)(?!.*;\s*$)",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex CjkName = new(
+        @"^\s*(?=[^:：]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}\p{IsHangulSyllables}])" +
+        @"[\p{L}\p{N}_ー・]{1,8}(?<![說说道講讲問问答曰云言是はがをにでともの])\s*[:：]",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex[] StrictPatterns = [Timestamp, Channel, Handle, LatinName, CjkName];
+
     public static bool Opens(string text) => Patterns.Any(pattern => pattern.IsMatch(text));
 
+    /// <summary>As <see cref="Opens"/>, but a bare name has to look like a name, not a clause.</summary>
+    public static bool OpensUnmistakably(string text) => StrictPatterns.Any(pattern => pattern.IsMatch(text));
+
     /// <summary>A line that is nothing but the speaker, with the message on the rows below it.</summary>
-    public static bool IsBareLabel(string text)
+    public static bool IsBareLabel(string text) => IsBareLabel(text, Patterns);
+
+    /// <summary>As <see cref="IsBareLabel(string)"/>, but a bare name has to look like a name, not a clause.</summary>
+    public static bool IsUnmistakablyBareLabel(string text) => IsBareLabel(text, StrictPatterns);
+
+    private static bool IsBareLabel(string text, Regex[] patterns)
     {
         var trimmed = text.TrimEnd();
-        return Patterns.Select(pattern => pattern.Match(trimmed))
+        return patterns.Select(pattern => pattern.Match(trimmed))
             .Any(match => match.Success && match.Index + match.Length == trimmed.Length);
     }
 }

@@ -23,6 +23,10 @@ namespace OverTranslate.Services.Ocr;
 /// this whole seam exists to prevent. Nothing in the type stops a fourth being added; this is a
 /// review contract, and a locked constructor would only produce a test-only factory to get around
 /// it.</para>
+///
+/// <para><see cref="TakesProseEvidence"/> is the exception to that count and adds no knob: it is a
+/// switch the grouper was already reading, out of the leading figure, and naming it changed no
+/// verdict. It is here so the next move of 1.45 is a move of one limit and nothing else.</para>
 /// </remarks>
 /// <param name="TightlySetMinTextSizeRatio">
 /// How close in text size two set-solid lines have to be. Only consulted for a pair that is already
@@ -67,15 +71,37 @@ namespace OverTranslate.Services.Ocr;
 /// <para>MEASURED CASE: the 22 chat-room captures under <c>.ai/test-images/chat-room</c>, five of
 /// them hand-marked. Chat entries sit at 0.62 to 1.16 line heights, one edge, one size — inside every
 /// set-solid limit — so the live panel path joined 11 pairs of separate messages across the five, all
-/// nine rows of one English log into a single string. Only the live panel path takes it: the
-/// screenshot modes have no chat corpus behind them and the interface mode's figures are its v1
-/// behaviour.</para>
+/// nine rows of one English log into a single string. The interface mode does not take it: its
+/// figures are its v1 behaviour.</para>
+///
+/// <para>The screenshot general mode takes it too, since there is now a chat corpus to measure it
+/// on: all 23 captures hand-marked one message per group (<c>GT-ui</c>). Grouped as a screenshot,
+/// those logs had 69 pairs of separate messages joined — the general mode relaxes set solid, so it
+/// strung them together more readily than the live path ever did — and refusing speaker line
+/// starts takes that to 10, with no group changing across the 72 earlier screenshots (comics, web
+/// pages, game panels). It costs one: a wrapped Chinese line reading 「Line詢問：…」 opens like a
+/// name, which the live path already pays.</para>
+/// </param>
+/// <param name="TakesProseEvidence">
+/// <para>Whether the rules written for page prose run at all: a row cut in two by a dash the
+/// detector did not read, a row held together by the rows around it, a visibly larger heading over
+/// a body in another script, Japanese prose crossing a sentence end, body text learning its leading
+/// from its own column, and a paragraph's short last line. The ink measurement the heading rule
+/// reads is taken for the same profiles and no others.</para>
+///
+/// <para>NOT NEW BEHAVIOUR. Every one of those rules used to ask whether
+/// <see cref="SolidLineAdvanceWhenWrapped"/> was above <see cref="OcrTextBlockGrouper.SolidLineAdvance"/>
+/// — in practice, whether this was the screenshot general mode — and seven places asked it. That
+/// made the leading figure a switch as well as a limit: moving 1.45 would have turned six rules and
+/// the ink measurement on or off with it. Each profile holds exactly the answer that comparison
+/// gave, so no verdict moved when the question was given its own name.</para>
 /// </param>
 internal sealed record GroupingProfile(
     double TightlySetMinTextSizeRatio,
     bool WaiveLengthTestWhenSetSolid,
     double SolidLineAdvanceWhenWrapped,
-    bool RefuseSpeakerLineStarts)
+    bool RefuseSpeakerLineStarts,
+    bool TakesProseEvidence)
 {
     /// <summary>
     /// Interfaces: game UI, menus, multi-column panels. The conservative half of the pair, and what
@@ -98,7 +124,8 @@ internal sealed record GroupingProfile(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,
         SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
-        RefuseSpeakerLineStarts: false);
+        RefuseSpeakerLineStarts: false,
+        TakesProseEvidence: false);
 
     /// <summary>
     /// The default: articles, comics, dialogue, and most of what anyone frames. Relaxed only where a
@@ -150,7 +177,8 @@ internal sealed record GroupingProfile(
         TightlySetMinTextSizeRatio: 0.80,
         WaiveLengthTestWhenSetSolid: true,
         SolidLineAdvanceWhenWrapped: 1.45,
-        RefuseSpeakerLineStarts: false);
+        RefuseSpeakerLineStarts: true,
+        TakesProseEvidence: true);
 
     /// <summary>
     /// The live-screen path's own profile. It is not <see cref="Interface"/>, it merely holds the
@@ -173,7 +201,8 @@ internal sealed record GroupingProfile(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,
         SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
-        RefuseSpeakerLineStarts: true);
+        RefuseSpeakerLineStarts: true,
+        TakesProseEvidence: false);
 
     /// <summary>
     /// Historical rotated-frame grouping, retained for offline comparisons and fixtures.
@@ -183,7 +212,8 @@ internal sealed record GroupingProfile(
         TightlySetMinTextSizeRatio: OrdinaryMinTextSizeRatio,
         WaiveLengthTestWhenSetSolid: false,
         SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
-        RefuseSpeakerLineStarts: false);
+        RefuseSpeakerLineStarts: false,
+        TakesProseEvidence: false);
 
     /// <summary>The thresholds for a capture the user has declared the kind of.</summary>
     /// <remarks>
