@@ -378,6 +378,60 @@ public class DialogueTextGrouperTests
         Assert.Equal(2, DialogueTextGrouper.Group([name, message]).Count);
     }
 
+    // PSO2's chat window (chat-room/en-8.png): each speaker on a line of its own, no colon, and the
+    // same names again and again. Every name stands apart, including the one over a reply shorter
+    // than itself; a message wrapped onto a second line stays one message.
+    [Fact]
+    public void RecurringNamesOnTheirOwnLinesStayApartFromTheirMessages()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("pe agaptaple!", 22, 2, 128, 22, 0.89), Block("gp173", 10, 27, 67, 33), Block("fk", 20, 56, 30, 29),
+            Block("Rossa", 12, 88, 64, 28), Block("Oh! That's the Nills Vera.", 22, 117, 235, 24),
+            Block("Rossa", 13, 150, 62, 25), Block("But it looks like our attacks can't reach it.", 21, 174, 390, 27, 0.98),
+            Block("So focus on the other enemies!", 21, 200, 295, 26), Block("Hatsune Miku", 16, 236, 128, 22),
+            Block("Don't make this harder, Nya!", 21, 260, 271, 27), Block("System", 13, 292, 75, 27),
+            Block("Defeat the Dark Magilz!", 21, 318, 219, 27), Block("Hatsune Miku", 14, 351, 130, 25),
+            Block("Rawr~!", 22, 378, 72, 26), Block("Hatsune Miku", 15, 412, 129, 22),
+            Block("And dwon't get up! Nya.", 22, 437, 225, 27), Block("Begin Chat with nter", 183, 496, 195, 25, 0.96),
+        ]).Select(b => b.Text).ToList();
+        Assert.Equal(
+        [
+            "pe agaptaple!", "gp173 fk", "Rossa", "Oh! That's the Nills Vera.", "Rossa",
+            "But it looks like our attacks can't reach it. So focus on the other enemies!", "Hatsune Miku",
+            "Don't make this harder, Nya!", "System", "Defeat the Dark Magilz!", "Hatsune Miku", "Rawr~!",
+            "Hatsune Miku", "And dwon't get up! Nya.", "Begin Chat with nter",
+        ], texts);
+    }
+
+    // A name plate over two lines of dialogue (web-dialogue/ja-p4g-nameplate-2line): one name,
+    // nothing recurring, so the box is left as it was.
+    [Fact]
+    public void ANameShownOnceOverDialogueIsLeftAsBefore()
+    {
+        Assert.Single(DialogueTextGrouper.Group(
+        [
+            Block("久慈川りせ", 94, 42, 341, 68), Block("あれ?", 115, 132, 172, 66, 0.84),
+            Block("シャドウがいない…", 116, 203, 503, 61),
+        ]));
+    }
+
+    // Steam reviews: the おすすめ badge recurs, which looks like a chat log, but a review's first
+    // sentence that lost its 「！」 to OCR is too long to be a name and stays with the review.
+    [Fact]
+    public void ARecurringBadgeDoesNotCutAReviewSentence()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("おすすめ", 20, 0, 80, 26), Block("投稿日：2024年9月6日", 20, 30, 180, 22),
+            Block("ようやく来ましたみっちゃんコレクション", 20, 60, 380, 26),
+            Block("逆転裁判の捜査パートをメインにしたゲームですが、", 20, 90, 600, 26),
+            Block("おすすめ", 20, 200, 80, 26), Block("投稿日：2024年9月6日", 20, 230, 180, 22),
+            Block("面白かったです。またやりたいと思いました。", 20, 260, 600, 26),
+        ]).Select(b => b.Text).ToList();
+        Assert.Contains(texts, t => t.Contains("ようやく") && t.Contains("逆転裁判"));
+    }
+
     /// <summary>
     /// A colon in running text is not a speaker. A subtitle that wraps after 「說：」 or on 「也就是說：」,
     /// or an English line that wraps on a lowercase word and a colon, is still one sentence.
