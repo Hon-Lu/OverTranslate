@@ -40,13 +40,31 @@ internal static class DialogueTextGrouper
         // Lines built from more than one detected block. A speaker label is one word the detector
         // read in one piece; see SpeakerLabel.
         var joinedLines = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
+        // The rows ItemRow took for slot labels, and the row each line came from; see
+        // ValuesBesideItems.
+        var itemRows = new List<(Rect Span, List<OcrTextBlock> Row)>();
+        var lineRows = new Dictionary<OcrTextBlock, List<OcrTextBlock>>(ReferenceEqualityComparer.Instance);
         foreach (var row in rows)
         {
             var segments = new List<List<OcrTextBlock>>();
-            foreach (var block in row)
+            var items = ItemRow(row, rows);
+            if (items && row.Any(b => HasLetter(b.Text))) itemRows.Add((Span(row), row));
+            for (int k = 0; k < row.Count; k++)
             {
+                var block = row[k];
                 var joinsRow = segments.Count > 0 && Adjacent(segments[^1][^1].LayoutBounds, block.LayoutBounds);
-                if (segments.Count > 0) RecordRow(decisions, segments[^1][^1], block, joinsRow);
+                string? refused = null;
+                if (joinsRow && items && SpacedItems(segments[^1][^1], block))
+                {
+                    joinsRow = false;
+                    refused = "row-items";
+                }
+                else if (joinsRow && ColumnStart(row, k, rows))
+                {
+                    joinsRow = false;
+                    refused = "column-gutter";
+                }
+                if (segments.Count > 0) RecordRow(decisions, segments[^1][^1], block, joinsRow, refused);
                 if (!joinsRow) segments.Add([block]);
                 else segments[^1].Add(block);
             }
@@ -64,6 +82,7 @@ internal static class DialogueTextGrouper
                 }
                 trace?.RegisterLine(line, segment);
                 lines.Add((line, segments.Count > 1));
+                lineRows[line] = row;
             }
         }
         var groups = new List<List<OcrTextBlock>>();
@@ -86,6 +105,12 @@ internal static class DialogueTextGrouper
                 {
                     joins = false;
                     rule = "speaker-label";
+                }
+                if (joins && HasLetter(groups[i][^1].Text) != HasLetter(line.Block.Text) &&
+                    (ValuesBesideItems(groups[i][^1], itemRows, lineRows) || ValuesBesideItems(line.Block, itemRows, lineRows)))
+                {
+                    joins = false;
+                    rule = "numeric-line";
                 }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;
@@ -116,6 +141,145 @@ internal static class DialogueTextGrouper
     private static bool Adjacent(Rect a, Rect b) =>
         SameRow(a, b) && Math.Min(a.Height, b.Height) >= Math.Max(a.Height, b.Height) * 0.6 &&
         b.Left - a.Right <= Math.Max(a.Height, b.Height) * 1.5;
+
+    /// <summary>
+    /// A row of separate short items — a status screen's tabs or slot labels — rather than one
+    /// line the detector broke at its spaces: several short boxes, with another itemised row right
+    /// above or below it.
+    /// </summary>
+    /// <remarks>
+    /// <para>The row alone cannot tell. A menu's labels sit 0.95–1.50 heights apart, straddling the
+    /// 1.5-height join in <see cref="Adjacent"/>, so the same screen joined different pairs at
+    /// different scales. But a subtitle written with doubled full-width spaces,
+    /// はい　　はい　　はい　　はい, is cut by the detector into four boxes 0.93–1.43 heights apart,
+    /// each as short as a label: every gap, width and count threshold tried split it too. Single
+    /// full-width spaces and English word gaps never reached the grouper as separate boxes.</para>
+    ///
+    /// <para>What a subtitle never has is a second row of items lined up with the first — the
+    /// percentages under the slot labels, kept whether the detector read them as seven boxes or
+    /// as one box of seven numbers. Over 410 corpus frames and 216 synthetic spaced subtitles this
+    /// changed nothing.</para>
+    ///
+    /// <para>That second row has to be values, with no letters in it. A line under a spaced one can
+    /// carry three numbers (10時30分に3番線へ), and the next line of a spaced subtitle has three
+    /// boxes of its own; either would otherwise vouch for the line above. This gives up a web
+    /// page's tab rows, whose neighbours are tabs too.</para>
+    /// </remarks>
+    private static bool ItemRow(List<OcrTextBlock> row, List<List<OcrTextBlock>> rows)
+    {
+        if (row.Count(b => ShortItem(b.LayoutBounds)) < 3) return false;
+        var span = Span(row);
+        return rows.Any(other => !ReferenceEquals(other, row) && Companion(span, other));
+    }
+
+    private static bool Companion(Rect items, List<OcrTextBlock> other)
+    {
+        var span = Span(other);
+        return Math.Max(span.Top - items.Bottom, items.Top - span.Bottom) <= items.Height * 1.5 &&
+            Math.Min(items.Right, span.Right) - Math.Max(items.Left, span.Left) >= items.Width * 0.5 &&
+            !other.Any(b => HasLetter(b.Text)) && (other.Count >= 3 || other.Sum(b => DigitRuns(b.Text)) >= 3);
+    }
+
+    // Measured labels reach 1.95 heights; a 0.9-height gap is under the narrowest label gap, 0.95.
+    private static bool ShortItem(Rect r) => r.Width <= r.Height * 2.2;
+
+    // Only a word starts an item. A status row's HP and EP are short and set apart from their
+    // numbers too (Dragon Quest XI, Trails of Cold Steel), and cutting a label from its value turns
+    // one stat into two meaningless pieces; a value followed by the next label is where one stat
+    // ends and the next begins.
+    private static bool SpacedItems(OcrTextBlock left, OcrTextBlock right)
+    {
+        Rect a = left.LayoutBounds, b = right.LayoutBounds;
+        return ShortItem(a) && ShortItem(b) && HasLetter(right.Text) &&
+            b.Left - a.Right >= Math.Max(a.Height, b.Height) * 0.9;
+    }
+
+    private static Rect Span(List<OcrTextBlock> row) => row.Select(b => b.LayoutBounds).Aggregate(Rect.Union);
+
+    /// <summary>
+    /// The row of values that made a row of slot labels itemised (see <see cref="ItemRow"/>):
+    /// numbers only, no letters, right beside those labels.
+    /// </summary>
+    /// <remarks>
+    /// Such a row is wide enough to be stacked with the note under it as "two substantial rows",
+    /// and then the note was translated with seven percentages in front of it. Refusing every
+    /// letterless line instead would also part a Korean scoreboard's 26/3/19 from the TK / K / A
+    /// under it, which nothing about slot labels said; tying it to an item row changed no corpus
+    /// frame.
+    /// <para>Only a row with words in it counts as the labels, and never the values' own row. A
+    /// scoreboard's two rows of bare numbers itemise each other, and either row would otherwise
+    /// count as labels beside the other, or beside itself, and be parted from the header under
+    /// them.</para>
+    /// </remarks>
+    private static bool ValuesBesideItems(OcrTextBlock line, List<(Rect Span, List<OcrTextBlock> Row)> itemRows,
+        Dictionary<OcrTextBlock, List<OcrTextBlock>> lineRows)
+    {
+        if (HasLetter(line.Text) || DigitRuns(line.Text) < 3) return false;
+        Rect r = line.LayoutBounds;
+        var own = lineRows.GetValueOrDefault(line);
+        return itemRows.Where(i => !ReferenceEquals(i.Row, own)).Select(i => i.Span).Any(items =>
+            Math.Max(items.Top - r.Bottom, r.Top - items.Bottom) <= Math.Max(items.Height, r.Height) * 1.5 &&
+            Math.Min(items.Right, r.Right) - Math.Max(items.Left, r.Left) >= items.Width * 0.5);
+    }
+
+    /// <summary>
+    /// The right column of a two-column list: the next box starts where, in at least three rows
+    /// nearby, a box starts after a wide gap too.
+    /// </summary>
+    /// <remarks>
+    /// A status screen's "label value" pairs sit 1.33–1.43 heights from the next column's, inside
+    /// the 1.5-height join. One aligned row is not enough: a visual novel's quick menu has a G and
+    /// a C icon above it, and the C lines up with QUIT, which would cut the menu in two. Three rows
+    /// changed no corpus frame; two would have done as well.
+    /// <para>The left column has to line up too, or it is not a list. Centred lyrics whose spaced
+    /// breaks happen to fall at one x start each line somewhere else, and a HUD stacked at that x
+    /// starts its rows at its own labels, not at the dialogue's left edge.</para>
+    /// </remarks>
+    private static bool ColumnStart(List<OcrTextBlock> row, int index, List<List<OcrTextBlock>> rows)
+    {
+        Rect a = row[index - 1].LayoutBounds, b = row[index].LayoutBounds;
+        double height = Math.Max(a.Height, b.Height);
+        if (b.Left - a.Right < height * 0.9) return false;
+        double left = RunStart(row, index - 1);
+        int aligned = 0;
+        foreach (var other in rows)
+        {
+            if (ReferenceEquals(other, row)) continue;
+            for (int i = 1; i < other.Count; i++)
+            {
+                Rect p = other[i - 1].LayoutBounds, c = other[i].LayoutBounds;
+                if (Math.Abs(c.Left - b.Left) > height * 0.5) continue;
+                if (Math.Max(c.Top - b.Bottom, b.Top - c.Bottom) > height * 4) continue;
+                if (c.Left - p.Right < Math.Max(p.Height, c.Height) * 0.9) continue;
+                if (Math.Abs(RunStart(other, i - 1) - left) > height * 0.5) continue;
+                aligned++;
+                break;
+            }
+        }
+        return aligned >= 3;
+    }
+
+    // Where the column holding row[index] starts: back from it until a gap as wide as a gutter.
+    private static double RunStart(List<OcrTextBlock> row, int index)
+    {
+        while (index > 0)
+        {
+            Rect p = row[index - 1].LayoutBounds, c = row[index].LayoutBounds;
+            if (c.Left - p.Right >= Math.Max(p.Height, c.Height) * 0.9) break;
+            index--;
+        }
+        return row[index].LayoutBounds.Left;
+    }
+
+    private static bool HasLetter(string text) => text.Any(char.IsLetter);
+
+    private static int DigitRuns(string text)
+    {
+        int runs = 0;
+        for (int i = 0; i < text.Length; i++)
+            if (char.IsDigit(text[i]) && (i == 0 || !char.IsDigit(text[i - 1]))) runs++;
+        return runs;
+    }
 
     private static bool NextRow(Rect a, Rect b, out string rule)
     {
@@ -191,16 +355,16 @@ internal static class DialogueTextGrouper
     // the harness prints its own legend saying so.
     private static void RecordRow(
         List<OcrTextBlockGrouper.NextLineDecision>? decisions,
-        OcrTextBlock previous, OcrTextBlock current, bool joined)
+        OcrTextBlock previous, OcrTextBlock current, bool joined, string? refused = null)
     {
         if (decisions is null) return;
         Rect a = previous.LayoutBounds, b = current.LayoutBounds;
         double height = Math.Max(a.Height, b.Height);
         if (height <= 0) return;
-        var rule = !SameRow(a, b) ? "not-same-row"
+        var rule = refused ?? (!SameRow(a, b) ? "not-same-row"
             : Math.Min(a.Height, b.Height) < height * 0.6 ? "row-height-mismatch"
             : b.Left - a.Right > height * 1.5 ? "row-gap-too-wide"
-            : "adjacent";
+            : "adjacent");
         decisions.Add(new OcrTextBlockGrouper.NextLineDecision(
             "row", previous.Text, current.Text, previous.LayoutScript, current.LayoutScript,
             VerticalGap: (b.Left - a.Right) / height,

@@ -93,6 +93,220 @@ public class DialogueTextGrouperTests
             Block("a facility to study that weird guitar...", 64, 127, 940, 78)]));
     }
 
+    // A status screen's slot labels over their percentages, as read at two scales (OCR coordinates
+    // from the report screenshot). main joined 乳口内 and 腔内肛門 at one scale, 口内クリ腔内肛門 at
+    // the other.
+    public static TheoryData<OcrTextBlock[]> SlotLabelRows => new()
+    {
+        new[]
+        {
+            Block("口内", 387, 20, 62, 40), Block("乳", 280, 22, 52, 38), Block("肛門", 723, 22, 61, 37),
+            Block("腔内", 610, 23, 59, 34), Block("耳", 858, 27, 30, 27), Block("96%", 117, 95, 97, 44),
+            Block("100%100%100%100%100%100%", 219, 95, 683, 44), Block("開発度は下げることも可能", 214, 127, 472, 47),
+        },
+        new[]
+        {
+            Block("腔内", 290, 5, 35, 22), Block("尻尾", 70, 6, 31, 20), Block("口内", 182, 6, 31, 18),
+            Block("クリ", 240, 7, 29, 17), Block("肛門", 351, 8, 29, 16), Block("乳", 138, 9, 16, 13),
+            Block("96%", 47, 42, 49, 24), Block("100%100%100%", 270, 42, 173, 25),
+            Block("100%100%", 103, 43, 116, 21), Block("100%", 212, 43, 60, 21),
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(SlotLabelRows))]
+    public void SlotLabelsOverARowOfValuesStaySeparate(OcrTextBlock[] blocks)
+    {
+        var texts = DialogueTextGrouper.Group(blocks).Select(b => b.Text).ToList();
+        foreach (var label in blocks.Where(b => !b.Text.Any(char.IsDigit) && b.Text.Length <= 2))
+            Assert.Contains(label.Text, texts);
+    }
+
+    // A subtitle written with doubled full-width spaces, cut by the detector into four boxes
+    // spaced like slot labels (measured on a rendered はい　　はい　　はい　　はい). Nothing itemised
+    // sits beside it, so it is left as the row rules already join it.
+    [Fact]
+    public void SpacedSubtitleWordsAreNotTakenForSlotLabels()
+    {
+        OcrTextBlock[] words =
+        [
+            Block("はい", 326, 39, 101, 55), Block("はい", 854, 39, 101, 55),
+            Block("はい", 502, 41, 99, 52), Block("はい", 682, 41, 97, 52),
+        ];
+        Assert.Equal(["はいはい", "はいはい"], DialogueTextGrouper.Group(words).Select(b => b.Text));
+        Assert.Equal(["はいはい", "はいはい", "そうだね、わかってるよ"],
+            DialogueTextGrouper.Group([.. words, Block("そうだね、わかってるよ", 330, 110, 620, 52)]).Select(b => b.Text));
+    }
+
+    // A spaced subtitle line over a line of text: three numbers in a time, or three boxes of the
+    // next spaced line, do not make the text a row of values beside it.
+    [Fact]
+    public void SpacedSubtitleOverOrdinaryTextIsNotTakenForSlotLabels()
+    {
+        OcrTextBlock[] hai = [Block("はい", 400, 40, 100, 55), Block("はい", 577, 40, 100, 55), Block("はい", 754, 40, 100, 55)];
+        Assert.Equal(["はいはいはい 10時30分に3番線へ"],
+            DialogueTextGrouper.Group([.. hai, Block("10時30分に3番線へ", 350, 110, 560, 55)]).Select(b => b.Text));
+        Assert.Equal(["はいはいはい いやいやいや"],
+            DialogueTextGrouper.Group([.. hai, Block("いや", 400, 110, 100, 55), Block("いや", 577, 110, 100, 55),
+                Block("いや", 754, 110, 100, 55)]).Select(b => b.Text));
+    }
+
+    // A visual novel's quick menu under its two icon letters (region-subtitle-ja-game/2.png): short
+    // buttons with a three-box row above, but that row covers too little of the menu to be its
+    // values. Grouped as before.
+    [Fact]
+    public void QuickMenuUnderIconLettersIsGroupedAsBefore()
+    {
+        OcrTextBlock[] frame =
+        [
+            Block("Summer Pockets REFLECTION BLUE羽未8月2日", 2, 0, 295, 24), Block("ろは", 460, 603, 62, 32, 1.0),
+            Block("「うん、じゃあ次はね……」", 285, 662, 346, 42, 1.0), Block("X CLOSE", 1336, 667, 91, 36, 0.92),
+            Block("VOICE", 1335, 709, 90, 31, 1.0), Block("LOG", 1334, 747, 78, 40, 0.81),
+            Block("G", 805, 792, 36, 32), Block("C", 881, 794, 26, 27, 0.91), Block("LOCK", 1366, 795, 53, 23, 1.0),
+            Block("TITLE", 800, 815, 45, 24), Block("QSAVE", 294, 816, 53, 23, 1.0), Block("AUTO", 656, 817, 45, 21, 1.0),
+            Block("SKIP", 732, 817, 38, 22, 1.0), Block("QUIT", 875, 817, 39, 21), Block("LOAD", 515, 818, 41, 19, 1.0),
+            Block("CONFIG", 939, 818, 58, 21, 1.0), Block("RECORD", 1008, 818, 62, 21, 1.0),
+            Block("TWITTER", 1077, 818, 67, 21, 1.0), Block("QLOAD", 366, 819, 53, 18, 0.94),
+            Block("SAVE", 446, 819, 34, 18, 1.0), Block("BACK", 589, 819, 38, 18, 1.0), Block("LOCK", 1162, 819, 42, 19, 1.0),
+        ];
+        Assert.Equal(
+        [
+            "Summer Pockets REFLECTION BLUE羽未8月2日", "ろは", "「うん、じゃあ次はね……」", "X CLOSE", "VOICE LOG",
+            "G", "C", "LOCK", "BACK AUTO SKIP TITLE QUIT CONFIG RECORD TWITTER LOCK", "QSAVE QLOAD SAVE", "LOAD",
+        ], OcrService.GroupRealtime([.. frame], 839, RealtimeBlockMode.Subtitle).Select(b => b.Text));
+    }
+
+    // A party status row (web-row-items/ja-dq11-2d-status-row-region.png): names over HP and MP,
+    // each label short and set apart from its number. The labels are not cut from their values.
+    [Fact]
+    public void StatLabelsStayWithTheirValues()
+    {
+        OcrTextBlock[] frame =
+        [
+            Block("ベロ二カ", 627, 3, 135, 45, 0.82), Block("カミュ", 401, 6, 106, 43), Block("イレブ", 151, 8, 104, 37),
+            Block("セーニヤ", 861, 9, 137, 39, 0.94), Block("HP", 593, 52, 88, 42, 0.98), Block("379", 217, 55, 92, 41, 1.0),
+            Block(":315", 425, 56, 125, 38), Block("253", 693, 56, 97, 39, 0.84), Block("HP", 835, 57, 67, 36, 1.0),
+            Block("HP", 118, 58, 68, 36, 1.0), Block("33", 935, 58, 65, 36, 0.97), Block("HP", 358, 59, 65, 33, 1.0),
+            Block("31", 986, 60, 44, 31, 0.93), Block("279", 692, 103, 95, 39, 1.0), Block("MP", 348, 105, 75, 37, 1.0),
+            Block("25", 933, 105, 67, 36, 1.0), Block("：145", 175, 106, 137, 33, 0.95), Block(") 6", 506, 106, 42, 31, 0.92),
+            Block("lMP :", 575, 106, 117, 33, 0.82), Block("MP", 836, 106, 65, 32, 1.0), Block("MP", 114, 107, 72, 31, 1.0),
+        ];
+        Assert.Equal(
+            ["ベロ二カ", "カミュ", "イレブ", "セーニヤ", "HP 379 HP:315 HP 253 HP 33 31", ") 6 lMP :279 MP 25", "MP：145 MP"],
+            OcrService.GroupRealtime([.. frame], 144, RealtimeBlockMode.Subtitle).Select(b => b.Text));
+    }
+
+    // The same party row with a row of bare values under it, which makes it a row of items: each
+    // stat is cut where the next label starts, never between a label and its value.
+    [Fact]
+    public void StatsBesideARowOfValuesPartBetweenStats()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("HP", 118, 58, 68, 36), Block("379", 217, 55, 80, 41), Block("HP", 358, 59, 65, 33),
+            Block("315", 425, 56, 80, 38), Block("HP", 593, 52, 88, 42), Block("253", 693, 56, 80, 39),
+            Block("HP", 835, 57, 67, 36), Block("33", 935, 58, 65, 36), Block("31", 986, 60, 44, 31),
+            Block("145", 200, 107, 90, 33), Block("106", 440, 107, 90, 33), Block("279", 692, 103, 95, 39),
+            Block("251", 933, 105, 90, 36),
+        ]).Select(b => b.Text).ToList();
+        foreach (var stat in new[] { "HP 379", "HP 315", "HP 253", "HP 33 31" })
+            Assert.Contains(stat, texts);
+    }
+
+    // The same status screen at a larger scale: the slot labels already part, but the one-box row
+    // of percentages was stacked with the note under it.
+    [Fact]
+    public void ValuesUnderSlotLabelsAreNotStackedWithTheNoteBelow()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("腔内", 920, 33, 88, 51), Block("尻尾", 250, 34, 85, 52), Block("口内", 588, 34, 81, 50),
+            Block("肛門", 1091, 35, 82, 48), Block("乳", 424, 36, 72, 51), Block("クリ", 761, 36, 77, 47),
+            Block("96%100%100%100%100%100%100%", 171, 140, 1180, 68), Block("開発度は下げることも可能", 325, 196, 705, 62),
+        ]).Select(b => b.Text).ToList();
+        Assert.Contains("96%100%100%100%100%100%100%", texts);
+        Assert.Contains("開発度は下げることも可能", texts);
+    }
+
+    // The top of the same status screen: a two-column list whose right column the other rows
+    // reach across a wide gap. main read 巫女のお勤め4回絶頂142回 as one item.
+    [Fact]
+    public void RightColumnOfAListStartsItsOwnItem()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("性防率", 65, 75, 96, 28), Block("97%", 170, 77, 53, 28), Block("ピストン数24759回", 272, 79, 211, 25),
+            Block("射精された量4637ml", 269, 99, 224, 29), Block("発情回数 9回", 58, 120, 137, 30),
+            Block("最大チン長285mm", 271, 122, 194, 27), Block("巫女のお勤め", 58, 142, 135, 30), Block("4回", 192, 144, 40, 28),
+            Block("絶頂142回", 269, 144, 135, 27), Block("売春 2回", 60, 168, 96, 26), Block("膣内出し123回", 271, 168, 172, 25),
+        ]).Select(b => b.Text).ToList();
+        Assert.Contains("巫女のお勤め4回", texts);
+        Assert.Contains("絶頂142回", texts);
+    }
+
+    // A scoreboard of two rows of bare numbers over its header: the rows itemise each other, but
+    // neither is a row of labels, so the header is not parted from them.
+    [Fact]
+    public void ScoreRowsAreNotTakenForSlotLabels()
+    {
+        Assert.Equal(["26 3 19 12 5 7 TK / K / A"], DialogueTextGrouper.Group(
+        [
+            Block("26", 1000, 40, 60, 50), Block("3", 1090, 40, 30, 50), Block("19", 1150, 40, 60, 50),
+            Block("12", 1000, 100, 60, 50), Block("5", 1090, 100, 30, 50), Block("7", 1150, 100, 30, 50),
+            Block("TK / K / A", 1000, 160, 180, 49),
+        ]).Select(b => b.Text));
+    }
+
+    // Centred lyrics whose spaced breaks all fall at one x: every line starts somewhere else, so
+    // there is no left column and the breaks are not a list's gutter.
+    [Fact]
+    public void CentredLinesBrokenAtOneXAreNotAList()
+    {
+        var lines = new[] { (200, 260), (320, 180), (260, 300), (380, 220) }.SelectMany((w, i) => new[]
+        {
+            Block($"phrase{i}a", 600 - w.Item1, i * 60, w.Item1, 40), Block($"phrase{i}b", 650, i * 60, w.Item2, 40),
+        }).ToArray();
+        Assert.Equal(["phrase0a phrase0b phrase1a phrase1b phrase2a phrase2b phrase3a phrase3b"],
+            DialogueTextGrouper.Group(lines).Select(b => b.Text));
+    }
+
+    // A dialogue line with a detector break at the x where a HUD's values start: the HUD rows
+    // start at their own labels, not at the dialogue's left edge.
+    [Fact]
+    public void HudValuesAtTheBreakDoNotCutTheDialogue()
+    {
+        Assert.Equal(["HP", "120/200", "MP", "80/90", "今日はいい天気ですね散歩に行こう そうしましょう", "SP", "10/10"],
+            DialogueTextGrouper.Group(
+            [
+                Block("HP", 300, 200, 60, 40), Block("120/200", 650, 200, 150, 40), Block("MP", 300, 250, 60, 40),
+                Block("80/90", 650, 250, 150, 40), Block("今日はいい天気ですね", 40, 300, 560, 40),
+                Block("散歩に行こう", 650, 300, 300, 40), Block("そうしましょう", 40, 350, 500, 40),
+                Block("SP", 300, 400, 60, 40), Block("10/10", 650, 400, 150, 40),
+            ]).Select(b => b.Text));
+    }
+
+    // A scoreboard's letterless 26/3/19 over TK / K / A (screen-subtitle-ko), with no slot labels
+    // anywhere: grouped as before.
+    [Fact]
+    public void NumbersAwayFromSlotLabelsAreGroupedAsBefore()
+    {
+        OcrTextBlock[] frame =
+        [
+            Block("RTX", 1812, 20, 38, 22, 1.0), Block("VSR", 1809, 34, 44, 27), Block("대상지정 불가", 665, 148, 180, 46, 0.83),
+            Block("257s", 597, 232, 57, 31, 0.96), Block("#2", 249, 400, 71, 55, 1.0), Block("26/3/19", 1004, 426, 206, 51, 1.0),
+            Block("27,003 841695", 1247, 461, 402, 56, 0.96), Block("랭크", 250, 467, 83, 53, 0.98),
+            Block("TK / K / A", 1003, 491, 180, 49, 0.86), Block("20", 689, 522, 70, 50, 0.98), Block("21:54", 249, 529, 114, 50, 1.0),
+            Block("딜량", 1246, 530, 84, 52, 0.95), Block("RP", 1441, 533, 61, 46, 1.0), Block("T3", 1016, 557, 74, 47, 1.0),
+            Block("1일전", 250, 581, 112, 54, 1.0), Block("아이작", 598, 586, 110, 47, 1.0),
+            Block("지금처럼 도파민은 없을 거야 울랄랄라", 284, 835, 1296, 117, 0.95),
+        ];
+        Assert.Equal(
+        [
+            "RTX", "VSR", "대상지정 불가", "257s", "#2", "26/3/19 TK / K / A T3", "27,003 841695", "랭크", "20", "21:54",
+            "딜량", "RP", "1일전", "아이작", "지금처럼 도파민은 없을 거야 울랄랄라",
+        ], OcrService.GroupRealtime([.. frame], 1035, RealtimeBlockMode.Subtitle).Select(b => b.Text));
+    }
+
     private static OcrTextBlock Block(string text, double x, double y, double w, double h = 20, double confidence = 0.99) =>
         new(text, new Rect(x, y, w, h), Confidence: confidence, LayoutBounds: new Rect(x, y, w, h),
             LayoutScript: OcrLayoutScript.Latin, LayoutGlyphHeight: h * 0.82);
