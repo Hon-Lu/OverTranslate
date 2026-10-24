@@ -64,8 +64,6 @@ public partial class ToolbarWindow
     {
         AddLabel(TtsBtn, () => LocalizationService.Get(_isSpeaking ? "S.Toolbar.SpeakStopLabel" : "S.Toolbar.Speak"));
         AddLabel(SwapBtn, () => LocalizationService.Get("S.Toolbar.Swap"));
-        AddLabel(HorizontalSeg, () => LocalizationService.Get("S.Toolbar.DirectionHorizontal"));
-        AddLabel(VerticalSeg, () => LocalizationService.Get("S.Toolbar.DirectionVertical"));
         AddLabel(ToggleBtn, () => LocalizationService.Get(
             _bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"));
         AddLabel(CopyTextBtn, () => LocalizationService.Get(

@@ -256,82 +256,56 @@
                              Remembered between sessions because writing direction is normally a property
                              of the material someone is working through, not of one rectangle they drew.
                              A first run and every settings file from before this switch still start on
-                             橫排; only an explicit press changes the stored answer.
+                             橫排; only an explicit choice changes the stored answer.
 
-                             The tray is the realtime bar's tray, for the same reason it has one: two
-                             things the user chooses between are one control, not two more objects on a
-                             crowded bar. -->
-                        <!-- Centred rather than stretched. A child of a horizontal StackPanel defaults
-                             to filling the panel's height, and the panel is now as tall as the stacked
-                             actions at the far end - so this tray, which holds one 26px row, was being
-                             pulled to 46 and reading as the tallest object on a bar where nothing beside
-                             it is tall. -->
-                        <Border Background="{DynamicResource ToolbarGroupBg}"
-                                CornerRadius="10"
-                                Padding="3"
-                                Margin="10,0,0,0"
-                                VerticalAlignment="Center"
-                                Grid.IsSharedSizeScope="True"
-                                AutomationProperties.Name="{DynamicResource S.Toolbar.Direction}">
-                            <Grid>
-                                <!-- Shared, so the two halves are the width of the longer label rather
-                                     than each their own — an even split is what makes the pill below able
-                                     to travel one fixed distance, and it is what a two-way switch looks
-                                     like. The labels are two characters each in Chinese and nothing like
-                                     each other in English, so this cannot be a hardcoded width. -->
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureDirectionSegment"/>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CaptureDirectionSegment"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- The mark for the chosen half, behind both of them and slid between
-                                     them rather than switched on and off. A marker that moves is the whole
-                                     point: it carries the eye from the option that was chosen to the one
-                                     that is now, which two backgrounds appearing and disappearing cannot
-                                     do. See DirectionSegment_Checked for the motion. -->
-                                <Border x:Name="DirectionThumb"
-                                        Grid.Column="0"
-                                        CornerRadius="7"
-                                        Background="{DynamicResource ToolbarSegmentThumbBg}"
-                                        BorderBrush="{DynamicResource ToolbarSegmentThumbBorder}"
-                                        BorderThickness="1">
-                                    <Border.RenderTransform>
-                                        <TranslateTransform x:Name="DirectionThumbShift"/>
-                                    </Border.RenderTransform>
-                                </Border>
-
-                                <RadioButton x:Name="HorizontalSeg"
-                                             Grid.Column="0"
-                                             GroupName="CaptureTextDirection"
-                                             IsChecked="True"
-                                             Style="{StaticResource ToolbarSegmentButton}"
-                                             ToolTip="{DynamicResource S.Toolbar.DirectionHorizontalHint}"
-                                             PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
-                                             Checked="DirectionSegment_Checked">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Style="{StaticResource ToolbarSegmentGlyph}"
-                                              Data="M2,3.5 H12 M2,7 H12 M2,10.5 H8"/>
-                                        <TextBlock VerticalAlignment="Center"
-                                                   Text="{DynamicResource S.Toolbar.DirectionHorizontal}"/>
-                                    </StackPanel>
-                                </RadioButton>
-
-                                <RadioButton x:Name="VerticalSeg"
-                                             Grid.Column="1"
-                                             GroupName="CaptureTextDirection"
-                                             Style="{StaticResource ToolbarSegmentButton}"
-                                             ToolTip="{DynamicResource S.Toolbar.DirectionVerticalHint}"
-                                             PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
-                                             Checked="DirectionSegment_Checked">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Style="{StaticResource ToolbarSegmentGlyph}"
-                                              Data="M10.5,2 V12 M7,2 V12 M3.5,2 V8"/>
-                                        <TextBlock VerticalAlignment="Center"
-                                                   Text="{DynamicResource S.Toolbar.DirectionVertical}"/>
-                                    </StackPanel>
-                                </RadioButton>
-                            </Grid>
-                        </Border>
+                             A picker naming the current direction, where it was a two-way switch spelling
+                             out both — see DirectionBox_SelectionChanged. Closed it shows the mark and the
+                             name; open, each entry has the line on what it is for under its name, which is
+                             what the switch's tooltips used to hold. The two are told apart the way
+                             ToolbarComboBox tells its closed box from its list: by whether there is a
+                             ComboBoxItem above. -->
+                        <ComboBox x:Name="DirectionBox"
+                                  Style="{StaticResource ToolbarComboBox}"
+                                  Margin="10,0,0,0"
+                                  VerticalContentAlignment="Center"
+                                  AutomationProperties.Name="{DynamicResource S.Toolbar.Direction}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Path x:Name="Mark"
+                                              Style="{StaticResource ToolbarSegmentGlyph}"
+                                              Data="{Binding Glyph}"
+                                              VerticalAlignment="Top"
+                                              Margin="0,2,8,0"
+                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontFamily="{DynamicResource AppFont}"/>
+                                            <TextBlock x:Name="Hint"
+                                                       Text="{Binding Hint}"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       FontSize="11.5"
+                                                       Margin="0,2,0,2"
+                                                       MaxWidth="260"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Value="{x:Null}"
+                                                     Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}">
+                                            <Setter TargetName="Hint" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="Mark" Property="VerticalAlignment" Value="Center"/>
+                                            <Setter TargetName="Mark" Property="Margin" Value="0,0,6,0"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
                         <!-- Translate -->
                         <Button x:Name="TranslateBtn"
