@@ -17,9 +17,10 @@ namespace OverTranslate.Services.Realtime;
 /// changes nothing; elsewhere it parts a Hacker News title from the line above and a wiki list
 /// entry 「フランス革命：…」 from the one before, both correctly.</para>
 ///
-/// <para>The other half the panel path has — a line holding only a speaker refuses to be
-/// continued — is not taken here. That is the name-over-its-message layout #341 left joined on
-/// purpose, and whether it should part is still an open question.</para>
+/// <para>The other half the panel path has is taken too: a line holding only a speaker in that
+/// form (「[GLOBAL] Conor_Braxton:」) is not continued, so a name on its own line stays apart from
+/// its message. #341 had left that layout joined; the name-plate rule there is about Ren'Py's
+/// plain name over indented dialogue and is unchanged.</para>
 /// </remarks>
 internal static class DialogueTextGrouper
 {
@@ -130,6 +131,11 @@ internal static class DialogueTextGrouper
                 {
                     joins = false;
                     rule = "speaker line start";
+                }
+                if (joins && SpeakerLineStart.IsBareLabel(groups[i][^1].Text))
+                {
+                    joins = false;
+                    rule = "speaker label";
                 }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;

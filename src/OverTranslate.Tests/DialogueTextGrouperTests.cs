@@ -367,12 +367,23 @@ public class DialogueTextGrouperTests
         Assert.Equal(3, DialogueTextGrouper.Group([first, second, third]).Count);
     }
 
-    [Fact]
-    public void ANameOverItsMessage_IsStillLeftAsItWas()
+    [Theory]
+    [InlineData("[GLOBAL] Conor_Braxton:")]
+    [InlineData("@alice:")]
+    [InlineData("Aa119119:")]
+    public void ANameOnItsOwnLine_StaysApartFromItsMessage(string speaker)
     {
-        var name = Block("[GLOBAL] Conor_Braxton:", 0, 0, 200);
+        var name = Block(speaker, 0, 0, 200);
         var message = Block("feels good making over 1m off a 33k rental ship", 0, 24, 300);
-        Assert.Single(DialogueTextGrouper.Group([name, message]));
+        Assert.Equal(2, DialogueTextGrouper.Group([name, message]).Count);
+    }
+
+    [Fact]
+    public void ALineThatOnlyStartsWithAName_StillTakesItsWrap()
+    {
+        var first = Block("[GLOBAL] Xa-mul: And on Very High settings it runs", 0, 0, 300);
+        var wrap = Block("just fine on my old card", 0, 24, 200);
+        Assert.Single(DialogueTextGrouper.Group([first, wrap]));
     }
 
     [Fact]
