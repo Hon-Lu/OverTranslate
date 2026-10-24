@@ -168,6 +168,7 @@ public partial class RealtimeControlWindow : Window
         ApplyCrosshairButton();
         ApplyCollapsed();
         RestoreText();
+        InitializeLabels();
 
         _messageTimer = new DispatcherTimer { Interval = MessageDuration };
         _messageTimer.Tick += (_, _) => { _messageTimer.Stop(); RestoreText(); };
@@ -484,6 +485,7 @@ public partial class RealtimeControlWindow : Window
     {
         _mode = mode;
         CloseMenu();
+        Labels.Hide();
         EditPanel.Visibility = mode == RealtimeControlMode.Edit ? Visibility.Visible : Visibility.Collapsed;
         RunPanel.Visibility = mode == RealtimeControlMode.Running ? Visibility.Visible : Visibility.Collapsed;
 
