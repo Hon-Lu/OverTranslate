@@ -257,6 +257,34 @@ public class DialogueTextGrouperTests
         ]).Select(b => b.Text));
     }
 
+    // Centred lyrics whose spaced breaks all fall at one x: every line starts somewhere else, so
+    // there is no left column and the breaks are not a list's gutter.
+    [Fact]
+    public void CentredLinesBrokenAtOneXAreNotAList()
+    {
+        var lines = new[] { (200, 260), (320, 180), (260, 300), (380, 220) }.SelectMany((w, i) => new[]
+        {
+            Block($"phrase{i}a", 600 - w.Item1, i * 60, w.Item1, 40), Block($"phrase{i}b", 650, i * 60, w.Item2, 40),
+        }).ToArray();
+        Assert.Equal(["phrase0a phrase0b phrase1a phrase1b phrase2a phrase2b phrase3a phrase3b"],
+            DialogueTextGrouper.Group(lines).Select(b => b.Text));
+    }
+
+    // A dialogue line with a detector break at the x where a HUD's values start: the HUD rows
+    // start at their own labels, not at the dialogue's left edge.
+    [Fact]
+    public void HudValuesAtTheBreakDoNotCutTheDialogue()
+    {
+        Assert.Equal(["HP", "120/200", "MP", "80/90", "今日はいい天気ですね散歩に行こう そうしましょう", "SP", "10/10"],
+            DialogueTextGrouper.Group(
+            [
+                Block("HP", 300, 200, 60, 40), Block("120/200", 650, 200, 150, 40), Block("MP", 300, 250, 60, 40),
+                Block("80/90", 650, 250, 150, 40), Block("今日はいい天気ですね", 40, 300, 560, 40),
+                Block("散歩に行こう", 650, 300, 300, 40), Block("そうしましょう", 40, 350, 500, 40),
+                Block("SP", 300, 400, 60, 40), Block("10/10", 650, 400, 150, 40),
+            ]).Select(b => b.Text));
+    }
+
     // A scoreboard's letterless 26/3/19 over TK / K / A (screen-subtitle-ko), with no slot labels
     // anywhere: grouped as before.
     [Fact]

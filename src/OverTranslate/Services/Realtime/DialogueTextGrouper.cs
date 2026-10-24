@@ -49,8 +49,9 @@ internal static class DialogueTextGrouper
             var segments = new List<List<OcrTextBlock>>();
             var items = ItemRow(row, rows);
             if (items && row.Any(b => HasLetter(b.Text))) itemRows.Add((Span(row), row));
-            foreach (var block in row)
+            for (int k = 0; k < row.Count; k++)
             {
+                var block = row[k];
                 var joinsRow = segments.Count > 0 && Adjacent(segments[^1][^1].LayoutBounds, block.LayoutBounds);
                 string? refused = null;
                 if (joinsRow && items && SpacedItems(segments[^1][^1], block))
@@ -58,7 +59,7 @@ internal static class DialogueTextGrouper
                     joinsRow = false;
                     refused = "row-items";
                 }
-                else if (joinsRow && ColumnStart(segments[^1][^1].LayoutBounds, block.LayoutBounds, row, rows))
+                else if (joinsRow && ColumnStart(row, k, rows))
                 {
                     joinsRow = false;
                     refused = "column-gutter";
@@ -230,11 +231,16 @@ internal static class DialogueTextGrouper
     /// the 1.5-height join. One aligned row is not enough: a visual novel's quick menu has a G and
     /// a C icon above it, and the C lines up with QUIT, which would cut the menu in two. Three rows
     /// changed no corpus frame; two would have done as well.
+    /// <para>The left column has to line up too, or it is not a list. Centred lyrics whose spaced
+    /// breaks happen to fall at one x start each line somewhere else, and a HUD stacked at that x
+    /// starts its rows at its own labels, not at the dialogue's left edge.</para>
     /// </remarks>
-    private static bool ColumnStart(Rect a, Rect b, List<OcrTextBlock> row, List<List<OcrTextBlock>> rows)
+    private static bool ColumnStart(List<OcrTextBlock> row, int index, List<List<OcrTextBlock>> rows)
     {
+        Rect a = row[index - 1].LayoutBounds, b = row[index].LayoutBounds;
         double height = Math.Max(a.Height, b.Height);
         if (b.Left - a.Right < height * 0.9) return false;
+        double left = RunStart(row, index - 1);
         int aligned = 0;
         foreach (var other in rows)
         {
@@ -244,10 +250,25 @@ internal static class DialogueTextGrouper
                 Rect p = other[i - 1].LayoutBounds, c = other[i].LayoutBounds;
                 if (Math.Abs(c.Left - b.Left) > height * 0.5) continue;
                 if (Math.Max(c.Top - b.Bottom, b.Top - c.Bottom) > height * 4) continue;
-                if (c.Left - p.Right >= Math.Max(p.Height, c.Height) * 0.9) { aligned++; break; }
+                if (c.Left - p.Right < Math.Max(p.Height, c.Height) * 0.9) continue;
+                if (Math.Abs(RunStart(other, i - 1) - left) > height * 0.5) continue;
+                aligned++;
+                break;
             }
         }
         return aligned >= 3;
+    }
+
+    // Where the column holding row[index] starts: back from it until a gap as wide as a gutter.
+    private static double RunStart(List<OcrTextBlock> row, int index)
+    {
+        while (index > 0)
+        {
+            Rect p = row[index - 1].LayoutBounds, c = row[index].LayoutBounds;
+            if (c.Left - p.Right >= Math.Max(p.Height, c.Height) * 0.9) break;
+            index--;
+        }
+        return row[index].LayoutBounds.Left;
     }
 
     private static bool HasLetter(string text) => text.Any(char.IsLetter);
