@@ -146,6 +146,7 @@ public partial class ToolbarWindow : Window
         };
 
         RenderSpeakButton();
+        InitializeLabels();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -222,6 +223,9 @@ public partial class ToolbarWindow : Window
             top = yAbove;
         else
             top = _selPhysTop + _selPhysHeight - tbH - 2 * scale;
+
+        // The labels grow away from the selection, so they never cover what is being read.
+        _labelsPreferAbove = top == yAbove;
 
         ScreenGeometry.MoveToPhysical(this, (int)Math.Round(left), (int)Math.Round(top));
     }

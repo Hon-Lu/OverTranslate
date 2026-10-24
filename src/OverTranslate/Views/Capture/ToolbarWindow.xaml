@@ -95,7 +95,8 @@
                                   VerticalContentAlignment="Center"/>
 
                         <!-- Swap -->
-                        <Button Content="&#xE8AB;"
+                        <Button x:Name="SwapBtn"
+                                Content="&#xE8AB;"
                                 Style="{StaticResource ToolbarIconButton}"
                                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                 FontSize="14"
@@ -720,10 +721,81 @@
                             </Border>
                         </Popup>
 
+                        <!-- The name of whatever the pointer is on, and a line on what it does. One
+                             popup for the whole bar rather than a ToolTip per button: a ToolTip closes
+                             and reopens from scratch at every button, where this one slides across to
+                             the next while it is still up, so a pass along the row reads every name.
+                             The popup spans the bar and the card moves inside it; transparent pixels of
+                             a layered popup pass clicks through, and nothing here takes the mouse.
+                             Placed and driven from ToolbarWindow.Labels.cs. -->
+                        <Popup x:Name="LabelPopup" PlacementTarget="{Binding ElementName=BarSurface}"
+                               Placement="Relative" AllowsTransparency="True" StaysOpen="True"
+                               Focusable="False" IsHitTestVisible="False" PopupAnimation="None">
+                            <Canvas x:Name="LabelCanvas" IsHitTestVisible="False">
+                                <Grid x:Name="LabelCard">
+                                    <Grid.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform x:Name="LabelScale"/>
+                                            <TranslateTransform x:Name="LabelShift"/>
+                                        </TransformGroup>
+                                    </Grid.RenderTransform>
+                                    <!-- Shadow on an empty twin, as on the bar itself. -->
+                                    <Border Background="{DynamicResource TooltipBg}" CornerRadius="9">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="14" ShadowDepth="3" Direction="270"
+                                                              Opacity="0.35" Color="#000000"/>
+                                        </Border.Effect>
+                                    </Border>
+                                    <Border x:Name="LabelBody"
+                                            Background="{DynamicResource TooltipBg}"
+                                            BorderBrush="{DynamicResource TooltipBorder}"
+                                            BorderThickness="1" CornerRadius="9"
+                                            Padding="12,7,12,8"
+                                            RenderOptions.ClearTypeHint="Enabled">
+                                        <StackPanel MaxWidth="260">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path x:Name="LabelTick" Visibility="Collapsed"
+                                                      Width="14" Height="14" Margin="0,0,6,0"
+                                                      VerticalAlignment="Center"
+                                                      Stroke="{DynamicResource AppSuccess}" StrokeThickness="1.6"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"
+                                                      Stretch="Uniform"
+                                                      Data="M3.2,9.6 L7.2,13.4 L14.8,4.6"/>
+                                                <TextBlock x:Name="LabelName"
+                                                           FontFamily="{DynamicResource AppFont}"
+                                                           FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TooltipFg}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <TextBlock x:Name="LabelDescription"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       FontSize="12" Margin="0,2,0,0"
+                                                       Foreground="{DynamicResource TooltipFgDim}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- The point at the button. Drawn over the card's edge so it opens
+                                         the border there; flipped when the card sits above the button. -->
+                                    <Canvas x:Name="LabelArrow" Width="12" Height="7"
+                                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                                            Margin="0,-6,0,0" RenderTransformOrigin="0.5,0.5">
+                                        <Canvas.RenderTransform>
+                                            <ScaleTransform x:Name="LabelArrowFlip"/>
+                                        </Canvas.RenderTransform>
+                                        <Path Data="M0,7 L6,1 L12,7 Z" Fill="{DynamicResource TooltipBg}"/>
+                                        <Path Data="M0,6.5 L6,0.5 L12,6.5"
+                                              Stroke="{DynamicResource TooltipBorder}" StrokeThickness="1"/>
+                                    </Canvas>
+                                </Grid>
+                            </Canvas>
+                        </Popup>
+
                         <!-- Close, set apart by the gap: everything left of it acts inside the session.
                              E8BB rather than ✕ in the UI font, which sits 0.83px below centre; E8BB is
                              exactly on it, and 9.5 keeps the old glyph's 9.4px of ink. -->
-                        <Button Content="&#xE8BB;"
+                        <Button x:Name="CloseBtn"
+                                Content="&#xE8BB;"
                                 Style="{StaticResource ToolbarIconButton}"
                                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                 FontSize="9.5"

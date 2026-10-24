@@ -164,6 +164,8 @@ public partial class ToolbarWindow
         _copyShotTimer ??= NewOneShotTimer(ButtonFeedbackMs, RevertCopyShotButton);
         _copyShotTimer.Stop();
         _copyShotTimer.Start();
+
+        FlashLabel(CopyShotBtn, OverTranslate.Services.LocalizationService.Get("S.Main.CopiedTitle"));
     }
 
     /// <summary>Gives the screenshot button its own name back.</summary>
