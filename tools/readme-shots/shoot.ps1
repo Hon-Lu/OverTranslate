@@ -6,6 +6,8 @@ param(
     [switch]$CopyToOriginals
 )
 $ErrorActionPreference = 'Stop'
+# Through -File, "-Langs en,ja" arrives as the one string "en,ja".
+$Langs = @($Langs | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing, System.Windows.Forms
 Add-Type -Namespace RS -Name W -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(System.IntPtr c);
