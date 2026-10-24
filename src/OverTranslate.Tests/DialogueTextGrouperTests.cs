@@ -196,6 +196,23 @@ public class DialogueTextGrouperTests
             OcrService.GroupRealtime([.. frame], 144, RealtimeBlockMode.Subtitle).Select(b => b.Text));
     }
 
+    // The same party row with a row of bare values under it, which makes it a row of items: each
+    // stat is cut where the next label starts, never between a label and its value.
+    [Fact]
+    public void StatsBesideARowOfValuesPartBetweenStats()
+    {
+        var texts = DialogueTextGrouper.Group(
+        [
+            Block("HP", 118, 58, 68, 36), Block("379", 217, 55, 80, 41), Block("HP", 358, 59, 65, 33),
+            Block("315", 425, 56, 80, 38), Block("HP", 593, 52, 88, 42), Block("253", 693, 56, 80, 39),
+            Block("HP", 835, 57, 67, 36), Block("33", 935, 58, 65, 36), Block("31", 986, 60, 44, 31),
+            Block("145", 200, 107, 90, 33), Block("106", 440, 107, 90, 33), Block("279", 692, 103, 95, 39),
+            Block("251", 933, 105, 90, 36),
+        ]).Select(b => b.Text).ToList();
+        foreach (var stat in new[] { "HP 379", "HP 315", "HP 253", "HP 33 31" })
+            Assert.Contains(stat, texts);
+    }
+
     // The same status screen at a larger scale: the slot labels already part, but the one-box row
     // of percentages was stacked with the note under it.
     [Fact]

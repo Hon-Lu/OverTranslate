@@ -179,13 +179,14 @@ internal static class DialogueTextGrouper
     // Measured labels reach 1.95 heights; a 0.9-height gap is under the narrowest label gap, 0.95.
     private static bool ShortItem(Rect r) => r.Width <= r.Height * 2.2;
 
-    // Both items have to be words. A status row's HP and EP are short and set apart from their
+    // Only a word starts an item. A status row's HP and EP are short and set apart from their
     // numbers too (Dragon Quest XI, Trails of Cold Steel), and cutting a label from its value turns
-    // one stat into two meaningless pieces.
+    // one stat into two meaningless pieces; a value followed by the next label is where one stat
+    // ends and the next begins.
     private static bool SpacedItems(OcrTextBlock left, OcrTextBlock right)
     {
         Rect a = left.LayoutBounds, b = right.LayoutBounds;
-        return ShortItem(a) && ShortItem(b) && HasLetter(left.Text) && HasLetter(right.Text) &&
+        return ShortItem(a) && ShortItem(b) && HasLetter(right.Text) &&
             b.Left - a.Right >= Math.Max(a.Height, b.Height) * 0.9;
     }
 
