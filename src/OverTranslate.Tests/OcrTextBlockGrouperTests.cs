@@ -449,6 +449,55 @@ public class OcrTextBlockGrouperTests
     }
 
     /// <summary>
+    /// A separator the detector boxed on its own — a dash, a bar, a star — is thinner and shorter
+    /// than the words beside it, so its box reads as a much smaller size. It carries no letters to
+    /// measure a size from, so it does not cut the row.
+    /// </summary>
+    [Theory]
+    [InlineData("2019", "-", "2024", OcrLayoutScript.Latin)]
+    [InlineData("首頁", "|", "新聞", OcrLayoutScript.Cjk)]
+    [InlineData("ホーム", "・", "ニュース", OcrLayoutScript.Cjk)]
+    public void ASeparatorBoxedOnItsOwn_DoesNotCutTheRow(string left, string separator, string right, OcrLayoutScript script)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured(left, new Rect(100, 100, 60, 24), script, 17),
+            new(separator, new Rect(165, 104, 8, 16), LayoutScript: OcrLayoutScript.Unknown, LayoutBounds: new Rect(165, 104, 8, 16)),
+            Measured(right, new Rect(178, 100, 60, 24), script, 17),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    [Fact]
+    public void AStarBeforeAWord_DoesNotCutTheRow()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            new("★", new Rect(100, 104, 14, 14), LayoutScript: OcrLayoutScript.Unknown, LayoutBounds: new Rect(100, 104, 14, 14)),
+            Measured("Recommended", new Rect(120, 100, 140, 24), OcrLayoutScript.Latin, 17),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
+    /// One or two CJK characters set smaller beside a number — a unit, a counter word — are too few
+    /// to say what size they are set at, and stay on the line.
+    /// </summary>
+    [Fact]
+    public void AShortSmallerCjkSuffix_DoesNotCutTheRow()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("12,800", new Rect(100, 100, 90, 30), OcrLayoutScript.Latin, 22),
+            Measured("円", new Rect(196, 110, 18, 18), OcrLayoutScript.Cjk, 13),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+    }
+
+    /// <summary>
     /// The level and the badge the detector cut out of the same cell overlap, so they stay one
     /// however different their sizes are.
     /// </summary>

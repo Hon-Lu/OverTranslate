@@ -377,9 +377,11 @@ internal static class OcrTextBlockGrouper
                 Math.Abs(box.Right - bounds.Right) > height * 0.75) continue;
             for (var i = 1; i < other.Count; i++)
             {
-                var (joined, _) = JudgeSameLine(other[i - 1], other[i], threshold);
+                // Only a gap says gutter: a neighbour cut for a size break is an icon or a
+                // different face inside that row, not a column edge running down the page.
+                var (joined, rule) = JudgeSameLine(other[i - 1], other[i], threshold);
                 var otherCut = (other[i - 1].LayoutBounds.Right + other[i].LayoutBounds.Left) / 2;
-                if (!joined && Math.Abs(otherCut - cut) <= height) return false;
+                if (!joined && rule == "horizontal gap" && Math.Abs(otherCut - cut) <= height) return false;
             }
             supporting.Add(other);
         }
@@ -436,20 +438,35 @@ internal static class OcrTextBlockGrouper
     /// sat both further apart than that and under <see cref="SizeBreakMaxRatio"/>; the nearest, "①
     /// Lvl 100" beside "M. Lvl 50 Eugen", is 0.98 the size.</para>
     ///
-    /// <para>A Latin word under <see cref="SizeBreakMinGlyphs"/> letters is not compared at all: its
-    /// size is estimated from the box and a letter count too small to average anything, so "to"
-    /// beside "session" in a line the detector boxed word by word reads as a different size when
-    /// it is not. A CJK box is square to its characters, so two of them are enough.</para>
+    /// <para>Both sides need letters enough to have a size (<see cref="HasSteadySize"/>). A box
+    /// of symbols only — a dash, a bar, a star the detector boxed on its own — has none: it is
+    /// thinner and shorter than the words beside it, so "2019 - 2024" and a nav bar's separators
+    /// would read as size breaks. A Latin word under <see cref="SizeBreakMinGlyphs"/> letters is
+    /// not compared either: its size is estimated from the box and a letter count too small to
+    /// average anything, so "to" beside "session" in a line the detector boxed word by word reads
+    /// as a different size when it is not. A CJK box is square to its characters, so a title of
+    /// two (「装備」) is a size; but as the smaller side, one or two characters are as often a unit
+    /// or a counter word set small beside a number (「円」), so the smaller side needs
+    /// <see cref="SizeBreakMinSmallerCharacters"/>.</para>
     /// </remarks>
     private static bool IsSizeBreakInRow(
-        OcrTextBlock previous, OcrTextBlock current, double horizontalGap, double avgHeight) =>
-        horizontalGap > avgHeight * SizeBreakMinGap &&
-        HasSteadySize(previous) && HasSteadySize(current) &&
-        TextSizeRatio(previous, current) < SizeBreakMaxRatio;
+        OcrTextBlock previous, OcrTextBlock current, double horizontalGap, double avgHeight)
+    {
+        if (horizontalGap <= avgHeight * SizeBreakMinGap)
+            return false;
+        var ratio = TextSizeRatio(previous, current, out _, out var previousSize, out var currentSize);
+        if (ratio >= SizeBreakMaxRatio)
+            return false;
+        var previousIsSmaller = previousSize < currentSize;
+        return HasSteadySize(previous, previousIsSmaller) && HasSteadySize(current, !previousIsSmaller);
+    }
 
-    private static bool HasSteadySize(OcrTextBlock line) =>
-        line.LayoutScript != OcrLayoutScript.Latin ||
-        line.Text.Count(c => !char.IsWhiteSpace(c)) >= SizeBreakMinGlyphs;
+    private static bool HasSteadySize(OcrTextBlock line, bool isSmaller) => line.LayoutScript switch
+    {
+        OcrLayoutScript.Unknown => false,
+        OcrLayoutScript.Latin => line.Text.Count(c => !char.IsWhiteSpace(c)) >= SizeBreakMinGlyphs,
+        _ => line.Text.Count(char.IsLetterOrDigit) >= (isSmaller ? SizeBreakMinSmallerCharacters : 1),
+    };
 
     /// <inheritdoc cref="IsSizeBreakInRow"/>
     private const double SizeBreakMinGap = 0.15;
@@ -459,6 +476,9 @@ internal static class OcrTextBlockGrouper
 
     /// <inheritdoc cref="IsSizeBreakInRow"/>
     private const int SizeBreakMinGlyphs = 4;
+
+    /// <inheritdoc cref="IsSizeBreakInRow"/>
+    private const int SizeBreakMinSmallerCharacters = 3;
 
     /// <summary>
     /// How close in text size two lines have to be before one can be the other wrapping.
