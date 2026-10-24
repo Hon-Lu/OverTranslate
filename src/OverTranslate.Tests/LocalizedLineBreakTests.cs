@@ -23,9 +23,13 @@ public class LocalizedLineBreakTests
     // paragraph each — deliberately, as the wording changed around the export and upload being
     // separate presses. They are out because a break is no longer what they are asking for; the
     // card's own hint still is, and is what this guards.
+    // The vertical-direction hint puts its bracket (Japanese books and comics) on a line of its own:
+    // the capture toolbar's direction picker no longer wraps its hints and is as wide as their
+    // longest line, so the break is the only thing keeping that line short (#349).
     private static readonly string[] TwoLineKeys =
     {
         "S.Settings.DiagnosticsUploadHint",
+        "S.Toolbar.DirectionVerticalHint",
     };
 
     /// <summary>Every shipped dictionary, so a new language cannot lose the break quietly.</summary>

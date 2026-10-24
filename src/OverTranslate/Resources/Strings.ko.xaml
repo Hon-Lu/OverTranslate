@@ -208,13 +208,19 @@
     <sys:String x:Key="S.Toolbar.Screenshot">스크린샷</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindow">창으로 열기</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindowHint">이번 번역 결과를 창에서 열기</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSourceHint">번역문을 잠시 치우고 선택 영역의 원래 화면 보기</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslationHint">번역문을 다시 화면에 표시</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTextHint">선택 영역의 원문을 클립보드에 복사</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslationHint">번역문을 클립보드에 복사</sys:String>
+    <sys:String x:Key="S.Toolbar.ScreenshotHint">선택 영역의 지금 화면을 클립보드에 복사</sys:String>
+    <sys:String x:Key="S.Toolbar.SettingsHint">자동 번역, 스크린샷 후 자동으로 닫기, 스크린샷 저장 등 설정</sys:String>
     <sys:String x:Key="S.Toolbar.Swap">원문과 번역문의 언어 바꾸기</sys:String>
     <sys:String x:Key="S.Toolbar.Close">캡처 번역 종료</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">원문의 쓰기 방향</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">가로쓰기</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">세로쓰기</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">원문이 가로로, 왼쪽에서 오른쪽으로 쓰여 있습니다</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">원문이 세로로, 위에서 아래·오른쪽에서 왼쪽으로 쓰여 있습니다 (일본어 책·만화)</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">원문이 세로로, 위에서 아래·오른쪽에서 왼쪽으로 쓰여 있습니다&#x0a;(일본어 책·만화)</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">선택 영역의 내용 종류</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">일반</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">UI</sys:String>

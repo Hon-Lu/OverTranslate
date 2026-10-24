@@ -69,7 +69,7 @@ public partial class ToolbarWindow : Window
     /// Restored from <see cref="AppSettings.Capture"/> when the toolbar opens and saved on each
     /// explicit switch, so consecutive pages from the same manga or game keep the chosen direction.
     /// </remarks>
-    public bool IsVerticalText => VerticalSeg.IsChecked == true;
+    public bool IsVerticalText => DirectionBox.SelectedItem == DirectionOption.Vertical;
 
     /// <summary>
     /// The effective capture mode. The single-mode release always uses General.
@@ -111,9 +111,10 @@ public partial class ToolbarWindow : Window
         LocationChanged += (_, _) => MorePopup.IsOpen = false;
         MoreBtn.MouseLeave += (_, _) => _ignoreMoreClick = false;
 
-        bool verticalText = SettingsService.Instance.Current.Capture.VerticalText;
-        HorizontalSeg.IsChecked = !verticalText;
-        VerticalSeg.IsChecked = verticalText;
+        DirectionBox.ItemsSource = DirectionOption.All;
+        DirectionBox.SelectedItem = SettingsService.Instance.Current.Capture.VerticalText
+            ? DirectionOption.Vertical
+            : DirectionOption.Horizontal;
         _initializingDirection = false;
 
         // A mode this build cannot read — a file from a later release, or one still naming a v1
@@ -136,16 +137,18 @@ public partial class ToolbarWindow : Window
         SrcLangBox.SelectionChanged  += SrcLangBox_SelectionChanged;
         TgtLangBox.SelectionChanged  += TgtLangBox_SelectionChanged;
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
+        DirectionBox.SelectionChanged += DirectionBox_SelectionChanged;
 
         // The shared columns do not have a width until layout. A remembered vertical choice already
         // checks the right half above; this places the thumb under it on the first rendered frame.
         Loaded += (_, _) =>
         {
-            RenderDirectionThumb(animate: false);
             RenderLayoutModeThumb(animate: false);
         };
 
         RenderSpeakButton();
+        RenderToggleButton();
+        InitializeLabels();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -223,6 +226,9 @@ public partial class ToolbarWindow : Window
         else
             top = _selPhysTop + _selPhysHeight - tbH - 2 * scale;
 
+        // The labels grow away from the selection, so they never cover what is being read.
+        _labelsPreferAbove = top == yAbove;
+
         ScreenGeometry.MoveToPhysical(this, (int)Math.Round(left), (int)Math.Round(top));
     }
 
@@ -277,6 +283,24 @@ public partial class ToolbarWindow : Window
     }
 
     /// <summary>
+    /// The direction just picked: kept for next time, and the manga hint brought in line with it.
+    /// </summary>
+    /// <remarks>
+    /// A picker that names the current direction rather than the two-way switch it was (#349). The
+    /// switch spelled out both words side by side, and in the longer languages they were the widest
+    /// thing on the bar; it was also a mode, and a pair of icons did not say what it was a choice
+    /// of. The picker reads like the language pickers to its left — a setting showing its value —
+    /// and opening it explains each choice in a line under its name.
+    /// </remarks>
+    private void DirectionBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (!_initializingDirection)
+            SaveTextDirectionSelection();
+
+        RenderMangaHint();
+    }
+
+    /// <summary>
     /// Commits the choice on the press rather than on the release, so the pill starts moving under
     /// the finger instead of after it.
     /// </summary>
@@ -286,7 +310,7 @@ public partial class ToolbarWindow : Window
     /// your mind about. The release still runs the ordinary click, which finds the option already
     /// chosen and does nothing.
     /// </remarks>
-    private void DirectionSegment_PreviewMouseLeftButtonDown(
+    private void LayoutModeSegment_PreviewMouseLeftButtonDown(
         object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (sender is System.Windows.Controls.RadioButton segment) segment.IsChecked = true;
@@ -306,28 +330,6 @@ public partial class ToolbarWindow : Window
     /// <para>The travel is one column's width, which is the pill's own width because the two columns
     /// share a size — see the tray's ColumnDefinitions.</para>
     /// </remarks>
-    private void DirectionSegment_Checked(object sender, RoutedEventArgs e)
-    {
-        // Fires once while the XAML is still being parsed, for the half that opens checked — at
-        // which point the other half does not exist yet and neither does the pill. The constructor
-        // applies the stored choice after parsing, and Loaded places the thumb after layout.
-        if (DirectionThumb is null || DirectionThumbShift is null || VerticalSeg is null) return;
-
-        if (!_initializingDirection)
-            SaveTextDirectionSelection();
-
-        RenderDirectionThumb(animate: IsLoaded);
-        RenderMangaHint();
-    }
-
-    /// <inheritdoc cref="DirectionSegment_PreviewMouseLeftButtonDown"/>
-    private void LayoutModeSegment_PreviewMouseLeftButtonDown(
-        object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (sender is System.Windows.Controls.RadioButton segment) segment.IsChecked = true;
-    }
-
-    /// <inheritdoc cref="DirectionSegment_Checked"/>
     private void LayoutModeSegment_Checked(object sender, RoutedEventArgs e)
     {
         // InterfaceModeSeg, because that is the half CurrentLayoutMode reads. This fires once while
@@ -364,27 +366,6 @@ public partial class ToolbarWindow : Window
             });
     }
 
-    private void RenderDirectionThumb(bool animate)
-    {
-        double target = IsVerticalText ? DirectionThumb.ActualWidth : 0;
-
-        // Before the tray has been laid out there is no distance to travel and nothing to see; the
-        // Loaded callback runs this again once the shared columns have their final width.
-        if (!animate || DirectionThumb.ActualWidth <= 0)
-        {
-            DirectionThumbShift.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
-            DirectionThumbShift.X = target;
-            return;
-        }
-
-        DirectionThumbShift.BeginAnimation(
-            System.Windows.Media.TranslateTransform.XProperty,
-            new DoubleAnimation(target, TimeSpan.FromMilliseconds(220))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-            });
-    }
-
     private void TranslateBtn_Click(object sender, RoutedEventArgs e)
         => RequestTranslate();
 
@@ -406,18 +387,17 @@ public partial class ToolbarWindow : Window
     private void TtsBtn_Click(object sender, RoutedEventArgs e)
         => SpeakToggleRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Puts the toggle's icon and label on the same side of what pressing it would do.</summary>
+    /// <summary>Holds the toggle down while the original is on screen.</summary>
     /// <remarks>
-    /// The eye is the action, like the label beside it: plain while the translation is on
-    /// screen, because pressing reveals the original; struck through while the original is,
-    /// because pressing puts it away again. A fixed eye under a label that changed was the
-    /// icon disagreeing with the word next to it every second press.
+    /// Set from the state rather than left to the click, so the two cannot drift apart: the bubbles
+    /// are also put back from outside, by a new translation (SetToggleEnabled). The name a screen
+    /// reader announces is what pressing does, as the label under it used to say.
     /// </remarks>
     private void RenderToggleButton()
     {
-        ToggleHideSlash.Visibility = _bubblesVisible ? Visibility.Collapsed : Visibility.Visible;
-        ToggleLabel.Text = LocalizationService.Get(
-            _bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation");
+        ToggleBtn.IsChecked = !_bubblesVisible;
+        System.Windows.Automation.AutomationProperties.SetName(ToggleBtn, LocalizationService.Get(
+            _bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"));
         RenderCopyTextButton();
     }
 
@@ -580,10 +560,10 @@ public partial class ToolbarWindow : Window
         bool copiesTranslation =
             ResolveCopyTextKind(_hasTranslated, _bubblesVisible) == CopyTextKind.Translation;
 
-        CopyTextLabel.Text = LocalizationService.Get(
+        System.Windows.Automation.AutomationProperties.SetName(CopyTextBtn, LocalizationService.Get(
             copiesTranslation
                 ? "S.Toolbar.CopyTranslation"
-                : "S.Toolbar.CopyText");
+                : "S.Toolbar.CopyText"));
         CopySourceMark.Visibility = copiesTranslation ? Visibility.Collapsed : Visibility.Visible;
         CopyTranslationMark.Visibility = copiesTranslation ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -701,6 +681,8 @@ public partial class ToolbarWindow : Window
         SrcLangBox.Width  = ClosedWidth(SrcLangBox, LanguageData.OcrSourceLanguages.Select(l => l.ShortName));
         TgtLangBox.Width  = ClosedWidth(TgtLangBox, LanguageData.TargetLanguages.Select(l => l.ShortName));
         ProviderBox.Width = ClosedWidth(ProviderBox, OverTranslate.Controls.ProviderPicker.ShowableItems(ProviderBox).Select(p => p.ShortName));
+        // Plus the direction's own mark in front of its name: 14 wide and 6 from the word.
+        DirectionBox.Width = ClosedWidth(DirectionBox, DirectionOption.All.Select(o => o.Name)) + 14 + 6;
 
         double ClosedWidth(System.Windows.Controls.ComboBox box, IEnumerable<string> labels)
         {

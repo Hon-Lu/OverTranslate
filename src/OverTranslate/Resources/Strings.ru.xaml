@@ -204,13 +204,19 @@
     <sys:String x:Key="S.Toolbar.Screenshot">Снимок</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindow">Окно</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindowHint">Открыть этот перевод в окне</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSourceHint">Временно убрать перевод и увидеть исходное изображение</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslationHint">Вернуть перевод на место</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTextHint">Скопировать исходный текст из выделенной области в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslationHint">Скопировать перевод в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.ScreenshotHint">Скопировать выделенную область в нынешнем виде в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.SettingsHint">Автоперевод, закрытие после снимка, сохранение снимков и другое</sys:String>
     <sys:String x:Key="S.Toolbar.Swap">Поменять местами исходный и целевой языки</sys:String>
     <sys:String x:Key="S.Toolbar.Close">Завершить перевод снимка экрана</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">Направление письма оригинала</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">Горизонтально</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">Вертикально</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">Текст идет по строкам слева направо</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">Текст идет столбцами сверху вниз, справа налево (японские книги и манга)</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">Текст идет столбцами сверху вниз, справа налево&#x0a;(японские книги и манга)</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">Содержимое выделения</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">Обычное</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">Интерфейс</sys:String>
@@ -405,13 +411,13 @@
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">Перевод пока не удался, повторные попытки продолжаются: {0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google Переводчик (стандартный)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChrome">Google Переводчик (бета)</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google (стандартный)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google (бета)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChromeHint">Звучит естественнее, но имена могут быть изменены или пропущены</sys:String>
-    <sys:String x:Key="S.Provider.Bing">Bing Переводчик</sys:String>
-    <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
-    <sys:String x:Key="S.Provider.Youdao">Youdao Translate</sys:String>
-    <sys:String x:Key="S.Provider.TranSmart">Tencent Translate</sys:String>
+    <sys:String x:Key="S.Provider.Bing">Bing</sys:String>
+    <sys:String x:Key="S.Provider.Microsoft">Microsoft</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">Youdao</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Нужен ключ API от DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

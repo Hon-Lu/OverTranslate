@@ -208,13 +208,19 @@
     <sys:String x:Key="S.Toolbar.Screenshot">スクリーンショット</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindow">ウィンドウ</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindowHint">この翻訳結果をウィンドウで開く</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSourceHint">訳文を一時的に外して、選択範囲の元の画面を見る</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslationHint">訳文を画面に戻す</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTextHint">選択範囲の原文をクリップボードにコピー</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslationHint">訳文をクリップボードにコピー</sys:String>
+    <sys:String x:Key="S.Toolbar.ScreenshotHint">選択範囲の今の画面をクリップボードにコピー</sys:String>
+    <sys:String x:Key="S.Toolbar.SettingsHint">自動翻訳、スクリーンショット後に閉じる、スクリーンショットを保存などの設定</sys:String>
     <sys:String x:Key="S.Toolbar.Swap">原文と訳文の言語を入れ替える</sys:String>
     <sys:String x:Key="S.Toolbar.Close">キャプチャ翻訳を終了</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">原文の書字方向</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">横書き</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">縦書き</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文は横書きで、左から右に読みます</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文は縦書きで、上から下・右から左に読みます（日本語の書籍やマンガ）</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">原文は縦書きで、上から下・右から左に読みます&#x0a;（日本語の書籍やマンガ）</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">選択範囲の内容の種類</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">UI</sys:String>

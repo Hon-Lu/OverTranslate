@@ -450,7 +450,7 @@ public partial class SettingsPage : UserControl
 
     /// <summary>
     /// Two rows across where each half has room for the longest name beside its mark and switch —
-    /// 「Google Translate (Standard)」 — and one where not.
+    /// 「Google (стандартный)」 — and one where not.
     /// </summary>
     private void ProviderGrid_SizeChanged(object sender, SizeChangedEventArgs e)
     {

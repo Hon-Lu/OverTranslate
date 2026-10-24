@@ -81,15 +81,16 @@ public class CaptureLayoutModeToolbarTests
     }
 
     /// <summary>
-    /// The two halves are one radio group, and it is not the direction switch's group.
+    /// The two halves are one radio group, and nothing else on the bar is in it.
     /// </summary>
     /// <remarks>
-    /// Two segmented switches now sit side by side on the same bar. Sharing a GroupName would make
-    /// them one four-way control: choosing 直排 would silently un-choose 漫畫・文章, and the failure
-    /// would look like the mode not being remembered rather than like a name collision.
+    /// The direction used to be a second segmented switch beside this one, and sharing a GroupName
+    /// would have made them one four-way control: choosing 直排 would silently un-choose 漫畫・文章,
+    /// and the failure would look like the mode not being remembered rather than like a name
+    /// collision. The direction is a picker now (#349), but any switch added later has the same trap.
     /// </remarks>
     [Fact]
-    public void TheTwoSwitchesOnTheBarAreSeparateGroups()
+    public void TheModeSwitchIsAGroupOfItsOwn()
     {
         var groups = Toolbar()
             .Descendants()
@@ -99,7 +100,6 @@ public class CaptureLayoutModeToolbarTests
                 element => (string)element.Attribute("GroupName")!);
 
         Assert.Equal(groups["InterfaceModeSeg"], groups["GeneralModeSeg"]);
-        Assert.Equal(groups["HorizontalSeg"], groups["VerticalSeg"]);
-        Assert.NotEqual(groups["InterfaceModeSeg"], groups["HorizontalSeg"]);
+        Assert.Equal(2, groups.Values.Count(group => group == groups["InterfaceModeSeg"]));
     }
 }
