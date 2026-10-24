@@ -140,6 +140,13 @@
     <SolidColorBrush x:Key="ToolbarSegmentThumbBorder" Color="Transparent"/>
     <Color x:Key="ToolbarShadowColor"          >#000000</Color>
 
+    <!-- What comes up over a control to name or explain it: ToolTip's own template and the
+         capture toolbar's label both draw with these, so the two read as one thing. -->
+    <SolidColorBrush x:Key="TooltipBg"     Color="#1F1F1F"/>
+    <SolidColorBrush x:Key="TooltipBorder" Color="#484848"/>
+    <SolidColorBrush x:Key="TooltipFg"     Color="#F0F0F0"/>
+    <SolidColorBrush x:Key="TooltipFgDim"  Color="#AAAAAA"/>
+
     <!-- 替換翻譯's mark, which keeps the palette it was drawn in rather than taking the accent: A
          and 文 are told apart by the plates they sit on, and repainting both plates one colour
          throws that away. The values here are the drawing's own — it was drawn for a dark interface,

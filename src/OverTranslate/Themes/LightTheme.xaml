@@ -124,6 +124,13 @@
     <SolidColorBrush x:Key="ToolbarSegmentThumbBorder" Color="#D8D8D8"/>
     <Color x:Key="ToolbarShadowColor"          >#000000</Color>
 
+    <!-- What comes up over a control to name or explain it: ToolTip's own template and the
+         capture toolbar's label both draw with these, so the two read as one thing. -->
+    <SolidColorBrush x:Key="TooltipBg"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TooltipBorder" Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="TooltipFg"     Color="#1A1A1A"/>
+    <SolidColorBrush x:Key="TooltipFgDim"  Color="#5A5A5A"/>
+
     <!-- 替換翻譯's mark. The drawing it was made from is dark-interface artwork — pale plates with
          dark letters — and see DarkTheme.xaml, where it is kept exactly as drawn. It cannot be
          carried over here: 設定 sets every mark on an AppAccentSubtle tile, #DEEDFB, and pale plates

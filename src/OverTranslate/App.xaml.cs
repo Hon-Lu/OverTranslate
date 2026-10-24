@@ -85,6 +85,12 @@ public partial class App
 
         ThemeService.Apply(SettingsService.Instance.Current.Theme);
 
+        // Windows waits its mouse-hover time, 400ms, before a ToolTip comes up — long enough that
+        // people decide there is nothing there and move on. Half of it is still long enough not to
+        // flash one up as the pointer crosses a control on its way somewhere else.
+        System.Windows.Controls.ToolTipService.InitialShowDelayProperty.OverrideMetadata(
+            typeof(DependencyObject), new FrameworkPropertyMetadata(200));
+
         // Before any window is built, so nothing is ever constructed against the wrong dictionary.
         LocalizationService.Apply(LocalizationService.Current);
 
