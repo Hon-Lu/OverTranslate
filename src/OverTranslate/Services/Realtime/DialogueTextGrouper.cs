@@ -106,6 +106,7 @@ internal static class DialogueTextGrouper
                 lineRows[line] = row;
             }
         }
+        var chatNames = ChatNameLines(lines, joinedLines);
         var groups = new List<List<OcrTextBlock>>();
         var open = new List<bool>();
         trace?.OrderLines(lines.OrderBy(l => l.Block.LayoutBounds.Y).ThenBy(l => l.Block.LayoutBounds.X).Select(l => l.Block).ToList());
@@ -143,6 +144,11 @@ internal static class DialogueTextGrouper
                     joins = false;
                     rule = "speaker label";
                 }
+                if (joins && (chatNames.Contains(line.Block) || chatNames.Contains(groups[i][^1])))
+                {
+                    joins = false;
+                    rule = "chat name";
+                }
                 RecordNext(decisions, groups[i][^1], line.Block, joins, rule);
                 if (!joins) continue;
                 var distance = current.Y - previous.Y;
@@ -163,6 +169,55 @@ internal static class DialogueTextGrouper
         }
         trace?.RegisterGroups(groups);
         return groups.Select(OcrTextBlockGrouper.BuildGroup).ToList();
+    }
+
+    /// <summary>
+    /// The name lines of a chat log that puts each speaker on a line of its own, without a colon
+    /// (PSO2's chat window): kept apart from the message under them and from the one above.
+    /// </summary>
+    /// <remarks>
+    /// <para>Geometry cannot find them on its own. A name sits 0.07–0.43 heights left of its
+    /// message, inside the range a dialogue box's own short first lines reach, and #341 already
+    /// leaves that layout joined. What a subtitle or a dialogue box never has is the same short
+    /// line again and again: Rossa twice and Hatsune Miku three times in one window, System over
+    /// every notice. So the frame has to show that first — at least three name-shaped lines whose
+    /// text recurs — and only then is every name-shaped line taken for a name.</para>
+    ///
+    /// <para>Name-shaped: one detected block, under half as wide as the line it would continue
+    /// into, no closing punctuation or opening bracket, and starting at that line's left edge or a
+    /// little left of it.</para>
+    /// </remarks>
+    private static HashSet<OcrTextBlock> ChatNameLines(
+        List<(OcrTextBlock Block, bool Unresolved)> lines, HashSet<OcrTextBlock> joinedLines)
+    {
+        var names = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
+        var ordered = lines.Where(l => !l.Unresolved).Select(l => l.Block)
+            .OrderBy(b => b.LayoutBounds.Y).ThenBy(b => b.LayoutBounds.X).ToList();
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var name = ordered[i];
+            if (joinedLines.Contains(name)) continue;
+            var message = ordered.Skip(i + 1).FirstOrDefault(b => NextRow(name.LayoutBounds, b.LayoutBounds, out _));
+            if (message is not null && NameOverMessage(name, message)) names.Add(name);
+        }
+        int recurring = names.GroupBy(b => b.Text.Trim()).Where(g => g.Count() >= 2).Sum(g => g.Count());
+        if (recurring < 2) { names.Clear(); return names; }
+        // A name over a message shorter than itself (Hatsune Miku over Rawr~!) is not name-shaped,
+        // but it is the name already seen elsewhere in the window.
+        var known = names.Select(b => b.Text.Trim()).ToHashSet();
+        foreach (var line in ordered)
+            if (!joinedLines.Contains(line) && known.Contains(line.Text.Trim())) names.Add(line);
+        return names;
+    }
+
+    private static bool NameOverMessage(OcrTextBlock name, OcrTextBlock message)
+    {
+        Rect a = name.LayoutBounds, b = message.LayoutBounds;
+        double height = Math.Max(a.Height, b.Height);
+        var text = name.Text.Trim();
+        return text.Length > 0 && text.Count(c => !char.IsWhiteSpace(c)) <= 15 && a.Width < b.Width * 0.75 &&
+            !SpeakerLabelEnds.Contains(text[^1]) && !SpeakerLabelOpens.Contains(text[0]) &&
+            b.Left - a.Left >= -height * 0.2 && b.Left - a.Left <= height * 0.6;
     }
 
     private static bool SameRow(Rect a, Rect b) =>
