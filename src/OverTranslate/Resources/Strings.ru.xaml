@@ -204,6 +204,12 @@
     <sys:String x:Key="S.Toolbar.Screenshot">Снимок</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindow">Окно</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindowHint">Открыть этот перевод в окне</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSourceHint">Временно убрать перевод и увидеть исходное изображение</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslationHint">Вернуть перевод на место</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTextHint">Скопировать исходный текст из выделенной области в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslationHint">Скопировать перевод в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.ScreenshotHint">Скопировать выделенную область в нынешнем виде в буфер обмена</sys:String>
+    <sys:String x:Key="S.Toolbar.SettingsHint">Автоперевод, закрытие после снимка, сохранение снимков и другое</sys:String>
     <sys:String x:Key="S.Toolbar.Swap">Поменять местами исходный и целевой языки</sys:String>
     <sys:String x:Key="S.Toolbar.Close">Завершить перевод снимка экрана</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">Направление письма оригинала</sys:String>

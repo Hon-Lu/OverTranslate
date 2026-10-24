@@ -64,16 +64,20 @@ public partial class ToolbarWindow
     {
         AddLabel(TtsBtn, () => LocalizationService.Get(_isSpeaking ? "S.Toolbar.SpeakStopLabel" : "S.Toolbar.Speak"));
         AddLabel(SwapBtn, () => LocalizationService.Get("S.Toolbar.Swap"));
-        AddLabel(ToggleBtn, () => LocalizationService.Get(
-            _bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"));
-        AddLabel(CopyTextBtn, () => LocalizationService.Get(
-            ResolveCopyTextKind(_hasTranslated, _bubblesVisible) == CopyTextKind.Translation
-                ? "S.Toolbar.CopyTranslation"
-                : "S.Toolbar.CopyText"));
+        AddLabel(ToggleBtn,
+            () => LocalizationService.Get(_bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"),
+            () => LocalizationService.Get(_bubblesVisible ? "S.Toolbar.ShowSourceHint" : "S.Toolbar.ShowTranslationHint"));
+        AddLabel(CopyTextBtn,
+            () => LocalizationService.Get(CopiesTranslation() ? "S.Toolbar.CopyTranslation" : "S.Toolbar.CopyText"),
+            () => LocalizationService.Get(CopiesTranslation() ? "S.Toolbar.CopyTranslationHint" : "S.Toolbar.CopyTextHint"));
         AddLabel(AnnotateBtn, () => LocalizationService.Get("S.Toolbar.Annotate"));
-        AddLabel(CopyShotBtn, () => LocalizationService.Get("S.Toolbar.Screenshot"));
+        AddLabel(CopyShotBtn,
+            () => LocalizationService.Get("S.Toolbar.Screenshot"),
+            () => LocalizationService.Get("S.Toolbar.ScreenshotHint"));
         AddLabel(OpenWindowBtn, () => LocalizationService.Get("S.Toolbar.OpenWindow"));
-        AddLabel(MoreBtn, () => LocalizationService.Get("S.Shell.Settings"));
+        AddLabel(MoreBtn,
+            () => LocalizationService.Get("S.Shell.Settings"),
+            () => LocalizationService.Get("S.Toolbar.SettingsHint"));
         AddLabel(CloseBtn, () => LocalizationService.Get("S.Toolbar.Close"));
 
         // On the bar rather than on each button: a disabled button raises no mouse events of its own,
@@ -93,22 +97,26 @@ public partial class ToolbarWindow
 
     /// <summary>
     /// Has <paramref name="element"/> named by the card, with the line under the name taken from
-    /// its ToolTip.
+    /// <paramref name="description"/>, or from its ToolTip when there is none.
     /// </summary>
     /// <remarks>
-    /// The ToolTip stays set but switched off: it already says what each button does, in every
-    /// language, and for the speak button it changes with the state. Reading it keeps one place to
-    /// say it. A ToolTip that only repeats the name adds nothing under it.
+    /// The ToolTip stays set but switched off: where it already says what a button does, in every
+    /// language — and for the speak button it changes with the state — reading it keeps one place to
+    /// say it. A ToolTip that only repeats the name adds nothing under it. The buttons that never had
+    /// one, because their word used to be enough, pass their line in.
     /// </remarks>
-    private void AddLabel(FrameworkElement element, Func<string> name)
+    private void AddLabel(FrameworkElement element, Func<string> name, Func<string?>? description = null)
     {
         ToolTipService.SetIsEnabled(element, false);
-        _labelTargets.Add(new LabelTarget(element, name, () =>
+        _labelTargets.Add(new LabelTarget(element, name, description ?? (() =>
         {
             var tip = element.ToolTip as string;
             return string.IsNullOrWhiteSpace(tip) || tip == name() ? null : tip;
-        }));
+        })));
     }
+
+    private bool CopiesTranslation() =>
+        ResolveCopyTextKind(_hasTranslated, _bubblesVisible) == CopyTextKind.Translation;
 
     /// <summary>Has the button just pressed say that it worked, in the card, for a moment.</summary>
     private void FlashLabel(FrameworkElement element, string message)

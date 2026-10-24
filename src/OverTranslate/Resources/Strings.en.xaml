@@ -207,6 +207,12 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.Toolbar.Screenshot">Screenshot</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindow">Window</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindowHint">Open this translation in a window</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSourceHint">Take the translation away for now and see the selection as it was</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslationHint">Put the translation back</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTextHint">Copy the original text in the selection to the clipboard</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslationHint">Copy the translation to the clipboard</sys:String>
+    <sys:String x:Key="S.Toolbar.ScreenshotHint">Copy the selection as it looks now to the clipboard</sys:String>
+    <sys:String x:Key="S.Toolbar.SettingsHint">Auto-translate, Close after screenshot, Save screenshots and more</sys:String>
     <sys:String x:Key="S.Toolbar.Swap">Swap source and target languages</sys:String>
     <sys:String x:Key="S.Toolbar.Close">End screenshot translation</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">Writing direction of the source</sys:String>

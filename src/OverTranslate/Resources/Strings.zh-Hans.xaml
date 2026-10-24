@@ -207,6 +207,12 @@
     <sys:String x:Key="S.Toolbar.Screenshot">截图</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindow">翻译窗口</sys:String>
     <sys:String x:Key="S.Toolbar.OpenWindowHint">在窗口中打开这次的翻译结果</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowSourceHint">暂时移除译文，查看框选范围原本的画面</sys:String>
+    <sys:String x:Key="S.Toolbar.ShowTranslationHint">把译文放回画面上</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTextHint">把框选范围里的原文复制到剪贴板</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyTranslationHint">把译文复制到剪贴板</sys:String>
+    <sys:String x:Key="S.Toolbar.ScreenshotHint">把框选范围现在的画面复制到剪贴板</sys:String>
+    <sys:String x:Key="S.Toolbar.SettingsHint">自动翻译、截图后自动关闭、保存截图等设置</sys:String>
     <sys:String x:Key="S.Toolbar.Swap">互换原文与译文语言</sys:String>
     <sys:String x:Key="S.Toolbar.Close">结束截图翻译</sys:String>
     <sys:String x:Key="S.Toolbar.Direction">原文的书写方向</sys:String>
