@@ -1531,8 +1531,14 @@ internal static class OcrTextBlockGrouper
     /// subtitle box's two lines at 0.17, large type whose boxes were padded unevenly. 0.15 split that
     /// subtitle, so the limit sits above it: 0.20 and 0.25 score the same on every hand-marked set,
     /// and the higher keeps the margin. Two HN pairs at 0.16 and 0.17 stay joined — the same 0.17 —
-    /// and are not separable from the subtitle by alignment alone. The floor is in pixels for small
-    /// text, half the edges' floor for the same reason.</para>
+    /// and are not separable from the subtitle by alignment alone.</para>
+    ///
+    /// <para>Small text has a pixel floor, <see cref="SetSolidMinCentrePixels"/>: at 12 to 14 pixels a
+    /// line's uneven padding alone moves its centre 4 to 5 pixels, more than a quarter of a line.
+    /// It sits under the edges' 6 because the Hacker News pair the limit is for — a "points by"
+    /// line over the next story at 20 pixels — is exactly 6.0 pixels off centre: a floor of 6 joins
+    /// it again, 5.5 and under keeps it apart, and 4, 5 and 5.5 score the same on every
+    /// hand-marked set. 5 covers the small captures and leaves that pair a pixel of margin.</para>
     /// </remarks>
     private static bool SharesAnEdge(OcrTextBlock previous, OcrTextBlock current)
     {
@@ -1543,11 +1549,14 @@ internal static class OcrTextBlockGrouper
 
         return edges <= Math.Max(avgHeight * SetSolidMaxAlignment, 6) ||
                Math.Abs(CenterX(previous) - CenterX(current)) <=
-               Math.Max(avgHeight * SetSolidMaxCentreAlignment, 3);
+               Math.Max(avgHeight * SetSolidMaxCentreAlignment, SetSolidMinCentrePixels);
     }
 
     /// <inheritdoc cref="SharesAnEdge"/>
     private const double SetSolidMaxCentreAlignment = 0.25;
+
+    /// <inheritdoc cref="SharesAnEdge"/>
+    private const double SetSolidMinCentrePixels = 5;
 
     /// <summary>
     /// How far the narrower line must sit inside the wider one, in line heights, before the two

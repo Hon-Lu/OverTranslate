@@ -566,6 +566,28 @@ public class OcrTextBlockGrouperTests
         Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
     }
 
+    /// <summary>
+    /// Small centred text — a low-resolution subtitle, a caption under a picture — whose boxes
+    /// were padded unevenly, so the centres sit 4 to 5 pixels apart: a few pixels of padding, not
+    /// a list matching by chance, and the two lines are still one caption.
+    /// </summary>
+    [Theory]
+    [InlineData(12, 4)]
+    [InlineData(12, 5)]
+    [InlineData(14, 4)]
+    [InlineData(14, 5)]
+    public void SmallCentredLinesPaddedUnevenly_StillSetSolid(double height, double offset)
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Measured("the small centred caption under the", new Rect(130, 100, 200, height), OcrLayoutScript.Latin, height * 0.7),
+            Measured("picture goes on for a longer second line", new Rect(100 + offset, 100 + height * 1.15, 260, height), OcrLayoutScript.Latin, height * 0.7),
+        };
+
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.General));
+        Assert.Single(OcrTextBlockGrouper.Group(blocks, GroupingProfile.Realtime));
+    }
+
     private static OcrTextBlock Measured(string text, Rect box, OcrLayoutScript script, double glyph) =>
         new(text, box, LayoutScript: script, LayoutBounds: box, LayoutGlyphHeight: glyph);
 
