@@ -1800,6 +1800,23 @@
         </Setter>
     </Style>
 
+    <!-- The capture toolbar's actions, with the word under each one gone (#349): a 36 square, so the
+         hover surface sits round the icon rather than round the space a word used to need. The 標記
+         panel keeps the labelled ones. -->
+    <Style x:Key="ToolbarIconActionButton" TargetType="Button" BasedOn="{StaticResource ToolbarStackButton}">
+        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="Width"    Value="36"/>
+        <Setter Property="Height"   Value="36"/>
+        <Setter Property="Padding"  Value="0"/>
+    </Style>
+
+    <Style x:Key="ToolbarIconActionToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource ToolbarStackToggleButton}">
+        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="Width"    Value="36"/>
+        <Setter Property="Height"   Value="36"/>
+        <Setter Property="Padding"  Value="0"/>
+    </Style>
+
     <!-- One colour in the 標記 palette. The mark of the chosen one is a ring drawn outside the disc,
          not a tick laid over it: a tick has to be a colour, and any colour it could be is one of the
          eight underneath it — white on white, black on black. A ring set off the edge stays legible

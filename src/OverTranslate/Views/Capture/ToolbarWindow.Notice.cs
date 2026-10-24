@@ -144,7 +144,8 @@ public partial class ToolbarWindow
     }
 
     /// <summary>
-    /// Has the screenshot button say that its copy landed, for a moment, in place of its name.
+    /// Has the screenshot button say that its copy landed, for a moment: a tick in place of the
+    /// camera, and 已複製 in the label card coming out of it.
     /// </summary>
     /// <remarks>
     /// On the button because that is where the reader is looking when it happens. The notice under
@@ -158,8 +159,6 @@ public partial class ToolbarWindow
         StopCopyShotFade();
         CopyShotCamera.Visibility = Visibility.Collapsed;
         CopyShotDoneMark.Visibility = Visibility.Visible;
-        CopyShotLabel.Visibility = Visibility.Hidden;
-        CopyShotDoneLabel.Visibility = Visibility.Visible;
 
         _copyShotTimer ??= NewOneShotTimer(ButtonFeedbackMs, RevertCopyShotButton);
         _copyShotTimer.Stop();
@@ -168,11 +167,11 @@ public partial class ToolbarWindow
         FlashLabel(CopyShotBtn, OverTranslate.Services.LocalizationService.Get("S.Main.CopiedTitle"));
     }
 
-    /// <summary>Gives the screenshot button its own name back.</summary>
+    /// <summary>Gives the screenshot button its camera back.</summary>
     /// <remarks>
     /// Cross-faded rather than swapped: by now nobody is waiting on it, and a button that snaps
-    /// back on its own, with nothing pressed, reads as a flicker. Both pairs are in the same cells
-    /// and the label grid is already as wide as the longer word, so nothing moves while they blend.
+    /// back on its own, with nothing pressed, reads as a flicker. Both marks are in the same cell,
+    /// so nothing moves while they blend.
     /// </remarks>
     private void RevertCopyShotButton()
     {
@@ -181,8 +180,6 @@ public partial class ToolbarWindow
             StopCopyShotFade();
             CopyShotCamera.Visibility = Visibility.Visible;
             CopyShotDoneMark.Visibility = Visibility.Collapsed;
-            CopyShotLabel.Visibility = Visibility.Visible;
-            CopyShotDoneLabel.Visibility = Visibility.Hidden;
         }
 
         // Windows' "animation effects" setting: see FadeOutNotice.
@@ -193,7 +190,6 @@ public partial class ToolbarWindow
         }
 
         CopyShotCamera.Visibility = Visibility.Visible;
-        CopyShotLabel.Visibility = Visibility.Visible;
 
         var duration = TimeSpan.FromMilliseconds(CopyShotFadeMs);
         var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
@@ -205,15 +201,13 @@ public partial class ToolbarWindow
         fadeIn.Completed += (_, _) => { if (_copyShotFading) Settle(); };
 
         CopyShotDoneMark.BeginAnimation(OpacityProperty, fadeOut);
-        CopyShotDoneLabel.BeginAnimation(OpacityProperty, fadeOut);
         CopyShotCamera.BeginAnimation(OpacityProperty, fadeIn);
-        CopyShotLabel.BeginAnimation(OpacityProperty, fadeIn);
     }
 
     private void StopCopyShotFade()
     {
         _copyShotFading = false;
-        foreach (var element in new UIElement[] { CopyShotCamera, CopyShotDoneMark, CopyShotLabel, CopyShotDoneLabel })
+        foreach (var element in new UIElement[] { CopyShotCamera, CopyShotDoneMark })
         {
             element.BeginAnimation(OpacityProperty, null);
             element.Opacity = 1;

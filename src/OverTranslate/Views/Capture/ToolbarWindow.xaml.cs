@@ -146,6 +146,7 @@ public partial class ToolbarWindow : Window
         };
 
         RenderSpeakButton();
+        RenderToggleButton();
         InitializeLabels();
     }
 
@@ -410,18 +411,17 @@ public partial class ToolbarWindow : Window
     private void TtsBtn_Click(object sender, RoutedEventArgs e)
         => SpeakToggleRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Puts the toggle's icon and label on the same side of what pressing it would do.</summary>
+    /// <summary>Holds the toggle down while the original is on screen.</summary>
     /// <remarks>
-    /// The eye is the action, like the label beside it: plain while the translation is on
-    /// screen, because pressing reveals the original; struck through while the original is,
-    /// because pressing puts it away again. A fixed eye under a label that changed was the
-    /// icon disagreeing with the word next to it every second press.
+    /// Set from the state rather than left to the click, so the two cannot drift apart: the bubbles
+    /// are also put back from outside, by a new translation (SetToggleEnabled). The name a screen
+    /// reader announces is what pressing does, as the label under it used to say.
     /// </remarks>
     private void RenderToggleButton()
     {
-        ToggleHideSlash.Visibility = _bubblesVisible ? Visibility.Collapsed : Visibility.Visible;
-        ToggleLabel.Text = LocalizationService.Get(
-            _bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation");
+        ToggleBtn.IsChecked = !_bubblesVisible;
+        System.Windows.Automation.AutomationProperties.SetName(ToggleBtn, LocalizationService.Get(
+            _bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"));
         RenderCopyTextButton();
     }
 
@@ -584,10 +584,10 @@ public partial class ToolbarWindow : Window
         bool copiesTranslation =
             ResolveCopyTextKind(_hasTranslated, _bubblesVisible) == CopyTextKind.Translation;
 
-        CopyTextLabel.Text = LocalizationService.Get(
+        System.Windows.Automation.AutomationProperties.SetName(CopyTextBtn, LocalizationService.Get(
             copiesTranslation
                 ? "S.Toolbar.CopyTranslation"
-                : "S.Toolbar.CopyText");
+                : "S.Toolbar.CopyText"));
         CopySourceMark.Visibility = copiesTranslation ? Visibility.Collapsed : Visibility.Visible;
         CopyTranslationMark.Visibility = copiesTranslation ? Visibility.Visible : Visibility.Collapsed;
     }

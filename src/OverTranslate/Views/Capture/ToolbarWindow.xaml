@@ -365,43 +365,40 @@
                                    Margin="14,9,10,9"
                                    Fill="{DynamicResource ToolbarDivider}"/>
 
-                        <!-- Toggle original / translated bubbles -->
-                        <Button x:Name="ToggleBtn"
-                                Style="{StaticResource ToolbarStackButton}"
+                        <!-- Toggle original / translated bubbles. Icons only from here to the gear:
+                             the words under them pushed the bar off the screen in the longer languages
+                             (#349), and the card in ToolbarWindow.Labels.cs names each one instead.
+
+                             The before-and-after frame every photo editor uses for comparing two
+                             versions of a picture, which is what this does. A switch rather than a
+                             button, held down while the original is up, like 標記: with no word to
+                             change, the state has to be on the button itself, and an eye that is
+                             struck through or not leaves the reader to work out which of the two
+                             it means. -->
+                        <ToggleButton x:Name="ToggleBtn"
+                                Style="{StaticResource ToolbarIconActionToggleButton}"
                                 IsEnabled="False"
                                 Click="ToggleBtn_Click">
-                            <StackPanel>
-                                <Grid Style="{StaticResource ToolbarActionIcon}">
-                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
-                                    <!-- A whole eye, both lids. Segoe's E890 draws the upper lid and the
-                                         pupil and nothing under them, which at 16px reads as an eyebrow
-                                         over a dot rather than as an eye. -->
-                                    <Path Style="{StaticResource ToolbarActionStroke}"
-                                          Data="M0.9,9 C3.3,5.1 5.9,3.2 9,3.2 C12.1,3.2 14.7,5.1 17.1,9
-                                                C14.7,12.9 12.1,14.8 9,14.8 C5.9,14.8 3.3,12.9 0.9,9 Z"/>
-                                    <Path Style="{StaticResource ToolbarActionStroke}"
-                                          Data="M11.5,9 A2.5,2.5 0 1 1 6.5,9 A2.5,2.5 0 1 1 11.5,9 Z"/>
-                                    <!-- The stroke through it, for while the original is the thing on
-                                         screen: pressing then puts it away again. -->
-                                    <Path x:Name="ToggleHideSlash"
-                                          Visibility="Collapsed"
-                                          Style="{StaticResource ToolbarActionStroke}"
-                                          Data="M2.4,15.6 L15.6,2.4"/>
-                                  </Grid>
-                                </Grid>
-                                <TextBlock x:Name="ToggleLabel"
-                                           Text="{DynamicResource S.Toolbar.ShowSource}"/>
-                            </StackPanel>
-                        </Button>
+                            <Grid Style="{StaticResource ToolbarActionIcon}" Margin="0">
+                              <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                <Path Style="{StaticResource ToolbarActionStroke}"
+                                      Data="M3.6,3 H14.4 A1.6,1.6 0 0 1 16,4.6 V13.4 A1.6,1.6 0 0 1 14.4,15
+                                            H3.6 A1.6,1.6 0 0 1 2,13.4 V4.6 A1.6,1.6 0 0 1 3.6,3 Z"/>
+                                <Path Fill="{DynamicResource AppAccent}" Opacity="0.3"
+                                      Data="M9,3 H3.6 A1.6,1.6 0 0 0 2,4.6 V13.4 A1.6,1.6 0 0 0 3.6,15 H9 Z"/>
+                                <Path Style="{StaticResource ToolbarActionStroke}"
+                                      Data="M9,1.2 V16.8"/>
+                              </Grid>
+                            </Grid>
+                        </ToggleButton>
 
                         <!-- Copy the text currently represented by the selection. Before translation
                              this recognises the selection; afterwards it follows the source/translation
                              toggle and uses the result already held by the session. -->
                         <Button x:Name="CopyTextBtn"
-                                Style="{StaticResource ToolbarStackButton}"
+                                Style="{StaticResource ToolbarIconActionButton}"
                                 Click="CopyTextBtn_Click">
-                            <StackPanel>
-                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                <Grid Style="{StaticResource ToolbarActionIcon}" Margin="0">
                                   <Grid Style="{StaticResource ToolbarActionDrawing}">
                                     <!-- The double-page outline stays fixed so both states still read
                                          as copy actions; only the meaning of the copied content changes. -->
@@ -419,9 +416,6 @@
                                           Data="M6.9,14 L10.25,7 L13.6,14 M8.35,11 H12.15"/>
                                   </Grid>
                                 </Grid>
-                                <TextBlock x:Name="CopyTextLabel"
-                                           Text="{DynamicResource S.Toolbar.CopyText}"/>
-                            </StackPanel>
                         </Button>
 
                         <!-- Draw on the selection. Between the two copies because that is the order
@@ -430,11 +424,11 @@
                              makes sense of the picture - a screenshot taken after the marks has the
                              marks in it. -->
                         <ToggleButton x:Name="AnnotateBtn"
-                                Style="{StaticResource ToolbarStackToggleButton}"
+                                Style="{StaticResource ToolbarIconActionToggleButton}"
                                 ToolTip="{DynamicResource S.Toolbar.AnnotateHint}"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.Annotate}"
                                 Click="AnnotateBtn_Click">
-                            <StackPanel>
-                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                <Grid Style="{StaticResource ToolbarActionIcon}" Margin="0">
                                   <Grid Style="{StaticResource ToolbarActionDrawing}">
                                     <!-- A pen, nib down to the left, over the stroke it has just left
                                          behind. The mark matters as much as the pen does: a pen on its
@@ -464,16 +458,14 @@
                                           Data="M2.5,16.3 H15.5"/>
                                   </Grid>
                                 </Grid>
-                                <TextBlock Text="{DynamicResource S.Toolbar.Annotate}"/>
-                            </StackPanel>
                         </ToggleButton>
 
                         <!-- Copy current selection screenshot to clipboard -->
                         <Button x:Name="CopyShotBtn"
-                                Style="{StaticResource ToolbarStackButton}"
+                                Style="{StaticResource ToolbarIconActionButton}"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.Screenshot}"
                                 Click="CopyShotBtn_Click">
-                            <StackPanel>
-                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                <Grid Style="{StaticResource ToolbarActionIcon}" Margin="0">
                                   <Grid Style="{StaticResource ToolbarActionDrawing}">
                                     <!-- A full-size camera keeps the body and lens legible at 18px. -->
                                     <Grid x:Name="CopyShotCamera">
@@ -495,21 +487,6 @@
                                           Data="M3.2,9.6 L7.2,13.4 L14.8,4.6"/>
                                   </Grid>
                                 </Grid>
-                                <!-- Both labels always laid out, the one not showing only hidden, so
-                                     the button is as wide as the longer of the two either way: in a
-                                     language where 已複製 is the shorter word the bar would otherwise
-                                     shrink under the pointer, and everything right of it would move. -->
-                                <Grid>
-                                    <TextBlock x:Name="CopyShotLabel"
-                                               Text="{DynamicResource S.Toolbar.Screenshot}"
-                                               HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="CopyShotDoneLabel"
-                                               Text="{DynamicResource S.Main.CopiedTitle}"
-                                               Foreground="{DynamicResource AppSuccess}"
-                                               HorizontalAlignment="Center"
-                                               Visibility="Hidden"/>
-                                </Grid>
-                            </StackPanel>
                         </Button>
 
                         <!-- Open translation window. Named for what it opens rather than for the opening:
@@ -517,11 +494,11 @@
                              on the one thing the user already knows, and it cost the bar the width of two
                              characters. The tooltip still says the whole sentence for anyone who wants it. -->
                         <Button x:Name="OpenWindowBtn"
-                                Style="{StaticResource ToolbarStackButton}"
+                                Style="{StaticResource ToolbarIconActionButton}"
                                 ToolTip="{DynamicResource S.Toolbar.OpenWindowHint}"
+                                AutomationProperties.Name="{DynamicResource S.Toolbar.OpenWindow}"
                                 Click="OpenWindowBtn_Click">
-                            <StackPanel>
-                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                <Grid Style="{StaticResource ToolbarActionIcon}" Margin="0">
                                   <Grid Style="{StaticResource ToolbarActionDrawing}">
                                     <!-- Drawn like the other four rather than typed as E8A7, so the row
                                          is one set of strokes at one weight and one size. The glyph was
@@ -535,8 +512,6 @@
                                           Data="M9.4,8.6 L15.7,2.3 M11,2.2 H15.8 V7"/>
                                   </Grid>
                                 </Grid>
-                                <TextBlock Text="{DynamicResource S.Toolbar.OpenWindow}"/>
-                            </StackPanel>
                         </Button>
 
                         <!-- A gear and 設定, where this was ⋯ and 顯示更多. Everything behind it is a
