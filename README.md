@@ -87,7 +87,7 @@ Once the selection is done, the toolbar offers:
 - **Copy text:** copies the recognized text straight to the clipboard, no translation needed
 - **Screenshot:** copies the selected area to the clipboard, and also saves an image file when "Save screenshots" is turned on in the settings
 - **Annotate:** mark up the capture directly with the pen, highlighter or shapes such as lines, arrows, rectangles and ellipses, then copy or save what you drew with Screenshot; some settings are remembered
-- **Settings (gear icon):** toggles Auto-translate (translates as soon as the selection is done), Close after screenshot, Save screenshots, and Debug aids, which draw the OCR boxes on the result
+- **Settings:** Auto-translate, Close after screenshot, Save screenshots and more
 
 ![截圖翻譯-標記.png](docs/images/截圖翻譯-標記.png)
 
