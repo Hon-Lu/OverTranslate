@@ -216,7 +216,7 @@
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">Горизонтально</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">Вертикально</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">Текст идет по строкам слева направо</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">Текст идет столбцами сверху вниз, справа налево (японские книги и манга)</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">Текст идет столбцами сверху вниз, справа налево&#x0a;(японские книги и манга)</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">Содержимое выделения</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">Обычное</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">Интерфейс</sys:String>

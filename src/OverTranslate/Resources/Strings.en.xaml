@@ -219,7 +219,7 @@ Translation failed: {1}</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">Horizontal</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">Vertical</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">The source runs across, left to right</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">The source runs down the page, right to left (Japanese books and comics)</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">The source runs down the page, right to left&#x0a;(Japanese books and comics)</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">What the selection holds</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">General</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">Interface</sys:String>

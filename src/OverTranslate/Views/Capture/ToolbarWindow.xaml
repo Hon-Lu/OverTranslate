@@ -286,13 +286,15 @@
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Name}"
                                                        FontFamily="{DynamicResource AppFont}"/>
+                                            <!-- Not wrapped: the list is as wide as its longest line,
+                                                 so a hint is never broken where the wording did not
+                                                 ask. The vertical one breaks before its bracket by
+                                                 itself — see the string. -->
                                             <TextBlock x:Name="Hint"
                                                        Text="{Binding Hint}"
                                                        FontFamily="{DynamicResource AppFont}"
                                                        FontSize="11.5"
                                                        Margin="0,2,0,2"
-                                                       MaxWidth="260"
-                                                       TextWrapping="Wrap"
                                                        Foreground="{DynamicResource AppTextSecondary}"/>
                                         </StackPanel>
                                     </Grid>
