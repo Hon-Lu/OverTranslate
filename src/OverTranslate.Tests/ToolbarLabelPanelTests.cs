@@ -2,19 +2,21 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using OverTranslate.Views.Capture;
+using OverTranslate.Controls;
 using Xunit;
 using Size = System.Windows.Size;
 
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// Where the capture toolbar's label card and its arrow are laid out (#349).
+/// Where the toolbars' label card and its arrow are laid out (#349).
 /// </summary>
 /// <remarks>
 /// The first version placed the two from a size it measured by hand, and they came apart: a card
 /// sized for the previous label, cut off at the popup's edge, its arrow somewhere else. These pin the
-/// layout to the panel's own pass, against real elements.
+/// layout to the panel's own pass, against real elements. Positions are compared in the bar's units,
+/// from its left edge — the panel's own start, <see cref="ToolbarLabelPanel.FrameLeft"/>, moves with
+/// the card and the screen.
 /// </remarks>
 public class ToolbarLabelPanelTests
 {
@@ -30,16 +32,7 @@ public class ToolbarLabelPanelTests
         {
             var (panel, card, arrow) = Build(anchor, cardWidth: 220);
 
-            double arrowCentre = ArrowCentre(panel, arrow);
-            Assert.Equal(ToolbarLabelPanel.SideRoom + anchor, arrowCentre, 3);
-
-            var cardBox = Box(panel, card);
-            Assert.True(arrowCentre - cardBox.Left >= 18, $"arrow {arrowCentre} too near the card's left {cardBox.Left}");
-            Assert.True(cardBox.Right - arrowCentre >= 18, $"arrow {arrowCentre} too near the card's right {cardBox.Right}");
-
-            // Never out of the popup, which is the bar plus its side room.
-            Assert.True(cardBox.Left >= 0);
-            Assert.True(cardBox.Right <= panel.ActualWidth);
+            AssertArrowOnButtonAndCardInside(panel, card, arrow, anchor);
         });
     }
 
@@ -50,7 +43,7 @@ public class ToolbarLabelPanelTests
         {
             var (panel, card, _) = Build(anchor: 300, cardWidth: 220);
             var box = Box(panel, card);
-            Assert.Equal(ToolbarLabelPanel.SideRoom + 300, (box.Left + box.Right) / 2, 3);
+            Assert.Equal(300, panel.FrameLeft + (box.Left + box.Right) / 2, 3);
         });
     }
 
@@ -60,7 +53,47 @@ public class ToolbarLabelPanelTests
         OnUiThread(() =>
         {
             var (panel, card, _) = Build(anchor: 540, cardWidth: 220);
-            Assert.Equal(ToolbarLabelPanel.SideRoom + BarWidth, Box(panel, card).Right, 3);
+            Assert.Equal(BarWidth, panel.FrameLeft + Box(panel, card).Right, 3);
+        });
+    }
+
+    [Fact]
+    public void A_card_wider_than_the_bar_is_centred_on_it_and_drawn_whole()
+    {
+        // The realtime capsule collapsed to three buttons is narrower than most of its cards: the
+        // popup used to be the bar plus a fixed margin, and cut the card off at its right.
+        OnUiThread(() =>
+        {
+            var (panel, card, arrow) = Build(anchor: 60, cardWidth: 260, span: 130);
+
+            var box = Box(panel, card);
+            Assert.Equal(65, panel.FrameLeft + (box.Left + box.Right) / 2, 3);
+            AssertArrowOnButtonAndCardInside(panel, card, arrow, anchor: 60);
+        });
+    }
+
+    [Theory]
+    [InlineData(570, 600, 0, 600)]       // the bar's last button, its right end against the screen's
+    [InlineData(30, 600, 0, 600)]        // its first, its left end against the screen's
+    [InlineData(100, 130, -270, 130)]    // a collapsed capsule in the right corner
+    [InlineData(30, 130, 0, 400)]        // and in the left
+    public void Against_the_screens_edge_the_popup_stops_there_and_the_arrow_stays_on_its_button(
+        double anchor, double span, double screenLeft, double screenRight)
+    {
+        // A popup that runs off the screen is pushed back onto it whole, arrow and all: the frame has
+        // to end at the screen, and the card has to fit inside it with its shadow.
+        OnUiThread(() =>
+        {
+            var (panel, card, arrow) = Build(anchor, cardWidth: 220, span: span,
+                screenLeft: screenLeft, screenRight: screenRight);
+
+            Assert.True(panel.FrameLeft >= screenLeft, $"frame starts at {panel.FrameLeft}");
+            Assert.True(panel.FrameLeft + panel.ActualWidth <= screenRight, $"frame ends at {panel.FrameLeft + panel.ActualWidth}");
+
+            var box = Box(panel, card);
+            Assert.InRange(panel.FrameLeft + box.Left, screenLeft + ToolbarLabelPanel.Edge, double.MaxValue);
+            Assert.InRange(panel.FrameLeft + box.Right, double.MinValue, screenRight - ToolbarLabelPanel.Edge);
+            AssertArrowOnButtonAndCardInside(panel, card, arrow, anchor);
         });
     }
 
@@ -112,12 +145,32 @@ public class ToolbarLabelPanelTests
         });
     }
 
+    private static void AssertArrowOnButtonAndCardInside(
+        ToolbarLabelPanel panel, FrameworkElement card, FrameworkElement arrow, double anchor)
+    {
+        double arrowCentre = ArrowCentre(panel, arrow);
+        Assert.Equal(anchor, panel.FrameLeft + arrowCentre, 3);
+
+        var cardBox = Box(panel, card);
+        Assert.True(arrowCentre - cardBox.Left >= 18, $"arrow {arrowCentre} too near the card's left {cardBox.Left}");
+        Assert.True(cardBox.Right - arrowCentre >= 18, $"arrow {arrowCentre} too near the card's right {cardBox.Right}");
+
+        // Never out of the popup.
+        Assert.True(cardBox.Left >= 0, $"card starts at {cardBox.Left}");
+        Assert.True(cardBox.Right <= panel.ActualWidth, $"card ends at {cardBox.Right} of {panel.ActualWidth}");
+    }
+
     private static (ToolbarLabelPanel Panel, FrameworkElement Card, FrameworkElement Arrow) Build(
-        double anchor, double cardWidth = 0, bool above = false, FrameworkElement? card = null)
+        double anchor, double cardWidth = 0, bool above = false, FrameworkElement? card = null,
+        double span = BarWidth,
+        double screenLeft = double.NegativeInfinity, double screenRight = double.PositiveInfinity)
     {
         card ??= new Border { Width = cardWidth, Height = 40 };
         var arrow = new Canvas { Width = 12, Height = 7 };
-        var panel = new ToolbarLabelPanel { Span = BarWidth, Anchor = anchor, Above = above };
+        var panel = new ToolbarLabelPanel
+        {
+            Span = span, Anchor = anchor, Above = above, ScreenLeft = screenLeft, ScreenRight = screenRight,
+        };
         panel.Children.Add(card);
         panel.Children.Add(arrow);
 
