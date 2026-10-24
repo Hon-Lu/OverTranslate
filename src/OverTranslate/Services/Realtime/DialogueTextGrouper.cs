@@ -21,6 +21,12 @@ namespace OverTranslate.Services.Realtime;
 /// form (「[GLOBAL] Conor_Braxton:」) is not continued, so a name on its own line stays apart from
 /// its message. #341 had left that layout joined; the name-plate rule there is about Ren'Py's
 /// plain name over indented dialogue and is unchanged.</para>
+///
+/// <para>Both halves use the strict form of a bare name (<see cref="SpeakerLineStart.OpensUnmistakably"/>,
+/// <see cref="SpeakerLineStart.IsUnmistakablyBareLabel"/>): subtitles wrap after a colon in running
+/// text — 「他回頭對我說：」 over 「「快走！」」, 「也就是說：…」, "this: never give up" — and here a
+/// sentence cut at its colon is worse than a chat entry left joined. A channel tag, an @handle or
+/// a timestamp is taken as it is.</para>
 /// </remarks>
 internal static class DialogueTextGrouper
 {
@@ -127,12 +133,12 @@ internal static class DialogueTextGrouper
                     joins = false;
                     rule = "numeric-line";
                 }
-                if (joins && SpeakerLineStart.Opens(line.Block.Text))
+                if (joins && SpeakerLineStart.OpensUnmistakably(line.Block.Text))
                 {
                     joins = false;
                     rule = "speaker line start";
                 }
-                if (joins && SpeakerLineStart.IsBareLabel(groups[i][^1].Text))
+                if (joins && SpeakerLineStart.IsUnmistakablyBareLabel(groups[i][^1].Text))
                 {
                     joins = false;
                     rule = "speaker label";

@@ -378,6 +378,34 @@ public class DialogueTextGrouperTests
         Assert.Equal(2, DialogueTextGrouper.Group([name, message]).Count);
     }
 
+    /// <summary>
+    /// A colon in running text is not a speaker. A subtitle that wraps after 「說：」 or on 「也就是說：」,
+    /// or an English line that wraps on a lowercase word and a colon, is still one sentence.
+    /// </summary>
+    [Theory]
+    [InlineData("他回頭對我說：", "「快走！」")]
+    [InlineData("這件事情的重點只有一個", "也就是說：大家都要小心")]
+    [InlineData("她小聲地說道：", "「我不會再回來了。」")]
+    [InlineData("and the last thing he told me was", "this: never give up")]
+    [InlineData("he wrote one word on the note:", "remember")]
+    public void AColonInsideASentence_IsNotASpeaker(string upper, string lower)
+    {
+        var first = Block(upper, 0, 0, 300);
+        var second = Block(lower, 0, 24, 260);
+        Assert.Single(DialogueTextGrouper.Group([first, second]));
+    }
+
+    [Theory]
+    [InlineData("雲中日：醃黃瓜先生")]
+    [InlineData("Shashaca: hi")]
+    [InlineData("Klaudia : Honestly though, I do appreciate this.")]
+    public void AShortNameAndAColon_StillOpensAnEntry(string next)
+    {
+        var first = Block("Tomlin10320: hey there everyone", 0, 0, 300);
+        var second = Block(next, 0, 24, 300);
+        Assert.Equal(2, DialogueTextGrouper.Group([first, second]).Count);
+    }
+
     [Fact]
     public void ALineThatOnlyStartsWithAName_StillTakesItsWrap()
     {
