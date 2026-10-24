@@ -715,6 +715,59 @@ p:last-child { margin-bottom: 0; }
 }
 .note--inline { margin-inline: 0; text-align: start; }
 
+/* the screenshots-are-in-Chinese note, which opens to list the app's interface languages */
+.note--langs { transition: border-color 160ms ease; }
+.note--langs:hover, .note--langs[open] { border-color: var(--line); }
+.note--langs summary {
+  display: block;
+  list-style: none;
+  cursor: pointer;
+  border-radius: var(--r-s);
+}
+.note--langs summary::-webkit-details-marker { display: none; }
+.note--langs summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
+.note__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+.note__more::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+.note--langs summary > span:first-child { display: block; }
+.note--langs[open] .note__more::after { transform: translateY(1px) rotate(-135deg); }
+.langlist {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px 0 2px;
+  padding: 0;
+  list-style: none;
+}
+.langlist li {
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.82rem;
+}
+.note--langs[open] .langlist { animation: langlist-in 180ms ease-out; }
+@keyframes langlist-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .note--langs[open] .langlist { animation: none; }
+  .note__more::after { transition: none; }
+}
+
 /* feature cards */
 .cards {
   display: flex;
