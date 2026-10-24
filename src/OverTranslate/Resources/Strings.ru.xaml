@@ -405,13 +405,13 @@
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">Перевод пока не удался, повторные попытки продолжаются: {0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google Переводчик (стандартный)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChrome">Google Переводчик (бета)</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google (стандартный)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google (бета)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChromeHint">Звучит естественнее, но имена могут быть изменены или пропущены</sys:String>
-    <sys:String x:Key="S.Provider.Bing">Bing Переводчик</sys:String>
-    <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
-    <sys:String x:Key="S.Provider.Youdao">Youdao Translate</sys:String>
-    <sys:String x:Key="S.Provider.TranSmart">Tencent Translate</sys:String>
+    <sys:String x:Key="S.Provider.Bing">Bing</sys:String>
+    <sys:String x:Key="S.Provider.Microsoft">Microsoft</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">Youdao</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Нужен ключ API от DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

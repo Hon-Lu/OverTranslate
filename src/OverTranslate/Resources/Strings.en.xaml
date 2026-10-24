@@ -408,13 +408,13 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.RetryingAfterFailure">Translation failed for now, still retrying: {0}</sys:String>
 
     <!-- ── Translation providers ── -->
-    <sys:String x:Key="S.Provider.Google">Google Translate (Standard)</sys:String>
-    <sys:String x:Key="S.Provider.GoogleChrome">Google Translate (Beta)</sys:String>
+    <sys:String x:Key="S.Provider.Google">Google (Standard)</sys:String>
+    <sys:String x:Key="S.Provider.GoogleChrome">Google (Beta)</sys:String>
     <sys:String x:Key="S.Provider.GoogleChromeHint">More natural, but names may be reworded or dropped</sys:String>
-    <sys:String x:Key="S.Provider.Bing">Bing Translator</sys:String>
-    <sys:String x:Key="S.Provider.Microsoft">Microsoft Translator</sys:String>
-    <sys:String x:Key="S.Provider.Youdao">Youdao Translate</sys:String>
-    <sys:String x:Key="S.Provider.TranSmart">Tencent Translate</sys:String>
+    <sys:String x:Key="S.Provider.Bing">Bing</sys:String>
+    <sys:String x:Key="S.Provider.Microsoft">Microsoft</sys:String>
+    <sys:String x:Key="S.Provider.Youdao">Youdao</sys:String>
+    <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Requires an API key from DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
