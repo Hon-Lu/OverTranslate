@@ -725,12 +725,18 @@
                                         </StackPanel>
                                     </Border>
                                     <!-- The point at the button. Drawn over the card's edge so it opens
-                                         the border there; flipped when the card sits above the button. -->
+                                         the border there; flipped when the card sits above the button.
+                                         Moved along the edge by a render transform, never a margin: a
+                                         margin counts towards the card's own size, and the card grew by
+                                         wherever the arrow had last been. -->
                                     <Canvas x:Name="LabelArrow" Width="12" Height="7"
                                             HorizontalAlignment="Left" VerticalAlignment="Top"
                                             Margin="0,-6,0,0" RenderTransformOrigin="0.5,0.5">
                                         <Canvas.RenderTransform>
-                                            <ScaleTransform x:Name="LabelArrowFlip"/>
+                                            <TransformGroup>
+                                                <ScaleTransform x:Name="LabelArrowFlip"/>
+                                                <TranslateTransform x:Name="LabelArrowShift"/>
+                                            </TransformGroup>
                                         </Canvas.RenderTransform>
                                         <Path Data="M0,7 L6,1 L12,7 Z" Fill="{DynamicResource TooltipBg}"/>
                                         <Path Data="M0,6.5 L6,0.5 L12,6.5"

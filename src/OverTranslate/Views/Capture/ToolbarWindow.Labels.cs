@@ -43,6 +43,14 @@ public partial class ToolbarWindow
     // Room around the card inside the popup for its shadow, and above or below it for the arrow.
     private const double LabelEdge = 10;
 
+    // How far the arrow keeps from either end of the card: past the 9 of the rounded corner, by
+    // half its own width and a little more, so it always leaves from a straight edge.
+    private const double LabelArrowInset = 18;
+
+    // Room either side of the bar inside the popup, for a card let out past the bar's end so its
+    // arrow can stay off the corner — at most the inset plus the half a button it is centred on.
+    private const double LabelSideRoom = 40;
+
     private readonly List<LabelTarget> _labelTargets = new();
     private LabelTarget? _labelCurrent;
     private LabelTarget? _labelSuppressed;
@@ -236,27 +244,29 @@ public partial class ToolbarWindow
         var origin = element.TranslatePoint(new System.Windows.Point(0, 0), BarSurface);
         double centre = origin.X + element.ActualWidth / 2;
 
-        // Kept inside the bar's span, with the arrow still on the button.
+        // Kept inside the bar's span where it can be, but never at the cost of the arrow: the arrow
+        // stays clear of the card's rounded corners, and where a button at the end of the bar would
+        // put it on one, the card is let out past the bar's end instead.
         double left = Math.Clamp(centre - width / 2, 0, Math.Max(0, barWidth - width));
+        left = Math.Clamp(left, centre - (width - LabelArrowInset), centre - LabelArrowInset);
         bool above = LabelGoesAbove(origin.Y, element.ActualHeight, height);
         double top = above
             ? origin.Y - LabelGap - height
             : origin.Y + element.ActualHeight + LabelGap;
 
-        LabelCanvas.Width = barWidth + 2 * LabelEdge;
+        LabelCanvas.Width = barWidth + 2 * LabelSideRoom;
         LabelCanvas.Height = height + 2 * LabelEdge;
         Canvas.SetTop(LabelCard, LabelEdge);
-        LabelPopup.HorizontalOffset = -LabelEdge;
+        LabelPopup.HorizontalOffset = -LabelSideRoom;
         LabelPopup.VerticalOffset = top - LabelEdge;
 
         double arrowX = centre - left;
         LabelArrow.VerticalAlignment = above ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-        LabelArrow.Margin = above
-            ? new Thickness(arrowX - LabelArrow.Width / 2, 0, 0, -6)
-            : new Thickness(arrowX - LabelArrow.Width / 2, -6, 0, 0);
+        LabelArrow.Margin = above ? new Thickness(0, 0, 0, -6) : new Thickness(0, -6, 0, 0);
+        LabelArrowShift.X = arrowX - LabelArrow.Width / 2;
         LabelArrowFlip.ScaleY = above ? -1 : 1;
 
-        double x = LabelEdge + left;
+        double x = LabelSideRoom + left;
         bool animate = SystemParameters.ClientAreaAnimation;
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
