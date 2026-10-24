@@ -1,0 +1,19 @@
+diff --git a/src/OverTranslate/Services/Providers/ResilientProvider.cs b/src/OverTranslate/Services/Providers/ResilientProvider.cs
+index 4c11be4e..b4643926 100644
+--- a/src/OverTranslate/Services/Providers/ResilientProvider.cs
++++ b/src/OverTranslate/Services/Providers/ResilientProvider.cs
+@@ -158,6 +158,14 @@ public class ResilientProvider : ITranslationProvider
+         var backupEngine  = backups.FirstOrDefault(kv => kv.Key != notTranslated).Key
+                             ?? backups.FirstOrDefault().Key;
+         bool fallbackUsed = backups.Count > 0;
++        // README screenshot only (tools/readme-shots): pretend the first backup served two blocks.
++        if (System.Environment.GetEnvironmentVariable("OT_SHOT_BACKUP") == "1" && _engines.Length > 1)
++        {
++            backupEngine = Friendly(_engines[1].Name);
++            int total    = ordered.Sum(kv => kv.Value);
++            summary      = total > 2 ? $"{primary}×{total - 2}, {backupEngine}×2" : $"{backupEngine}×{total}";
++            fallbackUsed = true;
++        }
+         LastUsage = new EngineUsage(summary, backupEngine ?? "", primary, fallbackUsed);
+ 
+         // The log keeps the engines apart, which is what telling an endpoint's trouble needs.
