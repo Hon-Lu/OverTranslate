@@ -1224,14 +1224,15 @@ internal static class OcrTextBlockGrouper
     /// 72 screenshots: lowering the gate to 12 or 8 line heights adds 1 and 3 wrong joins to the
     /// one-entry-per-line panel; raising it to 25 splits ten web-v3 paragraphs back apart.</para>
     ///
-    /// <para>This used to be Latin only, to read its samples off lines flush left with the line
-    /// above, and to stop at 1.65 whatever the page said. None of the three is needed once the
-    /// samples are the page's own stacked pairs. Lifting the script gate changed no group across
-    /// the Japanese and Chinese pages of the corpus (region-web-ja, web-v2's zh and ja pages,
-    /// web-v3); reading the alignment on any edge rather than the left one joined a paragraph's
-    /// short last line back on (web-v2 en2, "GPU. See PP-OCRv6 Technical Documentation"); and no
-    /// pair the cap used to stop gets through the vertical-gap gate in <see cref="JudgeNextLine"/>,
-    /// which this runs behind. It still never crosses a sentence end:
+    /// <para>This used to be Latin only and to read its samples off lines flush left with the line
+    /// above. Neither is needed. Lifting the script gate changed no group across the Japanese and
+    /// Chinese pages of the corpus (region-web-ja, web-v2's zh and ja pages, web-v3); reading the
+    /// alignment on any edge rather than the left one joined a paragraph's short last line back on
+    /// (web-v2 en2, "GPU. See PP-OCRv6 Technical Documentation"). Whatever the page says, it still
+    /// stops at <see cref="LooseProseMaxAdvance"/>: the vertical-gap gate in
+    /// <see cref="JudgeNextLine"/> lets lines of one size through up to 1.8 line heights apart, and
+    /// a stack of long unpunctuated headlines at 1.7 under body set at 1.5 would otherwise read as
+    /// one paragraph. It never crosses a sentence end either:
     /// <see cref="SentenceContinuationEvidence"/> asks about the full stop first.</para>
     /// </remarks>
     private static bool IsLooselySetProse(
@@ -1242,7 +1243,8 @@ internal static class OcrTextBlockGrouper
             !LineMeasure.Spans(previous.LayoutBounds, LineMeasure.ProseLineMinAspect) ||
             !LineMeasure.Spans(current.LayoutBounds, LineMeasure.WrappedLineMinAspect) ||
             !SharesAnEdge(previous, current) ||
-            TextSizeRatio(previous, current) < MinTextSizeRatio)
+            TextSizeRatio(previous, current) < MinTextSizeRatio ||
+            LineAdvanceRatio(previous, current) > LooseProseMaxAdvance)
             return false;
 
         var advances = leadingSamples
@@ -1612,6 +1614,9 @@ internal static class OcrTextBlockGrouper
 
     /// <summary>The widest step between the rows that vouch for a cut row being one line of a paragraph.</summary>
     private const double ParagraphRowMaxAdvance = 1.45;
+
+    /// <summary>The loosest leading a body line may have and still be asked about its page's own.</summary>
+    private const double LooseProseMaxAdvance = 1.65;
 
     /// <summary>Which steps down a page count as samples of its leading, in line heights.</summary>
     private const double LeadingSampleMinAdvance = 0.8;

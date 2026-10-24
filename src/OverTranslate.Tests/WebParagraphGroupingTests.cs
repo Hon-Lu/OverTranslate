@@ -119,6 +119,21 @@ public class WebParagraphGroupingTests
     }
 
     [Fact]
+    public void HeadlinesFurtherApartThanTheCapStayApartOnALooselySetPage()
+    {
+        // Body at 1.5 line heights reads the page's leading as loose; a stack of long headlines
+        // under it at 1.7 must not borrow it, however loose the page.
+        const string body = "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容";
+        const string headline = "一則獨立的新聞標題沒有任何標點但長得跟正文一樣";
+        var page = Enumerable.Range(0, 5)
+            .Select(i => new OcrTextBlock(body, new Rect(100, 100 + i * 45, 700, 30)).AsDetected())
+            .Concat(Enumerable.Range(0, 3)
+                .Select(i => new OcrTextBlock(headline, new Rect(100, 400 + i * 51, 700, 30)).AsDetected()))
+            .ToArray();
+        Assert.Equal("b0,b1,b2,b3,b4|b5|b6|b7", Members(page, GroupingProfile.General));
+    }
+
+    [Fact]
     public void ThePagesLeadingIsReadByTheScreenshotModeOnly()
     {
         var page = LooselySetPage(5, 700, "這一段正文的行距比介面文字寬鬆一些但仍然是同一段落的內容");
