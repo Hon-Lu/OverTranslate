@@ -73,6 +73,14 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         @"<think(?:\s[^>]*)?>.*?</think\s*>",
         RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
+    private static readonly Regex UpToClosingTag = new(
+        @"^.*?</think\s*>",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    private static readonly Regex UnclosedLeadingBlock = new(
+        @"^\s*<think(?:\s[^>]*)?>.*\z",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
     /// <returns>One outcome per text, in the order given.</returns>
     /// <exception cref="OpenAiChatException">
     /// Not one text was translated: the first text's failure, as it was thrown.
@@ -239,7 +247,26 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         return [.. messages];
     }
 
-    internal static string StripThinking(string value) => ThinkingBlock.Replace(value, "").Trim();
+    /// <summary>The answer with the model's thinking taken out.</summary>
+    /// <remarks>
+    /// <para>Three shapes, taken in this order. Whole blocks first, wherever they are. Then a closing
+    /// tag with nothing opening it: a chat template that writes the opening tag itself hands the
+    /// model a reply that already starts inside the thinking, so everything up to that first closing
+    /// tag is thinking. Then an opening tag that never closes, which is thinking the token limit cut
+    /// off — none of it is translation, and an answer that is nothing else comes out empty, which is
+    /// <see cref="OpenAiChatFailure.NoTranslation"/>.</para>
+    ///
+    /// <para>The last only when the answer begins with it. A translation that merely mentions the
+    /// tag somewhere in its text is far likelier than thinking that starts part way through an
+    /// answer, and taking everything after it would cut a real translation short.</para>
+    /// </remarks>
+    internal static string StripThinking(string value)
+    {
+        value = ThinkingBlock.Replace(value, "");
+        value = UpToClosingTag.Replace(value, "", 1);
+        value = UnclosedLeadingBlock.Replace(value, "", 1);
+        return value.Trim();
+    }
 
     private static string ReadContent(JsonElement message)
     {

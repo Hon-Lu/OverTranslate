@@ -175,6 +175,73 @@ public class OpenAiChatProtocolTests
         Assert.Equal(expected, OpenAiChatTranslator.StripThinking(response));
     }
 
+    /// <summary>
+    /// A chat template that writes the opening tag itself leaves the model's answer starting inside
+    /// the thinking: everything up to the first closing tag is thinking, not translation.
+    /// </summary>
+    [Theory]
+    [InlineData("推理過程\n</think>\n\n正確譯文", "正確譯文")]
+    [InlineData("hidden</THINK >Visible", "Visible")]
+    public void StripThinking_DropsThinkingWhoseOpeningTagTheTemplateWrote(string response, string expected)
+    {
+        Assert.Equal(expected, OpenAiChatTranslator.StripThinking(response));
+    }
+
+    /// <summary>
+    /// Thinking cut off by the token limit never closes, and none of it is translation.
+    /// </summary>
+    [Theory]
+    [InlineData("<think>還沒想完就被截斷")]
+    [InlineData("\n<think mode=\"deep\">still thinking")]
+    [InlineData("<think>first</think>\n<think>second, cut off")]
+    public void StripThinking_LeavesNothingOfThinkingThatNeverClosed(string response)
+    {
+        Assert.Equal("", OpenAiChatTranslator.StripThinking(response));
+    }
+
+    /// <summary>
+    /// Ordinary text that merely mentions a tag in passing is left alone: only an unclosed tag the
+    /// answer opens with is thinking.
+    /// </summary>
+    [Fact]
+    public void StripThinking_LeavesATranslationThatOnlyMentionsAnOpeningTag()
+    {
+        Assert.Equal("請輸入 <think> 標籤", OpenAiChatTranslator.StripThinking("請輸入 <think> 標籤"));
+    }
+
+    /// <summary>
+    /// Servers that parse the reasoning out put it in a field of its own; only the content is the
+    /// translation.
+    /// </summary>
+    [Fact]
+    public async Task TranslateAsync_IgnoresReasoningInItsOwnField()
+    {
+        const string response =
+            """{"choices":[{"message":{"reasoning_content":"先想一想","content":"乾淨譯文"}}]}""";
+        using var http = new HttpClient(new StaticResponseHandler(HttpStatusCode.OK, response));
+
+        var translated = await new OpenAiChatTranslator(http).TranslateAsync(["hello"], Request());
+
+        Assert.Equal("乾淨譯文", Assert.Single(translated).Translation);
+    }
+
+    /// <summary>
+    /// Reasoning and no content — the model thought until it ran out of tokens — is no translation,
+    /// never the reasoning passed off as one.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"choices":[{"message":{"reasoning_content":"想到一半","content":""}}]}""")]
+    [InlineData("""{"choices":[{"message":{"reasoning_content":"想到一半","content":null}}]}""")]
+    public async Task OnlyReasoningAndNoContentIsNoTranslation(string body)
+    {
+        using var http = new HttpClient(new StaticResponseHandler(HttpStatusCode.OK, body));
+
+        var error = await Assert.ThrowsAsync<OpenAiChatException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(["hello"], Request()));
+
+        Assert.Equal(OpenAiChatFailure.NoTranslation, error.Failure);
+    }
+
     // ---- Failures ---------------------------------------------------------------------------
 
     /// <summary>
