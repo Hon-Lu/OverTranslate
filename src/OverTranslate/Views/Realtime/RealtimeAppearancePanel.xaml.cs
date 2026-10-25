@@ -139,9 +139,6 @@ internal partial class RealtimeAppearancePanel : Window
         // Before Show could hand it the foreground: see the remarks for why it never takes it itself.
         WindowStyles.ApplyNoActivate(this);
 
-        if (PresentationSource.FromVisual(this) is HwndSource source)
-            source.AddHook(OnWindowPosChanging);
-
         // Opened at the bar, so the window starts on the monitor it will be placed on and the scale
         // read in Place is that monitor's.
         ScreenGeometry.MoveToPhysical(this, _bar.Left, _bar.Top);
@@ -186,14 +183,22 @@ internal partial class RealtimeAppearancePanel : Window
 
         int Physical(double dip) => (int)Math.Round(dip * screenScale);
 
-        var margin = RootChrome.Margin;
-        int chromeWidth = Physical(Chrome.ActualWidth);
-        int chromeHeight = Physical(Chrome.ActualHeight);
-        int gap = Physical(Gap);
-
         // Decided once, on the first placement: a panel that flipped sides as a picker opened would
         // move out from under the pointer that opened it.
         if (!_placed) _opensUp = _bar.Top - _screen.Top >= _screen.Bottom - _bar.Bottom;
+
+        // The window is made as tall as the panel with a picker open, and never resizes after: a
+        // picker opening or closing only lays the panel out again inside it, against the capsule's
+        // side. Resizing it with the panel showed a frame of the old layout in the new size — the
+        // panel cut off — before the new layout was drawn.
+        var margin = RootChrome.Margin;
+        double tallest = TallestChromeHeight();
+        RootChrome.VerticalAlignment = _opensUp ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+        Height = tallest * relative + margin.Top + margin.Bottom;
+
+        int chromeWidth = Physical(Chrome.ActualWidth);
+        int chromeHeight = Physical(tallest);
+        int gap = Physical(Gap);
 
         int chromeTop = _opensUp
             ? Math.Max(_screen.Top, _bar.Top - gap - chromeHeight)
@@ -204,7 +209,6 @@ internal partial class RealtimeAppearancePanel : Window
         // Cast away from the bar.
         Shadow.Direction = _opensUp ? 90 : 270;
 
-        _placed = false;
         ScreenGeometry.MoveToPhysical(this, chromeLeft - Physical(margin.Left), chromeTop - Physical(margin.Top));
         _placed = true;
 
@@ -212,47 +216,19 @@ internal partial class RealtimeAppearancePanel : Window
     }
 
     /// <summary>
-    /// Keeps the edge next to the capsule still while the panel grows or shrinks — a picker opening
-    /// or closing — so it grows away from the bar instead of over it, and stays on the screen.
+    /// How tall the panel is with a picker open — the three are the same height — laid out for the
+    /// measurement and folded away again before anything is drawn.
     /// </summary>
-    /// <remarks>
-    /// Done as the size changes rather than after, for the reason the capsule pins its right edge
-    /// this way: a correction after the resize is a second move, and the frame in between shows the
-    /// panel already grown and not yet moved.
-    /// </remarks>
-    private IntPtr OnWindowPosChanging(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    private double TallestChromeHeight()
     {
-        if (msg != WmWindowPosChanging || !_placed || _closing) return IntPtr.Zero;
+        if (_openPicker is not null) return Chrome.ActualHeight;
 
-        var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
-        if ((pos.flags & SwpNoSize) != 0) return IntPtr.Zero;
-
-        var bounds = ScreenGeometry.PhysicalBounds(this);
-        if (bounds.IsEmpty || pos.cy == bounds.Height) return IntPtr.Zero;
-
-        var left = (pos.flags & SwpNoMove) == 0 ? pos.x : bounds.Left;
-        var top = _opensUp ? bounds.Bottom - pos.cy : bounds.Top;
-        pos.x = left;
-        pos.y = Math.Clamp(top, _screen.Top, Math.Max(_screen.Top, _screen.Bottom - pos.cy));
-        pos.flags &= ~SwpNoMove;
-        Marshal.StructureToPtr(pos, lParam, fDeleteOld: false);
-        return IntPtr.Zero;
-    }
-
-    private const int WmWindowPosChanging = 0x0046;
-    private const uint SwpNoSize = 0x0001;
-    private const uint SwpNoMove = 0x0002;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct WINDOWPOS
-    {
-        public IntPtr hwnd;
-        public IntPtr hwndInsertAfter;
-        public int x;
-        public int y;
-        public int cx;
-        public int cy;
-        public uint flags;
+        TextColorPicker.Visibility = Visibility.Visible;
+        UpdateLayout();
+        var tallest = Chrome.ActualHeight;
+        TextColorPicker.Visibility = Visibility.Collapsed;
+        UpdateLayout();
+        return tallest;
     }
 
     // ── Settings ─────────────────────────────────────────────────────────────────────────────────
