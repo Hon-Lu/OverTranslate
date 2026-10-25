@@ -103,7 +103,7 @@ public class OpenAiChatProtocolTests
 
         Assert.Equal(23, handler.Requests.Count);
         Assert.Equal(8, handler.MaxConcurrentRequests);
-        Assert.Equal(texts.Select(text => $"translated:{text}"), translated);
+        Assert.Equal(texts.Select(text => $"translated:{text}"), translated.Select(outcome => outcome.Translation));
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class OpenAiChatProtocolTests
 
         var translated = await new OpenAiChatTranslator(http).TranslateAsync(["hello"], Request());
 
-        Assert.Equal("陣列格式譯文", Assert.Single(translated));
+        Assert.Equal("陣列格式譯文", Assert.Single(translated).Translation);
     }
 
     [Theory]
@@ -245,6 +245,63 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
+    /// One text failing leaves the others translated, and says which one failed and how.
+    /// </summary>
+    [Fact]
+    public async Task OneFailedTextInABatchLeavesTheOthersTranslated()
+    {
+        using var http = new HttpClient(new FailingOnHandler("block-3", hang: false));
+        var texts = Enumerable.Range(0, 6).Select(index => $"block-{index}").ToList();
+
+        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(texts, Request());
+
+        for (var i = 0; i < texts.Count; i++)
+        {
+            if (i == 3) continue;
+            Assert.Equal($"translated:{texts[i]}", outcomes[i].Translation);
+            Assert.Null(outcomes[i].Error);
+        }
+
+        Assert.False(outcomes[3].Translated);
+        var error = Assert.IsType<OpenAiChatException>(outcomes[3].Error);
+        Assert.Equal(OpenAiChatFailure.Rejected, error.Failure);
+    }
+
+    /// <summary>
+    /// A server that fails a whole round of requests is not sent the rest: with nothing translated,
+    /// every further round would only wait out the same failure again.
+    /// </summary>
+    [Fact]
+    public async Task AWholeFailedRoundStopsTheRestBeingSent()
+    {
+        var handler = new FailingOnHandler("block", hang: false);
+        using var http = new HttpClient(handler);
+        var texts = Enumerable.Range(0, 40).Select(index => $"block-{index}").ToList();
+
+        var error = await Assert.ThrowsAsync<OpenAiChatException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(texts, Request()));
+
+        Assert.Equal(OpenAiChatFailure.Rejected, error.Failure);
+        Assert.InRange(handler.Sent, OpenAiChatTranslator.MaxConcurrentRequests, 2 * OpenAiChatTranslator.MaxConcurrentRequests - 1);
+    }
+
+    /// <summary>
+    /// The caller cancelling part way through a batch is a cancellation, not a batch with some texts
+    /// translated and the rest failed.
+    /// </summary>
+    [Fact]
+    public async Task CancellingPartWayThroughABatchIsStillACancellation()
+    {
+        using var http = new HttpClient(new FailingOnHandler("block-2", hang: true));
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var texts = Enumerable.Range(0, 4).Select(index => $"block-{index}").ToList();
+        var request = Request() with { Timeout = TimeSpan.FromMinutes(5) };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(texts, request, cancel.Token));
+    }
+
+    /// <summary>
     /// A request past its timeout is a failure of its own, not the cancellation it starts as:
     /// callers stay silent on a cancellation, taking it for the user having walked away.
     /// </summary>
@@ -280,6 +337,38 @@ public class OpenAiChatProtocolTests
         {
             await Task.Delay(Timeout.Infinite, cancellationToken);
             throw new InvalidOperationException("unreachable");
+        }
+    }
+
+    /// <summary>
+    /// Translates every text, except those containing <paramref name="failOn"/>: refused with a 500,
+    /// or, with <paramref name="hang"/>, never answered at all.
+    /// </summary>
+    private sealed class FailingOnHandler(string failOn, bool hang) : HttpMessageHandler
+    {
+        private int _sent;
+
+        public int Sent => Volatile.Read(ref _sent);
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _sent);
+            using var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
+            var messages = payload.RootElement.GetProperty("messages");
+            var userText = messages[messages.GetArrayLength() - 1].GetProperty("content").GetString()!;
+
+            if (userText.Contains(failOn, StringComparison.Ordinal))
+            {
+                if (hang) await Task.Delay(Timeout.Infinite, cancellationToken);
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("boom") };
+            }
+
+            var response = JsonSerializer.Serialize(new
+            {
+                choices = new[] { new { message = new { role = "assistant", content = $"translated:{userText}" } } },
+            });
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(response) };
         }
     }
 
