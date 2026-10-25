@@ -193,8 +193,9 @@ public partial class RealtimeControlWindow : Window
             CloseAppearance();
         };
 
-        // 顯示外觀 is set against the capsule, so it goes wherever the capsule goes: dragged, or
-        // pushed along by its own width changing.
+        // 顯示外觀 is set against the capsule, so it goes wherever the capsule goes: pushed along by
+        // its own width changing, or held back into the screen. A drag closes it instead — see
+        // Chrome_MouseLeftButtonDown.
         LocationChanged += (_, _) => FollowCapsule();
         SizeChanged += (_, _) => FollowCapsule();
 
@@ -1030,6 +1031,11 @@ public partial class RealtimeControlWindow : Window
     {
         _pressOnMessage = _messageShowing && _mode == RealtimeControlMode.Running
             && ReferenceEquals(e.OriginalSource, RunStatusText);
+
+        // A press on the bar itself, not one of its buttons, is a press outside 顯示外觀, as it is
+        // for the lists: put away rather than dragged along, where the bar could end up under it.
+        CloseAppearance();
+
         _isDragging = true;
         _dragStartMouse = System.Windows.Forms.Control.MousePosition;
         _dragStartPosition = _position;

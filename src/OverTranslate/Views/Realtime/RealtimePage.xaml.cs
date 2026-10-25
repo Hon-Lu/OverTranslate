@@ -153,10 +153,12 @@ public partial class RealtimePage : UserControl
                 PersistScrimOpacity();
             }));
 
-        // 文字大小's − ＋ box: each size it applies is written there and then — stepped or entered —
-        // the same as the realtime bar's panel. The colour buttons do the same through ColourPopup.
+        // 文字大小's − ＋ box: each size it applies is written there and then — stepped, entered, or
+        // the one a hold ends on — the same as the realtime bar's panel. The preview follows every
+        // step of a hold. The colour buttons do the same through ColourPopup.
         FixedFontSizeStepper.Minimum = RealtimeSettings.MinFixedFontSize;
         FixedFontSizeStepper.Maximum = RealtimeSettings.MaxFixedFontSize;
+        FixedFontSizeStepper.ValueChanging += (_, size) => PreviewText.FontSize = size;
         FixedFontSizeStepper.ValueCommitted += (_, size) => Persist(s => s.Realtime.FixedFontSize = size);
 
         // Set before the handlers go on, for the reason the boxes above give: restoring a stored

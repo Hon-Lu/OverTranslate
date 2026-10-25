@@ -5,10 +5,12 @@
 
     <UserControl.Resources>
         <!-- − and ＋: flat until the pointer is on them, so the box reads as one field with two ends
-             rather than as three buttons. Greyed at the end of the range. -->
+             rather than as three buttons. Greyed at the end of the range. On press, not release:
+             holding one repeats it — see StartRepeat. -->
         <Style x:Key="StepButton" TargetType="Button">
             <Setter Property="Width" Value="28"/>
             <Setter Property="Focusable" Value="False"/>
+            <Setter Property="ClickMode" Value="Press"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
             <Setter Property="Template">
@@ -67,14 +69,16 @@
                     DockPanel.Dock="Left"
                     Style="{StaticResource StepButton}"
                     AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
-                    Click="DownBtn_Click">
+                    Click="StepBtn_Click"
+                    LostMouseCapture="StepBtn_LostMouseCapture">
                 <Path Style="{StaticResource StepGlyph}" Data="M1,5 H9"/>
             </Button>
             <Button x:Name="UpBtn"
                     DockPanel.Dock="Right"
                     Style="{StaticResource StepButton}"
                     AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
-                    Click="UpBtn_Click">
+                    Click="StepBtn_Click"
+                    LostMouseCapture="StepBtn_LostMouseCapture">
                 <Path Style="{StaticResource StepGlyph}" Data="M1,5 H9 M5,1 V9"/>
             </Button>
 
