@@ -314,6 +314,10 @@
     <sys:String x:Key="S.Realtime.BorderFixed">Свой</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">Цвет рамки</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">Сбросить внешний вид</sys:String>
+    <sys:String x:Key="S.ColorPicker.Undo">Вернуть предыдущий цвет</sys:String>
+    <sys:String x:Key="S.ColorPicker.Hex">Код цвета</sys:String>
+    <sys:String x:Key="S.ColorPicker.Square">Насыщенность и яркость</sys:String>
+    <sys:String x:Key="S.ColorPicker.Hue">Оттенок</sys:String>
     <sys:String x:Key="S.Realtime.AutoModeBestFor">Цвет текста и фон, подобранные в режиме «Авто», подходят не для каждого изображения: на некоторых видео или пестром фоне текст бывает трудно читать, а стертая область может выглядеть чужеродно. Для таких сцен выберите «Свой».</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">Как это работает</sys:String>

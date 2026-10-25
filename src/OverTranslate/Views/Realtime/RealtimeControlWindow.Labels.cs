@@ -47,6 +47,7 @@ public partial class RealtimeControlWindow
             () => LocalizationService.Get(_isPaused ? "S.Realtime.Resume" : "S.Realtime.Pause"),
             () => RealtimePauseHint.CurrentHotkey?.Trim() is { Length: > 0 } key ? key : null);
         Labels.Add(EditBtn, () => LocalizationService.Get("S.Realtime.EditBlocks"));
+        Labels.Add(AppearanceBtn, () => LocalizationService.Get("S.Realtime.Appearance"));
         Labels.Add(CollapseBtn, () => LocalizationService.Get(
             _collapsed ? "S.Realtime.ExpandBar" : "S.Realtime.CollapseBar"));
         Labels.Add(RunCloseBtn, () => LocalizationService.Get("S.Realtime.StopSession"));

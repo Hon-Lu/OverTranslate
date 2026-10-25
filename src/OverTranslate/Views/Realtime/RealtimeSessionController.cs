@@ -18,9 +18,9 @@ namespace OverTranslate.Views.Realtime;
 /// </param>
 /// <param name="TextColor">
 /// Subtitle colours as "#RRGGBB", carried here like everything else this sitting runs with. They are
-/// read from the settings file rather than chosen per session — see AppSettings — but they still
-/// arrive on the request, because a session cannot be asked to change them halfway: reaching the
-/// page that sets them means the shell window, and a running session has hidden it.
+/// read from the settings file rather than chosen per session — see AppSettings — and arrive on the
+/// request. The running bar's 顯示外觀 panel changes them halfway (#355) by writing the file and
+/// handing the session a request re-read from it — see RealtimeSessionController.ApplyAppearance.
 /// </param>
 /// <param name="ScrimOpacity">
 /// How opaque the band behind the text is, 0–100. Travels with the colours for the same reason and
@@ -461,6 +461,7 @@ internal sealed class RealtimeSessionController
         control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
         control.LanguagesChangeRequested += (_, pair) => ChangeLanguages(pair.Source, pair.Target);
+        control.AppearanceChanged += (_, _) => ApplyAppearance();
         _control = control;
         control.Show();
 
@@ -1075,6 +1076,61 @@ internal sealed class RealtimeSessionController
             request.SourceLanguage, request.TargetLanguage, source, target, rebuilt, paused);
 
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Raised after the running bar's 顯示外觀 panel changed the overlays' look (#355), once the
+    /// change is in the settings file — for the page whose card shows it.
+    /// </summary>
+    public event EventHandler? AppearanceChanged;
+
+    /// <summary>
+    /// Redraws the overlays with what 顯示外觀 says now, from the running bar's panel (#355), without
+    /// ending anything.
+    /// </summary>
+    /// <remarks>
+    /// <para>The panel has already written the change to the settings file; the request is re-read
+    /// from it through the same mapping a start uses (RealtimeQuickStart.WithAppearance), so a
+    /// session changed here draws exactly what one started now would.</para>
+    ///
+    /// <para>The overlays are built again, as for <see cref="ToggleCompareDisplay"/> and for the same
+    /// reason: how a window draws — its colours, whether it repairs the picture, whether it reads the
+    /// source's colour, its border and its size — is fixed when it is built. And as there, each window
+    /// is handed back the words it was showing, so a change restyles the translation on the screen
+    /// rather than blanking it until the next line. The session is not touched: the words, the
+    /// languages and the reading are the same, only how they are drawn has changed. A paused session
+    /// has nothing to hand back and stays empty.</para>
+    /// </remarks>
+    private void ApplyAppearance()
+    {
+        if (_request is not { } request || _control is not { } control) return;
+
+        // The bar is off the screen while a capture stands on the session, for the reason
+        // ToggleCompareDisplay gives.
+        if (_interlude.HideLayers) return;
+
+        _request = RealtimeQuickStart.WithAppearance(request, SettingsService.Instance.Current.Realtime);
+        AppearanceChanged?.Invoke(this, EventArgs.Empty);
+
+        if (!IsTranslating || _blockWindows.Count == 0) return;
+
+        var shown = new Dictionary<int, IReadOnlyList<TranslatedBlock>>(_shownLines);
+
+        CloseBlockWindows();
+        ShowBlockWindows(_request, Regions());
+        RefreshOverlayHandles();
+
+        foreach (var (id, lines) in shown)
+        {
+            if (!_blockWindows.TryGetValue(id, out var window)) continue;
+            window.SetLines(lines);
+            _shownLines[id] = lines;
+        }
+
+        // The new windows opened above the bar; it goes back on top of them.
+        control.BringToFront();
+
+        Log.Info("Realtime appearance changed mid-session; overlays rebuilt");
     }
 
     /// <summary>

@@ -210,6 +210,7 @@ public partial class RealtimePage : UserControl
 
         RealtimeSessionController.Instance.StateChanged += OnSessionStateChanged;
         RealtimeSessionController.Instance.LanguagesChanged += OnSessionLanguagesChanged;
+        RealtimeSessionController.Instance.AppearanceChanged += OnSessionAppearanceChanged;
 
         // The direction is set on the edit layer, which says so through MangaModelOptions.
         MangaModelOptions.Changed += OnMangaModelOptionsChanged;
@@ -378,6 +379,7 @@ public partial class RealtimePage : UserControl
     {
         RealtimeSessionController.Instance.StateChanged -= OnSessionStateChanged;
         RealtimeSessionController.Instance.LanguagesChanged -= OnSessionLanguagesChanged;
+        RealtimeSessionController.Instance.AppearanceChanged -= OnSessionAppearanceChanged;
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
     }
@@ -805,32 +807,25 @@ public partial class RealtimePage : UserControl
     /// One button for the card rather than one per group. There were three before, each sitting
     /// inside a group and undoing only that group, which left the reader to work out how much a
     /// reset covered from where the button happened to be — and it split 底色 from 底色不透明度 across
-    /// two of them, although nobody wants one put back without the other.
-    ///
-    /// The defaults are read off a fresh <see cref="RealtimeSettings"/> rather than written out
-    /// again here, so that a default changed in one place does not leave this button restoring the
-    /// old one.
+    /// two of them, although nobody wants one put back without the other. What it covers is
+    /// <see cref="RealtimeSettings.ResetAppearance"/>, shared with the realtime bar's panel.
     /// </remarks>
     private void ResetAppearanceBtn_Click(object sender, RoutedEventArgs e)
     {
-        var defaults = new RealtimeSettings();
-        Persist(s =>
-        {
-            var realtime = s.Realtime;
-            realtime.SampleSourceTextColor = defaults.SampleSourceTextColor;
-            realtime.TextColor = defaults.TextColor;
-            realtime.NaturalBackgroundEnabled = defaults.NaturalBackgroundEnabled;
-            realtime.ScrimColor = defaults.ScrimColor;
-            realtime.ScrimOpacity = defaults.ScrimOpacity;
-            realtime.BorderEnabled = defaults.BorderEnabled;
-            realtime.BorderColorMode = defaults.BorderColorMode;
-            realtime.BorderColor = defaults.BorderColor;
-            realtime.FontSizeMode = defaults.FontSizeMode;
-            realtime.FixedFontSize = defaults.FixedFontSize;
-        });
+        Persist(s => s.Realtime.ResetAppearance());
+        ShowStoredAppearance();
+    }
 
-        // The trays and the sliders are the controls here that hold their own value rather than
-        // reading it back from the settings on every render, so they have to be told.
+    /// <summary>
+    /// Puts the stored 顯示外觀 back on every control — after a reset, and after the realtime bar's
+    /// panel changed it while this page was hidden behind a session (#355).
+    /// </summary>
+    /// <remarks>
+    /// The trays and the sliders are the controls here that hold their own value rather than reading
+    /// it back from the settings on every render, so they have to be told.
+    /// </remarks>
+    private void ShowStoredAppearance()
+    {
         ShowAppearanceModes(SettingsService.Instance.Current.Realtime);
         SyncScrimOpacity();
         SyncFixedFontSize();
@@ -1332,7 +1327,7 @@ public partial class RealtimePage : UserControl
         PreviewScrim.BorderThickness = new Thickness(
             realtime.BorderEnabled ? RealtimeSubtitleColors.BorderThickness : 0);
 
-        ResetAppearanceBtn.IsEnabled = !IsDefaultAppearance(realtime, opacity, fixedFontSize);
+        ResetAppearanceBtn.IsEnabled = !realtime.HasDefaultAppearance(opacity, fixedFontSize);
     }
 
     /// <summary>
@@ -1344,33 +1339,15 @@ public partial class RealtimePage : UserControl
     /// </remarks>
     private const double PreviewAutoFontSize = 15;
 
-    /// <summary>
-    /// Whether every value on the card is still what it ships as, which is what decides the reset.
-    /// </summary>
-    /// <remarks>
-    /// A reset that would do nothing still looks like it might, and the user has to press it to find
-    /// out. The opacity is passed in rather than read from the settings: mid-drag the slider is
-    /// deliberately ahead of what is stored, and a button that comes back to life a beat late reads
-    /// as having missed the drag.
-    /// </remarks>
-    private static bool IsDefaultAppearance(RealtimeSettings realtime, int opacity, int fixedFontSize)
-    {
-        var defaults = new RealtimeSettings();
-
-        return realtime.SampleSourceTextColor == defaults.SampleSourceTextColor
-            && realtime.FontSizeMode == defaults.FontSizeMode
-            && fixedFontSize == defaults.FixedFontSize
-            && realtime.NaturalBackgroundEnabled == defaults.NaturalBackgroundEnabled
-            && realtime.BorderEnabled == defaults.BorderEnabled
-            && realtime.BorderColorMode == defaults.BorderColorMode
-            && opacity == defaults.ScrimOpacity
-            && string.Equals(realtime.TextColor, defaults.TextColor, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(realtime.ScrimColor, defaults.ScrimColor, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(realtime.BorderColor, defaults.BorderColor, StringComparison.OrdinalIgnoreCase);
-    }
-
     private void OnSessionStateChanged(object? sender, EventArgs e) =>
         Dispatcher.BeginInvoke(RenderState);
+
+    /// <summary>
+    /// The running bar's 顯示外觀 panel changed something (#355): this page shows it at once, so the
+    /// card says what the session is drawing with — and, after 結束, what the next one starts with.
+    /// </summary>
+    private void OnSessionAppearanceChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(ShowStoredAppearance);
 
     /// <summary>
     /// The running capsule changed the pair (#345): the pickers follow at once, locked as they are,

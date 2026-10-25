@@ -1,0 +1,34 @@
+<UserControl x:Class="OverTranslate.Controls.SegmentedSwitch"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False">
+    <!-- The sliding two-way tray of 顯示外觀, as one control: the tray, the accent marker under the
+         chosen half and the two halves — the same SegmentedTray and SegmentedTrackRadio the page
+         uses. The marker carries no text, so moving it does not blur anything. -->
+    <Border Style="{StaticResource SegmentedTray}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border x:Name="Thumb"
+                    Grid.Column="0"
+                    Background="{DynamicResource AppAccent}"
+                    CornerRadius="6"
+                    SizeChanged="Thumb_SizeChanged">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="ThumbShift"/>
+                </Border.RenderTransform>
+            </Border>
+            <RadioButton x:Name="FirstRadio"
+                         Grid.Column="0"
+                         Style="{StaticResource SegmentedTrackRadio}"
+                         IsChecked="True"
+                         Checked="Radio_Checked"/>
+            <RadioButton x:Name="SecondRadio"
+                         Grid.Column="1"
+                         Style="{StaticResource SegmentedTrackRadio}"
+                         Checked="Radio_Checked"/>
+        </Grid>
+    </Border>
+</UserControl>

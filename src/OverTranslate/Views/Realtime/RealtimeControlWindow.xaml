@@ -379,6 +379,21 @@
                                  feature rather than as a third session control. Drawn rather than typed for
                                  the same reason as the two buttons in the edit tray: MDL2 has no framing
                                  corners, and a Path has no font fallback to lose. -->
+                            <!-- 顯示外觀 (#355), so the colours and the size can be tried against the
+                                 translation they are for, without ending the session to reach the
+                                 page. Leftmost, for the reason 截圖翻譯 and 原文對照 were each added on
+                                 this side: the right edge is pinned, so 暫停, 編輯 and ✕ stay where the
+                                 hand knows them. Shown held down, the way 原文對照 shows its state,
+                                 while the panel is open — see SetAppearanceOpen. -->
+                            <Button x:Name="AppearanceBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    FontSize="14"
+                                    Content="&#xE790;"
+                                    Margin="0,0,4,0"
+                                    AutomationProperties.Name="{DynamicResource S.Realtime.Appearance}"
+                                    Click="AppearanceBtn_Click"/>
+
                             <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
                                  who wants to compare usually finds out while watching, not while framing,
                                  and the switch moves the translation without stopping anything. Left of
