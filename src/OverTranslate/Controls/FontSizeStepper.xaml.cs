@@ -49,7 +49,17 @@ public partial class FontSizeStepper : UserControl
     {
         if (ValueBox.IsMouseOver) return;
         ValueBox.Focus();
-        ValueBox.CaretIndex = ValueBox.Text.Length;
+        ValueBox.SelectAll();
+        e.Handled = true;
+    }
+
+    // The first click into the box takes the whole number: it holds two digits at most, so typing
+    // after the old one would be refused outright.
+    private void ValueBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (ValueBox.IsKeyboardFocusWithin) return;
+        ValueBox.Focus();
+        ValueBox.SelectAll();
         e.Handled = true;
     }
 
@@ -77,6 +87,12 @@ public partial class FontSizeStepper : UserControl
     private void ValueBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) => ValueBox.SelectAll();
 
     private void ValueBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) => CommitTyped();
+
+    /// <summary>
+    /// Applies a size typed and not yet entered, for a host that knows the typing is over when the
+    /// box itself has not been told — the keyboard taken away by another application.
+    /// </summary>
+    public void CommitPending() => CommitTyped();
 
     /// <summary>What was typed, held inside the range; an empty box goes back to the size in use.</summary>
     private void CommitTyped()

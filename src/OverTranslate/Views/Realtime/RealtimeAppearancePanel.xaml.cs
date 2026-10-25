@@ -10,6 +10,7 @@ using OverTranslate.Controls;
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
+using OverTranslate.Services.Realtime.Capture;
 using Button = System.Windows.Controls.Button;
 using Color = System.Windows.Media.Color;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -56,6 +57,9 @@ internal partial class RealtimeAppearancePanel : Window
     private bool _placed;
     private bool _closing;
     private IntPtr _previousForeground;
+
+    // While a box has the keyboard: tells when another application takes it back — see EndTyping.
+    private ForegroundChangeWatch? _typingWatch;
 
     // Set while stored values are being put on the controls, so that is not taken for the user.
     private bool _showing;
@@ -374,8 +378,24 @@ internal partial class RealtimeAppearancePanel : Window
     /// </summary>
     private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (IsActive || !IsInTextBox(e.OriginalSource as DependencyObject)) return;
+        if (HasForeground || TextBoxOf(e.OriginalSource as DependencyObject) is not { } box) return;
         TakeForeground();
+
+        // The activation that hands this window the keyboard also puts WPF's focus back where the
+        // window last had it — nowhere — after the press has already given it to the box, so the box
+        // showed a caret and took no keys. Given again once the handoff has settled; the same story
+        // RealtimeLanguageMenu.FocusWhenReady tells of its search box.
+        FocusWhenReady(box, attemptsLeft: 8);
+    }
+
+    private void FocusWhenReady(TextBox box, int attemptsLeft)
+    {
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (_closing || !box.IsVisible) return;
+            if (box.IsKeyboardFocused || box.Focus() || attemptsLeft <= 0) return;
+            FocusWhenReady(box, attemptsLeft - 1);
+        });
     }
 
     /// <summary>
@@ -384,17 +404,31 @@ internal partial class RealtimeAppearancePanel : Window
     /// </summary>
     private void OnPreviewKeyUp(object sender, KeyEventArgs e)
     {
-        if (e.Key is not (Key.Enter or Key.Escape) || !IsActive) return;
+        if (e.Key is not (Key.Enter or Key.Escape) || !HasForeground) return;
 
         Keyboard.ClearFocus();
         GiveBackForeground();
     }
 
-    private static bool IsInTextBox(DependencyObject? element)
+    /// <summary>
+    /// Whether the keyboard is this panel's, asked of Windows. Not <see cref="Window.IsActive"/>:
+    /// a window that never activates is reported active by WPF all the same, measured — which hid
+    /// that the boxes were never getting the keys.
+    /// </summary>
+    private bool HasForeground
+    {
+        get
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            return hwnd != IntPtr.Zero && GetForegroundWindow() == hwnd;
+        }
+    }
+
+    private static TextBox? TextBoxOf(DependencyObject? element)
     {
         for (var node = element; node is not null; node = VisualTreeHelper.GetParent(node) ?? LogicalTreeHelper.GetParent(node))
-            if (node is TextBox) return true;
-        return false;
+            if (node is TextBox box) return box;
+        return null;
     }
 
     /// <summary>Closes the panel, handing the keyboard back if a box had taken it.</summary>
@@ -403,10 +437,11 @@ internal partial class RealtimeAppearancePanel : Window
         if (_closing) return;
 
         // A code or a size typed and not yet entered is applied on the way out rather than lost.
-        if (IsKeyboardFocusWithin) Keyboard.ClearFocus();
+        var typing = HasForeground;
+        EndTyping();
 
         _closing = true;
-        if (IsActive) GiveBackForeground();
+        if (typing) GiveBackForeground();
         Close();
     }
 
@@ -416,6 +451,11 @@ internal partial class RealtimeAppearancePanel : Window
     /// Makes this the window the keyboard talks to; see RealtimeLanguageMenu.TakeForeground for why
     /// the foreground thread's input queue is shared for the call.
     /// </summary>
+    /// <remarks>
+    /// The no-activate bit comes off for it: Windows refuses the foreground to a window carrying it,
+    /// so the box showed a caret and every key went to the game. It goes back on as soon as the
+    /// typing is over — see <see cref="EndTyping"/>.
+    /// </remarks>
     private void TakeForeground()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
@@ -423,6 +463,12 @@ internal partial class RealtimeAppearancePanel : Window
 
         var foreground = GetForegroundWindow();
         if (foreground != hwnd) _previousForeground = foreground;
+
+        WindowStyles.SetNoActivate(this, enabled: false);
+        _typingWatch ??= ForegroundChangeWatch.Install(() =>
+        {
+            if (!HasForeground) EndTyping();
+        });
 
         var owner = GetWindowThreadProcessId(foreground, out _);
         var self = GetCurrentThreadId();
@@ -439,15 +485,49 @@ internal partial class RealtimeAppearancePanel : Window
         }
     }
 
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        EndTyping();
+    }
+
+    /// <summary>
+    /// The typing is over, whoever ended it — Enter or Esc here, or a click on the game. What is in
+    /// the box is applied, and a click on the panel must not activate it again from here on.
+    /// </summary>
+    /// <remarks>
+    /// Not left to the box's own LostKeyboardFocus or to <see cref="OnDeactivated"/> alone: with the
+    /// game clicked, neither came (measured), and a size typed and left was neither shown nor saved.
+    /// The foreground moving to another application is what says it, so that is what is watched.
+    /// </remarks>
+    private void EndTyping()
+    {
+        _typingWatch?.Dispose();
+        _typingWatch = null;
+
+        // Applied here rather than left to the boxes noticing: see the remarks.
+        if (FontSizeStepper.IsEnabled) FontSizeStepper.CommitPending();
+        _openPicker?.CommitPendingCode();
+
+        if (IsKeyboardFocusWithin) Keyboard.ClearFocus();
+        FocusManager.SetFocusedElement(this, null);
+
+        WindowStyles.SetNoActivate(this, enabled: true);
+    }
+
     private void GiveBackForeground()
     {
         var previous = _previousForeground;
         _previousForeground = IntPtr.Zero;
-        if (previous == IntPtr.Zero || !IsWindow(previous)) return;
-        if (previous == new WindowInteropHelper(this).Handle) return;
+        if (previous == IntPtr.Zero || !IsWindow(previous) || previous == new WindowInteropHelper(this).Handle)
+        {
+            EndTyping();
+            return;
+        }
 
         // Allowed without ceremony: this window holds the foreground, and the holder may pass it on.
         SetForegroundWindow(previous);
+        EndTyping();
     }
 
     [DllImport("user32.dll")]

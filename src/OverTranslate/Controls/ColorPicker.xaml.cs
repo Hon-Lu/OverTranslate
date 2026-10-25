@@ -210,7 +210,17 @@ public partial class ColorPicker : UserControl
     {
         if (HexBox.IsMouseOver) return;
         HexBox.Focus();
-        HexBox.CaretIndex = HexBox.Text.Length;
+        HexBox.SelectAll();
+        e.Handled = true;
+    }
+
+    // The first click into the box takes the whole code, so typing replaces it rather than running
+    // into the length limit behind it; later clicks place the caret as usual.
+    private void HexBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (HexBox.IsKeyboardFocusWithin) return;
+        HexBox.Focus();
+        HexBox.SelectAll();
         e.Handled = true;
     }
 
@@ -261,6 +271,12 @@ public partial class ColorPicker : UserControl
         HexField.SetResourceReference(Border.BorderBrushProperty, "AppInputBorder");
         CommitHex();
     }
+
+    /// <summary>
+    /// Applies a code typed and not yet entered, for a host that knows the typing is over when the
+    /// box itself has not been told — the keyboard taken away by another application.
+    /// </summary>
+    public void CommitPendingCode() => CommitHex();
 
     private void CommitHex()
     {

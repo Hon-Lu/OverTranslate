@@ -88,6 +88,7 @@
                              MaxLength="2"
                              InputMethod.IsInputMethodEnabled="False"
                              AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"
+                             PreviewMouseLeftButtonDown="ValueBox_PreviewMouseLeftButtonDown"
                              PreviewTextInput="ValueBox_PreviewTextInput"
                              PreviewKeyDown="ValueBox_PreviewKeyDown"
                              GotKeyboardFocus="ValueBox_GotKeyboardFocus"

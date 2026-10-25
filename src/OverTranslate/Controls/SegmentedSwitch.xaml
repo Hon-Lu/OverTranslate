@@ -23,7 +23,6 @@
             <RadioButton x:Name="FirstRadio"
                          Grid.Column="0"
                          Style="{StaticResource SegmentedTrackRadio}"
-                         IsChecked="True"
                          Checked="Radio_Checked"/>
             <RadioButton x:Name="SecondRadio"
                          Grid.Column="1"

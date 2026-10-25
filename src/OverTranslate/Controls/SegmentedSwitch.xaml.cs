@@ -28,6 +28,12 @@ public partial class SegmentedSwitch : UserControl
         var group = Guid.NewGuid().ToString("N");
         FirstRadio.GroupName = group;
         SecondRadio.GroupName = group;
+
+        // Here rather than in XAML: checked while the markup is still loading, the first half would
+        // raise Checked before the second half exists.
+        _showing = true;
+        FirstRadio.IsChecked = true;
+        _showing = false;
     }
 
     /// <summary>Raised with true for the second half, false for the first, when the user picks one.</summary>

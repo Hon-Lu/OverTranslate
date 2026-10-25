@@ -43,6 +43,17 @@ internal static class WindowStyles
     public static void ApplyNoActivate(Window window) => Add(window, WS_EX_NOACTIVATE);
 
     /// <summary>
+    /// Turns <see cref="ApplyNoActivate"/> off or back on, for a window that takes the keyboard only
+    /// for as long as something on it is being typed into: Windows will not hand the foreground to a
+    /// window carrying the bit, however it is asked.
+    /// </summary>
+    public static void SetNoActivate(Window window, bool enabled)
+    {
+        if (enabled) Add(window, WS_EX_NOACTIVATE);
+        else Remove(window, WS_EX_NOACTIVATE);
+    }
+
+    /// <summary>
     /// Makes the window invisible to the mouse entirely: clicks land on the application underneath.
     /// For layers that only ever display something.
     /// </summary>
