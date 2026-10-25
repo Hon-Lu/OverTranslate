@@ -13,7 +13,8 @@ namespace OverTranslate.Controls;
 /// The halves are given their words by resource key, so they follow the interface language like
 /// every other label. Setting <see cref="IsSecondSelected"/> from code moves the marker without
 /// raising <see cref="SelectionChanged"/>: that event is the user choosing, and a value being shown
-/// is not a choice.
+/// is not a choice. The host sets Grid.IsSharedSizeScope above its switches, so their halves come
+/// out one width — see the markup.
 /// </remarks>
 public partial class SegmentedSwitch : UserControl
 {

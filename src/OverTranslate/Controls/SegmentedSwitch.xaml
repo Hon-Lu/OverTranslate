@@ -4,12 +4,17 @@
              Focusable="False">
     <!-- The sliding two-way tray of 顯示外觀, as one control: the tray, the accent marker under the
          chosen half and the two halves — the same SegmentedTray and SegmentedTrackRadio the page
-         uses. The marker carries no text, so moving it does not blur anything. -->
+         uses. The marker carries no text, so moving it does not blur anything.
+
+         The halves share one width, as the page's do (RealtimeModeSegment), through the host's
+         shared size scope: every half of every switch is as wide as the widest word. Star columns
+         did not hold them equal — sized to content in an Auto column, "Automatic" came out wider
+         than "Fixed", and a marker one first half wide overshot the tray. -->
     <Border Style="{StaticResource SegmentedTray}">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
             </Grid.ColumnDefinitions>
             <Border x:Name="Thumb"
                     Grid.Column="0"
