@@ -69,6 +69,10 @@ internal partial class RealtimeAppearancePanel : Window
     private ColorPicker? _openPicker;
     private Button? _openSwatch;
 
+    // The open picker, when the press under way is outside it — folded away on release, see
+    // OnPreviewMouseLeftButtonDown.
+    private ColorPicker? _pickerToFold;
+
     /// <param name="bar">The capsule's visible surface, in physical pixels: the panel opens clear of it.</param>
     /// <param name="screen">The session's screen, which the panel has to stay on.</param>
     public RealtimeAppearancePanel(System.Drawing.Rectangle bar, System.Drawing.Rectangle screen)
@@ -118,6 +122,7 @@ internal partial class RealtimeAppearancePanel : Window
         }));
 
         PreviewMouseLeftButtonDown += OnPreviewMouseLeftButtonDown;
+        PreviewMouseLeftButtonUp += OnPreviewMouseLeftButtonUp;
         PreviewKeyUp += OnPreviewKeyUp;
         Loaded += (_, _) => Dispatcher.BeginInvoke(new Action(Place), DispatcherPriority.Loaded);
     }
@@ -378,7 +383,17 @@ internal partial class RealtimeAppearancePanel : Window
     /// </summary>
     private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (HasForeground || TextBoxOf(e.OriginalSource as DependencyObject) is not { } box) return;
+        // A press anywhere else in the panel is done with the open picker, as a press outside a
+        // list is done with the list. The swatches are left to themselves: theirs opens or closes
+        // a picker already.
+        var source = e.OriginalSource as DependencyObject;
+        _pickerToFold = _openPicker is { } open
+            && !IsInside(source, open)
+            && !IsInside(source, TextColorBtn) && !IsInside(source, ScrimColorBtn) && !IsInside(source, BorderColorBtn)
+                ? open
+                : null;
+
+        if (HasForeground || TextBoxOf(source) is not { } box) return;
         TakeForeground();
 
         // The activation that hands this window the keyboard also puts WPF's focus back where the
@@ -386,6 +401,30 @@ internal partial class RealtimeAppearancePanel : Window
         // showed a caret and took no keys. Given again once the handoff has settled; the same story
         // RealtimeLanguageMenu.FocusWhenReady tells of its search box.
         FocusWhenReady(box, attemptsLeft: 8);
+    }
+
+    /// <summary>
+    /// Folds the picker a press outside it found open, once the press is over rather than when it
+    /// began: folding it shifts the rows below it up, and a button that moved out from under the
+    /// pointer between press and release would not take the click. After the release has been
+    /// handled, so the control pressed has acted first.
+    /// </summary>
+    private void OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pickerToFold is not { } picker) return;
+        _pickerToFold = null;
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (ReferenceEquals(_openPicker, picker)) ClosePicker();
+        });
+    }
+
+    private static bool IsInside(DependencyObject? element, DependencyObject ancestor)
+    {
+        for (var node = element; node is not null;
+             node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+            if (ReferenceEquals(node, ancestor)) return true;
+        return false;
     }
 
     private void FocusWhenReady(TextBox box, int attemptsLeft)
