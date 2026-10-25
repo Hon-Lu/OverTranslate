@@ -906,14 +906,15 @@ internal sealed class RealtimeSessionController
         {
             var block = _blocks[region.Id];
             bool compared = copies is not null && !block.CompareHidden;
+            var look = RealtimeBlockAppearance.For(request, compared);
             var window = new RealtimeBlockWindow(
                 region.Id, region.Bounds, GrabUnderlying, request.SourceLanguage, request.TargetLanguage,
-                request.TextColor, request.ScrimColor, request.ScrimOpacity,
-                request.NaturalBackground && !compared,
-                request.SampleSourceTextColor && !compared,
-                region.Mode, request.Border, request.FixedBorderColor, region.Orientation,
+                look.TextColor, look.ScrimColor, look.ScrimOpacity,
+                look.NaturalBackground,
+                look.SampleTextColor,
+                region.Mode, look.Border, look.BorderColor, region.Orientation,
                 compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
-                request.FixedFontSize);
+                look.FixedFontSize);
             _blockWindows[region.Id] = window;
             window.Show();
         }
@@ -1093,17 +1094,14 @@ internal sealed class RealtimeSessionController
     /// from it through the same mapping a start uses (RealtimeQuickStart.WithAppearance), so a
     /// session changed here draws exactly what one started now would.</para>
     ///
-    /// <para>The overlays are built again, as for <see cref="ToggleCompareDisplay"/> and for the same
-    /// reason: how a window draws — its colours, whether it repairs the picture, whether it reads the
-    /// source's colour, its border and its size — is fixed when it is built. And as there, each window
-    /// is handed back the words it was showing, so a change restyles the translation on the screen
-    /// rather than blanking it until the next line. The session is not touched: the words, the
-    /// languages and the reading are the same, only how they are drawn has changed. A paused session
-    /// has nothing to hand back and stays empty.</para>
+    /// <para>Each overlay is restyled where it is, keeping its words — see
+    /// RealtimeBlockWindow.ApplyAppearance for why not built again, as 對照顯示 does. The session is not
+    /// touched: the words, the languages and the reading are the same, only how they are drawn has
+    /// changed. A paused session's overlays are empty and stay so.</para>
     /// </remarks>
     private void ApplyAppearance()
     {
-        if (_request is not { } request || _control is not { } control) return;
+        if (_request is not { } request || _control is null) return;
 
         // The bar is off the screen while a capture stands on the session, for the reason
         // ToggleCompareDisplay gives.
@@ -1114,23 +1112,16 @@ internal sealed class RealtimeSessionController
 
         if (!IsTranslating || _blockWindows.Count == 0) return;
 
-        var shown = new Dictionary<int, IReadOnlyList<TranslatedBlock>>(_shownLines);
-
-        CloseBlockWindows();
-        ShowBlockWindows(_request, Regions());
-        RefreshOverlayHandles();
-
-        foreach (var (id, lines) in shown)
+        // Which blocks are drawn as copies is the same answer ShowBlockWindows gave: the switch and
+        // each block's own say have not changed.
+        var compareOn = _compareDisplay;
+        foreach (var (id, window) in _blockWindows)
         {
-            if (!_blockWindows.TryGetValue(id, out var window)) continue;
-            window.SetLines(lines);
-            _shownLines[id] = lines;
+            bool compared = compareOn && id < _blocks.Count && !_blocks[id].CompareHidden;
+            window.ApplyAppearance(RealtimeBlockAppearance.For(_request, compared));
         }
 
-        // The new windows opened above the bar; it goes back on top of them.
-        control.BringToFront();
-
-        Log.Info("Realtime appearance changed mid-session; overlays rebuilt");
+        Log.Info("Realtime appearance changed mid-session; overlays restyled in place");
     }
 
     /// <summary>

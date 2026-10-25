@@ -117,39 +117,37 @@ public partial class RealtimeBlockWindow : Window
     // CaptureUnderlyingRegion for why nothing may photograph the screen on its own any more.
     private readonly Func<System.Drawing.Rectangle, System.Drawing.Bitmap?> _grabUnderlying;
 
-    // Per session rather than per application: the colours are read once when the session starts and
-    // cannot change while it runs, because reaching the page that sets them means the shell window,
-    // which a running session has hidden. Frozen for the same reason the fixed brushes were — they
-    // are handed to every line of every rebuild and never mutated.
-    private readonly SolidColorBrush _scrimBrush;
-    private readonly SolidColorBrush _textBrush;
+    // The colours, set when the window is built and again whenever the running bar's 顯示外觀
+    // panel changes them (#355) — see ApplyAppearance. Frozen for the same reason the fixed brushes
+    // were: they are handed to every line of every rebuild and never mutated, only replaced.
+    private SolidColorBrush _scrimBrush;
+    private SolidColorBrush _textBrush;
 
-    // 顯示外觀 → 進階選項, both off unless the user asked for them. Held per session for the same
-    // reason the colours are: the page that sets them is behind a shell window this session hid.
+    // 顯示外觀 → 進階選項, both off unless the user asked for them. Changed with the colours.
     //
     // With both off nothing here grabs the screen at all — see Rebuild. That is not merely a saving:
     // the band is the predictable one of the two looks, and a window that does not photograph itself
     // cannot bake its own translation into what it draws either.
-    private readonly bool _naturalBackground;
-    private readonly bool _sampleTextColor;
+    private bool _naturalBackground;
+    private bool _sampleTextColor;
     private readonly RealtimeBlockMode _mode;
 
     // Which way this block's source runs, as the user said in edit mode. It decides how the
     // translation is set here and how the frame was read upstream — see RealtimeTextOrientation.
     private readonly RealtimeTextOrientation _orientation;
 
-    // 顯示外觀 → 邊框, held per session like the colours. No fixed brush with the switch on means
-    // each group picks its own colour — see ApplyBorder.
-    private readonly bool _border;
-    private readonly SolidColorBrush? _fixedBorderBrush;
+    // 顯示外觀 → 邊框, changed with the colours. No fixed brush with the switch on means each group
+    // picks its own colour — see ApplyBorder.
+    private bool _border;
+    private SolidColorBrush? _fixedBorderBrush;
 
-    // 顯示外觀 → 文字大小, held per session like the colours: the size every line is set at, or null
+    // 顯示外觀 → 文字大小, changed with the colours: the size every line is set at, or null
     // for 自動 — see RealtimeFixedFontLayout for a line across and BuildVerticalLine for a column.
     // A vertical block takes it too, lines across it included. A balloon on a comic page is cut
     // close round its text, and a size picked larger than the page's lettering spreads the
     // translation over more columns than the balloon has, onto the picture beside it. That is the
     // reader's choice to make, and not one this window second-guesses by quietly going back to 自動.
-    private readonly double? _fixedFontSize;
+    private double? _fixedFontSize;
 
     // Each translation box as drawn — a line's text and band or patch, or a panel group's rows and
     // their one patch — for hiding one box when another window touches it. See ApplyCovers.
@@ -270,6 +268,35 @@ public partial class RealtimeBlockWindow : Window
     }
 
     public int RegionId { get; }
+
+    /// <summary>
+    /// Draws the words this window is showing again in a new look — 顯示外觀 changed from the
+    /// running bar (#355).
+    /// </summary>
+    /// <remarks>
+    /// In place rather than by building the window again, which is what the first version did and
+    /// what made a black band flash up under the translation on every change with 底色 at 自動. A new
+    /// window is a new handle, the capture's exclusion list changes with it, and the frames composed
+    /// under the old list are dropped — so the new window's first repair found no picture and fell
+    /// back to the band until the next refresh (see CaptureUnderlyingRegion). This window keeps its
+    /// handle, the list does not change, and the repair has a frame from the first draw.
+    /// </remarks>
+    public void ApplyAppearance(RealtimeBlockAppearance look)
+    {
+        _textBrush = Freeze(new SolidColorBrush(RealtimeSubtitleColors.Text(look.TextColor)));
+        _scrimBrush = Freeze(new SolidColorBrush(RealtimeSubtitleColors.Scrim(look.ScrimColor, look.ScrimOpacity)));
+        _naturalBackground = look.NaturalBackground;
+        _sampleTextColor = look.SampleTextColor;
+        _border = look.Border;
+        _fixedBorderBrush = look.Border && look.BorderColor is not null
+            ? Freeze(new SolidColorBrush(RealtimeSubtitleColors.Border(look.BorderColor)))
+            : null;
+        _fixedFontSize = look.FixedFontSize;
+
+        if (!_isLoaded) return;
+        Rebuild();
+        UpdateNaturalRefreshTimer();
+    }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
