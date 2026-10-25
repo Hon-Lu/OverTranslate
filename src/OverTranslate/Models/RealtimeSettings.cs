@@ -112,7 +112,7 @@ public class RealtimeSettings
     /// <remarks>
     /// Its own key rather than an alpha channel on <see cref="ScrimColor"/>, which could have carried
     /// one as <c>#AARRGGBB</c>. Two reasons, and the second is the one that decided it: the colour is
-    /// picked in a system dialog that has no alpha to give back, so the two values do not arrive
+    /// picked in a picker that has no alpha to give back, so the two values do not arrive
     /// together; and a reader who wants the band lighter over one game and heavier over the next is
     /// changing this and not their colour, which a combined key would make them redo.
     /// </remarks>

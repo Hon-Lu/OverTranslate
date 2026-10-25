@@ -44,13 +44,24 @@
         </Style>
     </UserControl.Resources>
 
+    <!-- Drawn as the colour buttons beside it are — the button fill, edge and corners — so a column
+         of answers reads as one. Its height is the host's to set: the page's rows are taller than the
+         realtime panel's. -->
     <Border x:Name="Frame"
-            Height="32"
-            Background="{DynamicResource AppInputBg}"
-            BorderBrush="{DynamicResource AppInputBorder}"
+            Background="{DynamicResource AppButtonBg}"
             BorderThickness="1"
-            CornerRadius="7"
+            CornerRadius="6"
             ClipToBounds="True">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
         <DockPanel LastChildFill="True">
             <Button x:Name="DownBtn"
                     DockPanel.Dock="Left"
@@ -69,7 +80,7 @@
 
             <!-- The number between them is a box of its own: type a size, Enter or leave to apply. -->
             <Border BorderThickness="1,0"
-                    BorderBrush="{DynamicResource AppInputBorder}"
+                    BorderBrush="{DynamicResource AppButtonBorder}"
                     Background="Transparent"
                     Cursor="IBeam"
                     MouseLeftButtonDown="Field_MouseLeftButtonDown">

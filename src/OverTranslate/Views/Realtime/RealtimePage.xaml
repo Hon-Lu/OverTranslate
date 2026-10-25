@@ -596,156 +596,16 @@
                                         </Grid>
                                     </Border>
 
-                                    <!-- Drawn as the colour box below it is drawn — the same height,
-                                         margin, corners and fill — and stretched across the column
-                                         they share, so the two right edges meet. -->
-                                    <Border Grid.Column="3"
-                                            x:Name="FixedFontSizeBox"
-                                            Height="34"
-                                            Margin="12,0,0,0"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Stretch"
-                                            CornerRadius="6"
-                                            BorderThickness="1"
-                                            Background="{DynamicResource AppButtonBg}">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                                        <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsEnabled" Value="False">
-                                                        <Setter Property="Opacity" Value="0.45"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="28"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- The whole of the left part takes a click for the box,
-                                                 not only the two digits: the field is as wide as it
-                                                 looks. The number's ink starts 26 in from the box's
-                                                 inner edge: 24 here, and the TextBox's own inset and
-                                                 the digit's side bearing make up the rest. -->
-                                            <Grid Grid.Column="0"
-                                                  Background="Transparent"
-                                                  Cursor="IBeam"
-                                                  MouseLeftButtonDown="FixedFontSizeField_MouseLeftButtonDown">
-                                                <StackPanel Orientation="Horizontal"
-                                                            Margin="24,0,0,0"
-                                                            VerticalAlignment="Center">
-                                                    <TextBox x:Name="FixedFontSizeInput"
-                                                             Background="Transparent"
-                                                             BorderThickness="0"
-                                                             Padding="0"
-                                                             MaxLength="2"
-                                                             VerticalAlignment="Center"
-                                                             VerticalContentAlignment="Center"
-                                                             TextAlignment="Left"
-                                                             FontFamily="{DynamicResource AppFont}"
-                                                             FontSize="{StaticResource AppFontSize}"
-                                                             Foreground="{DynamicResource AppTextPrimary}"
-                                                             CaretBrush="{DynamicResource AppTextPrimary}"
-                                                             SelectionBrush="{DynamicResource AppAccent}"
-                                                             InputMethod.IsInputMethodEnabled="False"
-                                                             AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"/>
-                                                    <TextBlock Text="px"
-                                                               FontFamily="{DynamicResource AppFont}"
-                                                               FontSize="{StaticResource AppFontSize}"
-                                                               Foreground="{DynamicResource AppTextSecondary}"
-                                                               VerticalAlignment="Center"
-                                                               Margin="2,0,0,0"/>
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <!-- The arrows get a column of their own, behind a rule, and
-                                                 split it in half: each half is the whole target, as wide
-                                                 as the column and lit whole on hover. The outer corners
-                                                 follow the box's own, less its border.
-
-                                                 Lit with a wash of the text colour rather than the page's
-                                                 button hover: that one is a shade off the box's own fill,
-                                                 which on a whole button reads, and on a cell this small
-                                                 did not show at all.
-
-                                                 Buttons that act on press, not RepeatButtons: the page
-                                                 repeats the step itself — see StartFixedFontSizeRepeat for
-                                                 why a RepeatButton's own repeat could not keep time. -->
-                                            <Border Grid.Column="1"
-                                                    BorderThickness="1,0,0,0"
-                                                    BorderBrush="{DynamicResource AppButtonBorder}">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="*"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.Resources>
-                                                        <Style TargetType="Button">
-                                                            <Setter Property="Focusable" Value="False"/>
-                                                            <Setter Property="ClickMode" Value="Press"/>
-                                                            <Setter Property="Cursor" Value="Hand"/>
-                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-                                                            <Setter Property="Template">
-                                                                <Setter.Value>
-                                                                    <ControlTemplate TargetType="Button">
-                                                                        <Grid Background="Transparent">
-                                                                            <Border x:Name="Wash"
-                                                                                    Background="{DynamicResource AppTextPrimary}"
-                                                                                    Opacity="0"
-                                                                                    CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
-                                                                            <TextBlock x:Name="Chevron"
-                                                                                       Text="{TemplateBinding Content}"
-                                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                                       FontSize="10"
-                                                                                       Foreground="{TemplateBinding Foreground}"
-                                                                                       HorizontalAlignment="Center"
-                                                                                       VerticalAlignment="Center"/>
-                                                                        </Grid>
-                                                                        <ControlTemplate.Triggers>
-                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                                <Setter TargetName="Wash" Property="Opacity" Value="0.12"/>
-                                                                                <Setter TargetName="Chevron" Property="Foreground"
-                                                                                        Value="{DynamicResource AppTextPrimary}"/>
-                                                                            </Trigger>
-                                                                            <Trigger Property="IsPressed" Value="True">
-                                                                                <Setter TargetName="Wash" Property="Opacity" Value="0.2"/>
-                                                                            </Trigger>
-                                                                            <Trigger Property="IsEnabled" Value="False">
-                                                                                <Setter Property="Opacity" Value="0.35"/>
-                                                                            </Trigger>
-                                                                        </ControlTemplate.Triggers>
-                                                                    </ControlTemplate>
-                                                                </Setter.Value>
-                                                            </Setter>
-                                                        </Style>
-                                                    </Grid.Resources>
-                                                    <Button Grid.Row="0"
-                                                            x:Name="FixedFontSizeUp"
-                                                            Content="&#xE70E;"
-                                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
-                                                            Click="FixedFontSizeStep_Click">
-                                                        <Button.Tag>
-                                                            <CornerRadius>0,5,0,0</CornerRadius>
-                                                        </Button.Tag>
-                                                    </Button>
-                                                    <Button Grid.Row="1"
-                                                            x:Name="FixedFontSizeDown"
-                                                            Content="&#xE70D;"
-                                                            AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
-                                                            Click="FixedFontSizeStep_Click">
-                                                        <Button.Tag>
-                                                            <CornerRadius>0,0,5,0</CornerRadius>
-                                                        </Button.Tag>
-                                                    </Button>
-                                                </Grid>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
+                                    <!-- The same − ＋ box as the realtime bar's 顯示外觀 panel (#355): a
+                                         size typed in or stepped one at a time, in the column the
+                                         colour boxes below sit in so the right edge of the card reads
+                                         as one column of answers. -->
+                                    <ctl:FontSizeStepper Grid.Column="3"
+                                                         x:Name="FixedFontSizeStepper"
+                                                         Height="34"
+                                                         Margin="12,0,0,0"
+                                                         VerticalAlignment="Center"
+                                                         HorizontalAlignment="Stretch"/>
                                 </Grid>
                         </Border>
 
@@ -1069,6 +929,10 @@
                                 </Button>
                             </Grid>
                         </Border>
+
+                        <!-- The colour picker the three colour buttons above open, one at a time — the same
+                             picker as the realtime bar's 顯示外觀 panel (#355), in a panel of its own. -->
+                        <ctl:ColorPickerPopup x:Name="ColourPopup"/>
 
                         <!-- Shown only while one of the rows above is in 自動, which is the only time it
                              is about anything on screen.

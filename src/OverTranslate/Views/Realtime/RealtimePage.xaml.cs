@@ -1,9 +1,8 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using System.Windows.Interop;
+using OverTranslate.Controls;
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
@@ -11,10 +10,6 @@ using OverTranslate.Services.Realtime.Capture;
 using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 using Screen = System.Windows.Forms.Screen;
 using UserControl = System.Windows.Controls.UserControl;
-using DataFormats = System.Windows.DataFormats;
-using DataObject = System.Windows.DataObject;
-using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -126,19 +121,6 @@ public partial class RealtimePage : UserControl
     // would otherwise be a hundred writes.
     private bool _draggingOpacity;
 
-    // 文字大小's box: true while this page writes a number into it rather than the user typing one,
-    // and the size it is showing — which is what the preview draws, and while a number is being
-    // typed is deliberately ahead of what is stored, as the opacity slider is mid-drag.
-    private bool _syncingFontSize;
-    private int _shownFixedFontSize = new RealtimeSettings().FixedFontSize;
-
-    // The arrow being held, if one is, and when its next step is due — see StartFixedFontSizeRepeat.
-    private readonly System.Windows.Threading.DispatcherTimer _fixedFontSizeRepeat =
-        new(System.Windows.Threading.DispatcherPriority.Input);
-    private readonly System.Diagnostics.Stopwatch _fixedFontSizeRepeatClock = new();
-    private ButtonBase? _repeatingArrow;
-    private TimeSpan _nextRepeatAt;
-
     // True while this page is putting the stored 顯示外觀 modes on their trays rather than the user
     // choosing one. Same failure as the two flags above, one control further on: checking a half
     // raises Checked, which would write back the value being restored.
@@ -171,20 +153,11 @@ public partial class RealtimePage : UserControl
                 PersistScrimOpacity();
             }));
 
-        // 文字大小's box takes whole numbers and nothing else, typed or pasted — see FixedFontSizeInput_PreviewTextInput.
-        FixedFontSizeInput.PreviewTextInput += FixedFontSizeInput_PreviewTextInput;
-        FixedFontSizeInput.PreviewKeyDown += FixedFontSizeInput_PreviewKeyDown;
-        FixedFontSizeInput.PreviewMouseWheel += FixedFontSizeInput_PreviewMouseWheel;
-        FixedFontSizeInput.LostKeyboardFocus += (_, _) => CommitFixedFontSize();
-        DataObject.AddPastingHandler(FixedFontSizeInput, FixedFontSizeInput_Pasting);
-        // The arrows step on every repeat but write once, when the button is let go: holding one down
-        // is one decision, as a drag across the opacity track is. Losing the mouse is the one way
-        // every hold ends — let go, or the arrow greying out under
-        // the pointer at the end of the range, which takes the capture with it and never sees the
-        // button come up.
-        FixedFontSizeUp.LostMouseCapture += (_, _) => StopFixedFontSizeRepeat();
-        FixedFontSizeDown.LostMouseCapture += (_, _) => StopFixedFontSizeRepeat();
-        _fixedFontSizeRepeat.Tick += FixedFontSizeRepeat_Tick;
+        // 文字大小's − ＋ box: each size it applies is written there and then — stepped or entered —
+        // the same as the realtime bar's panel. The colour buttons do the same through ColourPopup.
+        FixedFontSizeStepper.Minimum = RealtimeSettings.MinFixedFontSize;
+        FixedFontSizeStepper.Maximum = RealtimeSettings.MaxFixedFontSize;
+        FixedFontSizeStepper.ValueCommitted += (_, size) => Persist(s => s.Realtime.FixedFontSize = size);
 
         // Set before the handlers go on, for the reason the boxes above give: restoring a stored
         // value must not read as the user reaching for the switch and write it straight back.
@@ -202,9 +175,6 @@ public partial class RealtimePage : UserControl
 
         SyncScrimOpacity();
         SyncFixedFontSize();
-        // After the stored number is in, for the reason the trays' handlers are: putting it there
-        // must not read as the user typing it.
-        FixedFontSizeInput.TextChanged += FixedFontSizeInput_TextChanged;
         RenderColours();
         RenderPauseHint();
 
@@ -790,14 +760,15 @@ public partial class RealtimePage : UserControl
     // ── 顯示外觀 ───────────────────────────────────────────────────────────────
 
     private void TextColorBtn_Click(object sender, RoutedEventArgs e) =>
-        PickColour(
-            SettingsService.Instance.Current.Realtime.TextColor,
-            picked => Persist(s => s.Realtime.TextColor = picked));
+        ColourPopup.Toggle(TextColorBtn,
+            RealtimeSubtitleColors.Text(SettingsService.Instance.Current.Realtime.TextColor),
+            colour => Persist(s => s.Realtime.TextColor = RealtimeSubtitleColors.Format(colour)));
 
+    // Opened on the colour alone: the band's weight is the slider's, not the picker's.
     private void ScrimColorBtn_Click(object sender, RoutedEventArgs e) =>
-        PickColour(
-            SettingsService.Instance.Current.Realtime.ScrimColor,
-            picked => Persist(s => s.Realtime.ScrimColor = picked));
+        ColourPopup.Toggle(ScrimColorBtn,
+            RealtimeSubtitleColors.Scrim(SettingsService.Instance.Current.Realtime.ScrimColor, RealtimeSubtitleColors.MaxScrimOpacity),
+            colour => Persist(s => s.Realtime.ScrimColor = RealtimeSubtitleColors.Format(colour)));
 
     /// <summary>
     /// Everything on the card, back to what it ships as: both colours and the mode each is in, the
@@ -907,9 +878,9 @@ public partial class RealtimePage : UserControl
     }
 
     private void BorderColorBtn_Click(object sender, RoutedEventArgs e) =>
-        PickColour(
-            SettingsService.Instance.Current.Realtime.BorderColor,
-            picked => Persist(s => s.Realtime.BorderColor = picked));
+        ColourPopup.Toggle(BorderColorBtn,
+            RealtimeSubtitleColors.Border(SettingsService.Instance.Current.Realtime.BorderColor),
+            colour => Persist(s => s.Realtime.BorderColor = RealtimeSubtitleColors.Format(colour)));
 
     /// <summary>
     /// The half's width is not known until the tray is laid out, so the marker is placed again
@@ -1009,226 +980,9 @@ public partial class RealtimePage : UserControl
     private int CurrentScrimOpacity =>
         RealtimeSubtitleColors.ClampOpacity((int)Math.Round(ScrimOpacitySlider.Value));
 
-    /// <summary>Puts the stored size in 文字大小's box without that reading as the user typing it.</summary>
+    /// <summary>Puts the stored size in 文字大小's box.</summary>
     private void SyncFixedFontSize() =>
-        ShowFixedFontSize(SettingsService.Instance.Current.Realtime.FixedFontSize);
-
-    /// <summary>
-    /// Writes a size into the box — the one the preview then draws — and greys whichever arrow has
-    /// reached its end of the range.
-    /// </summary>
-    private void ShowFixedFontSize(int size)
-    {
-        _shownFixedFontSize = ClampFixedFontSize(size);
-        _syncingFontSize = true;
-        FixedFontSizeInput.Text = _shownFixedFontSize.ToString(CultureInfo.InvariantCulture);
-        FixedFontSizeInput.CaretIndex = FixedFontSizeInput.Text.Length;
-        _syncingFontSize = false;
-        FixedFontSizeUp.IsEnabled = _shownFixedFontSize < RealtimeSettings.MaxFixedFontSize;
-        FixedFontSizeDown.IsEnabled = _shownFixedFontSize > RealtimeSettings.MinFixedFontSize;
-    }
-
-    private static int ClampFixedFontSize(int size) =>
-        Math.Clamp(size, RealtimeSettings.MinFixedFontSize, RealtimeSettings.MaxFixedFontSize);
-
-    private void PersistFixedFontSize() =>
-        Persist(s => s.Realtime.FixedFontSize = _shownFixedFontSize);
-
-    /// <summary>Whole numbers only — no sign, point or space — so what is in the box is always a size or on its way to one.</summary>
-    private void FixedFontSizeInput_PreviewTextInput(object sender, TextCompositionEventArgs e) =>
-        e.Handled = !IsDigits(e.Text);
-
-    /// <summary>A paste with anything but digits in it is refused whole rather than filtered: half a pasted number is a different number.</summary>
-    private void FixedFontSizeInput_Pasting(object sender, DataObjectPastingEventArgs e)
-    {
-        if (e.DataObject.GetData(DataFormats.UnicodeText) is not string text || !IsDigits(text))
-            e.CancelCommand();
-    }
-
-    private static bool IsDigits(string text) => text.Length > 0 && text.All(char.IsAsciiDigit);
-
-    /// <summary>
-    /// The preview follows what is being typed, held inside the range, without saving it: "3" on
-    /// the way to "32" is not a size anyone asked for. Enter or leaving the box is what saves.
-    /// </summary>
-    private void FixedFontSizeInput_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (_syncingFontSize) return;
-        if (!int.TryParse(FixedFontSizeInput.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var typed))
-            return;
-
-        _shownFixedFontSize = ClampFixedFontSize(typed);
-        FixedFontSizeUp.IsEnabled = _shownFixedFontSize < RealtimeSettings.MaxFixedFontSize;
-        FixedFontSizeDown.IsEnabled = _shownFixedFontSize > RealtimeSettings.MinFixedFontSize;
-        RenderColours();
-    }
-
-    /// <summary>
-    /// Enter, or leaving the box: what was typed, held inside the range, is shown and saved. A box
-    /// left empty goes back to the size that was saved before, rather than to a minimum nobody chose.
-    /// </summary>
-    private void CommitFixedFontSize()
-    {
-        var size = int.TryParse(FixedFontSizeInput.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var typed)
-            ? typed
-            : SettingsService.Instance.Current.Realtime.FixedFontSize;
-        ShowFixedFontSize(size);
-        PersistFixedFontSize();
-    }
-
-    /// <summary>Up and down step by one and save, as a press of an arrow does; Enter commits; a space is refused.</summary>
-    /// <remarks>A space never raises PreviewTextInput's filter on its own, so it is stopped here.</remarks>
-    private void FixedFontSizeInput_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        switch (e.Key)
-        {
-            case Key.Up: StepFixedFontSize(+1, persist: true); e.Handled = true; break;
-            case Key.Down: StepFixedFontSize(-1, persist: true); e.Handled = true; break;
-            case Key.Enter: CommitFixedFontSize(); e.Handled = true; break;
-            case Key.Space: e.Handled = true; break;
-        }
-    }
-
-    /// <summary>
-    /// The wheel steps the size only while the box has the focus. Otherwise it is the page's: a
-    /// reader scrolling down past the row would change a setting they never touched.
-    /// </summary>
-    private void FixedFontSizeInput_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (!FixedFontSizeInput.IsKeyboardFocusWithin) return;
-        StepFixedFontSize(Math.Sign(e.Delta), persist: true);
-        e.Handled = true;
-    }
-
-    /// <summary>
-    /// A click anywhere in the box's left part puts the caret after the number, as a click past the
-    /// end of any text field does. The TextBox itself is only as wide as its two digits.
-    /// </summary>
-    private void FixedFontSizeField_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (FixedFontSizeInput.IsMouseOver) return;
-        FixedFontSizeInput.Focus();
-        FixedFontSizeInput.CaretIndex = FixedFontSizeInput.Text.Length;
-        e.Handled = true;
-    }
-
-    /// <summary>
-    /// A press on either arrow: one step at once, and if the mouse is what pressed it, more while it
-    /// is held. A press that holds nothing — the arrow invoked through accessibility — is one step,
-    /// saved there and then.
-    /// </summary>
-    private void FixedFontSizeStep_Click(object sender, RoutedEventArgs e)
-    {
-        var arrow = (ButtonBase)sender;
-        StepFixedFontSize(arrow == FixedFontSizeUp ? +1 : -1, persist: false);
-
-        if (Mouse.Captured == arrow)
-            StartFixedFontSizeRepeat(arrow);
-        else
-            PersistFixedFontSize();
-    }
-
-    /// <summary>How long an arrow is held before it starts to repeat, and how often it then steps.</summary>
-    private static readonly TimeSpan FixedFontSizeRepeatDelay = TimeSpan.FromMilliseconds(400);
-    private static readonly TimeSpan FixedFontSizeRepeatInterval = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>
-    /// Repeats a held arrow on a timer of the page's own, at input priority, against a clock.
-    /// </summary>
-    /// <remarks>
-    /// A RepeatButton's repeat runs on a dispatcher timer at background priority, and on this page
-    /// that is the lowest thing waiting: while any animation runs — the box's own blinking caret is
-    /// enough — the frames go first and the repeat waits behind them, so a hold came out at anything
-    /// from 60 ms to over a second a step (measured; the step itself takes about 2 ms). Input
-    /// priority is served between frames. Each step is due a fixed time after the last one was due,
-    /// not after it ran, so the timer's own lateness does not add up over a hold; one that falls
-    /// a whole step behind — a stall, or the pointer wandering off the arrow and back — starts
-    /// counting again from now rather than catching up in a burst.
-    /// </remarks>
-    private void StartFixedFontSizeRepeat(ButtonBase arrow)
-    {
-        _repeatingArrow = arrow;
-        _fixedFontSizeRepeatClock.Restart();
-        _nextRepeatAt = FixedFontSizeRepeatDelay;
-        ScheduleFixedFontSizeRepeat();
-    }
-
-    private void FixedFontSizeRepeat_Tick(object? sender, EventArgs e)
-    {
-        if (_repeatingArrow is not { } arrow)
-        {
-            _fixedFontSizeRepeat.Stop();
-            return;
-        }
-
-        var now = _fixedFontSizeRepeatClock.Elapsed;
-        if (now >= _nextRepeatAt)
-        {
-            // Held, but off the arrow: paused, as any repeating button pauses, until it is back.
-            if (arrow.IsPressed)
-                StepFixedFontSize(arrow == FixedFontSizeUp ? +1 : -1, persist: false);
-            // That step reached the end of the range, greyed the arrow and so ended the hold.
-            if (_repeatingArrow is null) return;
-
-            _nextRepeatAt += FixedFontSizeRepeatInterval;
-            if (_nextRepeatAt <= now)
-                _nextRepeatAt = now + FixedFontSizeRepeatInterval;
-        }
-
-        ScheduleFixedFontSizeRepeat();
-    }
-
-    private void ScheduleFixedFontSizeRepeat()
-    {
-        var wait = _nextRepeatAt - _fixedFontSizeRepeatClock.Elapsed;
-        _fixedFontSizeRepeat.Interval = wait > TimeSpan.FromMilliseconds(1) ? wait : TimeSpan.FromMilliseconds(1);
-        _fixedFontSizeRepeat.Start();
-    }
-
-    /// <summary>The hold is over: the size it ended on is saved, once, however many steps it took.</summary>
-    private void StopFixedFontSizeRepeat()
-    {
-        if (_repeatingArrow is null) return;
-        _repeatingArrow = null;
-        _fixedFontSizeRepeat.Stop();
-        PersistFixedFontSize();
-    }
-
-    /// <summary>One step from what the box shows, held inside the range; saved now or by the caller later.</summary>
-    private void StepFixedFontSize(int delta, bool persist)
-    {
-        ShowFixedFontSize(_shownFixedFontSize + delta);
-        if (persist) PersistFixedFontSize();
-        else RenderColours();
-    }
-
-    /// <summary>
-    /// Opens the system colour picker on the current value and reports what came back.
-    /// </summary>
-    /// <remarks>
-    /// The native dialog, not one of ours: it already carries a full picker, the custom-colour slots
-    /// and every keyboard convention, and none of that is worth rebuilding for two fields. It has no
-    /// alpha channel, which suits a setting that has no alpha to offer — the scrim's is fixed, see
-    /// <see cref="RealtimeSubtitleColors"/>.
-    /// </remarks>
-    private void PickColour(string current, Action<string> onPicked)
-    {
-        var start = RealtimeSubtitleColors.Text(current);
-
-        using var dialog = new System.Windows.Forms.ColorDialog
-        {
-            // Opens on what is in effect, so a small adjustment starts from the current colour
-            // rather than from black.
-            Color = System.Drawing.Color.FromArgb(start.R, start.G, start.B),
-            FullOpen = true,
-            AnyColor = true,
-        };
-
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-
-        onPicked(RealtimeSubtitleColors.Format(
-            System.Windows.Media.Color.FromRgb(dialog.Color.R, dialog.Color.G, dialog.Color.B)));
-    }
+        FixedFontSizeStepper.Value = SettingsService.Instance.Current.Realtime.FixedFontSize;
 
     private void Persist(Action<AppSettings> apply)
     {
@@ -1254,14 +1008,13 @@ public partial class RealtimePage : UserControl
 
         ScrimOpacityValue.Text = $"{opacity}%";
 
-        // The size the box is showing rather than the one stored, for the reason the opacity is
-        // read off its slider: the preview follows a number while it is being typed.
-        var fixedFontSize = _shownFixedFontSize;
         var fixedFontMode = realtime.FontSizeMode == RealtimeFontSizeMode.Fixed;
-        PreviewText.FontSize = fixedFontMode ? fixedFontSize : PreviewAutoFontSize;
+        PreviewText.FontSize = fixedFontMode ? realtime.FixedFontSize : PreviewAutoFontSize;
 
         // Greyed in 自動, as the colour box beside 文字顏色 is: there is no fixed size for it to set.
-        FixedFontSizeBox.IsEnabled = fixedFontMode;
+        // Dimmed by hand as well, as the opacity row is: the box has no disabled look of its own.
+        FixedFontSizeStepper.IsEnabled = fixedFontMode;
+        FixedFontSizeStepper.Opacity = fixedFontMode ? 1.0 : 0.45;
 
         // The swatch shows the colour the user picked, so it is drawn opaque even for the scrim —
         // the preview below is where its translucency is on display.
@@ -1327,7 +1080,12 @@ public partial class RealtimePage : UserControl
         PreviewScrim.BorderThickness = new Thickness(
             realtime.BorderEnabled ? RealtimeSubtitleColors.BorderThickness : 0);
 
-        ResetAppearanceBtn.IsEnabled = !realtime.HasDefaultAppearance(opacity, fixedFontSize);
+        // A picker whose row no longer takes a colour of ours — switched to 自動 or 隨機, or the
+        // border turned off — has nothing left to set.
+        if (ColourPopup.OpenOn is { } open && (!open.IsEnabled || open.Visibility != Visibility.Visible))
+            ColourPopup.IsOpen = false;
+
+        ResetAppearanceBtn.IsEnabled = !realtime.HasDefaultAppearance(opacity);
     }
 
     /// <summary>
