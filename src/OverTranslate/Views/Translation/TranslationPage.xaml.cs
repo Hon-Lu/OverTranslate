@@ -27,8 +27,9 @@ public partial class TranslationPage : UserControl
     // True while shared settings are being reflected into the selectors, so their change events do
     // not write the same values back to disk one field at a time.
     private bool _reloadingPreferences;
-    // Monotonic id so a slow in-flight translation can't overwrite the result of a newer one.
-    private int _seq;
+    // So a slow in-flight translation can't overwrite the result of a newer one, and stops running
+    // once it no longer can — see LatestRequest.
+    private readonly LatestRequest _request = new();
     // Last input that translated successfully — lets us skip redundant identical re-translations.
     private (string Text, string Src, string Tgt, TranslationProvider Provider)? _lastDone;
 
@@ -282,7 +283,7 @@ public partial class TranslationPage : UserControl
         ClearDictionaryResult();
         if (string.IsNullOrWhiteSpace(SourceTextBox.Text))
         {
-            _seq++;               // cancel any in-flight result
+            _request.Supersede(); // cancel any in-flight result
             TranslatedTextBox.Text = "";
             _lastDone = null;
             SetTranslating(false);
@@ -363,15 +364,16 @@ public partial class TranslationPage : UserControl
         var key = (text, srcLang, tgtLang, provider);
         if (_lastDone == key) return;   // identical to the last successful translation — skip
 
-        var seq = ++_seq;
+        var (seq, token) = _request.Start();
         ShowRetry(false);
         SetTranslating(true);
 
         try
         {
             var block = new OcrTextBlock(text, new Rect());
-            var (results, detected) = await _translationService.TranslateAsync([block], srcLang, tgtLang, apiKey, resilient: false);
-            if (seq != _seq) return;    // a newer request superseded this one — let it own the UI
+            var (results, detected) = await _translationService.TranslateAsync(
+                [block], srcLang, tgtLang, apiKey, resilient: false, cancellationToken: token);
+            if (!_request.IsCurrent(seq)) return;    // a newer request superseded this one — let it own the UI
 
             _detectedLang = detected ?? "";
             TranslatedTextBox.Text = results.FirstOrDefault()?.TranslatedText ?? "";
@@ -384,11 +386,11 @@ public partial class TranslationPage : UserControl
             RenderSourceActions();
 
             var dictionarySource = LanguageData.IsAutomaticSource(srcLang) ? _detectedLang : srcLang;
-            await LoadDictionaryAsync(seq, text, dictionarySource, tgtLang, provider);
+            await LoadDictionaryAsync(seq, token, text, dictionarySource, tgtLang, provider);
         }
         catch (Exception ex)
         {
-            if (seq != _seq) return;
+            if (!_request.IsCurrent(seq)) return;
             SetTranslating(false);
 
             // This page sends to the chosen engine only (resilient: false), so any failure lands
@@ -407,7 +409,7 @@ public partial class TranslationPage : UserControl
     }
 
     private async Task LoadDictionaryAsync(
-        int seq, string text, string sourceLang, string targetLang, TranslationProvider provider)
+        int seq, CancellationToken token, string text, string sourceLang, string targetLang, TranslationProvider provider)
     {
         if (sourceLang.Length == 0 || !DictionaryLookupEligibility.IsEligible(text)) return;
 
@@ -418,8 +420,8 @@ public partial class TranslationPage : UserControl
         try
         {
             var result = await _translationService.LookupDictionaryAsync(
-                text, sourceLang, targetLang, engine: provider);
-            if (seq != _seq) return;
+                text, sourceLang, targetLang, token, engine: provider);
+            if (!_request.IsCurrent(seq)) return;
 
             DictionaryLoadingBar.Visibility = Visibility.Collapsed;
             DictionaryView.Show(result);
@@ -432,7 +434,7 @@ public partial class TranslationPage : UserControl
             // Rich data is an enhancement to a translation that already succeeded. A dictionary
             // endpoint having a bad minute must not replace that answer with an error state.
             Log.Debug(ex, "Dictionary lookup did not complete");
-            if (seq == _seq)
+            if (_request.IsCurrent(seq))
             {
                 DictionaryLoadingBar.Visibility = Visibility.Collapsed;
                 DictionaryView.ShowMessage("S.Dictionary.Unavailable");
@@ -531,7 +533,7 @@ public partial class TranslationPage : UserControl
     {
         _suppressAuto = true;
         _debounce.Stop();
-        _seq++;
+        _request.Supersede();
 
         SourceTextBox.Text     = sourceText;
         TranslatedTextBox.Text = translatedText;
@@ -561,6 +563,7 @@ public partial class TranslationPage : UserControl
     public void Teardown()
     {
         _debounce.Stop();
+        _request.Supersede();
         _tts.Dispose();
     }
 
