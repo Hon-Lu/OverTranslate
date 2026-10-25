@@ -317,6 +317,10 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.BorderFixed">Fixed</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">Border colour</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">Reset appearance to defaults</sys:String>
+    <sys:String x:Key="S.ColorPicker.Undo">Back to the previous colour</sys:String>
+    <sys:String x:Key="S.ColorPicker.Hex">Colour code</sys:String>
+    <sys:String x:Key="S.ColorPicker.Square">Saturation and brightness</sys:String>
+    <sys:String x:Key="S.ColorPicker.Hue">Hue</sys:String>
     <sys:String x:Key="S.Realtime.AutoModeBestFor">The text colour and background Automatic picks do not suit every picture: over some video or a busy background the text can be hard to read and the erased area can look out of place. Switch to Fixed for those scenes.</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">How it works</sys:String>

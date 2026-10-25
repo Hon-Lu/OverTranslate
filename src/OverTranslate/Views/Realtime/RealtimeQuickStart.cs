@@ -92,7 +92,8 @@ internal readonly record struct RealtimeQuickStart(RealtimeStartRequest? Request
     /// </summary>
     /// <remarks>
     /// Shared with the page's button so the two cannot start sessions that look different: the
-    /// colours, the scrim, the border and the font size come from here either way.
+    /// colours, the scrim, the border and the font size come from here either way — see
+    /// <see cref="WithAppearance"/>.
     /// </remarks>
     public static RealtimeStartRequest Build(
         AppSettings settings,
@@ -103,23 +104,41 @@ internal readonly record struct RealtimeQuickStart(RealtimeStartRequest? Request
         RealtimeCaptureMode captureMode,
         IntPtr sourceWindow)
     {
-        var realtime = settings.Realtime;
-        return new RealtimeStartRequest(
+        var request = new RealtimeStartRequest(
             bounds,
             sourceLanguage,
             targetLanguage,
             provider,
-            realtime.TextColor,
-            realtime.ScrimColor,
-            realtime.ScrimOpacity,
-            realtime.NaturalBackgroundEnabled,
-            realtime.SampleSourceTextColor,
+            TextColor: "",
+            ScrimColor: "",
+            ScrimOpacity: 0,
+            NaturalBackground: false,
+            SampleSourceTextColor: false,
             captureMode,
-            sourceWindow,
-            realtime.BorderEnabled,
-            realtime.BorderColorMode == RealtimeBorderColorMode.Fixed ? realtime.BorderColor : null,
-            realtime.FontSizeMode == RealtimeFontSizeMode.Fixed ? realtime.FixedFontSize : null);
+            sourceWindow);
+        return WithAppearance(request, settings.Realtime);
     }
+
+    /// <summary>
+    /// The same request, drawn the way 顯示外觀 in the settings file says now.
+    /// </summary>
+    /// <remarks>
+    /// The one reading of those settings into a request: a session starts with it, and the running
+    /// bar's panel (#355) hands the session a request re-read through it after every change, so the
+    /// panel cannot draw something a fresh start would not.
+    /// </remarks>
+    public static RealtimeStartRequest WithAppearance(RealtimeStartRequest request, RealtimeSettings realtime) =>
+        request with
+        {
+            TextColor = realtime.TextColor,
+            ScrimColor = realtime.ScrimColor,
+            ScrimOpacity = realtime.ScrimOpacity,
+            NaturalBackground = realtime.NaturalBackgroundEnabled,
+            SampleSourceTextColor = realtime.SampleSourceTextColor,
+            Border = realtime.BorderEnabled,
+            FixedBorderColor = realtime.BorderColorMode == RealtimeBorderColorMode.Fixed ? realtime.BorderColor : null,
+            FixedFontSize = realtime.FontSizeMode == RealtimeFontSizeMode.Fixed ? realtime.FixedFontSize : null,
+        };
 
     private static RealtimeQuickStart Refuse(string key) => new(null, key);
 

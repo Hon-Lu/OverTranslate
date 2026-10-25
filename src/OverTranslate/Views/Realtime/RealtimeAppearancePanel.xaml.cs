@@ -1,0 +1,568 @@
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Threading;
+using OverTranslate.Controls;
+using OverTranslate.Models;
+using OverTranslate.Services;
+using OverTranslate.Services.Realtime;
+using OverTranslate.Services.Realtime.Capture;
+using Button = System.Windows.Controls.Button;
+using Color = System.Windows.Media.Color;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using TextBox = System.Windows.Controls.TextBox;
+
+namespace OverTranslate.Views.Realtime;
+
+/// <summary>
+/// 顯示外觀, opened from the running capsule (#355): the colours, the band, the border and the text
+/// size, changed while the translation they are for is on the screen.
+/// </summary>
+/// <remarks>
+/// <para>The same settings as the card on the page, read from and written to the same file, so the
+/// page shows what was chosen here when the session ends and the next session starts with it. Every
+/// change is written at once and announced through <see cref="AppearanceChanged"/>; the session
+/// redraws its overlays with it. A colour or an opacity is only a change once it is let go — see
+/// <see cref="ColorPicker"/> — because each one rebuilds every overlay on the screen.</para>
+///
+/// <para>A window of its own, like the language lists, and for the same reason: the capsule never
+/// takes activation, and a Popup inside it would get no keyboard. Unlike the lists this one does not
+/// take the foreground when it opens either — everything on it is worked with the mouse, and pulling
+/// the focus off a full-screen game to show it could minimise the game. Only a click in one of the
+/// two boxes that are typed into (the size and a colour's code) asks for the keyboard, and Enter or
+/// Esc there hands it straight back.</para>
+///
+/// <para>It stays open until the 顯示外觀 button is pressed again, so the user can try one value after
+/// another while watching the result. It follows the capsule when that is dragged, and closes with
+/// it — see RealtimeControlWindow.</para>
+///
+/// <para>Nothing about the session's rules for its own windows is special-cased, for the reason the
+/// language list gives: a visible, topmost, unowned window of this process is left out of every
+/// frame and raised over the overlays by the session's once-a-second re-assert.</para>
+/// </remarks>
+internal partial class RealtimeAppearancePanel : Window
+{
+    // Between the capsule's edge and the panel's.
+    private const double Gap = 6;
+
+    private System.Drawing.Rectangle _bar;
+    private readonly System.Drawing.Rectangle _screen;
+
+    private double _windowScale = 1.0;
+    private bool _opensUp = true;
+    private bool _placed;
+    private bool _closing;
+    private IntPtr _previousForeground;
+
+    // While a box has the keyboard: tells when another application takes it back — see EndTyping.
+    private ForegroundChangeWatch? _typingWatch;
+
+    // Set while stored values are being put on the controls, so that is not taken for the user.
+    private bool _showing;
+    private bool _draggingOpacity;
+
+    // The colour picker that is open, and the swatch it was opened from; one at a time.
+    private ColorPicker? _openPicker;
+    private Button? _openSwatch;
+
+    // The open picker, when the press under way is outside it — folded away on release, see
+    // OnPreviewMouseLeftButtonDown.
+    private ColorPicker? _pickerToFold;
+
+    /// <param name="bar">The capsule's visible surface, in physical pixels: the panel opens clear of it.</param>
+    /// <param name="screen">The session's screen, which the panel has to stay on.</param>
+    public RealtimeAppearancePanel(System.Drawing.Rectangle bar, System.Drawing.Rectangle screen)
+    {
+        InitializeComponent();
+
+        _bar = bar;
+        _screen = screen;
+
+        FontSizeMode.SetLabels("S.Realtime.ColorAuto", "S.Realtime.ColorFixed");
+        TextColorMode.SetLabels("S.Realtime.ColorAuto", "S.Realtime.ColorFixed");
+        ScrimColorMode.SetLabels("S.Realtime.ColorAuto", "S.Realtime.ColorFixed");
+        BorderMode.SetLabels("S.Realtime.BorderRandom", "S.Realtime.BorderFixed");
+        FontSizeStepper.Minimum = RealtimeSettings.MinFixedFontSize;
+        FontSizeStepper.Maximum = RealtimeSettings.MaxFixedFontSize;
+
+        ShowStored();
+
+        // After the stored values are in, so putting them there is not read as the user choosing.
+        FontSizeMode.SelectionChanged += (_, isFixed) => Persist(r => r.FontSizeMode =
+            isFixed ? RealtimeFontSizeMode.Fixed : RealtimeFontSizeMode.Auto);
+        FontSizeStepper.ValueCommitted += (_, size) => Persist(r => r.FixedFontSize = size);
+        TextColorMode.SelectionChanged += (_, isFixed) => Persist(r => r.SampleSourceTextColor = !isFixed);
+        ScrimColorMode.SelectionChanged += (_, isFixed) => Persist(r => r.NaturalBackgroundEnabled = !isFixed);
+        BorderMode.SelectionChanged += (_, isFixed) => Persist(r => r.BorderColorMode =
+            isFixed ? RealtimeBorderColorMode.Fixed : RealtimeBorderColorMode.Random);
+        BorderToggle.Checked += (_, _) => Persist(r => r.BorderEnabled = true);
+        BorderToggle.Unchecked += (_, _) => Persist(r => r.BorderEnabled = false);
+
+        TextColorPicker.ColorCommitted += (_, color) => Persist(r => r.TextColor = RealtimeSubtitleColors.Format(color));
+        ScrimColorPicker.ColorCommitted += (_, color) => Persist(r => r.ScrimColor = RealtimeSubtitleColors.Format(color));
+        BorderColorPicker.ColorCommitted += (_, color) => Persist(r => r.BorderColor = RealtimeSubtitleColors.Format(color));
+
+        // The slider follows the thumb on every step and is applied when it is let go — or at once,
+        // when it moved by a click on the track, which has no end to wait for.
+        OpacitySlider.ValueChanged += (_, _) =>
+        {
+            OpacityValue.Text = $"{CurrentOpacity}%";
+            if (_showing || _draggingOpacity) return;
+            Persist(r => r.ScrimOpacity = CurrentOpacity);
+        };
+        OpacitySlider.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => _draggingOpacity = true));
+        OpacitySlider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((_, _) =>
+        {
+            _draggingOpacity = false;
+            Persist(r => r.ScrimOpacity = CurrentOpacity);
+        }));
+
+        PreviewMouseLeftButtonDown += OnPreviewMouseLeftButtonDown;
+        PreviewMouseLeftButtonUp += OnPreviewMouseLeftButtonUp;
+        PreviewKeyUp += OnPreviewKeyUp;
+        Loaded += (_, _) => Dispatcher.BeginInvoke(new Action(Place), DispatcherPriority.Loaded);
+    }
+
+    /// <summary>Raised after a change is in the settings file, for the session to redraw with it.</summary>
+    public event EventHandler? AppearanceChanged;
+
+    private int CurrentOpacity => RealtimeSubtitleColors.ClampOpacity((int)Math.Round(OpacitySlider.Value));
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        // Before Show could hand it the foreground: see the remarks for why it never takes it itself.
+        WindowStyles.ApplyNoActivate(this);
+
+        // Opened at the bar, so the window starts on the monitor it will be placed on and the scale
+        // read in Place is that monitor's.
+        ScreenGeometry.MoveToPhysical(this, _bar.Left, _bar.Top);
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        if (IsLoaded) Dispatcher.BeginInvoke(new Action(Place), DispatcherPriority.Loaded);
+    }
+
+    /// <summary>The capsule moved — dragged, or its width changed — and the panel goes with it.</summary>
+    public void UpdateAnchor(System.Drawing.Rectangle bar)
+    {
+        if (bar == _bar || _closing) return;
+        _bar = bar;
+        if (IsLoaded) Place();
+    }
+
+    // ── Placement ────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sizes the panel for the session's screen and sets it against the capsule — above it, or below
+    /// when there is more room there — its right edge on the capsule's, which is the edge the capsule
+    /// keeps still. Shown only once it is there.
+    /// </summary>
+    private void Place()
+    {
+        if (_closing) return;
+
+        if (PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
+            _windowScale = target.TransformToDevice.M11;
+
+        // The capsule's own correction — see RealtimeControlWindow.ApplyScreenScale — so the panel
+        // comes out the same physical size as the bar it opens from.
+        double screenScale = ScreenGeometry.ScaleAt(_bar.Left, _bar.Top);
+        double relative = screenScale / _windowScale;
+        RootChrome.LayoutTransform = Math.Abs(relative - 1.0) < 0.001
+            ? Transform.Identity
+            : new ScaleTransform(relative, relative);
+        UpdateLayout();
+
+        int Physical(double dip) => (int)Math.Round(dip * screenScale);
+
+        // Decided once, on the first placement: a panel that flipped sides as a picker opened would
+        // move out from under the pointer that opened it.
+        if (!_placed) _opensUp = _bar.Top - _screen.Top >= _screen.Bottom - _bar.Bottom;
+
+        // The window is made as tall as the panel with a picker open, and never resizes after: a
+        // picker opening or closing only lays the panel out again inside it, against the capsule's
+        // side. Resizing it with the panel showed a frame of the old layout in the new size — the
+        // panel cut off — before the new layout was drawn.
+        var margin = RootChrome.Margin;
+        double tallest = TallestChromeHeight();
+        RootChrome.VerticalAlignment = _opensUp ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+        Height = tallest * relative + margin.Top + margin.Bottom;
+
+        int chromeWidth = Physical(Chrome.ActualWidth);
+        int chromeHeight = Physical(tallest);
+        int gap = Physical(Gap);
+
+        int chromeTop = _opensUp
+            ? Math.Max(_screen.Top, _bar.Top - gap - chromeHeight)
+            : Math.Min(_bar.Bottom + gap, Math.Max(_screen.Top, _screen.Bottom - chromeHeight));
+        int chromeLeft = Math.Clamp(
+            _bar.Right - chromeWidth, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
+
+        // Cast away from the bar.
+        Shadow.Direction = _opensUp ? 90 : 270;
+
+        ScreenGeometry.MoveToPhysical(this, chromeLeft - Physical(margin.Left), chromeTop - Physical(margin.Top));
+        _placed = true;
+
+        Opacity = 1;
+    }
+
+    /// <summary>
+    /// How tall the panel is with a picker open — the three are the same height — laid out for the
+    /// measurement and folded away again before anything is drawn.
+    /// </summary>
+    private double TallestChromeHeight()
+    {
+        if (_openPicker is not null) return Chrome.ActualHeight;
+
+        TextColorPicker.Visibility = Visibility.Visible;
+        UpdateLayout();
+        var tallest = Chrome.ActualHeight;
+        TextColorPicker.Visibility = Visibility.Collapsed;
+        UpdateLayout();
+        return tallest;
+    }
+
+    // ── Settings ─────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Puts every stored value on its control without that reading as the user setting it.</summary>
+    private void ShowStored()
+    {
+        var realtime = SettingsService.Instance.Current.Realtime;
+
+        _showing = true;
+        FontSizeMode.IsSecondSelected = realtime.FontSizeMode == RealtimeFontSizeMode.Fixed;
+        FontSizeStepper.Value = realtime.FixedFontSize;
+        TextColorMode.IsSecondSelected = !realtime.SampleSourceTextColor;
+        ScrimColorMode.IsSecondSelected = !realtime.NaturalBackgroundEnabled;
+        OpacitySlider.Value = RealtimeSubtitleColors.ClampOpacity(realtime.ScrimOpacity);
+        BorderMode.IsSecondSelected = realtime.BorderColorMode == RealtimeBorderColorMode.Fixed;
+        BorderToggle.IsChecked = realtime.BorderEnabled;
+        _showing = false;
+
+        Render();
+    }
+
+    private void Persist(Action<RealtimeSettings> apply)
+    {
+        if (_showing) return;
+
+        var settings = SettingsService.Instance;
+        apply(settings.Current.Realtime);
+        settings.Save();
+
+        Render();
+        AppearanceChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ResetBtn_Click(object sender, RoutedEventArgs e)
+    {
+        ClosePicker();
+        Persist(r => r.ResetAppearance());
+        ShowStored();
+    }
+
+    /// <summary>
+    /// What each row allows in its mode, and the colours on the swatches. A control that has nothing
+    /// to set in the mode its row is in is greyed rather than hidden, so no row changes shape — and no
+    /// button moves — as the modes are flipped.
+    /// </summary>
+    private void Render()
+    {
+        var realtime = SettingsService.Instance.Current.Realtime;
+
+        var text = RealtimeSubtitleColors.Text(realtime.TextColor);
+        var scrim = RealtimeSubtitleColors.Scrim(realtime.ScrimColor, 100);
+        var border = RealtimeSubtitleColors.Border(realtime.BorderColor);
+
+        FontSizeStepper.IsEnabled = realtime.FontSizeMode == RealtimeFontSizeMode.Fixed;
+        FontSizeStepper.Opacity = FontSizeStepper.IsEnabled ? 1 : 0.45;
+
+        ShowSwatch(TextColorBtn, TextColorChip, TextColorCode, text, enabled: !realtime.SampleSourceTextColor);
+        ShowSwatch(ScrimColorBtn, ScrimColorChip, ScrimColorCode, scrim, enabled: !realtime.NaturalBackgroundEnabled);
+        ShowSwatch(BorderColorBtn, BorderColorChip, null, border,
+            enabled: realtime.BorderEnabled && realtime.BorderColorMode == RealtimeBorderColorMode.Fixed);
+
+        OpacityRow.IsEnabled = !realtime.NaturalBackgroundEnabled;
+        OpacityRow.Opacity = OpacityRow.IsEnabled ? 1 : 0.45;
+        OpacityValue.Text = $"{CurrentOpacity}%";
+
+        BorderMode.IsEnabled = realtime.BorderEnabled;
+        BorderMode.Opacity = BorderMode.IsEnabled ? 1 : 0.45;
+
+        // A picker whose row no longer takes a colour of ours — switched to 自動 or 隨機, or the
+        // border turned off — has nothing left to set.
+        if (_openSwatch is { IsEnabled: false }) ClosePicker();
+
+        ResetBtn.IsEnabled = !realtime.HasDefaultAppearance(CurrentOpacity);
+    }
+
+    private static void ShowSwatch(Button button, Border chip, TextBlock? code, Color color, bool enabled)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B));
+        brush.Freeze();
+        chip.Background = brush;
+        if (code is not null) code.Text = RealtimeSubtitleColors.Format(color);
+        button.IsEnabled = enabled;
+    }
+
+    // ── Colour pickers ───────────────────────────────────────────────────────────────────────────
+
+    private void SwatchBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var swatch = (Button)sender;
+        var realtime = SettingsService.Instance.Current.Realtime;
+        var (picker, color) = swatch == TextColorBtn ? (TextColorPicker, RealtimeSubtitleColors.Text(realtime.TextColor))
+            : swatch == ScrimColorBtn ? (ScrimColorPicker, RealtimeSubtitleColors.Scrim(realtime.ScrimColor, 100))
+            : (BorderColorPicker, RealtimeSubtitleColors.Border(realtime.BorderColor));
+
+        // The swatch of the open picker closes it, as a menu button closes its menu.
+        var reopening = ReferenceEquals(_openPicker, picker);
+        ClosePicker();
+        if (reopening) return;
+
+        picker.Begin(Color.FromRgb(color.R, color.G, color.B));
+        picker.Visibility = Visibility.Visible;
+        swatch.Tag = "Open";
+        _openPicker = picker;
+        _openSwatch = swatch;
+    }
+
+    /// <summary>Folds the open picker away; its 返回 list goes with it — see ColorPickHistory.</summary>
+    private void ClosePicker()
+    {
+        if (_openPicker is { } picker)
+        {
+            // Out of the box first, so a code typed and not yet entered is applied, not lost.
+            if (picker.IsKeyboardFocusWithin) Keyboard.ClearFocus();
+            picker.Visibility = Visibility.Collapsed;
+        }
+
+        if (_openSwatch is { } swatch) swatch.Tag = null;
+        _openPicker = null;
+        _openSwatch = null;
+    }
+
+    // ── Keyboard ─────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A press in one of the boxes that are typed into is the one thing here that wants the
+    /// keyboard, so it is the one thing that takes the foreground.
+    /// </summary>
+    private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // A press anywhere else in the panel is done with the open picker, as a press outside a
+        // list is done with the list. The swatches are left to themselves: theirs opens or closes
+        // a picker already.
+        var source = e.OriginalSource as DependencyObject;
+        _pickerToFold = _openPicker is { } open
+            && !IsInside(source, open)
+            && !IsInside(source, TextColorBtn) && !IsInside(source, ScrimColorBtn) && !IsInside(source, BorderColorBtn)
+                ? open
+                : null;
+
+        if (HasForeground || TextBoxOf(source) is not { } box) return;
+        TakeForeground();
+
+        // The activation that hands this window the keyboard also puts WPF's focus back where the
+        // window last had it — nowhere — after the press has already given it to the box, so the box
+        // showed a caret and took no keys. Given again once the handoff has settled; the same story
+        // RealtimeLanguageMenu.FocusWhenReady tells of its search box.
+        FocusWhenReady(box, attemptsLeft: 8);
+    }
+
+    /// <summary>
+    /// Folds the picker a press outside it found open, once the press is over rather than when it
+    /// began: folding it shifts the rows below it up, and a button that moved out from under the
+    /// pointer between press and release would not take the click. After the release has been
+    /// handled, so the control pressed has acted first.
+    /// </summary>
+    private void OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pickerToFold is not { } picker) return;
+        _pickerToFold = null;
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (ReferenceEquals(_openPicker, picker)) ClosePicker();
+        });
+    }
+
+    private static bool IsInside(DependencyObject? element, DependencyObject ancestor)
+    {
+        for (var node = element; node is not null;
+             node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+            if (ReferenceEquals(node, ancestor)) return true;
+        return false;
+    }
+
+    private void FocusWhenReady(TextBox box, int attemptsLeft)
+    {
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (_closing || !box.IsVisible) return;
+            if (box.IsKeyboardFocused || box.Focus() || attemptsLeft <= 0) return;
+            FocusWhenReady(box, attemptsLeft - 1);
+        });
+    }
+
+    /// <summary>
+    /// Enter has applied what was typed and Esc has put it back; either way the user is done typing,
+    /// and the keyboard goes back to whatever had it — usually the game.
+    /// </summary>
+    private void OnPreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Escape) || !HasForeground) return;
+
+        Keyboard.ClearFocus();
+        GiveBackForeground();
+    }
+
+    /// <summary>
+    /// Whether the keyboard is this panel's, asked of Windows. Not <see cref="Window.IsActive"/>:
+    /// a window that never activates is reported active by WPF all the same, measured — which hid
+    /// that the boxes were never getting the keys.
+    /// </summary>
+    private bool HasForeground
+    {
+        get
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            return hwnd != IntPtr.Zero && GetForegroundWindow() == hwnd;
+        }
+    }
+
+    private static TextBox? TextBoxOf(DependencyObject? element)
+    {
+        for (var node = element; node is not null; node = VisualTreeHelper.GetParent(node) ?? LogicalTreeHelper.GetParent(node))
+            if (node is TextBox box) return box;
+        return null;
+    }
+
+    /// <summary>Closes the panel, handing the keyboard back if a box had taken it.</summary>
+    public void Dismiss()
+    {
+        if (_closing) return;
+
+        // A code or a size typed and not yet entered is applied on the way out rather than lost.
+        var typing = HasForeground;
+        EndTyping();
+
+        _closing = true;
+        if (typing) GiveBackForeground();
+        Close();
+    }
+
+    // ── Foreground ───────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Makes this the window the keyboard talks to; see RealtimeLanguageMenu.TakeForeground for why
+    /// the foreground thread's input queue is shared for the call.
+    /// </summary>
+    /// <remarks>
+    /// The no-activate bit comes off for it: Windows refuses the foreground to a window carrying it,
+    /// so the box showed a caret and every key went to the game. It goes back on as soon as the
+    /// typing is over — see <see cref="EndTyping"/>.
+    /// </remarks>
+    private void TakeForeground()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+
+        var foreground = GetForegroundWindow();
+        if (foreground != hwnd) _previousForeground = foreground;
+
+        WindowStyles.SetNoActivate(this, enabled: false);
+        _typingWatch ??= ForegroundChangeWatch.Install(() =>
+        {
+            if (!HasForeground) EndTyping();
+        });
+
+        var owner = GetWindowThreadProcessId(foreground, out _);
+        var self = GetCurrentThreadId();
+        var attached = owner != 0 && owner != self && AttachThreadInput(self, owner, true);
+
+        try
+        {
+            SetForegroundWindow(hwnd);
+            Activate();
+        }
+        finally
+        {
+            if (attached) AttachThreadInput(self, owner, false);
+        }
+    }
+
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        EndTyping();
+    }
+
+    /// <summary>
+    /// The typing is over, whoever ended it — Enter or Esc here, or a click on the game. What is in
+    /// the box is applied, and a click on the panel must not activate it again from here on.
+    /// </summary>
+    /// <remarks>
+    /// Not left to the box's own LostKeyboardFocus or to <see cref="OnDeactivated"/> alone: with the
+    /// game clicked, neither came (measured), and a size typed and left was neither shown nor saved.
+    /// The foreground moving to another application is what says it, so that is what is watched.
+    /// </remarks>
+    private void EndTyping()
+    {
+        _typingWatch?.Dispose();
+        _typingWatch = null;
+
+        // Applied here rather than left to the boxes noticing: see the remarks.
+        if (FontSizeStepper.IsEnabled) FontSizeStepper.CommitPending();
+        _openPicker?.CommitPendingCode();
+
+        if (IsKeyboardFocusWithin) Keyboard.ClearFocus();
+        FocusManager.SetFocusedElement(this, null);
+
+        WindowStyles.SetNoActivate(this, enabled: true);
+    }
+
+    private void GiveBackForeground()
+    {
+        var previous = _previousForeground;
+        _previousForeground = IntPtr.Zero;
+        if (previous == IntPtr.Zero || !IsWindow(previous) || previous == new WindowInteropHelper(this).Handle)
+        {
+            EndTyping();
+            return;
+        }
+
+        // Allowed without ceremony: this window holds the foreground, and the holder may pass it on.
+        SetForegroundWindow(previous);
+        EndTyping();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+}

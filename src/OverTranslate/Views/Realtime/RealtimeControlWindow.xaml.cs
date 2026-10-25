@@ -106,6 +106,8 @@ public partial class RealtimeControlWindow : Window
     // Which list a press on the capsule just closed, so the click that press ends in does not open
     // the same list again: pressing an open list's own name closes it, as a menu button does.
     private RealtimeLanguageMenuKind? _menuClosedByPress;
+    // 顯示外觀, while it is open (#355).
+    private RealtimeAppearancePanel? _appearance;
     private bool _isPaused;
     private bool _isLoadingModels;
     // What the session last said through SetBusy; the dot also pulses while the models load.
@@ -179,14 +181,23 @@ public partial class RealtimeControlWindow : Window
         {
             _scaleFixupSettle.Stop();
             CloseMenu();
+            CloseAppearance();
         };
 
         // A list left open over a capsule that has gone away — a capture standing the session down —
-        // would be a menu for a bar that is not there.
+        // would be a menu for a bar that is not there. The same for 顯示外觀.
         IsVisibleChanged += (_, _) =>
         {
-            if (!IsVisible) CloseMenu();
+            if (IsVisible) return;
+            CloseMenu();
+            CloseAppearance();
         };
+
+        // 顯示外觀 is set against the capsule, so it goes wherever the capsule goes: pushed along by
+        // its own width changing, or held back into the screen. A drag closes it instead — see
+        // Chrome_MouseLeftButtonDown.
+        LocationChanged += (_, _) => FollowCapsule();
+        SizeChanged += (_, _) => FollowCapsule();
 
         // The capsule never activates, so pressing it does not take activation from an open list and
         // the list would never hear about the press. It is told here instead: any press on the
@@ -250,6 +261,12 @@ public partial class RealtimeControlWindow : Window
     /// <see cref="SetLanguages"/>.
     /// </summary>
     public event EventHandler<(string Source, string Target)>? LanguagesChangeRequested;
+
+    /// <summary>
+    /// Raised when the 顯示外觀 panel has written a change to the settings file (#355), for the
+    /// session to draw its overlays with.
+    /// </summary>
+    public event EventHandler? AppearanceChanged;
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -485,6 +502,7 @@ public partial class RealtimeControlWindow : Window
     {
         _mode = mode;
         CloseMenu();
+        CloseAppearance();
         Labels.Hide();
         EditPanel.Visibility = mode == RealtimeControlMode.Edit ? Visibility.Visible : Visibility.Collapsed;
         RunPanel.Visibility = mode == RealtimeControlMode.Running ? Visibility.Visible : Visibility.Collapsed;
@@ -596,6 +614,9 @@ public partial class RealtimeControlWindow : Window
 
         UpdateCollapsedToolTip();
         CloseMenuIfPairHidden();
+
+        // Its button has gone with the rest of the capsule.
+        if (_collapsed) CloseAppearance();
     }
 
     /// <summary>
@@ -719,11 +740,16 @@ public partial class RealtimeControlWindow : Window
         _failureShowing = true;
     }
 
-    /// <summary>Re-asserts the bar above a window created after it — the edit layer, on re-entry.</summary>
+    /// <summary>
+    /// Re-asserts the bar above a window created after it — the edit layer, on re-entry, or overlays
+    /// rebuilt mid-session — and 顯示外觀 with it, which would otherwise sit under them until the
+    /// session's next re-assert.
+    /// </summary>
     public void BringToFront()
     {
         Topmost = false;
         Topmost = true;
+        if (_appearance is { } panel) AlwaysOnTop.Reassert(panel);
     }
 
     private void RestoreText()
@@ -788,6 +814,8 @@ public partial class RealtimeControlWindow : Window
         if (closedByPress == kind) return;
 
         CloseMenu();
+        // One thing open over the capsule at a time: the two would open into the same space.
+        CloseAppearance();
 
         var menu = new RealtimeLanguageMenu(
             kind,
@@ -836,6 +864,63 @@ public partial class RealtimeControlWindow : Window
         SourceLangBtn.Tag = null;
         TargetLangBtn.Tag = null;
         menu.Dismiss(giveBackForeground: true);
+    }
+
+    // ── 顯示外觀 (#355) ─────────────────────────────────────────────────────────────────────────
+
+    private void AppearanceBtn_Click(object sender, RoutedEventArgs e)
+    {
+        // Pressing it again is how the panel is put away: it stays open otherwise, so one value after
+        // another can be tried against the translation.
+        if (_appearance is not null)
+        {
+            CloseAppearance();
+            return;
+        }
+
+        CloseMenu();
+
+        var panel = new RealtimeAppearancePanel(PhysicalRect(Chrome), _screenBounds);
+        panel.AppearanceChanged += (_, _) => AppearanceChanged?.Invoke(this, EventArgs.Empty);
+        panel.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_appearance, panel)) return;
+            _appearance = null;
+            SetAppearanceOpen(false);
+        };
+
+        _appearance = panel;
+        SetAppearanceOpen(true);
+        panel.Show();
+    }
+
+    private void CloseAppearance()
+    {
+        var panel = _appearance;
+        if (panel is null) return;
+        _appearance = null;
+        SetAppearanceOpen(false);
+        panel.Dismiss();
+    }
+
+    private void FollowCapsule()
+    {
+        if (_appearance is { } panel && IsLoaded) panel.UpdateAnchor(PhysicalRect(Chrome));
+    }
+
+    /// <summary>The button held down while its panel is open, in 原文對照's way of showing a state.</summary>
+    private void SetAppearanceOpen(bool open)
+    {
+        if (open)
+        {
+            AppearanceBtn.SetResourceReference(ForegroundProperty, "AppAccent");
+            AppearanceBtn.SetResourceReference(BackgroundProperty, "ToolbarGroupBg");
+        }
+        else
+        {
+            AppearanceBtn.ClearValue(ForegroundProperty);
+            AppearanceBtn.ClearValue(BackgroundProperty);
+        }
     }
 
     // Screen pixels, through WPF's own transform to the device — which already carries this
@@ -946,6 +1031,11 @@ public partial class RealtimeControlWindow : Window
     {
         _pressOnMessage = _messageShowing && _mode == RealtimeControlMode.Running
             && ReferenceEquals(e.OriginalSource, RunStatusText);
+
+        // A press on the bar itself, not one of its buttons, is a press outside 顯示外觀, as it is
+        // for the lists: put away rather than dragged along, where the bar could end up under it.
+        CloseAppearance();
+
         _isDragging = true;
         _dragStartMouse = System.Windows.Forms.Control.MousePosition;
         _dragStartPosition = _position;

@@ -18,9 +18,9 @@ namespace OverTranslate.Views.Realtime;
 /// </param>
 /// <param name="TextColor">
 /// Subtitle colours as "#RRGGBB", carried here like everything else this sitting runs with. They are
-/// read from the settings file rather than chosen per session — see AppSettings — but they still
-/// arrive on the request, because a session cannot be asked to change them halfway: reaching the
-/// page that sets them means the shell window, and a running session has hidden it.
+/// read from the settings file rather than chosen per session — see AppSettings — and arrive on the
+/// request. The running bar's 顯示外觀 panel changes them halfway (#355) by writing the file and
+/// handing the session a request re-read from it — see RealtimeSessionController.ApplyAppearance.
 /// </param>
 /// <param name="ScrimOpacity">
 /// How opaque the band behind the text is, 0–100. Travels with the colours for the same reason and
@@ -461,6 +461,7 @@ internal sealed class RealtimeSessionController
         control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
         control.LanguagesChangeRequested += (_, pair) => ChangeLanguages(pair.Source, pair.Target);
+        control.AppearanceChanged += (_, _) => ApplyAppearance();
         _control = control;
         control.Show();
 
@@ -905,14 +906,15 @@ internal sealed class RealtimeSessionController
         {
             var block = _blocks[region.Id];
             bool compared = copies is not null && !block.CompareHidden;
+            var look = RealtimeBlockAppearance.For(request, compared);
             var window = new RealtimeBlockWindow(
                 region.Id, region.Bounds, GrabUnderlying, request.SourceLanguage, request.TargetLanguage,
-                request.TextColor, request.ScrimColor, request.ScrimOpacity,
-                request.NaturalBackground && !compared,
-                request.SampleSourceTextColor && !compared,
-                region.Mode, request.Border, request.FixedBorderColor, region.Orientation,
+                look.TextColor, look.ScrimColor, look.ScrimOpacity,
+                look.NaturalBackground,
+                look.SampleTextColor,
+                region.Mode, look.Border, look.BorderColor, region.Orientation,
                 compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
-                request.FixedFontSize);
+                look.FixedFontSize);
             _blockWindows[region.Id] = window;
             window.Show();
         }
@@ -1075,6 +1077,51 @@ internal sealed class RealtimeSessionController
             request.SourceLanguage, request.TargetLanguage, source, target, rebuilt, paused);
 
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Raised after the running bar's 顯示外觀 panel changed the overlays' look (#355), once the
+    /// change is in the settings file — for the page whose card shows it.
+    /// </summary>
+    public event EventHandler? AppearanceChanged;
+
+    /// <summary>
+    /// Redraws the overlays with what 顯示外觀 says now, from the running bar's panel (#355), without
+    /// ending anything.
+    /// </summary>
+    /// <remarks>
+    /// <para>The panel has already written the change to the settings file; the request is re-read
+    /// from it through the same mapping a start uses (RealtimeQuickStart.WithAppearance), so a
+    /// session changed here draws exactly what one started now would.</para>
+    ///
+    /// <para>Each overlay is restyled where it is, keeping its words — see
+    /// RealtimeBlockWindow.ApplyAppearance for why not built again, as 對照顯示 does. The session is not
+    /// touched: the words, the languages and the reading are the same, only how they are drawn has
+    /// changed. A paused session's overlays are empty and stay so.</para>
+    /// </remarks>
+    private void ApplyAppearance()
+    {
+        if (_request is not { } request || _control is null) return;
+
+        // The bar is off the screen while a capture stands on the session, for the reason
+        // ToggleCompareDisplay gives.
+        if (_interlude.HideLayers) return;
+
+        _request = RealtimeQuickStart.WithAppearance(request, SettingsService.Instance.Current.Realtime);
+        AppearanceChanged?.Invoke(this, EventArgs.Empty);
+
+        if (!IsTranslating || _blockWindows.Count == 0) return;
+
+        // Which blocks are drawn as copies is the same answer ShowBlockWindows gave: the switch and
+        // each block's own say have not changed.
+        var compareOn = _compareDisplay;
+        foreach (var (id, window) in _blockWindows)
+        {
+            bool compared = compareOn && id < _blocks.Count && !_blocks[id].CompareHidden;
+            window.ApplyAppearance(RealtimeBlockAppearance.For(_request, compared));
+        }
+
+        Log.Info("Realtime appearance changed mid-session; overlays restyled in place");
     }
 
     /// <summary>

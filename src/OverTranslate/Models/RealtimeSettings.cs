@@ -112,7 +112,7 @@ public class RealtimeSettings
     /// <remarks>
     /// Its own key rather than an alpha channel on <see cref="ScrimColor"/>, which could have carried
     /// one as <c>#AARRGGBB</c>. Two reasons, and the second is the one that decided it: the colour is
-    /// picked in a system dialog that has no alpha to give back, so the two values do not arrive
+    /// picked in a picker that has no alpha to give back, so the two values do not arrive
     /// together; and a reader who wants the band lighter over one game and heavier over the next is
     /// changing this and not their colour, which a combined key would make them redo.
     /// </remarks>
@@ -307,4 +307,54 @@ public class RealtimeSettings
     /// setting for.
     /// </remarks>
     public bool SampleSourceTextColor { get; set; } = false;
+
+    /// <summary>
+    /// Puts every 顯示外觀 value back to what it ships as: both colours and the mode each is in, the
+    /// weight of the band, the border with its own two values, and the text size with its own.
+    /// </summary>
+    /// <remarks>
+    /// One place for the page's reset and the realtime bar's (#355), so the two cannot come to cover
+    /// different values. The defaults are read off a fresh instance rather than written out again
+    /// here, so that a default changed in one place does not leave a reset restoring the old one.
+    /// </remarks>
+    public void ResetAppearance()
+    {
+        var defaults = new RealtimeSettings();
+        SampleSourceTextColor = defaults.SampleSourceTextColor;
+        TextColor = defaults.TextColor;
+        NaturalBackgroundEnabled = defaults.NaturalBackgroundEnabled;
+        ScrimColor = defaults.ScrimColor;
+        ScrimOpacity = defaults.ScrimOpacity;
+        BorderEnabled = defaults.BorderEnabled;
+        BorderColorMode = defaults.BorderColorMode;
+        BorderColor = defaults.BorderColor;
+        FontSizeMode = defaults.FontSizeMode;
+        FixedFontSize = defaults.FixedFontSize;
+    }
+
+    /// <summary>
+    /// Whether every 顯示外觀 value is still what it ships as, which is what decides whether a reset
+    /// has anything to do.
+    /// </summary>
+    /// <remarks>
+    /// A reset that would do nothing still looks like it might, and the user has to press it to find
+    /// out. The opacity and the size can be passed in rather than read from here: mid-drag a slider
+    /// is deliberately ahead of what is stored, and a button that comes back to life a beat late
+    /// reads as having missed the drag.
+    /// </remarks>
+    public bool HasDefaultAppearance(int? shownOpacity = null, int? shownFixedFontSize = null)
+    {
+        var defaults = new RealtimeSettings();
+
+        return SampleSourceTextColor == defaults.SampleSourceTextColor
+            && FontSizeMode == defaults.FontSizeMode
+            && (shownFixedFontSize ?? FixedFontSize) == defaults.FixedFontSize
+            && NaturalBackgroundEnabled == defaults.NaturalBackgroundEnabled
+            && BorderEnabled == defaults.BorderEnabled
+            && BorderColorMode == defaults.BorderColorMode
+            && (shownOpacity ?? ScrimOpacity) == defaults.ScrimOpacity
+            && string.Equals(TextColor, defaults.TextColor, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(ScrimColor, defaults.ScrimColor, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(BorderColor, defaults.BorderColor, StringComparison.OrdinalIgnoreCase);
+    }
 }

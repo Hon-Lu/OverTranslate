@@ -1,0 +1,279 @@
+<Window x:Class="OverTranslate.Views.Realtime.RealtimeAppearancePanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:OverTranslate.Controls"
+        x:ClassModifier="internal"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        SizeToContent="Width"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Opacity="0">
+
+    <Window.Resources>
+        <!-- A row's glyph: the same Fluent marks the page's rows carry, so the two read as one set of
+             settings. -->
+        <Style x:Key="RowGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+
+        <Style x:Key="RowLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+
+        <!-- One setting, on its own patch of the panel. -->
+        <Style x:Key="RowCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+
+        <!-- The colour a row is set to, and the button that opens the picker on it. Its accent ring
+             (Tag "Open", set in code) ties the open picker to the row it belongs to. -->
+        <Style x:Key="SwatchButton" TargetType="Button" BasedOn="{StaticResource FlatButton}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="Open">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SwatchChip" TargetType="Border">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarSwatchEdge}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="SwatchCode" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas, Cascadia Mono"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="8,0,8,0"/>
+        </Style>
+
+        <Style x:Key="SwatchChevron" TargetType="Path">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Stretch" Value="None"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="StrokeThickness" Value="1.2"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="StrokeLineJoin" Value="Round"/>
+            <Setter Property="Stroke" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="Data" Value="M2,3.5 L5,6.5 L8,3.5"/>
+        </Style>
+    </Window.Resources>
+
+    <!-- The margin is the room the shadow is drawn in, as on the capsule and its language lists; the
+         LayoutTransform is set in code for the same mixed-DPI reason. The window is as tall as the
+         panel with a picker open, and the panel sits against the capsule's side of it — see Place.
+         No background: the rest of the window is fully transparent, which lets presses through. -->
+    <Border x:Name="RootChrome" Margin="18,16,18,22">
+        <Grid>
+            <!-- Shadow on an empty twin: see the capsule for why an Effect on the surface that carries
+                 the text would cost it ClearType. -->
+            <Border Background="{DynamicResource ToolbarBg}" Margin="2" CornerRadius="14">
+                <Border.Effect>
+                    <DropShadowEffect x:Name="Shadow"
+                                      BlurRadius="24" ShadowDepth="4" Direction="270"
+                                      Opacity="0.45" Color="#000000"/>
+                </Border.Effect>
+            </Border>
+
+            <Border x:Name="Chrome"
+                    Background="{DynamicResource ToolbarBg}"
+                    BorderBrush="{DynamicResource ToolbarMenuBorder}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    Padding="8,4,8,8"
+                    RenderOptions.ClearTypeHint="Enabled"
+                    Grid.IsSharedSizeScope="True">
+                <StackPanel>
+                    <DockPanel Height="36" Margin="10,0,0,0">
+                        <Button x:Name="ResetBtn"
+                                DockPanel.Dock="Right"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Focusable="False"
+                                ToolTip="{DynamicResource S.Realtime.ResetAppearance}"
+                                AutomationProperties.Name="{DynamicResource S.Realtime.ResetAppearance}"
+                                Click="ResetBtn_Click">
+                            <TextBlock Text="&#xE72C;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13"/>
+                        </Button>
+                        <TextBlock Text="{DynamicResource S.Realtime.Appearance}"
+                                   VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="12.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppTextSecondary}"/>
+                    </DockPanel>
+
+                    <!-- 文字大小 -->
+                    <Border Style="{StaticResource RowCard}" Margin="0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="Glyph"/>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="Label"/>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="Switch"/>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="Value"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="&#xE8E9;" Style="{StaticResource RowGlyph}"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.FontSize}" Style="{StaticResource RowLabel}"/>
+                            <ctl:SegmentedSwitch x:Name="FontSizeMode" Grid.Column="2"
+                                                 AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeMode}"/>
+                            <ctl:FontSizeStepper x:Name="FontSizeStepper" Grid.Column="3"
+                                                 Margin="8,0,0,0"
+                                                 Width="120"
+                                                 Height="32"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- 文字顏色 -->
+                    <Border Style="{StaticResource RowCard}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Glyph"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Switch"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Value"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="&#xEF3C;" Style="{StaticResource RowGlyph}"/>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.TextColor}" Style="{StaticResource RowLabel}"/>
+                                <ctl:SegmentedSwitch x:Name="TextColorMode" Grid.Column="2"
+                                                     AutomationProperties.Name="{DynamicResource S.Realtime.TextColorMode}"/>
+                                <Button x:Name="TextColorBtn" Grid.Column="3"
+                                        Style="{StaticResource SwatchButton}"
+                                        AutomationProperties.Name="{DynamicResource S.Realtime.TextColor}"
+                                        Click="SwatchBtn_Click">
+                                    <DockPanel>
+                                        <Border x:Name="TextColorChip" DockPanel.Dock="Left" Style="{StaticResource SwatchChip}"/>
+                                        <Path DockPanel.Dock="Right" Style="{StaticResource SwatchChevron}"/>
+                                        <TextBlock x:Name="TextColorCode" Style="{StaticResource SwatchCode}"/>
+                                    </DockPanel>
+                                </Button>
+                            </Grid>
+                            <ctl:ColorPicker x:Name="TextColorPicker" Margin="0,10,0,2" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 底色, and how heavy it is drawn -->
+                    <Border Style="{StaticResource RowCard}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Glyph"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Switch"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Value"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="&#xE790;" Style="{StaticResource RowGlyph}"/>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.ScrimColor}" Style="{StaticResource RowLabel}"/>
+                                <ctl:SegmentedSwitch x:Name="ScrimColorMode" Grid.Column="2"
+                                                     AutomationProperties.Name="{DynamicResource S.Realtime.ScrimColorMode}"/>
+                                <Button x:Name="ScrimColorBtn" Grid.Column="3"
+                                        Style="{StaticResource SwatchButton}"
+                                        AutomationProperties.Name="{DynamicResource S.Realtime.ScrimColor}"
+                                        Click="SwatchBtn_Click">
+                                    <DockPanel>
+                                        <Border x:Name="ScrimColorChip" DockPanel.Dock="Left" Style="{StaticResource SwatchChip}"/>
+                                        <Path DockPanel.Dock="Right" Style="{StaticResource SwatchChevron}"/>
+                                        <TextBlock x:Name="ScrimColorCode" Style="{StaticResource SwatchCode}"/>
+                                    </DockPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Dimmed by hand as well as disabled in 自動, as on the page: a TextBlock in a
+                                 switched-off panel is still drawn at full strength. -->
+                            <Grid x:Name="OpacityRow" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Glyph"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="44"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1"
+                                           Text="{DynamicResource S.Realtime.ScrimOpacity}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,12,0"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource AppTextSecondary}"/>
+                                <Slider x:Name="OpacitySlider" Grid.Column="2"
+                                        Style="{StaticResource AppSlider}"
+                                        Minimum="0" Maximum="100"
+                                        SmallChange="1" LargeChange="10"
+                                        Focusable="False"
+                                        AutomationProperties.Name="{DynamicResource S.Realtime.ScrimOpacity}"/>
+                                <TextBlock x:Name="OpacityValue" Grid.Column="3"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource AppTextSecondary}"/>
+                            </Grid>
+                            <ctl:ColorPicker x:Name="ScrimColorPicker" Margin="0,10,0,2" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 邊框 -->
+                    <Border Style="{StaticResource RowCard}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Glyph"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Switch"/>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Value"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="&#xE739;" Style="{StaticResource RowGlyph}"/>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.Border}" Style="{StaticResource RowLabel}"/>
+                                <ctl:SegmentedSwitch x:Name="BorderMode" Grid.Column="2"
+                                                     AutomationProperties.Name="{DynamicResource S.Realtime.BorderMode}"/>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button x:Name="BorderColorBtn"
+                                            Style="{StaticResource SwatchButton}"
+                                            Width="32"
+                                            Padding="0"
+                                            HorizontalContentAlignment="Center"
+                                            AutomationProperties.Name="{DynamicResource S.Realtime.BorderColor}"
+                                            Click="SwatchBtn_Click">
+                                        <Border x:Name="BorderColorChip" Style="{StaticResource SwatchChip}"/>
+                                    </Button>
+                                    <CheckBox x:Name="BorderToggle"
+                                              Style="{StaticResource ToggleSwitch}"
+                                              Margin="8,0,0,0"
+                                              Focusable="False"
+                                              AutomationProperties.Name="{DynamicResource S.Realtime.Border}"/>
+                                </StackPanel>
+                            </Grid>
+                            <ctl:ColorPicker x:Name="BorderColorPicker" Margin="0,10,0,2" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

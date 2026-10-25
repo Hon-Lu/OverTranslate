@@ -1,0 +1,122 @@
+<UserControl x:Class="OverTranslate.Controls.FontSizeStepper"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False">
+
+    <UserControl.Resources>
+        <!-- − and ＋: flat until the pointer is on them, so the box reads as one field with two ends
+             rather than as three buttons. Greyed at the end of the range. On press, not release:
+             holding one repeats it — see StartRepeat. -->
+        <Style x:Key="StepButton" TargetType="Button">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="ClickMode" Value="Press"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StepGlyph" TargetType="Path">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Stretch" Value="None"/>
+            <Setter Property="StrokeThickness" Value="1.3"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Drawn as the colour buttons beside it are — the button fill, edge and corners — so a column
+         of answers reads as one. Its height is the host's to set: the page's rows are taller than the
+         realtime panel's. -->
+    <Border x:Name="Frame"
+            Background="{DynamicResource AppButtonBg}"
+            BorderThickness="1"
+            CornerRadius="6"
+            ClipToBounds="True">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <DockPanel LastChildFill="True">
+            <Button x:Name="DownBtn"
+                    DockPanel.Dock="Left"
+                    Style="{StaticResource StepButton}"
+                    AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeDecrease}"
+                    Click="StepBtn_Click"
+                    LostMouseCapture="StepBtn_LostMouseCapture">
+                <Path Style="{StaticResource StepGlyph}" Data="M1,5 H9"/>
+            </Button>
+            <Button x:Name="UpBtn"
+                    DockPanel.Dock="Right"
+                    Style="{StaticResource StepButton}"
+                    AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeIncrease}"
+                    Click="StepBtn_Click"
+                    LostMouseCapture="StepBtn_LostMouseCapture">
+                <Path Style="{StaticResource StepGlyph}" Data="M1,5 H9 M5,1 V9"/>
+            </Button>
+
+            <!-- The number between them is a box of its own: type a size, Enter or leave to apply. -->
+            <Border BorderThickness="1,0"
+                    BorderBrush="{DynamicResource AppButtonBorder}"
+                    Background="Transparent"
+                    Cursor="IBeam"
+                    MouseLeftButtonDown="Field_MouseLeftButtonDown">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBox x:Name="ValueBox"
+                             MinWidth="18"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Padding="0"
+                             HorizontalContentAlignment="Right"
+                             FontFamily="{DynamicResource AppFont}"
+                             FontSize="13"
+                             Foreground="{DynamicResource AppTextPrimary}"
+                             CaretBrush="{DynamicResource AppTextPrimary}"
+                             SelectionBrush="{DynamicResource AppAccent}"
+                             MaxLength="2"
+                             InputMethod.IsInputMethodEnabled="False"
+                             AutomationProperties.Name="{DynamicResource S.Realtime.FontSizeValue}"
+                             PreviewMouseLeftButtonDown="ValueBox_PreviewMouseLeftButtonDown"
+                             PreviewTextInput="ValueBox_PreviewTextInput"
+                             PreviewKeyDown="ValueBox_PreviewKeyDown"
+                             GotKeyboardFocus="ValueBox_GotKeyboardFocus"
+                             LostKeyboardFocus="ValueBox_LostKeyboardFocus"
+                             DataObject.Pasting="ValueBox_Pasting"/>
+                    <TextBlock Text="px"
+                               Margin="3,0,0,0"
+                               VerticalAlignment="Center"
+                               FontFamily="{DynamicResource AppFont}"
+                               FontSize="12"
+                               Foreground="{DynamicResource AppTextSecondary}"/>
+                </StackPanel>
+            </Border>
+        </DockPanel>
+    </Border>
+</UserControl>

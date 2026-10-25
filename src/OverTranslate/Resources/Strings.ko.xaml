@@ -321,6 +321,10 @@
     <sys:String x:Key="S.Realtime.BorderFixed">고정</sys:String>
     <sys:String x:Key="S.Realtime.BorderColor">테두리 색</sys:String>
     <sys:String x:Key="S.Realtime.ResetAppearance">표시 모양 기본값으로 되돌리기</sys:String>
+    <sys:String x:Key="S.ColorPicker.Undo">이전 색으로 되돌리기</sys:String>
+    <sys:String x:Key="S.ColorPicker.Hex">색상 코드</sys:String>
+    <sys:String x:Key="S.ColorPicker.Square">채도와 밝기</sys:String>
+    <sys:String x:Key="S.ColorPicker.Hue">색조</sys:String>
     <sys:String x:Key="S.Realtime.AutoModeBestFor">'자동'이 고르는 글자 색과 배경이 모든 화면에 맞는 것은 아닙니다. 일부 영상이나 복잡한 배경에서는 글자가 읽기 어려워지거나 지운 부분이 도드라질 수 있습니다. 화면에 따라 '고정'으로 바꿔 사용하세요.</sys:String>
 
     <sys:String x:Key="S.Realtime.HowItWorks">사용 방법</sys:String>

@@ -426,6 +426,21 @@
                                     AutomationProperties.Name="{DynamicResource S.Realtime.Pause}"
                                     Click="PauseBtn_Click"/>
 
+                            <!-- 顯示外觀 (#355), so the colours and the size can be tried against the
+                                 translation they are for, without ending the session to reach the
+                                 page. Between 暫停 and 編輯, where the user asked for it: next to the
+                                 controls that act on what is on screen now. Shown held down, the way
+                                 原文對照 shows its state, while the panel is open — see
+                                 SetAppearanceOpen. -->
+                            <Button x:Name="AppearanceBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    FontSize="14"
+                                    Content="&#xE790;"
+                                    Margin="0,0,4,0"
+                                    AutomationProperties.Name="{DynamicResource S.Realtime.Appearance}"
+                                    Click="AppearanceBtn_Click"/>
+
                             <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
                                  be read at a glance and one word set in a flat button among icons was the
                                  only thing on it drawing the eye. The pencil is the same one Windows uses
