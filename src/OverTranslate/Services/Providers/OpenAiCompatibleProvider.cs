@@ -28,6 +28,10 @@ namespace OverTranslate.Services.Providers;
 /// The <c>reasoning_effort</c> to send, or null to send none — the switch and the value in one,
 /// since it has no default worth a separate flag.
 /// </param>
+/// <param name="Prompts">
+/// The user's own prompts, unfilled, for <see cref="OpenAiTranslationMode.PerSegment"/>; null for the
+/// built-in instruction with <paramref name="ExtraInstructions"/>.
+/// </param>
 /// <remarks>
 /// The two newer switches default to off while the temperature defaults to on. Not a judgement about
 /// the parameters: every caller that translates builds these from a profile — see
@@ -47,7 +51,8 @@ public sealed record OpenAiCompatibleOptions(
     bool SendSeed = false,
     int Seed = 0,
     string? ReasoningEffort = null,
-    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds);
+    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds,
+    OpenAiPromptPair? Prompts = null);
 
 /// <summary>
 /// 「OpenAI 相容」 as the application asks for it: the user's setting, the instruction written from
@@ -130,7 +135,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             profile.SeedEnabled,
             profile.Seed,
             profile.ReasoningEffortEnabled ? profile.ReasoningEffort : null,
-            TimeoutSecondsFor(settings.OpenAiTimeoutSeconds));
+            TimeoutSecondsFor(settings.OpenAiTimeoutSeconds),
+            profile.Mode == OpenAiTranslationMode.PerSegment ? profile.Prompts : null);
     }
 
     /// <summary>
@@ -197,21 +203,25 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         // Counts and configuration only, so this stays in the shipped log: it is what tells a report
         // of "nothing was translated" apart from a request that never left, and names the model the
         // answer came from — with a local server the model is the variable that explains the output.
-        Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}",
-            blocks.Count, model, endpoint);
+        Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}，{Mode:l}",
+            blocks.Count, model, endpoint, options.Prompts is null ? "整批" : "逐段");
 
         var prompt = BuildPrompt(sourceLang, targetLang, options.ExtraInstructions);
+        var custom = options.Prompts is { } prompts ? BuildCustomPrompt(sourceLang, targetLang, prompts) : null;
 
         // The user's own words only at Debug, beside the text: what they wrote can quote what was on
         // screen, the same reason OnnxOcrEngine keeps the recognised text out of the shipped log.
-        Log.Debug("OpenAI 相容翻譯 extra=\"{Extra:l}\"", prompt.ExtraInstructions);
+        if (custom is null)
+            Log.Debug("OpenAI 相容翻譯 extra=\"{Extra:l}\"", prompt.ExtraInstructions);
+        else
+            Log.Debug("OpenAI 相容翻譯 system=\"{System:l}\" user=\"{User:l}\"", custom.System, custom.User);
 
         IReadOnlyList<OpenAiChatOutcome> outcomes;
         try
         {
             outcomes = await _chat.TranslateAsync(
                 blocks.Select(block => block.Text).ToList(),
-                Request(options, endpoint, model, prompt, targetLang),
+                Request(options, endpoint, model, prompt, targetLang, custom),
                 context is null ? null : new OpenAiChatContext(
                     context.History?.Select(Pair).ToList(),
                     context.Reference?.Select(Pair).ToList()),
@@ -283,21 +293,24 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         await _chat.WarmUpAsync(
             Request(options, BuildEndpoint(options.BaseUrl), model,
-                BuildPrompt(sourceLang, targetLang, options.ExtraInstructions), targetLang),
+                BuildPrompt(sourceLang, targetLang, options.ExtraInstructions), targetLang,
+                options.Prompts is { } prompts ? BuildCustomPrompt(sourceLang, targetLang, prompts) : null),
             cancellationToken);
         Log.Info("OpenAI 相容暖機完成：{Elapsed} ms",
             (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
     }
 
     private static OpenAiChatRequest Request(
-        OpenAiCompatibleOptions options, Uri endpoint, string model, OpenAiPrompt prompt, string targetLang) =>
+        OpenAiCompatibleOptions options, Uri endpoint, string model, OpenAiPrompt prompt, string targetLang,
+        OpenAiCustomPrompt? custom) =>
         new(endpoint, model, options.ApiKey, prompt,
             LanguageData.GetModelLanguageTag(targetLang),
             options.SendTemperature ? options.Temperature : null,
             options.SendTopP ? options.TopP : null,
             options.SendSeed ? options.Seed : null,
             options.ReasoningEffort,
-            TimeSpan.FromSeconds(options.TimeoutSeconds));
+            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            Custom: custom);
 
     /// <summary>How one block failed, for the log: never the server's words, which can quote the text.</summary>
     private static string FailureKind(OpenAiChatOutcome outcome) => outcome.Error switch
@@ -413,6 +426,32 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             extra = Fill(extra, sourceLang, targetLang, LanguageData.IsAutomaticSource(sourceLang));
 
         return new OpenAiPrompt(PromptLanguage(), LanguageData.GetTargetDisplayName(targetLang), extra);
+    }
+
+    /// <summary>
+    /// The user's own prompts for <see cref="OpenAiTranslationMode.PerSegment"/>, with the language
+    /// placeholders filled in.
+    /// </summary>
+    /// <remarks>
+    /// Either half may come back empty, and empty means the request carries no such message: a half
+    /// that is nothing but whitespace too, or a box that looks empty would send a stray space as an
+    /// instruction.
+    ///
+    /// Not trimmed, only normalised. What a prompt ends with is part of the prompt: the user half is
+    /// followed immediately by the text, so the blank line between the two lives at the end of the
+    /// wording, where whoever wrote it can see it.
+    /// </remarks>
+    internal static OpenAiCustomPrompt BuildCustomPrompt(string sourceLang, string targetLang, OpenAiPromptPair prompts)
+    {
+        var automatic = LanguageData.IsAutomaticSource(sourceLang);
+
+        string One(string template)
+        {
+            var text = OpenAiSettings.NormaliseLineBreaks(template);
+            return text.Trim().Length == 0 ? "" : Fill(text, sourceLang, targetLang, automatic);
+        }
+
+        return new OpenAiCustomPrompt(One(prompts.SystemPrompt), One(prompts.UserPrompt));
     }
 
     /// <summary>Which wording the interface language is served — see <see cref="BuildPrompt"/>.</summary>

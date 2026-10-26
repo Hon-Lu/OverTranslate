@@ -32,6 +32,10 @@ namespace OverTranslate.Translation.OpenAi;
 /// How many tokens the model can be assumed to read, for cutting a screen into batches — see
 /// <see cref="OpenAiChatTranslator.Batches"/>.
 /// </param>
+/// <param name="Custom">
+/// The user's own instruction, sent instead of <paramref name="Prompt"/>: each text alone, with
+/// nothing else — see <see cref="OpenAiChatTranslator.TranslateAsync"/>. Null for the application's.
+/// </param>
 public sealed record OpenAiChatRequest(
     Uri Endpoint,
     string Model,
@@ -43,7 +47,13 @@ public sealed record OpenAiChatRequest(
     int? Seed = null,
     string? ReasoningEffort = null,
     TimeSpan? Timeout = null,
-    int ContextTokens = OpenAiChatTranslator.DefaultContextTokens);
+    int ContextTokens = OpenAiChatTranslator.DefaultContextTokens,
+    OpenAiCustomPrompt? Custom = null);
+
+/// <summary>An instruction the user wrote: a system message and what goes in front of the text.</summary>
+/// <param name="System">A message of its own, or no system message at all when empty.</param>
+/// <param name="User">Written in front of the text, in the same message, as it is — blank line and all.</param>
+public sealed record OpenAiCustomPrompt(string System, string User);
 
 /// <summary>What one call knows beyond its texts.</summary>
 /// <param name="History">Earlier lines of the same session, oldest first — see <see cref="OpenAiPrompt.Build"/>.</param>
@@ -162,6 +172,12 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// one timeout per round instead of one in all.</para>
     ///
     /// <para>The caller's cancellation is not a failure of any text: it goes up as it always did.</para>
+    ///
+    /// <para>With <see cref="OpenAiChatRequest.Custom"/>, none of the above but the last two: every
+    /// text goes alone under the user's instruction, the whole answer less its thinking is the
+    /// translation, and <paramref name="context"/> is not sent. Nothing is checked or sent again —
+    /// what the instruction asks for is the user's to say, and a check written for the
+    /// application's instruction would be wrong about theirs.</para>
     /// </remarks>
     public async Task<IReadOnlyList<OpenAiChatOutcome>> TranslateAsync(
         IReadOnlyList<string> texts,
@@ -173,7 +189,26 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         var job = new Job(texts, request, context ?? new OpenAiChatContext(), cancellationToken);
         if (texts.Count == 0) return job.Outcomes;
 
-        foreach (var (start, count) in Batches(texts, request, job.Context))
+        if (request.Custom is { } custom)
+            await SinglesAsync(job, Enumerable.Range(0, texts.Count).ToList(), resend: false,
+                (text, token) => CustomAsync(text, request, custom, token));
+        else
+            await BatchesAsync(job);
+
+        if (job.Translated == 0)
+        {
+            var error = job.Outcomes.FirstOrDefault(outcome => outcome.Error is not null)?.Error
+                ?? new OpenAiChatException(OpenAiChatFailure.NoTranslation);
+            ExceptionDispatchInfo.Capture(error).Throw();
+        }
+
+        return job.Outcomes;
+    }
+
+    /// <summary>Every batch of the call, one after another — see <see cref="TranslateAsync"/>.</summary>
+    private async Task BatchesAsync(Job job)
+    {
+        foreach (var (start, count) in Batches(job.Texts, job.Request, job.Context))
         {
             if (job.Unreachable)
             {
@@ -184,15 +219,6 @@ public sealed class OpenAiChatTranslator(HttpClient http)
             if (count == 1) await SinglesAsync(job, [start], resend: false);
             else await BatchAsync(job, start, count);
         }
-
-        if (job.Translated == 0)
-        {
-            var error = job.Outcomes.FirstOrDefault(outcome => outcome.Error is not null)?.Error
-                ?? new OpenAiChatException(OpenAiChatFailure.NoTranslation);
-            ExceptionDispatchInfo.Capture(error).Throw();
-        }
-
-        return job.Outcomes;
     }
 
     /// <summary>
@@ -208,14 +234,16 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     ///
     /// <para>The instruction rather than a bare greeting because it is what every request after this
     /// one starts with: a server that keeps the start of the last request it read has that part
-    /// ready too.</para>
+    /// ready too. The user's own, with <see cref="OpenAiChatRequest.Custom"/>.</para>
     ///
     /// <para>Whatever comes back is not read. It throws as <see cref="TranslateAsync"/> does — a
     /// model answering with reasoning only has nothing for this to throw away and fails as
     /// <see cref="OpenAiChatFailure.NoTranslation"/> — and the caller decides what that means.</para>
     /// </remarks>
     public async Task WarmUpAsync(OpenAiChatRequest request, CancellationToken cancellationToken = default) =>
-        await SendAsync(request.Prompt.Build([WarmUpText]), request, cancellationToken, maxTokens: 1);
+        await SendAsync(
+            request.Custom is { } custom ? CustomMessages(custom, WarmUpText) : BuildMessages(request.Prompt.Build([WarmUpText])),
+            request, cancellationToken, maxTokens: 1);
 
     /// <summary>The one word <see cref="WarmUpAsync"/> asks for.</summary>
     internal const string WarmUpText = "Hello";
@@ -305,7 +333,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         try
         {
             var message = job.Request.Prompt.Build(texts, job.Context.History, job.Context.Reference);
-            var content = await SendAsync(message, job.Request, job.Token);
+            var content = await SendAsync(BuildMessages(message), job.Request, job.Token);
             answer = OpenAiAnswer.Read(content, count);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !job.Token.IsCancellationRequested)
@@ -386,8 +414,11 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// A second try at segments that already have a translation: whatever comes back replaces it,
     /// and a failure leaves it as it was.
     /// </param>
-    private async Task SinglesAsync(Job job, IReadOnlyList<int> indices, bool resend)
+    /// <param name="translate">How one text is asked for; <see cref="SingleAsync"/> when not given.</param>
+    private async Task SinglesAsync(
+        Job job, IReadOnlyList<int> indices, bool resend, Func<string, CancellationToken, Task<string>>? translate = null)
     {
+        translate ??= (text, token) => SingleAsync(text, job.Request, token);
         await Parallel.ForEachAsync(
             indices,
             new ParallelOptions
@@ -405,7 +436,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
                 try
                 {
-                    job.Succeed(index, await SingleAsync(job.Texts[index], job.Request, token), alreadyCounted: resend);
+                    job.Succeed(index, await translate(job.Texts[index], token), alreadyCounted: resend);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
                 {
@@ -422,7 +453,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// </remarks>
     private async Task<string> SingleAsync(string text, OpenAiChatRequest request, CancellationToken token)
     {
-        var content = await SendAsync(request.Prompt.Build([text]), request, token);
+        var content = await SendAsync(BuildMessages(request.Prompt.Build([text])), request, token);
         var answer = OpenAiAnswer.Read(content, 1);
 
         var translation = answer.Complete ? answer.Translations[0]
@@ -434,16 +465,21 @@ public sealed class OpenAiChatTranslator(HttpClient http)
             : translation;
     }
 
+    /// <summary>One text under the user's instruction: the whole answer, less its thinking.</summary>
+    private async Task<string> CustomAsync(
+        string text, OpenAiChatRequest request, OpenAiCustomPrompt custom, CancellationToken token) =>
+        StripThinking(await SendAsync(CustomMessages(custom, text), request, token));
+
     /// <summary>Sends one request and returns the answer's content, thinking and all.</summary>
     /// <param name="maxTokens">The longest answer to allow, or null to leave it to the server.</param>
     private async Task<string> SendAsync(
-        string message, OpenAiChatRequest request, CancellationToken cancellationToken, int? maxTokens = null)
+        object[] messages, OpenAiChatRequest request, CancellationToken cancellationToken, int? maxTokens = null)
     {
         // A dictionary rather than an anonymous type because the sampling fields are conditional.
         var payload = new Dictionary<string, object>
         {
             ["model"] = request.Model,
-            ["messages"] = BuildMessages(message),
+            ["messages"] = messages,
         };
         if (request.Temperature is { } temperature) payload["temperature"] = temperature;
         if (request.TopP is { } topP) payload["top_p"] = topP;
@@ -511,6 +547,17 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// is what some models' templates have nowhere to put — see <see cref="OpenAiPrompt"/>.
     /// </remarks>
     internal static object[] BuildMessages(string message) => [new { role = "user", content = message }];
+
+    /// <summary>
+    /// The messages for one text under the user's instruction: the system message when there is one,
+    /// then the user message, the instruction straight in front of the text.
+    /// </summary>
+    internal static object[] CustomMessages(OpenAiCustomPrompt custom, string text)
+    {
+        text = text.Replace("\r\n", "\n").Replace('\r', '\n');
+        var user = new { role = "user", content = custom.User + text };
+        return custom.System.Length > 0 ? [new { role = "system", content = custom.System }, user] : [user];
+    }
 
     /// <summary>The answer with the model's thinking taken out.</summary>
     /// <remarks>
