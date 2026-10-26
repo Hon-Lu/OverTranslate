@@ -197,14 +197,14 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         // Counts and configuration only, so this stays in the shipped log: it is what tells a report
         // of "nothing was translated" apart from a request that never left, and names the model the
         // answer came from — with a local server the model is the variable that explains the output.
-        Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model}\"，端點 {Endpoint}",
+        Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}",
             blocks.Count, model, endpoint);
 
         var prompt = BuildPrompt(sourceLang, targetLang, options.ExtraInstructions);
 
         // The user's own words only at Debug, beside the text: what they wrote can quote what was on
         // screen, the same reason OnnxOcrEngine keeps the recognised text out of the shipped log.
-        Log.Debug("OpenAI 相容翻譯 extra=\"{Extra}\"", prompt.ExtraInstructions);
+        Log.Debug("OpenAI 相容翻譯 extra=\"{Extra:l}\"", prompt.ExtraInstructions);
 
         IReadOnlyList<OpenAiChatOutcome> outcomes;
         try
