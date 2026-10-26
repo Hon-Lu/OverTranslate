@@ -684,6 +684,53 @@ public class OpenAiCompatibleProviderTests
         Assert.True(translated[4].Untranslated);
     }
 
+    /// <summary>
+    /// One text, as the text window, 取詞 and 替換翻譯 send it: the same instruction as a screen,
+    /// with the text as its one segment — paragraphs kept — in one request that is not streamed, and
+    /// nothing of a session around it.
+    /// </summary>
+    [Fact]
+    public async Task OneTextIsTheOneSegmentOfTheSharedInstruction()
+    {
+        var server = new OpenAiFakeServer();
+        using var http = new HttpClient(server);
+        var provider = new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:1234/v1", "test-model"));
+        const string text = "first paragraph\n\nsecond paragraph";
+
+        var (translated, _) = await provider.TranslateAsync(
+            [new OcrTextBlock(text, new Rect())], "EN", "ZH-HANT", "");
+
+        var request = Assert.Single(server.Requests);
+        Assert.False(request.Streamed);
+        Assert.Equal(OpenAiCompatibleProvider.BuildPrompt("EN", "ZH-HANT", "").Build([text]), request.Message);
+        Assert.Equal($"translated:{text}", Assert.Single(translated).TranslatedText);
+    }
+
+    /// <summary>
+    /// A newer request in the same window cancels this one while the server is still answering:
+    /// it comes out as a cancellation — not a failure shown to the user, not the original standing
+    /// in — and nothing is sent again on its behalf.
+    /// </summary>
+    [Fact]
+    public async Task OneTextSupersededMidRequestIsACancellationAndIsNotSentAgain()
+    {
+        var server = new OpenAiFakeServer { HangOn = "slow" };
+        using var http = new HttpClient(server);
+        var provider = new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:11434/v1", "local-model"));
+        var latest = new LatestRequest();
+        var (seq, token) = latest.Start();
+
+        var translating = provider.TranslateAsync([new OcrTextBlock("slow", new Rect())], "JA", "ZH-HANT", "", token);
+        while (server.Sent == 0) await Task.Delay(5);
+        latest.Start();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => translating);
+        Assert.False(latest.IsCurrent(seq));
+        Assert.Equal(1, server.Sent);
+    }
+
     /// <summary>The user cancelling part way through still comes out as a cancellation.</summary>
     [Fact]
     public async Task CancellingPartWayThroughIsStillACancellation()
