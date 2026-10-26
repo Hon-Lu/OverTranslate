@@ -62,6 +62,24 @@ public partial class OverlayWindow : Window
     /// </summary>
     private CaptureBubbleBackdrop? _backdrop;
 
+    /// <summary>
+    /// Blocks in <see cref="_currentBlocks"/> whose translation has not arrived: laid out against,
+    /// never drawn — see <see cref="Layout.StreamedCaptureBubbles"/>. Empty once the answer is in.
+    /// </summary>
+    private IReadOnlyCollection<TranslatedBlock> _pending = [];
+
+    /// <summary>
+    /// Where each drawn block's elements start on the two bubble canvases, in drawing order, so the
+    /// ones just drawn for an arriving block can be faded in. Rewritten by every build.
+    /// </summary>
+    private readonly List<(TranslatedBlock Block, int Backgrounds, int Texts)> _drawnFrom = [];
+
+    /// <summary>
+    /// How long an arriving bubble takes to appear. Opacity only: a bubble that moved or scaled in
+    /// would have its text drawn soft for about a second after the motion stopped.
+    /// </summary>
+    private static readonly Duration ArrivalFade = new(TimeSpan.FromMilliseconds(150));
+
     internal OverlayWindow(
         List<TranslatedBlock> blocks,
         IReadOnlyList<OcrTextBlock> ocrBlocks,
@@ -72,11 +90,13 @@ public partial class OverlayWindow : Window
         string sourceLanguage,
         string targetLanguage,
         bool verticalText,
-        CaptureBubbleBackdrop? backdrop = null)
+        CaptureBubbleBackdrop? backdrop = null,
+        IReadOnlyCollection<TranslatedBlock>? pending = null)
     {
         InitializeComponent();
         _currentBlocks = blocks;
         _backdrop = backdrop;
+        _pending = pending ?? [];
         _translationVisible = blocks.Count > 0;
         _currentOcrBlocks = ocrBlocks;
         _currentSelectionScreenX = selectionScreenX;
@@ -216,10 +236,13 @@ public partial class OverlayWindow : Window
         string sourceLanguage,
         string targetLanguage,
         bool verticalText,
-        CaptureBubbleBackdrop? backdrop = null)
+        CaptureBubbleBackdrop? backdrop = null,
+        IReadOnlyCollection<TranslatedBlock>? pending = null,
+        IReadOnlyCollection<TranslatedBlock>? arriving = null)
     {
         _currentBlocks = blocks;
         _backdrop = backdrop;
+        _pending = pending ?? [];
         _currentOcrBlocks = ocrBlocks;
         _currentSelectionScreenX = selScreenX;
         _currentSelectionScreenY = selScreenY;
@@ -231,12 +254,50 @@ public partial class OverlayWindow : Window
         ProcessingBorder.Visibility = Visibility.Collapsed;
         SetTranslationLayersVisible(true);
         if (_isLoaded)
+        {
             BuildOverlay(
                 _currentBlocks,
                 _currentSelectionScreenX,
                 _currentSelectionScreenY,
                 _currentSelectionScreenWidth,
                 _currentSelectionScreenHeight);
+            if (arriving is { Count: > 0 }) FadeIn(arriving);
+        }
+    }
+
+    /// <summary>Fades in what the last build drew for <paramref name="arriving"/>.</summary>
+    /// <remarks>
+    /// Every other bubble was drawn again too, in the same place, and is left as it is: in the frame
+    /// it replaces the one before, so only the new ones are seen to appear.
+    /// </remarks>
+    private void FadeIn(IReadOnlyCollection<TranslatedBlock> arriving)
+    {
+        if (!SystemParameters.ClientAreaAnimation) return;
+
+        for (var k = 0; k < _drawnFrom.Count; k++)
+        {
+            var (block, backgrounds, texts) = _drawnFrom[k];
+            if (!arriving.Contains(block)) continue;
+
+            var backgroundsEnd = k + 1 < _drawnFrom.Count ? _drawnFrom[k + 1].Backgrounds : BubbleBackgroundCanvas.Children.Count;
+            var textsEnd = k + 1 < _drawnFrom.Count ? _drawnFrom[k + 1].Texts : BubbleTextCanvas.Children.Count;
+            for (var i = backgrounds; i < backgroundsEnd; i++) Fade(BubbleBackgroundCanvas.Children[i]);
+            for (var i = texts; i < textsEnd; i++) Fade(BubbleTextCanvas.Children[i]);
+        }
+
+        // From nothing to the element's own opacity, and then handed back to it.
+        static void Fade(UIElement element) =>
+            element.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(
+                0, element.Opacity, ArrivalFade) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop });
+    }
+
+    /// <summary>Whether a block is to be drawn by this build, noting where its elements start.</summary>
+    private bool StartDrawing(TranslatedBlock block)
+    {
+        if (_pending.Contains(block)) return false;
+
+        _drawnFrom.Add((block, BubbleBackgroundCanvas.Children.Count, BubbleTextCanvas.Children.Count));
+        return true;
     }
 
     public void RestoreIdle(bool hasVisibleBlocks)
@@ -325,6 +386,7 @@ public partial class OverlayWindow : Window
     {
         BubbleBackgroundCanvas.Children.Clear();
         BubbleTextCanvas.Children.Clear();
+        _drawnFrom.Clear();
         BuildDebugBoxes(selScreenX, selScreenY);
 
         // Chosen per build, not once per window: re-translating into another target reuses this
@@ -361,6 +423,7 @@ public partial class OverlayWindow : Window
         foreach (var block in blocks)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+            if (!StartDrawing(block)) continue;
             // Before the tilt: a turned column group is still a column group, and what decides how
             // it is set across is its shape, not its angle.
             if (block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns)
@@ -1009,6 +1072,8 @@ public partial class OverlayWindow : Window
             // Horizontal writing on a vertical page, or a target not written downwards: the
             // ordinary path sets it across.
             if (block.RunsAcross || block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns)
+                continue;
+            if (!StartDrawing(block))
                 continue;
 
             if (block.Tilt is { Column: true } tilt)
