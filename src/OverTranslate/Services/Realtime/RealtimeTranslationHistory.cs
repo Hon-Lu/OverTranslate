@@ -101,4 +101,18 @@ internal sealed class RealtimeTranslationHistory
             }
         return wide + other / 4;
     }
+
+    /// <summary>
+    /// The screen's other lines less those whose source <paramref name="history"/> already has.
+    /// </summary>
+    /// <remarks>
+    /// A line in both would be in one request twice, once as history and once as the screen — in a
+    /// chat, whose lines stay up after they are translated, that is every line of the screen.
+    /// </remarks>
+    internal static List<TranslationPair> Beside(
+        IReadOnlyList<TranslationPair> reference, IReadOnlyList<TranslationPair> history)
+    {
+        var told = history.Select(line => line.Source).ToHashSet(StringComparer.Ordinal);
+        return [.. reference.Where(line => !told.Contains(line.Source))];
+    }
 }
