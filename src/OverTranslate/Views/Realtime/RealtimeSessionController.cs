@@ -1364,7 +1364,7 @@ internal sealed class RealtimeSessionController
             // gone and the result belongs to a layout that no longer exists.
             if (_blockWindows.TryGetValue(update.RegionId, out var window))
             {
-                window.SetLines(update.Lines);
+                window.SetLines(update.Lines, update.Pending);
                 _shownLines[update.RegionId] = update.Lines;
             }
         });

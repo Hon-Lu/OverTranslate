@@ -50,6 +50,20 @@ public class RealtimePublishOrderTests
     }
 
     [Fact]
+    public void AStreamedPassIsDrawnAgainUntilALaterOneIs()
+    {
+        var order = new RealtimePublishOrder();
+        var streamed = order.NextPass();
+        var later = order.NextPass();
+
+        Assert.True(order.TryClaimAgain(streamed));
+        Assert.True(order.TryClaimAgain(streamed));
+        Assert.True(order.TryClaim(later));
+        Assert.False(order.TryClaimAgain(streamed));
+        Assert.False(order.TryClaim(later));
+    }
+
+    [Fact]
     public void SkippedPassesDoNotBlockTheOnesAfterThem()
     {
         // Reads that end without drawing anything — unchanged text, a recogniser with no free slot —

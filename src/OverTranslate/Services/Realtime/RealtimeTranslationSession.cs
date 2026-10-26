@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using NLog;
 using OverTranslate.Services.Ocr;
+using OverTranslate.Services.Providers;
 using OverTranslate.Services.Realtime.Capture;
 
 namespace OverTranslate.Services.Realtime;
@@ -68,6 +69,11 @@ public sealed class RealtimeTranslationSession
     // Shared by every region, and generation-tagged so a provider answer from before a pause cannot
     // repopulate the cache after that pause cleared it.
     private readonly RealtimeTranslationCache _translationCache = new();
+
+    // What this session has translated, as a model is shown it, and the lines it is still waiting
+    // on — both 「OpenAI 相容」 only; see TranslateAsync.
+    private readonly RealtimeTranslationHistory _history = new();
+    private readonly RealtimeInFlightTranslations _inFlight = new();
 
     // Shared by every region's pump, for the reasons on MaxConcurrentTranslations.
     private readonly SemaphoreSlim _translationSlots =
@@ -154,8 +160,9 @@ public sealed class RealtimeTranslationSession
     public bool IsPaused { get; private set; }
 
     /// <summary>
-    /// The models the last <see cref="Start"/> found missing, loading: done once each load has
-    /// ended, however it ended, and already done when everything was in memory.
+    /// The models the last <see cref="Start"/> found missing, loading — and for 「OpenAI 相容」 the
+    /// translation model being warmed up: done once each has ended, however it ended, and already
+    /// done when everything was in memory.
     /// </summary>
     public Task ModelsLoading { get; private set; } = Task.CompletedTask;
 
@@ -170,13 +177,19 @@ public sealed class RealtimeTranslationSession
     /// the picture to settle. True for <see cref="Resume"/>; false when a session is starting, where
     /// both waits are earning their keep — see <see cref="RunRegionAsync"/>.
     /// </param>
+    /// <param name="warmUp">
+    /// Whether the translation model is warmed up — see <see cref="WarmUpTranslationAsync"/>. False
+    /// only for a change of languages, which happens mid-session over a model that has just been
+    /// translating.
+    /// </param>
     public void Start(
         IReadOnlyList<RealtimeRegion> regions,
         string sourceLanguage,
         string targetLanguage,
         Models.TranslationProvider provider,
         IRealtimeCaptureBackend capture,
-        bool readAtOnce = false)
+        bool readAtOnce = false,
+        bool warmUp = true)
     {
         // Not the public Stop: this one is the tail of the previous run only when there was one,
         // and 繼續 comes through here with the same backend it is about to keep using. Reporting on
@@ -208,8 +221,13 @@ public sealed class RealtimeTranslationSession
         // the next line is about to need — loads now whatever it will read with and does not have
         // yet, and lets the manga models go if no block will read with them. See
         // OcrService.KeepWarmForRealtime.
-        ModelsLoading = _ocr.KeepWarmForRealtime(
-            sourceLanguage, regions.Any(region => region.Orientation == RealtimeTextOrientation.Vertical));
+        //
+        // The translation model is asked to load beside it, and the bar's 載入模型中… waits for both:
+        // to the user it is one wait for the session to be ready, whichever model it is on.
+        ModelsLoading = Task.WhenAll(
+            _ocr.KeepWarmForRealtime(
+                sourceLanguage, regions.Any(region => region.Orientation == RealtimeTextOrientation.Vertical)),
+            warmUp ? WarmUpTranslationAsync(provider, sourceLanguage, targetLanguage, cts.Token) : Task.CompletedTask);
 
         // One loop per region rather than one loop over the regions. Sharing a loop made every
         // region wait out the slowest one: with three regions and a half-second recognition apiece,
@@ -228,6 +246,41 @@ public sealed class RealtimeTranslationSession
             loops.Add(new RegionLoop(watched.Id, loop, step));
         }
         _loops = loops;
+    }
+
+    /// <summary>
+    /// Has the translation model loaded while the screen is first being read, rather than in front
+    /// of the first line.
+    /// </summary>
+    /// <remarks>
+    /// <para>A local model takes seconds to load on the request that finds it missing — measured, most
+    /// of the first request — and the server lets it go again after a few idle minutes, which a pause
+    /// easily is. So every start and every 繼續 sends one short request first, whatever the server
+    /// and wherever it is: whether the model is still in memory is the server's to know, and when it
+    /// is the request costs a token. See <see cref="TranslationService.WarmUpAsync"/>.</para>
+    ///
+    /// <para>Never fails. A server that refuses this refuses the first translation too, and that is
+    /// where the user is told, in the words the failure has there; saying it twice, the first time
+    /// for a request they never asked for, would only be noise. Not awaited by anything but the
+    /// bar's hint: the first pass goes out when it is ready, and a server that answers one request
+    /// at a time puts it behind this one.</para>
+    /// </remarks>
+    private async Task WarmUpTranslationAsync(
+        Models.TranslationProvider provider, string sourceLanguage, string targetLanguage, CancellationToken token)
+    {
+        try
+        {
+            await _translation.WarmUpAsync(provider, sourceLanguage, targetLanguage, token);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Paused or ended before the model answered; nothing to say.
+        }
+        catch (Exception ex)
+        {
+            // The kind only: what the server said is the first translation's to show.
+            Log.Info("Realtime translation warm-up failed ({Kind}); not reported", ex.GetType().Name);
+        }
     }
 
     /// <summary>
@@ -325,6 +378,11 @@ public sealed class RealtimeTranslationSession
         if (running) StopLoops();
         var generation = _translationCache.Fence();
 
+        // After the fence, so an answer for the old pair finishing now is refused by the history
+        // rather than kept in it: lines and translations into the language just left would read to
+        // the model as the way to translate into the new one.
+        _history.Clear();
+
         Log.Info("Realtime session languages changed: {OldSrc}->{OldTgt} to {Src}->{Tgt}, {State}",
             _sourceLanguage, _targetLanguage, sourceLanguage, targetLanguage,
             running ? "restarting at once" : IsPaused ? "still paused" : "not started");
@@ -333,7 +391,7 @@ public sealed class RealtimeTranslationSession
         _targetLanguage = targetLanguage;
 
         if (running)
-            Start(_regions, sourceLanguage, targetLanguage, _provider, _capture!, readAtOnce: true);
+            Start(_regions, sourceLanguage, targetLanguage, _provider, _capture!, readAtOnce: true, warmUp: false);
 
         return generation;
     }
@@ -344,8 +402,13 @@ public sealed class RealtimeTranslationSession
     /// followed by 開始翻譯, however long the framing takes, and would otherwise pay the reload the
     /// pause above exists to avoid.
     /// </param>
-    public void Stop(bool releaseRecogniser = false) =>
+    public void Stop(bool releaseRecogniser = false)
+    {
+        // The session is over, and what it translated is no guide to the next one, which may be
+        // another game entirely. Kept on the way back to framing, as the cache is.
+        if (releaseRecogniser) _history.Clear();
         Stop(releaseRecogniser, reportCapture: true);
+    }
 
     /// <param name="reportCapture">
     /// Whether this stop ends a run of translating, as opposed to being the restart inside
@@ -1037,11 +1100,29 @@ public sealed class RealtimeTranslationSession
     /// Translates only the lines the session has not seen before, then reassembles the full result
     /// in the original order so the overlay always receives every line it has to draw.
     /// </summary>
+    /// <param name="shown">
+    /// Told the whole read again each time a line arrives before the answer is in — streamed by a
+    /// model, or a line this pass is waiting on from another: the lines in so far with their
+    /// translation, the rest with no text and named as pending. Called from whichever thread the
+    /// line arrived on. Never called for an engine, whose answer comes whole.
+    /// </param>
+    /// <remarks>
+    /// <para>For 「OpenAI 相容」 each request is the one measured best for a session: the new lines in
+    /// one batch, the lines of the same read that are already translated beside them as the screen
+    /// around them, and the session's history before both — see
+    /// <see cref="RealtimeTranslationHistory"/>. A line another pass has already sent is not sent
+    /// again but waited for — see <see cref="RealtimeInFlightTranslations"/>. The engines translate
+    /// each line on their own, have nowhere to put the rest, and are sent what they always were.</para>
+    ///
+    /// <para>What is cached is unchanged by any of it: a line is asked for once per session and kept
+    /// once it has an answer, and a line no engine translated is not kept.</para>
+    /// </remarks>
     private async Task<List<TranslatedBlock>?> TranslateAsync(
         List<OcrTextBlock> blocks,
         string sourceLanguage,
         string targetLanguage,
         int generation,
+        Action<List<TranslatedBlock>, IReadOnlyCollection<TranslatedBlock>>? shown,
         CancellationToken token)
     {
         if (!_translationCache.IsCurrent(generation)) return null;
@@ -1049,19 +1130,133 @@ public sealed class RealtimeTranslationSession
         // The service is part of the key: it cannot change mid-session today, but a cache that
         // silently outlived a change of engine would serve the old engine's wording forever.
         var cacheKeyPrefix = $"{_provider}|{sourceLanguage}|{targetLanguage}|";
-        var missing = blocks
-            .Where(block => !_translationCache.TryGet(
-                cacheKeyPrefix + block.Text, generation, out _))
+        var withContext = _provider == Models.TranslationProvider.OpenAI;
+
+        // Every line this pass is waiting for, by key: the ones it sends and the ones another pass
+        // already has on their way. One per key, so a line read twice in one region goes once.
+        var waitingFor = new Dictionary<string, RealtimeInFlightTranslations.Line>();
+        var sent = new List<RealtimeInFlightTranslations.Line>();
+        var missing = new List<OcrTextBlock>();
+        foreach (var block in blocks)
+        {
+            var key = cacheKeyPrefix + block.Text;
+            if (_translationCache.TryGet(key, generation, out _)) continue;
+            if (!withContext)
+            {
+                missing.Add(block);
+                continue;
+            }
+
+            if (waitingFor.ContainsKey(key)) continue;
+            var (line, send) = _inFlight.Claim(key, generation);
+            waitingFor[key] = line;
+            if (!send) continue;
+            missing.Add(block);
+            sent.Add(line);
+        }
+
+        // Serialised, so the read sent last is the one put together last.
+        var showGate = new object();
+        void Show()
+        {
+            lock (showGate)
+            {
+                if (shown is null) return;
+                var pending = new HashSet<TranslatedBlock>(ReferenceEqualityComparer.Instance);
+                var lines = blocks
+                    .Select(block =>
+                    {
+                        var key = cacheKeyPrefix + block.Text;
+                        if (_translationCache.TryGet(key, generation, out var translated))
+                            return Translated(block, translated, untranslated: false);
+                        if (waitingFor.TryGetValue(key, out var line) && line.Arrived is { } arrived)
+                            return Translated(block, arrived, untranslated: false);
+
+                        var waiting = Translated(block, "", untranslated: false);
+                        pending.Add(waiting);
+                        return waiting;
+                    })
+                    .ToList();
+                shown(lines, pending);
+            }
+        }
+
+        foreach (var line in waitingFor.Values) line.Changed += Show;
+        try
+        {
+            if (missing.Count > 0)
+            {
+                try
+                {
+                    await SendAsync();
+                }
+                finally
+                {
+                    // Off first: this pass draws its own answer whole in a moment, and only the
+                    // passes waiting on these lines still need telling that they are done.
+                    foreach (var line in sent)
+                    {
+                        line.Changed -= Show;
+                        line.Complete();
+                    }
+                }
+            }
+
+            var others = waitingFor.Values.Except(sent).Select(line => line.Done).ToList();
+            if (others.Count > 0) await Task.WhenAll(others).WaitAsync(token);
+        }
+        finally
+        {
+            foreach (var line in waitingFor.Values) line.Changed -= Show;
+
+            // A line told a moment ago may still be on its way into Show on another thread; once
+            // this returns, the whole answer is what gets drawn, and nothing streamed after it.
+            lock (showGate) shown = null;
+        }
+
+        // A pause may have landed while the provider was answering. Its result belongs to a screen
+        // view the session has abandoned: do not draw it, even untranslated.
+        if (!_translationCache.IsCurrent(generation)) return null;
+
+        return blocks
+            .Select(block => _translationCache.TryGet(cacheKeyPrefix + block.Text, generation, out var translated)
+                ? Translated(block, translated, untranslated: false)
+                : Translated(block, block.Text, untranslated: true))
             .ToList();
 
-        if (missing.Count > 0)
+        async Task SendAsync()
         {
             var apiKey = SettingsService.Instance.Current.ApiKey;
             if (_translation.ProviderRequiresApiKey(_provider) && string.IsNullOrWhiteSpace(apiKey))
                 throw new InvalidOperationException(LocalizationService.Get("S.Realtime.MissingApiKey"));
 
+            TranslationContext? context = null;
+            if (withContext)
+            {
+                // The lines of this read that already have a translation and are not being sent: what
+                // the new ones sit among on screen. Each once, as the request names them.
+                var reference = blocks
+                    .Select(block => block.Text)
+                    .Distinct(StringComparer.Ordinal)
+                    .Select(text => _translationCache.TryGet(cacheKeyPrefix + text, generation, out var translated)
+                        ? new TranslationPair(text, translated)
+                        : null)
+                    .OfType<TranslationPair>()
+                    .ToList();
+                var history = _history.Lines;
+
+                context = new TranslationContext(
+                    history.Count > 0 ? history : null,
+                    reference.Count > 0 ? reference : null,
+                    (index, text) =>
+                    {
+                        if (index >= 0 && index < sent.Count) sent[index].Arrive(text);
+                    });
+            }
+
             var (results, _) = await _translation.TranslateAsync(
-                missing, sourceLanguage, targetLanguage, apiKey, cancellationToken: token, engine: _provider);
+                missing, sourceLanguage, targetLanguage, apiKey, cancellationToken: token, engine: _provider,
+                context: context);
 
             _translationCache.ClearIfOverLimit(TranslationCacheLimit, generation);
 
@@ -1070,39 +1265,29 @@ public sealed class RealtimeTranslationSession
             //
             // A line no engine translated is not cached: the cache outlives a pause, so the original
             // text stored as its answer would be drawn for that line for the rest of the session.
-            // Left out, it is still missing on the next pass and is asked for again.
+            // Left out, it is still missing on the next pass and is asked for again. Nor is it
+            // written into the history, for the reason given there.
+            var round = new List<TranslationPair>();
             for (int i = 0; i < missing.Count && i < results.Count; i++)
-                if (!results[i].Untranslated)
-                    _translationCache.Set(
-                        cacheKeyPrefix + missing[i].Text,
-                        results[i].TranslatedText,
-                        generation);
-        }
-
-        // A pause may have landed while the provider was answering. Its result belongs to a screen
-        // view the session has abandoned: do not draw it, even untranslated.
-        if (!_translationCache.IsCurrent(generation)) return null;
-
-        return blocks
-            .Select(block =>
             {
-                var found = _translationCache.TryGet(
-                    cacheKeyPrefix + block.Text, generation, out var translated);
-                return new TranslatedBlock(
-                    block.Text,
-                    found ? translated : block.Text,
-                    block.Bounds,
-                    block.SourceLineBounds,
-                    block.RenderGlyphHeight)
-                {
-                    RunsAcross = block.RunsAcross,
-                    FontGlyphHeight = block.FontGlyphHeight,
-                    Tilt = block.Tilt,
-                    Untranslated = !found,
-                };
-            })
-            .ToList();
+                if (results[i].Untranslated) continue;
+                _translationCache.Set(cacheKeyPrefix + missing[i].Text, results[i].TranslatedText, generation);
+                round.Add(new TranslationPair(missing[i].Text, results[i].TranslatedText));
+            }
+
+            if (withContext) _history.Add(round, () => _translationCache.IsCurrent(generation));
+        }
     }
+
+    /// <summary>A recognised line holding <paramref name="text"/>, as the overlay draws it.</summary>
+    private static TranslatedBlock Translated(OcrTextBlock block, string text, bool untranslated) =>
+        new(block.Text, text, block.Bounds, block.SourceLineBounds, block.RenderGlyphHeight)
+        {
+            RunsAcross = block.RunsAcross,
+            FontGlyphHeight = block.FontGlyphHeight,
+            Tilt = block.Tilt,
+            Untranslated = untranslated,
+        };
 
     private static string DescribeFailure(Exception ex) => ex switch
     {
@@ -1177,11 +1362,26 @@ public sealed class RealtimeTranslationSession
             _ = Task.Run(async () =>
             {
                 var started = Stopwatch.GetTimestamp();
+                var firstMs = -1;
                 try
                 {
                     session.SetBusy(true);
+
+                    // Lines streamed in before the answer is whole are drawn as they come, straight
+                    // onto the screen with no fade: a line being read is no place for a transition,
+                    // and the next line must not wait on the slowest of the batch. Under the same
+                    // rules as the whole answer — not once the pass is stale, not over a later pass.
                     var translated = await session.TranslateAsync(
-                        blocks, sourceLanguage, targetLanguage, generation, token);
+                        blocks, sourceLanguage, targetLanguage, generation,
+                        (lines, pending) =>
+                        {
+                            if (token.IsCancellationRequested || !session._translationCache.IsCurrent(generation))
+                                return;
+                            if (Publish(pass, lines, generation, pending, again: true))
+                                Interlocked.CompareExchange(
+                                    ref firstMs, (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds, -1);
+                        },
+                        token);
                     var translateMs = (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
                     // A cancelled token is a run that has been stopped — paused, or started again on
@@ -1197,11 +1397,11 @@ public sealed class RealtimeTranslationSession
 
                     // Both per pass, so both track the content's rate of change — see the read line
                     // in RunRegionAsync for why that cannot sit at Info.
-                    if (Publish(pass, translated, generation))
+                    if (Publish(pass, translated, generation, again: Volatile.Read(ref firstMs) >= 0))
                     {
                         Log.Debug(
-                            "Realtime pass region={Region} ocr={Ocr}ms translate={Translate}ms lines={Lines}",
-                            region.Id, ocrMs, translateMs, translated.Count);
+                            "Realtime pass region={Region} ocr={Ocr}ms translate={Translate}ms first={First}ms lines={Lines}",
+                            region.Id, ocrMs, translateMs, Volatile.Read(ref firstMs), translated.Count);
 
                         // Drawn as it is, since the other lines are real, but a line shown in its
                         // original text is waiting on a translation. The pixels will not change to ask
@@ -1245,18 +1445,23 @@ public sealed class RealtimeTranslationSession
         }
 
         /// <summary>Draws a pass's lines unless a later pass has already been drawn.</summary>
+        /// <param name="pending">Lines still on their way — see <see cref="RealtimeRegionUpdate.Pending"/>.</param>
+        /// <param name="again">Whether this pass may already have been drawn, its lines streamed in.</param>
         /// <returns>False when this pass has been overtaken.</returns>
         public bool Publish(
             long pass,
             IReadOnlyList<TranslatedBlock> lines,
-            int? generation = null)
+            int? generation = null,
+            IReadOnlyCollection<TranslatedBlock>? pending = null,
+            bool again = false)
         {
-            if (!_order.TryClaim(pass)) return false;
+            if (!(again ? _order.TryClaimAgain(pass) : _order.TryClaim(pass))) return false;
 
             session.RaiseRegionUpdated(new RealtimeRegionUpdate(
                 region.Id,
                 lines,
-                generation ?? session._translationCache.Generation));
+                generation ?? session._translationCache.Generation,
+                pending is { Count: > 0 } ? pending : null));
             // The region shows what it should again, so a translation that failed before is over.
             Recovered(RealtimeFailureStage.Translate);
             return true;

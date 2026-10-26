@@ -371,6 +371,45 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
+    /// The warm-up is one short request: the same instruction the translations start with, one
+    /// word, one token back, not streamed — and the user's parameters, so a server that would refuse
+    /// them refuses here what it would refuse anyway.
+    /// </summary>
+    [Fact]
+    public async Task WarmUpAsync_SendsTheInstructionWithOneWordForOneToken()
+    {
+        var server = new OpenAiFakeServer();
+        using var http = new HttpClient(server);
+        await new OpenAiCompatibleProvider(
+            http,
+            () => new OpenAiCompatibleOptions(
+                "http://localhost:1234/v1", "test-model", ReasoningEffort: "none"))
+            .WarmUpAsync("JA", "ZH-HANT");
+
+        var request = Assert.Single(server.Requests);
+        Assert.Equal([OpenAiChatTranslator.WarmUpText], request.Segments);
+        Assert.Equal(1, request.Payload.GetProperty("max_tokens").GetInt32());
+        Assert.False(request.Streamed);
+        Assert.Equal("none", request.Payload.GetProperty("reasoning_effort").GetString());
+        Assert.Equal(
+            OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "").Build([OpenAiChatTranslator.WarmUpText]),
+            request.Message);
+    }
+
+    [Fact]
+    public async Task WarmUpAsync_WithNoModelSendsNothing()
+    {
+        var server = new OpenAiFakeServer();
+        using var http = new HttpClient(server);
+
+        await new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:1234/v1", " "))
+            .WarmUpAsync("JA", "ZH-HANT");
+
+        Assert.Empty(server.Requests);
+    }
+
+    /// <summary>
     /// The built-in setting sends the three numbers a new setting opens on, and no reasoning effort.
     /// </summary>
     /// <remarks>
