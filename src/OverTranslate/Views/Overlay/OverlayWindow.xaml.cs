@@ -80,6 +80,9 @@ public partial class OverlayWindow : Window
     /// </summary>
     private static readonly Duration ArrivalFade = new(TimeSpan.FromMilliseconds(150));
 
+    /// <summary>The fades still running, carried from one build to the next.</summary>
+    private readonly ArrivalFades _fades = new(ArrivalFade.TimeSpan);
+
     internal OverlayWindow(
         List<TranslatedBlock> blocks,
         IReadOnlyList<OcrTextBlock> ocrBlocks,
@@ -183,6 +186,7 @@ public partial class OverlayWindow : Window
         BubbleBackgroundCanvas.Children.Clear();
         BubbleTextCanvas.Children.Clear();
         DebugCanvas.Children.Clear();
+        _fades.Clear();
 
         double winPhysLeft = _physBounds.Left;
         double winPhysTop  = _physBounds.Top;
@@ -261,34 +265,53 @@ public partial class OverlayWindow : Window
                 _currentSelectionScreenY,
                 _currentSelectionScreenWidth,
                 _currentSelectionScreenHeight);
-            if (arriving is { Count: > 0 }) FadeIn(arriving);
+            FadeIn(arriving ?? []);
         }
     }
 
-    /// <summary>Fades in what the last build drew for <paramref name="arriving"/>.</summary>
+    /// <summary>
+    /// Fades in what the last build drew for <paramref name="arriving"/>, and carries on the fades
+    /// that build cut short.
+    /// </summary>
     /// <remarks>
     /// Every other bubble was drawn again too, in the same place, and is left as it is: in the frame
-    /// it replaces the one before, so only the new ones are seen to appear.
+    /// it replaces the one before, so only the new ones are seen to appear. A bubble still fading
+    /// from an earlier build is a new element now, and picks its fade up where it was — see
+    /// <see cref="ArrivalFades"/>.
     /// </remarks>
     private void FadeIn(IReadOnlyCollection<TranslatedBlock> arriving)
     {
         if (!SystemParameters.ClientAreaAnimation) return;
 
+        var places = new Dictionary<TranslatedBlock, int>(ReferenceEqualityComparer.Instance);
+        for (var i = 0; i < _currentBlocks.Count; i++) places.TryAdd(_currentBlocks[i], i);
+
+        var fading = _fades.Next(
+            arriving.Where(places.ContainsKey).Select(block => places[block]),
+            System.Diagnostics.Stopwatch.GetTimestamp());
+        if (fading.Count == 0) return;
+
         for (var k = 0; k < _drawnFrom.Count; k++)
         {
             var (block, backgrounds, texts) = _drawnFrom[k];
-            if (!arriving.Contains(block)) continue;
+            if (!places.TryGetValue(block, out var place) || !fading.TryGetValue(place, out var elapsed)) continue;
 
             var backgroundsEnd = k + 1 < _drawnFrom.Count ? _drawnFrom[k + 1].Backgrounds : BubbleBackgroundCanvas.Children.Count;
             var textsEnd = k + 1 < _drawnFrom.Count ? _drawnFrom[k + 1].Texts : BubbleTextCanvas.Children.Count;
-            for (var i = backgrounds; i < backgroundsEnd; i++) Fade(BubbleBackgroundCanvas.Children[i]);
-            for (var i = texts; i < textsEnd; i++) Fade(BubbleTextCanvas.Children[i]);
+            for (var i = backgrounds; i < backgroundsEnd; i++) Fade(BubbleBackgroundCanvas.Children[i], elapsed);
+            for (var i = texts; i < textsEnd; i++) Fade(BubbleTextCanvas.Children[i], elapsed);
         }
 
-        // From nothing to the element's own opacity, and then handed back to it.
-        static void Fade(UIElement element) =>
+        // From as far as the fade had got to the element's own opacity, and then handed back to it.
+        static void Fade(UIElement element, TimeSpan elapsed)
+        {
+            var progress = elapsed / ArrivalFade.TimeSpan;
             element.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(
-                0, element.Opacity, ArrivalFade) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop });
+                element.Opacity * progress, element.Opacity, ArrivalFade.TimeSpan - elapsed)
+            {
+                FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop,
+            });
+        }
     }
 
     /// <summary>Whether a block is to be drawn by this build, noting where its elements start.</summary>
