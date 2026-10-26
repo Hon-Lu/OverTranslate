@@ -3121,46 +3121,6 @@
     </Style>
 
 
-    <!-- ══════════ Prompt tab ══════════ -->
-    <!-- A page header, not a control to set: the underline is the whole of the selected look,
-         so nothing here can be mistaken for a switch that is on. -->
-    <Style x:Key="PromptTab" TargetType="RadioButton">
-        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Cursor"     Value="Hand"/>
-        <Setter Property="Height"     Value="42"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="RadioButton">
-                    <Grid Background="{TemplateBinding Background}">
-                        <ContentPresenter Margin="12,0"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
-                        <!-- Drawn even while unselected, in nothing: it holds the two pixels
-                             the selected tab needs, so selecting one does not lift its label. -->
-                        <Border x:Name="Underline"
-                                Height="2"
-                                VerticalAlignment="Bottom"
-                                Background="Transparent"/>
-                    </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter TargetName="Underline" Property="Background"
-                                    Value="{DynamicResource AppAccent}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <Style x:Key="PromptGroupBorder" TargetType="Border">
         <Setter Property="BorderBrush"     Value="{DynamicResource AppBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -3188,22 +3148,6 @@
              corners, so the strip's square top corners were drawn over the frame's curve. -->
         <Setter Property="CornerRadius"    Value="5,5,0,0"/>
         <Setter Property="Padding"         Value="12,6"/>
-    </Style>
-
-    <!-- The action that belongs to one prompt box, on that box's own caption row. Icon only and
-         pushed to the right: a word beside "System Prompt" would compete with the name of the field
-         it sits in, and what it does is in the tooltip. -->
-    <Style x:Key="PromptRoleAction" TargetType="Button" BasedOn="{StaticResource FlatButton}">
-        <Setter Property="Width"            Value="24"/>
-        <Setter Property="Height"           Value="22"/>
-        <Setter Property="Padding"          Value="0"/>
-        <Setter Property="Margin"           Value="8,0,0,0"/>
-        <Setter Property="Background"       Value="Transparent"/>
-        <Setter Property="BorderBrush"      Value="Transparent"/>
-        <Setter Property="FontFamily"       Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
-        <Setter Property="FontSize"         Value="12"/>
-        <Setter Property="Foreground"       Value="{DynamicResource AppTextSecondary}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <!-- Left-aligned and small. "System Prompt" is a term of art the reader either knows or is

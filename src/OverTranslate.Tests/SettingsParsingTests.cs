@@ -719,7 +719,7 @@ public class SettingsParsingTests
         {
             Id = "a",
             Name = "測試用",
-            Auto = new OpenAiPromptPair { UserPrompt = "翻成 {target_name}" },
+            ExtraInstructions = "翻成 {target_name}",
         });
 
         var json = SettingsService.Serialize(settings);

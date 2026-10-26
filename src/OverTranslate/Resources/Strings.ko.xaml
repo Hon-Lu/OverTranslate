@@ -504,10 +504,6 @@
     <sys:String x:Key="S.Settings.CopyModelName">모델 이름 복사</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">필수</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">로컬 LLM 설치 안내</sys:String>
-    <sys:String x:Key="S.Settings.PromptAuto">원본: 자동</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicit">원본: 지정</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoHint">이 프롬프트는 원본 언어가 ‘자동(Automatic)’일 때만 적용됩니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitHint">이 프롬프트는 원본 언어를 지정했을 때만 적용됩니다. 예: ‘영어(English)’.</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">모델 설정</sys:String>
     <sys:String x:Key="S.Settings.ProfileInUse">사용 중인 설정</sys:String>
     <sys:String x:Key="S.Settings.ProfileListTitle">설정 목록</sys:String>
@@ -516,9 +512,7 @@
     <sys:String x:Key="S.Settings.ProfileSnapshotBody">현재 시스템 기본값을 유지하려면 사용자 설정을 추가하세요.</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotAction">시스템 기본값 복사</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">시스템 기본값 v{0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoScope">원본 언어가 '자동'일 때만 아래 프롬프트를 사용합니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitScope">원본 언어를 지정했을 때(예: '영어')만 아래 프롬프트를 사용합니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptDeleteTitle">프롬프트 삭제</sys:String>
+    <sys:String x:Key="S.Settings.PromptDeleteTitle">설정 삭제</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">‘{0}’을(를) 삭제할까요? 되돌릴 수 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptDefaultName">시스템 기본값</sys:String>
     <sys:String x:Key="S.Settings.PromptReadOnly">읽기 전용</sys:String>
@@ -526,35 +520,23 @@
     <sys:String x:Key="S.Settings.PromptEditTitle">설정 편집</sys:String>
     <sys:String x:Key="S.Settings.PromptDelete">삭제</sys:String>
     <sys:String x:Key="S.Settings.PromptName">이름</sys:String>
-    <sys:String x:Key="S.Settings.PromptNamePlaceholder">이 프롬프트의 이름</sys:String>
-    <sys:String x:Key="S.Settings.PromptContent">프롬프트 내용</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">설정 안 함</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceLanguage">원본 언어</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceAuto">자동</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceExplicit">지정</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemPlaceholder">시스템 프롬프트를 입력…</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserPlaceholder">사용자 프롬프트를 입력…</sys:String>
-    <sys:String x:Key="S.Settings.PromptNeedOne">System Prompt와 User Prompt 중 하나는 입력해야 합니다</sys:String>
-    <sys:String x:Key="S.Settings.PromptOtherEmpty">'{0}' 프롬프트가 비어 있습니다</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemTip">선택한 모델이 권장하는 형식으로 시스템 프롬프트를 설정하세요. 필요 없으면 비워 두어도 됩니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserTip">선택한 모델이 권장하는 형식으로 사용자 프롬프트를 설정하세요. 필요 없으면 비워 두어도 됩니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptNewName">내 프롬프트 {0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptLoadDefault">기본 프롬프트 불러오기</sys:String>
-    <sys:String x:Key="S.Settings.PromptParams">사용할 수 있는 매개변수</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">보내기 전에 실제로 사용하는 언어 정보로 바뀝니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">매개변수</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">설명</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">예</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceName">원본 언어 이름</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceCode">원본 언어 코드</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetName">번역할 언어 이름</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetCode">번역할 언어 코드</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceNameExample">영어</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetNameExample">일본어</sys:String>
+    <sys:String x:Key="S.Settings.PromptNamePlaceholder">이 설정의 이름</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructions">추가 요청</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsOptional">선택 사항</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsHint">앱에 내장된 번역 규칙 뒤에 덧붙여집니다. 말투나 어휘 스타일 같은 요청을 적기에 알맞습니다. 비워 두면 내장 규칙만 적용됩니다.</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">예: 편안한 구어체로 번역하기, 문장 끝에 마침표 붙이지 않기</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">설정 안 함 — 내장 번역 규칙만 적용</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">이전 버전의 사용자 프롬프트에서 옮겨 온 내용입니다. 번역 작업, 출력 형식, 언어는 이제 앱이 처리하므로 여기에는 말투와 스타일에 관한 요청만 남겨 두면 됩니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptNewName">내 설정 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">고급</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">권장 모델 넣기</sys:String>
     <sys:String x:Key="S.Settings.AdvancedHint">사용하지 않는 매개변수는 전송되지 않습니다. 지원하는 매개변수와 범위, 권장값은 모델마다 다르므로 모델 문서에 맞춰 설정하세요.</sys:String>
     <sys:String x:Key="S.Settings.ParamEnable">사용</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">답변하기 전에 모델이 '생각'하는 정도를 조절합니다. 일부 범용 모델은 기본적으로 먼저 생각한 뒤 답변하므로
+번역이 크게 느려지거나 시간 초과될 수 있습니다.
+사용을 선택하고 none으로 설정하면 생각을 꺼서 번역이 빨라집니다. 번역 전용 모델은 보통 설정할 필요가 없습니다.
+사용할 수 있는 값은 서비스마다 다르며, 흔히 none, minimal, low, medium, high를 씁니다.</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">범위: 0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">확률이 높은 결과를 얼마나 선호할지 조정합니다. 값이 낮을수록 가장 가능성 높은

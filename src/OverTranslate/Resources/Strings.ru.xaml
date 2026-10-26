@@ -495,10 +495,6 @@
     <sys:String x:Key="S.Settings.CopyModelName">Копировать имя модели</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">Обязательно</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">Руководство по локальной LLM (англ.)</sys:String>
-    <sys:String x:Key="S.Settings.PromptAuto">Оригинал: авто</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicit">Оригинал: задан</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoHint">Этот промпт используется, только когда язык оригинала — «Авто».</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitHint">Этот промпт используется, только когда язык оригинала задан, например английский.</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">Настройки модели</sys:String>
     <sys:String x:Key="S.Settings.ProfileInUse">Используемые настройки</sys:String>
     <sys:String x:Key="S.Settings.ProfileListTitle">Сохраненные настройки</sys:String>
@@ -507,9 +503,7 @@
     <sys:String x:Key="S.Settings.ProfileSnapshotBody">Чтобы сохранить текущие встроенные настройки, добавьте их копию как свои.</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotAction">Копировать встроенные</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">Встроенные v{0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoScope">Используется, только когда язык оригинала — «Авто».</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitScope">Используется, только когда язык оригинала задан, например английский.</sys:String>
-    <sys:String x:Key="S.Settings.PromptDeleteTitle">Удалить промпт</sys:String>
+    <sys:String x:Key="S.Settings.PromptDeleteTitle">Удалить настройки</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">Удалить «{0}»? Это действие нельзя отменить.</sys:String>
     <sys:String x:Key="S.Settings.PromptDefaultName">Встроенные</sys:String>
     <sys:String x:Key="S.Settings.PromptReadOnly">Только чтение</sys:String>
@@ -517,35 +511,24 @@
     <sys:String x:Key="S.Settings.PromptEditTitle">Изменить настройки</sys:String>
     <sys:String x:Key="S.Settings.PromptDelete">Удалить</sys:String>
     <sys:String x:Key="S.Settings.PromptName">Название</sys:String>
-    <sys:String x:Key="S.Settings.PromptNamePlaceholder">Название промпта</sys:String>
-    <sys:String x:Key="S.Settings.PromptContent">Текст промпта</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">Не задано</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceLanguage">Язык оригинала</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceAuto">Авто</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceExplicit">Задан</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemPlaceholder">Системный промпт…</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserPlaceholder">Пользовательский промпт…</sys:String>
-    <sys:String x:Key="S.Settings.PromptNeedOne">Заполните System Prompt или User Prompt</sys:String>
-    <sys:String x:Key="S.Settings.PromptOtherEmpty">Промпт «{0}» пуст</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemTip">Задайте системный промпт в формате, рекомендованном для выбранной модели, или оставьте поле пустым, если он не нужен.</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserTip">Задайте пользовательский промпт в формате, рекомендованном для выбранной модели, или оставьте поле пустым, если он не нужен.</sys:String>
-    <sys:String x:Key="S.Settings.PromptNewName">Мой промпт {0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptLoadDefault">Загрузить встроенный промпт</sys:String>
-    <sys:String x:Key="S.Settings.PromptParams">Доступные параметры</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">Перед отправкой запроса заменяются фактически используемыми языками.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">Параметр</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">Описание</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">Пример</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceName">Название языка оригинала</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceCode">Код языка оригинала</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetName">Название языка перевода</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetCode">Код языка перевода</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceNameExample">Английский</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Японский</sys:String>
+    <sys:String x:Key="S.Settings.PromptNamePlaceholder">Название настроек</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructions">Дополнительные пожелания</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsOptional">необязательно</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsHint">Добавляются после встроенных правил перевода. Подходят для пожеланий к тону, выбору слов и стилю. Если оставить поле пустым, применяются только встроенные правила.</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">Например: переводить в непринужденном разговорном тоне; не ставить точку в конце фразы.</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">Не задано — применяются только встроенные правила перевода</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">Этот текст перенесен из вашего промпта в прошлой версии. Задачу перевода, формат ответа и язык теперь задает приложение, поэтому здесь достаточно оставить пожелания к тону и стилю.</sys:String>
+    <sys:String x:Key="S.Settings.PromptNewName">Мои настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Дополнительно</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Использовать рекомендуемую модель</sys:String>
     <sys:String x:Key="S.Settings.AdvancedHint">Невключенный параметр не передается в запросе. Модели различаются тем, какие параметры они принимают, в каком диапазоне и с какими значениями, — ориентируйтесь на документацию своей модели.</sys:String>
     <sys:String x:Key="S.Settings.ParamEnable">Включить</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">Насколько модель «размышляет» перед ответом. Некоторые универсальные модели по умолчанию
+сначала размышляют, из-за чего перевод заметно замедляется или не укладывается в тайм-аут.
+Включите параметр и выберите none, чтобы отключить размышление и ускорить перевод; моделям,
+созданным только для перевода, это обычно не нужно.
+Допустимые значения зависят от сервиса; чаще всего это none, minimal, low, medium и high.</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">Диапазон: 0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">Насколько сильно модель предпочитает самую вероятную формулировку. Чем ниже значение,

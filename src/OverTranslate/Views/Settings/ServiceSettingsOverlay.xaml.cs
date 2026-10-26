@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -42,17 +41,6 @@ public partial class ServiceSettingsOverlay : UserControl
 
     private readonly DispatcherTimer _apiKeyDebounce;
     private readonly DispatcherTimer _openAiSettingsDebounce;
-
-    private const int PromptAutoSegment = 0;
-    private const int PromptExplicitSegment = 1;
-
-    /// <summary>
-    /// Which of the two prompt libraries the list underneath the tabs is showing. Kept alongside
-    /// the tab's own checked state because every handler that reads or writes a prompt has to know
-    /// which of the two lists it belongs to, and asking two RadioButtons that each time reads worse
-    /// than asking this.
-    /// </summary>
-    private int _promptSegment = PromptAutoSegment;
 
     /// <summary>True while the controls are being populated, so initialization never writes back.</summary>
     private bool _loading;
@@ -222,7 +210,7 @@ public partial class ServiceSettingsOverlay : UserControl
     }
 
     /// <summary>
-    /// Re-renders the text this panel composes in code: the title, the note under the prompt tabs,
+    /// Re-renders the text this panel composes in code: the title,
     /// the built-in row's name and the label on the add row.
     /// </summary>
     private void OnLanguageChanged(object? sender, EventArgs e) => LoadSettings();
@@ -393,8 +381,8 @@ public partial class ServiceSettingsOverlay : UserControl
     }
 
     /// <summary>
-    /// Fills the tabs and the list under them. Also the language-change path, since the built-in
-    /// row's name, the note above the list and the label on the add row are all localized.
+    /// Fills the list. Also the language-change path, since the built-in row's name and the label
+    /// on the add row are localized.
     /// </summary>
     /// <remarks>
     /// Rebuilt whole on every change rather than kept in sync: the list is at most six short rows,
@@ -403,12 +391,6 @@ public partial class ServiceSettingsOverlay : UserControl
     /// </remarks>
     private void LoadPromptLibrary(AppSettings s)
     {
-        if (_promptSegment == PromptAutoSegment) PromptAutoTab.IsChecked = true;
-        else PromptExplicitTab.IsChecked = true;
-
-        // One list, whichever tab is showing. A saved profile carries a model, a temperature and both
-        // prompt pairs, so the tab beside the panels changes what is drawn in them and nothing else.
-        // It used to be two lists, and picking a row in one said nothing about the other.
         var profiles = s.OpenAi.Profiles;
         var selectedId = s.OpenAi.SelectedProfileId;
 
@@ -438,14 +420,6 @@ public partial class ServiceSettingsOverlay : UserControl
         UpdatePromptChrome();
     }
 
-    private void PromptTab_Checked(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-
-        _promptSegment = PromptExplicitTab.IsChecked == true ? PromptExplicitSegment : PromptAutoSegment;
-        LoadPromptLibrary(SettingsService.Instance.Current);
-    }
-
     /// <summary>Picks the prompt this case sends.</summary>
     /// <remarks>
     /// Also the path a rebuilt list takes when the stored selection comes up checked, so it writes
@@ -472,10 +446,7 @@ public partial class ServiceSettingsOverlay : UserControl
         var profiles = SettingsService.Instance.Current.OpenAi.Profiles;
         if (profiles.Count >= OpenAiSettings.MaxProfiles) return;
 
-        PromptEditor.Open(
-            _promptSegment == PromptAutoSegment,
-            profile: null,
-            suggestedName: SuggestProfileName(profiles));
+        PromptEditor.Open(profile: null, suggestedName: SuggestProfileName(profiles));
     }
 
     private void PromptEditPreset_Click(object sender, RoutedEventArgs e)
@@ -486,9 +457,7 @@ public partial class ServiceSettingsOverlay : UserControl
             .FirstOrDefault(p => p.Id == id);
         if (profile is null) return;
 
-        // The card opens on the tab the panel is showing, which is the one the reader was looking at
-        // when they reached for the pencil — it edits both pairs either way.
-        PromptEditor.Open(_promptSegment == PromptAutoSegment, profile, suggestedName: "");
+        PromptEditor.Open(profile, suggestedName: "");
     }
 
     /// <summary>
@@ -591,11 +560,7 @@ public partial class ServiceSettingsOverlay : UserControl
     /// </summary>
     private void UpdatePromptChrome()
     {
-        var automatic = _promptSegment == PromptAutoSegment;
         var openAi = SettingsService.Instance.Current.OpenAi;
-
-        PromptTabHint.Text = LocalizationService.Get(
-            automatic ? "S.Settings.PromptAutoHint" : "S.Settings.PromptExplicitHint");
 
         var count = openAi.Profiles.Count;
         PromptAddButton.IsEnabled = count < OpenAiSettings.MaxProfiles;
@@ -622,24 +587,26 @@ public partial class ServiceSettingsOverlay : UserControl
         // A parameter that is switched off is drawn as 不傳送 rather than left blank or hidden: the
         // reason a model behaves the way it does is as often a field that was left out as a value
         // that was sent, and a row that disappears when it is off cannot be read as either.
+        ProfileReasoningEffortText.Text = profile.ReasoningEffortEnabled
+            ? profile.ReasoningEffort
+            : Off;
         ProfileTemperatureText.Text = Sampling(profile.TemperatureEnabled, profile.Temperature);
         ProfileTopPText.Text = Sampling(profile.TopPEnabled, profile.TopP);
         ProfileSeedText.Text = Sampling(profile.SeedEnabled, profile.Seed);
 
-        // An em dash rather than a phrase for a parameter that is switched off. The three cards are
-        // read as a row of values, and a sentence in one of them is longer than the card, pushes the
-        // label into ellipsis and stops the row scanning as three of the same thing. A dash is the
-        // conventional "no value here", and the same mark in any language.
+        // An em dash rather than a phrase for a parameter that is switched off. The four cards are
+        // read as a block of values, and a sentence in one of them is longer than the card, pushes
+        // the label into ellipsis and stops the block scanning as four of the same thing. A dash is
+        // the conventional "no value here", and the same mark in any language.
         static string Sampling(bool enabled, double value) => enabled
             ? value.ToString("0.##", CultureInfo.InvariantCulture)
-            : "\u2014";
+            : Off;
 
-        // The tab decides which of the profile's two pairs is drawn and nothing else: the model and
-        // the temperature above belong to the profile, not to one of its cases.
-        var prompts = profile.PromptsFor(automatic);
-        WritePromptRole(PromptPreviewSystemText, PromptPreviewSystemEmpty, prompts.SystemPrompt);
-        WritePromptRole(PromptPreviewUserText, PromptPreviewUserEmpty, prompts.UserPrompt);
+        WriteExtraInstructions(profile.ExtraInstructions);
     }
+
+    /// <inheritdoc cref="UpdatePromptChrome"/>
+    private const string Off = "\u2014";
 
     /// <summary>
     /// Puts the model name on the clipboard, which is the one value on this pane someone needs
@@ -685,106 +652,22 @@ public partial class ServiceSettingsOverlay : UserControl
     private DispatcherTimer? _copyFeedback;
 
     /// <summary>
-    /// Fills one role's panel, or shows the line that says the role is deliberately unused.
+    /// Fills the extra-instructions panel, or shows the line that says only the built-in rules are
+    /// sent.
     /// </summary>
     /// <remarks>
-    /// The two TextBlocks are stacked rather than one being retargeted, because the prose is written
-    /// as Inlines with the placeholders picked out — see <see cref="WritePlaceholderAware"/> — and
-    /// the empty line is a plain string in a different style.
+    /// Plain text: the placeholders a carried-over prompt may still hold are filled in on the way
+    /// out, but they are no longer something this panel teaches, so they are not picked out either.
+    /// Normalised first, so a box saved before the editor did that does not draw a CRLF as two
+    /// breaks.
     /// </remarks>
-    private static void WritePromptRole(TextBlock body, TextBlock empty, string text)
+    private void WriteExtraInstructions(string text)
     {
         var hasText = text.Trim().Length > 0;
 
-        body.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
-        empty.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
-
-        // Drawn exactly as stored, trailing breaks included. This pane is what someone checks a
-        // prompt against before deciding it is wrong, and the break at the end of the user prompt is
-        // load-bearing: it is the blank line between the instruction and the text being translated,
-        // which nothing else inserts. Tidied away here, the one thing the reader cannot see would be
-        // the one thing easiest to delete by accident.
-        if (hasText) WritePlaceholderAware(body, text);
-        else body.Inlines.Clear();
-    }
-
-    /// <summary>
-    /// Writes prose that mentions the prompt placeholders, with each picked out in the accent colour.
-    /// </summary>
-    /// <remarks>
-    /// They are the only part of the sentence that is machinery rather than words — what the user
-    /// types into their own prompt to have a language substituted in — and the colour is what says
-    /// so without a sentence explaining it. The same colour the rest of the app uses for the thing
-    /// being pointed at, through a resource reference so it follows a theme change.
-    /// </remarks>
-    private static void WritePlaceholderAware(TextBlock target, string text)
-    {
-        target.Inlines.Clear();
-        foreach (var (segment, isPlaceholder) in SplitOnPlaceholders(text))
-        {
-            if (isPlaceholder)
-            {
-                var placeholder = new Run(segment);
-                placeholder.SetResourceReference(TextElement.ForegroundProperty, "AppAccent");
-                target.Inlines.Add(placeholder);
-                continue;
-            }
-
-            // The prose between placeholders may carry a line break — the explicit hint lists the
-            // source pair and the target pair one per line. Added as a LineBreak rather than left in
-            // a Run, so it does not depend on the block's wrapping to show up.
-            //
-            // Normalised first, or a CRLF splits into a piece ending in \r, which WPF draws as a
-            // break of its own on top of the one added here — the paragraph gap doubles. Presets
-            // saved before OpenAiSettings.NormaliseLineBreaks existed still hold mixed breaks.
-            var lines = OpenAiSettings.NormaliseLineBreaks(segment).Split('\n');
-            for (var i = 0; i < lines.Length; i++)
-            {
-                if (i > 0) target.Inlines.Add(new LineBreak());
-                if (lines[i].Length > 0) target.Inlines.Add(new Run(lines[i]));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Splits text into runs of ordinary prose and the placeholder tokens between them, in order.
-    /// </summary>
-    private static IEnumerable<(string Text, bool IsPlaceholder)> SplitOnPlaceholders(string text)
-    {
-        // All four, or the tag placeholders would be the only machinery in the sentence left looking
-        // like prose. None is a prefix of another once the closing brace is counted, so the
-        // earliest-match loop below cannot pick the wrong one.
-        string[] tokens =
-        [
-            OpenAiCompatibleProvider.SourcePlaceholder,
-            OpenAiCompatibleProvider.TargetPlaceholder,
-            OpenAiCompatibleProvider.SourceCodePlaceholder,
-            OpenAiCompatibleProvider.TargetCodePlaceholder,
-        ];
-
-        var index = 0;
-        while (index < text.Length)
-        {
-            var at = -1;
-            var length = 0;
-            foreach (var token in tokens)
-            {
-                var found = text.IndexOf(token, index, StringComparison.OrdinalIgnoreCase);
-                if (found < 0 || (at >= 0 && found >= at)) continue;
-                at = found;
-                length = token.Length;
-            }
-
-            if (at < 0)
-            {
-                yield return (text[index..], false);
-                yield break;
-            }
-
-            if (at > index) yield return (text[index..at], false);
-            yield return (text.Substring(at, length), true);
-            index = at + length;
-        }
+        ExtraInstructionsText.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
+        ExtraInstructionsEmpty.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
+        ExtraInstructionsText.Text = hasText ? OpenAiSettings.NormaliseLineBreaks(text) : "";
     }
 
     private void OllamaGuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
