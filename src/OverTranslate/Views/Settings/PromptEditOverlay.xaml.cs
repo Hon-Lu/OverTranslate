@@ -489,7 +489,11 @@ public partial class PromptEditOverlay : UserControl
         value.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>One entry of the Reasoning Effort list, as the shared combo box template draws it.</summary>
-    public sealed record ReasoningEffortOption(string Display);
+    public sealed record ReasoningEffortOption(string Display)
+    {
+        /// <summary>The value itself: what a screen reader names the entry by.</summary>
+        public override string ToString() => Display;
+    }
 
     /// <summary>
     /// Fills the Reasoning Effort list and picks <paramref name="stored"/> in it.
