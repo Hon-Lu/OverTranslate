@@ -311,6 +311,42 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
+    /// A Japanese name in kanji alone shares one character with Simplified at most, and copied it is
+    /// left as it is; two Simplified characters copied are still a copy.
+    /// </summary>
+    [Theory]
+    [InlineData("凉泉桜花", null)]
+    [InlineData("佐々木学子", null)]
+    [InlineData("这个问题", "copied")]
+    public void Content_TakesTwoSimplifiedCharactersForAHanCopy(string source, string? failure)
+    {
+        Assert.Equal(failure, OpenAiContentCheck.Failure(source, source, "zh-Hant"));
+    }
+
+    /// <summary>A title in katakana is one with a bracket or punctuation around it too.</summary>
+    [Theory]
+    [InlineData("「アイライク ユアライク")]
+    [InlineData("『アイライク・ユアライク』！")]
+    public void Content_PassesKatakanaInBrackets(string source)
+    {
+        Assert.Null(OpenAiContentCheck.Failure(source, source, "zh-Hant"));
+    }
+
+    /// <summary>
+    /// A title kept in its corner brackets as the source had it is not kana left behind; kana in
+    /// brackets the source did not have still is.
+    /// </summary>
+    [Theory]
+    [InlineData("「~BanG Dream! Our Notes~だんらんTV!」 初回放送のお知らせ", "「~BanG Dream! Our Notes~だんらんTV!」首次播出的公告", null)]
+    [InlineData("ー家Dumb Rock!「アイライク・ユアライク」 がデジタルリリース！", "ー家Dumb Rock!「アイライク・ユアライク」將以數位形式發行！", null)]
+    [InlineData("「アイライク」がリリース", "「アイライク」がリリース了", "kana")]
+    [InlineData("新曲がリリース", "新曲「がリリース」", "kana")]
+    public void Content_PassesATitleKeptInItsBrackets(string source, string translation, string? failure)
+    {
+        Assert.Equal(failure, OpenAiContentCheck.Failure(source, translation, "zh-Hant"));
+    }
+
+    /// <summary>
     /// The target decides what counts as left untranslated: kana is Japanese's own, Latin text is
     /// English's, and only Traditional Chinese is checked for Simplified characters.
     /// </summary>

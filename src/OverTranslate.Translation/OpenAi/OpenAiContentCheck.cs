@@ -16,9 +16,12 @@ namespace OverTranslate.Translation.OpenAi;
 /// for Traditional Chinese two or more Simplified-only characters and more of them than
 /// Traditional-only ones. What is deliberately not failed, because it legitimately stays as it is:
 /// a source with no letters; Latin text with fewer than two lowercase words of three letters or
-/// more — names, titles, acronyms, <c>AUTO ESKIP</c>; a copyright line; a name in katakana alone; a
-/// source already in the target language; one stray kana or Simplified character. Measured on the
-/// good models, one segment in six hundred was failed wrongly, and that costs one request.</para>
+/// more — names, titles, acronyms, <c>AUTO ESKIP</c>; a copyright line; a name in katakana alone,
+/// brackets and punctuation around it or not; Han alone copied with fewer than two Simplified-only
+/// characters — a Japanese name, 凉泉桜花, has one; a title kept in its corner brackets as the source
+/// had it, inside a sentence that was translated; a source already in the target language; one
+/// stray kana or Simplified character. Measured on the good models, one segment in six hundred was
+/// failed wrongly, and that costs one request.</para>
 /// </remarks>
 internal static class OpenAiContentCheck
 {
@@ -31,6 +34,9 @@ internal static class OpenAiContentCheck
     private static readonly Regex Han = new("[㐀-䶿一-鿿豈-﫿]", RegexOptions.CultureInvariant);
 
     private static readonly Regex KatakanaOnly = new(@"^[゠-ヿｦ-ﾟ・ー\s]+$", RegexOptions.CultureInvariant);
+
+    /// <summary>A title in corner brackets: 「…」 or 『…』.</summary>
+    private static readonly Regex Quoted = new("「[^「」]*」|『[^『』]*』", RegexOptions.CultureInvariant);
 
     private static readonly Regex LowercaseWord = new("(?<![A-Za-z])[a-z][a-z']{2,}", RegexOptions.CultureInvariant);
 
@@ -55,10 +61,10 @@ internal static class OpenAiContentCheck
         if (s.Length > 0 && s == t)
         {
             if (Copied(s, targetTag, japanese, korean, traditional)) return "copied";
-            if (KatakanaOnly.IsMatch(s)) return null;
+            if (IsKatakanaOnly(s)) return null;
         }
 
-        if (!japanese && Kana.Count(t) >= 2) return "kana";
+        if (!japanese && Kana.Count(WithoutKeptQuotes(t, s)) >= 2) return "kana";
         if (!korean && Hangul.Count(t) >= 2) return "hangul";
 
         if (traditional)
@@ -73,7 +79,7 @@ internal static class OpenAiContentCheck
     /// <summary>Whether a source that came back unchanged should have been translated.</summary>
     private static bool Copied(string source, string targetTag, bool japanese, bool korean, bool traditional)
     {
-        if (KatakanaOnly.IsMatch(source)) return false;
+        if (IsKatakanaOnly(source)) return false;
         if (Kana.IsMatch(source)) return !japanese;
         if (Hangul.IsMatch(source)) return !korean;
 
@@ -84,15 +90,34 @@ internal static class OpenAiContentCheck
             return !targetTag.StartsWith("en", StringComparison.OrdinalIgnoreCase);
 
         // Han alone, copied: wrong only when what was copied is Simplified and Traditional was asked
-        // for. Japanese written in kanji alone is left as it is — 通知 is 通知 in both.
+        // for. Japanese written in kanji alone is left as it is — 通知 is 通知 in both — and so is a
+        // Japanese name, which shares one character with Simplified at most: 凉泉桜花, 佐々木学子.
+        // Two, as for a translation.
         if (traditional && Han.IsMatch(source))
         {
             var (simplified, traditionalOnly) = ChineseScripts.Count(source);
-            return simplified > 0 && simplified >= traditionalOnly;
+            return simplified >= 2 && simplified >= traditionalOnly;
         }
 
         return false;
     }
+
+    /// <summary>
+    /// Whether <paramref name="text"/> is katakana alone once brackets and punctuation are taken off:
+    /// 「アイライク ユアライク is a title, as アイライク ユアライク is.
+    /// </summary>
+    private static bool IsKatakanaOnly(string text)
+    {
+        var letters = string.Concat(text.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c) || c is '・' or 'ー'));
+        return letters.Trim().Length > 0 && KatakanaOnly.IsMatch(letters);
+    }
+
+    /// <summary>
+    /// <paramref name="translation"/> less every 「…」 or 『…』 that <paramref name="source"/> has as it
+    /// is: a title kept as written, in a sentence that was translated, is not kana left behind.
+    /// </summary>
+    private static string WithoutKeptQuotes(string translation, string source) =>
+        Quoted.Replace(translation, quote => source.Contains(quote.Value, StringComparison.Ordinal) ? "" : quote.Value);
 
     /// <summary>
     /// Counts the characters only Simplified Chinese writes, and those only Traditional writes.
