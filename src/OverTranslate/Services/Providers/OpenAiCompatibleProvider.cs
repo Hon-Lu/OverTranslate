@@ -454,6 +454,29 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         return new OpenAiCustomPrompt(One(prompts.SystemPrompt), One(prompts.UserPrompt));
     }
 
+    /// <summary>
+    /// What the user prompt of 自訂提示詞 is filled with when it is first turned to: the user prompt
+    /// this application used to ship, in the interface's language, unfilled.
+    /// </summary>
+    /// <remarks>
+    /// The same sentences as <see cref="OpenAiPromptMigration.RetiredBuiltInPrompts"/>, which is
+    /// what a stored profile that never changed them is recognised by. English for every interface
+    /// but the two Chinese ones, as it always was. The two line feeds it ends with are part of it:
+    /// the text being translated starts straight after them.
+    /// </remarks>
+    internal static string DefaultCustomUserPrompt() => LocalizationService.Current switch
+    {
+        LocalizationService.TraditionalChinese =>
+            $"將以下文本翻譯為{TargetPlaceholder}，注意只需要輸出翻譯後的結果，不要額外解釋：\n\n",
+
+        LocalizationService.SimplifiedChinese =>
+            $"将以下文本翻译为{TargetPlaceholder}，注意只需要输出翻译后的结果，不要额外解释：\n\n",
+
+        _ =>
+            $"Translate the following text into {TargetPlaceholder}. Note that you should only " +
+            "output the translated result without any additional explanation:\n\n",
+    };
+
     /// <summary>Which wording the interface language is served — see <see cref="BuildPrompt"/>.</summary>
     /// <remarks>
     /// Branching on <see cref="LocalizationService.Current"/> rather than reading the string
