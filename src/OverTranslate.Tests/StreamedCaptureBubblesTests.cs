@@ -149,6 +149,23 @@ public class StreamedCaptureBubblesTests
         Assert.Contains(blocks[1], arriving);
     }
 
+    /// <summary>
+    /// An engine that answers all at once streamed nothing, and its bubbles appear as they did
+    /// before anything streamed: all at once, none fading in.
+    /// </summary>
+    [Fact]
+    public void WhenNothingStreamed_NothingFadesIn()
+    {
+        var bubbles = Coloured(CaptureLayoutMode.General);
+
+        var final = bubbles.Final([Answer(Line, "你好"), Answer(Paragraph, "你其實會喜歡這一個的")]);
+
+        var (blocks, arriving) = Assert.NotNull(final);
+        Assert.False(bubbles.Streamed);
+        Assert.NotEmpty(blocks);
+        Assert.Empty(arriving);
+    }
+
     [Fact]
     public void AnAnswerThatDoesNotLineUpIsRefused()
     {

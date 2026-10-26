@@ -1149,7 +1149,9 @@ public partial class MainWindow : Window
                                 workBitmap, b.Bounds, b.SourceLineBounds, req.IsVerticalText && !b.RunsAcross);
                         return b with { BackgroundColor = bg, TextColor = fg };
                     })];
-                arrivingAtEnd = new HashSet<TranslatedBlock>(coloredTranslated, ReferenceEqualityComparer.Instance);
+                arrivingAtEnd = bubbles.Streamed
+                    ? new HashSet<TranslatedBlock>(coloredTranslated, ReferenceEqualityComparer.Instance)
+                    : null;
             }
             if (firstBubbleMs < 0) firstBubbleMs = ElapsedMs(started);
 
