@@ -224,11 +224,12 @@ public class TranslationService
     /// </param>
     public async Task<(List<TranslatedBlock> Blocks, string DetectedLang)> TranslateAsync(
         List<OcrTextBlock> blocks, string sourceLang, string targetLang, string apiKey, bool resilient = true,
-        CancellationToken cancellationToken = default, TranslationProvider? engine = null)
+        CancellationToken cancellationToken = default, TranslationProvider? engine = null,
+        TranslationContext? context = null)
     {
         var chosen   = engine ?? Saved;
         var provider = resilient ? Resilient(chosen) : Single(chosen);
-        var result   = await provider.TranslateAsync(blocks, sourceLang, targetLang, apiKey, cancellationToken);
+        var result   = await provider.TranslateAsync(blocks, sourceLang, targetLang, apiKey, cancellationToken, context);
         LastEngineUsage = (provider as ResilientProvider)?.LastUsage;
         return result;
     }

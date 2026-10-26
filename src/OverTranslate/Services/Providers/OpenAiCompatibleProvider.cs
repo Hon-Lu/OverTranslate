@@ -9,8 +9,9 @@ namespace OverTranslate.Services.Providers;
 /// The model to ask for. Required: empty is a configuration error rather than a fallback — see
 /// <see cref="OpenAiCompatibleProvider.TranslateAsync"/>.
 /// </param>
-/// <param name="PromptAuto">What to send when the source language is 自動.</param>
-/// <param name="PromptExplicit">What to send when a source language has been chosen.</param>
+/// <param name="ExtraInstructions">
+/// What the user adds to the built-in rules, unfilled — see <see cref="OpenAiModelProfile.ExtraInstructions"/>.
+/// </param>
 /// <param name="SendTemperature">
 /// Whether the request carries a temperature at all. Off leaves the field out entirely rather than
 /// sending a default: a server that rejects the field rejects any value in it, so there is no number
@@ -23,6 +24,10 @@ namespace OverTranslate.Services.Providers;
 /// <param name="SendSeed">
 /// <inheritdoc cref="SendTemperature" path="/summary"/>
 /// </param>
+/// <param name="ReasoningEffort">
+/// The <c>reasoning_effort</c> to send, or null to send none — the switch and the value in one,
+/// since it has no default worth a separate flag.
+/// </param>
 /// <remarks>
 /// The two newer switches default to off while the temperature defaults to on. Not a judgement about
 /// the parameters: every caller that translates builds these from a profile — see
@@ -34,29 +39,15 @@ public sealed record OpenAiCompatibleOptions(
     string BaseUrl,
     string Model,
     string ApiKey = "",
-    OpenAiPromptPair? PromptAuto = null,
-    OpenAiPromptPair? PromptExplicit = null,
+    string ExtraInstructions = "",
     bool SendTemperature = true,
     double Temperature = 0,
     bool SendTopP = false,
     double TopP = 0,
     bool SendSeed = false,
     int Seed = 0,
-    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds)
-{
-    /// <summary>
-    /// The pair for one case. Empty rather than the built-in wording when nothing was supplied.
-    /// </summary>
-    /// <remarks>
-    /// The built-in setting is resolved into these options rather than behind them — see the
-    /// constructor, which asks <see cref="OpenAiSettings.SelectedProfile"/> first and falls back to
-    /// <see cref="OpenAiCompatibleProvider.BuiltInProfile"/> once. So by the time a pair reaches
-    /// here it is the whole answer: an empty half means "send no such message", not "substitute
-    /// something". A profile with both halves empty is a shape the editor refuses to save.
-    /// </remarks>
-    public OpenAiPromptPair PromptsFor(bool automatic) =>
-        (automatic ? PromptAuto : PromptExplicit) ?? new OpenAiPromptPair();
-}
+    string? ReasoningEffort = null,
+    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds);
 
 /// <summary>
 /// 「OpenAI 相容」 as the application asks for it: the user's setting, the instruction written from
@@ -131,14 +122,14 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             settings.OpenAiBaseUrl,
             profile.Model,
             settings.OpenAiApiKey,
-            profile.Auto,
-            profile.Explicit,
+            profile.ExtraInstructions,
             profile.TemperatureEnabled,
             profile.Temperature,
             profile.TopPEnabled,
             profile.TopP,
             profile.SeedEnabled,
             profile.Seed,
+            profile.ReasoningEffortEnabled ? profile.ReasoningEffort : null,
             TimeoutSecondsFor(settings.OpenAiTimeoutSeconds));
     }
 
@@ -193,7 +184,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         string sourceLang,
         string targetLang,
         string apiKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TranslationContext? context = null)
     {
         if (blocks.Count == 0) return ([], "");
         cancellationToken.ThrowIfCancellationRequested();
@@ -215,15 +207,11 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model}\"，端點 {Endpoint}",
             blocks.Count, model, endpoint);
 
-        // Built once for the batch: every block is sent the same instruction, and the user may have
-        // written this one themselves, so it is worth resolving in one place rather than per request.
-        var prompts = BuildPrompts(sourceLang, targetLang, options.PromptsFor(
-            LanguageData.IsAutomaticSource(sourceLang)));
+        var prompt = BuildPrompt(sourceLang, targetLang, options.ExtraInstructions);
 
-        // The prompt and the text itself only at Debug: the text is whatever was on the user's
+        // The user's own words only at Debug, beside the text: what they wrote can quote what was on
         // screen, the same reason OnnxOcrEngine keeps the recognised text out of the shipped log.
-        Log.Debug("OpenAI 相容翻譯 system=\"{System}\" user=\"{User}\"",
-            prompts.System, prompts.User);
+        Log.Debug("OpenAI 相容翻譯 extra=\"{Extra}\"", prompt.ExtraInstructions);
 
         IReadOnlyList<OpenAiChatOutcome> outcomes;
         try
@@ -231,11 +219,17 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             outcomes = await _chat.TranslateAsync(
                 blocks.Select(block => block.Text).ToList(),
                 new OpenAiChatRequest(
-                    endpoint, model, options.ApiKey, prompts.System, prompts.User,
+                    endpoint, model, options.ApiKey, prompt,
+                    LanguageData.GetModelLanguageTag(targetLang),
                     options.SendTemperature ? options.Temperature : null,
                     options.SendTopP ? options.TopP : null,
                     options.SendSeed ? options.Seed : null,
+                    options.ReasoningEffort,
                     TimeSpan.FromSeconds(options.TimeoutSeconds)),
+                context is null ? null : new OpenAiChatContext(
+                    context.History?.Select(Pair).ToList(),
+                    context.Reference?.Select(Pair).ToList(),
+                    context.SegmentTranslated),
                 cancellationToken);
         }
         catch (OpenAiChatException ex)
@@ -381,44 +375,42 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     internal const string TargetCodePlaceholder = "{target_code}";
 
     /// <summary>
-    /// The two messages one batch sends, with the language placeholders filled in.
+    /// The instruction every request of one call is written from: the wording for the interface
+    /// language, the target language named as the interface names it, and the user's own rules.
     /// </summary>
-    /// <param name="prompts">
-    /// The pair for the case in hand, already resolved against the built-in setting — see
-    /// <see cref="OpenAiCompatibleOptions.PromptsFor"/>.
-    /// </param>
     /// <remarks>
-    /// Either half may come back empty, and empty means the request carries no such message. Which
-    /// of the two a model wants is the model's business: the recommended one is trained on the
-    /// instruction sitting in the user turn immediately above the text, and has no system turn in
-    /// its documented format at all.
+    /// <para>One instruction for every model and every caller, which replaces the prompts a profile
+    /// used to hold — see <see cref="OpenAiPrompt"/> for what it says and why. The language it is
+    /// written in follows the interface as the old built-in wording did: Traditional and Simplified
+    /// Chinese for those two interfaces, English for every other.</para>
     ///
-    /// Not trimmed, only normalised. What a prompt ends with is part of the prompt: the user half is
-    /// followed immediately by the text being translated — see <c>OpenAiChatTranslator.BuildMessages</c> — so the
-    /// blank line between the two lives at the end of the wording, where whoever wrote it can see it
-    /// and a model that wants no blank line can be told so by deleting it.
-    ///
-    /// A half that is nothing but whitespace is still empty, though. A box that looks empty and a
-    /// box that is empty have to mean the same thing, or a stray space is sent as an instruction.
+    /// <para>The user's rules are filled in like the old templates were, because what was carried
+    /// over from them still says <c>{target_name}</c> — see <see cref="OpenAiPromptMigration"/>.
+    /// Normalised here as well as where it is saved, so a box saved before the editor did that
+    /// reaches the model as the same string the settings panel shows.</para>
     /// </remarks>
-    internal static (string System, string User) BuildPrompts(
-        string sourceLang,
-        string targetLang,
-        OpenAiPromptPair prompts)
+    internal static OpenAiPrompt BuildPrompt(string sourceLang, string targetLang, string extraInstructions)
     {
-        var automatic = LanguageData.IsAutomaticSource(sourceLang);
+        var extra = OpenAiSettings.NormaliseLineBreaks(extraInstructions).Trim();
+        if (extra.Length > 0)
+            extra = Fill(extra, sourceLang, targetLang, LanguageData.IsAutomaticSource(sourceLang));
 
-        // Normalised here as well as where it is saved, so a prompt written before the editor did
-        // that reaches the model as the same string the settings panel shows it as — see
-        // OpenAiSettings.NormaliseLineBreaks. The built-in wordings are already bare LFs.
-        string One(string template)
-        {
-            var text = OpenAiSettings.NormaliseLineBreaks(template);
-            return text.Trim().Length == 0 ? "" : Fill(text, sourceLang, targetLang, automatic);
-        }
-
-        return (One(prompts.SystemPrompt), One(prompts.UserPrompt));
+        return new OpenAiPrompt(PromptLanguage(), LanguageData.GetTargetDisplayName(targetLang), extra);
     }
+
+    /// <summary>Which wording the interface language is served — see <see cref="BuildPrompt"/>.</summary>
+    /// <remarks>
+    /// Branching on <see cref="LocalizationService.Current"/> rather than reading the string
+    /// dictionaries, for the reason <see cref="DefaultUserPrompt"/> gives.
+    /// </remarks>
+    internal static OpenAiPromptLanguage PromptLanguage() => LocalizationService.Current switch
+    {
+        LocalizationService.TraditionalChinese => OpenAiPromptLanguage.TraditionalChinese,
+        LocalizationService.SimplifiedChinese => OpenAiPromptLanguage.SimplifiedChinese,
+        _ => OpenAiPromptLanguage.English,
+    };
+
+    private static OpenAiTranslationPair Pair(TranslationPair pair) => new(pair.Source, pair.Translation);
 
     /// <summary>
     /// The system message the application ships with: none.
