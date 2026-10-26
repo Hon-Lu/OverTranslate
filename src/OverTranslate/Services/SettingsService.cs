@@ -118,7 +118,9 @@ public class SettingsService
         settings.Provider = LanguageData.CurrentProvider(settings.Provider);
         settings.Realtime.Provider = LanguageData.CurrentProvider(settings.Realtime.Provider);
 
-        OpenAiPromptMigration.Apply(settings.OpenAi, root[nameof(AppSettings.OpenAi)] as JsonObject);
+        OpenAiPromptMigration.Apply(
+            settings.OpenAi, root[nameof(AppSettings.OpenAi)] as JsonObject,
+            LanguageData.IsAutomaticSource(settings.SourceLanguage));
 
         // 替換翻譯's languages (QuickTranslate, its name before #277). The grouped section wins.
         // Older files used flat QuickTranslate* keys, and before that shared the text-translation

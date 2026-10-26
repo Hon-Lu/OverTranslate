@@ -5,7 +5,8 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// The four prompts a profile used to hold, carried into the one box of extra instructions.
+/// A profile saved with the four old prompts: put on the built-in instruction when none of them was
+/// the user's own, and on its own prompts, kept as they were, when any was.
 /// </summary>
 public class OpenAiPromptMigrationTests
 {
@@ -15,14 +16,13 @@ public class OpenAiPromptMigrationTests
         "Translate the following text into {target_name}. Note that you should only " +
         "output the translated result without any additional explanation:\n\n";
 
+    private static OpenAiPromptPair Pair(string system, string user) => new() { SystemPrompt = system, UserPrompt = user };
+
     /// <summary>
-    /// A profile nobody edited comes out empty, whichever interface it was added under.
-    /// </summary>
-    /// <remarks>
     /// Each language's own wording, because a profile is a copy of whichever built-in prompt was
-    /// showing; with the blank line it ends with, without it, and with the line breaks a TextBox
-    /// writes, because none of those is something the user chose to say.
-    /// </remarks>
+    /// showing; with the blank line it ends with, without it, with the line breaks a TextBox writes,
+    /// and in the older placeholder spelling — none of those is something the user chose to say.
+    /// </summary>
     [Theory]
     [InlineData(ZhHant)]
     [InlineData(ZhHans)]
@@ -32,70 +32,73 @@ public class OpenAiPromptMigrationTests
     [InlineData("Translate the following text into {target}. Note that you should only " +
         "output the translated result without any additional explanation:\n\n")]
     [InlineData("将以下文本翻译为{target}，注意只需要输出翻译后的结果，不要额外解释：")]
-    public void TheBuiltInWording_IsDropped(string builtIn)
+    public void TheBuiltInWording_IsNotTheUsersOwn(string builtIn)
     {
-        Assert.Equal("", OpenAiPromptMigration.ExtraInstructionsFrom("", builtIn, "", builtIn));
+        Assert.Null(OpenAiPromptMigration.Kept(Pair("", builtIn), Pair("", builtIn), automaticSource: true));
+    }
+
+    [Fact]
+    public void BuiltInWordingsFromDifferentInterfaces_AreNeitherTheUsersOwn()
+    {
+        Assert.Null(OpenAiPromptMigration.Kept(Pair("", ZhHant), Pair("", English), automaticSource: false));
+    }
+
+    [Fact]
+    public void EmptyAndBlankBoxes_AreNotTheUsersOwn()
+    {
+        Assert.Null(OpenAiPromptMigration.Kept(Pair("", "  "), Pair("\r\n", ""), automaticSource: true));
+    }
+
+    /// <summary>A custom system prompt makes the pair the user's own, built-in user half and all.</summary>
+    [Fact]
+    public void ACustomSystemPrompt_KeepsThePairAsItWas()
+    {
+        var kept = OpenAiPromptMigration.Kept(Pair("你是遊戲翻譯。", ZhHant), Pair("", ZhHant), automaticSource: false);
+
+        Assert.NotNull(kept);
+        Assert.Equal("你是遊戲翻譯。", kept.SystemPrompt);
+        Assert.Equal(ZhHant, kept.UserPrompt);
+    }
+
+    /// <summary>Only one pair the user's own: that one, whichever the source language is.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OnlyOnePairTheUsersOwn_IsTheOneKept(bool automaticSource)
+    {
+        var own = Pair("", "翻成{target_name}：\n\n");
+
+        Assert.Same(own, OpenAiPromptMigration.Kept(Pair("", ZhHant), own, automaticSource));
+        Assert.Same(own, OpenAiPromptMigration.Kept(own, Pair("", ZhHant), automaticSource));
+    }
+
+    /// <summary>Both the user's own and different: the one the source language was sending.</summary>
+    [Theory]
+    [InlineData(true, "自動")]
+    [InlineData(false, "指定")]
+    public void BothPairsTheUsersOwn_TheSourceLanguagePicks(bool automaticSource, string expected)
+    {
+        var kept = OpenAiPromptMigration.Kept(Pair("自動", ""), Pair("指定", ""), automaticSource);
+
+        Assert.Equal(expected, kept?.SystemPrompt);
     }
 
     /// <summary>
-    /// The two cases can hold different interface languages' wordings and still both be built in.
+    /// Read from the file: the edited profile goes on its own prompts exactly as written, the
+    /// untouched one on the built-in instruction with nothing extra.
     /// </summary>
     [Fact]
-    public void BuiltInWordingsFromDifferentInterfaces_AreAllDropped()
-    {
-        Assert.Equal("", OpenAiPromptMigration.ExtraInstructionsFrom("", ZhHant, "", English));
-    }
-
-    [Fact]
-    public void EmptyAndBlankBoxes_AreDropped()
-    {
-        Assert.Equal("", OpenAiPromptMigration.ExtraInstructionsFrom("", "  ", "\r\n", null));
-    }
-
-    [Fact]
-    public void ACustomSystemPrompt_IsCarriedAndTheBuiltInUserPromptBesideItIsNot()
-    {
-        Assert.Equal("你是遊戲翻譯。",
-            OpenAiPromptMigration.ExtraInstructionsFrom("你是遊戲翻譯。", ZhHant, "", ZhHant));
-    }
-
-    /// <summary>
-    /// The same text in both cases is carried once: it was one wish written twice.
-    /// </summary>
-    [Fact]
-    public void TheSameTextInBothCases_IsCarriedOnce()
-    {
-        Assert.Equal("用口語。",
-            OpenAiPromptMigration.ExtraInstructionsFrom("用口語。", "", "用口語。\r\n", ""));
-    }
-
-    /// <summary>
-    /// Different texts are kept in the order 自動 system, 自動 user, 指定語言 system, 指定語言 user,
-    /// a blank line apart, with the line breaks made bare.
-    /// </summary>
-    [Fact]
-    public void DifferentTexts_AreJoinedInOrderWithBareLineBreaks()
-    {
-        var extra = OpenAiPromptMigration.ExtraInstructionsFrom(
-            "A1\r\nA2", "翻成{target_name}：\n\n", "B", "C");
-
-        Assert.Equal("A1\nA2\n\n翻成{target_name}：\n\nB\n\nC", extra);
-    }
-
-    /// <summary>
-    /// A profile saved with the old prompts comes back with them carried in and the notice owed.
-    /// </summary>
-    [Fact]
-    public void AProfileWithOldPrompts_IsMigratedWhenRead()
+    public void ProfilesWithOldPrompts_GetAModeWhenRead()
     {
         var settings = SettingsService.Parse("""
             {
+              "SourceLanguage": "AUTO",
               "OpenAi": {
                 "Profiles": [
                   {
                     "Id": "a", "Name": "改過的", "Model": "m",
                     "Auto": { "SystemPrompt": "Be casual.", "UserPrompt": "Translate into {target}:\n\n" },
-                    "Explicit": { "SystemPrompt": "Be casual.", "UserPrompt": "Translate into {target}:\n\n" }
+                    "Explicit": { "SystemPrompt": "Be formal.", "UserPrompt": "" }
                   },
                   {
                     "Id": "b", "Name": "沒改的", "Model": "m",
@@ -108,46 +111,47 @@ public class OpenAiPromptMigrationTests
             """);
 
         var edited = settings.OpenAi.Profiles[0];
-        Assert.Equal("Be casual.\n\nTranslate into {target}:", edited.ExtraInstructions);
-        Assert.True(edited.ShowMigrationNotice);
+        Assert.Equal(OpenAiTranslationMode.PerSegment, edited.Mode);
+        Assert.Equal("Be casual.", edited.Prompts.SystemPrompt);
+        Assert.Equal("Translate into {target}:\n\n", edited.Prompts.UserPrompt);
+        Assert.Equal("", edited.ExtraInstructions);
 
         var untouched = settings.OpenAi.Profiles[1];
+        Assert.Equal(OpenAiTranslationMode.Batch, untouched.Mode);
+        Assert.True(untouched.Prompts.IsEmpty);
         Assert.Equal("", untouched.ExtraInstructions);
-        Assert.False(untouched.ShowMigrationNotice);
     }
 
-    /// <summary>
-    /// A profile that already has the new box is left as it is, old prompts or not.
-    /// </summary>
-    /// <remarks>
-    /// The key is what says the profile was saved by a build that knows the box — including one the
-    /// user emptied on purpose, which must not fill up again from prompts still in the file.
-    /// </remarks>
     [Fact]
-    public void AProfileThatHasTheNewBox_IsNotMigratedAgain()
+    public void BothPairsTheUsersOwn_AChosenSourceLanguageKeepsTheChosenPair()
     {
-        var settings = SettingsService.Parse("""
-            {
-              "OpenAi": {
-                "Profiles": [
-                  {
-                    "Id": "a", "Name": "n", "Model": "m",
-                    "ExtraInstructions": "",
-                    "Auto": { "SystemPrompt": "Be casual.", "UserPrompt": "" }
-                  }
-                ]
-              }
-            }
-            """);
+        var profile = Assert.Single(SettingsService.Parse("""
+            { "SourceLanguage": "JA", "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m",
+              "Auto": { "SystemPrompt": "自動", "UserPrompt": "" },
+              "Explicit": { "SystemPrompt": "指定", "UserPrompt": "" } } ] } }
+            """).OpenAi.Profiles);
 
-        var profile = Assert.Single(settings.OpenAi.Profiles);
-        Assert.Equal("", profile.ExtraInstructions);
-        Assert.False(profile.ShowMigrationNotice);
+        Assert.Equal(OpenAiTranslationMode.PerSegment, profile.Mode);
+        Assert.Equal("指定", profile.Prompts.SystemPrompt);
     }
 
     /// <summary>
-    /// What was carried in survives being written and read again, notice and all.
+    /// A profile that has a mode is left as it is, old prompts or not: it was saved by a build that
+    /// knows modes, and the user may have chosen the built-in instruction over them.
     /// </summary>
+    [Fact]
+    public void AProfileThatHasAMode_IsNotMigratedAgain()
+    {
+        var profile = Assert.Single(SettingsService.Parse("""
+            { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m", "Mode": "Batch",
+              "Auto": { "SystemPrompt": "Be casual.", "UserPrompt": "" } } ] } }
+            """).OpenAi.Profiles);
+
+        Assert.Equal(OpenAiTranslationMode.Batch, profile.Mode);
+        Assert.True(profile.Prompts.IsEmpty);
+    }
+
+    /// <summary>The mode and the prompts survive being written and read again.</summary>
     [Fact]
     public void AMigratedProfile_RoundTripsThroughTheFile()
     {
@@ -156,10 +160,18 @@ public class OpenAiPromptMigrationTests
               "Auto": { "SystemPrompt": "Be casual.", "UserPrompt": "" } } ] } }
             """);
 
-        var reread = Assert.Single(SettingsService.Parse(SettingsService.Serialize(settings)).OpenAi.Profiles);
+        var json = SettingsService.Serialize(settings);
+        var reread = Assert.Single(SettingsService.Parse(json).OpenAi.Profiles);
 
-        Assert.Equal("Be casual.", reread.ExtraInstructions);
-        Assert.True(reread.ShowMigrationNotice);
+        Assert.Contains("\"Mode\": \"PerSegment\"", json);
+        Assert.Equal(OpenAiTranslationMode.PerSegment, reread.Mode);
+        Assert.Equal("Be casual.", reread.Prompts.SystemPrompt);
+    }
+
+    [Fact]
+    public void ANewProfile_IsBatch()
+    {
+        Assert.Equal(OpenAiTranslationMode.Batch, new OpenAiModelProfile().Mode);
     }
 
     /// <summary>

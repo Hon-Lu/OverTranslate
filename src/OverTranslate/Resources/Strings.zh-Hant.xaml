@@ -547,7 +547,6 @@
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">會附加在程式內建的翻譯規則之後，適合描述語氣、用字風格等要求。留空就只套用內建規則。</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">例如：用輕鬆口語的語氣翻譯；句尾不要加句號。</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">未設定，只套用內建的翻譯規則</sys:String>
-    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">這段是從舊版的自訂提示詞搬過來的。翻譯任務、輸出格式與語言現在由程式處理，這裡只需要留下語氣、風格的要求。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">進階</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">帶入推薦模型</sys:String>

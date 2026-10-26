@@ -522,7 +522,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">Added after the app's built-in translation rules — the place to describe tone, word choice and style. Leave it empty to use the built-in rules alone.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">For example: Translate in a relaxed, casual tone; don't end sentences with a period.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">Not set — only the built-in translation rules apply</sys:String>
-    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">This was carried over from your custom prompt in an earlier version. The translation task, output format and language are now handled by the app, so only requests about tone and style need to stay here.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">My settings {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Advanced</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Use the recommended model</sys:String>
