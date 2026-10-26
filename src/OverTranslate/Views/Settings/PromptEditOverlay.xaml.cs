@@ -89,9 +89,6 @@ public partial class PromptEditOverlay : UserControl
             // is for tone and style on top of rules that are complete without it.
             var built = OpenAiCompatibleProvider.BuiltInProfile();
             ExtraInstructionsBox.Text = profile?.ExtraInstructions ?? built.ExtraInstructions;
-            MigrationNotice.Visibility = profile?.ShowMigrationNotice == true
-                ? Visibility.Visible
-                : Visibility.Collapsed;
 
             // The model opens on the built-in one like everything else on this card. A new setting is
             // a copy of what ships, and the reset beside this box puts the same name back — a box
@@ -585,13 +582,9 @@ public partial class PromptEditOverlay : UserControl
         profile.TopP = ReadNumber(TopPBox, MaxTopP);
         profile.SeedEnabled = SeedEnabledCheckBox.IsChecked == true;
         profile.Seed = ReadSeed();
-        // Normalised and trimmed, the form the carried-over text is stored in: each line is a rule
-        // of its own, and a blank line at either end is none.
+        // Normalised and trimmed: each line is a rule of its own, and a blank line at either end
+        // is none.
         profile.ExtraInstructions = OpenAiSettings.NormaliseLineBreaks(ExtraInstructionsBox.Text).Trim();
-
-        // Said once. Saving is the user having looked at what was carried in, whether or not they
-        // changed it.
-        profile.ShowMigrationNotice = false;
 
         Commit();
     }

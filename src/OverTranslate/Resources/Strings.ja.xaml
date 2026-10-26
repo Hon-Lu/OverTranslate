@@ -526,7 +526,6 @@
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">アプリに組み込まれた翻訳ルールの後に追加されます。口調や言葉づかいなどの要望を書くのに向いています。空欄なら組み込みのルールだけが適用されます。</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">例：くだけた話し言葉で訳す。文末に句点を付けない。</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">未設定（組み込みの翻訳ルールのみ適用）</sys:String>
-    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">この内容は旧バージョンのカスタムプロンプトから移行したものです。翻訳の指示、出力形式、言語は現在アプリが処理するため、ここには口調やスタイルの要望だけを残してください。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">マイ設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">詳細</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">推奨モデルを入力</sys:String>

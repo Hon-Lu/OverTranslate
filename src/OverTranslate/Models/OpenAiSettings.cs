@@ -1,5 +1,57 @@
 namespace OverTranslate.Models;
 
+/// <summary>How a profile sends what is on screen.</summary>
+/// <remarks>Stored by name, like <see cref="TranslationProvider"/>.</remarks>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+public enum OpenAiTranslationMode
+{
+    /// <summary>
+    /// The application's own instruction, a screen to a request, with the context it has: what every
+    /// new profile and the built-in one do.
+    /// </summary>
+    Batch,
+
+    /// <summary>
+    /// The user's own <see cref="OpenAiModelProfile.Prompts"/>, one text to a request, with nothing
+    /// else in it: for a model or a wording the built-in instruction does not suit.
+    /// </summary>
+    PerSegment,
+}
+
+/// <summary>
+/// The two messages a <see cref="OpenAiTranslationMode.PerSegment"/> request sends: the system message
+/// and what goes in front of the text in the user one.
+/// </summary>
+/// <remarks>
+/// Both, because the models this provider is pointed at do not agree on where an instruction goes. A
+/// translation model is trained to be told what to do in the user message with the text right under
+/// it; a general chat model wants a system message.
+/// </remarks>
+public class OpenAiPromptPair
+{
+    /// <summary>
+    /// The system message, or empty to send none at all.
+    /// </summary>
+    /// <remarks>
+    /// Empty means the request carries no system message, not that it carries an empty one: an empty
+    /// system message is still a turn the model has to account for.
+    /// </remarks>
+    public string SystemPrompt { get; set; } = "";
+
+    /// <summary>
+    /// What goes in front of the text to translate, in the user message, or empty to send the text
+    /// on its own.
+    /// </summary>
+    /// <remarks>
+    /// In front of rather than instead of: the text being translated is the rest of that same
+    /// message, straight after this. That is why the old built-in wording ends in a blank line.
+    /// </remarks>
+    public string UserPrompt { get; set; } = "";
+
+    /// <summary>Whether this pair would send no instruction at all.</summary>
+    public bool IsEmpty => SystemPrompt.Trim().Length == 0 && UserPrompt.Trim().Length == 0;
+}
+
 /// <summary>
 /// One named setting for an OpenAI-compatible model: which model, at what temperature, told what.
 /// </summary>
@@ -133,8 +185,12 @@ public class OpenAiModelProfile
     public static readonly IReadOnlyList<string> ReasoningEfforts =
         ["none", "minimal", "low", "medium", "high"];
 
+    /// <summary>Whether the built-in instruction is sent, or the user's own prompts.</summary>
+    public OpenAiTranslationMode Mode { get; set; } = OpenAiTranslationMode.Batch;
+
     /// <summary>
-    /// What the user adds to the built-in translation rules, or empty for the rules alone.
+    /// What the user adds to the built-in translation rules, or empty for the rules alone. Only for
+    /// <see cref="OpenAiTranslationMode.Batch"/>.
     /// </summary>
     /// <remarks>
     /// The one piece of the instruction that is the user's. The task, the output format, the rules
@@ -142,22 +198,18 @@ public class OpenAiModelProfile
     /// the last rule — a place for tone and style. It cannot pin how a name is translated; measured,
     /// the recommended model ignored exactly that request.
     ///
-    /// Line breaks are stored bare — see <see cref="OpenAiSettings.NormaliseLineBreaks"/>. The
-    /// language placeholders are still filled in, because text carried over from the old prompts
-    /// uses them; see <see cref="OpenAiPromptMigration"/>.
+    /// Line breaks are stored bare — see <see cref="OpenAiSettings.NormaliseLineBreaks"/>.
     /// </remarks>
     public string ExtraInstructions { get; set; } = "";
 
     /// <summary>
-    /// Whether the editor still owes the user a word about where <see cref="ExtraInstructions"/>
-    /// came from.
+    /// The whole instruction, the user's own, for <see cref="OpenAiTranslationMode.PerSegment"/>.
     /// </summary>
     /// <remarks>
-    /// Set when the old prompts were carried in, and cleared the first time the profile is saved.
-    /// Carried prompts are mostly a task sentence — "translate the following into X" — which is
-    /// harmless next to the rules but redundant, and saying so once lets the user delete it.
+    /// One pair whatever the source language: the language placeholders say what changes. Kept while
+    /// the profile is in the other mode, so switching back finds it as it was.
     /// </remarks>
-    public bool ShowMigrationNotice { get; set; }
+    public OpenAiPromptPair Prompts { get; set; } = new();
 }
 
 /// <summary>
@@ -176,8 +228,7 @@ public class OpenAiModelProfile
 /// were dropped rather than migrated, on the owner's call. A stored prompt has no name and no model
 /// beside it, and carrying one into this list would mean inventing both. A profile's own
 /// <c>Auto</c> and <c>Explicit</c> prompt pairs are different: they belong to a named profile, and
-/// are carried into its <see cref="OpenAiModelProfile.ExtraInstructions"/> from the file itself —
-/// see <see cref="OpenAiPromptMigration"/>.
+/// decide its <see cref="OpenAiModelProfile.Mode"/> — see <see cref="OpenAiPromptMigration"/>.
 /// </remarks>
 public class OpenAiSettings
 {

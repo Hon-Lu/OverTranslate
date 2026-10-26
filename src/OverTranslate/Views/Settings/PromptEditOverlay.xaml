@@ -396,37 +396,6 @@
                                                Text="{DynamicResource S.Settings.ExtraInstructionsHint}"
                                                Margin="0,12,0,0"/>
 
-                                    <!-- Only on a setting whose old prompts were carried in, until it
-                                         is saved once. What was carried is mostly a task sentence -
-                                         "translate the following into X" - which does no harm beside
-                                         the rules but says nothing they do not; this is the one chance
-                                         to say so, so the user can delete it. -->
-                                    <Border x:Name="MigrationNotice"
-                                            Style="{StaticResource InfoCardBorder}"
-                                            Margin="0,10,0,0"
-                                            Visibility="Collapsed">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0"
-                                                       Text="&#xE946;"
-                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                       FontSize="15"
-                                                       Foreground="{DynamicResource AppTextSecondary}"
-                                                       VerticalAlignment="Top"
-                                                       Margin="0,1,10,0"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{DynamicResource S.Settings.ExtraInstructionsMigrated}"
-                                                       FontFamily="{DynamicResource AppFont}"
-                                                       FontSize="12"
-                                                       LineHeight="17"
-                                                       Foreground="{DynamicResource AppTextSecondary}"
-                                                       TextWrapping="Wrap"/>
-                                        </Grid>
-                                    </Border>
-
                                     <Grid Margin="0,10,0,0">
                                         <TextBox x:Name="ExtraInstructionsBox"
                                                  Style="{StaticResource SettingsMultilineTextBox}"

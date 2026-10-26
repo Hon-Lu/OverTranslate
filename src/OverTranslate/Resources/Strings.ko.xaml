@@ -526,7 +526,6 @@
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">앱에 내장된 번역 규칙 뒤에 덧붙여집니다. 말투나 어휘 스타일 같은 요청을 적기에 알맞습니다. 비워 두면 내장 규칙만 적용됩니다.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">예: 편안한 구어체로 번역하기, 문장 끝에 마침표 붙이지 않기</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">설정 안 함 — 내장 번역 규칙만 적용</sys:String>
-    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">이전 버전의 사용자 프롬프트에서 옮겨 온 내용입니다. 번역 작업, 출력 형식, 언어는 이제 앱이 처리하므로 여기에는 말투와 스타일에 관한 요청만 남겨 두면 됩니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">내 설정 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">고급</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">권장 모델 넣기</sys:String>

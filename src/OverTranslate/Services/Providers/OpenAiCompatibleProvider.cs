@@ -381,9 +381,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// model expects them: TranslateGemma wanted "Japanese (ja)", another model may want the tag
     /// alone, and this application cannot know which.
     ///
-    /// No built-in wording uses these, and the settings panel no longer advertises them. They stay
-    /// because they are a written contract: the prompts carried into users' extra instructions use
-    /// them — see <see cref="OpenAiPromptMigration"/>.
+    /// No built-in wording uses these. They stay because they are a written contract: a prompt the
+    /// user wrote for <see cref="OpenAiTranslationMode.PerSegment"/> may use them.
     ///
     /// The names keep meaning only the name, which is also what they meant before the tags existed:
     /// a template someone wrote back then still reads the way they wrote it.
@@ -403,10 +402,9 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// written in follows the interface as the old built-in wording did: Traditional and Simplified
     /// Chinese for those two interfaces, English for every other.</para>
     ///
-    /// <para>The user's rules are filled in like the old templates were, because what was carried
-    /// over from them still says <c>{target_name}</c> — see <see cref="OpenAiPromptMigration"/>.
-    /// Normalised here as well as where it is saved, so a box saved before the editor did that
-    /// reaches the model as the same string the settings panel shows.</para>
+    /// <para>The user's rules are filled in like the user's own prompts are, so a placeholder means
+    /// the same in either box. Normalised here as well as where it is saved, so a box saved before
+    /// the editor did that reaches the model as the same string the settings panel shows.</para>
     /// </remarks>
     internal static OpenAiPrompt BuildPrompt(string sourceLang, string targetLang, string extraInstructions)
     {
