@@ -207,6 +207,38 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
+    /// A setting on its own prompts hands them over; one on the built-in instruction does not, even
+    /// with prompts kept from before it was switched back.
+    /// </summary>
+    [Theory]
+    [InlineData(OpenAiTranslationMode.PerSegment, true)]
+    [InlineData(OpenAiTranslationMode.Batch, false)]
+    public void Profiles_HandOverTheirPromptsOnlyPerSegment(OpenAiTranslationMode mode, bool handed)
+    {
+        var settings = new AppSettings();
+        settings.OpenAi.Profiles.Add(new OpenAiModelProfile
+        {
+            Id = "a",
+            Model = "m",
+            Mode = mode,
+            Prompts = new OpenAiPromptPair { SystemPrompt = "s", UserPrompt = "u" },
+        });
+        settings.OpenAi.SelectedProfileId = "a";
+
+        var prompts = OpenAiCompatibleProvider.FromSettings(settings).Prompts;
+
+        Assert.Equal(handed, prompts is not null);
+        if (handed) Assert.Equal("s", prompts!.SystemPrompt);
+    }
+
+    [Fact]
+    public void TheBuiltInSetting_IsBatch()
+    {
+        Assert.Equal(OpenAiTranslationMode.Batch, OpenAiCompatibleProvider.BuiltInProfile().Mode);
+        Assert.Null(OpenAiCompatibleProvider.FromSettings(new AppSettings()).Prompts);
+    }
+
+    /// <summary>
     /// A reasoning effort that is not switched on is not sent, whatever value is filled in beside it.
     /// </summary>
     [Fact]
@@ -831,5 +863,117 @@ public class OpenAiCompatibleProviderTests
         {
             Content = new StringContent(body),
         });
+    }
+
+    // ---- Per segment ------------------------------------------------------------------------
+
+    private static OpenAiCompatibleProvider PerSegment(HttpClient http, string system, string user) =>
+        new(http, () => new OpenAiCompatibleOptions(
+            "http://localhost:1234/v1", "test-model",
+            Prompts: new OpenAiPromptPair { SystemPrompt = system, UserPrompt = user }));
+
+    private static List<(string Role, string Content)> Messages(OpenAiFakeServer.Recorded request) =>
+        [.. request.Payload.GetProperty("messages").EnumerateArray()
+            .Select(message => (message.GetProperty("role").GetString()!, message.GetProperty("content").GetString()!))];
+
+    /// <summary>
+    /// Each text goes alone under the user's prompts, filled in, and with nothing else: no history,
+    /// no reference, no segment tags.
+    /// </summary>
+    [Fact]
+    public async Task PerSegment_SendsEachTextAloneUnderTheUsersPromptsWithNoContext()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "譯文" };
+        using var http = new HttpClient(server);
+        var blocks = new List<OcrTextBlock> { new("one", new Rect()), new("two\r\nlines", new Rect()), new("three", new Rect()) };
+
+        var (results, _) = await PerSegment(http, "你是翻譯。", "翻成{target_name}：\n\n").TranslateAsync(
+            blocks, "EN", "ZH-HANT", "",
+            context: new TranslationContext([new TranslationPair("前", "之前")], [new TranslationPair("旁", "旁邊")]));
+
+        Assert.Equal(3, server.Sent);
+        var expected = OpenAiCompatibleProvider.BuildCustomPrompt(
+            "EN", "ZH-HANT", new OpenAiPromptPair { SystemPrompt = "你是翻譯。", UserPrompt = "翻成{target_name}：\n\n" });
+        Assert.DoesNotContain("{target_name}", expected.User);
+        Assert.Equal(
+            new[] { "one", "three", "two\nlines" }.Select(text => new List<(string, string)> { ("system", "你是翻譯。"), ("user", expected.User + text) }),
+            server.Requests.Select(Messages).OrderBy(messages => messages[1].Content, StringComparer.Ordinal));
+        Assert.All(server.Requests, request =>
+        {
+            Assert.DoesNotContain("之前", request.Body);
+            Assert.DoesNotContain("旁邊", request.Body);
+            Assert.False(request.Streamed);
+        });
+        Assert.All(results, block => Assert.Equal("譯文", block.TranslatedText));
+    }
+
+    [Fact]
+    public async Task PerSegment_AnEmptySystemPromptSendsNoSystemMessage()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "譯文" };
+        using var http = new HttpClient(server);
+
+        await PerSegment(http, "  ", "Translate:\n\n").TranslateAsync([new OcrTextBlock("hi", new Rect())], "EN", "ZH-HANT", "");
+
+        Assert.Equal([("user", "Translate:\n\nhi")], Messages(Assert.Single(server.Requests)));
+    }
+
+    /// <summary>
+    /// The answer is taken as it is, less its thinking: an answer that copies the text is not sent
+    /// again, as the built-in instruction's would be.
+    /// </summary>
+    [Fact]
+    public async Task PerSegment_TakesTheAnswerWithoutCheckingOrResending()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "<think>想一下</think>ああ次の探索の準備か" };
+        using var http = new HttpClient(server);
+
+        var (results, _) = await PerSegment(http, "", "翻譯：").TranslateAsync(
+            [new OcrTextBlock("ああ次の探索の準備か", new Rect())], "JA", "ZH-HANT", "");
+
+        Assert.Equal(1, server.Sent);
+        var block = Assert.Single(results);
+        Assert.Equal("ああ次の探索の準備か", block.TranslatedText);
+        Assert.False(block.Untranslated);
+    }
+
+    /// <summary>One text failing does not take the others with it.</summary>
+    [Fact]
+    public async Task PerSegment_OneTextFailingLeavesTheOthersTranslated()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "譯文" };
+        using var http = new HttpClient(new FailingOn("bad", server));
+
+        var (results, _) = await PerSegment(http, "", "翻譯：").TranslateAsync(
+            [new OcrTextBlock("good", new Rect()), new OcrTextBlock("bad", new Rect())], "EN", "ZH-HANT", "");
+
+        Assert.False(results[0].Untranslated);
+        Assert.True(results[1].Untranslated);
+        Assert.Equal("bad", results[1].TranslatedText);
+    }
+
+    [Fact]
+    public async Task PerSegment_WarmUpSendsTheUsersPromptsWithOneWord()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "你" };
+        using var http = new HttpClient(server);
+
+        await PerSegment(http, "sys", "Translate:\n\n").WarmUpAsync("EN", "ZH-HANT");
+
+        var request = Assert.Single(server.Requests);
+        Assert.Equal([("system", "sys"), ("user", "Translate:\n\n" + OpenAiChatTranslator.WarmUpText)], Messages(request));
+        Assert.Equal(1, request.Payload.GetProperty("max_tokens").GetInt32());
+    }
+
+    /// <summary>Fails every request whose user message ends in <paramref name="text"/>, and passes the rest on.</summary>
+    private sealed class FailingOn(string text, HttpMessageHandler inner) : DelegatingHandler(inner)
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        {
+            var body = await request.Content!.ReadAsStringAsync(token);
+            return body.Contains(text + "\"", StringComparison.Ordinal)
+                ? new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("boom") }
+                : await base.SendAsync(request, token);
+        }
     }
 }
