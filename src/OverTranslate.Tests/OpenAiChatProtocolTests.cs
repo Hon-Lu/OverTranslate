@@ -248,46 +248,6 @@ public class OpenAiChatProtocolTests
         Assert.False(answer.Tagged);
     }
 
-    // ---- Reading a streamed answer ----------------------------------------------------------
-
-    [Fact]
-    public void Arriving_HandsOverEachSegmentOnceItIsClosed()
-    {
-        var arriving = new OpenAiAnswer.Arriving(2);
-
-        Assert.Empty(arriving.Add("<t id=\"1\">早"));
-        Assert.Equal([(0, "早安")], arriving.Add("安</t>\n<t id=\"2\">明天"));
-        Assert.Equal([(1, "明天見")], arriving.Add("見</t>"));
-        Assert.Empty(arriving.Add("\n"));
-    }
-
-    /// <summary>
-    /// Nothing is handed over inside a thinking block the answer opened with, and nothing past the
-    /// segments asked for.
-    /// </summary>
-    [Fact]
-    public void Arriving_WaitsOutThinkingAndIgnoresIdsNotAskedFor()
-    {
-        var arriving = new OpenAiAnswer.Arriving(1);
-
-        Assert.Empty(arriving.Add("<think>想 <t id=\"1\">錯</t>"));
-        Assert.Equal([(0, "對")], arriving.Add("</think><t id=\"1\">對</t>"));
-        Assert.Empty(arriving.Add("<t id=\"2\">多的</t>"));
-    }
-
-    /// <summary>
-    /// An echo is handed over and then replaced as the answer proper arrives under the same id.
-    /// </summary>
-    [Fact]
-    public void Arriving_ReplacesAnEchoWithTheAnswer()
-    {
-        var arriving = new OpenAiAnswer.Arriving(1);
-
-        Assert.Equal([(0, "おはよう")], arriving.Add("<t id=\"1\">おはよう</t>\n"));
-        Assert.Equal([(0, "早安")], arriving.Add("<t id=\"1\">早安</t>"));
-        Assert.Equal("早安", arriving.Shown(0));
-    }
-
     // ---- Is it a translation ----------------------------------------------------------------
 
     [Theory]
@@ -404,40 +364,19 @@ public class OpenAiChatProtocolTests
 
     // ---- Requests ---------------------------------------------------------------------------
 
-    /// <summary>
-    /// A screen is one streamed request, read back in order, each segment told as it arrives.
-    /// </summary>
+    /// <summary>A screen is one request, not streamed, read back in order.</summary>
     [Fact]
-    public async Task TranslateAsync_SendsAScreenAsOneStreamedRequest()
+    public async Task TranslateAsync_SendsAScreenAsOneRequest()
     {
         var server = new OpenAiFakeServer();
         using var http = new HttpClient(server);
         var texts = Blocks(23);
-        var told = new ConcurrentQueue<(int, string)>();
-
-        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(
-            texts, Request(), new OpenAiChatContext(SegmentTranslated: (i, t) => told.Enqueue((i, t))));
-
-        var request = Assert.Single(server.Requests);
-        Assert.True(request.Streamed);
-        Assert.Equal(texts, request.Segments);
-        Assert.Equal(texts.Select(text => $"translated:{text}"), outcomes.Select(outcome => outcome.Translation));
-        Assert.Equal(texts.Select((text, i) => (i, $"translated:{text}")), told.OrderBy(pair => pair.Item1));
-    }
-
-    /// <summary>
-    /// A server that answers a request for a stream with a whole completion is read as one.
-    /// </summary>
-    [Fact]
-    public async Task TranslateAsync_ReadsAWholeAnswerToARequestForAStream()
-    {
-        var server = new OpenAiFakeServer { Streams = false };
-        using var http = new HttpClient(server);
-        var texts = Blocks(5);
 
         var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(texts, Request());
 
-        Assert.Single(server.Requests);
+        var request = Assert.Single(server.Requests);
+        Assert.False(request.Streamed);
+        Assert.Equal(texts, request.Segments);
         Assert.Equal(texts.Select(text => $"translated:{text}"), outcomes.Select(outcome => outcome.Translation));
     }
 
@@ -498,26 +437,6 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
-    /// A stream that breaks part way is a failed batch: what was shown is replaced as each text
-    /// comes back alone.
-    /// </summary>
-    [Fact]
-    public async Task TranslateAsync_SendsEveryTextAloneWhenTheStreamBreaks()
-    {
-        var server = new OpenAiFakeServer { BreakStreamAfter = 12 };
-        using var http = new HttpClient(server);
-        var texts = Blocks(6);
-        var told = new ConcurrentQueue<int>();
-
-        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(
-            texts, Request(), new OpenAiChatContext(SegmentTranslated: (i, _) => told.Enqueue(i)));
-
-        Assert.Equal(1 + 6, server.Sent);
-        Assert.Equal(texts.Select(text => $"translated:{text}"), outcomes.Select(outcome => outcome.Translation));
-        Assert.Equal(Enumerable.Range(0, 6), told.Distinct().Order());
-    }
-
-    /// <summary>
     /// A segment copied through under the right id is sent alone once, and what comes back is taken
     /// whatever it says.
     /// </summary>
@@ -541,9 +460,7 @@ public class OpenAiChatProtocolTests
         Assert.All(outcomes, outcome => Assert.True(outcome.Translated));
     }
 
-    /// <summary>
-    /// A lone text is not streamed, and an answer to it with no tag at all is the translation.
-    /// </summary>
+    /// <summary>An answer to a lone text with no tag at all is the translation.</summary>
     [Fact]
     public async Task TranslateAsync_TakesAnUntaggedAnswerToALoneText()
     {

@@ -214,8 +214,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
                 Request(options, endpoint, model, prompt, targetLang),
                 context is null ? null : new OpenAiChatContext(
                     context.History?.Select(Pair).ToList(),
-                    context.Reference?.Select(Pair).ToList(),
-                    context.SegmentTranslated),
+                    context.Reference?.Select(Pair).ToList()),
                 cancellationToken);
         }
         catch (OpenAiChatException ex)

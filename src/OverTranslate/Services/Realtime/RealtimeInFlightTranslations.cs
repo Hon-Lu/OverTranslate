@@ -9,8 +9,7 @@ namespace OverTranslate.Services.Realtime;
 /// take seconds — long enough for two or three more passes over the same line to start. Each used
 /// to send it again, and a local server that answers one request at a time worked through every
 /// copy before the next new line. Here the first pass to need a line sends it, and any pass that
-/// needs it before the answer is in takes the same answer: what it streams as it comes, and the
-/// translation it ends as.</para>
+/// needs it before the answer is in takes the same answer once it is in.</para>
 ///
 /// <para>Keyed the way the cache is, and tagged with the cache's generation: after a pause or a
 /// change of languages a line is asked for afresh, whatever the pass before is still waiting on —
@@ -59,18 +58,14 @@ internal sealed class RealtimeInFlightTranslations
         }
     }
 
-    /// <summary>One line on its way: what has arrived of it so far, and when it is done.</summary>
+    /// <summary>One line on its way, and when it is done.</summary>
     internal sealed class Line(RealtimeInFlightTranslations owner, string key, int generation)
     {
         private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private string? _arrived;
 
         public string Key { get; } = key;
 
         public int Generation { get; } = generation;
-
-        /// <summary>The translation as it last arrived, or null while nothing has.</summary>
-        public string? Arrived => Volatile.Read(ref _arrived);
 
         /// <summary>
         /// Done once the pass that sent it has finished with it, however that went — by then the
@@ -79,27 +74,13 @@ internal sealed class RealtimeInFlightTranslations
         public Task Done => _done.Task;
 
         /// <summary>
-        /// Raised each time <see cref="Arrived"/> changes, and once more when the line is done. Raised
-        /// on the thread the answer arrived on.
-        /// </summary>
-        public event Action? Changed;
-
-        /// <summary>Notes the translation as it now reads.</summary>
-        public void Arrive(string translation)
-        {
-            if (string.IsNullOrWhiteSpace(translation)) return;
-            if (Interlocked.Exchange(ref _arrived, translation) == translation) return;
-            Changed?.Invoke();
-        }
-
-        /// <summary>
         /// Ends the line: no longer on its way, so the next pass to need it and not find it in the
         /// cache sends it again.
         /// </summary>
         public void Complete()
         {
             owner.Remove(this);
-            if (_done.TrySetResult()) Changed?.Invoke();
+            _done.TrySetResult();
         }
     }
 }

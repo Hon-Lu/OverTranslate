@@ -84,14 +84,7 @@ public sealed record RealtimeBlockPlacement(
 /// after the session was paused carries an older one and is dropped rather than painted onto a
 /// screen the user has just cleared — see <see cref="RealtimeTranslationCache"/>.
 /// </param>
-/// <param name="Pending">
-/// Lines whose translation is still on its way, from a pass whose answer is streamed: in
-/// <paramref name="Lines"/> with no text, so nothing is drawn over them and the screen under them
-/// stays as it is — and named here so a line beside one does not grow into the room it is about to
-/// take. Null when every line is in.
-/// </param>
 public sealed record RealtimeRegionUpdate(
     int RegionId,
     IReadOnlyList<TranslatedBlock> Lines,
-    int Generation,
-    IReadOnlyCollection<TranslatedBlock>? Pending = null);
+    int Generation);

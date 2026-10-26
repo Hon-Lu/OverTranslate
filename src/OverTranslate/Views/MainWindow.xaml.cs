@@ -850,9 +850,7 @@ public partial class MainWindow : Window
         string sourceLang,
         string targetLang,
         bool verticalText,
-        CaptureBubbleBackdrop? backdrop = null,
-        IReadOnlyCollection<TranslatedBlock>? pending = null,
-        IReadOnlyCollection<TranslatedBlock>? arriving = null)
+        CaptureBubbleBackdrop? backdrop = null)
     {
         if (_overlayWindow != null)
         {
@@ -866,9 +864,7 @@ public partial class MainWindow : Window
                 sourceLang,
                 targetLang,
                 verticalText,
-                backdrop,
-                pending,
-                arriving);
+                backdrop);
             return;
         }
 
@@ -882,8 +878,7 @@ public partial class MainWindow : Window
             sourceLang,
             targetLang,
             verticalText,
-            backdrop,
-            pending);
+            backdrop);
         if (_captureWindow != null)
             _overlayWindow.Owner = _captureWindow;
         // This runs when the overlay closes on its own (Esc via the keyboard hook). Same fault
@@ -945,7 +940,6 @@ public partial class MainWindow : Window
         // a report of a slow capture says nothing about which without this.
         var started = Stopwatch.GetTimestamp();
         long ocrMs = 0, translateMs = 0, backdropMs = 0;
-        long firstBubbleMs = -1;
 
         // Whether the frame may still be handed back: this run is what locked it, and recognition —
         // the one stage a redrawn box would fix — has not got past finding text yet. Cleared the
@@ -1014,13 +1008,13 @@ public partial class MainWindow : Window
             _overlayWindow?.ShowOcrDebug(_lastOcrBlocks, _lastSelPhysLeft, _lastSelPhysTop);
 
             // Where every bubble goes and what colour it is, worked out now rather than after the
-            // translation: none of it depends on the text — see StreamedCaptureBubbles. Placement has
+            // translation: none of it depends on the text — see CaptureBubbleShapes. Placement has
             // to come before the colours, because it decides the boxes the overlay will draw, and a
             // colour sampled from a box that is about to be cut into four is the average of four
             // backgrounds — the group box of a wrapped paragraph spans whatever the page put between
             // its lines.
             var layoutMode = CaptureLayoutPolicy.ForApplication(req.LayoutMode);
-            var bubbles = new StreamedCaptureBubbles(_lastOcrBlocks, layoutMode, req.IsVerticalText, req.TargetLang);
+            var bubbles = new CaptureBubbleShapes(_lastOcrBlocks, layoutMode, req.IsVerticalText, req.TargetLang);
 
             // Re-use sampled colours from the previous overlay, but only where the block at that
             // index is recognisably the same block. Re-translating after switching capture mode,
@@ -1057,8 +1051,8 @@ public partial class MainWindow : Window
 
             // Off the UI thread, and alongside the translation rather than after it: this repairs the
             // whole capture once, under the same boxes, for every bubble that is about to be drawn
-            // over it. Null on failure, and the overlay then paints flat colour. Awaited before the
-            // request leaves, whatever happens, because it reads this request's copy of the crop.
+            // over it. Null on failure, and the overlay then paints flat colour. Awaited before this
+            // request is left, whatever happens, because it reads this request's copy of the crop.
             var backdropTask = Task.Run(() =>
             {
                 var repairStarted = Stopwatch.GetTimestamp();
@@ -1067,44 +1061,11 @@ public partial class MainWindow : Window
                 return repaired;
             }, cancellationToken);
 
-            // Translations that arrive before the whole answer — a provider that streams says so as
-            // each block comes in — go up as they come, once the backdrop they are painted from is
-            // ready. Coalesced: one rebuild for however many arrived since the last one.
-            CaptureBubbleBackdrop? backdrop = null;
-            var backdropReady = false;
-            var answered = false;
-            var flushQueued = 0;
-            void ShowArrivals()
-            {
-                Interlocked.Exchange(ref flushQueued, 0);
-                if (!backdropReady || answered ||
-                    !IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
-                    return;
-
-                var (changed, firstShown) = bubbles.TakeArrivals();
-                if (!changed) return;
-                if (firstBubbleMs < 0) firstBubbleMs = ElapsedMs(started);
-
-                // The first one takes the 翻譯中 card down with it, so it does not sit over bubbles
-                // as they appear; the toolbar keeps saying it is busy until the last one is in.
-                var (shown, pending, arriving) = bubbles.Current(firstShown);
-                ShowOverlay(
-                    shown, _lastOcrBlocks,
-                    _lastSelPhysLeft, _lastSelPhysTop, _lastSelPhysWidth, _lastSelPhysHeight,
-                    req.SourceLang, req.TargetLang, req.IsVerticalText, backdrop, pending, arriving);
-            }
-
-            var context = new Services.Providers.TranslationContext(SegmentTranslated: (index, text) =>
-            {
-                bubbles.Arrive(index, text);
-                if (Interlocked.Exchange(ref flushQueued, 1) == 0)
-                    Dispatcher.BeginInvoke((Action)ShowArrivals, System.Windows.Threading.DispatcherPriority.Background);
-            });
-
             stage = Stopwatch.GetTimestamp();
             var translation = AppServices.Translation.TranslateAsync(
                 _lastOcrBlocks, req.SourceLang, req.TargetLang, settings.ApiKey,
-                cancellationToken: cancellationToken, context: context);
+                cancellationToken: cancellationToken);
+            CaptureBubbleBackdrop? backdrop;
             try
             {
                 backdrop = await backdropTask;
@@ -1116,31 +1077,17 @@ public partial class MainWindow : Window
                 throw;
             }
 
-            if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
-                return;
-            backdropReady = true;
-            ShowArrivals();
-
             var (translated, _) = await translation;
-            answered = true;
             if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
                 return;
             translateMs = ElapsedMs(stage);
 
             _lastTranslatedBlocks = [.. translated];
 
-            // The answer, not what streamed, is what stays on screen. It lines up with what was
-            // read block for block; should it ever not, it is placed and coloured on its own.
-            List<TranslatedBlock> coloredTranslated;
-            IReadOnlyCollection<TranslatedBlock>? arrivingAtEnd;
-            if (bubbles.Final(translated) is var (finalBlocks, finalArriving))
-            {
-                coloredTranslated = finalBlocks;
-                arrivingAtEnd = finalArriving;
-            }
-            else
-            {
-                coloredTranslated = [.. OverlayPlacement.Place(translated, layoutMode, req.IsVerticalText, req.TargetLang)
+            // The answer lines up with what was read block for block; should it ever not, it is
+            // placed and coloured on its own.
+            var coloredTranslated = bubbles.Final(translated)
+                ?? [.. OverlayPlacement.Place(translated, layoutMode, req.IsVerticalText, req.TargetLang)
                     .Select(b =>
                     {
                         var (bg, fg) = b.Tilt is { } tilt
@@ -1149,11 +1096,6 @@ public partial class MainWindow : Window
                                 workBitmap, b.Bounds, b.SourceLineBounds, req.IsVerticalText && !b.RunsAcross);
                         return b with { BackgroundColor = bg, TextColor = fg };
                     })];
-                arrivingAtEnd = bubbles.Streamed
-                    ? new HashSet<TranslatedBlock>(coloredTranslated, ReferenceEqualityComparer.Instance)
-                    : null;
-            }
-            if (firstBubbleMs < 0) firstBubbleMs = ElapsedMs(started);
 
             _lastColoredBlocks = coloredTranslated;
             _lastVerticalText = req.IsVerticalText;
@@ -1169,20 +1111,17 @@ public partial class MainWindow : Window
                 req.SourceLang,
                 req.TargetLang,
                 req.IsVerticalText,
-                backdrop,
-                arriving: arrivingAtEnd);
+                backdrop);
             requestToolbar?.SetTranslationState(true);
             requestToolbar?.SetToggleEnabled(coloredTranslated.Count > 0);
             requestToolbar?.SetEngineBadge(AppServices.Translation.LastEngineUsage);
 
             // Sizes and times only, never the text: this is Info, in every diagnostic bundle.
-            // The backdrop runs alongside the translation, so the three stage times overlap; the
-            // first bubble is what the wait felt like.
+            // The backdrop runs alongside the translation, so the two times overlap.
             Log.Info("Capture translation done in {Total} ms: {Width}x{Height}, {Blocks} blocks, " +
-                     "ocr {Ocr} ms{Reused:l}, translate {Translate} ms, backdrop {Backdrop} ms, " +
-                     "first bubble at {First} ms",
+                     "ocr {Ocr} ms{Reused:l}, translate {Translate} ms, backdrop {Backdrop} ms",
                 ElapsedMs(started), workBitmap.Width, workBitmap.Height, _lastOcrBlocks.Count,
-                ocrMs, ocrReused ? " (reused)" : "", translateMs, backdropMs, firstBubbleMs);
+                ocrMs, ocrReused ? " (reused)" : "", translateMs, backdropMs);
         }
         // The session was torn down (Esc, re-capture, toolbar close) while this was in flight.
         // Expected and user-initiated — it must stay completely silent, with no error toast.

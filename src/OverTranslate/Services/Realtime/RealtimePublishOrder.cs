@@ -36,18 +36,4 @@ internal sealed class RealtimePublishOrder
             return true;
         }
     }
-
-    /// <summary>
-    /// Like <see cref="TryClaim"/>, but true again for the pass drawn last: a pass whose lines are
-    /// streamed is drawn once for each line as it arrives, and once more for the whole answer.
-    /// </summary>
-    public bool TryClaimAgain(long pass)
-    {
-        lock (_gate)
-        {
-            if (pass < _published) return false;
-            _published = pass;
-            return true;
-        }
-    }
 }
