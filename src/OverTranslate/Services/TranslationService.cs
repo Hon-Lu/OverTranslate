@@ -235,6 +235,17 @@ public class TranslationService
     }
 
     /// <summary>
+    /// Has <paramref name="engine"/> ready to answer before the first translation is asked of it:
+    /// a model loaded on a server, for 「OpenAI 相容」, and nothing for an engine, which has no
+    /// model of ours to load. Throws as the request did.
+    /// </summary>
+    public Task WarmUpAsync(
+        TranslationProvider engine, string sourceLang, string targetLang, CancellationToken cancellationToken = default) =>
+        engine == TranslationProvider.OpenAI
+            ? _openAi.WarmUpAsync(sourceLang, targetLang, cancellationToken)
+            : Task.CompletedTask;
+
+    /// <summary>
     /// Looks up rich dictionary data only when the caller explicitly asks for it. Normal translation,
     /// screenshot translation and realtime translation keep their existing request count and latency.
     /// </summary>

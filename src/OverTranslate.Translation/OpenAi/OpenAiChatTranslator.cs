@@ -194,6 +194,31 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         return job.Outcomes;
     }
 
+    /// <summary>
+    /// Sends the shortest request that still makes the server load the model: the instruction with
+    /// one word in it, and an answer of one token.
+    /// </summary>
+    /// <remarks>
+    /// <para>For the moment before the first real request, when nothing on screen has been read yet:
+    /// a local model that is not in memory takes seconds to load on the request that finds it
+    /// missing, and the server unloads it again after a few idle minutes without being asked — and
+    /// cannot be asked not to through this route. Sent now, the load happens while the screen is
+    /// still being read rather than in front of the first line.</para>
+    ///
+    /// <para>The instruction rather than a bare greeting because it is what every request after this
+    /// one starts with: a server that keeps the start of the last request it read has that part
+    /// ready too.</para>
+    ///
+    /// <para>Whatever comes back is not read. It throws as <see cref="TranslateAsync"/> does — a
+    /// model answering with reasoning only has nothing for this to throw away and fails as
+    /// <see cref="OpenAiChatFailure.NoTranslation"/> — and the caller decides what that means.</para>
+    /// </remarks>
+    public async Task WarmUpAsync(OpenAiChatRequest request, CancellationToken cancellationToken = default) =>
+        await SendAsync(request.Prompt.Build([WarmUpText]), request, stream: false, null, cancellationToken, maxTokens: 1);
+
+    /// <summary>The one word <see cref="WarmUpAsync"/> asks for.</summary>
+    internal const string WarmUpText = "Hello";
+
     /// <summary>One call's texts and what has become of them so far.</summary>
     private sealed class Job(
         IReadOnlyList<string> texts, OpenAiChatRequest request, OpenAiChatContext context, CancellationToken token)
@@ -384,8 +409,10 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// Told each piece of a streamed answer as it arrives. A server that answers a streamed request
     /// with a whole completion is read as one — streaming is a request, not a requirement.
     /// </param>
+    /// <param name="maxTokens">The longest answer to allow, or null to leave it to the server.</param>
     private async Task<string> SendAsync(
-        string message, OpenAiChatRequest request, bool stream, Action<string>? onPiece, CancellationToken cancellationToken)
+        string message, OpenAiChatRequest request, bool stream, Action<string>? onPiece, CancellationToken cancellationToken,
+        int? maxTokens = null)
     {
         // A dictionary rather than an anonymous type because the sampling fields are conditional.
         var payload = new Dictionary<string, object>
@@ -397,6 +424,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         if (request.TopP is { } topP) payload["top_p"] = topP;
         if (request.Seed is { } seed) payload["seed"] = seed;
         if (request.ReasoningEffort is { } effort) payload["reasoning_effort"] = effort;
+        if (maxTokens is { } most) payload["max_tokens"] = most;
         payload["stream"] = stream;
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, request.Endpoint);

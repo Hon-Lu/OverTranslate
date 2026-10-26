@@ -211,14 +211,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         {
             outcomes = await _chat.TranslateAsync(
                 blocks.Select(block => block.Text).ToList(),
-                new OpenAiChatRequest(
-                    endpoint, model, options.ApiKey, prompt,
-                    LanguageData.GetModelLanguageTag(targetLang),
-                    options.SendTemperature ? options.Temperature : null,
-                    options.SendTopP ? options.TopP : null,
-                    options.SendSeed ? options.Seed : null,
-                    options.ReasoningEffort,
-                    TimeSpan.FromSeconds(options.TimeoutSeconds)),
+                Request(options, endpoint, model, prompt, targetLang),
                 context is null ? null : new OpenAiChatContext(
                     context.History?.Select(Pair).ToList(),
                     context.Reference?.Select(Pair).ToList(),
@@ -271,6 +264,41 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         var detected = LanguageData.IsAutomaticSource(sourceLang) ? "" : sourceLang.ToUpperInvariant();
         return (results, detected);
     }
+
+    /// <summary>
+    /// Has the server load the model before the first translation needs it — see
+    /// <see cref="OpenAiChatTranslator.WarmUpAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// Sent whatever the server is, on this machine or not: whether a model is already in memory is
+    /// the server's business, and for one that keeps it there the request costs a token. Throws as
+    /// the request did, unworded — nobody is shown a warm-up's failure, and the translation that
+    /// follows meets the same cause and words it.
+    /// </remarks>
+    public async Task WarmUpAsync(string sourceLang, string targetLang, CancellationToken cancellationToken = default)
+    {
+        var options = _options();
+        var model = options.Model.Trim();
+        if (model.Length == 0) return;
+
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        await _chat.WarmUpAsync(
+            Request(options, BuildEndpoint(options.BaseUrl), model,
+                BuildPrompt(sourceLang, targetLang, options.ExtraInstructions), targetLang),
+            cancellationToken);
+        Log.Info("OpenAI 相容暖機完成：{Elapsed} ms",
+            (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+    }
+
+    private static OpenAiChatRequest Request(
+        OpenAiCompatibleOptions options, Uri endpoint, string model, OpenAiPrompt prompt, string targetLang) =>
+        new(endpoint, model, options.ApiKey, prompt,
+            LanguageData.GetModelLanguageTag(targetLang),
+            options.SendTemperature ? options.Temperature : null,
+            options.SendTopP ? options.TopP : null,
+            options.SendSeed ? options.Seed : null,
+            options.ReasoningEffort,
+            TimeSpan.FromSeconds(options.TimeoutSeconds));
 
     /// <summary>How one block failed, for the log: never the server's words, which can quote the text.</summary>
     private static string FailureKind(OpenAiChatOutcome outcome) => outcome.Error switch
