@@ -174,10 +174,6 @@ public partial class RealtimeBlockWindow : Window
 
     private IReadOnlyList<TranslatedBlock> _lines = [];
 
-    // Lines of _lines whose translation is still on its way: drawn as nothing, but in the way of a
-    // neighbour that would otherwise grow into their room. See RealtimeRegionUpdate.Pending.
-    private IReadOnlyCollection<TranslatedBlock> _pending = [];
-
     /// <param name="grabUnderlying">
     /// Asks the session's capture backend for a screen rectangle. Required rather than optional:
     /// 進階選項 cannot be drawn without it, and a window that quietly fell back to reading the
@@ -319,11 +315,7 @@ public partial class RealtimeBlockWindow : Window
         // why a session cannot start on a source that has not proved it (#105).
     }
 
-    /// <param name="pending">
-    /// Lines still on their way, in <paramref name="lines"/> with no text — see
-    /// <see cref="RealtimeRegionUpdate.Pending"/>.
-    /// </param>
-    public void SetLines(IReadOnlyList<TranslatedBlock> lines, IReadOnlyCollection<TranslatedBlock>? pending = null)
+    public void SetLines(IReadOnlyList<TranslatedBlock> lines)
     {
         // A rebuild cross-fades, so repainting an unchanged overlay is a visible flicker for no
         // gain. The session already suppresses re-translation of text that has not really changed;
@@ -331,44 +323,12 @@ public partial class RealtimeBlockWindow : Window
         // off, which happens whenever recognition redraws its idea of where the line sits.
         if (_isLoaded && LooksIdentical(_lines, lines)) return;
 
-        var arrived = _isLoaded ? ArrivedOnly(_lines, lines) : null;
         _lines = lines;
-        _pending = pending ?? [];
         if (_isLoaded)
         {
-            if (arrived is null) Rebuild();
-            else Draw(arrived);
+            Rebuild();
             UpdateNaturalRefreshTimer();
         }
-    }
-
-    /// <summary>
-    /// The lines of <paramref name="next"/> that are new on screen, when nothing else about it is
-    /// different from <paramref name="current"/>: the same lines in the same places, each saying
-    /// what it said or — where it said nothing, still on its way — something now. Null when
-    /// anything else changed, and the whole overlay is drawn again.
-    /// </summary>
-    /// <remarks>
-    /// What a streamed answer looks like as it comes in, one line at a time. Drawing only those
-    /// lines leaves the ones already up exactly as they are, repaired background and all: built again
-    /// from a new grab, a patch over moving content would jump to the newer picture every time a
-    /// line beside it arrived.
-    /// </remarks>
-    internal static IReadOnlySet<TranslatedBlock>? ArrivedOnly(
-        IReadOnlyList<TranslatedBlock> current, IReadOnlyList<TranslatedBlock> next)
-    {
-        if (current.Count != next.Count) return null;
-
-        var arrived = new HashSet<TranslatedBlock>(ReferenceEqualityComparer.Instance);
-        for (int i = 0; i < current.Count; i++)
-        {
-            if (!SamePosition(current[i].Bounds, next[i].Bounds)) return null;
-            if (string.Equals(current[i].TranslatedText, next[i].TranslatedText, StringComparison.Ordinal)) continue;
-            if (!string.IsNullOrWhiteSpace(current[i].TranslatedText)) return null;
-            arrived.Add(next[i]);
-        }
-
-        return arrived.Count > 0 ? arrived : null;
     }
 
     /// <summary>
@@ -432,38 +392,27 @@ public partial class RealtimeBlockWindow : Window
             if (!string.Equals(current[i].TranslatedText, next[i].TranslatedText, StringComparison.Ordinal))
                 return false;
 
-            if (!SamePosition(current[i].Bounds, next[i].Bounds))
+            var a = current[i].Bounds;
+            var b = next[i].Bounds;
+            if (Math.Abs(a.X - b.X) > SamePositionTolerance ||
+                Math.Abs(a.Y - b.Y) > SamePositionTolerance ||
+                Math.Abs(a.Width - b.Width) > SamePositionTolerance ||
+                Math.Abs(a.Height - b.Height) > SamePositionTolerance)
                 return false;
         }
 
         return true;
     }
 
-    private static bool SamePosition(Rect a, Rect b) =>
-        Math.Abs(a.X - b.X) <= SamePositionTolerance &&
-        Math.Abs(a.Y - b.Y) <= SamePositionTolerance &&
-        Math.Abs(a.Width - b.Width) <= SamePositionTolerance &&
-        Math.Abs(a.Height - b.Height) <= SamePositionTolerance;
-
-    private void Rebuild() => Draw(null);
-
-    /// <param name="only">
-    /// Lines to add to what is already drawn, leaving the rest as it is — see
-    /// <see cref="ArrivedOnly"/>; null draws every line again.
-    /// </param>
-    private void Draw(IReadOnlySet<TranslatedBlock>? only)
+    private void Rebuild()
     {
-        if (only is null)
-        {
-            ScrimCanvas.Children.Clear();
-            TextCanvas.Children.Clear();
+        ScrimCanvas.Children.Clear();
+        TextCanvas.Children.Clear();
 
-            // Moved on before anything is drawn, so a batch of brushes already in flight for the
-            // previous arrangement can be told it has been overtaken. Not for lines added to it:
-            // the surfaces such a batch paints are all still there.
-            Interlocked.Increment(ref _patchGeneration);
-        }
-        var patches = only is null ? new List<NaturalPatchVisual>() : [.. Volatile.Read(ref _naturalPatches)];
+        // Moved on before anything is drawn, so a batch of brushes already in flight for the previous
+        // arrangement can be told it has been overtaken.
+        Interlocked.Increment(ref _patchGeneration);
+        var patches = new List<NaturalPatchVisual>();
 
         // The block's size, not the window's: a shrunk copy is scaled at the root afterwards.
         double canvasWidth = _sourceBounds.Width / _dpiX;
@@ -475,8 +424,8 @@ public partial class RealtimeBlockWindow : Window
             ? CaptureUnderlyingRegion()
             : null;
 
-        var boxes = only is null ? new List<List<FrameworkElement>>() : [.. _boxes.Select(box => box.ToList())];
-        foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame, only))
+        var boxes = new List<List<FrameworkElement>>();
+        foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame))
         {
             if (visual.JoinsPrevious && boxes.Count > 0) boxes[^1].Add(visual.Text);
             else boxes.Add([visual.Text]);
@@ -501,7 +450,7 @@ public partial class RealtimeBlockWindow : Window
         foreach (var index in _coverage.Redrawn(_boxes.Count, MeasureBoxes)) SetBoxVisible(index, false);
 
         // A new set of patches has to be painted once before there is anything to compare against.
-        if (only is null) Volatile.Write(ref _lastRefreshPrint, null);
+        Volatile.Write(ref _lastRefreshPrint, null);
     }
 
     /// <summary>
@@ -953,10 +902,8 @@ public partial class RealtimeBlockWindow : Window
         return new LineVisual(background, text, patchBounds);
     }
 
-    /// <param name="only">The lines to build, or null for every one — see <see cref="Draw"/>.</param>
     private IEnumerable<LineVisual> BuildVisuals(
-        double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
-        IReadOnlySet<TranslatedBlock>? only = null)
+        double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
     {
         using var repairedFrame = _naturalBackground ? RepairNaturalFrame(frame, _lines) : null;
         // Read out of the repair once, and only when a column is about to ask for a plate.
@@ -966,7 +913,6 @@ public partial class RealtimeBlockWindow : Window
         foreach (var block in _lines)
         {
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
-            if (only is not null && !only.Contains(block)) continue;
 
             // RunsAcross is the reading stage saying this block is horizontal writing that happened
             // to be on a vertical page — a name plate, a caption box, a scene label. It falls
@@ -1227,8 +1173,7 @@ public partial class RealtimeBlockWindow : Window
             Math.Max(0, _sourceBounds.Height - ScrimPaddingY * 2 * _dpiY));
         var room = AcrossInColumnsRoom.Within(
             line.Bounds,
-            _lines.Where(other => !ReferenceEquals(other, line) &&
-                    (!string.IsNullOrWhiteSpace(other.TranslatedText) || _pending.Contains(other)))
+            _lines.Where(other => !ReferenceEquals(other, line) && !string.IsNullOrWhiteSpace(other.TranslatedText))
                 .Select(other => other.Bounds),
             limit);
         room = new(room.Left / _dpiX, room.Right / _dpiX, room.Below / _dpiY);

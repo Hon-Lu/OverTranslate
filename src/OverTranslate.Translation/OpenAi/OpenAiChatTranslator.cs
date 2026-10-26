@@ -48,16 +48,9 @@ public sealed record OpenAiChatRequest(
 /// <summary>What one call knows beyond its texts.</summary>
 /// <param name="History">Earlier lines of the same session, oldest first — see <see cref="OpenAiPrompt.Build"/>.</param>
 /// <param name="Reference">Lines on the same screen that are already translated.</param>
-/// <param name="SegmentTranslated">
-/// Told each time a text's translation is known or changes, with its index and the translation: as
-/// a streamed segment arrives, when the whole answer reads a segment differently, when a segment
-/// sent again comes back. Called from whichever thread the answer arrived on, and possibly from
-/// several at once.
-/// </param>
 public sealed record OpenAiChatContext(
     IReadOnlyList<OpenAiTranslationPair>? History = null,
-    IReadOnlyList<OpenAiTranslationPair>? Reference = null,
-    Action<int, string>? SegmentTranslated = null);
+    IReadOnlyList<OpenAiTranslationPair>? Reference = null);
 
 /// <summary>What became of one text: its translation, or why there is none.</summary>
 /// <param name="Translation">Null when the text was not translated.</param>
@@ -124,18 +117,13 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// </remarks>
     public const int DefaultContextTokens = 4096;
 
-    internal static readonly Regex ThinkingBlock = new(
+    private static readonly Regex ThinkingBlock = new(
         @"<think(?:\s[^>]*)?>.*?</think\s*>",
         RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
-    internal static readonly Regex UpToClosingTag = new(
+    private static readonly Regex UpToClosingTag = new(
         @"^.*?</think\s*>",
         RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
-
-    /// <summary>An answer that opens with a thinking block, closed later or not.</summary>
-    internal static readonly Regex LeadingOpeningTag = new(
-        @"^\s*<think(?:\s[^>]*)?>",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly Regex UnclosedLeadingBlock = new(
         @"^\s*<think(?:\s[^>]*)?>.*\z",
@@ -146,9 +134,9 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// Not one text was translated: the first text's failure, as it was thrown.
     /// </exception>
     /// <remarks>
-    /// <para>The texts go in batches — see <see cref="Batches"/> — one after another, each streamed
-    /// so that a segment is told to <see cref="OpenAiChatContext.SegmentTranslated"/> as soon as its
-    /// closing tag is in. The whole answer, once in, is what counts.</para>
+    /// <para>The texts go in batches — see <see cref="Batches"/> — one after another, each answer
+    /// read whole once it is in. Not streamed: measured, a streamed answer took as long in all and
+    /// read the same, and only showed its first segment sooner.</para>
     ///
     /// <para>An answer whose ids are not exactly 1 to n — a segment merged into the next, one left
     /// out, the request failing — is set aside whole, and every text of that batch is sent alone.
@@ -227,7 +215,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// <see cref="OpenAiChatFailure.NoTranslation"/> — and the caller decides what that means.</para>
     /// </remarks>
     public async Task WarmUpAsync(OpenAiChatRequest request, CancellationToken cancellationToken = default) =>
-        await SendAsync(request.Prompt.Build([WarmUpText]), request, stream: false, null, cancellationToken, maxTokens: 1);
+        await SendAsync(request.Prompt.Build([WarmUpText]), request, cancellationToken, maxTokens: 1);
 
     /// <summary>The one word <see cref="WarmUpAsync"/> asks for.</summary>
     internal const string WarmUpText = "Hello";
@@ -251,12 +239,10 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         /// <summary>A batch failed in a way that has nothing to do with its texts — see <see cref="OpenAiChatTranslator.MightBeTheTexts"/>.</summary>
         public bool Unreachable { get; set; }
 
-        /// <param name="shown">What the caller was already told for this text, if anything.</param>
-        public void Succeed(int index, string translation, bool alreadyCounted = false, string? shown = null)
+        public void Succeed(int index, string translation, bool alreadyCounted = false)
         {
             Outcomes[index] = new OpenAiChatOutcome(translation, null);
             if (!alreadyCounted) Interlocked.Increment(ref _translated);
-            if (translation != shown) Context.SegmentTranslated?.Invoke(index, translation);
         }
 
         public void Fail(int index, Exception error)
@@ -307,11 +293,10 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     private static IReadOnlyList<string> Slice(IReadOnlyList<string> texts, int start, int count) =>
         Enumerable.Range(start, count).Select(i => texts[i]).ToList();
 
-    /// <summary>One batch: sent whole and streamed, then read, checked and mended.</summary>
+    /// <summary>One batch: sent whole, then read, checked and mended.</summary>
     private async Task BatchAsync(Job job, int start, int count)
     {
         var texts = Slice(job.Texts, start, count);
-        var arriving = new OpenAiAnswer.Arriving(count);
         var watch = Stopwatch.StartNew();
 
         OpenAiAnswer? answer = null;
@@ -320,11 +305,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         try
         {
             var message = job.Request.Prompt.Build(texts, job.Context.History, job.Context.Reference);
-            var content = await SendAsync(message, job.Request, stream: true, piece =>
-            {
-                foreach (var (index, text) in arriving.Add(piece))
-                    job.Context.SegmentTranslated?.Invoke(start + index, text);
-            }, job.Token);
+            var content = await SendAsync(message, job.Request, job.Token);
             answer = OpenAiAnswer.Read(content, count);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !job.Token.IsCancellationRequested)
@@ -358,7 +339,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         for (var k = 0; k < count; k++)
         {
             var translation = answer.Translations[k]!;
-            job.Succeed(start + k, translation, shown: arriving.Shown(k));
+            job.Succeed(start + k, translation);
             if (!Passes(texts[k], translation, job.Request.TargetTag)) resend.Add(start + k);
         }
 
@@ -441,7 +422,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// </remarks>
     private async Task<string> SingleAsync(string text, OpenAiChatRequest request, CancellationToken token)
     {
-        var content = await SendAsync(request.Prompt.Build([text]), request, stream: false, null, token);
+        var content = await SendAsync(request.Prompt.Build([text]), request, token);
         var answer = OpenAiAnswer.Read(content, 1);
 
         var translation = answer.Complete ? answer.Translations[0]
@@ -454,14 +435,9 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     }
 
     /// <summary>Sends one request and returns the answer's content, thinking and all.</summary>
-    /// <param name="onPiece">
-    /// Told each piece of a streamed answer as it arrives. A server that answers a streamed request
-    /// with a whole completion is read as one — streaming is a request, not a requirement.
-    /// </param>
     /// <param name="maxTokens">The longest answer to allow, or null to leave it to the server.</param>
     private async Task<string> SendAsync(
-        string message, OpenAiChatRequest request, bool stream, Action<string>? onPiece, CancellationToken cancellationToken,
-        int? maxTokens = null)
+        string message, OpenAiChatRequest request, CancellationToken cancellationToken, int? maxTokens = null)
     {
         // A dictionary rather than an anonymous type because the sampling fields are conditional.
         var payload = new Dictionary<string, object>
@@ -474,7 +450,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         if (request.Seed is { } seed) payload["seed"] = seed;
         if (request.ReasoningEffort is { } effort) payload["reasoning_effort"] = effort;
         if (maxTokens is { } most) payload["max_tokens"] = most;
-        payload["stream"] = stream;
+        payload["stream"] = false;
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, request.Endpoint);
         httpRequest.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -499,9 +475,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
                 throw new OpenAiChatException(OpenAiChatFailure.Rejected, response.StatusCode, ReadError(error));
             }
 
-            var content = response.Content.Headers.ContentType?.MediaType == "text/event-stream"
-                ? await ReadEventsAsync(response, onPiece, timeout.Token)
-                : ReadCompletion(await response.Content.ReadAsStringAsync(timeout.Token));
+            var content = ReadCompletion(await response.Content.ReadAsStringAsync(timeout.Token));
 
             if (StripThinking(content).Length == 0)
                 throw new OpenAiChatException(OpenAiChatFailure.NoTranslation);
@@ -527,57 +501,6 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         {
             throw new OpenAiChatException(OpenAiChatFailure.Unparsable, inner: ex);
         }
-    }
-
-    /// <summary>
-    /// The content of a streamed completion, each piece told to <paramref name="onPiece"/> as it
-    /// comes.
-    /// </summary>
-    /// <remarks>
-    /// Reasoning sent in a field of its own is not content and is skipped. An error sent part way
-    /// through, in the body of an answer that started out fine, is a refusal like any other: the
-    /// server's own words are the only thing that says what went wrong.
-    /// </remarks>
-    private static async Task<string> ReadEventsAsync(
-        HttpResponseMessage response, Action<string>? onPiece, CancellationToken token)
-    {
-        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(token), Encoding.UTF8);
-        var content = new StringBuilder();
-
-        while (await reader.ReadLineAsync(token) is { } line)
-        {
-            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
-            var data = line[5..].Trim();
-            if (data == "[DONE]") break;
-            if (data.Length == 0) continue;
-
-            string? piece;
-            try
-            {
-                using var document = JsonDocument.Parse(data);
-                var root = document.RootElement;
-                if (root.TryGetProperty("error", out _))
-                    throw new OpenAiChatException(OpenAiChatFailure.Rejected, response.StatusCode, ReadError(data));
-
-                piece = root.TryGetProperty("choices", out var choices)
-                        && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0
-                        && choices[0].TryGetProperty("delta", out var delta)
-                        && delta.TryGetProperty("content", out var text)
-                        && text.ValueKind == JsonValueKind.String
-                    ? text.GetString()
-                    : null;
-            }
-            catch (JsonException ex)
-            {
-                throw new OpenAiChatException(OpenAiChatFailure.Unparsable, inner: ex);
-            }
-
-            if (string.IsNullOrEmpty(piece)) continue;
-            content.Append(piece);
-            onPiece?.Invoke(piece);
-        }
-
-        return content.ToString();
     }
 
     /// <summary>

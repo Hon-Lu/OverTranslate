@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
-using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -35,15 +33,6 @@ internal sealed class OpenAiFakeServer : HttpMessageHandler
 
     /// <summary>Requests with a segment containing this are never answered.</summary>
     public string? HangOn { get; init; }
-
-    /// <summary>Whether a request asking for a stream gets one. Off, it gets a whole completion.</summary>
-    public bool Streams { get; init; } = true;
-
-    /// <summary>A stream that breaks after this many pieces, as a dropped connection does.</summary>
-    public int? BreakStreamAfter { get; init; }
-
-    /// <summary>How many characters each streamed piece carries.</summary>
-    public int PieceLength { get; init; } = 3;
 
     public ConcurrentQueue<Recorded> Requests { get; } = new();
     public int MaxConcurrentRequests => Volatile.Read(ref _max);
@@ -84,9 +73,7 @@ internal sealed class OpenAiFakeServer : HttpMessageHandler
             if (FailOn is { } fail && segments.Any(text => text.Contains(fail, StringComparison.Ordinal)))
                 return new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("boom") };
 
-            var answer = Answer?.Invoke(segments) ?? Tagged(segments.Select(text => $"translated:{text}"));
-            var stream = payload.RootElement.GetProperty("stream").GetBoolean() && Streams;
-            return stream ? Streamed(answer) : Whole(answer);
+            return Whole(Answer?.Invoke(segments) ?? Tagged(segments.Select(text => $"translated:{text}")));
         }
         finally
         {
@@ -101,47 +88,4 @@ internal sealed class OpenAiFakeServer : HttpMessageHandler
             choices = new[] { new { message = new { role = "assistant", content } } },
         })),
     };
-
-    private HttpResponseMessage Streamed(string content)
-    {
-        var events = new List<string>();
-        for (var i = 0; i < content.Length; i += PieceLength)
-        {
-            var piece = content.Substring(i, Math.Min(PieceLength, content.Length - i));
-            events.Add("data: " + JsonSerializer.Serialize(new
-            {
-                choices = new[] { new { delta = new { content = piece } } },
-            }) + "\n\n");
-        }
-
-        var broken = BreakStreamAfter is { } after && after < events.Count;
-        if (broken) events = events.Take(BreakStreamAfter!.Value).ToList();
-        else events.Add("data: [DONE]\n\n");
-
-        var response = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StreamContent(new EventStream(Encoding.UTF8.GetBytes(string.Concat(events)), broken)),
-        };
-        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/event-stream");
-        return response;
-    }
-
-    /// <summary>The bytes of a stream, then — when <paramref name="breaks"/> — a dropped connection.</summary>
-    private sealed class EventStream(byte[] bytes, bool breaks) : MemoryStream(bytes)
-    {
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            var read = base.Read(buffer, offset, count);
-            return read == 0 && breaks ? throw new IOException("connection reset") : read;
-        }
-
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            var read = await base.ReadAsync(buffer, cancellationToken);
-            return read == 0 && breaks ? throw new IOException("connection reset") : read;
-        }
-
-        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
-            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
-    }
 }

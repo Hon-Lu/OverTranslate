@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace OverTranslate.Translation.OpenAi;
@@ -93,71 +92,5 @@ internal sealed record OpenAiAnswer(IReadOnlyList<string?> Translations, bool Co
     {
         var fence = Fence.Match(text);
         return fence.Success ? fence.Groups[1].Value : text;
-    }
-
-    /// <summary>
-    /// Reads a streamed answer as it arrives, handing over each segment once its closing tag is in.
-    /// </summary>
-    /// <remarks>
-    /// <para>What is handed over is provisional: the whole answer, read by <see cref="Read"/> once
-    /// it is in, is what counts, and a segment it reads differently replaces what was shown. That
-    /// covers a model that echoes the texts before translating them — the echo is shown, briefly,
-    /// as the original it is — and a model that turns out to have been thinking.</para>
-    ///
-    /// <para>Nothing is handed over while the answer is inside a thinking block it opened with; a
-    /// closing tag with no opening one makes everything before it thinking, from then on.</para>
-    /// </remarks>
-    internal sealed class Arriving(int count)
-    {
-        private readonly StringBuilder _buffer = new();
-        private readonly string?[] _shown = new string?[count];
-
-        /// <summary>Takes the next piece of the answer.</summary>
-        /// <returns>The segments whose text changed with it, by index from zero.</returns>
-        public IReadOnlyList<(int Index, string Text)> Add(string piece)
-        {
-            if (piece.Length == 0) return [];
-            _buffer.Append(piece);
-
-            // Only a closing tag can complete a segment.
-            if (!piece.Contains('>')) return [];
-
-            var visible = Visible(_buffer.ToString());
-            if (visible is null) return [];
-
-            var changed = new List<(int, string)>();
-            foreach (Match opening in OpeningTag.Matches(visible))
-            {
-                var start = opening.Index + opening.Length;
-                var closing = ClosingTag.Match(visible, start);
-                if (!closing.Success) break;
-
-                var next = OpeningTag.Match(visible, start);
-                if (next.Success && next.Index < closing.Index) continue;
-
-                if (!int.TryParse(opening.Groups[1].ValueSpan, out var id) || id < 1 || id > count) continue;
-                var text = visible[start..closing.Index].Trim();
-                if (text == _shown[id - 1]) continue;
-
-                _shown[id - 1] = text;
-                changed.Add((id - 1, text));
-            }
-
-            return changed;
-        }
-
-        /// <summary>What was last handed over for the segment at <paramref name="index"/>, if anything.</summary>
-        public string? Shown(int index) => _shown[index];
-
-        /// <summary>The whole answer so far.</summary>
-        public override string ToString() => _buffer.ToString();
-
-        /// <summary>The answer without its thinking, or null while it is still inside a leading block.</summary>
-        private static string? Visible(string answer)
-        {
-            var visible = OpenAiChatTranslator.ThinkingBlock.Replace(answer, "");
-            if (OpenAiChatTranslator.LeadingOpeningTag.IsMatch(visible)) return null;
-            return OpenAiChatTranslator.UpToClosingTag.Replace(visible, "", 1);
-        }
     }
 }

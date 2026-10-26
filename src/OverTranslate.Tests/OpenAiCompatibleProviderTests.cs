@@ -270,9 +270,7 @@ public class OpenAiCompatibleProviderTests
         Assert.Equal("EN", detected);
     }
 
-    /// <summary>
-    /// The context reaches the request, and each block is told to the caller as it arrives.
-    /// </summary>
+    /// <summary>The context reaches the request.</summary>
     [Fact]
     public async Task TranslateAsync_PassesTheContextOn()
     {
@@ -280,19 +278,16 @@ public class OpenAiCompatibleProviderTests
         using var http = new HttpClient(server);
         var provider = new OpenAiCompatibleProvider(
             http, () => new OpenAiCompatibleOptions("http://localhost:1234/v1", "test-model"));
-        var told = new ConcurrentQueue<(int, string)>();
 
         await provider.TranslateAsync(
             [new OcrTextBlock("a", new Rect()), new OcrTextBlock("b", new Rect())], "JA", "ZH-HANT", "",
             context: new TranslationContext(
                 [new TranslationPair("前", "之前")],
-                [new TranslationPair("旁", "旁邊")],
-                (index, text) => told.Enqueue((index, text))));
+                [new TranslationPair("旁", "旁邊")]));
 
         var message = Assert.Single(server.Requests).Message;
         Assert.Contains("- 前 → 之前", message);
         Assert.Contains("- 旁 → 旁邊", message);
-        Assert.Equal([(0, "translated:a"), (1, "translated:b")], told.OrderBy(pair => pair.Item1));
     }
 
     /// <summary>

@@ -39,27 +39,15 @@ public class RealtimeInFlightTranslationsTests
     }
 
     [Fact]
-    public void WhatArrivesIsToldOnce_AndTheEndToo()
+    public void ALineIsDoneOnceItsPassHasFinishedWithIt()
     {
         var inFlight = new RealtimeInFlightTranslations();
         var (line, _) = inFlight.Claim("key", 1);
-        var told = 0;
-        line.Changed += () => told++;
-
-        line.Arrive("你好");
-        line.Arrive("你好");
-        line.Arrive(" ");
-        Assert.Equal("你好", line.Arrived);
-        Assert.Equal(1, told);
-
-        line.Arrive("哈囉");
-        Assert.Equal("哈囉", line.Arrived);
-        Assert.Equal(2, told);
+        Assert.False(line.Done.IsCompleted);
 
         line.Complete();
         line.Complete();
         Assert.True(line.Done.IsCompleted);
-        Assert.Equal(3, told);
     }
 
     [Fact]
