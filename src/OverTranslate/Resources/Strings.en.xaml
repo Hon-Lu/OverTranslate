@@ -500,10 +500,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.CopyModelName">Copy the model name</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">Required</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">Local LLM setup guide</sys:String>
-    <sys:String x:Key="S.Settings.PromptAuto">Source: automatic</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicit">Source: chosen</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoHint">This prompt applies only when the source language is set to Automatic.</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitHint">This prompt applies only when a source language is chosen, such as English.</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">Model settings</sys:String>
     <sys:String x:Key="S.Settings.ProfileInUse">Settings in use</sys:String>
     <sys:String x:Key="S.Settings.ProfileListTitle">Saved settings</sys:String>
@@ -512,9 +508,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotBody">To keep the current built-in setting, add a setting of your own.</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotAction">Copy built-in setting</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">Built-in v{0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoScope">Used only while the source language is set to Automatic.</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitScope">Used only while a source language is chosen, such as English.</sys:String>
-    <sys:String x:Key="S.Settings.PromptDeleteTitle">Delete prompt</sys:String>
+    <sys:String x:Key="S.Settings.PromptDeleteTitle">Delete settings</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">Delete “{0}”? This cannot be undone.</sys:String>
     <sys:String x:Key="S.Settings.PromptDefaultName">Built-in</sys:String>
     <sys:String x:Key="S.Settings.PromptReadOnly">Read-only</sys:String>
@@ -522,35 +516,24 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptEditTitle">Edit settings</sys:String>
     <sys:String x:Key="S.Settings.PromptDelete">Delete</sys:String>
     <sys:String x:Key="S.Settings.PromptName">Name</sys:String>
-    <sys:String x:Key="S.Settings.PromptNamePlaceholder">Name this prompt</sys:String>
-    <sys:String x:Key="S.Settings.PromptContent">Prompt text</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">Not set</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceLanguage">Source language</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceAuto">Automatic</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceExplicit">Chosen</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemPlaceholder">System prompt…</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserPlaceholder">User prompt…</sys:String>
-    <sys:String x:Key="S.Settings.PromptNeedOne">Fill in System Prompt or User Prompt</sys:String>
-    <sys:String x:Key="S.Settings.PromptOtherEmpty">The “{0}” prompt is empty</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemTip">Set the system prompt in the format your chosen model recommends, or leave it empty if it is not needed.</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserTip">Set the user prompt in the format your chosen model recommends, or leave it empty if it is not needed.</sys:String>
-    <sys:String x:Key="S.Settings.PromptNewName">My prompt {0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptLoadDefault">Load the built-in prompt</sys:String>
-    <sys:String x:Key="S.Settings.PromptParams">Available parameters</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">Replaced with the languages actually in use before the request is sent.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">Parameter</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">Description</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">Example</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceName">Source language name</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceCode">Source language code</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetName">Target language name</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetCode">Target language code</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceNameExample">English</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Japanese</sys:String>
+    <sys:String x:Key="S.Settings.PromptNamePlaceholder">Name these settings</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructions">Additional requests</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsOptional">Optional</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsHint">Added after the app's built-in translation rules — the place to describe tone, word choice and style. Leave it empty to use the built-in rules alone.</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">For example: Translate in a relaxed, casual tone; don't end sentences with a period.</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">Not set — only the built-in translation rules apply</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">This was carried over from your custom prompt in an earlier version. The translation task, output format and language are now handled by the app, so only requests about tone and style need to stay here.</sys:String>
+    <sys:String x:Key="S.Settings.PromptNewName">My settings {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Advanced</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Use the recommended model</sys:String>
     <sys:String x:Key="S.Settings.AdvancedHint">A parameter that is not enabled is left out of the request. Models differ in which parameters they accept, in what range, and at what value — follow your model's own documentation.</sys:String>
     <sys:String x:Key="S.Settings.ParamEnable">Enable</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">How much the model “thinks” before it answers. Some general-purpose models think first by
+default, which makes translation much slower or even makes it time out.
+Enable this and choose none to turn thinking off and speed translation up; translation-only
+models usually do not need it.
+Accepted values depend on the service; common ones are none, minimal, low, medium and high.</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">Range: 0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">How strongly the model favours the likeliest phrasing. The lower the value, the more

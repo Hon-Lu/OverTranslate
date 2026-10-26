@@ -332,8 +332,8 @@ public static class LanguageData
     /// <remarks>
     /// Some translation-only models are trained with the language named as "Japanese (ja)" — the tag
     /// is not decoration beside the name there, it is the part the model was trained to key on. The
-    /// built-in prompts no longer ask for one, but <c>{source_code}</c> and <c>{target_code}</c> are
-    /// still offered to templates users write — see
+    /// built-in instruction does not ask for one, but <c>{source_code}</c> and <c>{target_code}</c>
+    /// are still filled in where old prompts carried into a setting use them — see
     /// <see cref="Services.Providers.OpenAiCompatibleProvider.SourceCodePlaceholder"/>.
     ///
     /// Returns empty for 自動, which has no language to name: a template that names the source while

@@ -540,7 +540,6 @@
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
@@ -549,15 +548,15 @@
                                                                Style="{StaticResource SectionHeader}"
                                                                Margin="2,0,0,8"/>
 
-                                                    <!-- The two settings that are not prose, above the
-                                                         two that are. They are what makes this a model
+                                                    <!-- The settings that are not prose, above the
+                                                         one that is. They are what makes this a model
                                                          setting rather than a prompt: the wording below
                                                          was written for this model, at this
-                                                         temperature, and reading one without the other
-                                                         two is how they come to disagree. -->
+                                                         temperature, and reading one without the
+                                                         others is how they come to disagree. -->
                                                     <StackPanel Grid.Row="1">
                                                         <!-- The model on a card of its own, above
-                                                             the three numbers. It is the answer to a
+                                                             the four numbers. It is the answer to a
                                                              different question - which model this
                                                              setting is for, rather than how it is
                                                              asked - and it is the one value a reader
@@ -610,20 +609,51 @@
                                                             </Grid>
                                                         </Border>
 
-                                                        <!-- The three side by side rather than
-                                                             stacked: each is a number two or three
-                                                             characters long, and they are read
-                                                             together - what a temperature means
-                                                             depends on the Top P beside it. -->
+                                                        <!-- Two by two rather than four side by side:
+                                                             four in a row cut the names to
+                                                             "Temp…" and "Reaso…" at this width,
+                                                             and the values with them in a narrow
+                                                             window. They are still read together -
+                                                             what a temperature means depends on the
+                                                             Top P beside it. -->
                                                         <Grid Margin="0,8,0,0">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
-                                                        <Border Grid.Column="0"
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+                                                        <!-- First, as it is in the editor: whether
+                                                             the model thinks at all. -->
+                                                        <Border Grid.Row="0" Grid.Column="0"
                                                                 Style="{StaticResource ProfileCard}"
-                                                                Margin="0,0,4,0">
+                                                                Margin="0,0,4,4">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <Border Grid.Column="0"
+                                                                        Style="{StaticResource ProfileCardIconWell}">
+                                                                    <TextBlock Text="&#xE945;"
+                                                                               Style="{StaticResource ProfileCardIcon}"/>
+                                                                </Border>
+                                                                <StackPanel Grid.Column="1"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="10,0,0,0">
+                                                                    <TextBlock Text="{DynamicResource S.Settings.ReasoningEffort}"
+                                                                               Style="{StaticResource ProfileCardLabel}"/>
+                                                                    <TextBlock x:Name="ProfileReasoningEffortText"
+                                                                               Style="{StaticResource ProfileCardValue}"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                        <Border Grid.Row="0" Grid.Column="1"
+                                                                Style="{StaticResource ProfileCard}"
+                                                                Margin="4,0,0,4">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="Auto"/>
@@ -645,9 +675,9 @@
                                                                 </StackPanel>
                                                             </Grid>
                                                         </Border>
-                                                        <Border Grid.Column="1"
+                                                        <Border Grid.Row="1" Grid.Column="0"
                                                                 Style="{StaticResource ProfileCard}"
-                                                                Margin="4,0,4,0">
+                                                                Margin="0,4,4,0">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="Auto"/>
@@ -669,9 +699,9 @@
                                                                 </StackPanel>
                                                             </Grid>
                                                         </Border>
-                                                        <Border Grid.Column="2"
+                                                        <Border Grid.Row="1" Grid.Column="1"
                                                                 Style="{StaticResource ProfileCard}"
-                                                                Margin="4,0,0,0">
+                                                                Margin="4,4,0,0">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="Auto"/>
@@ -701,129 +731,36 @@
                                                                Margin="0,12,0,0"
                                                                Fill="{DynamicResource AppSeparator}"/>
 
-                                                    <!-- The pair of tabs used to sit above the whole
-                                                         card, where it read as choosing how the app
-                                                         translates. All it has ever picked is which of
-                                                         the two sets of prompts is on screen, and now
-                                                         that the card also holds a model and a
-                                                         temperature - which the pair does not scope -
-                                                         it has to sit against the prompts themselves. -->
-                                                    <StackPanel Grid.Row="3" Margin="0,12,0,0">
-                                                        <Border BorderBrush="{DynamicResource AppBorder}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="6"
-                                                                ClipToBounds="True">
-                                                            <Grid>
-                                                                <!-- An even split rather than tabs sized
-                                                                     to their own labels: the two names
-                                                                     run to a similar length in every
-                                                                     language this ships in, and two tabs
-                                                                     of different widths read as one
-                                                                     being the main one. -->
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <!-- Neither tab is checked here: a
-                                                                     checked state set in markup raises
-                                                                     Checked while the panel is still
-                                                                     being constructed, before the
-                                                                     debounce timers its handler writes
-                                                                     through exist. Opening the panel
-                                                                     sets it. -->
-                                                                <RadioButton x:Name="PromptAutoTab"
-                                                                             Grid.Column="0"
-                                                                             GroupName="PromptTab"
-                                                                             Style="{StaticResource PromptTab}"
-                                                                             Content="{DynamicResource S.Settings.PromptAuto}"
-                                                                             Checked="PromptTab_Checked"/>
-                                                                <RadioButton x:Name="PromptExplicitTab"
-                                                                             Grid.Column="1"
-                                                                             GroupName="PromptTab"
-                                                                             Style="{StaticResource PromptTab}"
-                                                                             Content="{DynamicResource S.Settings.PromptExplicit}"
-                                                                             Checked="PromptTab_Checked"/>
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <!-- Says when the prompt on screen is the one
-                                                             that gets sent: the tab names alone leave a
-                                                             reader to guess whether the other one is
-                                                             off. -->
-                                                        <TextBlock x:Name="PromptTabHint"
-                                                                   Style="{StaticResource FieldHint}"
-                                                                   Margin="2,8,0,0"/>
-                                                    </StackPanel>
-
-                                                    <!-- One panel per chat role, stacked in the order
-                                                         they are sent. Both halves are always drawn,
-                                                         at the same height, whichever one the prompt
-                                                         fills: the pair is the shape of the thing
-                                                         being previewed, and a panel that appears
-                                                         only when it has content would make the
-                                                         other one move every time the picked row
-                                                         changes. An unused half says so — see
-                                                         PromptRoleEmptyText. -->
-                                                    <Grid Grid.Row="4" Margin="0,10,0,0">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="10"/>
-                                                            <RowDefinition Height="*"/>
-                                                        </Grid.RowDefinitions>
-
-                                                        <Border Grid.Row="0" Style="{StaticResource PromptRoleFrame}">
-                                                            <Grid>
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto"/>
-                                                                    <RowDefinition Height="*"/>
-                                                                </Grid.RowDefinitions>
-                                                                <Border Grid.Row="0" Style="{StaticResource PromptRoleHeaderBar}">
-                                                                    <TextBlock Text="System Prompt"
-                                                                               Style="{StaticResource PromptRoleLabel}"/>
-                                                                </Border>
-                                                                <ScrollViewer Grid.Row="1"
-                                                                              Padding="14,11"
-                                                                              VerticalScrollBarVisibility="Auto"
-                                                                              HorizontalScrollBarVisibility="Disabled">
-                                                                    <Grid>
-                                                                        <TextBlock x:Name="PromptPreviewSystemText"
-                                                                                   Style="{StaticResource PromptRoleBodyText}"/>
-                                                                        <TextBlock x:Name="PromptPreviewSystemEmpty"
-                                                                                   Style="{StaticResource PromptRoleEmptyText}"
-                                                                                   Text="{DynamicResource S.Settings.PromptRoleEmpty}"
-                                                                                   Visibility="Collapsed"/>
-                                                                    </Grid>
-                                                                </ScrollViewer>
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <Border Grid.Row="2" Style="{StaticResource PromptRoleFrame}">
-                                                            <Grid>
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto"/>
-                                                                    <RowDefinition Height="*"/>
-                                                                </Grid.RowDefinitions>
-                                                                <Border Grid.Row="0" Style="{StaticResource PromptRoleHeaderBar}">
-                                                                    <TextBlock Text="User Prompt"
-                                                                               Style="{StaticResource PromptRoleLabel}"/>
-                                                                </Border>
-                                                                <ScrollViewer Grid.Row="1"
-                                                                              Padding="14,11"
-                                                                              VerticalScrollBarVisibility="Auto"
-                                                                              HorizontalScrollBarVisibility="Disabled">
-                                                                    <Grid>
-                                                                        <TextBlock x:Name="PromptPreviewUserText"
-                                                                                   Style="{StaticResource PromptRoleBodyText}"/>
-                                                                        <TextBlock x:Name="PromptPreviewUserEmpty"
-                                                                                   Style="{StaticResource PromptRoleEmptyText}"
-                                                                                   Text="{DynamicResource S.Settings.PromptRoleEmpty}"
-                                                                                   Visibility="Collapsed"/>
-                                                                    </Grid>
-                                                                </ScrollViewer>
-                                                            </Grid>
-                                                        </Border>
-                                                    </Grid>
+                                                    <!-- The user's own part of the instruction, the
+                                                         one piece of prose a setting still holds. Drawn
+                                                         whether or not there is any, so the pane keeps
+                                                         its shape as rows are picked; empty says what
+                                                         is sent instead - see PromptRoleEmptyText. -->
+                                                    <Border Grid.Row="3" Margin="0,12,0,0" Style="{StaticResource PromptRoleFrame}">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="*"/>
+                                                            </Grid.RowDefinitions>
+                                                            <Border Grid.Row="0" Style="{StaticResource PromptRoleHeaderBar}">
+                                                                <TextBlock Text="{DynamicResource S.Settings.ExtraInstructions}"
+                                                                           Style="{StaticResource PromptRoleLabel}"/>
+                                                            </Border>
+                                                            <ScrollViewer Grid.Row="1"
+                                                                          Padding="14,11"
+                                                                          VerticalScrollBarVisibility="Auto"
+                                                                          HorizontalScrollBarVisibility="Disabled">
+                                                                <Grid>
+                                                                    <TextBlock x:Name="ExtraInstructionsText"
+                                                                               Style="{StaticResource PromptRoleBodyText}"/>
+                                                                    <TextBlock x:Name="ExtraInstructionsEmpty"
+                                                                               Style="{StaticResource PromptRoleEmptyText}"
+                                                                               Text="{DynamicResource S.Settings.ExtraInstructionsEmpty}"
+                                                                               Visibility="Collapsed"/>
+                                                                </Grid>
+                                                            </ScrollViewer>
+                                                        </Grid>
+                                                    </Border>
                                                 </Grid>
                                             </Grid>
                             </Border>

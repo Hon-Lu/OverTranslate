@@ -524,10 +524,6 @@
     <sys:String x:Key="S.Settings.CopyModelName">複製模型名稱</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">必填</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">本地 LLM 架設教學</sys:String>
-    <sys:String x:Key="S.Settings.PromptAuto">來源：自動</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicit">來源：指定語言</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoHint">此提示詞僅在來源語言設為「自動（Automatic）」時套用。</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitHint">此提示詞僅在指定來源語言時套用，例如「英文（English）」等。</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">模型設定</sys:String>
     <sys:String x:Key="S.Settings.ProfileInUse">目前使用的設定</sys:String>
     <sys:String x:Key="S.Settings.ProfileListTitle">設定清單</sys:String>
@@ -536,9 +532,7 @@
     <sys:String x:Key="S.Settings.ProfileSnapshotBody">如果想要保留目前系統預設，請新增一份自訂設定。</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotAction">複製預設設定</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">系統預設 v{0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptAutoScope">僅在來源語言設為「自動」時使用以下提示詞。</sys:String>
-    <sys:String x:Key="S.Settings.PromptExplicitScope">僅在指定來源語言（例如「英文」）時使用以下提示詞。</sys:String>
-    <sys:String x:Key="S.Settings.PromptDeleteTitle">刪除提示詞</sys:String>
+    <sys:String x:Key="S.Settings.PromptDeleteTitle">刪除設定</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">確定要刪除「{0}」嗎？刪除後無法復原。</sys:String>
     <!-- 提示詞清單。預設提示詞唯讀，要改就是自己新增一則；名稱是使用者取的 -->
     <sys:String x:Key="S.Settings.PromptDefaultName">系統預設</sys:String>
@@ -547,36 +541,22 @@
     <sys:String x:Key="S.Settings.PromptEditTitle">編輯設定</sys:String>
     <sys:String x:Key="S.Settings.PromptDelete">刪除</sys:String>
     <sys:String x:Key="S.Settings.PromptName">名稱</sys:String>
-    <sys:String x:Key="S.Settings.PromptNamePlaceholder">為這個提示詞命名</sys:String>
-    <sys:String x:Key="S.Settings.PromptContent">提示詞內容</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">未設定</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceLanguage">來源語言</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceAuto">自動</sys:String>
-    <sys:String x:Key="S.Settings.PromptSourceExplicit">指定語言</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemPlaceholder">請輸入系統提示詞…</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserPlaceholder">請輸入使用者提示詞…</sys:String>
-    <sys:String x:Key="S.Settings.PromptNeedOne">System Prompt 與 User Prompt 至少需填寫一項</sys:String>
-    <sys:String x:Key="S.Settings.PromptOtherEmpty">「{0}」的提示詞尚未填寫</sys:String>
-    <sys:String x:Key="S.Settings.PromptSystemTip">可依所選模型的建議格式設定系統提示詞；若不需要可留空。</sys:String>
-    <sys:String x:Key="S.Settings.PromptUserTip">可依所選模型的建議格式設定使用者提示詞；若不需要可留空。</sys:String>
-    <sys:String x:Key="S.Settings.PromptNewName">我的提示詞 {0}</sys:String>
-    <sys:String x:Key="S.Settings.PromptLoadDefault">帶入預設提示詞</sys:String>
-    <!-- 可用參數表。範例欄的語言名稱會跟著介面語言，因為代入提示詞的名稱就是介面語言的名稱；代碼欄固定是模型使用的語言代碼 -->
-    <sys:String x:Key="S.Settings.PromptParams">可用參數</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">送出前會替換為實際使用的語言資訊。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">參數</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">說明</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">範例</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceName">來源語言名稱</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceCode">來源語言代碼</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetName">目標語言名稱</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetCode">目標語言代碼</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英文</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日文</sys:String>
+    <sys:String x:Key="S.Settings.PromptNamePlaceholder">為這個設定命名</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructions">額外要求</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsOptional">選填</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsHint">會附加在程式內建的翻譯規則之後，適合描述語氣、用字風格等要求。留空就只套用內建規則。</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">例如：用輕鬆口語的語氣翻譯；句尾不要加句號。</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">未設定，只套用內建的翻譯規則</sys:String>
+    <sys:String x:Key="S.Settings.ExtraInstructionsMigrated">這段是從舊版的自訂提示詞搬過來的。翻譯任務、輸出格式與語言現在由程式處理，這裡只需要留下語氣、風格的要求。</sys:String>
+    <sys:String x:Key="S.Settings.PromptNewName">我的設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">進階</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">帶入推薦模型</sys:String>
     <sys:String x:Key="S.Settings.AdvancedHint">未啟用的參數不會傳送。不同模型支援的參數、範圍與建議值可能不同，請依模型文件設定。</sys:String>
     <sys:String x:Key="S.Settings.ParamEnable">啟用</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
+    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">控制模型回答前「思考」的程度。部分通用模型預設會先思考再回答，翻譯會明顯變慢，甚至逾時。
+勾選啟用並設為 none 可以關閉思考，讓翻譯變快；翻譯專用模型通常不需要設定。
+可用的值依服務而定，常見有 none、minimal、low、medium、high。</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">範圍：0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">調整模型對高機率結果的偏好程度。數值越低，越傾向選擇最可能的表達；

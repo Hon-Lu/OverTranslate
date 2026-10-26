@@ -1,48 +1,6 @@
 namespace OverTranslate.Models;
 
 /// <summary>
-/// The two messages one case sends: the system message and the user one.
-/// </summary>
-/// <remarks>
-/// Both, rather than the single system prompt that shipped before, because the models this provider
-/// is pointed at do not agree on where an instruction goes. A translation model is trained to be
-/// told what to do in the user message with the text right under it, and sending that model a system
-/// message it never saw in training changes what comes back; a general chat model wants the opposite.
-/// Which half is used is the model's business, so the editor asks for one of the two rather than for
-/// both — see <see cref="IsEmpty"/>, the one shape that is not a setting.
-///
-/// Kept as a pair rather than two properties on the profile so the two cases stay symmetrical: 自動
-/// and 指定語言 each own one of these, and nothing has to remember which of four flat names goes
-/// with which case.
-/// </remarks>
-public class OpenAiPromptPair
-{
-    /// <summary>
-    /// The system message, or empty to send none at all.
-    /// </summary>
-    /// <remarks>
-    /// Empty means the request carries no system message, not that it carries an empty one: an empty
-    /// system message is still a turn the model has to account for, and the built-in setting is
-    /// written for a model whose documented format has no system turn in it.
-    /// </remarks>
-    public string SystemPrompt { get; set; } = "";
-
-    /// <summary>
-    /// What goes in front of the text to translate, in the user message, or empty to send the text
-    /// on its own.
-    /// </summary>
-    /// <remarks>
-    /// In front of rather than instead of: the text being translated is the rest of that same
-    /// message — see <c>OpenAiChatTranslator.BuildMessages</c>. This is
-    /// why the built-in wording ends in a colon.
-    /// </remarks>
-    public string UserPrompt { get; set; } = "";
-
-    /// <summary>Whether this case would send no instruction at all.</summary>
-    public bool IsEmpty => SystemPrompt.Trim().Length == 0 && UserPrompt.Trim().Length == 0;
-}
-
-/// <summary>
 /// One named setting for an OpenAI-compatible model: which model, at what temperature, told what.
 /// </summary>
 /// <remarks>
@@ -200,15 +158,6 @@ public class OpenAiModelProfile
     /// harmless next to the rules but redundant, and saying so once lets the user delete it.
     /// </remarks>
     public bool ShowMigrationNotice { get; set; }
-
-    /// <summary>What this profile sends when the source language is 自動.</summary>
-    public OpenAiPromptPair Auto { get; set; } = new();
-
-    /// <summary>What this profile sends when a source language has been chosen.</summary>
-    public OpenAiPromptPair Explicit { get; set; } = new();
-
-    /// <summary>The pair for one case.</summary>
-    public OpenAiPromptPair PromptsFor(bool automatic) => automatic ? Auto : Explicit;
 }
 
 /// <summary>
@@ -225,7 +174,10 @@ public class OpenAiModelProfile
 /// The keys that did ship and are gone — <c>OpenAiPromptAuto</c>, <c>OpenAiPromptExplicit</c>,
 /// <c>AutoPrompts</c>, <c>ExplicitPrompts</c>, <c>OpenAiModel</c> and the flat temperature pair —
 /// were dropped rather than migrated, on the owner's call. A stored prompt has no name and no model
-/// beside it, and carrying one into this list would mean inventing both.
+/// beside it, and carrying one into this list would mean inventing both. A profile's own
+/// <c>Auto</c> and <c>Explicit</c> prompt pairs are different: they belong to a named profile, and
+/// are carried into its <see cref="OpenAiModelProfile.ExtraInstructions"/> from the file itself —
+/// see <see cref="OpenAiPromptMigration"/>.
 /// </remarks>
 public class OpenAiSettings
 {

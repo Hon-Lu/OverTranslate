@@ -138,8 +138,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// </summary>
     /// <remarks>
     /// A whole profile rather than a special case threaded through the provider and the panel: the
-    /// built-in row in 設定清單 shows a model, a temperature and two prompt pairs exactly as a saved
-    /// row does, and everything that reads a setting reads one shape.
+    /// built-in row in 設定清單 shows a model, its parameters and its extra instructions — none —
+    /// exactly as a saved row does, and everything that reads a setting reads one shape.
     ///
     /// Unnamed — the list localizes the name of this row, and a name stored here would be the wrong
     /// language the moment the interface is switched.
@@ -149,6 +149,9 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// wording below is written for it. Naming it here is not the fallback that was removed — a
     /// fallback filled a box the user could not see, and this is on screen in 目前使用的設定 before a
     /// single line is translated, next to a list whose whole purpose is to replace it.
+    ///
+    /// Reasoning Effort is left off, as on any new profile: the recommended model does not think,
+    /// and a field it does not need is one more thing a server can refuse.
     /// </remarks>
     internal static OpenAiModelProfile BuiltInProfile() => new()
     {
@@ -163,16 +166,6 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         TopP = OpenAiModelProfile.DefaultTopP,
         SeedEnabled = true,
         Seed = OpenAiModelProfile.DefaultSeed,
-        Auto = new OpenAiPromptPair
-        {
-            SystemPrompt = DefaultSystemPrompt,
-            UserPrompt = DefaultUserPrompt(),
-        },
-        Explicit = new OpenAiPromptPair
-        {
-            SystemPrompt = DefaultSystemPrompt,
-            UserPrompt = DefaultUserPrompt(),
-        },
     };
 
     // Local OpenAI-compatible servers commonly accept an empty or dummy key. Endpoint and model
@@ -361,10 +354,9 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// model expects them: TranslateGemma wanted "Japanese (ja)", another model may want the tag
     /// alone, and this application cannot know which.
     ///
-    /// No built-in wording uses these any more — see <see cref="DefaultUserPrompt"/>, which
-    /// names the target language and nothing else. They stay because they are a written contract:
-    /// templates in users' settings files use them, the settings panel advertises them, and the
-    /// model that wanted a tag is one someone may still be pointing this at.
+    /// No built-in wording uses these, and the settings panel no longer advertises them. They stay
+    /// because they are a written contract: the prompts carried into users' extra instructions use
+    /// them — see <see cref="OpenAiPromptMigration"/>.
     ///
     /// The names keep meaning only the name, which is also what they meant before the tags existed:
     /// a template someone wrote back then still reads the way they wrote it.
@@ -401,7 +393,10 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// <summary>Which wording the interface language is served — see <see cref="BuildPrompt"/>.</summary>
     /// <remarks>
     /// Branching on <see cref="LocalizationService.Current"/> rather than reading the string
-    /// dictionaries, for the reason <see cref="DefaultUserPrompt"/> gives.
+    /// dictionaries: the dictionaries fall back to zh-Hant whenever there is no Application to ask —
+    /// see <see cref="LocalizationService.Get"/> — so a wording chosen that way would be the Chinese
+    /// one in every test, and the per-language wording could not be tested at all. This is also the
+    /// branch that comment in LocalizationService means by "the prompt templates".
     /// </remarks>
     internal static OpenAiPromptLanguage PromptLanguage() => LocalizationService.Current switch
     {
@@ -411,67 +406,6 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     };
 
     private static OpenAiTranslationPair Pair(TranslationPair pair) => new(pair.Source, pair.Translation);
-
-    /// <summary>
-    /// The system message the application ships with: none.
-    /// </summary>
-    /// <remarks>
-    /// A named constant rather than an empty string written into three places, because it is a
-    /// decision rather than an absence. The recommended model is a translation model whose published
-    /// format is a single user turn; the system message it never saw in training is a variable that
-    /// changes the output for no stated reason. A general chat model pointed at this provider wants
-    /// one, which is what the box in the editor is for.
-    /// </remarks>
-    internal const string DefaultSystemPrompt = "";
-
-    /// <summary>
-    /// The user message the application ships with, unfilled — the form the settings panel shows, so
-    /// the placeholders are visible rather than described in prose elsewhere.
-    /// </summary>
-    /// <remarks>
-    /// One wording per interface language, which is a reversal: a single English wording shipped
-    /// before this, on the reasoning that the string is read by a model rather than by a person. What
-    /// changed is the model it is written for. The recommended model follows an instruction in the
-    /// language the instruction is written in, and the interface language is the closest thing this
-    /// application has to the language its user thinks in.
-    ///
-    /// Every interface other than the two Chinese ones is served the English wording on purpose: the
-    /// model's own documentation publishes a prompt for Chinese and for English and none for any
-    /// other language, and inventing a translation of it would be guessing at a format on the user's
-    /// behalf. The language the prompt names still follows the interface — see <see cref="Fill"/> —
-    /// so a Japanese interface sends an English sentence naming 日本語, which is the owner's decision
-    /// and not an oversight.
-    ///
-    /// Branching on <see cref="LocalizationService.Current"/> rather than reading the string
-    /// dictionaries, even though these are translations of one sentence: the dictionaries fall back
-    /// to zh-Hant whenever there is no Application to ask — see <see cref="LocalizationService.Get"/>
-    /// — so a prompt served that way would be the Chinese one in every test, and the per-language
-    /// wording could not be tested at all. This is also the branch that comment in LocalizationService
-    /// means by "the prompt templates".
-    ///
-    /// Written verbatim from what the owner supplied, and deliberately not reflowed: the shape of a
-    /// prompt is part of it, and a wording nobody re-measured after editing is a new variable on a
-    /// working path. That includes the two line feeds it ends with — the text being translated
-    /// starts at the character after them, so trimming the end of this string closes up the blank
-    /// line the model was trained to see and runs the instruction into the first line on screen.
-    ///
-    /// The same sentence in both cases. 自動 and 指定語言 are two settings, two halves of the library
-    /// and two arguments, but this model is told what to translate into and detects the rest — so
-    /// naming the source language would be an instruction with nothing behind it.
-    /// </remarks>
-    internal static string DefaultUserPrompt() => LocalizationService.Current switch
-    {
-        LocalizationService.TraditionalChinese =>
-            $"將以下文本翻譯為{TargetPlaceholder}，注意只需要輸出翻譯後的結果，不要額外解釋：\n\n",
-
-        LocalizationService.SimplifiedChinese =>
-            $"将以下文本翻译为{TargetPlaceholder}，注意只需要输出翻译后的结果，不要额外解释：\n\n",
-
-        // English, and every other interface language.
-        _ =>
-            $"Translate the following text into {TargetPlaceholder}. Note that you should only " +
-            "output the translated result without any additional explanation:\n\n",
-    };
 
     /// <summary>
     /// Substitutes the language placeholders, naming every language in the interface's own language
@@ -486,8 +420,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     ///
     /// What this costs is a template someone wrote in a language other than the interface's: their
     /// English sentence on a Chinese interface now names 繁體中文 where it used to name Traditional
-    /// Chinese. The parameter table in the prompt editor shows the example in the interface language
-    /// for that reason — it is the one place the rule is visible before a prompt is sent.
+    /// Chinese.
     ///
     /// The language tags beside the names are unaffected: those have only ever been the model's own
     /// spelling and have no localised form to choose between.
@@ -499,13 +432,12 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     ///
     /// 自動 has no tag to give, so <see cref="SourceCodePlaceholder"/> empties out there. A template
     /// that wrote its own brackets around it is left with an empty pair, which is the cost of letting
-    /// templates place the tag themselves — the built-in automatic template names no source at all
-    /// and so never shows it.
+    /// templates place the tag themselves.
     /// </remarks>
     private static string Fill(string template, string sourceLang, string targetLang, bool automatic)
     {
-        // Nothing to name when the source is 自動. The built-in automatic template names no source
-        // at all, so this only ever reaches a template the user wrote one into themselves.
+        // Nothing to name when the source is 自動. Only text the user wrote a source into reaches
+        // this.
         //
         // Left in English while the names beside it follow the interface, because it is not a
         // language name: no built-in wording reaches it, and the template that does is one someone
