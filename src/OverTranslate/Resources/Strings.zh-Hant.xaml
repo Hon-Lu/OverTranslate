@@ -566,11 +566,11 @@
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日文</sys:String>
     <sys:String x:Key="S.Settings.PromptMode">提示詞</sys:String>
     <sys:String x:Key="S.Settings.PromptModeBuiltIn">內建提示詞</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeBatch">整批翻譯</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeBatch">參考上下文</sys:String>
     <sys:String x:Key="S.Settings.PromptModeCustom">自訂提示詞</sys:String>
-    <sys:String x:Key="S.Settings.PromptModePerSegment">逐段翻譯</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeBatchInfo">使用程式內建的翻譯指示，畫面上的文字整批送出；可在下方加上額外要求。</sys:String>
-    <sys:String x:Key="S.Settings.PromptModePerSegmentInfo">使用你自己寫的提示詞，每段文字各送出一個請求（請求數量會大增，建議只在本地模型使用）。</sys:String>
+    <sys:String x:Key="S.Settings.PromptModePerSegment">不含上下文</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeBatchInfo">使用程式內建的翻譯指示，翻譯時參考同一畫面與前面翻過的內容；可在下方加上額外要求。</sys:String>
+    <sys:String x:Key="S.Settings.PromptModePerSegmentInfo">完全使用你寫的提示詞，每段單獨翻譯、不附上下文。</sys:String>
     <sys:String x:Key="S.Settings.PromptParamsTipAuto">來源語言為「自動」時，來源語言名稱為 any language，代碼為空白。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">進階</sys:String>

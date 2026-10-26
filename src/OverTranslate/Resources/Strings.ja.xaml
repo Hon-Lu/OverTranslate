@@ -545,11 +545,11 @@
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日本語</sys:String>
     <sys:String x:Key="S.Settings.PromptMode">プロンプト</sys:String>
     <sys:String x:Key="S.Settings.PromptModeBuiltIn">組み込みプロンプト</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeBatch">一括翻訳</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeBatch">文脈を参照</sys:String>
     <sys:String x:Key="S.Settings.PromptModeCustom">カスタムプロンプト</sys:String>
-    <sys:String x:Key="S.Settings.PromptModePerSegment">段落ごとに翻訳</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeBatchInfo">アプリ組み込みの翻訳指示を使い、画面上のテキストをまとめて送信します。下で追加の要望を書き足せます。</sys:String>
-    <sys:String x:Key="S.Settings.PromptModePerSegmentInfo">自分で書いたプロンプトを使い、テキストを段落ごとに別々のリクエストで送信します（リクエスト数が大幅に増えるため、ローカルモデルでの使用をおすすめします）。</sys:String>
+    <sys:String x:Key="S.Settings.PromptModePerSegment">文脈なし</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeBatchInfo">アプリ組み込みの翻訳指示を使い、同じ画面やそれまでに訳した内容を参照しながら翻訳します。下で追加の要望を書き足せます。</sys:String>
+    <sys:String x:Key="S.Settings.PromptModePerSegmentInfo">自分で書いたプロンプトだけを使い、テキストを段落ごとに文脈なしで翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.PromptParamsTipAuto">翻訳元が「自動」のときは、翻訳元の言語名は any language、コードは空になります。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">マイ設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">詳細</sys:String>

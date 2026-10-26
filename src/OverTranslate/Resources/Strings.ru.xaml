@@ -536,11 +536,11 @@
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Японский</sys:String>
     <sys:String x:Key="S.Settings.PromptMode">Промпт</sys:String>
     <sys:String x:Key="S.Settings.PromptModeBuiltIn">Встроенный промпт</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeBatch">Пакетный перевод</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeBatch">С контекстом</sys:String>
     <sys:String x:Key="S.Settings.PromptModeCustom">Свой промпт</sys:String>
-    <sys:String x:Key="S.Settings.PromptModePerSegment">По фрагментам</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeBatchInfo">Используются встроенные инструкции приложения, текст с экрана отправляется одним пакетом. Ниже можно добавить свои пожелания.</sys:String>
-    <sys:String x:Key="S.Settings.PromptModePerSegmentInfo">Используется ваш собственный промпт, каждый фрагмент текста отправляется отдельным запросом (запросов станет намного больше, поэтому рекомендуется только для локальных моделей).</sys:String>
+    <sys:String x:Key="S.Settings.PromptModePerSegment">Без контекста</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeBatchInfo">Используются встроенные инструкции приложения; при переводе учитываются остальной текст на экране и то, что уже переведено. Ниже можно добавить свои пожелания.</sys:String>
+    <sys:String x:Key="S.Settings.PromptModePerSegmentInfo">Используется только ваш собственный промпт, каждый фрагмент текста переводится отдельно, без контекста.</sys:String>
     <sys:String x:Key="S.Settings.PromptParamsTipAuto">Если язык оригинала определяется автоматически, название языка оригинала — any language, а код пустой.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">Мои настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Дополнительно</sys:String>
