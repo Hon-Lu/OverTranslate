@@ -98,7 +98,7 @@ public class ResilientProvider : ITranslationProvider
 
     public async Task<(List<TranslatedBlock> Blocks, string DetectedLang)> TranslateAsync(
         List<OcrTextBlock> blocks, string sourceLang, string targetLang, string apiKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, TranslationContext? context = null)
     {
         if (blocks.Count == 0) return ([], "");
         cancellationToken.ThrowIfCancellationRequested();

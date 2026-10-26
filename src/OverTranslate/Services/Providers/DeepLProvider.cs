@@ -18,7 +18,7 @@ public sealed class DeepLProvider(HttpClient http) : ITranslationProvider
 
     public Task<(List<TranslatedBlock> Blocks, string DetectedLang)> TranslateAsync(
         List<OcrTextBlock> blocks, string sourceLang, string targetLang, string apiKey,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default, TranslationContext? context = null) =>
         new EngineProvider(new DeepLTranslator(http, apiKey))
             .TranslateAsync(blocks, sourceLang, targetLang, apiKey, cancellationToken);
 }
