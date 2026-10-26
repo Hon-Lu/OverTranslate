@@ -118,6 +118,32 @@ public class OpenAiChatProtocolTests
         Assert.EndsWith("<t id=\"1\">一 二</t>\n<t id=\"2\">三</t>", Prompt.Build(["一\n二", "三"]));
     }
 
+    /// <summary>
+    /// A lone segment is asked for as one tag holding all of it, paragraphs kept, in the format and
+    /// in the rule on length: asked for one line per segment, a lone segment of two paragraphs came
+    /// back as one, and asked only to be concise, one model still ran them together.
+    /// </summary>
+    [Theory]
+    [InlineData(OpenAiPromptLanguage.TraditionalChinese, "每段一行", "保留原文的分段與換行", "- 譯文要精簡。\n", "- 譯文要精簡，段落與換行照原文。\n")]
+    [InlineData(OpenAiPromptLanguage.SimplifiedChinese, "每段一行", "保留原文的分段与换行", "- 译文要精简。\n", "- 译文要精简，段落与换行照原文。\n")]
+    [InlineData(OpenAiPromptLanguage.English, "one line per segment", "keeping the paragraphs and line breaks", "- Keep translations concise.\n", "- Keep the translation concise, with the paragraphs and line breaks of the source.\n")]
+    public void Prompt_AsksALoneSegmentToKeepItsParagraphs(
+        OpenAiPromptLanguage language, string perLine, string keep, string concise, string loneConcise)
+    {
+        var prompt = new OpenAiPrompt(language, "x");
+
+        var lone = prompt.Build(["第一段。\n\n第二段。"]);
+        Assert.DoesNotContain(perLine, lone);
+        Assert.Contains(keep, lone);
+        Assert.Contains(loneConcise, lone);
+        Assert.DoesNotContain(concise, lone);
+
+        var several = prompt.Build(["a", "b"]);
+        Assert.Contains(perLine, several);
+        Assert.DoesNotContain(keep, several);
+        Assert.Contains(concise, several);
+    }
+
     [Theory]
     [InlineData(OpenAiPromptLanguage.English, "Translate each of the following segments into Japanese.", "- Output segments that are already in Japanese unchanged.", "Source:")]
     [InlineData(OpenAiPromptLanguage.SimplifiedChinese, "把下列各段翻译成日语。", "- 已经是日语的段落原样输出。", "原文：")]
@@ -528,6 +554,19 @@ public class OpenAiChatProtocolTests
 
         Assert.False(Assert.Single(server.Requests).Streamed);
         Assert.Equal("直接的譯文", outcome.Translation);
+    }
+
+    /// <summary>A lone text of two paragraphs goes out as two and comes back as two.</summary>
+    [Fact]
+    public async Task TranslateAsync_KeepsTheParagraphsOfALoneText()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "<t id=\"1\">第一段。\n\n第二段。</t>" };
+        using var http = new HttpClient(server);
+
+        var outcome = Assert.Single(await new OpenAiChatTranslator(http).TranslateAsync(["First.\r\n\r\nSecond."], Request()));
+
+        Assert.EndsWith("<t id=\"1\">First.\n\nSecond.</t>", Assert.Single(server.Requests).Message);
+        Assert.Equal("第一段。\n\n第二段。", outcome.Translation);
     }
 
     /// <summary>A lone text answered under the wrong id is no translation.</summary>
