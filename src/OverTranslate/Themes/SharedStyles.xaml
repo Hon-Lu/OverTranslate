@@ -3189,6 +3189,23 @@
         </Setter>
     </Style>
 
+    <!-- How a setting sends what is on screen, as a small filled tag after its name: on the two
+         tiles that choose it, on the setting's row in the list and over its preview. Filled rather
+         than outlined so it does not read as one more of the outlined 唯讀 badge beside it - that
+         one says what can be done with the row, this one says what the row is. -->
+    <Style x:Key="PromptModeTag" TargetType="Border">
+        <Setter Property="Background"        Value="{DynamicResource AppHeaderBg}"/>
+        <Setter Property="CornerRadius"      Value="4"/>
+        <Setter Property="Padding"           Value="6,1"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="PromptModeTagText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"   Value="11"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+    </Style>
+
     <!-- The well a sliding two-way switch sits in: the pair of halves, the marker behind them and
          nothing else. Deliberately not a shared-size scope of its own — every tray on a page names
          the same group for its two halves, so that 自動／固定 and 隨機／固定 come out the same width

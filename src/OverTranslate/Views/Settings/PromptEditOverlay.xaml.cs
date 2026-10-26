@@ -90,6 +90,14 @@ public partial class PromptEditOverlay : UserControl
             var built = OpenAiCompatibleProvider.BuiltInProfile();
             ExtraInstructionsBox.Text = profile?.ExtraInstructions ?? built.ExtraInstructions;
 
+            // A new setting is on the built-in instruction, like the one it is a copy of. The
+            // user's own prompts are loaded whichever mode is on, so switching shows them as kept.
+            var mode = (profile ?? built).Mode;
+            BatchModeTile.IsChecked = mode == OpenAiTranslationMode.Batch;
+            PerSegmentModeTile.IsChecked = mode == OpenAiTranslationMode.PerSegment;
+            SystemPromptBox.Text = profile?.Prompts.SystemPrompt ?? "";
+            UserPromptBox.Text = profile?.Prompts.UserPrompt ?? "";
+
             // The model opens on the built-in one like everything else on this card. A new setting is
             // a copy of what ships, and the reset beside this box puts the same name back — a box
             // that opened empty while its own reset filled it in would be two answers to one
@@ -118,6 +126,7 @@ public partial class PromptEditOverlay : UserControl
         }
 
         UpdateAdvancedChrome();
+        UpdateModeChrome();
         UpdateChrome();
 
         Visibility = Visibility.Visible;
@@ -227,6 +236,48 @@ public partial class PromptEditOverlay : UserControl
         if (!_loading) TrimToLineLimit(ExtraInstructionsBox);
     }
 
+    private void PromptBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        SystemPromptPlaceholder.Visibility = SystemPromptBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UserPromptPlaceholder.Visibility = UserPromptBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // The trim below raises this event again for its own edit.
+        if (_trimming) return;
+
+        if (!_loading && sender is TextBox box) TrimToLineLimit(box);
+        UpdateChrome();
+    }
+
+    /// <summary>Whether the setting is on the user's own prompts.</summary>
+    private bool PerSegment => PerSegmentModeTile.IsChecked == true;
+
+    /// <summary>
+    /// Swaps the card under the tiles. Turning to 自訂提示詞 with both boxes empty fills in the user
+    /// prompt this application used to ship, in the interface's language, to write from rather than
+    /// a blank page.
+    /// </summary>
+    /// <remarks>
+    /// Assigned rather than put in through <see cref="Refill"/>: the boxes are empty, so there is no
+    /// writing of the user's to keep an undo for, and focusing a box on a click of a tile would pull
+    /// the card away from the tiles being looked at.
+    /// </remarks>
+    private void ModeTile_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+
+        if (PerSegment && SystemPromptBox.Text.Trim().Length == 0 && UserPromptBox.Text.Trim().Length == 0)
+            UserPromptBox.Text = OpenAiCompatibleProvider.DefaultCustomUserPrompt();
+
+        UpdateModeChrome();
+        UpdateChrome();
+    }
+
+    private void UpdateModeChrome()
+    {
+        ExtraInstructionsCard.Visibility = PerSegment ? Visibility.Collapsed : Visibility.Visible;
+        CustomPromptCard.Visibility = PerSegment ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     /// <summary>Puts the text in the box, to write over or to write from.</summary>
     /// <remarks>
     /// Through the selection rather than by assigning Text, which would throw away the undo history:
@@ -258,14 +309,19 @@ public partial class PromptEditOverlay : UserControl
     /// </summary>
     /// <remarks>
     /// The extra instructions are not asked for. Empty is the built-in rules alone, which is a
-    /// complete instruction — not a setting someone forgot to finish.
+    /// complete instruction — not a setting someone forgot to finish. The user's own prompts are:
+    /// with both empty, the text would go to the model with nothing to say what to do with it.
     /// </remarks>
     private void UpdateChrome()
     {
         NamePlaceholder.Visibility = NameBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         ModelPlaceholder.Visibility = ModelBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        SaveButton.IsEnabled = NameBox.Text.Trim().Length > 0 && ModelBox.Text.Trim().Length > 0;
+        var promptMissing = PerSegment
+            && SystemPromptBox.Text.Trim().Length == 0 && UserPromptBox.Text.Trim().Length == 0;
+        PromptRuleRow.Visibility = promptMissing ? Visibility.Visible : Visibility.Collapsed;
+
+        SaveButton.IsEnabled = NameBox.Text.Trim().Length > 0 && ModelBox.Text.Trim().Length > 0 && !promptMissing;
     }
 
     /// <summary>
@@ -585,6 +641,17 @@ public partial class PromptEditOverlay : UserControl
         // Normalised and trimmed: each line is a rule of its own, and a blank line at either end
         // is none.
         profile.ExtraInstructions = OpenAiSettings.NormaliseLineBreaks(ExtraInstructionsBox.Text).Trim();
+        profile.Mode = PerSegment ? OpenAiTranslationMode.PerSegment : OpenAiTranslationMode.Batch;
+        // Normalised but not trimmed: the user prompt is followed straight by the text, so the blank
+        // line it ends with is part of it. A box of nothing but whitespace is empty, though.
+        profile.Prompts = new OpenAiPromptPair
+        {
+            SystemPrompt = Prompt(SystemPromptBox),
+            UserPrompt = Prompt(UserPromptBox),
+        };
+
+        static string Prompt(TextBox box) =>
+            box.Text.Trim().Length == 0 ? "" : OpenAiSettings.NormaliseLineBreaks(box.Text);
 
         Commit();
     }
