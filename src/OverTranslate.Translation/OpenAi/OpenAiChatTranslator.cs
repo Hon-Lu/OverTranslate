@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -32,6 +33,21 @@ public sealed record OpenAiChatRequest(
     int? Seed = null,
     TimeSpan? Timeout = null);
 
+/// <summary>What became of one text of a batch: its translation, or why there is none.</summary>
+/// <param name="Translation">Null when the text was not translated.</param>
+/// <param name="Error">
+/// What the request failed with — an <see cref="OpenAiChatException"/>, or what the
+/// <see cref="HttpClient"/> threw. Null both for a translation and for a text that was never sent,
+/// see <see cref="NotSent"/>.
+/// </param>
+public sealed record OpenAiChatOutcome(string? Translation, Exception? Error)
+{
+    /// <summary>A text left unsent because the batch had already failed every request it made.</summary>
+    public static OpenAiChatOutcome NotSent { get; } = new(null, null);
+
+    public bool Translated => Translation is not null;
+}
+
 /// <summary>
 /// Translates through an OpenAI-compatible Chat Completions endpoint: one request per text, each
 /// text sent whole, at most <see cref="MaxConcurrentRequests"/> at a time.
@@ -57,15 +73,43 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         @"<think(?:\s[^>]*)?>.*?</think\s*>",
         RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
-    /// <returns>One translation per text, in the order given.</returns>
-    /// <exception cref="OpenAiChatException">A request was refused, or its answer held no translation.</exception>
-    public async Task<IReadOnlyList<string>> TranslateAsync(
+    private static readonly Regex UpToClosingTag = new(
+        @"^.*?</think\s*>",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    private static readonly Regex UnclosedLeadingBlock = new(
+        @"^\s*<think(?:\s[^>]*)?>.*\z",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    /// <returns>One outcome per text, in the order given.</returns>
+    /// <exception cref="OpenAiChatException">
+    /// Not one text was translated: the first text's failure, as it was thrown.
+    /// </exception>
+    /// <remarks>
+    /// <para>One text failing does not take the others with it. A capture of six blocks where one
+    /// request ran past its timeout is five translations and one gap, not a screen that only says
+    /// something went wrong; which texts failed, and how, is in the outcomes for the caller to show.</para>
+    ///
+    /// <para>Every text failing is still thrown, as the first one's failure. That is a server that is
+    /// not running, a wrong key, a model that is not there — one cause, which the user has to read,
+    /// and a screen of untouched originals would hide it.</para>
+    ///
+    /// <para>Once a whole round of requests has failed with nothing translated, the rest are not
+    /// sent. A server that answers nothing would otherwise be waited on one timeout per round
+    /// instead of one in all — the time it took to say so before a failure stopped being the end
+    /// of the batch.</para>
+    ///
+    /// <para>The caller's cancellation is not a failure of any text: it goes up as it always did.</para>
+    /// </remarks>
+    public async Task<IReadOnlyList<OpenAiChatOutcome>> TranslateAsync(
         IReadOnlyList<string> texts, OpenAiChatRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var translations = new string[texts.Count];
-        if (texts.Count == 0) return translations;
+        var outcomes = new OpenAiChatOutcome[texts.Count];
+        if (texts.Count == 0) return outcomes;
 
+        var translated = 0;
+        var failed = 0;
         await Parallel.ForEachAsync(
             Enumerable.Range(0, texts.Count),
             new ParallelOptions
@@ -73,9 +117,30 @@ public sealed class OpenAiChatTranslator(HttpClient http)
                 MaxDegreeOfParallelism = MaxConcurrentRequests,
                 CancellationToken = cancellationToken,
             },
-            async (index, token) => translations[index] = await TranslateOneAsync(texts[index], request, token));
+            async (index, token) =>
+            {
+                if (Volatile.Read(ref translated) == 0 && Volatile.Read(ref failed) >= MaxConcurrentRequests)
+                {
+                    outcomes[index] = OpenAiChatOutcome.NotSent;
+                    return;
+                }
 
-        return translations;
+                try
+                {
+                    outcomes[index] = new OpenAiChatOutcome(await TranslateOneAsync(texts[index], request, token), null);
+                    Interlocked.Increment(ref translated);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
+                {
+                    outcomes[index] = new OpenAiChatOutcome(null, ex);
+                    Interlocked.Increment(ref failed);
+                }
+            });
+
+        if (translated == 0)
+            ExceptionDispatchInfo.Capture(outcomes.First(outcome => outcome.Error is not null).Error!).Throw();
+
+        return outcomes;
     }
 
     private async Task<string> TranslateOneAsync(string text, OpenAiChatRequest request, CancellationToken cancellationToken)
@@ -182,7 +247,26 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         return [.. messages];
     }
 
-    internal static string StripThinking(string value) => ThinkingBlock.Replace(value, "").Trim();
+    /// <summary>The answer with the model's thinking taken out.</summary>
+    /// <remarks>
+    /// <para>Three shapes, taken in this order. Whole blocks first, wherever they are. Then a closing
+    /// tag with nothing opening it: a chat template that writes the opening tag itself hands the
+    /// model a reply that already starts inside the thinking, so everything up to that first closing
+    /// tag is thinking. Then an opening tag that never closes, which is thinking the token limit cut
+    /// off — none of it is translation, and an answer that is nothing else comes out empty, which is
+    /// <see cref="OpenAiChatFailure.NoTranslation"/>.</para>
+    ///
+    /// <para>The last only when the answer begins with it. A translation that merely mentions the
+    /// tag somewhere in its text is far likelier than thinking that starts part way through an
+    /// answer, and taking everything after it would cut a real translation short.</para>
+    /// </remarks>
+    internal static string StripThinking(string value)
+    {
+        value = ThinkingBlock.Replace(value, "");
+        value = UpToClosingTag.Replace(value, "", 1);
+        value = UnclosedLeadingBlock.Replace(value, "", 1);
+        return value.Trim();
+    }
 
     private static string ReadContent(JsonElement message)
     {

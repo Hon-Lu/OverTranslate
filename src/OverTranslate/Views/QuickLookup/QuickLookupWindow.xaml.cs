@@ -134,8 +134,11 @@ public partial class QuickLookupWindow : Window
     /// <summary>True once the closing animation has started, so nothing restarts it.</summary>
     private bool _closing;
 
-    /// <summary>Monotonic id, so a slow translation cannot overwrite the result of a newer one.</summary>
-    private int _seq;
+    /// <summary>
+    /// So a slow translation cannot overwrite the result of a newer one, and stops running once it no
+    /// longer can — see <see cref="LatestRequest"/>.
+    /// </summary>
+    private readonly LatestRequest _request = new();
 
     /// <summary>
     /// The language the engine said the original was in, or empty.
@@ -445,7 +448,7 @@ public partial class QuickLookupWindow : Window
         _suppressAuto = false;
 
         _detectedLang = "";
-        _seq++;
+        _request.Supersede();
 
         // New text, so the direction the header is reading out belongs to the old text.
         ForgetBilingualDirection();
@@ -1007,7 +1010,7 @@ public partial class QuickLookupWindow : Window
         ClearDictionaryResult();
         if (string.IsNullOrWhiteSpace(SourceTextBox.Text))
         {
-            _seq++;
+            _request.Supersede();
             _detectedLang = "";
 
             // An empty box has no language, so the header goes back to saying it will work one out.
@@ -1056,7 +1059,7 @@ public partial class QuickLookupWindow : Window
             return;
         }
 
-        var seq = ++_seq;
+        var (seq, token) = _request.Start();
         SetTranslationLoading(true);
         ShowStatus(LocalizationService.Get("S.Translation.Translating"), isError: false);
 
@@ -1074,9 +1077,9 @@ public partial class QuickLookupWindow : Window
                 var answer = await BilingualTranslation.TranslateAsync(text, Pair,
                     (source, target) => AppServices.Translation.TranslateAsync(
                         [new OcrTextBlock(text, new Rect())], BilingualTranslation.SourceCode(source), target,
-                        settings.ApiKey));
+                        settings.ApiKey, cancellationToken: token));
 
-                if (seq != _seq) return;
+                if (!_request.IsCurrent(seq)) return;
 
                 (results, detected, tgtLang) = (answer.Blocks, answer.DetectedLang, answer.Target);
                 SetBilingualSource(answer.Source);
@@ -1084,9 +1087,10 @@ public partial class QuickLookupWindow : Window
             else
             {
                 (results, detected) = await AppServices.Translation.TranslateAsync(
-                    [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey);
+                    [new OcrTextBlock(text, new Rect())], srcLang, tgtLang, settings.ApiKey,
+                    cancellationToken: token);
 
-                if (seq != _seq) return;
+                if (!_request.IsCurrent(seq)) return;
             }
 
             SetTranslationLoading(false);
@@ -1107,11 +1111,11 @@ public partial class QuickLookupWindow : Window
             if (bilingual && !Pair.Includes(_detectedLang) && Pair.Includes(_bilingualSource))
                 dictionarySource = LanguageData.MapTargetToSourceCode(_bilingualSource!) ?? dictionarySource;
 
-            await LoadDictionaryAsync(seq, text, dictionarySource, tgtLang, settings.Provider);
+            await LoadDictionaryAsync(seq, token, text, dictionarySource, tgtLang, settings.Provider);
         }
         catch (Exception ex)
         {
-            if (seq != _seq) return;
+            if (!_request.IsCurrent(seq)) return;
 
             SetTranslationLoading(false);
             Log.Warn(ex, "取詞翻譯 could not translate");
@@ -1126,7 +1130,7 @@ public partial class QuickLookupWindow : Window
     }
 
     private async Task LoadDictionaryAsync(
-        int seq, string text, string sourceLang, string targetLang, TranslationProvider provider)
+        int seq, CancellationToken token, string text, string sourceLang, string targetLang, TranslationProvider provider)
     {
         if (sourceLang.Length == 0 || !DictionaryLookupEligibility.IsEligible(text)) return;
 
@@ -1138,8 +1142,8 @@ public partial class QuickLookupWindow : Window
         try
         {
             var result = await AppServices.Translation.LookupDictionaryAsync(
-                text, sourceLang, targetLang, engine: provider);
-            if (seq != _seq) return;
+                text, sourceLang, targetLang, token, engine: provider);
+            if (!_request.IsCurrent(seq)) return;
 
             DictionaryLoadingBar.Visibility = Visibility.Collapsed;
             DictionaryView.Show(result);
@@ -1152,7 +1156,7 @@ public partial class QuickLookupWindow : Window
         {
             // Keep the fast primary answer even when the optional rich endpoint fails.
             Log.Debug(ex, "取詞翻譯 dictionary lookup did not complete");
-            if (seq == _seq)
+            if (_request.IsCurrent(seq))
             {
                 DictionaryLoadingBar.Visibility = Visibility.Collapsed;
                 DictionaryView.ShowMessage("S.Dictionary.Unavailable");
@@ -1944,7 +1948,7 @@ public partial class QuickLookupWindow : Window
         }
 
         // Anything already in flight was asked under the old pair and would overwrite both.
-        _seq++;
+        _request.Supersede();
 
         // Target → source. ZH-HANT has to stay traditional rather than collapse to ZH, which is what
         // the mapping is for.
@@ -2005,6 +2009,7 @@ public partial class QuickLookupWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _debounce.Stop();
+        _request.Supersede();
         _copiedHold.Stop();
         _foregroundWatch.Stop();
         _tts.Dispose();

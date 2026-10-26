@@ -225,10 +225,10 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         Log.Debug("OpenAI 相容翻譯 system=\"{System}\" user=\"{User}\"",
             prompts.System, prompts.User);
 
-        IReadOnlyList<string> translations;
+        IReadOnlyList<OpenAiChatOutcome> outcomes;
         try
         {
-            translations = await _chat.TranslateAsync(
+            outcomes = await _chat.TranslateAsync(
                 blocks.Select(block => block.Text).ToList(),
                 new OpenAiChatRequest(
                     endpoint, model, options.ApiKey, prompts.System, prompts.User,
@@ -243,29 +243,56 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             throw Localized(ex, options.TimeoutSeconds);
         }
 
+        // Only some blocks failed — every one failing was thrown above, in the user's words. Kinds
+        // and counts only, never the text, so this stays in the shipped log: it is what explains a
+        // screen where a few blocks were left in the original.
+        var failures = outcomes.Where(outcome => !outcome.Translated).ToList();
+        if (failures.Count > 0)
+            Log.Warn("OpenAI 相容翻譯：{Failed}/{Count} 個區塊失敗，以原文代替（{Kinds}）",
+                failures.Count, blocks.Count, string.Join("、", failures
+                    .GroupBy(FailureKind)
+                    .Select(group => $"{group.Key}×{group.Count()}")));
+
         // Both sides of one block on one line: a block that came back still in its own language is
         // the shape this provider fails in, and that is only visible by reading the request against
         // the reply.
         if (Log.IsDebugEnabled)
             for (var i = 0; i < blocks.Count; i++)
                 Log.Debug("OpenAI 相容翻譯 index={Index} in=\"{In}\" out=\"{Out}\"",
-                    i, blocks[i].Text, translations[i]);
+                    i, blocks[i].Text, outcomes[i].Translation ?? $"<{FailureKind(outcomes[i])}>");
 
         var results = new List<TranslatedBlock>(blocks.Count);
         for (int i = 0; i < blocks.Count; i++)
         {
+            // A block whose request failed: the original stands in, and says so — as for the engines
+            // behind ResilientProvider, so the overlay and the realtime cache treat both the same.
             var block = blocks[i];
             results.Add(new TranslatedBlock(
                 block.Text,
-                translations[i],
+                outcomes[i].Translation ?? block.Text,
                 block.Bounds,
                 block.Lines,
-                block.RenderGlyphHeight) { RunsAcross = block.RunsAcross, FontGlyphHeight = block.FontGlyphHeight, Tilt = block.Tilt });
+                block.RenderGlyphHeight)
+                {
+                    RunsAcross = block.RunsAcross,
+                    FontGlyphHeight = block.FontGlyphHeight,
+                    Tilt = block.Tilt,
+                    Untranslated = !outcomes[i].Translated,
+                });
         }
 
         var detected = LanguageData.IsAutomaticSource(sourceLang) ? "" : sourceLang.ToUpperInvariant();
         return (results, detected);
     }
+
+    /// <summary>How one block failed, for the log: never the server's words, which can quote the text.</summary>
+    private static string FailureKind(OpenAiChatOutcome outcome) => outcome.Error switch
+    {
+        null => "NotSent",
+        OpenAiChatException { StatusCode: { } status } chat => $"{chat.Failure}({(int)status})",
+        OpenAiChatException chat => chat.Failure.ToString(),
+        var other => other.GetType().Name,
+    };
 
     /// <summary>
     /// A failure the server answered with, in the words the capture toolbar's notice and the translation

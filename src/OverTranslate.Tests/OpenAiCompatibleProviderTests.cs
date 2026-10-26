@@ -1062,7 +1062,7 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
-    /// One bad block fails the whole capture, and the message still has to name the cause.
+    /// Every block failing fails the whole capture, and the message still has to name the cause.
     /// </summary>
     /// <remarks>
     /// The blocks go out in parallel, and what that does to an exception on the way out is what
@@ -1092,6 +1092,53 @@ public class OpenAiCompatibleProviderTests
         // more errors occurred.
         Assert.Equal(expected, error.Message);
         Assert.IsType<InvalidOperationException>(error);
+    }
+
+    /// <summary>
+    /// One block failing leaves the rest translated, and that block in the original, marked as such.
+    /// </summary>
+    /// <remarks>
+    /// The same as a block no engine answered behind ResilientProvider: the overlay shows the
+    /// original, and the realtime loop does not keep it, so the next round asks again.
+    /// </remarks>
+    [Fact]
+    public async Task OneFailedBlockStandsInAsTheOriginalAndTheRestAreTranslated()
+    {
+        using var http = new HttpClient(new FailingOnHandler("block-4"));
+        var provider = new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:11434/v1", "local-model"));
+        var blocks = Enumerable.Range(0, 6)
+            .Select(index => new OcrTextBlock($"block-{index}", new Rect()))
+            .ToList();
+
+        var (translated, _) = await provider.TranslateAsync(blocks, "JA", "ZH-HANT", "");
+
+        Assert.Equal(6, translated.Count);
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            if (i == 4) continue;
+            Assert.Equal($"translated:{blocks[i].Text}", translated[i].TranslatedText);
+            Assert.False(translated[i].Untranslated);
+        }
+
+        Assert.Equal("block-4", translated[4].TranslatedText);
+        Assert.True(translated[4].Untranslated);
+    }
+
+    /// <summary>The user cancelling part way through a batch still comes out as a cancellation.</summary>
+    [Fact]
+    public async Task CancellingPartWayThroughABatchIsStillACancellation()
+    {
+        using var http = new HttpClient(new FailingOnHandler("block-1", hang: true));
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var provider = new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:11434/v1", "local-model"));
+        var blocks = Enumerable.Range(0, 3)
+            .Select(index => new OcrTextBlock($"block-{index}", new Rect()))
+            .ToList();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            provider.TranslateAsync(blocks, "JA", "ZH-HANT", "", cancel.Token));
     }
 
     // A prompt long enough to blow the model's context window is rejected by the server, not here,
@@ -1244,6 +1291,37 @@ public class OpenAiCompatibleProviderTests
                     return;
                 current = observed;
             }
+        }
+    }
+
+    /// <summary>
+    /// Translates every text, except those containing <paramref name="failOn"/>: refused with a 500,
+    /// or, with <paramref name="hang"/>, never answered at all.
+    /// </summary>
+    private sealed class FailingOnHandler(string failOn, bool hang = false) : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            using var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
+            var messages = payload.RootElement.GetProperty("messages");
+            var userText = messages[messages.GetArrayLength() - 1].GetProperty("content").GetString()!;
+
+            if (userText.Contains(failOn, StringComparison.Ordinal))
+            {
+                if (hang) await Task.Delay(Timeout.Infinite, cancellationToken);
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("boom"),
+                };
+            }
+
+            var response = JsonSerializer.Serialize(new
+            {
+                choices = new[] { new { message = new { role = "assistant", content = $"translated:{userText}" } } },
+            });
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(response) };
         }
     }
 
