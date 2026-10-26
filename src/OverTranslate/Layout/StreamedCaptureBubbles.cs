@@ -44,6 +44,7 @@ internal sealed class StreamedCaptureBubbles
 
     private readonly object _incomingLock = new();
     private readonly Dictionary<int, string> _incoming = [];
+    private volatile bool _streamed;
 
     public StreamedCaptureBubbles(
         IReadOnlyList<OcrTextBlock> source, CaptureLayoutMode mode, bool verticalText, string targetLanguage)
@@ -83,7 +84,15 @@ internal sealed class StreamedCaptureBubbles
     public void Arrive(int index, string translation)
     {
         lock (_incomingLock) _incoming[index] = translation;
+        _streamed = true;
     }
+
+    /// <summary>
+    /// Whether any translation arrived before the whole answer. An engine that answers all at once
+    /// never says anything until it is done, and its bubbles appear as they always did, without
+    /// fading in — see <see cref="Final"/>.
+    /// </summary>
+    public bool Streamed => _streamed;
 
     /// <summary>
     /// Places what arrived since the last call, and says which blocks changed and which of those
@@ -143,8 +152,11 @@ internal sealed class StreamedCaptureBubbles
     /// the answer does not line up block for block with what was read.
     /// </summary>
     /// <remarks>
-    /// The answer is what is drawn, not what streamed: a provider may read the whole answer
-    /// differently from a piece of it, and a block that failed comes back as its source text.
+    /// <para>The answer is what is drawn, not what streamed: a provider may read the whole answer
+    /// differently from a piece of it, and a block that failed comes back as its source text.</para>
+    ///
+    /// <para>What fades in is what streamed blocks had not shown yet. When nothing streamed at all,
+    /// nothing fades: the whole overlay appears at once, as it did before anything streamed.</para>
     /// </remarks>
     public (List<TranslatedBlock> Blocks, IReadOnlyCollection<TranslatedBlock> Arriving)? Final(
         IReadOnlyList<TranslatedBlock> translated)
@@ -159,7 +171,7 @@ internal sealed class StreamedCaptureBubbles
             if (pieces.Count != _shapes[i].Count) return null;
 
             blocks.AddRange(pieces);
-            if (!IsShown(i)) arriving.UnionWith(pieces);
+            if (Streamed && !IsShown(i)) arriving.UnionWith(pieces);
         }
 
         return (blocks, arriving);
