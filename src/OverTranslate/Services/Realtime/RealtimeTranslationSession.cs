@@ -1234,16 +1234,18 @@ public sealed class RealtimeTranslationSession
             if (withContext)
             {
                 // The lines of this read that already have a translation and are not being sent: what
-                // the new ones sit among on screen. Each once, as the request names them.
-                var reference = blocks
-                    .Select(block => block.Text)
-                    .Distinct(StringComparer.Ordinal)
-                    .Select(text => _translationCache.TryGet(cacheKeyPrefix + text, generation, out var translated)
-                        ? new TranslationPair(text, translated)
-                        : null)
-                    .OfType<TranslationPair>()
-                    .ToList();
+                // the new ones sit among on screen. Each once, as the request names them, and none
+                // the history already names.
                 var history = _history.Lines;
+                var reference = RealtimeTranslationHistory.Beside(
+                    [.. blocks
+                        .Select(block => block.Text)
+                        .Distinct(StringComparer.Ordinal)
+                        .Select(text => _translationCache.TryGet(cacheKeyPrefix + text, generation, out var translated)
+                            ? new TranslationPair(text, translated)
+                            : null)
+                        .OfType<TranslationPair>()],
+                    history);
 
                 context = new TranslationContext(
                     history.Count > 0 ? history : null,

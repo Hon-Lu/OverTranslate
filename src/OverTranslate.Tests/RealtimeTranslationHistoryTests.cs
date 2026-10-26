@@ -84,6 +84,24 @@ public class RealtimeTranslationHistoryTests
         Assert.Empty(history.Lines);
     }
 
+    /// <summary>
+    /// A chat: every line still up was translated in an earlier round, so the screen beside the new
+    /// lines is already all in the history, and none of it goes again as the screen.
+    /// </summary>
+    [Fact]
+    public void TheScreenLeavesOutWhatTheHistoryHas()
+    {
+        var history = new RealtimeTranslationHistory();
+        history.Add([new("一行目", "第一行"), new("二行目", "第二行")]);
+        history.Add([new("三行目", "第三行")]);
+
+        Assert.Empty(RealtimeTranslationHistory.Beside(
+            [new("一行目", "第一行"), new("二行目", "第二行"), new("三行目", "第三行")], history.Lines));
+        Assert.Equal(
+            [new TranslationPair("看板", "招牌")],
+            RealtimeTranslationHistory.Beside([new("二行目", "第二行"), new("看板", "招牌")], history.Lines));
+    }
+
     [Theory]
     [InlineData("你好", "", 2)]
     [InlineData("こんにちは", "", 5)]
