@@ -881,6 +881,59 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>Waits until the request is cancelled, as a server that never answers does.</summary>
+    /// <summary>
+    /// No server there: the batch fails, and its texts are not sent again one by one, nor is any
+    /// batch after it — each would fail the same way.
+    /// </summary>
+    [Theory]
+    [InlineData(6)]
+    [InlineData(50)]
+    public async Task ARefusedConnectionIsOneRequest(int count)
+    {
+        var handler = new RefusingHandler();
+        using var http = new HttpClient(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(Blocks(count), Request()));
+
+        Assert.Equal(1, handler.Sent);
+    }
+
+    /// <summary>
+    /// A refusal no text could have caused is not sent again one by one; one that a text could
+    /// have — a filter on what it says, a batch too long — is.
+    /// </summary>
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, false)]
+    [InlineData(HttpStatusCode.NotFound, false)]
+    [InlineData(HttpStatusCode.TooManyRequests, false)]
+    [InlineData(HttpStatusCode.BadRequest, true)]
+    public async Task OnlyARefusalTheTextsCouldHaveCausedIsSentAlone(HttpStatusCode status, bool alone)
+    {
+        var handler = new StaticResponseHandler(status, """{"error":{"message":"no"}}""");
+        using var http = new HttpClient(handler);
+
+        var error = await Assert.ThrowsAsync<OpenAiChatException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(Blocks(12), Request()));
+
+        Assert.Equal(status, error.StatusCode);
+        if (alone) Assert.InRange(handler.Sent, 1 + OpenAiChatTranslator.MaxConcurrentRequests, 1 + 12);
+        else Assert.Equal(1, handler.Sent);
+    }
+
+    private sealed class RefusingHandler : HttpMessageHandler
+    {
+        private int _sent;
+        public int Sent => Volatile.Read(ref _sent);
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _sent);
+            throw new HttpRequestException("connection refused");
+        }
+    }
+
     private sealed class NeverAnsweringHandler : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -893,8 +946,14 @@ public class OpenAiChatProtocolTests
 
     private sealed class StaticResponseHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
+        private int _sent;
+        public int Sent => Volatile.Read(ref _sent);
+
         protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _sent);
+            return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+        }
     }
 }
