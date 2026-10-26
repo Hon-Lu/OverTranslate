@@ -280,8 +280,11 @@ public class OpenAiChatProtocolTests
     [Theory]
     [InlineData("「~BanG Dream! Our Notes~だんらんTV!」 初回放送のお知らせ", "「~BanG Dream! Our Notes~だんらんTV!」首次播出的公告", null)]
     [InlineData("ー家Dumb Rock!「アイライク・ユアライク」 がデジタルリリース！", "ー家Dumb Rock!「アイライク・ユアライク」將以數位形式發行！", null)]
+    [InlineData("「アイライク ユアライク", "「アイライク ユアライク」", null)]
+    [InlineData("素晴らしきラジオ でも どこにもないラジオ", "「素晴らしきラジオ でも どこにもないラジオ」", "copied")]
+    [InlineData("どうしたんだ", "「どうしたんだ。」", "copied")]
     [InlineData("「アイライク」がリリース", "「アイライク」がリリース了", "kana")]
-    [InlineData("新曲がリリース", "新曲「がリリース」", "kana")]
+    [InlineData("新曲がリリース", "新曲「リリースされた」", "kana")]
     public void Content_PassesATitleKeptInItsBrackets(string source, string translation, string? failure)
     {
         Assert.Equal(failure, OpenAiContentCheck.Failure(source, translation, "zh-Hant"));

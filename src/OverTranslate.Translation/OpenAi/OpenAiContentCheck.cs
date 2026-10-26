@@ -18,9 +18,10 @@ namespace OverTranslate.Translation.OpenAi;
 /// a source with no letters; Latin text with fewer than two lowercase words of three letters or
 /// more — names, titles, acronyms, <c>AUTO ESKIP</c>; a copyright line; a name in katakana alone,
 /// brackets and punctuation around it or not; Han alone copied with fewer than two Simplified-only
-/// characters — a Japanese name, 凉泉桜花, has one; a title kept in its corner brackets as the source
-/// had it, inside a sentence that was translated; a source already in the target language; one
-/// stray kana or Simplified character. Measured on the good models, one segment in six hundred was
+/// characters — a Japanese name, 凉泉桜花, has one; a title kept in corner brackets in the source's
+/// words, inside a sentence that was translated; a source already in the target language; one
+/// stray kana or Simplified character. The source given back with its brackets or punctuation put
+/// right is still a copy. Measured on the good models, one segment in six hundred was
 /// failed wrongly, and that costs one request.</para>
 /// </remarks>
 internal static class OpenAiContentCheck
@@ -58,7 +59,9 @@ internal static class OpenAiContentCheck
         var s = OpenAiPrompt.OneLine(source);
         var t = OpenAiPrompt.OneLine(translation);
 
-        if (s.Length > 0 && s == t)
+        // Copied is copied with the brackets or punctuation put right too: 「アイライク ユアライク given
+        // back closed, a line given back in quotation marks.
+        if (s.Length > 0 && (s == t || Letters(s) == Letters(t)))
         {
             if (Copied(s, targetTag, japanese, korean, traditional)) return "copied";
             if (IsKatakanaOnly(s)) return null;
@@ -108,16 +111,23 @@ internal static class OpenAiContentCheck
     /// </summary>
     private static bool IsKatakanaOnly(string text)
     {
-        var letters = string.Concat(text.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c) || c is '・' or 'ー'));
+        var letters = Letters(text);
         return letters.Trim().Length > 0 && KatakanaOnly.IsMatch(letters);
     }
 
+    /// <summary><paramref name="text"/> less its brackets and punctuation, the katakana marks kept.</summary>
+    private static string Letters(string text) =>
+        string.Concat(text.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c) || c is '・' or 'ー'));
+
     /// <summary>
-    /// <paramref name="translation"/> less every 「…」 or 『…』 that <paramref name="source"/> has as it
-    /// is: a title kept as written, in a sentence that was translated, is not kana left behind.
+    /// <paramref name="translation"/> less every 「…」 or 『…』 whose words <paramref name="source"/> has
+    /// as they are: a title kept as written, in a sentence that was translated, is not kana left
+    /// behind. A translation that is nothing but the source in brackets is a copy, and caught as one
+    /// before this.
     /// </summary>
     private static string WithoutKeptQuotes(string translation, string source) =>
-        Quoted.Replace(translation, quote => source.Contains(quote.Value, StringComparison.Ordinal) ? "" : quote.Value);
+        Quoted.Replace(translation, quote =>
+            quote.Length > 2 && source.Contains(quote.Value[1..^1], StringComparison.Ordinal) ? "" : quote.Value);
 
     /// <summary>
     /// Counts the characters only Simplified Chinese writes, and those only Traditional writes.
