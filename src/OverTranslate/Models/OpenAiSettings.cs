@@ -145,6 +145,62 @@ public class OpenAiModelProfile
     /// <inheritdoc cref="DefaultTemperature"/>
     public const int DefaultSeed = 42;
 
+    /// <summary>
+    /// Whether the request carries a <c>reasoning_effort</c> at all.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, unlike the three sampling switches above, and off means the field is not sent
+    /// — no detection, and nothing remembered about a server that refused it. The built-in model does
+    /// not reason, so the field would buy nothing there, and a hosted model that does not know it
+    /// answers 400. It is for the general chat models that think before answering unless told not
+    /// to: through the OpenAI-compatible route only this field turns that off, and left on, one
+    /// screen takes longer than the timeout.
+    /// </remarks>
+    public bool ReasoningEffortEnabled { get; set; }
+
+    /// <summary>
+    /// What <c>reasoning_effort</c> is set to, when <see cref="ReasoningEffortEnabled"/>.
+    /// </summary>
+    /// <remarks>
+    /// Pre-filled with <see cref="DefaultReasoningEffort"/> while the switch is off, so turning it on
+    /// is the one click that makes a thinking model usable. Picked from <see cref="ReasoningEfforts"/>
+    /// rather than typed: a misspelt value is a 400 on every request.
+    /// </remarks>
+    public string ReasoningEffort { get; set; } = DefaultReasoningEffort;
+
+    /// <inheritdoc cref="ReasoningEffort"/>
+    public const string DefaultReasoningEffort = "none";
+
+    /// <summary>The values the editor offers for <see cref="ReasoningEffort"/>, in order.</summary>
+    public static readonly IReadOnlyList<string> ReasoningEfforts =
+        ["none", "minimal", "low", "medium", "high"];
+
+    /// <summary>
+    /// What the user adds to the built-in translation rules, or empty for the rules alone.
+    /// </summary>
+    /// <remarks>
+    /// The one piece of the instruction that is the user's. The task, the output format, the rules
+    /// and the text are written by the application for every model alike, and this is appended as
+    /// the last rule — a place for tone and style. It cannot pin how a name is translated; measured,
+    /// the recommended model ignored exactly that request.
+    ///
+    /// Line breaks are stored bare — see <see cref="OpenAiSettings.NormaliseLineBreaks"/>. The
+    /// language placeholders are still filled in, because text carried over from the old prompts
+    /// uses them; see <see cref="OpenAiPromptMigration"/>.
+    /// </remarks>
+    public string ExtraInstructions { get; set; } = "";
+
+    /// <summary>
+    /// Whether the editor still owes the user a word about where <see cref="ExtraInstructions"/>
+    /// came from.
+    /// </summary>
+    /// <remarks>
+    /// Set when the old prompts were carried in, and cleared the first time the profile is saved.
+    /// Carried prompts are mostly a task sentence — "translate the following into X" — which is
+    /// harmless next to the rules but redundant, and saying so once lets the user delete it.
+    /// </remarks>
+    public bool ShowMigrationNotice { get; set; }
+
     /// <summary>What this profile sends when the source language is 自動.</summary>
     public OpenAiPromptPair Auto { get; set; } = new();
 
