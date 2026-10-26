@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime.ExceptionServices;
 using System.Text;
@@ -154,6 +155,12 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// Keeping the ids that did come back was measured and rejected: in a failed answer they are
     /// often already one place off.</para>
     ///
+    /// <para>Not when the request failed in a way no text of it could have caused: no server
+    /// answering at all, a key or an address or a model it refuses, a limit on how often it is asked.
+    /// Sending the texts alone would only fail as many more times, so every text of the batch fails
+    /// as the batch did and no batch after it is sent. A refusal that can be the texts' doing — a
+    /// filter on what they say, a batch longer than the model reads — is still sent alone.</para>
+    ///
     /// <para>An answer whose ids are right is checked segment by segment — see
     /// <see cref="OpenAiContentCheck"/> — and each that fails is sent alone, once. What comes back
     /// is taken whatever it says: sending again was measured to rescue most of what it could, and
@@ -180,6 +187,12 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
         foreach (var (start, count) in Batches(texts, request, job.Context))
         {
+            if (job.Unreachable)
+            {
+                for (var k = 0; k < count; k++) job.Outcomes[start + k] = OpenAiChatOutcome.NotSent;
+                continue;
+            }
+
             if (count == 1) await SinglesAsync(job, [start], resend: false);
             else await BatchAsync(job, start, count);
         }
@@ -234,6 +247,9 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
         public int Translated => Volatile.Read(ref _translated);
         public int Failed => Volatile.Read(ref _failed);
+
+        /// <summary>A batch failed in a way that has nothing to do with its texts — see <see cref="OpenAiChatTranslator.MightBeTheTexts"/>.</summary>
+        public bool Unreachable { get; set; }
 
         /// <param name="shown">What the caller was already told for this text, if anything.</param>
         public void Succeed(int index, string translation, bool alreadyCounted = false, string? shown = null)
@@ -299,6 +315,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         var watch = Stopwatch.StartNew();
 
         OpenAiAnswer? answer = null;
+        Exception? error = null;
         string failure = "";
         try
         {
@@ -312,7 +329,18 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !job.Token.IsCancellationRequested)
         {
+            error = ex;
             failure = ex is OpenAiChatException chat ? chat.Failure.ToString() : ex.GetType().Name;
+        }
+
+        if (error is not null && !MightBeTheTexts(error))
+        {
+            Log.Info("OpenAI 相容翻譯：{Count} 段整批失敗（{Reason}，{Elapsed} ms），不逐段重送",
+                count, error is OpenAiChatException { StatusCode: { } status } ? $"{failure} {(int)status}" : failure,
+                watch.ElapsedMilliseconds);
+            for (var k = 0; k < count; k++) job.Fail(start + k, error);
+            job.Unreachable = true;
+            return;
         }
 
         if (answer is not { Complete: true })
@@ -339,6 +367,27 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
         if (resend.Count > 0) await SinglesAsync(job, resend, resend: true);
     }
+
+    /// <summary>
+    /// Whether a failed request could have gone through with other texts in it — and so whether
+    /// sending its texts one by one could still get some of them translated.
+    /// </summary>
+    /// <remarks>
+    /// No answer at all is a server that is not there, not running, or not reachable. The statuses
+    /// are a key, an address or a model the server refuses whatever is asked, and asking too often —
+    /// which more requests would only make worse. Every other refusal can be the texts' own doing.
+    /// </remarks>
+    private static bool MightBeTheTexts(Exception error) => error switch
+    {
+        HttpRequestException => false,
+        OpenAiChatException
+        {
+            Failure: OpenAiChatFailure.Rejected,
+            StatusCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+                or HttpStatusCode.NotFound or HttpStatusCode.TooManyRequests,
+        } => false,
+        _ => true,
+    };
 
     /// <summary>
     /// Whether a segment passes for a translation: not empty where the source was not, and see
