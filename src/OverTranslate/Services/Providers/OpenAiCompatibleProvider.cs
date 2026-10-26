@@ -204,7 +204,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         // of "nothing was translated" apart from a request that never left, and names the model the
         // answer came from — with a local server the model is the variable that explains the output.
         Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}，{Mode:l}",
-            blocks.Count, model, endpoint, options.Prompts is null ? "整批" : "逐段");
+            blocks.Count, model, endpoint, options.Prompts is null ? "內建提示詞" : "自訂提示詞");
 
         var prompt = BuildPrompt(sourceLang, targetLang, options.ExtraInstructions);
         var custom = options.Prompts is { } prompts ? BuildCustomPrompt(sourceLang, targetLang, prompts) : null;

@@ -6,9 +6,10 @@ namespace OverTranslate.Models;
 public enum OpenAiTranslationMode
 {
     /// <summary>
-    /// The application's own instruction, a screen to a request, with the context it has: what every
+    /// The application's own instruction, a text to a request, with the context it has: what every
     /// new profile and the built-in one do.
     /// </summary>
+    /// <remarks>Named for what it did before; the name is what settings already store.</remarks>
     Batch,
 
     /// <summary>

@@ -1102,7 +1102,7 @@ public sealed class RealtimeTranslationSession
     /// </summary>
     /// <remarks>
     /// <para>For 「OpenAI 相容」 each request is the one measured best for a session: the new lines in
-    /// one batch, the lines of the same read that are already translated beside them as the screen
+    /// one call, the lines of the same read that are already translated beside them as the screen
     /// around them, and the session's history before both — see
     /// <see cref="RealtimeTranslationHistory"/>. A line another pass has already sent is not sent
     /// again but waited for — see <see cref="RealtimeInFlightTranslations"/>. The engines translate

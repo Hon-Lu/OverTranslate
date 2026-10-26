@@ -2,13 +2,8 @@ using System.Text.RegularExpressions;
 
 namespace OverTranslate.Translation.OpenAi;
 
-/// <summary>
-/// An answer read back into one translation per segment.
-/// </summary>
-/// <param name="Translations">One per segment, in order; null where the answer had none.</param>
-/// <param name="Complete">Whether the ids were exactly 1 to n, each once.</param>
-/// <param name="Tagged">Whether the answer had any segment tag in it at all.</param>
-internal sealed record OpenAiAnswer(IReadOnlyList<string?> Translations, bool Complete, bool Tagged)
+/// <summary>An answer to one text read back into its translation.</summary>
+internal static class OpenAiAnswer
 {
     private static readonly Regex OpeningTag = new(
         @"<t\s+id\s*=\s*[""']?(\d+)[""']?\s*>",
@@ -19,58 +14,63 @@ internal sealed record OpenAiAnswer(IReadOnlyList<string?> Translations, bool Co
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly Regex Fence = new(
-        @"```[a-zA-Z]*\n(.*?)```",
+        @"^```[a-zA-Z]*\n(.*?)\n?```$",
         RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
-    /// <summary>Reads <paramref name="answer"/> for <paramref name="count"/> segments.</summary>
-    /// <remarks>
-    /// <para>The tags are cut into runs — a new run starts wherever an id is not greater than the one
-    /// before it — and the last run whose ids are exactly 1 to n is the answer. A model that echoes
-    /// the texts, or the first half of its own answer, before the answer proper is read correctly
-    /// that way; when no run is complete, the last one is still read, for what it has.</para>
-    ///
-    /// <para>A tag the model never closed ends at the end of its line, or at the next tag. Small
-    /// models drop closing tags, and the line is where one segment ends anyway.</para>
-    ///
-    /// <para>Thinking and a code fence around the answer are taken off first.</para>
-    /// </remarks>
-    public static OpenAiAnswer Read(string answer, int count)
-    {
-        var text = WithoutFence(OpenAiChatTranslator.StripThinking(answer)).Trim();
-        var tags = Tags(text);
+    /// <summary>Quotation marks a model can put around the whole of its answer, as pairs.</summary>
+    private static readonly (char Open, char Close)[] Quotes = [('"', '"'), ('“', '”'), ('「', '」'), ('『', '』')];
 
-        var runs = new List<List<(int Id, string Text)>>();
-        foreach (var tag in tags)
+    /// <summary>The translation in <paramref name="answer"/>, or null when there is none.</summary>
+    /// <param name="source">The text that was asked for, to tell a quote it had from one the model added.</param>
+    /// <remarks>
+    /// <para>The whole answer, less its thinking, is the translation — asked for nothing else, a model
+    /// mostly gives nothing else. What it does sometimes add is taken off: a code fence around all of
+    /// it; a segment tag, a habit of the tagged format this replaced — the last one numbered 1, and
+    /// none at all when every tag is numbered otherwise; and a pair of quotation marks around all of
+    /// it, when the source has neither mark anywhere — a source that opens a title and leaves it
+    /// open, 「アイライク ユアライク, is rightly answered with the title closed.</para>
+    /// </remarks>
+    public static string? Read(string answer, string source)
+    {
+        var text = OpenAiChatTranslator.StripThinking(answer);
+
+        var fence = Fence.Match(text);
+        if (fence.Success) text = fence.Groups[1].Value.Trim();
+
+        if (OpeningTag.IsMatch(text))
         {
-            if (runs.Count == 0 || tag.Id <= runs[^1][^1].Id) runs.Add([]);
-            runs[^1].Add(tag);
+            text = LastFirstTag(text) ?? "";
+            if (text.Length == 0) return null;
         }
 
-        var complete = runs.FindLastIndex(run => IsExactly(run, count));
-        var chosen = complete >= 0 ? runs[complete] : runs.Count > 0 ? runs[^1] : [];
+        var trimmed = source.Trim();
+        foreach (var (open, close) in Quotes)
+        {
+            if (text.Length >= 2 && text[0] == open && text[^1] == close
+                && text.IndexOf(close, 1) == text.Length - 1
+                && !trimmed.Contains(open) && !trimmed.Contains(close))
+            {
+                text = text[1..^1].Trim();
+                break;
+            }
+        }
 
-        var translations = new string?[count];
-        foreach (var (id, translation) in chosen)
-            if (id >= 1 && id <= count) translations[id - 1] = translation;
-
-        return new OpenAiAnswer(translations, complete >= 0, tags.Count > 0);
+        return text.Length > 0 ? text : null;
     }
 
-    /// <summary>Whether a run's ids are exactly 1 to <paramref name="count"/>, each once.</summary>
-    private static bool IsExactly(List<(int Id, string Text)> run, int count) =>
-        run.Count == count && run.Select(tag => tag.Id).Order().SequenceEqual(Enumerable.Range(1, count));
-
-    /// <summary>Every segment tag in order, closed or not.</summary>
-    private static List<(int Id, string Text)> Tags(string text)
+    /// <summary>
+    /// The text of the last tag numbered 1, up to its closing tag — or, when the model never closed
+    /// it, to the end of its line or the next tag.
+    /// </summary>
+    private static string? LastFirstTag(string text)
     {
-        var tags = new List<(int, string)>();
         var openings = OpeningTag.Matches(text);
-        for (var i = 0; i < openings.Count; i++)
+        for (var i = openings.Count - 1; i >= 0; i--)
         {
+            if (openings[i].Groups[1].Value != "1") continue;
+
             var start = openings[i].Index + openings[i].Length;
             var next = i + 1 < openings.Count ? openings[i + 1].Index : text.Length;
-            if (!int.TryParse(openings[i].Groups[1].ValueSpan, out var id)) continue;
-
             var closing = ClosingTag.Match(text, start);
             int end;
             if (closing.Success && closing.Index <= next)
@@ -81,16 +81,9 @@ internal sealed record OpenAiAnswer(IReadOnlyList<string?> Translations, bool Co
                 end = lineEnd >= 0 && lineEnd < next ? lineEnd : next;
             }
 
-            tags.Add((id, text[start..end].Trim()));
+            return text[start..end].Trim();
         }
 
-        return tags;
-    }
-
-    /// <summary>The first fenced block's body, or the text as it is when it has none.</summary>
-    private static string WithoutFence(string text)
-    {
-        var fence = Fence.Match(text);
-        return fence.Success ? fence.Groups[1].Value : text;
+        return null;
     }
 }

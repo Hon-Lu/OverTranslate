@@ -269,10 +269,10 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
-    /// A screen is one request; every block comes back in its place with its bounds.
+    /// A screen is a request per block, in order; every block comes back in its place with its bounds.
     /// </summary>
     [Fact]
-    public async Task TranslateAsync_SendsTheScreenAsOneRequestAndPreservesOrderAndBounds()
+    public async Task TranslateAsync_SendsTheScreenABlockAtATimeAndPreservesOrderAndBounds()
     {
         var server = new OpenAiFakeServer();
         using var http = new HttpClient(server);
@@ -289,12 +289,12 @@ public class OpenAiCompatibleProviderTests
         var (translated, detected) = await provider.TranslateAsync(
             blocks, "EN", "ZH-HANT", "ignored-provider-key");
 
-        var request = Assert.Single(server.Requests);
+        Assert.Equal(["first", "second"], server.Requests.Select(sent => sent.Text));
+        var request = server.Requests.First();
         Assert.Equal("http://localhost:1234/v1/chat/completions", request.Url);
         Assert.Equal("Bearer secret-key", request.Authorization);
         Assert.Equal("test-model", request.Payload.GetProperty("model").GetString());
         Assert.Equal(0, request.Payload.GetProperty("temperature").GetInt32());
-        Assert.Equal(["first", "second"], request.Segments);
         Assert.Equal(["translated:first", "translated:second"],
             translated.Select(block => block.TranslatedText));
         Assert.Equal(blocks[0].Bounds, translated[0].Bounds);
@@ -317,9 +317,12 @@ public class OpenAiCompatibleProviderTests
                 [new TranslationPair("前", "之前")],
                 [new TranslationPair("旁", "旁邊")]));
 
-        var message = Assert.Single(server.Requests).Message;
-        Assert.Contains("- 前 → 之前", message);
-        Assert.Contains("- 旁 → 旁邊", message);
+        Assert.Equal(2, server.Requests.Count);
+        Assert.All(server.Requests, request =>
+        {
+            Assert.Contains("- 前 → 之前", request.Message);
+            Assert.Contains("- 旁 → 旁邊", request.Message);
+        });
     }
 
     /// <summary>
@@ -414,12 +417,12 @@ public class OpenAiCompatibleProviderTests
             .WarmUpAsync("JA", "ZH-HANT");
 
         var request = Assert.Single(server.Requests);
-        Assert.Equal([OpenAiChatTranslator.WarmUpText], request.Segments);
+        Assert.Equal(OpenAiChatTranslator.WarmUpText, request.Text);
         Assert.Equal(1, request.Payload.GetProperty("max_tokens").GetInt32());
         Assert.False(request.Streamed);
         Assert.Equal("none", request.Payload.GetProperty("reasoning_effort").GetString());
         Assert.Equal(
-            OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "").Build([OpenAiChatTranslator.WarmUpText]),
+            OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "").Build(OpenAiChatTranslator.WarmUpText),
             request.Message);
     }
 
@@ -524,7 +527,7 @@ public class OpenAiCompatibleProviderTests
     [MemberData(nameof(HostilePrompts))]
     public async Task TranslateAsync_SendsAnythingTheUserCanTypeAsValidJson(string name, string prompt)
     {
-        var server = new OpenAiFakeServer { Answer = _ => "<t id=\"1\">譯文</t>" };
+        var server = new OpenAiFakeServer { Answer = _ => "譯文" };
         using var http = new HttpClient(server);
         var provider = new OpenAiCompatibleProvider(
             http,
@@ -542,7 +545,7 @@ public class OpenAiCompatibleProviderTests
         // keys or extra messages rather than as an exception.
         Assert.Equal(1, messages.GetArrayLength());
         Assert.Equal("user", messages[0].GetProperty("role").GetString());
-        Assert.EndsWith("<t id=\"1\">hello</t>", messages[0].GetProperty("content").GetString());
+        Assert.EndsWith("要翻譯的原文：\nhello", messages[0].GetProperty("content").GetString());
         Assert.Equal(4, request.Payload.EnumerateObject().Count());
         Assert.False(request.Payload.TryGetProperty("injected", out _), name);
     }
@@ -558,12 +561,12 @@ public class OpenAiCompatibleProviderTests
         foreach (var source in new[] { "AUTO", "JA" })
         {
             var message = OpenAiCompatibleProvider.BuildPrompt(source, "ZH-HANT", prompt)
-                .Build(["first line\r\nsecond line\rthird line"]);
+                .Build("first line\r\nsecond line\rthird line");
 
             Assert.DoesNotContain("\r", message);
             Assert.DoesNotContain("{source}", message, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("{target}", message, StringComparison.OrdinalIgnoreCase);
-            Assert.EndsWith("<t id=\"1\">first line\nsecond line\nthird line</t>", message);
+            Assert.EndsWith("\nfirst line\nsecond line\nthird line", message);
         }
 
         Assert.NotEmpty(name);
@@ -712,12 +715,12 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
-    /// One text, as the text window, 取詞 and 替換翻譯 send it: the same instruction as a screen,
-    /// with the text as its one segment — paragraphs kept — in one request that is not streamed, and
-    /// nothing of a session around it.
+    /// One text, as the text window, 取詞 and 替換翻譯 send it: the same instruction as a screen's,
+    /// with the text — paragraphs kept — in one request that is not streamed, and nothing of a
+    /// session or a screen around it.
     /// </summary>
     [Fact]
-    public async Task OneTextIsTheOneSegmentOfTheSharedInstruction()
+    public async Task OneTextIsTheSharedInstructionAlone()
     {
         var server = new OpenAiFakeServer();
         using var http = new HttpClient(server);
@@ -730,7 +733,7 @@ public class OpenAiCompatibleProviderTests
 
         var request = Assert.Single(server.Requests);
         Assert.False(request.Streamed);
-        Assert.Equal(OpenAiCompatibleProvider.BuildPrompt("EN", "ZH-HANT", "").Build([text]), request.Message);
+        Assert.Equal(OpenAiCompatibleProvider.BuildPrompt("EN", "ZH-HANT", "").Build(text), request.Message);
         Assert.Equal($"translated:{text}", Assert.Single(translated).TranslatedText);
     }
 

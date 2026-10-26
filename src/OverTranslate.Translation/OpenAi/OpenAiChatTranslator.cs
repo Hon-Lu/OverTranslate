@@ -29,8 +29,8 @@ namespace OverTranslate.Translation.OpenAi;
 /// coming back.
 /// </param>
 /// <param name="ContextTokens">
-/// How many tokens the model can be assumed to read, for cutting a screen into batches — see
-/// <see cref="OpenAiChatTranslator.Batches"/>.
+/// How many tokens the model can be assumed to read, for cutting what a request carries to fit —
+/// see <see cref="OpenAiChatTranslator.Message"/>.
 /// </param>
 /// <param name="Custom">
 /// The user's own instruction, sent instead of <paramref name="Prompt"/>: each text alone, with
@@ -78,8 +78,8 @@ public sealed record OpenAiChatOutcome(string? Translation, Exception? Error)
 }
 
 /// <summary>
-/// Translates through an OpenAI-compatible Chat Completions endpoint: a whole screen in one request,
-/// read back by segment id, with the request for each text alone as the way back.
+/// Translates through an OpenAI-compatible Chat Completions endpoint: one text to a request, one
+/// after another, each request carrying the rest of the screen and what is already translated.
 /// </summary>
 /// <remarks>
 /// <para>Not an <see cref="ITextTranslator"/>, and not a <see cref="BatchTranslator"/>. The batch
@@ -88,10 +88,10 @@ public sealed record OpenAiChatOutcome(string? Translation, Exception? Error)
 /// the application, naming languages the way the interface does, so there is no language code for
 /// this to be given.</para>
 ///
-/// <para>Measured before it was written: with the screen in one request, the good models named the
-/// same thing the same way across a page where one request per text named it five ways, and fixed
-/// subjects a single line cannot show. How each step falls back is what those measurements settled —
-/// see <see cref="TranslateAsync"/>.</para>
+/// <para>Measured before it was written: a text alone named the same thing five ways across a page
+/// where a screen in one request named it one way, and the screen's texts and translations carried
+/// in each request got that back. How each step falls back is what those measurements settled — see
+/// <see cref="TranslateAsync"/>.</para>
 ///
 /// <para>Failures the server answers with are <see cref="OpenAiChatException"/>, and so is a request
 /// that ran past <see cref="OpenAiChatRequest.Timeout"/>. One that never got an answer otherwise —
@@ -102,18 +102,17 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    /// <summary>How many requests are in flight at once, when texts are sent one by one.</summary>
+    /// <summary>How many requests are in flight at once under the user's own instruction.</summary>
     public const int MaxConcurrentRequests = 8;
 
     /// <summary>
-    /// The most segments one request carries.
+    /// How many failed requests in a row, with nothing translated yet, stop the rest being sent.
     /// </summary>
     /// <remarks>
-    /// Measured, the good models got every id right from ten segments to eighty, in time that grew
-    /// with the count; forty is where a page that does fail costs a bounded amount to send again one
-    /// by one.
+    /// A server that answers nothing would otherwise be waited on one timeout per text instead of a
+    /// few in all.
     /// </remarks>
-    public const int MaxSegmentsPerBatch = 40;
+    private const int MaxFailuresBeforeAnyTranslation = MaxConcurrentRequests;
 
     /// <summary>
     /// How many tokens a model is assumed to read when nothing says otherwise.
@@ -123,7 +122,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// that gave the least; newer ones give more. Assumed rather than asked, because the
     /// OpenAI-compatible route has no way to ask or to set it. Past it, a local model is cut from the
     /// front without a word — the instruction is what goes first — and starts writing anything at
-    /// all; a smaller assumption costs only a screen sent as two requests instead of one.
+    /// all; a smaller assumption costs only some context left out of a request.
     /// </remarks>
     public const int DefaultContextTokens = 4096;
 
@@ -141,43 +140,44 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
     /// <returns>One outcome per text, in the order given.</returns>
     /// <exception cref="OpenAiChatException">
-    /// Not one text was translated: the first text's failure, as it was thrown.
+    /// Not one text that was sent was translated: the first text's failure, as it was thrown.
     /// </exception>
     /// <remarks>
-    /// <para>The texts go in batches — see <see cref="Batches"/> — one after another, each answer
-    /// read whole once it is in. Not streamed: measured, a streamed answer took as long in all and
-    /// read the same, and only showed its first segment sooner.</para>
+    /// <para>Each text is its own request, sent once the one before it is answered — see
+    /// <see cref="OpenAiPrompt.Build"/> for what each carries. One after another rather than many at
+    /// once because each carries the translations before it, and because a local server runs one
+    /// request at a time anyway: measured there, a screen sent this way took less time in all than
+    /// the same screen as one tagged request. Not streamed: a streamed answer took as long in all
+    /// and read the same.</para>
     ///
-    /// <para>An answer whose ids are not exactly 1 to n — a segment merged into the next, one left
-    /// out, the request failing — is set aside whole, and every text of that batch is sent alone.
-    /// Keeping the ids that did come back was measured and rejected: in a failed answer they are
-    /// often already one place off.</para>
+    /// <para>A text with no letter in it — a number, a date, a symbol — is not sent: it is its own
+    /// translation, as the model gave back nearly every one measured, and it is left out of what the
+    /// other requests carry.</para>
     ///
-    /// <para>Not when the request failed in a way no text of it could have caused: no server
-    /// answering at all, a key or an address or a model it refuses, a limit on how often it is asked.
-    /// Sending the texts alone would only fail as many more times, so every text of the batch fails
-    /// as the batch did and no batch after it is sent. A refusal that can be the texts' doing — a
-    /// filter on what they say, a batch longer than the model reads — is still sent alone.</para>
+    /// <para>Once every text is in, each is checked — see <see cref="OpenAiContentCheck"/> — and each
+    /// that fails is sent again once, alone, with no context: the request it came from would only
+    /// come back the same under a fixed seed. What comes back is taken whatever it says: sending
+    /// again was measured to rescue most of what it could, and the rest was the model's own
+    /// limit.</para>
     ///
-    /// <para>An answer whose ids are right is checked segment by segment — see
-    /// <see cref="OpenAiContentCheck"/> — and each that fails is sent alone, once. What comes back
-    /// is taken whatever it says: sending again was measured to rescue most of what it could, and
-    /// the rest was the model's own limit.</para>
+    /// <para>A request that fails in a way no text could have caused — no server answering at all, a
+    /// key or an address or a model it refuses, a limit on how often it is asked — stops the rest
+    /// being sent: they would only fail as many more times. Any other failure is that text's alone.
+    /// So is a run of failures with nothing translated yet, once it reaches
+    /// <see cref="MaxFailuresBeforeAnyTranslation"/>.</para>
     ///
     /// <para>One text failing does not take the others with it: which texts failed, and how, is in
-    /// the outcomes for the caller to show. Every text failing is still thrown, as the first one's
-    /// failure — a server that is not running, a wrong key, a model that is not there is one cause
-    /// the user has to read. Once a whole round of single requests has failed with nothing
-    /// translated, the rest are not sent: a server that answers nothing would otherwise be waited on
-    /// one timeout per round instead of one in all.</para>
+    /// the outcomes for the caller to show. Every text that was sent failing is still thrown, as the
+    /// first one's failure — a server that is not running, a wrong key, a model that is not there is
+    /// one cause the user has to read.</para>
     ///
     /// <para>The caller's cancellation is not a failure of any text: it goes up as it always did.</para>
     ///
     /// <para>With <see cref="OpenAiChatRequest.Custom"/>, none of the above but the last two: every
-    /// text goes alone under the user's instruction, the whole answer less its thinking is the
-    /// translation, and <paramref name="context"/> is not sent. Nothing is checked or sent again —
-    /// what the instruction asks for is the user's to say, and a check written for the
-    /// application's instruction would be wrong about theirs.</para>
+    /// text goes alone under the user's instruction, up to <see cref="MaxConcurrentRequests"/> at a
+    /// time, the whole answer less its thinking is the translation, and <paramref name="context"/> is
+    /// not sent. Nothing is checked or sent again — what the instruction asks for is the user's to
+    /// say, and a check written for the application's instruction would be wrong about theirs.</para>
     /// </remarks>
     public async Task<IReadOnlyList<OpenAiChatOutcome>> TranslateAsync(
         IReadOnlyList<string> texts,
@@ -190,12 +190,11 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         if (texts.Count == 0) return job.Outcomes;
 
         if (request.Custom is { } custom)
-            await SinglesAsync(job, Enumerable.Range(0, texts.Count).ToList(), resend: false,
-                (text, token) => CustomAsync(text, request, custom, token));
+            await CustomsAsync(job, custom);
         else
-            await BatchesAsync(job);
+            await SegmentsAsync(job);
 
-        if (job.Translated == 0)
+        if (job.Translated == 0 && job.Outcomes.Any(outcome => !outcome.Translated))
         {
             var error = job.Outcomes.FirstOrDefault(outcome => outcome.Error is not null)?.Error
                 ?? new OpenAiChatException(OpenAiChatFailure.NoTranslation);
@@ -203,22 +202,6 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         }
 
         return job.Outcomes;
-    }
-
-    /// <summary>Every batch of the call, one after another — see <see cref="TranslateAsync"/>.</summary>
-    private async Task BatchesAsync(Job job)
-    {
-        foreach (var (start, count) in Batches(job.Texts, job.Request, job.Context))
-        {
-            if (job.Unreachable)
-            {
-                for (var k = 0; k < count; k++) job.Outcomes[start + k] = OpenAiChatOutcome.NotSent;
-                continue;
-            }
-
-            if (count == 1) await SinglesAsync(job, [start], resend: false);
-            else await BatchAsync(job, start, count);
-        }
     }
 
     /// <summary>
@@ -242,7 +225,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// </remarks>
     public async Task WarmUpAsync(OpenAiChatRequest request, CancellationToken cancellationToken = default) =>
         await SendAsync(
-            request.Custom is { } custom ? CustomMessages(custom, WarmUpText) : BuildMessages(request.Prompt.Build([WarmUpText])),
+            request.Custom is { } custom ? CustomMessages(custom, WarmUpText) : BuildMessages(request.Prompt.Build(WarmUpText)),
             request, cancellationToken, maxTokens: 1);
 
     /// <summary>The one word <see cref="WarmUpAsync"/> asks for.</summary>
@@ -261,16 +244,19 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         private int _translated;
         private int _failed;
 
+        /// <summary>How many texts that were sent came back translated.</summary>
         public int Translated => Volatile.Read(ref _translated);
         public int Failed => Volatile.Read(ref _failed);
 
-        /// <summary>A batch failed in a way that has nothing to do with its texts — see <see cref="OpenAiChatTranslator.MightBeTheTexts"/>.</summary>
-        public bool Unreachable { get; set; }
+        /// <summary>Whether no more requests should be sent — see <see cref="OpenAiChatTranslator.TranslateAsync"/>.</summary>
+        public bool Stopped => Translated == 0 && Failed >= MaxFailuresBeforeAnyTranslation;
 
-        public void Succeed(int index, string translation, bool alreadyCounted = false)
+        /// <param name="sent">False for a text that is its own translation and was never asked for.</param>
+        public void Succeed(int index, string translation, bool sent = true)
         {
+            var counted = Outcomes[index] is { Translated: true };
             Outcomes[index] = new OpenAiChatOutcome(translation, null);
-            if (!alreadyCounted) Interlocked.Increment(ref _translated);
+            if (sent && !counted) Interlocked.Increment(ref _translated);
         }
 
         public void Fail(int index, Exception error)
@@ -280,111 +266,133 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         }
     }
 
-    /// <summary>
-    /// The texts cut into batches, in order: at most <see cref="MaxSegmentsPerBatch"/> each, and
-    /// each within <see cref="OpenAiChatRequest.ContextTokens"/>, whichever comes first.
-    /// </summary>
-    /// <remarks>
-    /// The budget is the message's characters, plus 32, plus twice the source's characters — room
-    /// for the answer — against the context. Measured against what a local server counted on some
-    /// seven thousand requests, it never came out short. A model's own system prompt, set up on the
-    /// server, is the one thing it cannot see.
-    /// </remarks>
-    internal static List<(int Start, int Count)> Batches(
-        IReadOnlyList<string> texts, OpenAiChatRequest request, OpenAiChatContext context)
+    /// <summary>Every text of the call, one after another, then the check — see <see cref="TranslateAsync"/>.</summary>
+    private async Task SegmentsAsync(Job job)
     {
-        bool Fits(int start, int count)
+        var watch = Stopwatch.StartNew();
+        var sent = new List<int>();
+        for (var i = 0; i < job.Texts.Count; i++)
         {
-            var slice = Slice(texts, start, count);
-            var message = request.Prompt.Build(slice, context.History, context.Reference);
-            return message.Length + 32 + 2 * slice.Sum(text => text.Length) <= request.ContextTokens;
+            if (HasLetters(job.Texts[i])) sent.Add(i);
+            else job.Succeed(i, job.Texts[i], sent: false);
         }
 
-        var batches = new List<(int, int)>();
-        int first = 0, size = 0;
-        for (var i = 0; i < texts.Count; i++)
+        var round = sent.Select(i => job.Texts[i]).ToList();
+        var soFar = new List<OpenAiTranslationPair>();
+        var unreachable = false;
+        for (var k = 0; k < sent.Count; k++)
         {
-            if (size > 0 && (size >= MaxSegmentsPerBatch || !Fits(first, size + 1)))
+            var index = sent[k];
+            if (unreachable || job.Stopped)
             {
-                batches.Add((first, size));
-                first = i;
-                size = 0;
+                job.Outcomes[index] = OpenAiChatOutcome.NotSent;
+                continue;
             }
 
-            size++;
+            var text = job.Texts[index];
+            try
+            {
+                var message = Message(job.Request, text, job.Context, round, k, soFar);
+                var translation = await SegmentAsync(message, text, job.Request, job.Token);
+                job.Succeed(index, translation);
+                soFar.Add(new OpenAiTranslationPair(text, translation));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !job.Token.IsCancellationRequested)
+            {
+                job.Fail(index, ex);
+                if (MightBeTheTexts(ex)) continue;
+
+                unreachable = true;
+                Log.Info("OpenAI 相容翻譯：第 {Index} 段失敗（{Reason}），不再送其餘 {Rest} 段",
+                    k + 1, Reason(ex), sent.Count - k - 1);
+            }
         }
 
-        if (size > 0) batches.Add((first, size));
-        return batches;
+        var resend = sent.Where(i => !unreachable && job.Outcomes[i] is { Translation: { } translation }
+            && !Passes(job.Texts[i], translation, job.Request.TargetTag)).ToList();
+
+        // Counts only, never the text, so this stays in the shipped log: it is what explains a screen
+        // that took far longer than usual.
+        Log.Info("OpenAI 相容翻譯：{Count} 段逐段完成（{Skipped} 段沒有文字不送），{Elapsed} ms，內容檢查重送 {Resend} 段",
+            sent.Count, job.Texts.Count - sent.Count, watch.ElapsedMilliseconds, resend.Count);
+
+        foreach (var index in resend)
+        {
+            var text = job.Texts[index];
+            try
+            {
+                job.Succeed(index, await SegmentAsync(job.Request.Prompt.Build(text), text, job.Request, job.Token));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !job.Token.IsCancellationRequested)
+            {
+                // The first answer stands.
+                if (!MightBeTheTexts(ex)) break;
+            }
+        }
     }
 
-    private static IReadOnlyList<string> Slice(IReadOnlyList<string> texts, int start, int count) =>
-        Enumerable.Range(start, count).Select(i => texts[i]).ToList();
+    /// <summary>Whether <paramref name="text"/> has a letter of any script in it.</summary>
+    internal static bool HasLetters(string text) => text.EnumerateRunes().Any(Rune.IsLetter);
 
-    /// <summary>One batch: sent whole, then read, checked and mended.</summary>
-    private async Task BatchAsync(Job job, int start, int count)
+    /// <summary>
+    /// The message for the text at <paramref name="position"/> of <paramref name="round"/>, cut to fit
+    /// <see cref="OpenAiChatRequest.ContextTokens"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The budget is the message's characters, plus 32, plus twice the text's characters — room
+    /// for the answer — against the context. Measured against what a local server counted on some
+    /// seven thousand requests, it never came out short. A model's own system prompt, set up on the
+    /// server, is the one thing it cannot see.</para>
+    ///
+    /// <para>Over budget, what this round carries goes first, a line at a time — the round's text
+    /// farthest from this one, or the oldest translation so far, whichever list is longer — so what
+    /// is left is what sits nearest the text. Then the history, oldest first. The screen's own
+    /// translated lines and the instruction stay: a message that still does not fit is sent as it
+    /// is, and is the text's own length.</para>
+    /// </remarks>
+    internal static string Message(
+        OpenAiChatRequest request,
+        string text,
+        OpenAiChatContext context,
+        IReadOnlyList<string> round,
+        int position,
+        IReadOnlyList<OpenAiTranslationPair> soFar)
     {
-        var texts = Slice(job.Texts, start, count);
-        var watch = Stopwatch.StartNew();
+        var history = context.History?.ToList() ?? [];
+        var nearby = Enumerable.Range(0, round.Count).ToList();
+        var done = soFar.ToList();
 
-        OpenAiAnswer? answer = null;
-        Exception? error = null;
-        string failure = "";
-        try
-        {
-            var message = job.Request.Prompt.Build(texts, job.Context.History, job.Context.Reference);
-            var content = await SendAsync(BuildMessages(message), job.Request, job.Token);
-            answer = OpenAiAnswer.Read(content, count);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !job.Token.IsCancellationRequested)
-        {
-            error = ex;
-            failure = ex is OpenAiChatException chat ? chat.Failure.ToString() : ex.GetType().Name;
-        }
+        string Build() => request.Prompt.Build(
+            text, history, context.Reference, nearby.Select(i => round[i]).ToList(), done);
 
-        if (error is not null && !MightBeTheTexts(error))
+        var message = Build();
+        while (message.Length + 32 + 2 * text.Length > request.ContextTokens)
         {
-            Log.Info("OpenAI 相容翻譯：{Count} 段整批失敗（{Reason}，{Elapsed} ms），不逐段重送",
-                count, error is OpenAiChatException { StatusCode: { } status } ? $"{failure} {(int)status}" : failure,
-                watch.ElapsedMilliseconds);
-            for (var k = 0; k < count; k++) job.Fail(start + k, error);
-            job.Unreachable = true;
-            return;
+            if (nearby.Count > 1 && nearby.Count >= done.Count)
+                nearby.Remove(nearby.MaxBy(i => Math.Abs(i - position)));
+            else if (done.Count > 0)
+                done.RemoveAt(0);
+            else if (nearby.Count > 1)
+                nearby.Remove(nearby.MaxBy(i => Math.Abs(i - position)));
+            else if (history.Count > 0)
+                history.RemoveAt(0);
+            else
+                break;
+
+            message = Build();
         }
 
-        if (answer is not { Complete: true })
-        {
-            // Counts and kinds only, never the text, so this stays in the shipped log: it is what
-            // explains a screen that took far longer than usual.
-            Log.Info("OpenAI 相容翻譯：{Count} 段整批失敗（{Reason}，{Elapsed} ms），改逐段重送",
-                count, answer is null ? failure : answer.Tagged ? "id 不符" : "沒有段落標籤",
-                watch.ElapsedMilliseconds);
-            await SinglesAsync(job, Enumerable.Range(start, count).ToList(), resend: false);
-            return;
-        }
-
-        var resend = new List<int>();
-        for (var k = 0; k < count; k++)
-        {
-            var translation = answer.Translations[k]!;
-            job.Succeed(start + k, translation);
-            if (!Passes(texts[k], translation, job.Request.TargetTag)) resend.Add(start + k);
-        }
-
-        Log.Info("OpenAI 相容翻譯：{Count} 段一批完成，{Elapsed} ms，內容檢查重送 {Resend} 段",
-            count, watch.ElapsedMilliseconds, resend.Count);
-
-        if (resend.Count > 0) await SinglesAsync(job, resend, resend: true);
+        return message;
     }
 
     /// <summary>
-    /// Whether a failed request could have gone through with other texts in it — and so whether
-    /// sending its texts one by one could still get some of them translated.
+    /// Whether a failed request could have gone through with another text in it — and so whether
+    /// the texts after it could still be translated.
     /// </summary>
     /// <remarks>
     /// No answer at all is a server that is not there, not running, or not reachable. The statuses
     /// are a key, an address or a model the server refuses whatever is asked, and asking too often —
-    /// which more requests would only make worse. Every other refusal can be the texts' own doing.
+    /// which more requests would only make worse. Every other refusal can be the text's own doing.
     /// </remarks>
     private static bool MightBeTheTexts(Exception error) => error switch
     {
@@ -398,6 +406,14 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         _ => true,
     };
 
+    /// <summary>A failure's kind for the log, with the status when the server gave one.</summary>
+    private static string Reason(Exception error) => error switch
+    {
+        OpenAiChatException { StatusCode: { } status } chat => $"{chat.Failure} {(int)status}",
+        OpenAiChatException chat => chat.Failure.ToString(),
+        _ => error.GetType().Name,
+    };
+
     /// <summary>
     /// Whether a segment passes for a translation: not empty where the source was not, and see
     /// <see cref="OpenAiContentCheck"/>.
@@ -406,21 +422,20 @@ public sealed class OpenAiChatTranslator(HttpClient http)
         (translation.Length > 0 || source.Trim().Length == 0)
         && OpenAiContentCheck.Passes(source, translation, targetTag);
 
+    /// <summary>One request for <paramref name="text"/>, read back — see <see cref="OpenAiAnswer.Read"/>.</summary>
+    private async Task<string> SegmentAsync(
+        string message, string text, OpenAiChatRequest request, CancellationToken token) =>
+        OpenAiAnswer.Read(await SendAsync(BuildMessages(message), request, token), text)
+            ?? throw new OpenAiChatException(OpenAiChatFailure.NoTranslation);
+
     /// <summary>
-    /// Sends each of <paramref name="indices"/> alone, at most <see cref="MaxConcurrentRequests"/>
-    /// at a time.
+    /// Every text alone under the user's instruction, at most <see cref="MaxConcurrentRequests"/> at
+    /// a time.
     /// </summary>
-    /// <param name="resend">
-    /// A second try at segments that already have a translation: whatever comes back replaces it,
-    /// and a failure leaves it as it was.
-    /// </param>
-    /// <param name="translate">How one text is asked for; <see cref="SingleAsync"/> when not given.</param>
-    private async Task SinglesAsync(
-        Job job, IReadOnlyList<int> indices, bool resend, Func<string, CancellationToken, Task<string>>? translate = null)
+    private async Task CustomsAsync(Job job, OpenAiCustomPrompt custom)
     {
-        translate ??= (text, token) => SingleAsync(text, job.Request, token);
         await Parallel.ForEachAsync(
-            indices,
+            Enumerable.Range(0, job.Texts.Count),
             new ParallelOptions
             {
                 MaxDegreeOfParallelism = MaxConcurrentRequests,
@@ -428,7 +443,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
             },
             async (index, token) =>
             {
-                if (!resend && job.Translated == 0 && job.Failed >= MaxConcurrentRequests)
+                if (job.Stopped)
                 {
                     job.Outcomes[index] = OpenAiChatOutcome.NotSent;
                     return;
@@ -436,33 +451,13 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
                 try
                 {
-                    job.Succeed(index, await translate(job.Texts[index], token), alreadyCounted: resend);
+                    job.Succeed(index, await CustomAsync(job.Texts[index], job.Request, custom, token));
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
                 {
-                    if (!resend) job.Fail(index, ex);
+                    job.Fail(index, ex);
                 }
             });
-    }
-
-    /// <summary>One text, alone, as the one segment of its own request.</summary>
-    /// <remarks>
-    /// An answer with no tag at all is taken as the translation itself. A model asked for one line
-    /// that answers with the line and no markup has still translated it, and turning that into a
-    /// failure would be worse than the request it replaced.
-    /// </remarks>
-    private async Task<string> SingleAsync(string text, OpenAiChatRequest request, CancellationToken token)
-    {
-        var content = await SendAsync(BuildMessages(request.Prompt.Build([text])), request, token);
-        var answer = OpenAiAnswer.Read(content, 1);
-
-        var translation = answer.Complete ? answer.Translations[0]
-            : answer.Tagged ? null
-            : StripThinking(content);
-
-        return string.IsNullOrEmpty(translation)
-            ? throw new OpenAiChatException(OpenAiChatFailure.NoTranslation)
-            : translation;
     }
 
     /// <summary>One text under the user's instruction: the whole answer, less its thinking.</summary>
