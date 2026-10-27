@@ -122,7 +122,46 @@ public sealed record OpenAiPrompt(
         IReadOnlyList<OpenAiTranslationPair>? soFar = null)
     {
         var words = Wording.For(Language);
-        var context = Context(words, text, history, screen, soFar);
+        var showScreen = screen is { Count: > 0 } && (screen.Count > 1 || OneLine(screen[0].Source) != OneLine(text));
+        return Fill(words, Context(words, history, showScreen ? screen : null, soFar), Bare(text));
+    }
+
+    /// <summary>The user message for several texts in one request, read back by number.</summary>
+    /// <param name="texts">Two or more texts, in order: numbered from 1.</param>
+    /// <param name="history">Earlier lines of the same session, oldest first, or null.</param>
+    /// <param name="screen">
+    /// The lines on screen in screen order, <paramref name="texts"/> among them, those already
+    /// translated with their translation; left out when it is <paramref name="texts"/> and nothing
+    /// else, which the numbered texts already show.
+    /// </param>
+    /// <remarks>
+    /// <para>The same template as one text at a time, so a template the user wrote works both ways:
+    /// <c>{text}</c> brings its own line saying how to answer, then the texts, one to a line, each in
+    /// a tag of its number — <c>&lt;1&gt;…&lt;/1&gt;</c>. <c>{context}</c> is the history and the
+    /// screen; there is no round's translations so far, the texts being one request.</para>
+    ///
+    /// <para>Measured with the application's template: numbered tags with their closing tag came
+    /// back as the source again least of the shapes tried, and a format line ahead of the texts no
+    /// worse than one after them. Leaving the closing tag out cost fewer tokens to answer but more
+    /// texts given back untranslated.</para>
+    /// </remarks>
+    public string BuildBatch(
+        IReadOnlyList<string> texts,
+        IReadOnlyList<OpenAiTranslationPair>? history = null,
+        IReadOnlyList<OpenAiScreenLine>? screen = null)
+    {
+        var words = Wording.For(Language);
+        var asked = texts.Select(OneLine).ToHashSet();
+        var showScreen = screen is { Count: > 0 }
+            && screen.Any(line => line.Translation is not null || !asked.Contains(OneLine(line.Source)));
+        var body = words.Batch.Replace("{n}", texts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            + "\n" + string.Join("\n", texts.Select((text, i) => $"<{i + 1}>{OneLine(text)}</{i + 1}>"));
+        return Fill(words, Context(words, history, showScreen ? screen : null, null), body);
+    }
+
+    /// <summary>The template with <c>{context}</c> and <c>{text}</c> filled in.</summary>
+    private string Fill(Wording words, string context, string text)
+    {
         var hasText = false;
 
         var message = words.Placeholders.Replace(Template, match =>
@@ -130,7 +169,7 @@ public sealed record OpenAiPrompt(
             if (!match.Groups["before"].Success)
             {
                 hasText = true;
-                return Bare(text);
+                return text;
             }
 
             var before = match.Groups["before"].Length;
@@ -146,7 +185,7 @@ public sealed record OpenAiPrompt(
             return match.Groups["lead"].Success ? gap + CapitalFirst(match.Groups["rest"].Value) : gap;
         });
 
-        return hasText ? message : message + Bare(text);
+        return hasText ? message : message + text;
     }
 
     /// <summary>
@@ -158,9 +197,9 @@ public sealed record OpenAiPrompt(
         Tags.Matches(answer).Count > Tags.Matches(source).Count;
 
     /// <summary>What <c>{context}</c> becomes: every block that has something in it, or nothing.</summary>
+    /// <param name="screen">The screen, or null when it is not to be shown.</param>
     private string Context(
         Wording words,
-        string text,
         IReadOnlyList<OpenAiTranslationPair>? history,
         IReadOnlyList<OpenAiScreenLine>? screen,
         IReadOnlyList<OpenAiTranslationPair>? soFar)
@@ -168,17 +207,17 @@ public sealed record OpenAiPrompt(
         var blocks = new List<string>();
         var hasHistory = history is { Count: > 0 };
         if (hasHistory)
-            blocks.Add(Block(Fill(words.History), "history", history!.Select(Pair)));
-        if (screen is { Count: > 0 } && (screen.Count > 1 || OneLine(screen[0].Source) != OneLine(text)))
-            blocks.Add(Block(Fill(hasHistory ? words.Page : words.PageAlone), "page", screen.Select(line =>
+            blocks.Add(Block(Heading(words.History), "history", history!.Select(Pair)));
+        if (screen is { Count: > 0 })
+            blocks.Add(Block(Heading(hasHistory ? words.Page : words.PageAlone), "page", screen.Select(line =>
                 line.Translation is { } translation ? Pair(new(line.Source, translation)) : Source(line.Source))));
         if (soFar is { Count: > 0 })
-            blocks.Add(Block(Fill(words.Translated), "translated", soFar.Select(Pair)));
+            blocks.Add(Block(Heading(words.Translated), "translated", soFar.Select(Pair)));
 
         return string.Join("\n\n", blocks);
     }
 
-    private string Fill(string heading) => heading.Replace(TargetNamePlaceholder, TargetLabel);
+    private string Heading(string heading) => heading.Replace(TargetNamePlaceholder, TargetLabel);
 
     private static string Block(string heading, string name, IEnumerable<string> entries) =>
         heading + $"\n<{name}>\n" + string.Join("\n", entries) + $"\n</{name}>";
@@ -205,8 +244,10 @@ public sealed record OpenAiPrompt(
     /// </param>
     /// <param name="Page">The screen's heading under a history, which has said what the tags are.</param>
     /// <param name="PageAlone">The screen's heading with no history before it.</param>
+    /// <param name="Batch">What heads the texts of a batch; <c>{n}</c> is how many there are.</param>
     private sealed record Wording(
-        string Lead, string Instruction, string History, string Page, string PageAlone, string Translated)
+        string Lead, string Instruction, string History, string Page, string PageAlone, string Translated,
+        string Batch)
     {
         public static Wording For(OpenAiPromptLanguage language) => language switch
         {
@@ -226,7 +267,8 @@ public sealed record OpenAiPrompt(
             $"之前的翻譯（<s> 原文，<t> {TargetNamePlaceholder}譯文），只供參考：",
             "目前畫面（沒有 <t> 的還沒翻），只供參考，不用翻譯：",
             $"目前畫面（<s> 原文，<t> {TargetNamePlaceholder}譯文，沒有 <t> 的還沒翻），只供參考，不用翻譯：",
-            "這個畫面剛翻好的，只供參考：");
+            "這個畫面剛翻好的，只供參考：",
+            "（共 {n} 段，每段的譯文照原編號放在 <編號></編號> 裡，一段一行）");
 
         private static readonly Wording SimplifiedChinese = new(
             "参考上面，",
@@ -234,7 +276,8 @@ public sealed record OpenAiPrompt(
             $"之前的翻译（<s> 原文，<t> {TargetNamePlaceholder}译文），仅供参考：",
             "当前画面（没有 <t> 的还没翻），仅供参考，不用翻译：",
             $"当前画面（<s> 原文，<t> {TargetNamePlaceholder}译文，没有 <t> 的还没翻），仅供参考，不用翻译：",
-            "这个画面刚翻好的，仅供参考：");
+            "这个画面刚翻好的，仅供参考：",
+            "（共 {n} 段，每段的译文照原编号放在 <编号></编号> 里，一段一行）");
 
         private static readonly Wording English = new(
             "Using the above, ",
@@ -242,6 +285,7 @@ public sealed record OpenAiPrompt(
             $"Earlier translations (<s> source, <t> {TargetNamePlaceholder} translation), for reference only:",
             "Current screen (lines without <t> are not translated yet), for reference only, do not translate:",
             $"Current screen (<s> source, <t> {TargetNamePlaceholder} translation; lines without <t> are not translated yet), for reference only, do not translate:",
-            "Just translated on this screen, for reference only:");
+            "Just translated on this screen, for reference only:",
+            "({n} parts: put each translation in the tag with its number, <number></number>, one per line.)");
     }
 }

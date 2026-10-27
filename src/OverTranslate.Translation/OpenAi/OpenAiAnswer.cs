@@ -67,6 +67,42 @@ internal static class OpenAiAnswer
         return text.Length > 0 ? text : null;
     }
 
+    private static readonly Regex Numbered = new(
+        @"<(\d+)>(.*?)(?=</\1>|<\d+>|\z)",
+        RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    private static readonly Regex NumberedClosing = new(
+        @"</\d+>",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The translations in an answer to <see cref="OpenAiPrompt.BuildBatch"/>, one per text, null
+    /// for a number that is missing or empty.
+    /// </summary>
+    /// <remarks>
+    /// A tag runs to its closing tag, or to the next numbered tag or the end when the model left it
+    /// open. A number given twice is read the first time. A number past <paramref name="count"/> is
+    /// not one that was asked for.
+    /// </remarks>
+    public static string?[] ReadNumbered(string answer, int count)
+    {
+        var text = OpenAiChatTranslator.StripThinking(answer);
+        var fence = Fence.Match(text);
+        if (fence.Success) text = fence.Groups[1].Value.Trim();
+
+        var translations = new string?[count];
+        foreach (Match match in Numbered.Matches(text))
+        {
+            if (!int.TryParse(match.Groups[1].Value, out var number) || number < 1 || number > count) continue;
+
+            var translation = NumberedClosing.Replace(match.Groups[2].Value, "").Trim();
+            if (translations[number - 1] is null && translation.Length > 0)
+                translations[number - 1] = translation;
+        }
+
+        return translations;
+    }
+
     /// <summary>
     /// The text of the last tag numbered 1, up to its closing tag — or, when the model never closed
     /// it, to the end of its line or the next tag.

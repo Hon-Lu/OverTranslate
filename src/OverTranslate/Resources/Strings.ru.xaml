@@ -489,6 +489,10 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">Настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">URL API</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">Тайм-аут</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">Отправка</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeSegment">По одному</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeBatch">Пакетом</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">Для локальных моделей лучше «По одному»: каждый фрагмент уходит отдельным запросом с контекстом, и перевод точнее. Для облачных сервисов подходит «Пакетом»: несколько фрагментов за раз, меньше запросов.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">с</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">Не менее {0} с</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Модель</sys:String>

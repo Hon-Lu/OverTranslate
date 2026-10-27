@@ -518,6 +518,10 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0}設定</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API 位址</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">逾時</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">翻譯方式</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeSegment">逐段</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeBatch">批次</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">本機模型建議逐段：一段一個請求，帶著上下文翻得較準；雲端服務可用批次：一次送多段，請求較少。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">最少 {0} 秒</sys:String>
     <sys:String x:Key="S.Settings.ModelName">模型名稱</sys:String>

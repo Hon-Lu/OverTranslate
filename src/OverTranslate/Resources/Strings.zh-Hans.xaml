@@ -494,6 +494,10 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0}设置</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API 地址</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">超时</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">翻译方式</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeSegment">逐段</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeBatch">批量</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">本地模型建议逐段：一段一个请求，带着上下文翻得更准；云端服务可用批量：一次发送多段，请求更少。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">最少 {0} 秒</sys:String>
     <sys:String x:Key="S.Settings.ModelName">模型名称</sys:String>

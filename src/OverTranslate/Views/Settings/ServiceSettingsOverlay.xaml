@@ -313,6 +313,50 @@
                                        Style="{StaticResource FieldHint}"
                                        Foreground="{DynamicResource AppError}"/>
 
+                            <!-- A text at a time or as few requests as fit. Up here with the server
+                                 rather than on a profile: which one suits is a matter of the server —
+                                 a local one runs one request at a time, a hosted one many — and the
+                                 same tray as 偵錯工具's either/or, the marker sliding between halves. -->
+                            <TextBlock Grid.Column="0" Grid.Row="5" Text="{DynamicResource S.Settings.OpenAiMode}"
+                                       Margin="0,10,0,0"
+                                       VerticalAlignment="Top"
+                                       Style="{StaticResource FieldLabel}"/>
+                            <StackPanel Grid.Column="1" Grid.Row="5" Margin="0,10,0,0">
+                                <Border Style="{StaticResource SegmentedTray}"
+                                        HorizontalAlignment="Left"
+                                        Grid.IsSharedSizeScope="True">
+                                    <Grid>
+                                        <!-- Shared so the two halves come out one width and the
+                                             marker travels its own width — see 偵錯工具's tray. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="OpenAiModeSegment"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="OpenAiModeSegment"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border x:Name="OpenAiModeThumb"
+                                                Grid.Column="0"
+                                                Background="{DynamicResource AppAccent}"
+                                                CornerRadius="6"
+                                                SizeChanged="OpenAiModeThumb_SizeChanged">
+                                            <Border.RenderTransform>
+                                                <TranslateTransform x:Name="OpenAiModeThumbShift"/>
+                                            </Border.RenderTransform>
+                                        </Border>
+                                        <RadioButton x:Name="OpenAiSegmentRadio" Grid.Column="0" GroupName="OpenAiMode"
+                                                     Style="{StaticResource SegmentedTrackRadio}"
+                                                     Content="{DynamicResource S.Settings.OpenAiModeSegment}"
+                                                     Checked="OpenAiMode_Changed"/>
+                                        <RadioButton x:Name="OpenAiBatchRadio" Grid.Column="1" GroupName="OpenAiMode"
+                                                     Style="{StaticResource SegmentedTrackRadio}"
+                                                     Content="{DynamicResource S.Settings.OpenAiModeBatch}"
+                                                     Checked="OpenAiMode_Changed"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{DynamicResource S.Settings.OpenAiModeHint}"
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Style="{StaticResource FieldHint}"/>
+                            </StackPanel>
+
 
 
                             <!-- Everything above is the server; everything below is the model. The

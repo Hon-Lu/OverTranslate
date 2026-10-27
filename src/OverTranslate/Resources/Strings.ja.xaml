@@ -498,6 +498,10 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} の設定</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API アドレス</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">タイムアウト</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">送信方式</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeSegment">1段ずつ</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeBatch">まとめて</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">ローカルモデルには「1段ずつ」がおすすめです。1段ごとに文脈付きで送るので、より正確に訳せます。クラウドサービスでは「まとめて」も使えます。複数の段を一度に送るので、リクエストが少なくなります。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">{0} 秒以上を入力してください</sys:String>
     <sys:String x:Key="S.Settings.ModelName">モデル名</sys:String>

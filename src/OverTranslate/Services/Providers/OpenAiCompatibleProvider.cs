@@ -29,6 +29,9 @@ namespace OverTranslate.Services.Providers;
 /// The <c>reasoning_effort</c> to send, or null to send none — the switch and the value in one,
 /// since it has no default worth a separate flag.
 /// </param>
+/// <param name="Batch">
+/// Whether a screen goes as few requests as fit — see <see cref="AppSettings.OpenAiBatch"/>.
+/// </param>
 /// <remarks>
 /// The two newer switches default to off while the temperature defaults to on. Not a judgement about
 /// the parameters: every caller that translates builds these from a profile — see
@@ -48,7 +51,8 @@ public sealed record OpenAiCompatibleOptions(
     bool SendSeed = false,
     int Seed = 0,
     string? ReasoningEffort = null,
-    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds);
+    int TimeoutSeconds = OpenAiCompatibleProvider.DefaultTimeoutSeconds,
+    bool Batch = false);
 
 /// <summary>
 /// 「OpenAI 相容」 as the application asks for it: the user's setting, the instruction written from
@@ -131,7 +135,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             profile.SeedEnabled,
             profile.Seed,
             profile.ReasoningEffortEnabled ? profile.ReasoningEffort : null,
-            TimeoutSecondsFor(settings.OpenAiTimeoutSeconds));
+            TimeoutSecondsFor(settings.OpenAiTimeoutSeconds),
+            settings.OpenAiBatch);
     }
 
     /// <summary>
@@ -199,8 +204,9 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         // of "nothing was translated" apart from a request that never left, and names the model the
         // answer came from — with a local server the model is the variable that explains the output.
         var prompt = BuildPrompt(sourceLang, targetLang, options.Template);
-        Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}，{Mode:l}",
-            blocks.Count, model, endpoint, prompt.IsDefault ? "預設模板" : prompt.HasContext ? "自訂模板" : "自訂模板（無上下文）");
+        Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}，{Mode:l}，{Way:l}",
+            blocks.Count, model, endpoint, prompt.IsDefault ? "預設模板" : prompt.HasContext ? "自訂模板" : "自訂模板（無上下文）",
+            options.Batch ? "批次" : "逐段");
 
         // The user's own words only at Debug, beside the text: what they wrote can quote what was on
         // screen, the same reason OnnxOcrEngine keeps the recognised text out of the shipped log.
@@ -298,7 +304,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             options.SendTopP ? options.TopP : null,
             options.SendSeed ? options.Seed : null,
             options.ReasoningEffort,
-            TimeSpan.FromSeconds(options.TimeoutSeconds));
+            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            Batch: options.Batch);
 
     /// <summary>How one block failed, for the log: never the server's words, which can quote the text.</summary>
     private static string FailureKind(OpenAiChatOutcome outcome) => outcome.Error switch

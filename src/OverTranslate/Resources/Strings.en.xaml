@@ -494,6 +494,10 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} settings</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API URL</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">Timeout</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">Requests</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeSegment">Per segment</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeBatch">Batch</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">Per segment suits local models: one request per segment, with context, for better translations. Batch suits cloud services: many segments per request, fewer requests.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">seconds</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">At least {0} seconds</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Model</sys:String>

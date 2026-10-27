@@ -270,6 +270,38 @@ public class OpenAiCompatibleProviderTests
         Assert.Null(OpenAiCompatibleProvider.FromSettings(settings).ReasoningEffort);
     }
 
+    /// <summary>A text at a time unless 批次 is chosen, whichever setting is in use.</summary>
+    [Fact]
+    public void Settings_BatchIsOffUntilChosen()
+    {
+        var settings = new AppSettings();
+        Assert.False(OpenAiCompatibleProvider.FromSettings(settings).Batch);
+
+        settings.OpenAiBatch = true;
+        Assert.True(OpenAiCompatibleProvider.FromSettings(settings).Batch);
+    }
+
+    /// <summary>With 批次 chosen, a screen goes as one request under the application's template.</summary>
+    [Fact]
+    public async Task TranslateAsync_BatchSendsTheScreenAsOneRequest()
+    {
+        var server = new OpenAiFakeServer
+        {
+            Answer = text => string.Join("\n", System.Text.RegularExpressions.Regex.Matches(text, @"<(\d+)>(.*?)</\1>")
+                .Select(row => $"<{row.Groups[1].Value}>譯:{row.Groups[2].Value}</{row.Groups[1].Value}>")),
+        };
+        using var http = new HttpClient(server);
+        var provider = new OpenAiCompatibleProvider(
+            http, () => new OpenAiCompatibleOptions("http://localhost:1234/v1", "test-model", Batch: true));
+
+        var (blocks, _) = await provider.TranslateAsync(
+            [new OcrTextBlock("hello there", new Rect()), new OcrTextBlock("good night", new Rect())], "EN", "ZH-HANT", "");
+
+        Assert.Equal(1, server.Sent);
+        Assert.Contains("<1>hello there</1>\n<2>good night</2>", server.Requests.Single().Message);
+        Assert.Equal(["譯:hello there", "譯:good night"], blocks.Select(block => block.TranslatedText));
+    }
+
     /// <summary>
     /// The built-in setting names the model the guide tells the user to install.
     /// </summary>
