@@ -537,8 +537,8 @@
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻訳のたびに送信される内容のすべてです。訳文だけを出力するよう書いておくのがおすすめです。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">既定に戻す</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">既定</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">翻訳する原文です。前に「Source text to translate (only this part):」の行が付きます。このパラメーターがないときは、原文が末尾に付きます。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">直前の文、画面上のほかの文字、この回ですでに訳した部分で、参考用です。このパラメーターがないときは前後の文脈を付けず、各部分を同時に送信します。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">翻訳する原文をそのまま入れます。このパラメーターがないときは、原文が末尾に付きます。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">直前の文、現在の画面、この画面ですでに訳した部分で、原文は &lt;s&gt;、訳文は &lt;t&gt; で示し、参考用です。付ける内容がないときは、直後の「Using the above, 」も一緒に取り除きます。このパラメーターがないときは前後の文脈を付けず、各部分を同時に送信します。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">マイ設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">詳細</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">推奨モデルを入力</sys:String>

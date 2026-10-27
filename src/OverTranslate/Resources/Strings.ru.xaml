@@ -528,8 +528,8 @@
     <sys:String x:Key="S.Settings.PromptTemplateHint">Всё, что отправляется при каждом переводе. Лучше прямо попросить выводить только перевод.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Вернуть по умолчанию</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">По умолчанию</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">Текст для перевода, после строки «Source text to translate (only this part):». Без этого параметра текст добавляется в конец.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">Предыдущие строки, другой текст на экране и уже переведённые в этот раз фрагменты — только для справки. Без этого параметра контекст не отправляется, а фрагменты отправляются одновременно.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">Текст для перевода, как есть. Без этого параметра текст добавляется в конец.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">Предыдущие строки, текущий экран и только что переведённые на нём фрагменты: оригинал помечен &lt;s&gt;, перевод — &lt;t&gt;; только для справки. Если добавлять нечего, следующая сразу за ним фраза «Using the above, » тоже убирается. Без этого параметра контекст не отправляется, а фрагменты отправляются одновременно.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">Мои настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Дополнительно</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Использовать рекомендуемую модель</sys:String>

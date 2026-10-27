@@ -400,7 +400,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// <remarks>
     /// <para>The language the application's is written in follows the interface as the old built-in
     /// wording did: Traditional and Simplified Chinese for those two interfaces, English for every
-    /// other. Every language name — the placeholders and the labels of the context alike — is written
+    /// other. Every language name — the placeholders and the headings of the context alike — is written
     /// in that language too: an English sentence on a Japanese interface names its languages in
     /// English.</para>
     ///
@@ -419,7 +419,6 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         return new OpenAiPrompt(
             language,
             Fill(isDefault ? OpenAiPrompt.DefaultTemplate(language) : own, sourceLang, targetLang, automatic, english),
-            automatic ? OpenAiPrompt.AutomaticSourceLabel(language) : LanguageData.GetSourceDisplayName(sourceLang, english),
             LanguageData.GetTargetDisplayName(targetLang, english),
             isDefault);
     }

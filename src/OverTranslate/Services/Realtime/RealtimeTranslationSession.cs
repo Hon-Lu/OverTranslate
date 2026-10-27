@@ -1183,11 +1183,11 @@ public sealed class RealtimeTranslationSession
             if (withContext)
             {
                 // Every line of this read in screen order, the new ones among them: what they sit
-                // among on screen. Each once, those already translated with their translation.
+                // among on screen. A line there twice twice, as a reader of the screen sees it;
+                // those already translated with their translation.
                 var history = _history.Lines;
                 var screen = blocks
                     .Select(block => block.Text)
-                    .Distinct(StringComparer.Ordinal)
                     .Select(text => new ScreenLine(text,
                         _translationCache.TryGet(cacheKeyPrefix + text, generation, out var translated) ? translated : null))
                     .ToList();

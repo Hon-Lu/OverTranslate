@@ -148,7 +148,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// other requests carry.</para>
     ///
     /// <para>Under the application's template, once every text is in, each is checked — see
-    /// <see cref="OpenAiContentCheck"/> and <see cref="OpenAiPrompt.AnswersInPairs"/> — and each that
+    /// <see cref="OpenAiContentCheck"/> and <see cref="OpenAiPrompt.LeaksTags"/> — and each that
     /// fails is sent again once, alone, with no context: the request it came from would only come
     /// back the same under a fixed seed. What comes back is taken whatever it says: sending again
     /// was measured to rescue most of what it could, and the rest was the model's own limit. Under
@@ -328,13 +328,11 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     internal static bool HasLetters(string text) => text.EnumerateRunes().Any(Rune.IsLetter);
 
     /// <summary>
-    /// The screen as a request shows it: the lines with a letter in them, each once, in screen order.
+    /// The screen as a request shows it: the lines with a letter in them, in screen order, a line
+    /// that is there twice twice — two lines alike are what a reader of the screen sees.
     /// </summary>
-    internal static List<OpenAiScreenLine> Screen(IReadOnlyList<OpenAiScreenLine> lines)
-    {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        return [.. lines.Where(line => HasLetters(line.Source) && seen.Add(line.Source))];
-    }
+    internal static List<OpenAiScreenLine> Screen(IReadOnlyList<OpenAiScreenLine> lines) =>
+        [.. lines.Where(line => HasLetters(line.Source))];
 
     /// <summary>The message for <paramref name="text"/>, cut to fit <see cref="OpenAiChatRequest.ContextTokens"/>.</summary>
     /// <param name="screen">The screen as <see cref="Screen"/> made it, <paramref name="text"/> among it.</param>
@@ -414,12 +412,12 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     };
 
     /// <summary>
-    /// Whether a segment passes for a translation: not empty where the source was not, not written
-    /// the way the context is, and see <see cref="OpenAiContentCheck"/>.
+    /// Whether a segment passes for a translation: not empty where the source was not, none of the
+    /// context's tags in it, and see <see cref="OpenAiContentCheck"/>.
     /// </summary>
     private static bool Passes(string source, string translation, OpenAiChatRequest request) =>
         (translation.Length > 0 || source.Trim().Length == 0)
-        && !request.Prompt.AnswersInPairs(source, translation)
+        && !OpenAiPrompt.LeaksTags(source, translation)
         && OpenAiContentCheck.Passes(source, translation, request.TargetTag);
 
     /// <summary>

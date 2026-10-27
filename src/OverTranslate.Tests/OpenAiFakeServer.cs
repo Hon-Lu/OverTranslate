@@ -10,13 +10,13 @@ namespace OverTranslate.Tests;
 /// model that follows the format does unless told otherwise.
 /// </summary>
 /// <remarks>
-/// The text is whatever follows the last line asking for it — 要翻譯的原文（只翻這一段）： and its two
-/// other wordings — in the user message; under a template of the user's own, which has no such line,
+/// The text is whatever follows the last line asking for it — the instruction ending 不要解釋： and its
+/// two other wordings — in the user message; under a template of the user's own, which has no such line,
 /// it is the whole user message.
 /// </remarks>
 internal sealed class OpenAiFakeServer : HttpMessageHandler
 {
-    private static readonly string[] TargetHeaders = ["要翻譯的原文（只翻這一段）：\n", "要翻译的原文（只翻这一段）：\n", "Source text to translate (only this part):\n"];
+    private static readonly string[] TargetHeaders = ["不加標籤，不要解釋：\n", "不加标签，不要解释：\n", "with no tags and no explanation:\n"];
 
     private int _active;
     private int _max;

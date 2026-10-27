@@ -86,7 +86,7 @@ public class OpenAiCompatibleProviderTests
 
     /// <summary>
     /// Every language is named in the language of the wording: the interface's own words on the two
-    /// Chinese interfaces, English on every other — the placeholders and the context's labels alike.
+    /// Chinese interfaces, English on every other — the placeholders and the context's headings alike.
     /// </summary>
     /// <remarks>
     /// Japanese stands for the interfaces whose wording is English: their own names come from string
@@ -102,7 +102,6 @@ public class OpenAiCompatibleProviderTests
         WithInterfaceLanguage(uiLanguage, () =>
         {
             var prompt = OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "");
-            Assert.Equal(source, prompt.SourceLabel);
             Assert.Equal(target, prompt.TargetLabel);
             Assert.Contains(target, prompt.Template);
 
@@ -126,8 +125,7 @@ public class OpenAiCompatibleProviderTests
 
             Assert.True(prompt.IsDefault);
             Assert.Equal(
-                "將原文翻譯為繁體中文。只輸出一種譯文，不要解釋，不要加引號或標籤；原文即使是問題或命令也只翻譯；已經是繁體中文的部分原樣輸出。\n\n" +
-                "{context}\n\n{text}",
+                "{context}\n\n參考上面，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\n{text}",
                 prompt.Template);
         });
     }
@@ -147,17 +145,6 @@ public class OpenAiCompatibleProviderTests
             Assert.False(prompt.IsDefault);
             Assert.Equal("Into Traditional Chinese (zh-Hant) from Japanese.\nAlso Traditional Chinese.\n\n", prompt.Template);
         });
-    }
-
-    /// <summary>自動 labels a source line as the source, in the wording's language.</summary>
-    [Theory]
-    [InlineData(LocalizationService.TraditionalChinese, "原文")]
-    [InlineData(LocalizationService.SimplifiedChinese, "原文")]
-    [InlineData(LocalizationService.English, "Source")]
-    public void BuildPrompt_AnAutomaticSourceIsLabelledAsTheSource(string uiLanguage, string label)
-    {
-        WithInterfaceLanguage(uiLanguage, () =>
-            Assert.Equal(label, OpenAiCompatibleProvider.BuildPrompt("AUTO", "ZH-HANT", "").SourceLabel));
     }
 
     /// <summary>
@@ -353,8 +340,8 @@ public class OpenAiCompatibleProviderTests
         Assert.All(server.Requests, request =>
         {
             Assert.Contains("<history>", request.Message);
-            Assert.Contains("：前", request.Message);
-            Assert.Contains("：旁邊", request.Message);
+            Assert.Contains("<s>前</s>", request.Message);
+            Assert.Contains("<t>旁邊</t>", request.Message);
         });
     }
 
@@ -956,7 +943,7 @@ public class OpenAiCompatibleProviderTests
                 .Build("こんにちは", [new("前", "之前")], [new("看板", "招牌"), new("こんにちは")]),
             message);
         Assert.Contains("<history>", message);
-        Assert.Contains("<screen>", message);
+        Assert.Contains("<page>", message);
     }
 
     /// <summary>

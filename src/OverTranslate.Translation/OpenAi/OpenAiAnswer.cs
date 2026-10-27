@@ -13,6 +13,10 @@ internal static class OpenAiAnswer
         @"</t\s*>",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    private static readonly Regex Wrapped = new(
+        @"^<t>(?<body>.*)</t>$",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
     private static readonly Regex Fence = new(
         @"^```[a-zA-Z]*\n(.*?)\n?```$",
         RegexOptions.Singleline | RegexOptions.CultureInvariant);
@@ -25,8 +29,9 @@ internal static class OpenAiAnswer
     /// <remarks>
     /// <para>The whole answer, less its thinking, is the translation — asked for nothing else, a model
     /// mostly gives nothing else. What it does sometimes add is taken off: a code fence around all of
-    /// it; a segment tag, a habit of the tagged format this replaced — the last one numbered 1, and
-    /// none at all when every tag is numbered otherwise; and a pair of quotation marks around all of
+    /// it; a <c>&lt;t&gt;</c> around all of it, the tag the context gives a translation, when there is
+    /// no other tag inside; a segment tag, a habit of the tagged format this replaced — the last one
+    /// numbered 1, and none at all when every tag is numbered otherwise; and a pair of quotation marks around all of
     /// it, when the source has neither mark anywhere — a source that opens a title and leaves it
     /// open, 「アイライク ユアライク, is rightly answered with the title closed.</para>
     /// </remarks>
@@ -36,6 +41,10 @@ internal static class OpenAiAnswer
 
         var fence = Fence.Match(text);
         if (fence.Success) text = fence.Groups[1].Value.Trim();
+
+        var wrapped = Wrapped.Match(text);
+        if (wrapped.Success && !OpenAiPrompt.LeaksTags("", wrapped.Groups["body"].Value))
+            text = wrapped.Groups["body"].Value.Trim();
 
         if (OpeningTag.IsMatch(text))
         {
