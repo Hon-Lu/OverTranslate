@@ -22,7 +22,7 @@ namespace OverTranslate.Views.Settings;
 /// </summary>
 /// <remarks>
 /// The one surface in 設定 that does not save as it is typed. Everything behind it is a value that
-/// takes effect the moment it changes; the extra instructions are prose, and half a sentence saved
+/// takes effect the moment it changes; the template is prose, and half a sentence saved
 /// on the way to the whole one is what the model would be sent on the next capture. So this card is
 /// confirmed, and cancelling it leaves the stored setting exactly as it was.
 ///
@@ -34,7 +34,7 @@ public partial class PromptEditOverlay : UserControl
 {
     private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(140));
 
-    /// <summary>How many lines the extra-instructions box accepts.</summary>
+    /// <summary>How many lines the template box accepts.</summary>
     private const int PromptMaxLines = 200;
 
     /// <summary>True while the box is being cut back to the line limit, so its own edit is ignored.</summary>
@@ -85,15 +85,14 @@ public partial class PromptEditOverlay : UserControl
 
             NameBox.Text = profile?.Name ?? suggestedName;
 
-            // Interim, until the template editor replaces this card: the user prompt box edits the
-            // template, the built-in tile is the application's template.
+            // An empty template is the application's, and opens as its text in the interface's
+            // language rather than as an empty box: what is sent is what is on screen.
             var built = OpenAiCompatibleProvider.BuiltInProfile();
-            ExtraInstructionsBox.Text = "";
+            _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate();
             var template = profile?.Template ?? built.Template;
-            BatchModeTile.IsChecked = template.Trim().Length == 0;
-            PerSegmentModeTile.IsChecked = template.Trim().Length > 0;
-            SystemPromptBox.Text = "";
-            UserPromptBox.Text = template;
+            TemplateBox.Text = template.Trim().Length == 0
+                ? _defaultTemplate
+                : OpenAiSettings.NormaliseLineBreaks(template);
 
             // The model opens on the built-in one like everything else on this card. A new setting is
             // a copy of what ships, and the reset beside this box puts the same name back — a box
@@ -123,7 +122,6 @@ public partial class PromptEditOverlay : UserControl
         }
 
         UpdateAdvancedChrome();
-        UpdateModeChrome();
         UpdateChrome();
 
         Visibility = Visibility.Visible;
@@ -181,13 +179,21 @@ public partial class PromptEditOverlay : UserControl
     }
 
     /// <summary>
-    /// Only the labels this card composes in code — the title. The boxes hold what the user typed,
-    /// in whatever language they typed it.
+    /// The labels this card composes in code — the title — and the template box while it still
+    /// reads as the default: that one is the application's text, which follows the interface. The
+    /// other boxes hold what the user typed, in whatever language they typed it.
     /// </summary>
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         TitleText.Text = LocalizationService.Get(
             _editingId.Length == 0 ? "S.Settings.PromptAddTitle" : "S.Settings.PromptEditTitle");
+
+        // Assigned rather than put in through Refill: nothing of the user's is replaced, and the
+        // undo history of a box that was never written in is nothing to keep.
+        var wasDefault = IsDefault(TemplateBox.Text);
+        _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate();
+        if (wasDefault) TemplateBox.Text = _defaultTemplate;
+        UpdateChrome();
 
         // Only while the question is on screen; it names the prompt, so it is composed rather than
         // bound and has to be written again in the new language.
@@ -221,58 +227,41 @@ public partial class PromptEditOverlay : UserControl
 
     private void ModelBox_TextChanged(object sender, TextChangedEventArgs e) => UpdateChrome();
 
-    private void ExtraInstructionsBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void TemplateBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        ExtraInstructionsPlaceholder.Visibility = ExtraInstructionsBox.Text.Length == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-
         // The trim below raises this event again for its own edit.
         if (_trimming) return;
 
-        if (!_loading) TrimToLineLimit(ExtraInstructionsBox);
-    }
-
-    private void PromptBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        SystemPromptPlaceholder.Visibility = SystemPromptBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        UserPromptPlaceholder.Visibility = UserPromptBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-
-        // The trim below raises this event again for its own edit.
-        if (_trimming) return;
-
-        if (!_loading && sender is TextBox box) TrimToLineLimit(box);
+        if (!_loading) TrimToLineLimit(TemplateBox);
         UpdateChrome();
     }
-
-    /// <summary>Whether the setting is on the user's own prompts.</summary>
-    private bool PerSegment => PerSegmentModeTile.IsChecked == true;
 
     /// <summary>
-    /// Swaps the card under the tiles. Turning to 自訂提示詞 with both boxes empty fills in the user
-    /// prompt this application used to ship, in the interface's language, to write from rather than
-    /// a blank page.
+    /// The application's template in the interface's language, as the box was last given it — what
+    /// the box is compared against to tell the default from the user's own.
     /// </summary>
-    /// <remarks>
-    /// Assigned rather than put in through <see cref="Refill"/>: the boxes are empty, so there is no
-    /// writing of the user's to keep an undo for, and focusing a box on a click of a tile would pull
-    /// the card away from the tiles being looked at.
-    /// </remarks>
-    private void ModeTile_Checked(object sender, RoutedEventArgs e)
+    private string _defaultTemplate = "";
+
+    /// <summary>Whether the box reads as the default, which is what saving it as empty means.</summary>
+    /// <remarks>The same comparison the save makes — see <see cref="OpenAiCompatibleProvider.TemplateToStore"/>.</remarks>
+    private bool IsDefault(string text)
     {
-        if (_loading) return;
+        var trimmed = OpenAiSettings.NormaliseLineBreaks(text).Trim();
+        return trimmed.Length == 0 || trimmed == _defaultTemplate;
+    }
 
-        if (PerSegment && SystemPromptBox.Text.Trim().Length == 0 && UserPromptBox.Text.Trim().Length == 0)
-            UserPromptBox.Text = OpenAiCompatibleProvider.DefaultTemplate();
-
-        UpdateModeChrome();
+    /// <summary>Puts the application's template back, undoably.</summary>
+    private void TemplateResetButton_Click(object sender, RoutedEventArgs e)
+    {
+        Refill(TemplateBox, _defaultTemplate);
         UpdateChrome();
     }
 
-    private void UpdateModeChrome()
+    private void ParamsToggle_Click(object sender, RoutedEventArgs e)
     {
-        ExtraInstructionsCard.Visibility = PerSegment ? Visibility.Collapsed : Visibility.Visible;
-        CustomPromptCard.Visibility = PerSegment ? Visibility.Visible : Visibility.Collapsed;
+        var open = ParamsContent.Visibility != Visibility.Visible;
+        ParamsContent.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        ParamsChevronRotation.Angle = open ? 180 : 0;
     }
 
     /// <summary>Puts the text in the box, to write over or to write from.</summary>
@@ -305,20 +294,17 @@ public partial class PromptEditOverlay : UserControl
     /// out of the list by and a model to send to, and neither can be supplied later.
     /// </summary>
     /// <remarks>
-    /// The extra instructions are not asked for. Empty is the built-in rules alone, which is a
-    /// complete instruction — not a setting someone forgot to finish. The user's own prompts are:
-    /// with both empty, the text would go to the model with nothing to say what to do with it.
+    /// The template is not asked for. Empty is the application's template, which is a complete
+    /// request — not a setting someone forgot to finish.
     /// </remarks>
     private void UpdateChrome()
     {
         NamePlaceholder.Visibility = NameBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         ModelPlaceholder.Visibility = ModelBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        var promptMissing = PerSegment
-            && SystemPromptBox.Text.Trim().Length == 0 && UserPromptBox.Text.Trim().Length == 0;
-        PromptRuleRow.Visibility = promptMissing ? Visibility.Visible : Visibility.Collapsed;
+        TemplateResetButton.IsEnabled = !IsDefault(TemplateBox.Text);
 
-        SaveButton.IsEnabled = NameBox.Text.Trim().Length > 0 && ModelBox.Text.Trim().Length > 0 && !promptMissing;
+        SaveButton.IsEnabled = NameBox.Text.Trim().Length > 0 && ModelBox.Text.Trim().Length > 0;
     }
 
     /// <summary>
@@ -635,7 +621,7 @@ public partial class PromptEditOverlay : UserControl
         profile.TopP = ReadNumber(TopPBox, MaxTopP);
         profile.SeedEnabled = SeedEnabledCheckBox.IsChecked == true;
         profile.Seed = ReadSeed();
-        profile.Template = PerSegment ? OpenAiCompatibleProvider.TemplateToStore(UserPromptBox.Text) : "";
+        profile.Template = OpenAiCompatibleProvider.TemplateToStore(TemplateBox.Text);
 
         Commit();
     }

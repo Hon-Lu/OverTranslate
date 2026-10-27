@@ -372,9 +372,6 @@ public partial class ServiceSettingsOverlay : UserControl
 
         public bool IsSelected { get; init; }
 
-        /// <summary>The tag after the name: how this setting sends what is on screen.</summary>
-        public string ModeLabel { get; init; } = "";
-
         public bool IsBuiltIn => Id.Length == 0;
 
         /// <inheritdoc cref="IsBuiltIn"/>
@@ -409,7 +406,6 @@ public partial class ServiceSettingsOverlay : UserControl
             {
                 Name = LocalizationService.Get("S.Settings.PromptDefaultName"),
                 IsSelected = selectedId.Length == 0,
-                ModeLabel = ModeLabel(OpenAiCompatibleProvider.BuiltInProfile().Template),
             },
         };
 
@@ -418,7 +414,6 @@ public partial class ServiceSettingsOverlay : UserControl
             Id = p.Id,
             Name = p.Name,
             IsSelected = p.Id == selectedId,
-            ModeLabel = ModeLabel(p.Template),
         }));
 
         PromptPresetList.ItemsSource = rows;
@@ -608,17 +603,15 @@ public partial class ServiceSettingsOverlay : UserControl
             ? value.ToString("0.##", CultureInfo.InvariantCulture)
             : Off;
 
-        // Interim, until the template editor replaces this panel.
-        ProfileModeText.Text = ModeLabel(profile.Template);
-        if (profile.Template.Trim().Length > 0)
-            WriteTemplate(profile.Template);
-        else
-            WriteExtraInstructions("");
+        // The default's text in the interface's language when the setting has none — the text the
+        // editor opens on — and normalised, so a box saved before the editor did that does not draw
+        // a CRLF as two breaks.
+        var isDefault = profile.Template.Trim().Length == 0;
+        TemplateDefaultTag.Visibility = isDefault ? Visibility.Visible : Visibility.Collapsed;
+        TemplateText.Text = isDefault
+            ? OpenAiCompatibleProvider.DefaultTemplate()
+            : OpenAiSettings.NormaliseLineBreaks(profile.Template).TrimEnd();
     }
-
-    /// <summary>What a setting's mode tag says, in the list and over the preview alike.</summary>
-    private static string ModeLabel(string template) => LocalizationService.Get(
-        template.Trim().Length > 0 ? "S.Settings.PromptModePerSegment" : "S.Settings.PromptModeBatch");
 
     /// <inheritdoc cref="UpdatePromptChrome"/>
     private const string Off = "\u2014";
@@ -665,35 +658,6 @@ public partial class ServiceSettingsOverlay : UserControl
 
     /// <summary>Puts the copy icon back after the tick. Null while no tick is showing.</summary>
     private DispatcherTimer? _copyFeedback;
-
-    /// <summary>
-    /// Fills the extra-instructions panel, or shows the line that says only the built-in rules are
-    /// sent.
-    /// </summary>
-    /// <remarks>
-    /// Plain text: the placeholders a carried-over prompt may still hold are filled in on the way
-    /// out, but they are no longer something this panel teaches, so they are not picked out either.
-    /// Normalised first, so a box saved before the editor did that does not draw a CRLF as two
-    /// breaks.
-    /// </remarks>
-    private void WriteExtraInstructions(string text)
-    {
-        var hasText = text.Trim().Length > 0;
-
-        PromptPanelTitle.Text = LocalizationService.Get("S.Settings.ExtraInstructions");
-        ExtraInstructionsText.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
-        ExtraInstructionsEmpty.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
-        ExtraInstructionsText.Text = hasText ? OpenAiSettings.NormaliseLineBreaks(text) : "";
-    }
-
-    /// <summary>Fills the same panel with the user's own template.</summary>
-    private void WriteTemplate(string template)
-    {
-        PromptPanelTitle.Text = LocalizationService.Get("S.Settings.PromptModeCustom");
-        ExtraInstructionsEmpty.Visibility = Visibility.Collapsed;
-        ExtraInstructionsText.Visibility = Visibility.Visible;
-        ExtraInstructionsText.Text = OpenAiSettings.NormaliseLineBreaks(template).TrimEnd();
-    }
 
     private void OllamaGuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {

@@ -380,365 +380,123 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Which instruction this setting sends, chosen on two tiles of the
-                                 kind the app already chooses between two ways of working with. Each
-                                 says what it is and, in a small tag after it, how it sends; the card
-                                 under them says the rest once, for both, instead of a sentence
-                                 crammed into each tile. Directly above the card it swaps, so the
-                                 choice and what it changes are read as one group. -->
-                            <TextBlock Text="{DynamicResource S.Settings.PromptMode}"
-                                       Style="{StaticResource FieldLabel}"
-                                       Margin="2,16,0,6"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <RadioButton Grid.Column="0"
-                                             x:Name="BatchModeTile"
-                                             GroupName="PromptMode"
-                                             Style="{StaticResource ChoiceTile}"
-                                             Margin="0,0,6,0"
-                                             AutomationProperties.Name="{DynamicResource S.Settings.PromptModeBuiltIn}"
-                                             Checked="ModeTile_Checked">
-                                    <StackPanel>
-                                        <TextBlock Text="{DynamicResource S.Settings.PromptModeBuiltIn}"
-                                                   Style="{StaticResource ChoiceTileTitle}"/>
-                                        <Border Style="{StaticResource PromptModeTag}"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,6,0,0">
-                                            <TextBlock Text="{DynamicResource S.Settings.PromptModeBatch}"
-                                                       Style="{StaticResource PromptModeTagText}"/>
-                                        </Border>
-                                    </StackPanel>
-                                </RadioButton>
-
-                                <RadioButton Grid.Column="1"
-                                             x:Name="PerSegmentModeTile"
-                                             GroupName="PromptMode"
-                                             Style="{StaticResource ChoiceTile}"
-                                             Margin="6,0,0,0"
-                                             AutomationProperties.Name="{DynamicResource S.Settings.PromptModeCustom}"
-                                             Checked="ModeTile_Checked">
-                                    <StackPanel>
-                                        <TextBlock Text="{DynamicResource S.Settings.PromptModeCustom}"
-                                                   Style="{StaticResource ChoiceTileTitle}"/>
-                                        <Border Style="{StaticResource PromptModeTag}"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,6,0,0">
-                                            <TextBlock Text="{DynamicResource S.Settings.PromptModePerSegment}"
-                                                       Style="{StaticResource PromptModeTagText}"/>
-                                        </Border>
-                                    </StackPanel>
-                                </RadioButton>
-                            </Grid>
-
-                            <!-- Both ways, side by side in one card, whichever is picked: the
-                                 difference is the thing to read before choosing, and a card that
-                                 only described the chosen one would hide it. -->
-                            <Border Style="{StaticResource InfoCardBorder}" Margin="0,10,0,0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="&#xE946;"
-                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                               FontSize="15"
-                                               Foreground="{DynamicResource AppTextSecondary}"
-                                               VerticalAlignment="Top"
-                                               Margin="0,1,10,0"/>
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="12"
-                                                   LineHeight="17"
-                                                   Foreground="{DynamicResource AppTextSecondary}"
-                                                   TextWrapping="Wrap">
-                                            <Run Text="{DynamicResource S.Settings.PromptModeBuiltIn}"
-                                                 FontWeight="SemiBold"
-                                                 Foreground="{DynamicResource AppTextPrimary}"/><Run Text="  "/><Run Text="{DynamicResource S.Settings.PromptModeBatchInfo}"/>
-                                        </TextBlock>
-                                        <TextBlock FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="12"
-                                                   LineHeight="17"
-                                                   Margin="0,6,0,0"
-                                                   Foreground="{DynamicResource AppTextSecondary}"
-                                                   TextWrapping="Wrap">
-                                            <Run Text="{DynamicResource S.Settings.PromptModeCustom}"
-                                                 FontWeight="SemiBold"
-                                                 Foreground="{DynamicResource AppTextPrimary}"/><Run Text="  "/><Run Text="{DynamicResource S.Settings.PromptModePerSegmentInfo}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <!-- The one piece of the instruction that is the user's, as one titled
-                                 card. The task, the format, the rules and the text are written by
-                                 the application for every model alike; what is left to say is tone
-                                 and style, appended as the last rule. Below the fold rather than
-                                 inside it: it is prose, not one more number, and folded away it
-                                 would go unfound. Optional, and says so - an empty box is the
-                                 built-in rules alone, not a setting left unfinished. -->
-                            <Border x:Name="ExtraInstructionsCard" Style="{StaticResource PromptGroupBorder}" Margin="0,12,0,0">
+                            <!-- The whole of what each request says, as one titled card: the template
+                                 opens on the application's own wording rather than an empty box, so
+                                 what is sent is on screen before anything is changed, and changing a
+                                 word is all it takes to make it one's own. Below the fold rather
+                                 than inside it: it is prose, not one more number. -->
+                            <Border Style="{StaticResource PromptGroupBorder}" Margin="0,16,0,0">
                                 <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <!-- Drawn rather than set in an icon font, for the reason
-                                             the guide's book is: the glyph fonts are not on every
-                                             supported build and a missing icon beside a heading
-                                             reads as damage. -->
-                                        <Path Width="17" Height="17"
-                                              Margin="0,0,10,0"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"
-                                              Stroke="{DynamicResource AppAccent}"
-                                              StrokeThickness="1.15"
-                                              StrokeLineJoin="Round"
-                                              Data="M3.5,1.5 L9.5,1.5 L12.5,4.5 L12.5,14.5 L3.5,14.5 Z
-                                                    M9.5,1.5 L9.5,4.5 L12.5,4.5
-                                                    M5.8,8 L10.2,8 M5.8,11 L10.2,11"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.ExtraInstructions}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="15"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AppTextPrimary}"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.ExtraInstructionsOptional}"
-                                                   Margin="8,0,0,0"
-                                                   VerticalAlignment="Center"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource AppTextSecondary}"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <!-- Drawn rather than set in an icon font, for the reason
+                                                 the guide's book is: the glyph fonts are not on every
+                                                 supported build and a missing icon beside a heading
+                                                 reads as damage. -->
+                                            <Path Width="17" Height="17"
+                                                  Margin="0,0,10,0"
+                                                  VerticalAlignment="Center"
+                                                  Stretch="Uniform"
+                                                  Stroke="{DynamicResource AppAccent}"
+                                                  StrokeThickness="1.15"
+                                                  StrokeLineJoin="Round"
+                                                  Data="M3.5,1.5 L9.5,1.5 L12.5,4.5 L12.5,14.5 L3.5,14.5 Z
+                                                        M9.5,1.5 L9.5,4.5 L12.5,4.5
+                                                        M5.8,8 L10.2,8 M5.8,11 L10.2,11"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.PromptTemplate}"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       FontSize="15"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AppTextPrimary}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- Greyed while the box already reads as the default, so
+                                             the button also says whether anything has been changed. -->
+                                        <Button Grid.Column="1"
+                                                x:Name="TemplateResetButton"
+                                                Style="{StaticResource FlatButton}"
+                                                Height="30"
+                                                Padding="10,0"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{DynamicResource S.Settings.PromptTemplateReset}"
+                                                Click="TemplateResetButton_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE72C;"
+                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource AppTextSecondary}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,7,0"/>
+                                                <TextBlock Text="{DynamicResource S.Settings.PromptTemplateReset}"
+                                                           FontFamily="{DynamicResource AppFont}"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource AppTextSecondary}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
 
                                     <Rectangle Height="1" Margin="0,12,0,0" Fill="{DynamicResource AppSeparator}"/>
 
                                     <TextBlock Style="{StaticResource FieldHint}"
-                                               Text="{DynamicResource S.Settings.ExtraInstructionsHint}"
+                                               Text="{DynamicResource S.Settings.PromptTemplateHint}"
                                                Margin="0,12,0,0"/>
 
-                                    <Grid Margin="0,10,0,0">
-                                        <TextBox x:Name="ExtraInstructionsBox"
-                                                 Style="{StaticResource SettingsMultilineTextBox}"
-                                                 MinHeight="110"
-                                                 TextChanged="ExtraInstructionsBox_TextChanged"/>
-                                        <TextBlock x:Name="ExtraInstructionsPlaceholder"
-                                                   IsHitTestVisible="False"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   Foreground="{DynamicResource AppTextSecondary}"
-                                                   Opacity="0.7"
-                                                   Margin="15,11,15,0"
-                                                   VerticalAlignment="Top"
-                                                   TextWrapping="Wrap"
-                                                   Text="{DynamicResource S.Settings.ExtraInstructionsPlaceholder}"/>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
+                                    <TextBox x:Name="TemplateBox"
+                                             Style="{StaticResource SettingsMultilineTextBox}"
+                                             Margin="0,10,0,0"
+                                             MinHeight="150"
+                                             TextChanged="TemplateBox_TextChanged"/>
 
-                            <!-- The whole instruction, the user's own, for 自訂提示詞: one system and
-                                 one user message, whatever the source language - the placeholders
-                                 say what changes. In place of the extra-instructions card rather
-                                 than beside it, because only one of the two is ever sent. -->
-                            <Border x:Name="CustomPromptCard"
-                                    Style="{StaticResource PromptGroupBorder}"
-                                    Margin="0,12,0,0"
-                                    Visibility="Collapsed">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Width="17" Height="17"
-                                              Margin="0,0,10,0"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"
-                                              Stroke="{DynamicResource AppAccent}"
-                                              StrokeThickness="1.15"
-                                              StrokeLineJoin="Round"
-                                              Data="M3.5,1.5 L9.5,1.5 L12.5,4.5 L12.5,14.5 L3.5,14.5 Z
-                                                    M9.5,1.5 L9.5,4.5 L12.5,4.5
-                                                    M5.8,8 L10.2,8 M5.8,11 L10.2,11"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.PromptModeCustom}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="15"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AppTextPrimary}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-
-                                    <Rectangle Height="1" Margin="0,12,0,0" Fill="{DynamicResource AppSeparator}"/>
-
-                                    <TextBlock Text="System Prompt"
-                                               Style="{StaticResource PromptRoleLabel}"
-                                               HorizontalAlignment="Left"
-                                               Margin="0,14,0,0"/>
-                                    <TextBlock Style="{StaticResource FieldHint}"
-                                               Text="{DynamicResource S.Settings.PromptSystemTip}"
-                                               Margin="0,5,0,0"/>
-                                    <Grid Margin="0,8,0,0">
-                                        <TextBox x:Name="SystemPromptBox"
-                                                 Style="{StaticResource SettingsMultilineTextBox}"
-                                                 MinHeight="96"
-                                                 TextChanged="PromptBox_TextChanged"/>
-                                        <TextBlock x:Name="SystemPromptPlaceholder"
-                                                   IsHitTestVisible="False"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   Foreground="{DynamicResource AppTextSecondary}"
-                                                   Opacity="0.7"
-                                                   Margin="15,11,15,0"
-                                                   VerticalAlignment="Top"
-                                                   Text="{DynamicResource S.Settings.PromptSystemPlaceholder}"/>
-                                    </Grid>
-
-                                    <Rectangle Height="1" Margin="0,16,0,0" Fill="{DynamicResource AppSeparator}"/>
-
-                                    <TextBlock Text="User Prompt"
-                                               Style="{StaticResource PromptRoleLabel}"
-                                               HorizontalAlignment="Left"
-                                               Margin="0,14,0,0"/>
-                                    <TextBlock Style="{StaticResource FieldHint}"
-                                               Text="{DynamicResource S.Settings.PromptUserTip}"
-                                               Margin="0,5,0,0"/>
-                                    <Grid Margin="0,8,0,0">
-                                        <TextBox x:Name="UserPromptBox"
-                                                 Style="{StaticResource SettingsMultilineTextBox}"
-                                                 MinHeight="96"
-                                                 TextChanged="PromptBox_TextChanged"/>
-                                        <TextBlock x:Name="UserPromptPlaceholder"
-                                                   IsHitTestVisible="False"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   Foreground="{DynamicResource AppTextSecondary}"
-                                                   Opacity="0.7"
-                                                   Margin="15,11,15,0"
-                                                   VerticalAlignment="Top"
-                                                   Text="{DynamicResource S.Settings.PromptUserPlaceholder}"/>
-                                    </Grid>
-
-                                    <!-- The rule the card enforces, shown only while it is being
-                                         broken: it is also the only thing that says why 儲存 has
-                                         gone quiet. -->
-                                    <StackPanel x:Name="PromptRuleRow"
-                                                Orientation="Horizontal"
-                                                Margin="0,12,0,0"
-                                                Visibility="Collapsed">
-                                        <TextBlock Text="&#xE7BA;"
-                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource AppError}"
-                                                   VerticalAlignment="Top"
-                                                   Margin="0,1,8,0"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.PromptNeedOne}"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource AppError}"
-                                                   TextWrapping="Wrap"/>
-                                    </StackPanel>
-
-                                    <!-- 可用參數, as a card inside the card: reference material for
-                                         the two boxes above it, and the border is what says where it
-                                         stops. -->
-                                    <Border BorderBrush="{DynamicResource AppBorder}"
-                                            BorderThickness="1"
-                                            CornerRadius="8"
-                                            Padding="14,12"
-                                            Margin="0,16,0,0">
-                                        <StackPanel>
+                                    <!-- 可用參數, folded: reference for the box above, looked up
+                                         rather than read, and the box is what this card is for. -->
+                                    <Button x:Name="ParamsToggle"
+                                            Style="{StaticResource AdvancedToggleRow}"
+                                            Margin="0,12,0,0"
+                                            Click="ParamsToggle_Click">
+                                        <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{DynamicResource S.Settings.PromptParams}"
-                                                       Style="{StaticResource SectionHeader}"
-                                                       Margin="0,0,0,4"/>
-                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamsTip}"
-                                                       Style="{StaticResource FieldHint}"
-                                                       Margin="0,0,0,2"/>
-                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamsTipAuto}"
-                                                       Style="{StaticResource FieldHint}"
-                                                       Margin="0,0,0,10"/>
+                                                       VerticalAlignment="Center"/>
+                                            <Path Width="9" Height="6"
+                                                  VerticalAlignment="Center"
+                                                  Margin="8,1,0,0"
+                                                  Stretch="Uniform"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                  StrokeThickness="1.4"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  Data="M1,1 L5,5 L9,1"
+                                                  RenderTransformOrigin="0.5,0.5">
+                                                <Path.RenderTransform>
+                                                    <RotateTransform x:Name="ParamsChevronRotation"/>
+                                                </Path.RenderTransform>
+                                            </Path>
+                                        </StackPanel>
+                                    </Button>
 
-                                            <Border BorderBrush="{DynamicResource AppBorder}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="6">
-                                                <StackPanel>
-                                                    <!-- AppHeaderBg rather than AppSurfaceBg: the light
-                                                         theme paints surface and card the same white. -->
-                                                    <Border Background="{DynamicResource AppHeaderBg}"
-                                                            CornerRadius="5,5,0,0"
-                                                            BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <Border Grid.Column="0" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamCol1}" Style="{StaticResource ParamHeaderText}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="1" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamCol2}" Style="{StaticResource ParamHeaderText}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamCol3}" Style="{StaticResource ParamHeaderText}"/>
-                                                            </Border>
-                                                        </Grid>
-                                                    </Border>
+                                    <StackPanel x:Name="ParamsContent" Margin="0,8,0,0" Visibility="Collapsed">
+                                        <TextBlock Text="{DynamicResource S.Settings.PromptParamsTip}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,0,0,2"/>
+                                        <TextBlock Text="{DynamicResource S.Settings.PromptParamsTipAuto}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,0,0,10"/>
 
-                                                    <!-- {} escapes the brace: XAML reads a leading { as a markup extension. -->
-                                                    <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <Border Grid.Column="0" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{}{source_name}" Style="{StaticResource ParamName}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="1" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamSourceName}" Style="{StaticResource ParamText}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamSourceNameExample}" Style="{StaticResource ParamText}"/>
-                                                            </Border>
-                                                        </Grid>
-                                                    </Border>
-
-                                                    <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <Border Grid.Column="0" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{}{source_code}" Style="{StaticResource ParamName}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="1" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamSourceCode}" Style="{StaticResource ParamText}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
-                                                                <TextBlock Text="en" Style="{StaticResource ParamText}"/>
-                                                            </Border>
-                                                        </Grid>
-                                                    </Border>
-
-                                                    <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <Border Grid.Column="0" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{}{target_name}" Style="{StaticResource ParamName}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="1" Style="{StaticResource ParamCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamTargetName}" Style="{StaticResource ParamText}"/>
-                                                            </Border>
-                                                            <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
-                                                                <TextBlock Text="{DynamicResource S.Settings.PromptParamTargetNameExample}" Style="{StaticResource ParamText}"/>
-                                                            </Border>
-                                                        </Grid>
-                                                    </Border>
-
+                                        <Border BorderBrush="{DynamicResource AppBorder}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <StackPanel>
+                                                <!-- AppHeaderBg rather than AppSurfaceBg: the light
+                                                     theme paints surface and card the same white. -->
+                                                <Border Background="{DynamicResource AppHeaderBg}"
+                                                        CornerRadius="5,5,0,0"
+                                                        BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*"/>
@@ -746,19 +504,135 @@
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Border Grid.Column="0" Style="{StaticResource ParamCell}">
-                                                            <TextBlock Text="{}{target_code}" Style="{StaticResource ParamName}"/>
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamCol1}" Style="{StaticResource ParamHeaderText}"/>
                                                         </Border>
                                                         <Border Grid.Column="1" Style="{StaticResource ParamCell}">
-                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamTargetCode}" Style="{StaticResource ParamText}"/>
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamCol2}" Style="{StaticResource ParamHeaderText}"/>
                                                         </Border>
                                                         <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
-                                                            <TextBlock Text="ja" Style="{StaticResource ParamText}"/>
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamCol3}" Style="{StaticResource ParamHeaderText}"/>
                                                         </Border>
                                                     </Grid>
-                                                </StackPanel>
-                                            </Border>
-                                        </StackPanel>
-                                    </Border>
+                                                </Border>
+
+                                                <!-- The two that carry the content, first and across
+                                                     both remaining columns: there is no short example
+                                                     of a paragraph, and what they do takes a sentence. -->
+                                                <!-- {} escapes the brace: XAML reads a leading { as a markup extension. -->
+                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{}{text}" Style="{StaticResource ParamName}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource ParamLastCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamText}"
+                                                                       Style="{StaticResource ParamText}"
+                                                                       TextTrimming="None"
+                                                                       TextWrapping="Wrap"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{}{context}" Style="{StaticResource ParamName}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource ParamLastCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamContext}"
+                                                                       Style="{StaticResource ParamText}"
+                                                                       TextTrimming="None"
+                                                                       TextWrapping="Wrap"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{}{source_name}" Style="{StaticResource ParamName}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="1" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamSourceName}" Style="{StaticResource ParamText}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamSourceNameExample}" Style="{StaticResource ParamText}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{}{source_code}" Style="{StaticResource ParamName}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="1" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamSourceCode}" Style="{StaticResource ParamText}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
+                                                            <TextBlock Text="en" Style="{StaticResource ParamText}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{}{target_name}" Style="{StaticResource ParamName}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="1" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamTargetName}" Style="{StaticResource ParamText}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamTargetNameExample}" Style="{StaticResource ParamText}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                        <TextBlock Text="{}{target_code}" Style="{StaticResource ParamName}"/>
+                                                    </Border>
+                                                    <Border Grid.Column="1" Style="{StaticResource ParamCell}">
+                                                        <TextBlock Text="{DynamicResource S.Settings.PromptParamTargetCode}" Style="{StaticResource ParamText}"/>
+                                                    </Border>
+                                                    <Border Grid.Column="2" Style="{StaticResource ParamLastCell}">
+                                                        <TextBlock Text="ja" Style="{StaticResource ParamText}"/>
+                                                    </Border>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

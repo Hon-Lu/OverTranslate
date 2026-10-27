@@ -462,32 +462,19 @@
                                                                                 <Grid.ColumnDefinitions>
                                                                                     <ColumnDefinition Width="*"/>
                                                                                     <ColumnDefinition Width="Auto"/>
-                                                                                    <ColumnDefinition Width="Auto"/>
                                                                                 </Grid.ColumnDefinitions>
 
-                                                                                <!-- The name gives way
-                                                                                     before the tag does,
-                                                                                     which sits at the end
-                                                                                     so the tags line up
-                                                                                     down the list. -->
                                                                                 <TextBlock Grid.Column="0"
                                                                                            Text="{Binding Name}"
                                                                                            VerticalAlignment="Center"
                                                                                            TextTrimming="CharacterEllipsis"/>
-
-                                                                                <Border Grid.Column="1"
-                                                                                        Style="{StaticResource PromptModeTag}"
-                                                                                        Margin="8,0,0,0">
-                                                                                    <TextBlock Text="{Binding ModeLabel}"
-                                                                                               Style="{StaticResource PromptModeTagText}"/>
-                                                                                </Border>
 
                                                                                 <!-- The badge and the
                                                                                      button share the
                                                                                      column: exactly one
                                                                                      of the two is ever
                                                                                      on a row. -->
-                                                                                <Border Grid.Column="2"
+                                                                                <Border Grid.Column="1"
                                                                                         Visibility="{Binding BuiltInBadgeVisibility}"
                                                                                         BorderBrush="{DynamicResource AppBorder}"
                                                                                         BorderThickness="1"
@@ -501,7 +488,7 @@
                                                                                                Foreground="{DynamicResource AppTextSecondary}"/>
                                                                                 </Border>
 
-                                                                                <Button Grid.Column="2"
+                                                                                <Button Grid.Column="1"
                                                                                         Visibility="{Binding ActionsVisibility}"
                                                                                         Style="{StaticResource IconButton}"
                                                                                         Width="30" Height="30"
@@ -556,18 +543,10 @@
                                                         <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- The mode beside the heading, in the tag the
-                                                         list row carries: which instruction is sent
-                                                         decides what the prose panel below holds. -->
-                                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,8">
-                                                        <TextBlock Text="{DynamicResource S.Settings.ProfileInUse}"
-                                                                   Style="{StaticResource SectionHeader}"
-                                                                   VerticalAlignment="Center"/>
-                                                        <Border Style="{StaticResource PromptModeTag}" Margin="8,0,0,0">
-                                                            <TextBlock x:Name="ProfileModeText"
-                                                                       Style="{StaticResource PromptModeTagText}"/>
-                                                        </Border>
-                                                    </StackPanel>
+                                                    <TextBlock Grid.Row="0"
+                                                               Text="{DynamicResource S.Settings.ProfileInUse}"
+                                                               Style="{StaticResource SectionHeader}"
+                                                               Margin="2,0,0,8"/>
 
                                                     <!-- The settings that are not prose, above the
                                                          one that is. They are what makes this a model
@@ -752,11 +731,13 @@
                                                                Margin="0,12,0,0"
                                                                Fill="{DynamicResource AppSeparator}"/>
 
-                                                    <!-- The user's own part of the instruction, the
-                                                         one piece of prose a setting still holds. Drawn
-                                                         whether or not there is any, so the pane keeps
-                                                         its shape as rows are picked; empty says what
-                                                         is sent instead - see PromptRoleEmptyText. -->
+                                                    <!-- The template, the one piece of prose a setting
+                                                         holds, as the editor shows it: the default's
+                                                         own text when the setting has none, with a tag
+                                                         that says so, and the placeholders left as
+                                                         they are - the screenshot and realtime
+                                                         languages can differ, so there is no one
+                                                         filled-in version to show. -->
                                                     <Border Grid.Row="3" Margin="0,12,0,0" Style="{StaticResource PromptRoleFrame}">
                                                         <Grid>
                                                             <Grid.RowDefinitions>
@@ -764,21 +745,29 @@
                                                                 <RowDefinition Height="*"/>
                                                             </Grid.RowDefinitions>
                                                             <Border Grid.Row="0" Style="{StaticResource PromptRoleHeaderBar}">
-                                                                <TextBlock x:Name="PromptPanelTitle"
-                                                                           Style="{StaticResource PromptRoleLabel}"/>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{DynamicResource S.Settings.PromptTemplate}"
+                                                                               Style="{StaticResource PromptRoleLabel}"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <!-- The body's fill rather than the
+                                                                         tag's own: the tag's is the
+                                                                         header bar's, and would vanish
+                                                                         on it. -->
+                                                                    <Border x:Name="TemplateDefaultTag"
+                                                                            Style="{StaticResource PromptModeTag}"
+                                                                            Background="{DynamicResource AppInputBg}"
+                                                                            Margin="8,0,0,0">
+                                                                        <TextBlock Text="{DynamicResource S.Settings.PromptTemplateDefault}"
+                                                                                   Style="{StaticResource PromptModeTagText}"/>
+                                                                    </Border>
+                                                                </StackPanel>
                                                             </Border>
                                                             <ScrollViewer Grid.Row="1"
                                                                           Padding="14,11"
                                                                           VerticalScrollBarVisibility="Auto"
                                                                           HorizontalScrollBarVisibility="Disabled">
-                                                                <Grid>
-                                                                    <TextBlock x:Name="ExtraInstructionsText"
-                                                                               Style="{StaticResource PromptRoleBodyText}"/>
-                                                                    <TextBlock x:Name="ExtraInstructionsEmpty"
-                                                                               Style="{StaticResource PromptRoleEmptyText}"
-                                                                               Text="{DynamicResource S.Settings.ExtraInstructionsEmpty}"
-                                                                               Visibility="Collapsed"/>
-                                                                </Grid>
+                                                                <TextBlock x:Name="TemplateText"
+                                                                           Style="{StaticResource PromptRoleBodyText}"/>
                                                             </ScrollViewer>
                                                         </Grid>
                                                     </Border>
