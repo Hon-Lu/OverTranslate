@@ -522,7 +522,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">Added after the app's built-in translation rules — the place to describe tone, word choice and style. Leave it empty to use the built-in rules alone.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">For example: Translate in a relaxed, casual tone; don't end sentences with a period.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">Not set — only the built-in translation rules apply</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">Not set</sys:String>
     <sys:String x:Key="S.Settings.PromptSystemPlaceholder">System prompt…</sys:String>
     <sys:String x:Key="S.Settings.PromptUserPlaceholder">User prompt…</sys:String>
     <sys:String x:Key="S.Settings.PromptNeedOne">Fill in System Prompt or User Prompt</sys:String>

@@ -85,18 +85,15 @@ public partial class PromptEditOverlay : UserControl
 
             NameBox.Text = profile?.Name ?? suggestedName;
 
-            // A new setting opens with nothing extra, which is what the built-in one sends: the box
-            // is for tone and style on top of rules that are complete without it.
+            // Interim, until the template editor replaces this card: the user prompt box edits the
+            // template, the built-in tile is the application's template.
             var built = OpenAiCompatibleProvider.BuiltInProfile();
-            ExtraInstructionsBox.Text = profile?.ExtraInstructions ?? built.ExtraInstructions;
-
-            // A new setting is on the built-in instruction, like the one it is a copy of. The
-            // user's own prompts are loaded whichever mode is on, so switching shows them as kept.
-            var mode = (profile ?? built).Mode;
-            BatchModeTile.IsChecked = mode == OpenAiTranslationMode.Batch;
-            PerSegmentModeTile.IsChecked = mode == OpenAiTranslationMode.PerSegment;
-            SystemPromptBox.Text = profile?.Prompts.SystemPrompt ?? "";
-            UserPromptBox.Text = profile?.Prompts.UserPrompt ?? "";
+            ExtraInstructionsBox.Text = "";
+            var template = profile?.Template ?? built.Template;
+            BatchModeTile.IsChecked = template.Trim().Length == 0;
+            PerSegmentModeTile.IsChecked = template.Trim().Length > 0;
+            SystemPromptBox.Text = "";
+            UserPromptBox.Text = template;
 
             // The model opens on the built-in one like everything else on this card. A new setting is
             // a copy of what ships, and the reset beside this box puts the same name back — a box
@@ -266,7 +263,7 @@ public partial class PromptEditOverlay : UserControl
         if (_loading) return;
 
         if (PerSegment && SystemPromptBox.Text.Trim().Length == 0 && UserPromptBox.Text.Trim().Length == 0)
-            UserPromptBox.Text = OpenAiCompatibleProvider.DefaultCustomUserPrompt();
+            UserPromptBox.Text = OpenAiCompatibleProvider.DefaultTemplate();
 
         UpdateModeChrome();
         UpdateChrome();
@@ -638,20 +635,7 @@ public partial class PromptEditOverlay : UserControl
         profile.TopP = ReadNumber(TopPBox, MaxTopP);
         profile.SeedEnabled = SeedEnabledCheckBox.IsChecked == true;
         profile.Seed = ReadSeed();
-        // Normalised and trimmed: each line is a rule of its own, and a blank line at either end
-        // is none.
-        profile.ExtraInstructions = OpenAiSettings.NormaliseLineBreaks(ExtraInstructionsBox.Text).Trim();
-        profile.Mode = PerSegment ? OpenAiTranslationMode.PerSegment : OpenAiTranslationMode.Batch;
-        // Normalised but not trimmed: the user prompt is followed straight by the text, so the blank
-        // line it ends with is part of it. A box of nothing but whitespace is empty, though.
-        profile.Prompts = new OpenAiPromptPair
-        {
-            SystemPrompt = Prompt(SystemPromptBox),
-            UserPrompt = Prompt(UserPromptBox),
-        };
-
-        static string Prompt(TextBox box) =>
-            box.Text.Trim().Length == 0 ? "" : OpenAiSettings.NormaliseLineBreaks(box.Text);
+        profile.Template = PerSegment ? OpenAiCompatibleProvider.TemplateToStore(UserPromptBox.Text) : "";
 
         Commit();
     }

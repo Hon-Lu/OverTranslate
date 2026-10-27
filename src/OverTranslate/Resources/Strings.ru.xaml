@@ -517,7 +517,6 @@
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">Добавляются после встроенных правил перевода. Подходят для пожеланий к тону, выбору слов и стилю. Если оставить поле пустым, применяются только встроенные правила.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">Например: переводить в непринужденном разговорном тоне; не ставить точку в конце фразы.</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">Не задано — применяются только встроенные правила перевода</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">Не задано</sys:String>
     <sys:String x:Key="S.Settings.PromptSystemPlaceholder">Системный промпт…</sys:String>
     <sys:String x:Key="S.Settings.PromptUserPlaceholder">Пользовательский промпт…</sys:String>
     <sys:String x:Key="S.Settings.PromptNeedOne">Заполните System Prompt или User Prompt</sys:String>

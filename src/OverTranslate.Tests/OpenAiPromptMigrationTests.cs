@@ -5,8 +5,9 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// A profile saved with the four old prompts: put on the built-in instruction when none of them was
-/// the user's own, and on its own prompts, kept as they were, when any was.
+/// A profile saved with the four old prompts: the pair that was being sent is picked as it always
+/// was, and its user half, when it is the user's own, becomes the template as it was; otherwise the
+/// template is the application's.
 /// </summary>
 public class OpenAiPromptMigrationTests
 {
@@ -16,7 +17,7 @@ public class OpenAiPromptMigrationTests
         "Translate the following text into {target_name}. Note that you should only " +
         "output the translated result without any additional explanation:\n\n";
 
-    private static OpenAiPromptPair Pair(string system, string user) => new() { SystemPrompt = system, UserPrompt = user };
+    private static OpenAiPromptMigration.OldPrompts Pair(string system, string user) => new(system, user);
 
     /// <summary>
     /// Each language's own wording, because a profile is a copy of whichever built-in prompt was
@@ -49,17 +50,6 @@ public class OpenAiPromptMigrationTests
         Assert.Null(OpenAiPromptMigration.Kept(Pair("", "  "), Pair("\r\n", ""), automaticSource: true));
     }
 
-    /// <summary>A custom system prompt makes the pair the user's own, built-in user half and all.</summary>
-    [Fact]
-    public void ACustomSystemPrompt_KeepsThePairAsItWas()
-    {
-        var kept = OpenAiPromptMigration.Kept(Pair("你是遊戲翻譯。", ZhHant), Pair("", ZhHant), automaticSource: false);
-
-        Assert.NotNull(kept);
-        Assert.Equal("你是遊戲翻譯。", kept.SystemPrompt);
-        Assert.Equal(ZhHant, kept.UserPrompt);
-    }
-
     /// <summary>Only one pair the user's own: that one, whichever the source language is.</summary>
     [Theory]
     [InlineData(true)]
@@ -80,15 +70,26 @@ public class OpenAiPromptMigrationTests
     {
         var kept = OpenAiPromptMigration.Kept(Pair("自動", ""), Pair("指定", ""), automaticSource);
 
-        Assert.Equal(expected, kept?.SystemPrompt);
+        Assert.Equal(expected, kept?.System);
     }
 
     /// <summary>
-    /// Read from the file: the edited profile goes on its own prompts exactly as written, the
-    /// untouched one on the built-in instruction with nothing extra.
+    /// The three cases: the user's own user half is the template, as it was, blank line and all —
+    /// only its line breaks made bare; a pair whose only own half was the system message, and no
+    /// pair of the user's at all, leave the application's.
     /// </summary>
     [Fact]
-    public void ProfilesWithOldPrompts_GetAModeWhenRead()
+    public void TheTemplate_IsTheUsersOwnUserHalfOrNothing()
+    {
+        Assert.Equal("Translate into {target}:\n\n", OpenAiPromptMigration.Template(Pair("Be casual.", "Translate into {target}:\r\n\r\n")));
+        Assert.Equal("", OpenAiPromptMigration.Template(Pair("你是遊戲翻譯。", ZhHant)));
+        Assert.Equal("", OpenAiPromptMigration.Template(Pair("你是遊戲翻譯。", "")));
+        Assert.Equal("", OpenAiPromptMigration.Template(null));
+    }
+
+    /// <summary>Read from the file: each profile gets the template its old prompts leave.</summary>
+    [Fact]
+    public void ProfilesWithOldPrompts_GetATemplateWhenRead()
     {
         var settings = SettingsService.Parse("""
             {
@@ -104,22 +105,17 @@ public class OpenAiPromptMigrationTests
                     "Id": "b", "Name": "沒改的", "Model": "m",
                     "Auto": { "SystemPrompt": "", "UserPrompt": "將以下文本翻譯為{target_name}，注意只需要輸出翻譯後的結果，不要額外解釋：\n\n" },
                     "Explicit": { "SystemPrompt": "", "UserPrompt": "將以下文本翻譯為{target_name}，注意只需要輸出翻譯後的結果，不要額外解釋：\n\n" }
+                  },
+                  {
+                    "Id": "c", "Name": "只改系統", "Model": "m",
+                    "Auto": { "SystemPrompt": "You are a game translator.", "UserPrompt": "將以下文本翻譯為{target_name}，注意只需要輸出翻譯後的結果，不要額外解釋：\n\n" }
                   }
                 ]
               }
             }
             """);
 
-        var edited = settings.OpenAi.Profiles[0];
-        Assert.Equal(OpenAiTranslationMode.PerSegment, edited.Mode);
-        Assert.Equal("Be casual.", edited.Prompts.SystemPrompt);
-        Assert.Equal("Translate into {target}:\n\n", edited.Prompts.UserPrompt);
-        Assert.Equal("", edited.ExtraInstructions);
-
-        var untouched = settings.OpenAi.Profiles[1];
-        Assert.Equal(OpenAiTranslationMode.Batch, untouched.Mode);
-        Assert.True(untouched.Prompts.IsEmpty);
-        Assert.Equal("", untouched.ExtraInstructions);
+        Assert.Equal(["Translate into {target}:\n\n", "", ""], settings.OpenAi.Profiles.Select(profile => profile.Template));
     }
 
     [Fact]
@@ -127,51 +123,50 @@ public class OpenAiPromptMigrationTests
     {
         var profile = Assert.Single(SettingsService.Parse("""
             { "SourceLanguage": "JA", "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m",
-              "Auto": { "SystemPrompt": "自動", "UserPrompt": "" },
-              "Explicit": { "SystemPrompt": "指定", "UserPrompt": "" } } ] } }
+              "Auto": { "SystemPrompt": "", "UserPrompt": "自動：" },
+              "Explicit": { "SystemPrompt": "", "UserPrompt": "指定：" } } ] } }
             """).OpenAi.Profiles);
 
-        Assert.Equal(OpenAiTranslationMode.PerSegment, profile.Mode);
-        Assert.Equal("指定", profile.Prompts.SystemPrompt);
+        Assert.Equal("指定：", profile.Template);
     }
 
     /// <summary>
-    /// A profile that has a mode is left as it is, old prompts or not: it was saved by a build that
-    /// knows modes, and the user may have chosen the built-in instruction over them.
+    /// A profile that has a template is left as it is, old prompts or not: it was saved by a build
+    /// that knows templates, and the user may have chosen the application's over them.
     /// </summary>
     [Fact]
-    public void AProfileThatHasAMode_IsNotMigratedAgain()
+    public void AProfileThatHasATemplate_IsNotMigratedAgain()
     {
         var profile = Assert.Single(SettingsService.Parse("""
-            { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m", "Mode": "Batch",
-              "Auto": { "SystemPrompt": "Be casual.", "UserPrompt": "" } } ] } }
+            { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m", "Template": "",
+              "Auto": { "SystemPrompt": "", "UserPrompt": "Be casual." } } ] } }
             """).OpenAi.Profiles);
 
-        Assert.Equal(OpenAiTranslationMode.Batch, profile.Mode);
-        Assert.True(profile.Prompts.IsEmpty);
+        Assert.Equal("", profile.Template);
     }
 
-    /// <summary>The mode and the prompts survive being written and read again.</summary>
+    /// <summary>The template survives being written and read again, and the old fields are not written.</summary>
     [Fact]
     public void AMigratedProfile_RoundTripsThroughTheFile()
     {
         var settings = SettingsService.Parse("""
             { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m",
-              "Auto": { "SystemPrompt": "Be casual.", "UserPrompt": "" } } ] } }
+              "Auto": { "SystemPrompt": "", "UserPrompt": "Be casual: " } } ] } }
             """);
 
         var json = SettingsService.Serialize(settings);
         var reread = Assert.Single(SettingsService.Parse(json).OpenAi.Profiles);
 
-        Assert.Contains("\"Mode\": \"PerSegment\"", json);
-        Assert.Equal(OpenAiTranslationMode.PerSegment, reread.Mode);
-        Assert.Equal("Be casual.", reread.Prompts.SystemPrompt);
+        Assert.Contains("\"Template\": \"Be casual: \"", json);
+        Assert.DoesNotContain("\"UserPrompt\"", json);
+        Assert.DoesNotContain("\"Mode\"", json);
+        Assert.Equal("Be casual: ", reread.Template);
     }
 
     [Fact]
-    public void ANewProfile_IsBatch()
+    public void ANewProfile_IsOnTheApplicationsTemplate()
     {
-        Assert.Equal(OpenAiTranslationMode.Batch, new OpenAiModelProfile().Mode);
+        Assert.Equal("", new OpenAiModelProfile().Template);
     }
 
     /// <summary>

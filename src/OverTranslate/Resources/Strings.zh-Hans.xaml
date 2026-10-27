@@ -522,7 +522,6 @@
     <sys:String x:Key="S.Settings.ExtraInstructionsHint">会附加在程序内置的翻译规则之后，适合描述语气、用词风格等要求。留空则只应用内置规则。</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsPlaceholder">例如：用轻松口语的语气翻译；句尾不要加句号。</sys:String>
     <sys:String x:Key="S.Settings.ExtraInstructionsEmpty">未设置，只应用内置的翻译规则</sys:String>
-    <sys:String x:Key="S.Settings.PromptRoleEmpty">未设置</sys:String>
     <sys:String x:Key="S.Settings.PromptSystemPlaceholder">请输入系统提示词…</sys:String>
     <sys:String x:Key="S.Settings.PromptUserPlaceholder">请输入用户提示词…</sys:String>
     <sys:String x:Key="S.Settings.PromptNeedOne">System Prompt 与 User Prompt 至少需填写一项</sys:String>

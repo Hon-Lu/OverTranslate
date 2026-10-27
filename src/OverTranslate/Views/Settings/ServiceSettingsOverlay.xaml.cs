@@ -409,7 +409,7 @@ public partial class ServiceSettingsOverlay : UserControl
             {
                 Name = LocalizationService.Get("S.Settings.PromptDefaultName"),
                 IsSelected = selectedId.Length == 0,
-                ModeLabel = ModeLabel(OpenAiCompatibleProvider.BuiltInProfile().Mode),
+                ModeLabel = ModeLabel(OpenAiCompatibleProvider.BuiltInProfile().Template),
             },
         };
 
@@ -418,7 +418,7 @@ public partial class ServiceSettingsOverlay : UserControl
             Id = p.Id,
             Name = p.Name,
             IsSelected = p.Id == selectedId,
-            ModeLabel = ModeLabel(p.Mode),
+            ModeLabel = ModeLabel(p.Template),
         }));
 
         PromptPresetList.ItemsSource = rows;
@@ -608,16 +608,17 @@ public partial class ServiceSettingsOverlay : UserControl
             ? value.ToString("0.##", CultureInfo.InvariantCulture)
             : Off;
 
-        ProfileModeText.Text = ModeLabel(profile.Mode);
-        if (profile.Mode == OpenAiTranslationMode.PerSegment)
-            WritePrompts(profile.Prompts);
+        // Interim, until the template editor replaces this panel.
+        ProfileModeText.Text = ModeLabel(profile.Template);
+        if (profile.Template.Trim().Length > 0)
+            WriteTemplate(profile.Template);
         else
-            WriteExtraInstructions(profile.ExtraInstructions);
+            WriteExtraInstructions("");
     }
 
     /// <summary>What a setting's mode tag says, in the list and over the preview alike.</summary>
-    private static string ModeLabel(OpenAiTranslationMode mode) => LocalizationService.Get(
-        mode == OpenAiTranslationMode.PerSegment ? "S.Settings.PromptModePerSegment" : "S.Settings.PromptModeBatch");
+    private static string ModeLabel(string template) => LocalizationService.Get(
+        template.Trim().Length > 0 ? "S.Settings.PromptModePerSegment" : "S.Settings.PromptModeBatch");
 
     /// <inheritdoc cref="UpdatePromptChrome"/>
     private const string Off = "\u2014";
@@ -685,32 +686,13 @@ public partial class ServiceSettingsOverlay : UserControl
         ExtraInstructionsText.Text = hasText ? OpenAiSettings.NormaliseLineBreaks(text) : "";
     }
 
-    /// <summary>
-    /// Fills the same panel with the user's own prompts, each under the name of its message, an
-    /// empty one said to be empty rather than left as a gap.
-    /// </summary>
-    private void WritePrompts(OpenAiPromptPair prompts)
+    /// <summary>Fills the same panel with the user's own template.</summary>
+    private void WriteTemplate(string template)
     {
         PromptPanelTitle.Text = LocalizationService.Get("S.Settings.PromptModeCustom");
         ExtraInstructionsEmpty.Visibility = Visibility.Collapsed;
         ExtraInstructionsText.Visibility = Visibility.Visible;
-
-        var inlines = ExtraInstructionsText.Inlines;
-        inlines.Clear();
-        Role("System Prompt", prompts.SystemPrompt);
-        inlines.Add(new LineBreak());
-        inlines.Add(new LineBreak());
-        Role("User Prompt", prompts.UserPrompt);
-
-        void Role(string name, string text)
-        {
-            inlines.Add(new Run(name) { FontWeight = FontWeights.SemiBold });
-            inlines.Add(new LineBreak());
-            var body = OpenAiSettings.NormaliseLineBreaks(text).TrimEnd();
-            inlines.Add(body.Length > 0
-                ? new Run(body)
-                : new Run(LocalizationService.Get("S.Settings.PromptRoleEmpty")) { FontStyle = FontStyles.Italic });
-        }
+        ExtraInstructionsText.Text = OpenAiSettings.NormaliseLineBreaks(template).TrimEnd();
     }
 
     private void OllamaGuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)

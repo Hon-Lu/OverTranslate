@@ -1182,23 +1182,17 @@ public sealed class RealtimeTranslationSession
             TranslationContext? context = null;
             if (withContext)
             {
-                // The lines of this read that already have a translation and are not being sent: what
-                // the new ones sit among on screen. Each once, as the request names them, and none
-                // the history already names.
+                // Every line of this read in screen order, the new ones among them: what they sit
+                // among on screen. Each once, those already translated with their translation.
                 var history = _history.Lines;
-                var reference = RealtimeTranslationHistory.Beside(
-                    [.. blocks
-                        .Select(block => block.Text)
-                        .Distinct(StringComparer.Ordinal)
-                        .Select(text => _translationCache.TryGet(cacheKeyPrefix + text, generation, out var translated)
-                            ? new TranslationPair(text, translated)
-                            : null)
-                        .OfType<TranslationPair>()],
-                    history);
+                var screen = blocks
+                    .Select(block => block.Text)
+                    .Distinct(StringComparer.Ordinal)
+                    .Select(text => new ScreenLine(text,
+                        _translationCache.TryGet(cacheKeyPrefix + text, generation, out var translated) ? translated : null))
+                    .ToList();
 
-                context = new TranslationContext(
-                    history.Count > 0 ? history : null,
-                    reference.Count > 0 ? reference : null);
+                context = new TranslationContext(history.Count > 0 ? history : null, screen);
             }
 
             var (results, _) = await _translation.TranslateAsync(
