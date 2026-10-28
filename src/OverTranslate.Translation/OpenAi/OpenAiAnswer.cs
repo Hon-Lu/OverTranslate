@@ -17,6 +17,11 @@ internal static class OpenAiAnswer
         @"^<t>(?<body>.*)</t>$",
         RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
+    /// <summary>The tags the context is written in.</summary>
+    private static readonly Regex ContextTag = new(
+        @"</?(?:s|t|history)>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     private static readonly Regex Fence = new(
         @"^```[a-zA-Z]*\n(.*?)\n?```$",
         RegexOptions.Singleline | RegexOptions.CultureInvariant);
@@ -43,7 +48,7 @@ internal static class OpenAiAnswer
         if (fence.Success) text = fence.Groups[1].Value.Trim();
 
         var wrapped = Wrapped.Match(text);
-        if (wrapped.Success && !OpenAiPrompt.LeaksTags("", wrapped.Groups["body"].Value))
+        if (wrapped.Success && !ContextTag.IsMatch(wrapped.Groups["body"].Value))
             text = wrapped.Groups["body"].Value.Trim();
 
         if (OpeningTag.IsMatch(text))
@@ -81,8 +86,8 @@ internal static class OpenAiAnswer
     /// </summary>
     /// <remarks>
     /// A tag runs to its closing tag, or to the next numbered tag or the end when the model left it
-    /// open. A number given twice is read the first time. A number past <paramref name="count"/> is
-    /// not one that was asked for.
+    /// open or closed it with another opening tag, <c>&lt;1&gt;…&lt;1&gt;</c>. A number given twice is
+    /// read the first time. A number past <paramref name="count"/> is not one that was asked for.
     /// </remarks>
     public static string?[] ReadNumbered(string answer, int count)
     {

@@ -287,7 +287,7 @@ public class OpenAiCompatibleProviderTests
     {
         var server = new OpenAiFakeServer
         {
-            Answer = text => string.Join("\n", System.Text.RegularExpressions.Regex.Matches(text, @"<(\d+)>(.*?)</\1>")
+            Answer = text => string.Join("\n", System.Text.RegularExpressions.Regex.Matches(text, @"(?m)^<(\d+)>(.*?)</\1>")
                 .Select(row => $"<{row.Groups[1].Value}>譯:{row.Groups[2].Value}</{row.Groups[1].Value}>")),
         };
         using var http = new HttpClient(server);
@@ -958,9 +958,12 @@ public class OpenAiCompatibleProviderTests
         Assert.All(results, block => Assert.Equal("譯文", block.TranslatedText));
     }
 
-    /// <summary>A template with <c>{context}</c> carries the history and the screen the caller gave, in its order.</summary>
+    /// <summary>
+    /// A template with <c>{context}</c> carries the history and then the lines on screen the caller
+    /// gave already translated; a line not translated yet is not context.
+    /// </summary>
     [Fact]
-    public async Task OwnTemplate_WithContextCarriesTheScreen()
+    public async Task OwnTemplate_WithContextCarriesWhatIsTranslated()
     {
         var server = new OpenAiFakeServer { Answer = _ => "譯文" };
         using var http = new HttpClient(server);
@@ -972,15 +975,15 @@ public class OpenAiCompatibleProviderTests
         var message = Assert.Single(server.Requests).Message;
         Assert.Equal(
             OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "{context}\n\n{text}")
-                .Build("こんにちは", [new("前", "之前")], [new("看板", "招牌"), new("こんにちは")]),
+                .Build("こんにちは", [new("前", "之前"), new("看板", "招牌")]),
             message);
         Assert.Contains("<history>", message);
-        Assert.Contains("<page>", message);
+        Assert.DoesNotContain("<page>", message);
     }
 
     /// <summary>
     /// The answer is taken as it is, less its thinking: an answer that copies the text is not sent
-    /// again, as the application's template's would be.
+    /// again.
     /// </summary>
     [Fact]
     public async Task OwnTemplate_TakesTheAnswerWithoutCheckingOrResending()

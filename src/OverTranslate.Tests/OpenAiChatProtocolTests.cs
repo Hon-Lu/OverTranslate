@@ -32,7 +32,7 @@ public class OpenAiChatProtocolTests
     private static OpenAiChatRequest Request(
         string apiKey = "", double? temperature = null, double? topP = null, int? seed = null,
         string? reasoningEffort = null) =>
-        new(Endpoint, "test-model", apiKey, Prompt, "zh-Hant", temperature, topP, seed, reasoningEffort);
+        new(Endpoint, "test-model", apiKey, Prompt, temperature, topP, seed, reasoningEffort);
 
     private static List<string> Blocks(int count, string prefix = "block-") =>
         Enumerable.Range(0, count).Select(index => $"{prefix}{index:D2}").ToList();
@@ -62,9 +62,8 @@ public class OpenAiChatProtocolTests
 
     /// <summary>
     /// The Traditional Chinese template is the measured one, word for word, and so is what its
-    /// context becomes: the blocks in their order under their headings, a pair to a line in
-    /// <c>&lt;s&gt;</c> and <c>&lt;t&gt;</c>, the screen as the round found it — a line there twice
-    /// twice — and the screen's heading saying what the tags are when no history has.
+    /// context becomes: the translations done before under their heading, a pair to a line in
+    /// <c>&lt;s&gt;</c> and <c>&lt;t&gt;</c>, each on one line.
     /// </summary>
     /// <remarks>
     /// Written out whole rather than assembled from the same strings: a reworded line is a new
@@ -77,36 +76,16 @@ public class OpenAiChatProtocolTests
             "之前的翻譯（<s> 原文，<t> 繁體中文譯文），只供參考：\n" +
             "<history>\n" +
             "<s>前の 台詞</s><t>之前的台詞</t>\n" +
-            "</history>\n\n" +
-            "目前畫面（沒有 <t> 的還沒翻），只供參考，不用翻譯：\n" +
-            "<page>\n" +
-            "<s>おはよう</s>\n" +
-            "<s>画面の文</s><t>畫面上的句子</t>\n" +
-            "<s>また 明日</s>\n" +
-            "<s>また 明日</s>\n" +
-            "</page>\n\n" +
-            "這個畫面剛翻好的，只供參考：\n" +
-            "<translated>\n" +
             "<s>おはよう</s><t>早安</t>\n" +
-            "</translated>\n\n" +
+            "</history>\n\n" +
             "參考上面，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\n" +
             "また\n明日",
-            Prompt.Build(
-                "また\r\n明日",
-                history: [new("前の\n台詞", "之前的台詞")],
-                screen: [new("おはよう"), new("画面の文", "畫面上的句子"), new("また\r\n明日"), new("また 明日")],
-                soFar: [new("おはよう", "早安")]));
-
-        Assert.Equal(
-            "目前畫面（<s> 原文，<t> 繁體中文譯文，沒有 <t> 的還沒翻），只供參考，不用翻譯：\n" +
-            "<page>\n<s>おはよう</s>\n<s>また</s>\n</page>\n\n" +
-            "參考上面，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\nまた",
-            Prompt.Build("また", screen: [new("おはよう"), new("また")]));
+            Prompt.Build("また\r\n明日", [new("前の\n台詞", "之前的台詞"), new("おはよう", "早安")]));
     }
 
     /// <summary>
     /// No context to give: <c>{context}</c> goes with the blank lines around it and the 參考上面，
-    /// after it, leaving the instruction over the text — also when the screen is the text alone.
+    /// after it, leaving the instruction over the text.
     /// </summary>
     [Fact]
     public void Prompt_AloneIsTheInstructionAndTheText()
@@ -114,8 +93,7 @@ public class OpenAiChatProtocolTests
         const string expected = "將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\nおはよう";
 
         Assert.Equal(expected, Prompt.Build("おはよう"));
-        Assert.Equal(expected, Prompt.Build("おはよう", screen: [new("おはよう")]));
-        Assert.Equal(expected, Prompt.Build("おはよう", [], [], []));
+        Assert.Equal(expected, Prompt.Build("おはよう", []));
     }
 
     /// <summary>An empty <c>{context}</c> leaves no run of three line breaks wherever it sat.</summary>
@@ -142,7 +120,7 @@ public class OpenAiChatProtocolTests
     public void Prompt_WithoutAPlaceForTheTextAppendsItAsItIs()
     {
         Assert.Equal("翻成中文：\n\nline one\nline two", Own("翻成中文：\n\n").Build("line one\r\nline two"));
-        Assert.Equal("翻成中文：hello", Own("翻成中文：").Build("hello", [new("前", "之前")], Screen(["a", "hello"])));
+        Assert.Equal("翻成中文：hello", Own("翻成中文：").Build("hello", [new("前", "之前")]));
     }
 
     /// <summary>
@@ -157,35 +135,35 @@ public class OpenAiChatProtocolTests
         Assert.False(prompt.HasContext);
         Assert.Equal(
             "Translate {source_code} {x}: t",
-            prompt.Build("t", [new("前", "之前")], Screen(["a", "t"]), [new("a", "A")]));
+            prompt.Build("t", [new("前", "之前"), new("a", "A")]));
         Assert.True(Prompt.HasContext);
     }
 
     /// <summary>
-    /// What the text or the context say is never read as a placeholder: a line on screen that
-    /// reads <c>{text}</c> stays as it was.
+    /// What the text or the context say is never read as a placeholder: a translation done before
+    /// that reads <c>{text}</c> stays as it was.
     /// </summary>
     [Fact]
     public void Prompt_FillsThePlaceholdersOnce()
     {
-        var message = Prompt.Build("{context}", screen: Screen(["{text}", "{context}"]));
+        var message = Prompt.Build("{context}", [new("{text}", "{context}")]);
 
-        Assert.Contains("<s>{text}</s>\n<s>{context}</s>\n</page>", message);
+        Assert.Contains("<s>{text}</s><t>{context}</t>\n</history>", message);
         Assert.EndsWith("不要解釋：\n{context}", message);
     }
 
     [Theory]
     [InlineData(OpenAiPromptLanguage.English, "Traditional Chinese",
-        "Just translated on this screen, for reference only:\n<translated>\n<s>a</s><t>A</t>\n</translated>\n\n" +
+        "Earlier translations (<s> source, <t> Traditional Chinese translation), for reference only:\n<history>\n<s>a</s><t>A</t>\n</history>\n\n" +
         "Using the above, translate the following text into Traditional Chinese. Output only the translation, with no tags and no explanation:\nx",
         "Translate the following text into Traditional Chinese. Output only the translation, with no tags and no explanation:\nx")]
     [InlineData(OpenAiPromptLanguage.SimplifiedChinese, "简体中文",
-        "这个画面刚翻好的，仅供参考：\n<translated>\n<s>a</s><t>A</t>\n</translated>\n\n" +
+        "之前的翻译（<s> 原文，<t> 简体中文译文），仅供参考：\n<history>\n<s>a</s><t>A</t>\n</history>\n\n" +
         "参考上面，将以下文本翻译为简体中文，只输出译文，不加标签，不要解释：\nx",
         "将以下文本翻译为简体中文，只输出译文，不加标签，不要解释：\nx")]
     public void Prompt_TheOtherWordingsSayTheSame(OpenAiPromptLanguage language, string target, string expected, string alone)
     {
-        Assert.Equal(expected, Default(language, target).Build("x", soFar: [new("a", "A")]));
+        Assert.Equal(expected, Default(language, target).Build("x", [new("a", "A")]));
         Assert.Equal(alone, Default(language, target).Build("x"));
     }
 
@@ -196,31 +174,6 @@ public class OpenAiChatProtocolTests
         Assert.StartsWith(
             "Earlier translations (<s> source, <t> Japanese translation), for reference only:",
             Default(OpenAiPromptLanguage.English, "Japanese").Build("x", [new("a", "A")]));
-    }
-
-    // ---- The context's tags in the answer -----------------------------------------------------
-
-    /// <summary>The shapes measured: a tag the context gives come back with the translation.</summary>
-    [Theory]
-    [InlineData("e", "<s>e</s><t>e</t>")]
-    [InlineData("[全城性] a: usa withdrew", "[全城性] a: 美國撤軍了</s>")]
-    [InlineData("<page>要素は使えません", "<page>無法使用該元素</page>")]
-    [InlineData("a", "<page>\n<s>a</s>")]
-    [InlineData("b", "乙\n</translated>")]
-    public void LeaksTags_CatchesTheContextsTags(string source, string answer)
-    {
-        Assert.True(OpenAiPrompt.LeaksTags(source, answer));
-    }
-
-    /// <summary>A translation, and the tags the source itself had, are not a leak.</summary>
-    [Theory]
-    [InlineData("TAKE ITEM", "拿取物品")]
-    [InlineData("<s>タグ</s>を入力してください", "請輸入<s>標籤</s>")]
-    [InlineData("x < y かつ y > z", "x < y 且 y > z")]
-    [InlineData("<b>太字</b>", "<b>粗體</b>")]
-    public void LeaksTags_PassesATranslation(string source, string answer)
-    {
-        Assert.False(OpenAiPrompt.LeaksTags(source, answer));
     }
 
     /// <summary>One user message and no system message, whatever the instruction.</summary>
@@ -276,169 +229,36 @@ public class OpenAiChatProtocolTests
         Assert.Null(OpenAiAnswer.Read(answer, "hello"));
     }
 
-    // ---- Is it a translation ----------------------------------------------------------------
-
-    [Theory]
-    [InlineData("ああ次の探索の準備か", "啊，是為下次的探索做準備嗎")]
-    [InlineData("Where did you put the key?", "你把鑰匙放哪了？")]
-    public void Content_PassesATranslation(string source, string translation)
-    {
-        Assert.Null(OpenAiContentCheck.Failure(source, translation, "zh-Hant"));
-    }
-
-    [Theory]
-    [InlineData("ああ次の探索の準備か")]
-    [InlineData("Do you want to change your equipment?")]
-    [InlineData("[TEAM] Taz: where are you going")]
-    [InlineData("这个问题我们明天再讨论吧")]
-    public void Content_FailsACopy(string source)
-    {
-        Assert.Equal("copied", OpenAiContentCheck.Failure(source, source, "zh-Hant"));
-    }
-
-    /// <summary>
-    /// What legitimately stays as it is: numbers, names, titles, acronyms, copyright lines, names
-    /// in katakana, and text already in the target language.
-    /// </summary>
-    [Theory]
-    [InlineData("1200")]
-    [InlineData("HP 350/350")]
-    [InlineData("gg")]
-    [InlineData("Taz")]
-    [InlineData("OK")]
-    [InlineData("Level")]
-    [InlineData("[ALL] Taz: gg")]
-    [InlineData("$200")]
-    [InlineData("AUTO ESKIP")]
-    [InlineData("STR DEX CON INT WIS CHA")]
-    [InlineData("Mar-Adetta")]
-    [InlineData("The Unbidden")]
-    [InlineData("MegaCrit the Ironclad")]
-    [InlineData("全城性ViridianRogue:@BROTHERSZ")]
-    [InlineData("[GLOBAL1 Vespy238:")]
-    [InlineData("©07th Expansion/MangaGamer.com")]
-    [InlineData("DIO/SQUARE ENIX All Rights Reserved.")]
-    [InlineData("ベジャイア")]
-    [InlineData("オブ・ムーンセ")]
-    [InlineData("這家店的咖啡很好喝")]
-    [InlineData("通知")]
-    public void Content_PassesWhatStaysAsItIs(string source)
-    {
-        Assert.Null(OpenAiContentCheck.Failure(source, source, "zh-Hant"));
-    }
-
-    [Theory]
-    [InlineData("どうしたんだ改まって", "怎麼了改まって", "kana")]
-    [InlineData("オルン", "奧倫ン", null)]
-    [InlineData("ああ次の探索の準備か", "啊，是为下次的探索做准备吗", "simplified")]
-    [InlineData("なあ オルン", "哎呀，奥爾恩。", null)]
-    [InlineData("오늘 저녁에 뭐 먹을까?", "今晚 뭐 먹을까?", "hangul")]
-    public void Content_FailsWhatWasLeftUntranslated(string source, string translation, string? failure)
-    {
-        Assert.Equal(failure, OpenAiContentCheck.Failure(source, translation, "zh-Hant"));
-    }
-
-    /// <summary>
-    /// A Japanese name in kanji alone shares one character with Simplified at most, and copied it is
-    /// left as it is; two Simplified characters copied are still a copy.
-    /// </summary>
-    [Theory]
-    [InlineData("凉泉桜花", null)]
-    [InlineData("佐々木学子", null)]
-    [InlineData("这个问题", "copied")]
-    public void Content_TakesTwoSimplifiedCharactersForAHanCopy(string source, string? failure)
-    {
-        Assert.Equal(failure, OpenAiContentCheck.Failure(source, source, "zh-Hant"));
-    }
-
-    /// <summary>A title in katakana is one with a bracket or punctuation around it too.</summary>
-    [Theory]
-    [InlineData("「アイライク ユアライク")]
-    [InlineData("『アイライク・ユアライク』！")]
-    public void Content_PassesKatakanaInBrackets(string source)
-    {
-        Assert.Null(OpenAiContentCheck.Failure(source, source, "zh-Hant"));
-    }
-
-    /// <summary>
-    /// A title kept in its corner brackets as the source had it is not kana left behind; kana in
-    /// brackets the source did not have still is.
-    /// </summary>
-    [Theory]
-    [InlineData("「~BanG Dream! Our Notes~だんらんTV!」 初回放送のお知らせ", "「~BanG Dream! Our Notes~だんらんTV!」首次播出的公告", null)]
-    [InlineData("ー家Dumb Rock!「アイライク・ユアライク」 がデジタルリリース！", "ー家Dumb Rock!「アイライク・ユアライク」將以數位形式發行！", null)]
-    [InlineData("「アイライク ユアライク", "「アイライク ユアライク」", null)]
-    [InlineData("素晴らしきラジオ でも どこにもないラジオ", "「素晴らしきラジオ でも どこにもないラジオ」", "copied")]
-    [InlineData("どうしたんだ", "「どうしたんだ。」", "copied")]
-    [InlineData("「アイライク」がリリース", "「アイライク」がリリース了", "kana")]
-    [InlineData("新曲がリリース", "新曲「リリースされた」", "kana")]
-    public void Content_PassesATitleKeptInItsBrackets(string source, string translation, string? failure)
-    {
-        Assert.Equal(failure, OpenAiContentCheck.Failure(source, translation, "zh-Hant"));
-    }
-
-    /// <summary>
-    /// The target decides what counts as left untranslated: kana is Japanese's own, Latin text is
-    /// English's, and only Traditional Chinese is checked for Simplified characters.
-    /// </summary>
-    [Theory]
-    [InlineData("どうしたんだ", "どうしたんだ", "ja")]
-    [InlineData("Do you want to change your equipment?", "Do you want to change your equipment?", "en")]
-    [InlineData("오늘 저녁에 뭐 먹을까?", "오늘 저녁에 뭐 먹을까?", "ko")]
-    [InlineData("ああ次の探索の準備か", "啊，是为下次的探索做准备吗", "zh-Hans")]
-    public void Content_LetsTheTargetKeepItsOwnScript(string source, string translation, string target)
-    {
-        Assert.Null(OpenAiContentCheck.Failure(source, translation, target));
-    }
-
     // ---- How long a request may be -------------------------------------------------------------
 
     private static bool Fits(string message, string text, int context) =>
         message.Length + 32 + 2 * text.Length <= context;
 
-    /// <summary>Within budget, every part goes as it is.</summary>
+    /// <summary>Within budget, every translation goes as it is.</summary>
     [Fact]
     public void Message_KeepsEverythingThatFits()
     {
-        var screen = Screen(Blocks(5));
-        var soFar = Blocks(2).Select(text => new OpenAiTranslationPair(text, "譯" + text)).ToList();
-        List<OpenAiTranslationPair> history = [new("前", "之前")];
+        var earlier = Blocks(3).Select(text => new OpenAiTranslationPair(text, "譯" + text)).ToList();
 
-        Assert.Equal(
-            Prompt.Build(screen[2].Source, history, screen, soFar),
-            OpenAiChatTranslator.Message(Request(), screen[2].Source, history, screen, soFar));
+        Assert.Equal(Prompt.Build("x y", earlier), OpenAiChatTranslator.Message(Request(), "x y", earlier));
     }
 
-    /// <summary>
-    /// Over budget, what the round carries goes first — the screen's lines farthest from the text
-    /// and the oldest of its translations — and the history only after, oldest first.
-    /// </summary>
+    /// <summary>Over budget, the oldest translations go first: what is left came nearest the text.</summary>
     [Fact]
-    public void Message_CutsTheRoundFromFarthestThenTheHistory()
+    public void Message_CutsTheOldestFirst()
     {
-        var round = Enumerable.Range(0, 20).Select(i => $"round-{i:D2}-" + new string('字', 40)).ToList();
-        var screen = Screen(round);
-        var soFar = round.Take(10).Select(text => new OpenAiTranslationPair(text, "譯" + text)).ToList();
-        var history = Enumerable.Range(0, 6).Select(i => new OpenAiTranslationPair($"hist-{i}-" + new string('前', 40), "之前")).ToList();
-        var text = round[10];
-        var whole = Prompt.Build(text, history, screen, soFar);
+        var earlier = Enumerable.Range(0, 20)
+            .Select(i => new OpenAiTranslationPair($"line-{i:D2}-" + new string('字', 40), "譯")).ToList();
+        const string text = "x y";
+        var whole = Prompt.Build(text, earlier);
 
-        var cut = OpenAiChatTranslator.Message(Request() with { ContextTokens = whole.Length - 600 }, text, history, screen, soFar);
-        Assert.True(Fits(cut, text, whole.Length - 600));
-        Assert.Contains("<s>round-09-", cut);
-        Assert.Contains("<s>round-11-", cut);
-        Assert.DoesNotContain("round-19-", cut);
-        Assert.Contains("<t>譯round-09-", cut);
-        Assert.DoesNotContain("譯round-00-", cut);
-        Assert.Contains("hist-0-", cut);
+        var cut = OpenAiChatTranslator.Message(Request() with { ContextTokens = whole.Length - 300 }, text, earlier);
+
+        Assert.True(Fits(cut, text, whole.Length - 300));
+        Assert.DoesNotContain("line-00-", cut);
+        Assert.Contains("line-19-", cut);
+        Assert.Equal(Prompt.Build(text, earlier.SkipWhile(pair => !cut.Contains(pair.Source)).ToList()), cut);
         Assert.EndsWith("不要解釋：\n" + text, cut);
-
-        var bare = Prompt.Build(text);
-        var tighter = OpenAiChatTranslator.Message(
-            Request() with { ContextTokens = bare.Length + 32 + 2 * text.Length + 200 }, text, history, screen, soFar);
-        Assert.DoesNotContain("round-0", tighter);
-        Assert.DoesNotContain("hist-0-", tighter);
-        Assert.Contains("hist-5-", tighter);
     }
 
     /// <summary>A text too long for the budget on its own is still sent, with nothing else in it.</summary>
@@ -447,23 +267,25 @@ public class OpenAiChatProtocolTests
     {
         var text = new string('長', 5000);
 
-        var message = OpenAiChatTranslator.Message(
-            Request(), text, [new("前", "之前")], Screen(["短", text]), [new("短", "短的")]);
+        var message = OpenAiChatTranslator.Message(Request(), text, [new("前", "之前"), new("短", "短的")]);
 
         Assert.Equal(Prompt.Build(text), message);
     }
 
     /// <summary>
-    /// The screen as a request shows it: lines with a letter in their order, a line there twice
-    /// twice.
+    /// What a request carries: the history, then the lines on screen already translated, then the
+    /// round's — a source there already only the first time, a line with no letter not at all, and a
+    /// line not translated yet never.
     /// </summary>
     [Fact]
-    public void Screen_KeepsEachLineWithALetterInOrder()
+    public void Earlier_IsTheHistoryThenTheScreenThenTheRound()
     {
-        var screen = OpenAiChatTranslator.Screen(
-            [new("b"), new("1200"), new("a", "甲"), new("b"), new("★"), new("c")]);
+        var earlier = OpenAiChatTranslator.Earlier(
+            [new("h", "H"), new("a", "甲")],
+            [new("b"), new("1200", "1200"), new("a", "甲"), new("c", "丙"), new("d")],
+            [new("b", "乙"), new("c", "又丙")]);
 
-        Assert.Equal([new("b"), new("a", "甲"), new("b"), new("c")], screen);
+        Assert.Equal([new("h", "H"), new("a", "甲"), new("c", "丙"), new("b", "乙")], earlier);
     }
 
     // ---- Requests ---------------------------------------------------------------------------
@@ -485,12 +307,12 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
-    /// Each request carries the screen as the round found it and the translations before it, and
-    /// is the one before it with one more translation on the end: a server keeping the start of the
-    /// last request keeps all but the text.
+    /// Each request carries the history, the lines on screen already translated and the round's
+    /// translations before it, and is the one before it with one more translation on the end: a
+    /// server keeping the start of the last request keeps all but the text.
     /// </summary>
     [Fact]
-    public async Task TranslateAsync_CarriesTheRoundAndOnlyAppends()
+    public async Task TranslateAsync_CarriesWhatIsTranslatedAndOnlyAppends()
     {
         var server = new OpenAiFakeServer();
         using var http = new HttpClient(server);
@@ -503,33 +325,33 @@ public class OpenAiChatProtocolTests
         var messages = server.Requests.Select(request => request.Message).ToList();
         for (var k = 0; k < texts.Count; k++)
         {
-            var soFar = texts.Take(k).Select(text => new OpenAiTranslationPair(text, $"translated:{text}")).ToList();
-            Assert.Equal(Prompt.Build(texts[k], context.History, screen, soFar), messages[k]);
+            List<OpenAiTranslationPair> earlier =
+                [new("前", "之前"), new("旁", "旁邊"), .. texts.Take(k).Select(text => new OpenAiTranslationPair(text, $"translated:{text}"))];
+            Assert.Equal(Prompt.Build(texts[k], earlier), messages[k]);
         }
 
         for (var k = 1; k < texts.Count; k++)
         {
             var last = messages[k - 1];
-            var end = last.LastIndexOf("\n</translated>", StringComparison.Ordinal);
-            if (end < 0) end = last.LastIndexOf("\n\n參考上面，", StringComparison.Ordinal);
-            Assert.StartsWith(last[..end], messages[k]);
+            Assert.StartsWith(last[..last.LastIndexOf("\n</history>", StringComparison.Ordinal)], messages[k]);
         }
     }
 
     /// <summary>
-    /// Without a screen from the caller, the screen is the texts themselves, untranslated, and stays
-    /// so for the whole round.
+    /// The text itself and the lines still to come are never context: the first text of a screen
+    /// with nothing translated goes alone.
     /// </summary>
     [Fact]
-    public async Task TranslateAsync_WithoutAScreenTheTextsAreTheScreen()
+    public async Task TranslateAsync_NeverCarriesWhatIsNotTranslatedYet()
     {
         var server = new OpenAiFakeServer();
         using var http = new HttpClient(server);
 
-        await new OpenAiChatTranslator(http).TranslateAsync(["a b", "c d"], Request());
+        await new OpenAiChatTranslator(http).TranslateAsync(
+            ["a b", "c d"], Request(), new OpenAiChatContext(Screen: Screen(["a b", "c d", "e f"])));
 
-        Assert.All(server.Requests, request =>
-            Assert.Contains("<page>\n<s>a b</s>\n<s>c d</s>\n</page>", request.Message));
+        Assert.Equal(Prompt.Build("a b"), server.Requests.First().Message);
+        Assert.All(server.Requests, request => Assert.DoesNotContain("e f", request.Message));
     }
 
     /// <summary>
@@ -548,7 +370,7 @@ public class OpenAiChatProtocolTests
         Assert.Equal(["a b", "c d"], server.Requests.Select(request => request.Text));
         Assert.Equal(["1200", "translated:a b", "2026/10/27 ★ 12:30", "translated:c d"], outcomes.Select(outcome => outcome.Translation));
         Assert.All(server.Requests, request => Assert.DoesNotContain("1200", request.Message));
-        Assert.Equal(Prompt.Build("c d", screen: Screen(["a b", "c d"]), soFar: [new("a b", "translated:a b")]), server.Requests.Last().Message);
+        Assert.Equal(Prompt.Build("c d", [new("a b", "translated:a b")]), server.Requests.Last().Message);
     }
 
     [Fact]
@@ -576,29 +398,59 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
-    /// A text copied through is sent again once all are in, with no context — the same request
-    /// would come back the same — and what comes back is taken whatever it says.
+    /// An answer is taken whatever it says: a text given back as it was, kana and all, is not sent
+    /// again.
     /// </summary>
-    [Theory]
-    [InlineData("譯:再一次", "譯:再一次")]
-    [InlineData(null, "ああ次の探索の準備か")]
-    public async Task TranslateAsync_SendsACopiedTextAgainWithoutContextAndTakesTheAnswer(string? second, string expected)
+    [Fact]
+    public async Task TranslateAsync_TakesACopyAsItIs()
     {
-        var asked = 0;
-        var server = new OpenAiFakeServer
-        {
-            Answer = text => text.StartsWith("ああ") ? (++asked == 1 ? text : second ?? text) : $"譯:{text}",
-        };
+        var server = new OpenAiFakeServer { Answer = text => text.StartsWith("ああ") ? text : $"譯:{text}" };
         using var http = new HttpClient(server);
         List<string> texts = ["a b c", "ああ次の探索の準備か", "d e f"];
 
         var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(
             texts, Request(), new OpenAiChatContext([new("前", "之前")]));
 
+        Assert.Equal(3, server.Sent);
+        Assert.Equal(["譯:a b c", "ああ次の探索の準備か", "譯:d e f"], outcomes.Select(outcome => outcome.Translation));
+    }
+
+    /// <summary>
+    /// An empty answer, or a failure the text could have caused, is sent again once, alone with no
+    /// context; when that fails too the text has the first failure.
+    /// </summary>
+    [Theory]
+    [InlineData("", "譯:b c", "譯:b c")]
+    [InlineData("", "", null)]
+    [InlineData("<think>只想不答</think>", "譯:b c", "譯:b c")]
+    public async Task TranslateAsync_SendsAnEmptyAnswerAgainAloneOnce(string first, string second, string? expected)
+    {
+        var asked = 0;
+        var server = new OpenAiFakeServer { Answer = text => text == "b c" ? (++asked == 1 ? first : second) : null };
+        using var http = new HttpClient(server);
+
+        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(
+            ["a b", "b c", "d e"], Request(), new OpenAiChatContext([new("前", "之前")]));
+
         Assert.Equal(4, server.Sent);
-        Assert.Equal(Prompt.Build("ああ次の探索の準備か"), server.Requests.Last().Message);
-        Assert.Equal(["譯:a b c", expected, "譯:d e f"], outcomes.Select(outcome => outcome.Translation));
-        Assert.All(outcomes, outcome => Assert.True(outcome.Translated));
+        Assert.Equal(Prompt.Build("b c"), server.Requests.ElementAt(2).Message);
+        Assert.Equal(expected, outcomes[1].Translation);
+        if (expected is null)
+            Assert.Equal(OpenAiChatFailure.NoTranslation, Assert.IsType<OpenAiChatException>(outcomes[1].Error).Failure);
+        Assert.Equal("translated:d e", outcomes[2].Translation);
+    }
+
+    /// <summary>A text that already went alone is not sent the same again.</summary>
+    [Fact]
+    public async Task TranslateAsync_DoesNotSendTheSameAloneAgain()
+    {
+        var server = new OpenAiFakeServer { Answer = _ => "" };
+        using var http = new HttpClient(server);
+
+        await Assert.ThrowsAsync<OpenAiChatException>(() =>
+            new OpenAiChatTranslator(http).TranslateAsync(["a b"], Request()));
+
+        Assert.Equal(1, server.Sent);
     }
 
     /// <summary>An answer to a lone text with no tag at all is the translation.</summary>
@@ -661,10 +513,10 @@ public class OpenAiChatProtocolTests
 
     /// <summary>
     /// The user's own template with <c>{context}</c>: one after another with the context, the
-    /// answer taken as it came — nothing checked or sent again.
+    /// answer taken as it came.
     /// </summary>
     [Fact]
-    public async Task TranslateAsync_TheUsersOwnTemplateIsNeitherCheckedNorSentAgain()
+    public async Task TranslateAsync_TheUsersOwnTemplateTakesTheAnswerAsItCame()
     {
         var server = new OpenAiFakeServer { Answer = text => text };
         using var http = new HttpClient(server);
@@ -675,26 +527,21 @@ public class OpenAiChatProtocolTests
 
         Assert.Equal(2, server.Sent);
         Assert.Equal(1, server.MaxConcurrentRequests);
-        Assert.Contains("<translated>\n<s>ああ次の探索の準備か</s>", server.Requests.Last().Message);
+        Assert.Contains("<history>\n<s>ああ次の探索の準備か</s>", server.Requests.Last().Message);
         Assert.Equal(texts, outcomes.Select(outcome => outcome.Translation));
     }
 
-    /// <summary>
-    /// Under the application's template an answer with the context's tags in it is sent again,
-    /// alone, with no context.
-    /// </summary>
+    /// <summary>An answer with the context's tags in it is taken as it came, not sent again.</summary>
     [Fact]
-    public async Task TranslateAsync_SendsAnAnswerWithTheContextsTagsAgain()
+    public async Task TranslateAsync_TakesAnAnswerWithTheContextsTags()
     {
-        var asked = 0;
-        var server = new OpenAiFakeServer { Answer = text => text == "e" && ++asked == 1 ? "<s>e</s><t>e</t>" : $"譯:{text}" };
+        var server = new OpenAiFakeServer { Answer = text => text == "e" ? "<s>e</s><t>e</t>" : $"譯:{text}" };
         using var http = new HttpClient(server);
 
         var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(["a b c", "e"], Request());
 
-        Assert.Equal(3, server.Sent);
-        Assert.Equal(Prompt.Build("e"), server.Requests.Last().Message);
-        Assert.Equal(["譯:a b c", "譯:e"], outcomes.Select(outcome => outcome.Translation));
+        Assert.Equal(2, server.Sent);
+        Assert.Equal(["譯:a b c", "<s>e</s><t>e</t>"], outcomes.Select(outcome => outcome.Translation));
     }
 
     [Fact]
@@ -898,8 +745,8 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
-    /// One text the server keeps refusing leaves the others translated, and says which one failed
-    /// and how.
+    /// One text the server keeps refusing — sent again alone, refused again — leaves the others
+    /// translated, and says which one failed and how.
     /// </summary>
     [Fact]
     public async Task OneFailedTextLeavesTheOthersTranslated()
@@ -920,8 +767,9 @@ public class OpenAiChatProtocolTests
         Assert.False(outcomes[3].Translated);
         var error = Assert.IsType<OpenAiChatException>(outcomes[3].Error);
         Assert.Equal(OpenAiChatFailure.Rejected, error.Failure);
-        Assert.Equal(6, server.Sent);
-        Assert.DoesNotContain("block-03 →", server.Requests.Last().Message);
+        Assert.Equal(7, server.Sent);
+        Assert.Equal(Prompt.Build("block-03"), server.Requests.ElementAt(4).Message);
+        Assert.DoesNotContain("block-03", server.Requests.Last().Message);
     }
 
     /// <summary>
@@ -1025,7 +873,7 @@ public class OpenAiChatProtocolTests
 
     /// <summary>
     /// Part way through, a refusal no text could have caused leaves what is done translated and the
-    /// rest unsent, with no error of their own; the content check sends nothing after it.
+    /// rest unsent, with no error of their own, and is not sent again.
     /// </summary>
     [Fact]
     public async Task ARefusalPartWayThroughLeavesTheRestUnsent()

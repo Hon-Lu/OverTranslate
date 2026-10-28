@@ -23,12 +23,12 @@ public class OpenAiBatchTests
     private static OpenAiPrompt Own(string template) => Prompt with { Template = template, IsDefault = false };
 
     private static OpenAiChatRequest Request(OpenAiPrompt? prompt = null) =>
-        new(Endpoint, "test-model", "", prompt ?? Prompt, "zh-Hant", Batch: true);
+        new(Endpoint, "test-model", "", prompt ?? Prompt, Batch: true);
 
     private static List<OpenAiScreenLine> Screen(IEnumerable<string> texts) =>
         texts.Select(text => new OpenAiScreenLine(text)).ToList();
 
-    private static readonly Regex Row = new(@"<(\d+)>(.*?)</\1>");
+    private static readonly Regex Row = new(@"(?m)^<(\d+)>(.*?)</\1>$");
 
     /// <summary>
     /// What a model that follows the format answers a batch with: each numbered text as
@@ -50,40 +50,35 @@ public class OpenAiBatchTests
 
     // ---- Prompt ----------------------------------------------------------------------------------
 
-    /// <summary>The texts numbered under the line saying how to answer, where <c>{text}</c> is.</summary>
+    /// <summary>
+    /// The texts numbered under the line saying how to answer — the real count, the first tag as an
+    /// example — where <c>{text}</c> is.
+    /// </summary>
     [Fact]
     public void BuildBatch_NumbersTheTextsUnderAFormatLine()
     {
         Assert.Equal(
-            Instruction + "\n（共 2 段，每段的譯文照原編號放在 <編號></編號> 裡，一段一行）\n<1>a b</1>\n<2>c d</2>",
+            Instruction + "\n（共 2 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）\n<1>a b</1>\n<2>c d</2>",
             Prompt.BuildBatch(["a b", "c\r\nd"]));
     }
 
-    /// <summary>
-    /// The screen only when it shows more than the texts do: a line already translated, or one not
-    /// asked for. The history whenever there is one.
-    /// </summary>
+    /// <summary>The context is the translations done before, as for one text.</summary>
     [Fact]
-    public void BuildBatch_ShowsTheScreenOnlyWhenItSaysMore()
+    public void BuildBatch_CarriesTheTranslationsDoneBefore()
     {
-        List<string> texts = ["a b", "c d"];
+        var message = Prompt.BuildBatch(["a b", "c d"], [new("前", "之前")]);
 
-        Assert.DoesNotContain("<page>", Prompt.BuildBatch(texts, screen: Screen(texts)));
-        Assert.Contains("<page>\n<s>旁</s><t>旁邊</t>\n<s>a b</s>\n<s>c d</s>\n</page>",
-            Prompt.BuildBatch(texts, screen: [new("旁", "旁邊"), .. Screen(texts)]));
-        Assert.Contains("<page>\n<s>e f</s>\n<s>a b</s>",
-            Prompt.BuildBatch(texts, screen: Screen(["e f", .. texts])));
-
-        var message = Prompt.BuildBatch(texts, [new("前", "之前")], Screen(texts));
-        Assert.StartsWith("之前的翻譯（<s> 原文，<t> 繁體中文譯文），只供參考：\n<history>\n<s>前</s><t>之前</t>\n</history>\n\n參考上面，", message);
-        Assert.DoesNotContain("<translated>", message);
+        Assert.StartsWith(
+            "之前的翻譯（<s> 原文，<t> 繁體中文譯文），只供參考：\n<history>\n<s>前</s><t>之前</t>\n</history>\n\n參考上面，",
+            message);
+        Assert.EndsWith("<1>a b</1>\n<2>c d</2>", message);
     }
 
     /// <summary>The user's own template works as it is: the numbered texts go where its text goes.</summary>
     [Fact]
     public void BuildBatch_FillsTheUsersOwnTemplate()
     {
-        const string body = "（共 2 段，每段的譯文照原編號放在 <編號></編號> 裡，一段一行）\n<1>a</1>\n<2>b</2>";
+        const string body = "（共 2 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）\n<1>a</1>\n<2>b</2>";
 
         Assert.Equal("翻成中文：\n" + body + "\n完", Own("翻成中文：\n{text}\n完").BuildBatch(["a", "b"]));
         Assert.Equal("翻成中文：\n" + body, Own("翻成中文：\n").BuildBatch(["a", "b"]));
@@ -96,8 +91,8 @@ public class OpenAiBatchTests
         var hans = new OpenAiPrompt(OpenAiPromptLanguage.SimplifiedChinese, "{text}", "简体中文");
         var english = new OpenAiPrompt(OpenAiPromptLanguage.English, "{text}", "English");
 
-        Assert.StartsWith("（共 2 段，每段的译文照原编号放在 <编号></编号> 里，一段一行）\n<1>", hans.BuildBatch(["a", "b"]));
-        Assert.StartsWith("(2 parts: put each translation in the tag with its number, <number></number>, one per line.)\n<1>",
+        Assert.StartsWith("（共 2 段，按编号输出译文，例如 <1>译文</1>，一段一行）\n<1>", hans.BuildBatch(["a", "b"]));
+        Assert.StartsWith("(2 parts: output each translation by its number, for example <1>translation</1>, one per line.)\n<1>",
             english.BuildBatch(["a", "b"]));
     }
 
@@ -106,6 +101,7 @@ public class OpenAiBatchTests
     [Theory]
     [InlineData("<1>甲</1>\n<2>乙</2>\n<3>丙</3>", "甲|乙|丙")]
     [InlineData("<1>甲\n<2>乙\n<3>丙", "甲|乙|丙")]
+    [InlineData("<1>甲<1>\n<2>乙<2>\n<3>丙<3>", "甲|乙|丙")]
     [InlineData("<think>想</think>```\n<1>甲</1><2>乙</2>\n<3>丙</3>\n```", "甲|乙|丙")]
     [InlineData("<1>甲</1>\n<3>丙</3>", "甲||丙")]
     [InlineData("<1>甲</1>\n<2></2>\n<3>丙</3>\n<4>丁</4>", "甲||丙")]
@@ -149,11 +145,28 @@ public class OpenAiBatchTests
     }
 
     /// <summary>
-    /// A number the answer left out is sent again on its own, with the screen and what the batch
-    /// translated filled in — as one text at a time would send it.
+    /// The lines on screen already translated go after the history, as for one text; the lines not
+    /// translated yet do not go at all.
     /// </summary>
     [Fact]
-    public async Task TranslateAsync_SendsAMissingNumberAgainWithTheScreen()
+    public async Task TranslateAsync_CarriesTheScreensTranslations()
+    {
+        var server = new OpenAiFakeServer { Answer = Numbered(text => $"譯:{text}") };
+        using var http = new HttpClient(server);
+        List<string> texts = ["a b", "c d"];
+
+        await new OpenAiChatTranslator(http).TranslateAsync(texts, Request(),
+            new OpenAiChatContext([new("前", "之前")], [new("旁", "旁邊"), new("等", null), .. Screen(texts)]));
+
+        Assert.Equal(Prompt.BuildBatch(texts, [new("前", "之前"), new("旁", "旁邊")]), server.Requests.Single().Message);
+    }
+
+    /// <summary>
+    /// A number the answer left out is sent again on its own, carrying the history and what the batch
+    /// translated — as one text at a time would send it.
+    /// </summary>
+    [Fact]
+    public async Task TranslateAsync_SendsAMissingNumberAgainWithWhatIsTranslated()
     {
         var server = new OpenAiFakeServer { Answer = Numbered(text => text == "c d" ? null : $"譯:{text}", text => $"譯:{text}") };
         using var http = new HttpClient(server);
@@ -164,43 +177,58 @@ public class OpenAiBatchTests
             texts, Request(), new OpenAiChatContext(history));
 
         Assert.Equal(2, server.Sent);
-        var known = new List<OpenAiScreenLine> { new("a b", "譯:a b"), new("c d"), new("e f", "譯:e f") };
-        Assert.Equal(Prompt.Build("c d", history, known), server.Requests.Last().Message);
+        Assert.Equal(Prompt.Build("c d", [new("前", "之前"), new("a b", "譯:a b"), new("e f", "譯:e f")]),
+            server.Requests.Last().Message);
         Assert.Equal(["譯:a b", "譯:c d", "譯:e f"], outcomes.Select(outcome => outcome.Translation));
     }
 
+    /// <summary>An answer with no number at all sends every text again, one at a time.</summary>
+    [Fact]
+    public async Task TranslateAsync_AnAnswerWithNoNumbersGoesOneAtATime()
+    {
+        var server = new OpenAiFakeServer { Answer = text => text.Contains("<1>") ? "甲\n乙" : $"譯:{text}" };
+        using var http = new HttpClient(server);
+
+        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(["a b", "c d"], Request());
+
+        Assert.Equal(3, server.Sent);
+        Assert.Equal(["譯:a b", "譯:c d"], outcomes.Select(outcome => outcome.Translation));
+    }
+
     /// <summary>
-    /// The source given back is sent again on its own with the context; what still fails the check
-    /// after that goes alone with no context, as always, and is taken whatever it says.
+    /// A missing number sent on its own and answered with nothing is sent once more, alone with no
+    /// context, as for one text.
     /// </summary>
     [Fact]
-    public async Task TranslateAsync_SendsACopyAgainThenAlone()
+    public async Task TranslateAsync_SendsAnEmptyAnswerToAMissingNumberAgainAlone()
     {
-        var server = new OpenAiFakeServer { Answer = Numbered(text => text.StartsWith("ああ") ? text : $"譯:{text}") };
+        var alone = 0;
+        var server = new OpenAiFakeServer
+        {
+            Answer = Numbered(text => text == "c d" ? null : $"譯:{text}", text => ++alone == 1 ? "" : $"譯:{text}"),
+        };
+        using var http = new HttpClient(server);
+
+        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(
+            ["a b", "c d"], Request(), new OpenAiChatContext([new("前", "之前")]));
+
+        Assert.Equal(3, server.Sent);
+        Assert.Equal(Prompt.Build("c d"), server.Requests.Last().Message);
+        Assert.Equal("譯:c d", outcomes[1].Translation);
+    }
+
+    /// <summary>An answer that has its number is taken whatever it says: a copy is not sent again.</summary>
+    [Fact]
+    public async Task TranslateAsync_TakesACopyAsItIs()
+    {
+        var server = new OpenAiFakeServer { Answer = Numbered(text => text.StartsWith("ああ") || text == "Odd Dice" ? text : $"譯:{text}") };
         using var http = new HttpClient(server);
         List<string> texts = ["a b", "ああ次の探索の準備か", "Odd Dice"];
 
         var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(texts, Request());
 
-        var requests = server.Requests.ToList();
-        Assert.Equal(3, requests.Count);
-        Assert.True(IsBatch(requests[0]));
-        Assert.Contains("<page>", requests[1].Message);
-        Assert.Equal(Prompt.Build("ああ次の探索の準備か"), requests[2].Message);
-        Assert.Equal(["譯:a b", "ああ次の探索の準備か", "譯:Odd Dice"], outcomes.Select(outcome => outcome.Translation));
-    }
-
-    /// <summary>An untranslated name the batch gave back as it is goes again too, and its answer stands.</summary>
-    [Fact]
-    public async Task TranslateAsync_SendsALatinCopyAgainOnce()
-    {
-        var server = new OpenAiFakeServer { Answer = Numbered(text => text == "Odd Dice" ? text : $"譯:{text}") };
-        using var http = new HttpClient(server);
-
-        var outcomes = await new OpenAiChatTranslator(http).TranslateAsync(["a b", "Odd Dice"], Request());
-
-        Assert.Equal(2, server.Sent);
-        Assert.Equal(["譯:a b", "Odd Dice"], outcomes.Select(outcome => outcome.Translation));
+        Assert.Equal(1, server.Sent);
+        Assert.Equal(["譯:a b", "ああ次の探索の準備か", "Odd Dice"], outcomes.Select(outcome => outcome.Translation));
     }
 
     /// <summary>Under the user's own template nothing is checked: only a missing number goes again.</summary>
@@ -255,7 +283,7 @@ public class OpenAiBatchTests
 
     /// <summary>
     /// Each batch fits the context it is given: the message, 32, and twice its texts. A later batch
-    /// shows the earlier ones' translations on the screen.
+    /// carries the earlier ones' translations.
     /// </summary>
     [Fact]
     public async Task TranslateAsync_CutsEachBatchToFitTheContext()
@@ -275,21 +303,31 @@ public class OpenAiBatchTests
             var asked = Row.Matches(batch.Text).Select(row => row.Groups[2].Value).ToList();
             Assert.True(batch.Message.Length + 32 + 2 * asked.Sum(text => text.Length) <= request.ContextTokens);
         });
-        Assert.Contains("<t>譯:line number 00 of the screen</t>", batches[1].Message);
+        var next = texts.IndexOf(Row.Match(batches[1].Text).Groups[2].Value);
+        Assert.Contains($"<s>{texts[next - 1]}</s><t>譯:{texts[next - 1]}</t>", batches[1].Message);
         Assert.Equal(texts.Select(text => $"譯:{text}"), outcomes.Select(outcome => outcome.Translation));
     }
 
-    /// <summary>When not even two texts fit with the history, the batch goes without it.</summary>
+    /// <summary>
+    /// When not even two texts fit with the translations, the batch carries the newer half of them,
+    /// and so on down to none.
+    /// </summary>
     [Fact]
-    public void BatchSize_DropsTheHistoryBeforeTheBatch()
+    public void BatchSize_HalvesTheTranslationsBeforeTheBatch()
     {
         var history = Enumerable.Range(0, 30).Select(i => new OpenAiTranslationPair($"earlier line {i}", $"之前 {i}")).ToList();
         List<string> texts = ["a b", "c d", "e f"];
         var request = Request() with { ContextTokens = Prompt.BuildBatch(texts).Length + 32 + 24 };
 
-        var (count, carried, _) = OpenAiChatTranslator.BatchSize(request, texts, history, null);
+        var (count, carried) = OpenAiChatTranslator.BatchSize(request, texts, history);
 
         Assert.Equal(3, count);
         Assert.Null(carried);
+
+        var half = history.Skip(15).ToList();
+        var (more, kept) = OpenAiChatTranslator.BatchSize(
+            Request() with { ContextTokens = Prompt.BuildBatch(texts, half).Length + 32 + 18 }, texts, history);
+        Assert.Equal(3, more);
+        Assert.Equal(half, kept);
     }
 }

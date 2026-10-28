@@ -218,7 +218,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         {
             outcomes = await _chat.TranslateAsync(
                 blocks.Select(block => block.Text).ToList(),
-                Request(options, endpoint, model, prompt, targetLang),
+                Request(options, endpoint, model, prompt),
                 context is null ? null : new OpenAiChatContext(
                     context.History?.Select(Pair).ToList(),
                     context.Screen?.Select(line => new OpenAiScreenLine(line.Source, line.Translation)).ToList()),
@@ -290,16 +290,15 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         await _chat.WarmUpAsync(
             Request(options, BuildEndpoint(options.BaseUrl), model,
-                BuildPrompt(sourceLang, targetLang, options.Template), targetLang),
+                BuildPrompt(sourceLang, targetLang, options.Template)),
             cancellationToken);
         Log.Info("OpenAI 相容暖機完成：{Elapsed} ms",
             (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
     }
 
     private static OpenAiChatRequest Request(
-        OpenAiCompatibleOptions options, Uri endpoint, string model, OpenAiPrompt prompt, string targetLang) =>
+        OpenAiCompatibleOptions options, Uri endpoint, string model, OpenAiPrompt prompt) =>
         new(endpoint, model, options.ApiKey, prompt,
-            LanguageData.GetModelLanguageTag(targetLang),
             options.SendTemperature ? options.Temperature : null,
             options.SendTopP ? options.TopP : null,
             options.SendSeed ? options.Seed : null,

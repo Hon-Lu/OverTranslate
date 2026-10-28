@@ -538,7 +538,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Restore default</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">Default</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">The text to translate, as it is. Without it, the text is added at the end.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">Earlier lines, the current screen and the parts just translated on it, sources marked &lt;s&gt; and translations &lt;t&gt;, for reference only. When there is nothing to add, "Using the above, " right after it is removed too. Without it, no context is sent and the parts are sent all at once.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">Parts already translated (earlier lines, translations already on screen and the parts just translated), sources marked &lt;s&gt; and translations &lt;t&gt;, for reference only; parts not yet translated are never included. When there is nothing to add, "Using the above, " right after it is removed too. Without it, no context is sent and the parts are sent all at once.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">My settings {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Advanced</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Use the recommended model</sys:String>

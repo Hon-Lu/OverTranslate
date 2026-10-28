@@ -538,7 +538,7 @@
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">默认</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，照原样放入。没有这个参数时，原文接在最后。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">前文、当前画面和这个画面刚翻好的段落，原文以 &lt;s&gt;、译文以 &lt;t&gt; 标示，仅供参考。没有可附的内容时，连同紧接在后的“参考上面，”一起去掉。没有这个参数时不附上下文，各段同时发送。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、画面上已有的译文和这次已翻好的段），原文以 &lt;s&gt;、译文以 &lt;t&gt; 标示，仅供参考；还没翻的段不会放进来。没有可附的内容时，连同紧接在后的“参考上面，”一起去掉。没有这个参数时不附上下文，各段同时发送。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的设置 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">高级</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">带入推荐模型</sys:String>
