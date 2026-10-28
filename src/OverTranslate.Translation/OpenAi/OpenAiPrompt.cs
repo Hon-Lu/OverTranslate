@@ -86,12 +86,6 @@ public sealed record OpenAiPrompt(
     /// <summary>The placeholder the application's templates name the target language with.</summary>
     public const string TargetNamePlaceholder = "{target_name}";
 
-    /// <summary>
-    /// How many texts a batch sends, for a template that says how to answer in its own words — see
-    /// <see cref="BuildBatch"/>. 1 for a text at a time.
-    /// </summary>
-    public const string CountPlaceholder = "{count}";
-
     /// <summary>Whether a request carries any context: whether the template has a place for it.</summary>
     public bool HasContext => Template.Contains(ContextPlaceholder, StringComparison.OrdinalIgnoreCase);
 
@@ -101,16 +95,20 @@ public sealed record OpenAiPrompt(
     /// </summary>
     /// <param name="batch">
     /// The one for several texts in a request — see <see cref="BuildBatch"/> — rather than the one
-    /// for a text at a time: the same, and after the texts the line saying how to answer, its count
-    /// left as <see cref="CountPlaceholder"/>. In the template rather than brought by
-    /// <c>{text}</c> so it can be worded like the rest; after the texts because, measured against
-    /// the same line ahead of them, it had half as many texts given back untranslated — a chat
-    /// where every line opens with a player's name came back whole as it was given less often.
+    /// for a text at a time. The two differ in their words alone; nothing brings the batch's line
+    /// saying how to answer but the template. The batch's instruction says English is translated
+    /// too: what a batch gave back untranslated was mostly short English — AUTO, SKIP, a title — and
+    /// saying so left a third fewer, on two seeds, with no more texts given back whole; saying it
+    /// again in the line left a few fewer still but ran more than 5% slower. The line goes after the
+    /// texts because, measured
+    /// against the same line ahead of them, that left half as many texts untranslated; a line that
+    /// counted the texts did no better than one that does not.
     /// </param>
     public static string DefaultTemplate(OpenAiPromptLanguage language, bool batch = false)
     {
         var words = Wording.For(language);
-        var template = ContextPlaceholder + "\n\n" + words.Lead + words.Instruction + "\n" + TextPlaceholder;
+        var instruction = batch ? words.BatchInstruction : words.Instruction;
+        var template = ContextPlaceholder + "\n\n" + words.Lead + instruction + "\n" + TextPlaceholder;
         return batch ? template + "\n" + words.Batch : template;
     }
 
@@ -127,54 +125,33 @@ public sealed record OpenAiPrompt(
     ///
     /// <para>No context to give empties <c>{context}</c> and the blank lines around it with it, so
     /// the template reads as if it had never had one — and the words right after it that point back
-    /// at it, 參考上面，, when they are there.</para>
-    ///
-    /// <para>A line with <c>{count}</c> in it is left out: it says how to answer numbered texts,
-    /// and one text goes without a number — a batch's text sent again alone, or a batch template
-    /// kept after switching to a text at a time. The application's batch template alone is then
-    /// word for word the one for a text at a time.</para>
+    /// at it, 參考上面的上下文，, when they are there.</para>
     /// </remarks>
     public string Build(string text, IReadOnlyList<OpenAiTranslationPair>? earlier = null)
     {
         var words = Wording.For(Language);
-        return Fill(words, WithoutCountLines(Template), Context(words, earlier), Bare(text));
+        return Fill(words, Template, Context(words, earlier), Bare(text));
     }
 
-    /// <summary><paramref name="template"/> without the lines that hold <c>{count}</c>, and the break before each.</summary>
-    private static string WithoutCountLines(string template)
-    {
-        if (!template.Contains(CountPlaceholder, StringComparison.OrdinalIgnoreCase)) return template;
-
-        var lines = template.Split('\n');
-        return string.Join("\n", lines.Where(line => !line.Contains(CountPlaceholder, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    /// <summary>The user message for several texts in one request, read back by number.</summary>
-    /// <param name="texts">Two or more texts, in order: numbered from 1.</param>
+    /// <summary>The user message for texts in one request, read back by number.</summary>
+    /// <param name="texts">The texts, in order: numbered from 1. One is a batch of one.</param>
     /// <param name="earlier">Translations done before these texts, oldest first, or null.</param>
     /// <remarks>
     /// <para><c>{text}</c> is the texts, one to a line, each in a tag of its number —
-    /// <c>&lt;1&gt;…&lt;/1&gt;</c> — and <c>{count}</c> how many. A template without <c>{count}</c>
-    /// — one written for a text at a time, the user's or the application's — has the application's
-    /// line saying how to answer written straight after the texts, with the real count and the
-    /// first tag as an example, so any template works both ways.</para>
+    /// <c>&lt;1&gt;…&lt;/1&gt;</c> — and nothing else: how to answer them is the template's to say,
+    /// as the application's batch template does. One that does not say it — written for a text at
+    /// a time — is still answered, a text at a time: what comes back without numbers is sent again
+    /// as batches of one, see <see cref="OpenAiChatTranslator.TranslateAsync"/>.</para>
     ///
     /// <para>Measured with the application's template: numbered tags with their closing tag came
-    /// back as the source again least of the shapes tried, and the line saying how to answer after
-    /// the texts left half as many of them untranslated as the same line ahead of them. Leaving the
-    /// closing tag out cost fewer tokens to answer but more texts given back untranslated.</para>
+    /// back as the source again least of the shapes tried. Leaving the closing tag out cost fewer
+    /// tokens to answer but more texts given back untranslated.</para>
     /// </remarks>
     public string BuildBatch(IReadOnlyList<string> texts, IReadOnlyList<OpenAiTranslationPair>? earlier = null)
     {
         var words = Wording.For(Language);
-        var count = texts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var body = string.Join("\n", texts.Select((text, i) => $"<{i + 1}>{OneLine(text)}</{i + 1}>"));
-        var template = Template;
-        if (template.Contains(CountPlaceholder, StringComparison.OrdinalIgnoreCase))
-            template = template.Replace(CountPlaceholder, count, StringComparison.OrdinalIgnoreCase);
-        else
-            body += "\n" + words.Batch.Replace(CountPlaceholder, count);
-        return Fill(words, template, Context(words, earlier), body);
+        return Fill(words, Template, Context(words, earlier), body);
     }
 
     /// <summary><paramref name="template"/> with <c>{context}</c> and <c>{text}</c> filled in.</summary>
@@ -233,13 +210,13 @@ public sealed record OpenAiPrompt(
     /// none, wherever a template has it right after <c>{context}</c>.
     /// </param>
     /// <param name="History">The heading of the translations done before.</param>
-    /// <param name="Batch">
-    /// The line saying how to answer a batch, after its texts; <c>{count}</c> is how many there are.
-    /// </param>
+    /// <param name="BatchInstruction"><paramref name="Instruction"/> for a batch.</param>
+    /// <param name="Batch">The line saying how to answer a batch, after its texts.</param>
     /// <param name="AutomaticSource">What a source line is labelled with when its language is detected.</param>
     /// <param name="Colon">What follows a label: the full-width colon in Chinese, a colon and a space in English.</param>
     private sealed record Wording(
-        string Lead, string Instruction, string History, string Batch, string AutomaticSource, string Colon)
+        string Lead, string Instruction, string History, string BatchInstruction, string Batch,
+        string AutomaticSource, string Colon)
     {
         public static Wording For(OpenAiPromptLanguage language) => language switch
         {
@@ -254,26 +231,29 @@ public sealed record OpenAiPrompt(
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         private static readonly Wording TraditionalChinese = new(
-            "參考上面，",
+            "參考上面的上下文，",
             $"將以下文本翻譯為{TargetNamePlaceholder}，只輸出譯文，不加標籤，不要解釋：",
             "之前的翻譯，只供參考：",
-            $"（共 {CountPlaceholder} 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）",
+            $"將以下文本翻譯為{TargetNamePlaceholder}，英文單字與短語也要翻譯，只輸出譯文，不加標籤，不要解釋：",
+            "（依編號輸出譯文，例如 <1>譯文</1>，一段一行）",
             "原文",
             "：");
 
         private static readonly Wording SimplifiedChinese = new(
-            "参考上面，",
+            "参考上面的上下文，",
             $"将以下文本翻译为{TargetNamePlaceholder}，只输出译文，不加标签，不要解释：",
             "之前的翻译，仅供参考：",
-            $"（共 {CountPlaceholder} 段，按编号输出译文，例如 <1>译文</1>，一段一行）",
+            $"将以下文本翻译为{TargetNamePlaceholder}，英文单词与短语也要翻译，只输出译文，不加标签，不要解释：",
+            "（按编号输出译文，例如 <1>译文</1>，一段一行）",
             "原文",
             "：");
 
         private static readonly Wording English = new(
-            "Using the above, ",
+            "Using the context above, ",
             $"translate the following text into {TargetNamePlaceholder}. Output only the translation, with no tags and no explanation:",
             "Earlier translations, for reference only:",
-            $"({CountPlaceholder} parts: output each translation by its number, for example <1>translation</1>, one per line.)",
+            $"translate the following text into {TargetNamePlaceholder}, English words and phrases included. Output only the translation, with no tags and no explanation:",
+            "(Output each translation by its number, for example <1>translation</1>, one per line.)",
             "Source",
             ": ");
     }

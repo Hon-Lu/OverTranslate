@@ -484,9 +484,17 @@
                                             </Grid>
                                         </Border>
                                     </StackPanel>
-                                    <TextBlock Style="{StaticResource FieldHint}"
-                                               Text="{DynamicResource S.Settings.OpenAiModeHint}"
+                                    <!-- What the chosen way does, the other's hidden: switching
+                                         changes it, and a line that does not fit wraps. -->
+                                    <TextBlock x:Name="ModeSegmentHint"
+                                               Style="{StaticResource FieldHint}"
+                                               Text="{DynamicResource S.Settings.OpenAiModeSegmentHint}"
                                                Margin="0,6,0,0"/>
+                                    <TextBlock x:Name="ModeBatchHint"
+                                               Style="{StaticResource FieldHint}"
+                                               Text="{DynamicResource S.Settings.OpenAiModeBatchHint}"
+                                               Margin="0,6,0,0"
+                                               Visibility="Collapsed"/>
 
                                     <TextBlock Style="{StaticResource FieldHint}"
                                                Text="{DynamicResource S.Settings.PromptTemplateHint}"
@@ -595,25 +603,6 @@
                                                         </Border>
                                                         <Border Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource ParamLastCell}">
                                                             <TextBlock Text="{DynamicResource S.Settings.PromptParamContext}"
-                                                                       Style="{StaticResource ParamText}"
-                                                                       TextTrimming="None"
-                                                                       TextWrapping="Wrap"/>
-                                                        </Border>
-                                                    </Grid>
-                                                </Border>
-
-                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
-                                                            <TextBlock Text="{}{count}" Style="{StaticResource ParamName}"/>
-                                                        </Border>
-                                                        <Border Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource ParamLastCell}">
-                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamCount}"
                                                                        Style="{StaticResource ParamText}"
                                                                        TextTrimming="None"
                                                                        TextWrapping="Wrap"/>
@@ -870,6 +859,7 @@
                                 Height="34"
                                 Margin="10,0,0,0"
                                 Padding="18,0"
+                                Content="{DynamicResource S.Settings.PromptModeUseDefault}"
                                 Click="ModeUseDefaultButton_Click"/>
                     </StackPanel>
                 </StackPanel>

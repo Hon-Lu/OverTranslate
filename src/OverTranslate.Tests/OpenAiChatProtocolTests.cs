@@ -78,7 +78,7 @@ public class OpenAiChatProtocolTests
             "繁體中文：之前的台詞\n\n" +
             "日文：おはよう\n" +
             "繁體中文：早安\n\n" +
-            "參考上面，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\n" +
+            "參考上面的上下文，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\n" +
             "また\n明日",
             (Prompt with { SourceLabel = "日文" }).Build("また\r\n明日", [new("前の\n台詞", "之前的台詞"), new("おはよう", "早安")]));
     }
@@ -94,7 +94,7 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
-    /// No context to give: <c>{context}</c> goes with the blank lines around it and the 參考上面，
+    /// No context to give: <c>{context}</c> goes with the blank lines around it and the 參考上面的上下文，
     /// after it, leaving the instruction over the text.
     /// </summary>
     [Fact]
@@ -114,9 +114,9 @@ public class OpenAiChatProtocolTests
     [InlineData("{context}\n\nA {text}", "A t")]
     [InlineData("A {text}\n\n{CONTEXT}", "A t")]
     [InlineData("A{context}B{text}", "ABt")]
-    [InlineData("{context}\n\n參考上面，翻成中文：{text}", "翻成中文：t")]
-    [InlineData("A\n\n{context}\n\n參考上面，B\n{text}", "A\n\nB\nt")]
-    [InlineData("A 參考上面，B {context}{text}", "A 參考上面，B t")]
+    [InlineData("{context}\n\n參考上面的上下文，翻成中文：{text}", "翻成中文：t")]
+    [InlineData("A\n\n{context}\n\n參考上面的上下文，B\n{text}", "A\n\nB\nt")]
+    [InlineData("A 參考上面的上下文，B {context}{text}", "A 參考上面的上下文，B t")]
     public void Prompt_AnEmptyContextTakesItsBlankLinesWithIt(string template, string expected)
     {
         Assert.Equal(expected, Own(template).Build("t"));
@@ -165,11 +165,11 @@ public class OpenAiChatProtocolTests
     [Theory]
     [InlineData(OpenAiPromptLanguage.English, "Traditional Chinese",
         "Earlier translations, for reference only:\nSource: a\nTraditional Chinese: A\n\n" +
-        "Using the above, translate the following text into Traditional Chinese. Output only the translation, with no tags and no explanation:\nx",
+        "Using the context above, translate the following text into Traditional Chinese. Output only the translation, with no tags and no explanation:\nx",
         "Translate the following text into Traditional Chinese. Output only the translation, with no tags and no explanation:\nx")]
     [InlineData(OpenAiPromptLanguage.SimplifiedChinese, "简体中文",
         "之前的翻译，仅供参考：\n原文：a\n简体中文：A\n\n" +
-        "参考上面，将以下文本翻译为简体中文，只输出译文，不加标签，不要解释：\nx",
+        "参考上面的上下文，将以下文本翻译为简体中文，只输出译文，不加标签，不要解释：\nx",
         "将以下文本翻译为简体中文，只输出译文，不加标签，不要解释：\nx")]
     public void Prompt_TheOtherWordingsSayTheSame(OpenAiPromptLanguage language, string target, string expected, string alone)
     {
@@ -343,7 +343,7 @@ public class OpenAiChatProtocolTests
         for (var k = 1; k < texts.Count; k++)
         {
             var last = messages[k - 1];
-            Assert.StartsWith(last[..last.LastIndexOf("\n\n參考上面，", StringComparison.Ordinal)], messages[k]);
+            Assert.StartsWith(last[..last.LastIndexOf("\n\n參考上面的上下文，", StringComparison.Ordinal)], messages[k]);
         }
     }
 

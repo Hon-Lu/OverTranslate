@@ -95,6 +95,7 @@ public partial class PromptEditOverlay : UserControl
             _batch = (profile ?? built).Batch;
             SegmentRadio.IsChecked = !_batch;
             BatchRadio.IsChecked = _batch;
+            ShowModeHint();
             _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
             var template = profile?.Template ?? built.Template;
             TemplateBox.Text = template.Trim().Length == 0
@@ -278,8 +279,9 @@ public partial class PromptEditOverlay : UserControl
     /// </summary>
     private void Mode_Changed(object sender, RoutedEventArgs e)
     {
-        // Ahead of the guard: the marker follows the choice when it is loaded too.
+        // Ahead of the guard: the marker and the hint follow the choice when it is loaded too.
         MoveModeThumb(animate: !_loading);
+        ShowModeHint();
         if (_loading) return;
 
         var toBatch = ReferenceEquals(sender, BatchRadio);
@@ -304,14 +306,10 @@ public partial class PromptEditOverlay : UserControl
         ModeKeepButton.Focus();
     }
 
-    /// <summary>The question and the button that answers it, naming the way switched to.</summary>
-    private void WriteModeConfirm()
-    {
+    /// <summary>The question, naming the way switched to.</summary>
+    private void WriteModeConfirm() =>
         ModeConfirmMessage.Text = LocalizationService.Get(
             _batch ? "S.Settings.PromptModeSwitchToBatch" : "S.Settings.PromptModeSwitchToSegment");
-        ModeUseDefaultButton.Content = LocalizationService.Get(
-            _batch ? "S.Settings.PromptModeUseBatchDefault" : "S.Settings.PromptModeUseSegmentDefault");
-    }
 
     private void CloseModeConfirm() => ModeConfirmLayer.Visibility = Visibility.Collapsed;
 
@@ -324,6 +322,14 @@ public partial class PromptEditOverlay : UserControl
         CloseModeConfirm();
         Refill(TemplateBox, OpenAiCompatibleProvider.TemplateAfterAnswer(TemplateBox.Text, _batch, useDefault: true));
         UpdateChrome();
+    }
+
+    /// <summary>Shows what the chosen way does, whatever the question about the template is answered.</summary>
+    private void ShowModeHint()
+    {
+        var batch = BatchRadio.IsChecked == true;
+        ModeSegmentHint.Visibility = batch ? Visibility.Collapsed : Visibility.Visible;
+        ModeBatchHint.Visibility = batch ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>Puts the marker under the chosen half, at the speed of the other trays.</summary>

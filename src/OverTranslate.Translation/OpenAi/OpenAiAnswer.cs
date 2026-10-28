@@ -108,6 +108,34 @@ internal static class OpenAiAnswer
         return translations;
     }
 
+    private static readonly Regex AnyNumbered = new(
+        @"</?\d+>",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex WrappedInNumber = new(
+        @"^<(\d+)>(?<body>.*)</\1>$",
+        RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    /// <summary>The translation in an answer to a batch of one, or null when there is none.</summary>
+    /// <param name="isDefault">Whether the template is the application's — see <see cref="OpenAiPrompt.IsDefault"/>.</param>
+    /// <remarks>
+    /// Its number first, as <see cref="ReadNumbered"/> reads it. Otherwise the whole answer, read as
+    /// an answer to one text is, a numbered tag around all of it taken off: there being one text, it
+    /// cannot belong to another — and a template written for a text at a time is answered with no
+    /// number at all. One with numbered tags inside it, none of them the one asked for, is not
+    /// read as anything.
+    /// </remarks>
+    public static string? ReadOfOne(string answer, string source, bool isDefault)
+    {
+        if (ReadNumbered(answer, 1)[0] is { } numbered) return numbered;
+
+        var text = OpenAiChatTranslator.StripThinking(answer);
+        var wrapped = WrappedInNumber.Match(text);
+        if (wrapped.Success) text = wrapped.Groups["body"].Value.Trim();
+        if (AnyNumbered.IsMatch(text)) return null;
+        return isDefault ? Read(text, source) : text;
+    }
+
     /// <summary>
     /// The text of the last tag numbered 1, up to its closing tag — or, when the model never closed
     /// it, to the end of its line or the next tag.

@@ -125,7 +125,7 @@ public class OpenAiCompatibleProviderTests
 
             Assert.True(prompt.IsDefault);
             Assert.Equal(
-                "{context}\n\n參考上面，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\n{text}",
+                "{context}\n\n參考上面的上下文，將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：\n{text}",
                 prompt.Template);
         });
     }
