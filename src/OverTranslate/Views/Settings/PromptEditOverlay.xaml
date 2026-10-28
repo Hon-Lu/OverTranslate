@@ -632,11 +632,12 @@
                                            Text="{DynamicResource S.Settings.PromptTemplate}"
                                            Style="{StaticResource EditorHeading}"/>
                                 <!-- Greyed while the box already reads as the default, so the button
-                                     also says whether anything has been changed. -->
+                                     also says whether anything has been changed. Its ground ends where
+                                     the box's edge does: drawn past the content it is cut off by the
+                                     scroller. -->
                                 <Button Grid.Column="1"
                                         x:Name="TemplateResetButton"
                                         Style="{StaticResource TextButton}"
-                                        Margin="0,0,-10,0"
                                         AutomationProperties.Name="{DynamicResource S.Settings.PromptTemplateReset}"
                                         Click="TemplateResetButton_Click">
                                     <StackPanel Orientation="Horizontal">
@@ -806,8 +807,8 @@
 
                     <!-- The one card in 設定 with buttons on it. Everything else here saves as it is
                          typed; a half-written prompt saved that way would be sent to the model on
-                         the next capture, so this one is confirmed before it counts. Leaving without
-                         saving is the close button and Escape, as on every other card. -->
+                         the next capture, so this one is confirmed before it counts. 取消 leaves without
+                         saving, as the close button and Escape do. -->
                     <Grid Grid.Row="4" Margin="0,14,0,0">
                         <Button x:Name="DeleteButton"
                                 HorizontalAlignment="Left"
@@ -819,13 +820,21 @@
                                 Content="{DynamicResource S.Settings.PromptDelete}"
                                 Click="DeleteButton_Click"/>
 
-                        <Button x:Name="SaveButton"
-                                HorizontalAlignment="Right"
-                                Style="{StaticResource AccentButton}"
-                                Height="34"
-                                Padding="22,0"
-                                Content="{DynamicResource S.Common.Save}"
-                                Click="SaveButton_Click"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="CancelButton"
+                                    Style="{StaticResource FlatButton}"
+                                    Height="34"
+                                    Padding="18,0"
+                                    Content="{DynamicResource S.Common.Cancel}"
+                                    Click="CancelButton_Click"/>
+                            <Button x:Name="SaveButton"
+                                    Style="{StaticResource AccentButton}"
+                                    Height="34"
+                                    Margin="10,0,0,0"
+                                    Padding="22,0"
+                                    Content="{DynamicResource S.Common.Save}"
+                                    Click="SaveButton_Click"/>
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>

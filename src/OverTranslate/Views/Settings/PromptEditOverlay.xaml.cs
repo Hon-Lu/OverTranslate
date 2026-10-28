@@ -339,6 +339,13 @@ public partial class PromptEditOverlay : UserControl
         var open = ParamsContent.Visibility != Visibility.Visible;
         ParamsContent.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
         ParamsChevronRotation.Angle = open ? 180 : 0;
+
+        // It opens at the bottom of the scroller, below the box, so opened is scrolled to.
+        if (open)
+        {
+            ParamsContent.UpdateLayout();
+            ParamsContent.BringIntoView();
+        }
     }
 
     /// <summary>Puts the text in the box, to write over or to write from.</summary>
