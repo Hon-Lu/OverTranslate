@@ -17,7 +17,7 @@ internal static class OpenAiAnswer
         @"^<t>(?<body>.*)</t>$",
         RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
-    /// <summary>The tags the context is written in.</summary>
+    /// <summary>The tags the context was once written in, and a model still sometimes answers in.</summary>
     private static readonly Regex ContextTag = new(
         @"</?(?:s|t|history)>",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -34,7 +34,7 @@ internal static class OpenAiAnswer
     /// <remarks>
     /// <para>The whole answer, less its thinking, is the translation — asked for nothing else, a model
     /// mostly gives nothing else. What it does sometimes add is taken off: a code fence around all of
-    /// it; a <c>&lt;t&gt;</c> around all of it, the tag the context gives a translation, when there is
+    /// it; a <c>&lt;t&gt;</c> around all of it, the tag the context once gave a translation, when there is
     /// no other tag inside; a segment tag, a habit of the tagged format this replaced — the last one
     /// numbered 1, and none at all when every tag is numbered otherwise; and a pair of quotation marks around all of
     /// it, when the source has neither mark anywhere — a source that opens a title and leaves it

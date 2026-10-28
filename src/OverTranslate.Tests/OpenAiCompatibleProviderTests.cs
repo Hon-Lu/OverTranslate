@@ -371,9 +371,8 @@ public class OpenAiCompatibleProviderTests
         Assert.Equal(2, server.Requests.Count);
         Assert.All(server.Requests, request =>
         {
-            Assert.Contains("<history>", request.Message);
-            Assert.Contains("<s>前</s>", request.Message);
-            Assert.Contains("<t>旁邊</t>", request.Message);
+            Assert.Contains("日文：前\n繁體中文：之前\n", request.Message);
+            Assert.Contains("日文：旁\n繁體中文：旁邊\n", request.Message);
         });
     }
 
@@ -977,7 +976,7 @@ public class OpenAiCompatibleProviderTests
             OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "{context}\n\n{text}")
                 .Build("こんにちは", [new("前", "之前"), new("看板", "招牌")]),
             message);
-        Assert.Contains("<history>", message);
+        Assert.Contains("日文：看板\n繁體中文：招牌", message);
         Assert.DoesNotContain("<page>", message);
     }
 

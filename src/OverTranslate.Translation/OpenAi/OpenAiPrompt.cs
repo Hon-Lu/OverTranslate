@@ -33,11 +33,15 @@ public sealed record OpenAiScreenLine(string Source, string? Translation = null)
 /// The whole message, the language placeholders already filled in — the application's business.
 /// <c>{context}</c> and <c>{text}</c> are left for <see cref="Build"/>.
 /// </param>
-/// <param name="TargetLabel">The target language as the context's headings name it: 繁體中文.</param>
+/// <param name="TargetLabel">What a translation is labelled with in the context: 繁體中文.</param>
 /// <param name="IsDefault">
 /// Whether <paramref name="Template"/> is the application's own — see <see cref="DefaultTemplate"/>.
 /// Only an answer to that one is read for what the model tends to wrap a translation in: what the
 /// user's own asks for is theirs to say.
+/// </param>
+/// <param name="SourceLabel">
+/// What a source line is labelled with in the context: 日文 — or null for a source language the user
+/// left to be detected, which the wording's own word for the source stands in for, 原文.
 /// </param>
 /// <remarks>
 /// <para>The same message for every model and every caller — a segment of a screen and the whole of
@@ -51,11 +55,14 @@ public sealed record OpenAiScreenLine(string Source, string? Translation = null)
 /// already done — named things as consistently and read at least as well.</para>
 ///
 /// <para>The context is translations done before and nothing else — never the text being asked
-/// for, nor lines still waiting their turn: one XML block under a one-sentence heading, a line to
-/// each translation, the source in <c>&lt;s&gt;</c> and its translation after it in
-/// <c>&lt;t&gt;</c>. Two things about the wording were measured to matter: a short heading, and the
-/// instruction last, straight before the text — a longer heading and instruction made a line holding
-/// only a speaker's name come back with the next line's translation in it.</para>
+/// for, nor lines still waiting their turn: under a one-sentence heading, each pair as two lines
+/// labelled with its language, <c>日文：…</c> and <c>繁體中文：…</c>, a blank line between pairs.
+/// Measured against the same pairs in <c>&lt;s&gt;</c> and <c>&lt;t&gt;</c> tags inside an XML
+/// block, the labels were judged better two to one in a blind test, and a source with those tags in
+/// it no longer had them answered with. Two things about the wording were measured to matter too: a
+/// short heading, and the instruction last, straight before the text — a longer heading and
+/// instruction made a line holding only a speaker's name come back with the next line's translation
+/// in it.</para>
 ///
 /// <para>The Traditional Chinese wording is the one that was measured, word for word. The other two
 /// say the same thing.</para>
@@ -64,7 +71,8 @@ public sealed record OpenAiPrompt(
     OpenAiPromptLanguage Language,
     string Template,
     string TargetLabel,
-    bool IsDefault = false)
+    bool IsDefault = false,
+    string? SourceLabel = null)
 {
     /// <summary>Where the context goes; a template without it is sent no context at all.</summary>
     public const string ContextPlaceholder = "{context}";
@@ -164,14 +172,14 @@ public sealed record OpenAiPrompt(
     }
 
     /// <summary>What <c>{context}</c> becomes: the translations done before under their heading, or nothing.</summary>
-    private string Context(Wording words, IReadOnlyList<OpenAiTranslationPair>? earlier) =>
-        earlier is { Count: > 0 }
-            ? words.History.Replace(TargetNamePlaceholder, TargetLabel)
-                + "\n<history>\n" + string.Join("\n", earlier.Select(Pair)) + "\n</history>"
-            : "";
+    private string Context(Wording words, IReadOnlyList<OpenAiTranslationPair>? earlier)
+    {
+        if (earlier is not { Count: > 0 }) return "";
 
-    private static string Pair(OpenAiTranslationPair pair) =>
-        $"<s>{OneLine(pair.Source)}</s><t>{OneLine(pair.Translation)}</t>";
+        var source = SourceLabel ?? words.AutomaticSource;
+        return words.History + "\n" + string.Join("\n\n", earlier.Select(pair =>
+            source + words.Colon + OneLine(pair.Source) + "\n" + TargetLabel + words.Colon + OneLine(pair.Translation)));
+    }
 
     /// <summary>The first character in upper case: the instruction once its lead is taken off.</summary>
     private static string CapitalFirst(string text) =>
@@ -191,7 +199,10 @@ public sealed record OpenAiPrompt(
     /// </param>
     /// <param name="History">The heading of the translations done before.</param>
     /// <param name="Batch">What heads the texts of a batch; <c>{n}</c> is how many there are.</param>
-    private sealed record Wording(string Lead, string Instruction, string History, string Batch)
+    /// <param name="AutomaticSource">What a source line is labelled with when its language is detected.</param>
+    /// <param name="Colon">What follows a label: the full-width colon in Chinese, a colon and a space in English.</param>
+    private sealed record Wording(
+        string Lead, string Instruction, string History, string Batch, string AutomaticSource, string Colon)
     {
         public static Wording For(OpenAiPromptLanguage language) => language switch
         {
@@ -208,19 +219,25 @@ public sealed record OpenAiPrompt(
         private static readonly Wording TraditionalChinese = new(
             "參考上面，",
             $"將以下文本翻譯為{TargetNamePlaceholder}，只輸出譯文，不加標籤，不要解釋：",
-            $"之前的翻譯（<s> 原文，<t> {TargetNamePlaceholder}譯文），只供參考：",
-            "（共 {n} 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）");
+            "之前的翻譯，只供參考：",
+            "（共 {n} 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）",
+            "原文",
+            "：");
 
         private static readonly Wording SimplifiedChinese = new(
             "参考上面，",
             $"将以下文本翻译为{TargetNamePlaceholder}，只输出译文，不加标签，不要解释：",
-            $"之前的翻译（<s> 原文，<t> {TargetNamePlaceholder}译文），仅供参考：",
-            "（共 {n} 段，按编号输出译文，例如 <1>译文</1>，一段一行）");
+            "之前的翻译，仅供参考：",
+            "（共 {n} 段，按编号输出译文，例如 <1>译文</1>，一段一行）",
+            "原文",
+            "：");
 
         private static readonly Wording English = new(
             "Using the above, ",
             $"translate the following text into {TargetNamePlaceholder}. Output only the translation, with no tags and no explanation:",
-            $"Earlier translations (<s> source, <t> {TargetNamePlaceholder} translation), for reference only:",
-            "({n} parts: output each translation by its number, for example <1>translation</1>, one per line.)");
+            "Earlier translations, for reference only:",
+            "({n} parts: output each translation by its number, for example <1>translation</1>, one per line.)",
+            "Source",
+            ": ");
     }
 }

@@ -563,7 +563,7 @@
     <sys:String x:Key="S.Settings.PromptTemplateReset">還原預設</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">預設</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">要翻譯的原文，照原樣放入。沒有這個參數時，原文接在最後。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、畫面上已有的譯文與這次已翻好的段），原文以 &lt;s&gt;、譯文以 &lt;t&gt; 標示，只供參考；還沒翻的段不會放進來。沒有可附的內容時，連同緊接在後的「參考上面，」一起拿掉。沒有這個參數時不附上下文，各段同時送出。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、畫面上已有的譯文與這次已翻好的段），每段寫成兩行，用語言名稱標出原文與譯文，只供參考；還沒翻的段不會放進來。沒有可附的內容時，連同緊接在後的「參考上面，」一起拿掉。沒有這個參數時不附上下文，各段同時送出。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">進階</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">帶入推薦模型</sys:String>

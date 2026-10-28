@@ -69,7 +69,7 @@ public class OpenAiBatchTests
         var message = Prompt.BuildBatch(["a b", "c d"], [new("前", "之前")]);
 
         Assert.StartsWith(
-            "之前的翻譯（<s> 原文，<t> 繁體中文譯文），只供參考：\n<history>\n<s>前</s><t>之前</t>\n</history>\n\n參考上面，",
+            "之前的翻譯，只供參考：\n原文：前\n繁體中文：之前\n\n參考上面，",
             message);
         Assert.EndsWith("<1>a b</1>\n<2>c d</2>", message);
     }
@@ -304,7 +304,7 @@ public class OpenAiBatchTests
             Assert.True(batch.Message.Length + 32 + 2 * asked.Sum(text => text.Length) <= request.ContextTokens);
         });
         var next = texts.IndexOf(Row.Match(batches[1].Text).Groups[2].Value);
-        Assert.Contains($"<s>{texts[next - 1]}</s><t>譯:{texts[next - 1]}</t>", batches[1].Message);
+        Assert.Contains($"原文：{texts[next - 1]}\n繁體中文：譯:{texts[next - 1]}\n", batches[1].Message);
         Assert.Equal(texts.Select(text => $"譯:{text}"), outcomes.Select(outcome => outcome.Translation));
     }
 

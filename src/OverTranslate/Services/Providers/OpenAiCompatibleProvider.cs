@@ -426,7 +426,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             language,
             Fill(isDefault ? OpenAiPrompt.DefaultTemplate(language) : own, sourceLang, targetLang, automatic, english),
             LanguageData.GetTargetDisplayName(targetLang, english),
-            isDefault);
+            isDefault,
+            automatic ? null : LanguageData.GetSourceDisplayName(sourceLang, english));
     }
 
     /// <summary>
