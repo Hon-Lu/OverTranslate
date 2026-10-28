@@ -94,6 +94,33 @@ public class OpenAiChatProtocolTests
     }
 
     /// <summary>
+    /// A pair that reads like the context's own lines — a label of its own, a speaker's name, tags,
+    /// braces, quotes, a backslash — goes in as it is, after the labels and on its line: nothing is
+    /// escaped or taken off. Measured, escaping into another format did no better.
+    /// </summary>
+    [Fact]
+    public void Prompt_APairLikeTheLabelsGoesInAsItIs()
+    {
+        var message = (Prompt with { SourceLabel = "日文" }).Build("x",
+        [
+            new("日文：", "日文："),
+            new("アリス：おはよう", "繁體中文：早安"),
+            new("<s>タグ</s> {name} \"走れ\" C:\\Users", "<t>標籤</t> {name} \"快跑\" C:\\Users"),
+        ]);
+
+        Assert.StartsWith(
+            "之前的翻譯，只供參考：\n" +
+            "日文：日文：\n" +
+            "繁體中文：日文：\n\n" +
+            "日文：アリス：おはよう\n" +
+            "繁體中文：繁體中文：早安\n\n" +
+            "日文：<s>タグ</s> {name} \"走れ\" C:\\Users\n" +
+            "繁體中文：<t>標籤</t> {name} \"快跑\" C:\\Users\n\n" +
+            "參考上面的上下文，",
+            message);
+    }
+
+    /// <summary>
     /// No context to give: <c>{context}</c> goes with the blank lines around it and the 參考上面的上下文，
     /// after it, leaving the instruction over the text.
     /// </summary>

@@ -59,7 +59,11 @@ public sealed record OpenAiScreenLine(string Source, string? Translation = null)
 /// labelled with its language, <c>日文：…</c> and <c>繁體中文：…</c>, a blank line between pairs.
 /// Measured against the same pairs in <c>&lt;s&gt;</c> and <c>&lt;t&gt;</c> tags inside an XML
 /// block, the labels were judged better two to one in a blind test, and a source with those tags in
-/// it no longer had them answered with. Two things about the wording were measured to matter too: a
+/// it no longer had them answered with. Texts that collide with the labels — a speaker's line,
+/// アリス：…, one that opens with 日文： or 原文：, a label with nothing after it — or that hold tags,
+/// braces, quotes or backslashes were measured too, as a pair in the context and as the text: the
+/// same pairs as escaped XML, or as one JSON object a line, had as many of them go wrong, and the
+/// JSON had its own context given back for a text. The labels stay. Two things about the wording were measured to matter too: a
 /// short heading, and the instruction last, straight before the text — a longer heading and
 /// instruction made a line holding only a speaker's name come back with the next line's translation
 /// in it.</para>
@@ -102,14 +106,17 @@ public sealed record OpenAiPrompt(
     /// again in the line left a few fewer still but ran more than 5% slower. The line goes after the
     /// texts because, measured
     /// against the same line ahead of them, that left half as many texts untranslated; a line that
-    /// counted the texts did no better than one that does not.
+    /// counted the texts did no better than one that does not. A blank line sets it apart from the
+    /// texts, and it keeps its brackets: reworded as a sentence — with a colon before the example, or
+    /// none — or set off by a rule instead, it had batches answered with their first number alone,
+    /// on one seed or both, where the bracketed line after a blank line lost none.
     /// </param>
     public static string DefaultTemplate(OpenAiPromptLanguage language, bool batch = false)
     {
         var words = Wording.For(language);
         var instruction = batch ? words.BatchInstruction : words.Instruction;
         var template = ContextPlaceholder + "\n\n" + words.Lead + instruction + "\n" + TextPlaceholder;
-        return batch ? template + "\n" + words.Batch : template;
+        return batch ? template + "\n\n" + words.Batch : template;
     }
 
     /// <summary>The user message for <paramref name="text"/>.</summary>
@@ -125,7 +132,10 @@ public sealed record OpenAiPrompt(
     ///
     /// <para>No context to give empties <c>{context}</c> and the blank lines around it with it, so
     /// the template reads as if it had never had one — and the words right after it that point back
-    /// at it, 參考上面的上下文，, when they are there.</para>
+    /// at it, 參考上面的上下文，, when they are there. Measured on every text and every screen sent with
+    /// no context, on two seeds: a text at a time read the same either way, but a batch that kept the
+    /// words — with nothing above them, or under the heading with （無） or None below it — gave
+    /// about twice as many texts back untranslated, and more of its numbers went missing.</para>
     /// </remarks>
     public string Build(string text, IReadOnlyList<OpenAiTranslationPair>? earlier = null)
     {

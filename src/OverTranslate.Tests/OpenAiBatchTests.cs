@@ -72,14 +72,14 @@ public class OpenAiBatchTests
     // ---- Prompt ----------------------------------------------------------------------------------
 
     /// <summary>
-    /// The texts numbered where <c>{text}</c> is, and after them the batch template's own line saying
-    /// how to answer, with no count in it.
+    /// The texts numbered where <c>{text}</c> is, and after them, past a blank line, the batch
+    /// template's own line saying how to answer, with no count in it.
     /// </summary>
     [Fact]
     public void BuildBatch_NumbersTheTextsAboveAFormatLine()
     {
         Assert.Equal(
-            BatchInstruction + "\n<1>a b</1>\n<2>c d</2>\n" + FormatLine,
+            BatchInstruction + "\n<1>a b</1>\n<2>c d</2>\n\n" + FormatLine,
             Prompt.BuildBatch(["a b", "c\r\nd"]));
     }
 
@@ -110,7 +110,7 @@ public class OpenAiBatchTests
 
         Assert.StartsWith(head, batch);
         Assert.NotEqual(segment, batch[..batch.IndexOf("{text}", StringComparison.Ordinal)] + "{text}");
-        Assert.Matches(@"\{text\}\n[^{}\n]*<1>[^{}\n]*$", batch);
+        Assert.Matches(@"\{text\}\n\n[^{}\n]*<1>[^{}\n]*$", batch);
         Assert.DoesNotContain("{count}", batch);
     }
 
@@ -123,7 +123,7 @@ public class OpenAiBatchTests
         Assert.StartsWith(
             "之前的翻譯，只供參考：\n原文：前\n繁體中文：之前\n\n參考上面的上下文，",
             message);
-        Assert.EndsWith("<1>a b</1>\n<2>c d</2>\n" + FormatLine, message);
+        Assert.EndsWith("<1>a b</1>\n<2>c d</2>\n\n" + FormatLine, message);
     }
 
     /// <summary>The user's own template works as it is: the numbered texts go where its text goes.</summary>
@@ -145,9 +145,9 @@ public class OpenAiBatchTests
 
         Assert.Equal("<1>a</1>\n<2>b</2>", hans.BuildBatch(["a", "b"]));
         Assert.Equal("<1>a</1>\n<2>b</2>", english.BuildBatch(["a", "b"]));
-        Assert.EndsWith("{text}\n（按编号输出译文，例如 <1>译文</1>，一段一行）",
+        Assert.EndsWith("{text}\n\n（按编号输出译文，例如 <1>译文</1>，一段一行）",
             OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.SimplifiedChinese, batch: true));
-        Assert.EndsWith("{text}\n(Output each translation by its number, for example <1>translation</1>, one per line.)",
+        Assert.EndsWith("{text}\n\n(Output each translation by its number, for example <1>translation</1>, one per line.)",
             OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.English, batch: true));
     }
 
