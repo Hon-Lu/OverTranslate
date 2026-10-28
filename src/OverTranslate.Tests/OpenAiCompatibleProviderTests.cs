@@ -231,8 +231,7 @@ public class OpenAiCompatibleProviderTests
             TopP = 0.9,
             SeedEnabled = false,
             Seed = 7,
-            ReasoningEffortEnabled = true,
-            ReasoningEffort = "low",
+            ThinkingOff = true,
             Template = "用口語翻成{target_name}：{text}",
         });
         settings.OpenAi.SelectedProfileId = "a";
@@ -246,7 +245,7 @@ public class OpenAiCompatibleProviderTests
         Assert.Equal(0.9, options.TopP);
         Assert.False(options.SendSeed);
         Assert.Equal(7, options.Seed);
-        Assert.Equal("low", options.ReasoningEffort);
+        Assert.Equal("none", options.ReasoningEffort);
         Assert.Equal("用口語翻成{target_name}：{text}", options.Template);
     }
 
@@ -258,16 +257,18 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
-    /// A reasoning effort that is not switched on is not sent, whatever value is filled in beside it.
+    /// 關閉思考 sends <c>reasoning_effort: "none"</c>, and left unticked sends no such field at all.
     /// </summary>
-    [Fact]
-    public void Profiles_SendNoReasoningEffortUnlessItIsSwitchedOn()
+    [Theory]
+    [InlineData(true, "none")]
+    [InlineData(false, null)]
+    public void Profiles_SendReasoningEffortNoneOnlyWithThinkingOff(bool thinkingOff, string? sent)
     {
         var settings = new AppSettings();
-        settings.OpenAi.Profiles.Add(new OpenAiModelProfile { Id = "a", Model = "m", ReasoningEffort = "high" });
+        settings.OpenAi.Profiles.Add(new OpenAiModelProfile { Id = "a", Model = "m", ThinkingOff = thinkingOff });
         settings.OpenAi.SelectedProfileId = "a";
 
-        Assert.Null(OpenAiCompatibleProvider.FromSettings(settings).ReasoningEffort);
+        Assert.Equal(sent, OpenAiCompatibleProvider.FromSettings(settings).ReasoningEffort);
     }
 
     /// <summary>
@@ -638,7 +639,7 @@ public class OpenAiCompatibleProviderTests
         Assert.True(built.TemperatureEnabled);
         Assert.True(built.TopPEnabled);
         Assert.True(built.SeedEnabled);
-        Assert.False(built.ReasoningEffortEnabled);
+        Assert.False(built.ThinkingOff);
 
         Assert.Equal(OpenAiModelProfile.DefaultTemperature, built.Temperature);
         Assert.Equal(OpenAiModelProfile.DefaultTopP, built.TopP);
@@ -647,7 +648,7 @@ public class OpenAiCompatibleProviderTests
         Assert.Equal(fresh.Temperature, built.Temperature);
         Assert.Equal(fresh.TopP, built.TopP);
         Assert.Equal(fresh.Seed, built.Seed);
-        Assert.Equal(fresh.ReasoningEffort, built.ReasoningEffort);
+        Assert.Equal(fresh.ThinkingOff, built.ThinkingOff);
     }
 
     [Fact]

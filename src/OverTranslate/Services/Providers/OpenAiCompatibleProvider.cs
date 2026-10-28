@@ -134,7 +134,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             profile.TopP,
             profile.SeedEnabled,
             profile.Seed,
-            profile.ReasoningEffortEnabled ? profile.ReasoningEffort : null,
+            profile.ThinkingOff ? OpenAiModelProfile.ThinkingOffEffort : null,
             TimeoutSecondsFor(settings.OpenAiTimeoutSeconds),
             profile.Batch);
     }
@@ -156,7 +156,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// fallback filled a box the user could not see, and this is on screen in 目前使用的設定 before a
     /// single line is translated, next to a list whose whole purpose is to replace it.
     ///
-    /// Reasoning Effort is left off, as on any new profile: the recommended model does not think,
+    /// 關閉思考 is left off, as on any new profile: the recommended model does not think,
     /// and a field it does not need is one more thing a server can refuse.
     /// </remarks>
     internal static OpenAiModelProfile BuiltInProfile() => new()
@@ -398,6 +398,14 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
 
     /// <inheritdoc cref="SourceCodePlaceholder"/>
     internal const string TargetCodePlaceholder = "{target_code}";
+
+    /// <summary>Every placeholder a template is filled in at, the old spellings included.</summary>
+    internal static readonly IReadOnlyList<string> Placeholders =
+    [
+        OpenAiPrompt.TextPlaceholder, OpenAiPrompt.ContextPlaceholder,
+        SourcePlaceholder, SourceCodePlaceholder, TargetPlaceholder, TargetCodePlaceholder,
+        LegacySourcePlaceholder, LegacyTargetPlaceholder,
+    ];
 
     /// <summary>
     /// The template every request of one call is written from: the user's own, or the application's

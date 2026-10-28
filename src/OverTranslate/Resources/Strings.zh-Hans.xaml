@@ -507,16 +507,14 @@
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">最少 {0} 秒</sys:String>
     <sys:String x:Key="S.Settings.ModelName">模型名称</sys:String>
-    <sys:String x:Key="S.Settings.CopyModelName">复制模型名称</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">必填</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">本地 LLM 搭建教程</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">模型设置</sys:String>
-    <sys:String x:Key="S.Settings.ProfileInUse">当前使用的设置</sys:String>
-    <sys:String x:Key="S.Settings.ProfileListTitle">设置列表</sys:String>
     <sys:String x:Key="S.Settings.ProfileAdd">新增设置（{0}/{1}）</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotTitle">系统默认会随版本更新</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotBody">如果想要保留当前系统默认，请新增一份自定义设置。</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotAction">复制默认设置</sys:String>
+    <sys:String x:Key="S.Settings.ProfileListHint">点击选择要使用的设置</sys:String>
+    <sys:String x:Key="S.Settings.ProfileBuiltInNote">系统默认会随版本更新；想保留当前的内容，点击系统默认右侧的复制按钮另存一份。</sys:String>
+    <sys:String x:Key="S.Settings.ProfileCopy">复制为新设置</sys:String>
+    <sys:String x:Key="S.Settings.ProfileTagCustomPrompt">自定义提示词</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">系统默认 v{0}</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteTitle">删除设置</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">确定要删除“{0}”吗？删除后无法恢复。</sys:String>
@@ -528,10 +526,6 @@
     <sys:String x:Key="S.Settings.PromptName">名称</sys:String>
     <sys:String x:Key="S.Settings.PromptNamePlaceholder">为这个设置命名</sys:String>
     <sys:String x:Key="S.Settings.PromptParams">可用参数</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">发送前会替换为实际的内容。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">参数</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">说明</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">示例</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceName">源语言名称</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceCode">源语言代码</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetName">目标语言名称</sys:String>
@@ -539,21 +533,19 @@
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英语</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日语</sys:String>
     <sys:String x:Key="S.Settings.PromptParamsTipAuto">源语言为“自动”时，源语言名称为 any language，代码为空。</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplate">提示词模板</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplateHint">每次翻译发送的完整内容。建议写明只输出译文。</sys:String>
+    <sys:String x:Key="S.Settings.PromptTemplate">提示词</sys:String>
+    <sys:String x:Key="S.Settings.PromptTemplateHint">翻译时发送给模型的内容。花括号标示的参数会替换成实际的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplateDefault">默认</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，照原样放入；整批时是各段加上编号（&lt;1&gt;…&lt;/1&gt;），一段一行，模板要说明按编号输出译文，没说明时会改成一段一段发送。没有这个参数时，原文接在最后。</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、画面上已有的译文和这次已翻好的段），每段写成两行，用语言名称标出原文与译文，仅供参考；还没翻的段不会放进来。没有可附的内容时，连同紧接在后的“参考上面的上下文，”一起去掉。没有这个参数时不附上下文，各段同时发送。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的设置 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">高级</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">带入推荐模型</sys:String>
-    <sys:String x:Key="S.Settings.AdvancedHint">未启用的参数不会发送。不同模型支持的参数、范围与建议值可能不同，请依模型文档设置。</sys:String>
-    <sys:String x:Key="S.Settings.ParamEnable">启用</sys:String>
-    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
-    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">控制模型回答前「思考」的程度。部分通用模型默认会先思考再回答，翻译会明显变慢，甚至超时。
-勾选启用并设为 none 可以关闭思考，让翻译变快；翻译专用模型通常不需要设置。
-可用的值因服务而异，常见的有 none、minimal、low、medium、high。</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOff">关闭思考</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOffDetail">发送 reasoning_effort: none</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOffTip" xml:space="preserve">要求模型直接回答、不先思考。部分通用模型默认会先思考再回答，翻译会明显变慢，甚至超时；翻译专用模型通常不需要。
+有些服务不认识这个参数会返回错误，这时请取消勾选。</sys:String>
+    <sys:String x:Key="S.Settings.AdvancedHint">未勾选的参数不会发送。各模型支持的参数与范围不同，请以模型文档为准。</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">范围：0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">调整模型对高概率结果的偏好程度。数值越低，越倾向选择最可能的表达；

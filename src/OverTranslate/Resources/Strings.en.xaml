@@ -507,16 +507,14 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">seconds</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">At least {0} seconds</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Model</sys:String>
-    <sys:String x:Key="S.Settings.CopyModelName">Copy the model name</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">Required</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">Local LLM setup guide</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">Model settings</sys:String>
-    <sys:String x:Key="S.Settings.ProfileInUse">Settings in use</sys:String>
-    <sys:String x:Key="S.Settings.ProfileListTitle">Saved settings</sys:String>
     <sys:String x:Key="S.Settings.ProfileAdd">Add settings ({0}/{1})</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotTitle">The built-in setting changes with each version</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotBody">To keep the current built-in setting, add a setting of your own.</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotAction">Copy built-in setting</sys:String>
+    <sys:String x:Key="S.Settings.ProfileListHint">Click the setting to use</sys:String>
+    <sys:String x:Key="S.Settings.ProfileBuiltInNote">The built-in setting changes with each version. To keep what it is now, save a copy with the copy button beside it.</sys:String>
+    <sys:String x:Key="S.Settings.ProfileCopy">Copy as a new setting</sys:String>
+    <sys:String x:Key="S.Settings.ProfileTagCustomPrompt">Custom prompt</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">Built-in v{0}</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteTitle">Delete settings</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">Delete “{0}”? This cannot be undone.</sys:String>
@@ -528,10 +526,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptName">Name</sys:String>
     <sys:String x:Key="S.Settings.PromptNamePlaceholder">Name these settings</sys:String>
     <sys:String x:Key="S.Settings.PromptParams">Available parameters</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">Replaced with the actual content before the request is sent.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">Parameter</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">Description</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">Example</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceName">Source language name</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceCode">Source language code</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetName">Target language name</sys:String>
@@ -539,23 +533,19 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">English</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Japanese</sys:String>
     <sys:String x:Key="S.Settings.PromptParamsTipAuto">When the source language is Automatic, the source language name is "any language" and the code is empty.</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplate">Prompt template</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplateHint">Everything sent with each translation. It helps to ask for the translation only.</sys:String>
+    <sys:String x:Key="S.Settings.PromptTemplate">Prompt</sys:String>
+    <sys:String x:Key="S.Settings.PromptTemplateHint">What is sent to the model for each translation. Parameters in curly braces are replaced with the actual text.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Restore default</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplateDefault">Default</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">The text to translate, as it is; in Batch, the parts numbered (&lt;1&gt;…&lt;/1&gt;), one per line, so the template should ask for the translations by number — without that, parts are sent one at a time. Without it, the text is added at the end.</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">Parts already translated (earlier lines, translations already on screen and the parts just translated), each as two lines labelled with the language of the source and of the translation, for reference only; parts not yet translated are never included. When there is nothing to add, "Using the context above, " right after it is removed too. Without it, no context is sent and the parts are sent all at once.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">My settings {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Advanced</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Use the recommended model</sys:String>
-    <sys:String x:Key="S.Settings.AdvancedHint">A parameter that is not enabled is left out of the request. Models differ in which parameters they accept, in what range, and at what value — follow your model's own documentation.</sys:String>
-    <sys:String x:Key="S.Settings.ParamEnable">Enable</sys:String>
-    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
-    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">How much the model “thinks” before it answers. Some general-purpose models think first by
-default, which makes translation much slower or even makes it time out.
-Enable this and choose none to turn thinking off and speed translation up; translation-only
-models usually do not need it.
-Accepted values depend on the service; common ones are none, minimal, low, medium and high.</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOff">Turn off thinking</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOffDetail">Sends reasoning_effort: none</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOffTip" xml:space="preserve">Asks the model to answer straight away, without thinking first. Some general-purpose models think before they answer by default, which makes translation much slower or even times out; models made for translation usually don’t need this.
+Some services don’t recognise this parameter and return an error. If so, untick it.</sys:String>
+    <sys:String x:Key="S.Settings.AdvancedHint">Unticked parameters are not sent. Models differ in which parameters they accept and in what range — go by your model’s documentation.</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">Range: 0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">How strongly the model favours the likeliest phrasing. The lower the value, the more

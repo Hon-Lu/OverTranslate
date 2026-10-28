@@ -104,7 +104,7 @@ public class OpenAiModelProfile
     public const int DefaultSeed = 42;
 
     /// <summary>
-    /// Whether the request carries a <c>reasoning_effort</c> at all.
+    /// Whether the request carries <c>reasoning_effort: "none"</c>; off, the field is not sent at all.
     /// </summary>
     /// <remarks>
     /// Off by default, unlike the three sampling switches above, and off means the field is not sent
@@ -113,25 +113,15 @@ public class OpenAiModelProfile
     /// answers 400. It is for the general chat models that think before answering unless told not
     /// to: through the OpenAI-compatible route only this field turns that off, and left on, one
     /// screen takes longer than the timeout.
+    ///
+    /// A switch rather than a choice of effort: "none" is the one value a translation wants, and the
+    /// others only buy a slower answer. The list of efforts and its own switch never shipped, so their
+    /// keys are not read — a file that has them opens with this off.
     /// </remarks>
-    public bool ReasoningEffortEnabled { get; set; }
+    public bool ThinkingOff { get; set; }
 
-    /// <summary>
-    /// What <c>reasoning_effort</c> is set to, when <see cref="ReasoningEffortEnabled"/>.
-    /// </summary>
-    /// <remarks>
-    /// Pre-filled with <see cref="DefaultReasoningEffort"/> while the switch is off, so turning it on
-    /// is the one click that makes a thinking model usable. Picked from <see cref="ReasoningEfforts"/>
-    /// rather than typed: a misspelt value is a 400 on every request.
-    /// </remarks>
-    public string ReasoningEffort { get; set; } = DefaultReasoningEffort;
-
-    /// <inheritdoc cref="ReasoningEffort"/>
-    public const string DefaultReasoningEffort = "none";
-
-    /// <summary>The values the editor offers for <see cref="ReasoningEffort"/>, in order.</summary>
-    public static readonly IReadOnlyList<string> ReasoningEfforts =
-        ["none", "minimal", "low", "medium", "high"];
+    /// <summary>What <see cref="ThinkingOff"/> sends.</summary>
+    public const string ThinkingOffEffort = "none";
 
     /// <summary>
     /// Whether a screen goes as few requests as fit rather than a text at a time — see

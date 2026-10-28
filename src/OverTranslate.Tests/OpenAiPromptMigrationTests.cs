@@ -1,5 +1,6 @@
 using OverTranslate.Models;
 using OverTranslate.Services;
+using OverTranslate.Services.Providers;
 using Xunit;
 
 namespace OverTranslate.Tests;
@@ -170,29 +171,52 @@ public class OpenAiPromptMigrationTests
     }
 
     /// <summary>
-    /// A profile with nothing to say about reasoning does not send it, and has none pre-filled.
+    /// A profile with nothing to say about thinking leaves 關閉思考 unticked.
     /// </summary>
     [Fact]
-    public void ReasoningEffort_IsOffAndPrefilledWithNone()
+    public void ThinkingOff_IsOffByDefault()
     {
         var profile = Assert.Single(SettingsService.Parse("""
             { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m" } ] } }
             """).OpenAi.Profiles);
 
-        Assert.False(profile.ReasoningEffortEnabled);
-        Assert.Equal("none", profile.ReasoningEffort);
-        Assert.Equal(["none", "minimal", "low", "medium", "high"], OpenAiModelProfile.ReasoningEfforts);
+        Assert.False(profile.ThinkingOff);
     }
 
     [Fact]
-    public void ReasoningEffort_IsReadBack()
+    public void ThinkingOff_IsReadBack()
     {
-        var profile = Assert.Single(SettingsService.Parse("""
-            { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m",
-              "ReasoningEffortEnabled": true, "ReasoningEffort": "low" } ] } }
-            """).OpenAi.Profiles);
+        var settings = SettingsService.Parse("""
+            { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m", "ThinkingOff": true } ] } }
+            """);
 
-        Assert.True(profile.ReasoningEffortEnabled);
-        Assert.Equal("low", profile.ReasoningEffort);
+        Assert.True(Assert.Single(settings.OpenAi.Profiles).ThinkingOff);
+        Assert.True(Assert.Single(SettingsService.Parse(SettingsService.Serialize(settings)).OpenAi.Profiles).ThinkingOff);
+    }
+
+    /// <summary>
+    /// The effort list and its switch never shipped, so whatever they say opens unticked — "none"
+    /// included — and saving drops them.
+    /// </summary>
+    [Theory]
+    [InlineData("true", "\"none\"")]
+    [InlineData("true", "\"low\"")]
+    [InlineData("true", "\"high\"")]
+    [InlineData("false", "\"none\"")]
+    [InlineData("true", "\"\"")]
+    public void TheUnshippedReasoningEffort_OpensAsThinkingLeftOn(string enabled, string effort)
+    {
+        var settings = SettingsService.Parse($$"""
+            { "OpenAi": { "Profiles": [ { "Id": "a", "Name": "n", "Model": "m",
+              "ReasoningEffortEnabled": {{enabled}}, "ReasoningEffort": {{effort}} } ] } }
+            """);
+
+        var profile = Assert.Single(settings.OpenAi.Profiles);
+        Assert.False(profile.ThinkingOff);
+
+        settings.OpenAi.SelectedProfileId = "a";
+        Assert.Null(OpenAiCompatibleProvider.FromSettings(settings).ReasoningEffort);
+
+        Assert.DoesNotContain("ReasoningEffort", SettingsService.Serialize(settings));
     }
 }

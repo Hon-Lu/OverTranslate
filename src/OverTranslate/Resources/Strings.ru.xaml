@@ -502,16 +502,14 @@
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">с</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">Не менее {0} с</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Модель</sys:String>
-    <sys:String x:Key="S.Settings.CopyModelName">Копировать имя модели</sys:String>
     <sys:String x:Key="S.Settings.ModelRequired">Обязательно</sys:String>
     <sys:String x:Key="S.Settings.OllamaGuide">Руководство по локальной LLM (англ.)</sys:String>
     <sys:String x:Key="S.Settings.ModelProfiles">Настройки модели</sys:String>
-    <sys:String x:Key="S.Settings.ProfileInUse">Используемые настройки</sys:String>
-    <sys:String x:Key="S.Settings.ProfileListTitle">Сохраненные настройки</sys:String>
     <sys:String x:Key="S.Settings.ProfileAdd">Добавить настройки ({0}/{1})</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotTitle">Встроенные настройки меняются с каждой версией</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotBody">Чтобы сохранить текущие встроенные настройки, добавьте их копию как свои.</sys:String>
-    <sys:String x:Key="S.Settings.ProfileSnapshotAction">Копировать встроенные</sys:String>
+    <sys:String x:Key="S.Settings.ProfileListHint">Нажмите на настройку, чтобы выбрать её</sys:String>
+    <sys:String x:Key="S.Settings.ProfileBuiltInNote">Встроенные настройки меняются с каждой версией. Чтобы сохранить текущие, сделайте копию кнопкой справа от встроенных.</sys:String>
+    <sys:String x:Key="S.Settings.ProfileCopy">Копировать как новую настройку</sys:String>
+    <sys:String x:Key="S.Settings.ProfileTagCustomPrompt">Свой промпт</sys:String>
     <sys:String x:Key="S.Settings.ProfileSnapshotName">Встроенные v{0}</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteTitle">Удалить настройки</sys:String>
     <sys:String x:Key="S.Settings.PromptDeleteConfirm">Удалить «{0}»? Это действие нельзя отменить.</sys:String>
@@ -523,10 +521,6 @@
     <sys:String x:Key="S.Settings.PromptName">Название</sys:String>
     <sys:String x:Key="S.Settings.PromptNamePlaceholder">Название настроек</sys:String>
     <sys:String x:Key="S.Settings.PromptParams">Доступные параметры</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTip">Перед отправкой запроса заменяются фактическим содержимым.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol1">Параметр</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol2">Описание</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamCol3">Пример</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceName">Название языка оригинала</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceCode">Код языка оригинала</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetName">Название языка перевода</sys:String>
@@ -534,23 +528,19 @@
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">Английский</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Японский</sys:String>
     <sys:String x:Key="S.Settings.PromptParamsTipAuto">Если язык оригинала определяется автоматически, название языка оригинала — any language, а код пустой.</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplate">Шаблон промпта</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplateHint">Всё, что отправляется при каждом переводе. Лучше прямо попросить выводить только перевод.</sys:String>
+    <sys:String x:Key="S.Settings.PromptTemplate">Промпт</sys:String>
+    <sys:String x:Key="S.Settings.PromptTemplateHint">Текст, который отправляется модели при каждом переводе. Параметры в фигурных скобках заменяются настоящим текстом.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Вернуть по умолчанию</sys:String>
-    <sys:String x:Key="S.Settings.PromptTemplateDefault">По умолчанию</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">Текст для перевода, как есть; в режиме «Пакетом» — пронумерованные фрагменты (&lt;1&gt;…&lt;/1&gt;), по одному в строке, поэтому в шаблоне нужно попросить переводы по номерам — иначе фрагменты отправляются по одному. Без этого параметра текст добавляется в конец.</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">Уже переведённые фрагменты (предыдущие строки, переводы, которые уже есть на экране, и только что переведённые фрагменты): каждый — двумя строками, оригинал и перевод помечены названием языка; только для справки. Ещё не переведённые фрагменты не добавляются. Если добавлять нечего, следующая сразу за ним фраза «Using the context above, » тоже убирается. Без этого параметра контекст не отправляется, а фрагменты отправляются одновременно.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">Мои настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Дополнительно</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Использовать рекомендуемую модель</sys:String>
-    <sys:String x:Key="S.Settings.AdvancedHint">Невключенный параметр не передается в запросе. Модели различаются тем, какие параметры они принимают, в каком диапазоне и с какими значениями, — ориентируйтесь на документацию своей модели.</sys:String>
-    <sys:String x:Key="S.Settings.ParamEnable">Включить</sys:String>
-    <sys:String x:Key="S.Settings.ReasoningEffort">Reasoning Effort</sys:String>
-    <sys:String x:Key="S.Settings.ReasoningEffortTip" xml:space="preserve">Насколько модель «размышляет» перед ответом. Некоторые универсальные модели по умолчанию
-сначала размышляют, из-за чего перевод заметно замедляется или не укладывается в тайм-аут.
-Включите параметр и выберите none, чтобы отключить размышление и ускорить перевод; моделям,
-созданным только для перевода, это обычно не нужно.
-Допустимые значения зависят от сервиса; чаще всего это none, minimal, low, medium и high.</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOff">Отключить размышления</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOffDetail">Отправляет reasoning_effort: none</sys:String>
+    <sys:String x:Key="S.Settings.ThinkingOffTip" xml:space="preserve">Просит модель отвечать сразу, без размышлений. Некоторые универсальные модели по умолчанию сначала размышляют, и перевод заметно замедляется или даже не укладывается в тайм-аут; моделям для перевода это обычно не нужно.
+Некоторые сервисы не знают этот параметр и возвращают ошибку — тогда снимите флажок.</sys:String>
+    <sys:String x:Key="S.Settings.AdvancedHint">Параметры без флажка не отправляются. Модели поддерживают разные параметры и диапазоны — ориентируйтесь на документацию своей модели.</sys:String>
     <sys:String x:Key="S.Settings.Temperature">Temperature</sys:String>
     <sys:String x:Key="S.Settings.TemperatureRange">Диапазон: 0.0 ~ 2.0</sys:String>
     <sys:String x:Key="S.Settings.TemperatureTip" xml:space="preserve">Насколько сильно модель предпочитает самую вероятную формулировку. Чем ниже значение,

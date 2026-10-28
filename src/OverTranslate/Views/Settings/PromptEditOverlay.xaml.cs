@@ -52,7 +52,7 @@ public partial class PromptEditOverlay : UserControl
     /// </remarks>
     private string _editingId = "";
 
-    /// <summary>Whether the setting on this card sends as a batch — the tray beside the template.</summary>
+    /// <summary>Whether the setting on this card sends as a batch — the two cards above the template.</summary>
     private bool _batch;
 
     /// <summary>Raised once the stored prompt library has changed, before the card closes.</summary>
@@ -68,6 +68,8 @@ public partial class PromptEditOverlay : UserControl
         // On the control rather than checked on save: a name too long to fit the row it is drawn in
         // should stop being typed, not be silently shortened once it is too late to see.
         NameBox.MaxLength = OpenAiSettings.MaxNameLength;
+
+        TemplateLayer.Placeholders = OpenAiCompatibleProvider.Placeholders;
     }
 
     // ── Open / close ─────────────────────────────────────────────────────────
@@ -95,7 +97,6 @@ public partial class PromptEditOverlay : UserControl
             _batch = (profile ?? built).Batch;
             SegmentRadio.IsChecked = !_batch;
             BatchRadio.IsChecked = _batch;
-            ShowModeHint();
             _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
             var template = profile?.Template ?? built.Template;
             TemplateBox.Text = template.Trim().Length == 0
@@ -109,8 +110,7 @@ public partial class PromptEditOverlay : UserControl
             ModelBox.Text = profile?.Model ?? built.Model;
 
             var sampling = profile ?? built;
-            ReasoningEffortEnabledCheckBox.IsChecked = sampling.ReasoningEffortEnabled;
-            WriteReasoningEfforts(sampling.ReasoningEffort);
+            ThinkingOffCheckBox.IsChecked = sampling.ThinkingOff;
             TemperatureEnabledCheckBox.IsChecked = sampling.TemperatureEnabled;
             TemperatureBox.Text = FormatNumber(sampling.Temperature);
             TopPEnabledCheckBox.IsChecked = sampling.TopPEnabled;
@@ -124,6 +124,16 @@ public partial class PromptEditOverlay : UserControl
             // Left open by a card that was closed from inside the confirmation, otherwise.
             ConfirmLayer.Visibility = Visibility.Collapsed;
             ModeConfirmLayer.Visibility = Visibility.Collapsed;
+
+            // Both folds shut and the card at its top, however it was left: what is folded is looked
+            // up when it is wanted, and a card that opened on the parameters would put the name, the
+            // one thing a new setting is missing, out of sight.
+            _advancedExpanded = false;
+            ++_advancedTransition;
+            ShutFold(AdvancedHost, AdvancedChevronRotation);
+            ParamsContent.Visibility = Visibility.Collapsed;
+            ParamsChevronRotation.Angle = 0;
+            Scroller.ScrollToTop();
         }
         finally
         {
@@ -204,6 +214,9 @@ public partial class PromptEditOverlay : UserControl
         if (wasDefault) TemplateBox.Text = _defaultTemplate;
         UpdateChrome();
 
+        // Each language has its own font, so the placeholders' baseline is measured again.
+        TemplateLayer.FontChanged();
+
         // Only while the question is on screen; it names the prompt, so it is composed rather than
         // bound and has to be written again in the new language.
         if (ConfirmLayer.Visibility == Visibility.Visible) WriteConfirmMessage();
@@ -279,9 +292,6 @@ public partial class PromptEditOverlay : UserControl
     /// </summary>
     private void Mode_Changed(object sender, RoutedEventArgs e)
     {
-        // Ahead of the guard: the marker and the hint follow the choice when it is loaded too.
-        MoveModeThumb(animate: !_loading);
-        ShowModeHint();
         if (_loading) return;
 
         var toBatch = ReferenceEquals(sender, BatchRadio);
@@ -323,36 +333,6 @@ public partial class PromptEditOverlay : UserControl
         Refill(TemplateBox, OpenAiCompatibleProvider.TemplateAfterAnswer(TemplateBox.Text, _batch, useDefault: true));
         UpdateChrome();
     }
-
-    /// <summary>Shows what the chosen way does, whatever the question about the template is answered.</summary>
-    private void ShowModeHint()
-    {
-        var batch = BatchRadio.IsChecked == true;
-        ModeSegmentHint.Visibility = batch ? Visibility.Collapsed : Visibility.Visible;
-        ModeBatchHint.Visibility = batch ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    /// <summary>Puts the marker under the chosen half, at the speed of the other trays.</summary>
-    private void MoveModeThumb(bool animate)
-    {
-        var target = BatchRadio.IsChecked == true ? ModeThumb.ActualWidth : 0;
-        if (!animate || ModeThumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
-        {
-            ModeThumbShift.BeginAnimation(TranslateTransform.XProperty, null);
-            ModeThumbShift.X = target;
-            return;
-        }
-
-        ModeThumbShift.BeginAnimation(
-            TranslateTransform.XProperty,
-            new DoubleAnimation(target, new Duration(TimeSpan.FromMilliseconds(220)))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-            });
-    }
-
-    /// <summary>Places the marker again once the halves have a width, without animating.</summary>
-    private void ModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) => MoveModeThumb(animate: false);
 
     private void ParamsToggle_Click(object sender, RoutedEventArgs e)
     {
@@ -479,6 +459,27 @@ public partial class PromptEditOverlay : UserControl
     /// here, and handed back to Auto once open: the sentences inside are localized and wrap against
     /// the card's width, so today's measurement is not tomorrow's.
     /// </remarks>
+    /// <summary>
+    /// Shuts a fold at once, without the animation: the host at zero height, see-through and out of
+    /// the tab order, its chevron pointing down.
+    /// </summary>
+    /// <remarks>
+    /// What <see cref="Open"/> starts from every time, so an 進階 left open is closed again the next
+    /// time the card comes up. Static so a test can hold it to that without the application's
+    /// resources, which the card itself cannot be built without.
+    /// </remarks>
+    internal static void ShutFold(FrameworkElement host, RotateTransform chevron)
+    {
+        host.BeginAnimation(HeightProperty, null);
+        host.BeginAnimation(OpacityProperty, null);
+        host.Height = 0;
+        host.Opacity = 0;
+        host.IsEnabled = false;
+
+        chevron.BeginAnimation(RotateTransform.AngleProperty, null);
+        chevron.Angle = 0;
+    }
+
     private void SetAdvancedExpanded(bool expanded)
     {
         _advancedExpanded = expanded;
@@ -621,59 +622,23 @@ public partial class PromptEditOverlay : UserControl
     private static string FormatNumber(double value) =>
         value.ToString("0.##", CultureInfo.InvariantCulture);
 
-    /// <summary>One entry of the Reasoning Effort list, as the shared combo box template draws it.</summary>
-    public sealed record ReasoningEffortOption(string Display)
-    {
-        /// <summary>The value itself: what a screen reader names the entry by.</summary>
-        public override string ToString() => Display;
-    }
-
     /// <summary>
-    /// Fills the Reasoning Effort list and picks <paramref name="stored"/> in it.
-    /// </summary>
-    /// <remarks>
-    /// A value that is not one of the five — written into the settings file by hand — is added to
-    /// the end of the list for this card rather than replaced. It is sent as it is, so the card shows
-    /// what is sent, and saving without touching the row keeps it.
-    /// </remarks>
-    private void WriteReasoningEfforts(string stored)
-    {
-        var options = OpenAiModelProfile.ReasoningEfforts.Select(value => new ReasoningEffortOption(value)).ToList();
-        var selected = options.FindIndex(option => option.Display == stored);
-        if (selected < 0 && stored.Trim().Length > 0)
-        {
-            options.Add(new ReasoningEffortOption(stored));
-            selected = options.Count - 1;
-        }
-
-        ReasoningEffortBox.ItemsSource = options;
-        ReasoningEffortBox.SelectedIndex = Math.Max(selected, 0);
-    }
-
-    /// <summary>What the Reasoning Effort list has picked.</summary>
-    private string ReadReasoningEffort() =>
-        (ReasoningEffortBox.SelectedItem as ReasoningEffortOption)?.Display
-        ?? OpenAiModelProfile.DefaultReasoningEffort;
-
-    /// <summary>
-    /// Brings the four rows in line with what is on screen: nothing to type into while a parameter
-    /// is not being sent, and its range greyed with it.
+    /// Brings the four cards in line with what is on screen: a parameter that is not sent has its
+    /// name greyed and nothing to type into. The box keeps its value, so ticking it again is the one
+    /// click that sends the number it had.
     /// </summary>
     private void UpdateAdvancedChrome()
     {
-        // The list keeps its value while switched off, the way the boxes below keep theirs: turning
-        // it on is then the one click that sends the pre-filled none.
-        ReasoningEffortBox.IsEnabled = ReasoningEffortEnabledCheckBox.IsChecked == true;
+        Card(ThinkingOffCheckBox, ThinkingOffName, null);
+        Card(TemperatureEnabledCheckBox, TemperatureName, TemperatureBox);
+        Card(TopPEnabledCheckBox, TopPName, TopPBox);
+        Card(SeedEnabledCheckBox, SeedName, SeedBox);
 
-        Row(TemperatureEnabledCheckBox, TemperatureBox, TemperatureRangeHint);
-        Row(TopPEnabledCheckBox, TopPBox, TopPRangeHint);
-        Row(SeedEnabledCheckBox, SeedBox, SeedRangeHint);
-
-        static void Row(CheckBox enabled, TextBox box, TextBlock range)
+        static void Card(CheckBox enabled, TextBlock name, TextBox? box)
         {
             var on = enabled.IsChecked == true;
-            box.IsEnabled = on;
-            range.Opacity = on ? 1 : 0.45;
+            name.SetResourceReference(TextBlock.ForegroundProperty, on ? "AppTextPrimary" : "AppTextSecondary");
+            if (box is not null) box.IsEnabled = on;
         }
     }
 
@@ -710,8 +675,7 @@ public partial class PromptEditOverlay : UserControl
 
         profile.Name = name;
         profile.Model = model;
-        profile.ReasoningEffortEnabled = ReasoningEffortEnabledCheckBox.IsChecked == true;
-        profile.ReasoningEffort = ReadReasoningEffort();
+        profile.ThinkingOff = ThinkingOffCheckBox.IsChecked == true;
         profile.TemperatureEnabled = TemperatureEnabledCheckBox.IsChecked == true;
         profile.Temperature = ReadNumber(TemperatureBox, MaxTemperature);
         profile.TopPEnabled = TopPEnabledCheckBox.IsChecked == true;
@@ -730,7 +694,7 @@ public partial class PromptEditOverlay : UserControl
     /// <remarks>
     /// Every other destructive gesture here is undoable (Ctrl+Z in a box) or costs a setting that is
     /// one click to restore. This one throws away prose someone wrote, with nothing to get it back,
-    /// from a button that shares a row with 取消 and 儲存.
+    /// from a button that shares a row with 儲存.
     /// </remarks>
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {

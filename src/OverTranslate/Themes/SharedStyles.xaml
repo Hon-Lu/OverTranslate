@@ -693,76 +693,12 @@
     <!--  the word instead, which is enough to name  -->
     <!--  a region without competing with it.        -->
     <!-- ═══════════════════════════════════════════ -->
-    <!-- The model and its three sampling parameters, above the two prompt panels. Four small cards
-         rather than four rows of label-and-value text: this pane answers "what is this setting", and
-         as prose the answer read as a form someone had not finished filling in. A card with an icon
-         on it is a thing; a label with a value beside it is a field. -->
-    <Style x:Key="ProfileCard" TargetType="Border">
-        <Setter Property="Background"      Value="{DynamicResource AppInputBg}"/>
-        <Setter Property="BorderBrush"     Value="{DynamicResource AppBorder}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius"    Value="8"/>
-        <Setter Property="Padding"         Value="10"/>
-    </Style>
 
-    <!-- The tinted square an icon sits in. AppAccentSubtle rather than the accent at an opacity,
-         because opacity on the well would take the glyph inside down with it. -->
-    <Style x:Key="ProfileCardIconWell" TargetType="Border">
-        <Setter Property="Background"   Value="{DynamicResource AppAccentSubtle}"/>
-        <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Width"        Value="34"/>
-        <Setter Property="Height"       Value="34"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
 
-    <Style x:Key="ProfileCardIcon" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
-        <Setter Property="FontSize"   Value="16"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
-        <Setter Property="VerticalAlignment"   Value="Center"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-    </Style>
 
-    <!-- What the value underneath is. Small and quiet: on four cards read together, four labels at
-         the same weight as their values would be half the ink saying nothing new. -->
-    <Style x:Key="ProfileCardLabel" TargetType="TextBlock">
-        <Setter Property="FontFamily"    Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize"      Value="11"/>
-        <Setter Property="Foreground"    Value="{DynamicResource AppTextSecondary}"/>
-        <Setter Property="TextTrimming"  Value="CharacterEllipsis"/>
-    </Style>
 
-    <Style x:Key="ProfileCardValue" TargetType="TextBlock">
-        <Setter Property="FontFamily"   Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize"     Value="15"/>
-        <Setter Property="FontWeight"   Value="SemiBold"/>
-        <Setter Property="Foreground"   Value="{DynamicResource AppTextPrimary}"/>
-        <Setter Property="Margin"       Value="0,1,0,0"/>
-        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-    </Style>
 
-    <!-- A model name is an identifier: it is copied from a guide and matched character by character
-         against what is installed, which is the one job a fixed pitch does better. Smaller than the
-         numbers beside it because it is long, and a name that wraps stops being one line to compare. -->
-    <Style x:Key="ProfileCardMono" TargetType="TextBlock" BasedOn="{StaticResource ProfileCardValue}">
-        <Setter Property="FontFamily" Value="Consolas, Cascadia Mono"/>
-        <Setter Property="FontSize"   Value="13"/>
-    </Style>
 
-    <!-- The mark beside an advanced parameter's name. What the parameter does is a paragraph, and a
-         paragraph under every row would push the three rows apart until the fold read as a page;
-         asked for rather than displayed is the right trade for prose that is read once. The tooltip
-         itself is set per row, since that is the only thing that differs between them. -->
-    <Style x:Key="ParamInfo" TargetType="TextBlock">
-        <Setter Property="Text"       Value="&#xE946;"/>
-        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
-        <Setter Property="FontSize"   Value="12"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Margin"     Value="6,0,0,0"/>
-        <Setter Property="ToolTipService.InitialShowDelay" Value="200"/>
-        <Setter Property="ToolTipService.ShowDuration" Value="20000"/>
-    </Style>
 
     <!-- The group the prompt panels live in, in the editor. The label, the sentence under it and the
          two panels were four things stacked at the same level, which read as four unrelated rows;
@@ -3121,12 +3057,6 @@
     </Style>
 
 
-    <Style x:Key="PromptGroupBorder" TargetType="Border">
-        <Setter Property="BorderBrush"     Value="{DynamicResource AppBorder}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius"    Value="8"/>
-        <Setter Property="Padding"         Value="14,12"/>
-    </Style>
 
     <Style x:Key="PromptRoleFrame" TargetType="Border">
         <Setter Property="BorderBrush"   Value="{DynamicResource AppBorder}"/>
@@ -3137,18 +3067,6 @@
         <Setter Property="Background"    Value="{DynamicResource AppInputBg}"/>
     </Style>
 
-    <!-- AppHeaderBg rather than AppSurfaceBg, for the reason the parameter table gives: the light
-         theme paints surface and card the same white, so that one would separate nothing there. -->
-    <Style x:Key="PromptRoleHeaderBar" TargetType="Border">
-        <Setter Property="Background"      Value="{DynamicResource AppHeaderBg}"/>
-        <Setter Property="BorderBrush"     Value="{DynamicResource AppBorder}"/>
-        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <!-- One less than the frame's, which is the inside of a 1px border. Set here rather than
-             left to the frame's ClipToBounds: a Border clips to its rectangle, not to its rounded
-             corners, so the strip's square top corners were drawn over the frame's curve. -->
-        <Setter Property="CornerRadius"    Value="5,5,0,0"/>
-        <Setter Property="Padding"         Value="12,6"/>
-    </Style>
 
     <!-- Left-aligned and small. "System Prompt" is a term of art the reader either knows or is
          about to learn from the box under it; centring it would make a banner of a label. -->
@@ -3162,15 +3080,6 @@
         <Setter Property="FontWeight" Value="Medium"/>
     </Style>
 
-    <!-- A step up from the 11 a section header takes: these name the box under them rather than a
-         region of the card, and at 11 they were smaller than the prose they introduce. -->
-    <Style x:Key="PromptRoleLabel" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize"   Value="13"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
 
     <Style x:Key="PromptRoleBodyText" TargetType="TextBlock">
         <Setter Property="FontFamily"   Value="{DynamicResource AppFont}"/>
@@ -3224,22 +3133,7 @@
         </Setter>
     </Style>
 
-    <!-- How a setting sends what is on screen, as a small filled tag after its name: on the two
-         tiles that choose it, on the setting's row in the list and over its preview. Filled rather
-         than outlined so it does not read as one more of the outlined 唯讀 badge beside it - that
-         one says what can be done with the row, this one says what the row is. -->
-    <Style x:Key="PromptModeTag" TargetType="Border">
-        <Setter Property="Background"        Value="{DynamicResource AppHeaderBg}"/>
-        <Setter Property="CornerRadius"      Value="4"/>
-        <Setter Property="Padding"           Value="6,1"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
 
-    <Style x:Key="PromptModeTagText" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize"   Value="11"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-    </Style>
 
     <!-- The well a sliding two-way switch sits in: the pair of halves, the marker behind them and
          nothing else. Deliberately not a shared-size scope of its own — every tray on a page names
