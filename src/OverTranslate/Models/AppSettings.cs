@@ -191,17 +191,6 @@ public class AppSettings
     public int? OpenAiTimeoutSeconds { get; set; }
 
     /// <summary>
-    /// Whether OpenAI-compatible translation sends a screen as few requests as fit rather than a
-    /// text at a time — see <see cref="OverTranslate.Translation.OpenAi.OpenAiChatRequest.Batch"/>.
-    /// </summary>
-    /// <remarks>
-    /// Off by default: a local server runs one request at a time, so a batch saves it nothing and
-    /// comes back with more lines untranslated. Beside the address rather than on a profile, because
-    /// what it suits is the server — a hosted one answers many requests at once and counts them.
-    /// </remarks>
-    public bool OpenAiBatch { get; set; }
-
-    /// <summary>
     /// The key 「Google 翻譯 (Beta)」 sends, read from Google's translate element the first time it
     /// is used and again only when Google refuses it. Empty until then.
     /// </summary>

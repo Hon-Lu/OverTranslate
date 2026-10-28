@@ -134,6 +134,18 @@ public class OpenAiModelProfile
         ["none", "minimal", "low", "medium", "high"];
 
     /// <summary>
+    /// Whether a screen goes as few requests as fit rather than a text at a time — see
+    /// <see cref="OverTranslate.Translation.OpenAi.OpenAiChatRequest.Batch"/>.
+    /// </summary>
+    /// <remarks>
+    /// Off by default: a local server runs one request at a time, so a batch saves it nothing and
+    /// comes back with more lines untranslated. On the profile rather than beside the address,
+    /// because each way has its own default template and the template is the profile's — and a
+    /// profile is how a model is switched, a hosted one included.
+    /// </remarks>
+    public bool Batch { get; set; }
+
+    /// <summary>
     /// The whole message each request sends, the user's own, or empty for the application's — see
     /// <see cref="Services.Providers.OpenAiCompatibleProvider.BuildPrompt"/>.
     /// </summary>
@@ -144,7 +156,8 @@ public class OpenAiModelProfile
     /// the text written straight after its end, as the user prompts it replaces did.</para>
     ///
     /// <para>Empty rather than a copy of the application's, so the application's follows the
-    /// interface language and any later revision of it. Line breaks are stored bare — see
+    /// interface language, any later revision of it, and <see cref="Batch"/> — empty is the default
+    /// of whichever way the profile sends. Line breaks are stored bare — see
     /// <see cref="OpenAiSettings.NormaliseLineBreaks"/>.</para>
     /// </remarks>
     public string Template { get; set; } = "";

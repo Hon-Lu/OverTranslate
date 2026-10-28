@@ -30,7 +30,7 @@ namespace OverTranslate.Services.Providers;
 /// since it has no default worth a separate flag.
 /// </param>
 /// <param name="Batch">
-/// Whether a screen goes as few requests as fit — see <see cref="AppSettings.OpenAiBatch"/>.
+/// Whether a screen goes as few requests as fit — see <see cref="OpenAiModelProfile.Batch"/>.
 /// </param>
 /// <remarks>
 /// The two newer switches default to off while the temperature defaults to on. Not a judgement about
@@ -136,7 +136,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
             profile.Seed,
             profile.ReasoningEffortEnabled ? profile.ReasoningEffort : null,
             TimeoutSecondsFor(settings.OpenAiTimeoutSeconds),
-            settings.OpenAiBatch);
+            profile.Batch);
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         // Counts and configuration only, so this stays in the shipped log: it is what tells a report
         // of "nothing was translated" apart from a request that never left, and names the model the
         // answer came from — with a local server the model is the variable that explains the output.
-        var prompt = BuildPrompt(sourceLang, targetLang, options.Template);
+        var prompt = BuildPrompt(sourceLang, targetLang, options.Template, options.Batch);
         Log.Info("OpenAI 相容翻譯：{Count} 個區塊，模型 \"{Model:l}\"，端點 {Endpoint}，{Mode:l}，{Way:l}",
             blocks.Count, model, endpoint, prompt.IsDefault ? "預設模板" : prompt.HasContext ? "自訂模板" : "自訂模板（無上下文）",
             options.Batch ? "批次" : "逐段");
@@ -290,7 +290,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         await _chat.WarmUpAsync(
             Request(options, BuildEndpoint(options.BaseUrl), model,
-                BuildPrompt(sourceLang, targetLang, options.Template)),
+                BuildPrompt(sourceLang, targetLang, options.Template, options.Batch)),
             cancellationToken);
         Log.Info("OpenAI 相容暖機完成：{Elapsed} ms",
             (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
@@ -410,11 +410,11 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// in that language too: an English sentence on a Japanese interface names its languages in
     /// English.</para>
     ///
-    /// <para>A template that is nothing but whitespace is the application's. Normalised here as well
-    /// as where it is saved, so a box saved before the editor did that reaches the model as the same
-    /// string the settings panel shows.</para>
+    /// <para>A template that is nothing but whitespace is the application's — the one for
+    /// <paramref name="batch"/>. Normalised here as well as where it is saved, so a box saved before
+    /// the editor did that reaches the model as the same string the settings panel shows.</para>
     /// </remarks>
-    internal static OpenAiPrompt BuildPrompt(string sourceLang, string targetLang, string template)
+    internal static OpenAiPrompt BuildPrompt(string sourceLang, string targetLang, string template, bool batch = false)
     {
         var language = PromptLanguage();
         var english = language == OpenAiPromptLanguage.English;
@@ -424,34 +424,61 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
 
         return new OpenAiPrompt(
             language,
-            Fill(isDefault ? OpenAiPrompt.DefaultTemplate(language) : own, sourceLang, targetLang, automatic, english),
+            Fill(isDefault ? OpenAiPrompt.DefaultTemplate(language, batch) : own, sourceLang, targetLang, automatic, english),
             LanguageData.GetTargetDisplayName(targetLang, english),
             isDefault,
             automatic ? null : LanguageData.GetSourceDisplayName(sourceLang, english));
     }
 
     /// <summary>
-    /// The application's template in the interface's language, unfilled: what the editor shows and
-    /// compares against.
+    /// The application's template for <paramref name="batch"/> in the interface's language, unfilled:
+    /// what the editor shows and compares against.
     /// </summary>
-    internal static string DefaultTemplate() => OpenAiPrompt.DefaultTemplate(PromptLanguage());
+    internal static string DefaultTemplate(bool batch = false) => OpenAiPrompt.DefaultTemplate(PromptLanguage(), batch);
 
     /// <summary>
-    /// What a template box is saved as: empty when it is blank or reads the same as the application's
-    /// template in the interface's language — so the application's keeps following the interface and
-    /// its own revisions — and otherwise the text with its line breaks made bare, not trimmed.
+    /// Whether a template box reads as the application's template for <paramref name="batch"/>:
+    /// blank, or the same text once line breaks are made bare and the ends trimmed.
+    /// </summary>
+    internal static bool IsDefaultTemplate(string text, bool batch)
+    {
+        var trimmed = OpenAiSettings.NormaliseLineBreaks(text).Trim();
+        return trimmed.Length == 0 || trimmed == DefaultTemplate(batch);
+    }
+
+    /// <summary>
+    /// What a template box is saved as: empty when it reads as the application's template for
+    /// <paramref name="batch"/> — so the application's keeps following the interface, its own
+    /// revisions and the way the profile sends — and otherwise the text with its line breaks made
+    /// bare, not trimmed.
     /// </summary>
     /// <remarks>
-    /// Compared with line breaks made bare and the ends trimmed. Not trimmed when kept: a template
-    /// with no <c>{text}</c> is followed straight by the text, so the blank line it ends with is part
-    /// of it.
+    /// Not trimmed when kept: a template with no <c>{text}</c> is followed straight by the text, so
+    /// the blank line it ends with is part of it. The other way's default is kept as written: it is
+    /// not what this way sends when left empty, so it is the user's choice like any other text.
     /// </remarks>
-    internal static string TemplateToStore(string text)
-    {
-        var bare = OpenAiSettings.NormaliseLineBreaks(text);
-        var trimmed = bare.Trim();
-        return trimmed.Length == 0 || trimmed == DefaultTemplate() ? "" : bare;
-    }
+    internal static string TemplateToStore(string text, bool batch = false) =>
+        IsDefaultTemplate(text, batch) ? "" : OpenAiSettings.NormaliseLineBreaks(text);
+
+    /// <summary>
+    /// What the template box holds once the way of sending is switched to <paramref name="toBatch"/>,
+    /// or null when the box is the user's own and they are to be asked first.
+    /// </summary>
+    /// <remarks>
+    /// The default of the way it was switched from becomes the default of the way it was switched
+    /// to without a question: nothing of the user's is replaced, and keeping the old default would
+    /// leave a request the new way was not measured with, marked as the user's own.
+    /// </remarks>
+    internal static string? TemplateOnSwitch(string text, bool toBatch) =>
+        IsDefaultTemplate(text, !toBatch) ? DefaultTemplate(toBatch) : null;
+
+    /// <summary>
+    /// The template box after the question <see cref="TemplateOnSwitch"/> asked:
+    /// <paramref name="useDefault"/> puts the new way's default in, otherwise the user's text stays.
+    /// The way is switched either way.
+    /// </summary>
+    internal static string TemplateAfterAnswer(string text, bool toBatch, bool useDefault) =>
+        useDefault ? DefaultTemplate(toBatch) : text;
 
     /// <summary>Which wording the interface language is served — see <see cref="BuildPrompt"/>.</summary>
     /// <remarks>

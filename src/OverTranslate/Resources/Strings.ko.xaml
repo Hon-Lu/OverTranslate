@@ -501,7 +501,13 @@
     <sys:String x:Key="S.Settings.OpenAiMode">전송 방식</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">한 단락씩</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">일괄</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeHint">로컬 모델에는 '한 단락씩'을 권장합니다. 단락마다 문맥과 함께 보내므로 더 정확하게 번역됩니다. 클라우드 서비스에서는 '일괄'도 쓸 수 있습니다. 여러 단락을 한 번에 보내므로 요청 수가 줄어듭니다.</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">로컬 모델에는 '한 단락씩'을 권장하며, 클라우드 서비스에서는 '일괄'도 쓸 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">전송 방식 전환</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">현재 프롬프트는 직접 수정한 것입니다. '일괄' 기본 프롬프트로 바꿀까요?</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">현재 프롬프트는 직접 수정한 것입니다. '한 단락씩' 기본 프롬프트로 바꿀까요?</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseBatchDefault">'일괄' 기본값으로 바꾸기</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseSegmentDefault">'한 단락씩' 기본값으로 바꾸기</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeKeep">현재 프롬프트 유지</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">초</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">{0}초 이상 입력하세요</sys:String>
     <sys:String x:Key="S.Settings.ModelName">모델 이름</sys:String>
@@ -541,7 +547,8 @@
     <sys:String x:Key="S.Settings.PromptTemplateHint">번역할 때마다 보내는 전체 내용입니다. 번역문만 출력하라고 적어 두는 것을 권장합니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">기본값으로 복원</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">기본값</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">번역할 원문을 그대로 넣습니다. 이 매개변수가 없으면 원문이 맨 끝에 붙습니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">번역할 원문을 그대로 넣습니다. '일괄'일 때는 각 부분에 번호를 붙여 한 줄씩 넣습니다. 이 매개변수가 없으면 원문이 맨 끝에 붙습니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCount">'일괄'로 이번에 보내는 부분의 수로, 답변 형식을 설명하는 줄에 씁니다. 이 매개변수가 없으면 기본 형식 줄이 원문 뒤에 자동으로 붙고, 한 부분씩 보낼 때는 이 매개변수가 든 줄을 지웁니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">이미 번역한 부분(앞의 문장, 화면에 이미 있는 번역문, 이번에 방금 번역한 부분)으로, 하나당 두 줄로 원문과 번역문을 각각 언어 이름으로 표시하며 참고용입니다. 아직 번역하지 않은 부분은 넣지 않습니다. 붙일 내용이 없으면 바로 뒤의 「Using the above, 」도 함께 지웁니다. 이 매개변수가 없으면 문맥 없이 각 부분을 동시에 보냅니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">내 설정 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">고급</sys:String>

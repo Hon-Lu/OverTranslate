@@ -270,15 +270,145 @@ public class OpenAiCompatibleProviderTests
         Assert.Null(OpenAiCompatibleProvider.FromSettings(settings).ReasoningEffort);
     }
 
-    /// <summary>A text at a time unless 批次 is chosen, whichever setting is in use.</summary>
+    /// <summary>
+    /// A text at a time unless the setting in use has 批次 chosen: the built-in one never does, and
+    /// each saved one says so for itself.
+    /// </summary>
     [Fact]
-    public void Settings_BatchIsOffUntilChosen()
+    public void Profiles_BatchIsTheSettingsOwn()
     {
         var settings = new AppSettings();
         Assert.False(OpenAiCompatibleProvider.FromSettings(settings).Batch);
 
-        settings.OpenAiBatch = true;
+        settings.OpenAi.Profiles.Add(new OpenAiModelProfile { Id = "a", Model = "m", Batch = true });
+        settings.OpenAi.Profiles.Add(new OpenAiModelProfile { Id = "b", Model = "m" });
+        settings.OpenAi.SelectedProfileId = "a";
         Assert.True(OpenAiCompatibleProvider.FromSettings(settings).Batch);
+
+        settings.OpenAi.SelectedProfileId = "b";
+        Assert.False(OpenAiCompatibleProvider.FromSettings(settings).Batch);
+    }
+
+    /// <summary>
+    /// 批次 is written with the profile and read back; a profile saved without it, and the switch
+    /// that used to sit beside the address, both read as a text at a time.
+    /// </summary>
+    [Fact]
+    public void Profiles_BatchIsSavedAndReadBack()
+    {
+        var written = new AppSettings();
+        written.OpenAi.Profiles.Add(new OpenAiModelProfile { Id = "a", Name = "雲端", Model = "m", Batch = true });
+        written.OpenAi.Profiles.Add(new OpenAiModelProfile { Id = "b", Name = "本機", Model = "m" });
+
+        var read = SettingsService.Parse(SettingsService.Serialize(written));
+        Assert.True(read.OpenAi.Profiles[0].Batch);
+        Assert.False(read.OpenAi.Profiles[1].Batch);
+
+        var old = SettingsService.Parse(
+            """{"OpenAiBatch":true,"OpenAi":{"Profiles":[{"Id":"a","Name":"x","Model":"m","Template":""}],"SelectedProfileId":"a"}}""");
+        Assert.False(old.OpenAi.Profiles[0].Batch);
+        Assert.False(OpenAiCompatibleProvider.FromSettings(old).Batch);
+    }
+
+    /// <summary>
+    /// Each way has its own default: an empty template is the one for the way the setting sends,
+    /// which is also what 還原預設 puts back.
+    /// </summary>
+    [Fact]
+    public void DefaultTemplate_FollowsTheWayOfSending()
+    {
+        foreach (var language in new[] { LocalizationService.TraditionalChinese, LocalizationService.SimplifiedChinese, LocalizationService.English })
+            WithInterfaceLanguage(language, () =>
+            {
+                var promptLanguage = OpenAiCompatibleProvider.PromptLanguage();
+                Assert.Equal(OpenAiPrompt.DefaultTemplate(promptLanguage), OpenAiCompatibleProvider.DefaultTemplate(batch: false));
+                Assert.Equal(OpenAiPrompt.DefaultTemplate(promptLanguage, batch: true), OpenAiCompatibleProvider.DefaultTemplate(batch: true));
+
+                var segment = OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "", batch: false);
+                var batch = OpenAiCompatibleProvider.BuildPrompt("JA", "ZH-HANT", "", batch: true);
+                Assert.True(segment.IsDefault);
+                Assert.True(batch.IsDefault);
+                var target = LanguageData.GetTargetDisplayName("ZH-HANT", promptLanguage == OpenAiPromptLanguage.English);
+                Assert.Equal(OpenAiCompatibleProvider.DefaultTemplate(batch: false).Replace("{target_name}", target), segment.Template);
+                Assert.Equal(OpenAiCompatibleProvider.DefaultTemplate(batch: true).Replace("{target_name}", target), batch.Template);
+            });
+    }
+
+    /// <summary>
+    /// What reads as the default of a way: blank, or its text once line breaks are made bare and
+    /// the ends trimmed. Anything else, a word added, is the user's own.
+    /// </summary>
+    [Fact]
+    public void IsDefaultTemplate_ComparesAgainstTheWaysOwnDefault()
+    {
+        WithInterfaceLanguage(LocalizationService.TraditionalChinese, () =>
+        {
+            foreach (var batch in new[] { false, true })
+            {
+                var own = OpenAiCompatibleProvider.DefaultTemplate(batch);
+                Assert.True(OpenAiCompatibleProvider.IsDefaultTemplate(own, batch));
+                Assert.True(OpenAiCompatibleProvider.IsDefaultTemplate("", batch));
+                Assert.True(OpenAiCompatibleProvider.IsDefaultTemplate(" \r\n", batch));
+                Assert.True(OpenAiCompatibleProvider.IsDefaultTemplate("\r\n" + own.Replace("\n", "\r\n") + "  ", batch));
+                Assert.False(OpenAiCompatibleProvider.IsDefaultTemplate(own + "！", batch));
+                Assert.Equal("", OpenAiCompatibleProvider.TemplateToStore(own, batch));
+                Assert.Equal(own + "！", OpenAiCompatibleProvider.TemplateToStore(own + "！", batch));
+            }
+
+            var segment = OpenAiCompatibleProvider.DefaultTemplate(batch: false);
+            var batchDefault = OpenAiCompatibleProvider.DefaultTemplate(batch: true);
+            if (segment != batchDefault)
+            {
+                // The other way's default is not what this way sends when left empty: kept as written.
+                Assert.False(OpenAiCompatibleProvider.IsDefaultTemplate(segment, batch: true));
+                Assert.Equal(segment, OpenAiCompatibleProvider.TemplateToStore(segment, batch: true));
+                Assert.Equal(batchDefault, OpenAiCompatibleProvider.TemplateToStore(batchDefault, batch: false));
+            }
+        });
+    }
+
+    /// <summary>
+    /// Switching the way while the box is the default — or blank — puts the other way's default in
+    /// without a question, in both directions.
+    /// </summary>
+    [Fact]
+    public void TemplateOnSwitch_ReplacesTheDefaultWithoutAsking()
+    {
+        WithInterfaceLanguage(LocalizationService.TraditionalChinese, () =>
+        {
+            var segment = OpenAiCompatibleProvider.DefaultTemplate(batch: false);
+            var batch = OpenAiCompatibleProvider.DefaultTemplate(batch: true);
+
+            Assert.Equal(batch, OpenAiCompatibleProvider.TemplateOnSwitch(segment, toBatch: true));
+            Assert.Equal(segment, OpenAiCompatibleProvider.TemplateOnSwitch(batch, toBatch: false));
+            Assert.Equal(batch, OpenAiCompatibleProvider.TemplateOnSwitch(segment.Replace("\n", "\r\n") + "\r\n", toBatch: true));
+            Assert.Equal(batch, OpenAiCompatibleProvider.TemplateOnSwitch("  ", toBatch: true));
+            Assert.Equal(segment, OpenAiCompatibleProvider.TemplateOnSwitch("", toBatch: false));
+        });
+    }
+
+    /// <summary>
+    /// A template of the user's own is asked about rather than replaced; the two answers put the new
+    /// way's default in, or leave the user's text exactly as it was.
+    /// </summary>
+    [Fact]
+    public void TemplateOnSwitch_AsksAboutTheUsersOwn()
+    {
+        WithInterfaceLanguage(LocalizationService.TraditionalChinese, () =>
+        {
+            var own = "{context}\n\n翻成{target_name}：\n{text}\n";
+            var segment = OpenAiCompatibleProvider.DefaultTemplate(batch: false);
+            var batch = OpenAiCompatibleProvider.DefaultTemplate(batch: true);
+
+            Assert.Null(OpenAiCompatibleProvider.TemplateOnSwitch(own, toBatch: true));
+            Assert.Null(OpenAiCompatibleProvider.TemplateOnSwitch(own, toBatch: false));
+            Assert.Null(OpenAiCompatibleProvider.TemplateOnSwitch(segment + "！", toBatch: true));
+
+            Assert.Equal(batch, OpenAiCompatibleProvider.TemplateAfterAnswer(own, toBatch: true, useDefault: true));
+            Assert.Equal(segment, OpenAiCompatibleProvider.TemplateAfterAnswer(own, toBatch: false, useDefault: true));
+            Assert.Equal(own, OpenAiCompatibleProvider.TemplateAfterAnswer(own, toBatch: true, useDefault: false));
+            Assert.Equal(own, OpenAiCompatibleProvider.TemplateAfterAnswer(own, toBatch: false, useDefault: false));
+        });
     }
 
     /// <summary>With 批次 chosen, a screen goes as one request under the application's template.</summary>

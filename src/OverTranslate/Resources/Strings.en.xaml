@@ -497,7 +497,13 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiMode">Requests</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">Per segment</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">Batch</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeHint">Per segment suits local models: one request per segment, with context, for better translations. Batch suits cloud services: many segments per request, fewer requests.</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">Per segment is recommended for local models; Batch works for cloud services.</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">Switch how requests are sent</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">The current prompt is your own. Replace it with the default prompt for Batch?</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">The current prompt is your own. Replace it with the default prompt for Per segment?</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseBatchDefault">Use Batch default</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseSegmentDefault">Use Per segment default</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeKeep">Keep current prompt</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">seconds</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">At least {0} seconds</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Model</sys:String>
@@ -537,7 +543,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">Everything sent with each translation. It helps to ask for the translation only.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Restore default</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">Default</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">The text to translate, as it is. Without it, the text is added at the end.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">The text to translate, as it is; in Batch, the parts numbered, one per line. Without it, the text is added at the end.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCount">How many parts a batch sends, for the line that says how to answer. Without it, the default format line is added after the text; when a part is sent on its own, the line with it is left out.</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">Parts already translated (earlier lines, translations already on screen and the parts just translated), each as two lines labelled with the language of the source and of the translation, for reference only; parts not yet translated are never included. When there is nothing to add, "Using the above, " right after it is removed too. Without it, no context is sent and the parts are sent all at once.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">My settings {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Advanced</sys:String>

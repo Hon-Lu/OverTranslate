@@ -492,7 +492,13 @@
     <sys:String x:Key="S.Settings.OpenAiMode">Отправка</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">По одному</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">Пакетом</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeHint">Для локальных моделей лучше «По одному»: каждый фрагмент уходит отдельным запросом с контекстом, и перевод точнее. Для облачных сервисов подходит «Пакетом»: несколько фрагментов за раз, меньше запросов.</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">Для локальных моделей лучше «По одному», для облачных сервисов подходит и «Пакетом».</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">Смена способа отправки</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">Сейчас используется ваш собственный промпт. Заменить его промптом по умолчанию для режима «Пакетом»?</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">Сейчас используется ваш собственный промпт. Заменить его промптом по умолчанию для режима «По одному»?</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseBatchDefault">Взять промпт для «Пакетом»</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseSegmentDefault">Взять промпт для «По одному»</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeKeep">Оставить текущий</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">с</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">Не менее {0} с</sys:String>
     <sys:String x:Key="S.Settings.ModelName">Модель</sys:String>
@@ -532,7 +538,8 @@
     <sys:String x:Key="S.Settings.PromptTemplateHint">Всё, что отправляется при каждом переводе. Лучше прямо попросить выводить только перевод.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Вернуть по умолчанию</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">По умолчанию</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">Текст для перевода, как есть. Без этого параметра текст добавляется в конец.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">Текст для перевода, как есть; в режиме «Пакетом» — пронумерованные фрагменты, по одному в строке. Без этого параметра текст добавляется в конец.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCount">Сколько фрагментов отправляется пакетом — для строки, которая объясняет формат ответа. Без этого параметра строка формата по умолчанию добавляется после текста; при отправке фрагмента по одному строка с этим параметром убирается.</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">Уже переведённые фрагменты (предыдущие строки, переводы, которые уже есть на экране, и только что переведённые фрагменты): каждый — двумя строками, оригинал и перевод помечены названием языка; только для справки. Ещё не переведённые фрагменты не добавляются. Если добавлять нечего, следующая сразу за ним фраза «Using the above, » тоже убирается. Без этого параметра контекст не отправляется, а фрагменты отправляются одновременно.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">Мои настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Дополнительно</sys:String>

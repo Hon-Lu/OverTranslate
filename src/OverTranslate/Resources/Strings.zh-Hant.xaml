@@ -521,7 +521,13 @@
     <sys:String x:Key="S.Settings.OpenAiMode">翻譯方式</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">逐段</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">批次</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeHint">本機模型建議逐段：一段一個請求，帶著上下文翻得較準；雲端服務可用批次：一次送多段，請求較少。</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiModeHint">本機模型建議逐段，雲端服務可用批次。</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">切換翻譯方式</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">目前的提示詞是自訂的。要換成批次的預設提示詞嗎？</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">目前的提示詞是自訂的。要換成逐段的預設提示詞嗎？</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseBatchDefault">換成批次預設提示詞</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeUseSegmentDefault">換成逐段預設提示詞</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeKeep">保留目前的提示詞</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutUnit">秒</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeoutMin">最少 {0} 秒</sys:String>
     <sys:String x:Key="S.Settings.ModelName">模型名稱</sys:String>
@@ -562,7 +568,8 @@
     <sys:String x:Key="S.Settings.PromptTemplateHint">每次翻譯送出的完整內容。建議寫明只輸出譯文。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">還原預設</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateDefault">預設</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">要翻譯的原文，照原樣放入。沒有這個參數時，原文接在最後。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">要翻譯的原文，照原樣放入；批次時是各段加上編號，一段一行。沒有這個參數時，原文接在最後。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamCount">批次這次送出的段數，給說明回答格式的那一行用。沒有這個參數時，預設的格式句會自動接在原文後面；逐段送出時，含這個參數的那一行會拿掉。</sys:String>
     <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、畫面上已有的譯文與這次已翻好的段），每段寫成兩行，用語言名稱標出原文與譯文，只供參考；還沒翻的段不會放進來。沒有可附的內容時，連同緊接在後的「參考上面，」一起拿掉。沒有這個參數時不附上下文，各段同時送出。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">進階</sys:String>

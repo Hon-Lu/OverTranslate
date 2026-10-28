@@ -13,12 +13,21 @@ public class OpenAiBatchTests
 
     private static readonly OpenAiPrompt Prompt = new(
         OpenAiPromptLanguage.TraditionalChinese,
-        OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.TraditionalChinese)
+        OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.TraditionalChinese, batch: true)
             .Replace(OpenAiPrompt.TargetNamePlaceholder, "繁體中文"),
         "繁體中文",
         IsDefault: true);
 
+    /// <summary>The application's template for a text at a time, sent as a batch.</summary>
+    private static readonly OpenAiPrompt SegmentPrompt = Prompt with
+    {
+        Template = OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.TraditionalChinese)
+            .Replace(OpenAiPrompt.TargetNamePlaceholder, "繁體中文"),
+    };
+
     private const string Instruction = "將以下文本翻譯為繁體中文，只輸出譯文，不加標籤，不要解釋：";
+
+    private const string FormatLine = "（共 2 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）";
 
     private static OpenAiPrompt Own(string template) => Prompt with { Template = template, IsDefault = false };
 
@@ -51,15 +60,43 @@ public class OpenAiBatchTests
     // ---- Prompt ----------------------------------------------------------------------------------
 
     /// <summary>
-    /// The texts numbered under the line saying how to answer — the real count, the first tag as an
-    /// example — where <c>{text}</c> is.
+    /// The texts numbered where <c>{text}</c> is, and after them the batch template's line saying
+    /// how to answer — the real count, the first tag as an example.
     /// </summary>
     [Fact]
-    public void BuildBatch_NumbersTheTextsUnderAFormatLine()
+    public void BuildBatch_NumbersTheTextsAboveAFormatLine()
     {
         Assert.Equal(
-            Instruction + "\n（共 2 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）\n<1>a b</1>\n<2>c d</2>",
+            Instruction + "\n<1>a b</1>\n<2>c d</2>\n" + FormatLine,
             Prompt.BuildBatch(["a b", "c\r\nd"]));
+    }
+
+    /// <summary>
+    /// The application's template for a text at a time has no <c>{count}</c>: sent as a batch, it
+    /// gets the same line written after the texts, so the message is the batch template's.
+    /// </summary>
+    [Fact]
+    public void BuildBatch_GivesATemplateWithoutCountTheFormatLine()
+    {
+        Assert.Equal(Prompt.BuildBatch(["a b", "c d"]), SegmentPrompt.BuildBatch(["a b", "c d"]));
+        Assert.Equal(
+            Prompt.BuildBatch(["a b", "c d"], [new("前", "之前")]),
+            SegmentPrompt.BuildBatch(["a b", "c d"], [new("前", "之前")]));
+    }
+
+    /// <summary>
+    /// A template with <c>{count}</c> says how to answer in its own words: the count goes there and
+    /// no line is added. Sent alone, a text goes without that line: it has no number.
+    /// </summary>
+    [Fact]
+    public void BuildBatch_LeavesAFormatLineOfTheTemplatesOwn()
+    {
+        var own = Own("共 {count} 段，逐段翻成中文：\n{text}");
+
+        Assert.Equal("共 3 段，逐段翻成中文：\n<1>a</1>\n<2>b</2>\n<3>c</3>", own.BuildBatch(["a", "b", "c"]));
+        Assert.Equal("a", own.Build("a"));
+        Assert.Equal(SegmentPrompt.Build("a", [new("前", "之前")]), Prompt.Build("a", [new("前", "之前")]));
+        Assert.Equal(Instruction + "\na", Prompt.Build("a"));
     }
 
     /// <summary>The context is the translations done before, as for one text.</summary>
@@ -71,14 +108,14 @@ public class OpenAiBatchTests
         Assert.StartsWith(
             "之前的翻譯，只供參考：\n原文：前\n繁體中文：之前\n\n參考上面，",
             message);
-        Assert.EndsWith("<1>a b</1>\n<2>c d</2>", message);
+        Assert.EndsWith("<1>a b</1>\n<2>c d</2>\n" + FormatLine, message);
     }
 
     /// <summary>The user's own template works as it is: the numbered texts go where its text goes.</summary>
     [Fact]
     public void BuildBatch_FillsTheUsersOwnTemplate()
     {
-        const string body = "（共 2 段，依編號輸出譯文，例如 <1>譯文</1>，一段一行）\n<1>a</1>\n<2>b</2>";
+        const string body = "<1>a</1>\n<2>b</2>\n" + FormatLine;
 
         Assert.Equal("翻成中文：\n" + body + "\n完", Own("翻成中文：\n{text}\n完").BuildBatch(["a", "b"]));
         Assert.Equal("翻成中文：\n" + body, Own("翻成中文：\n").BuildBatch(["a", "b"]));
@@ -91,9 +128,13 @@ public class OpenAiBatchTests
         var hans = new OpenAiPrompt(OpenAiPromptLanguage.SimplifiedChinese, "{text}", "简体中文");
         var english = new OpenAiPrompt(OpenAiPromptLanguage.English, "{text}", "English");
 
-        Assert.StartsWith("（共 2 段，按编号输出译文，例如 <1>译文</1>，一段一行）\n<1>", hans.BuildBatch(["a", "b"]));
-        Assert.StartsWith("(2 parts: output each translation by its number, for example <1>translation</1>, one per line.)\n<1>",
+        Assert.Equal("<1>a</1>\n<2>b</2>\n（共 2 段，按编号输出译文，例如 <1>译文</1>，一段一行）", hans.BuildBatch(["a", "b"]));
+        Assert.Equal("<1>a</1>\n<2>b</2>\n(2 parts: output each translation by its number, for example <1>translation</1>, one per line.)",
             english.BuildBatch(["a", "b"]));
+        Assert.EndsWith("{text}\n（共 {count} 段，按编号输出译文，例如 <1>译文</1>，一段一行）",
+            OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.SimplifiedChinese, batch: true));
+        Assert.EndsWith("{text}\n({count} parts: output each translation by its number, for example <1>translation</1>, one per line.)",
+            OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.English, batch: true));
     }
 
     // ---- Reading ---------------------------------------------------------------------------------

@@ -443,6 +443,51 @@
 
                                     <Rectangle Height="1" Margin="0,12,0,0" Fill="{DynamicResource AppSeparator}"/>
 
+                                    <!-- A text at a time or as few requests as fit, on the card of
+                                         the template because each way has its own default template:
+                                         switching is a change to what the box below sends. Out of
+                                         the folded parameters, which are closed most of the time.
+                                         The same tray as 偵錯工具's either/or, the marker sliding
+                                         between halves. -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                        <TextBlock Text="{DynamicResource S.Settings.OpenAiMode}"
+                                                   Style="{StaticResource FieldLabel}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,12,0"/>
+                                        <Border Style="{StaticResource SegmentedTray}"
+                                                HorizontalAlignment="Left"
+                                                Grid.IsSharedSizeScope="True">
+                                            <Grid>
+                                                <!-- Shared so the two halves come out one width and
+                                                     the marker travels its own width. -->
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ModeSegment"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ModeSegment"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border x:Name="ModeThumb"
+                                                        Grid.Column="0"
+                                                        Background="{DynamicResource AppAccent}"
+                                                        CornerRadius="6"
+                                                        SizeChanged="ModeThumb_SizeChanged">
+                                                    <Border.RenderTransform>
+                                                        <TranslateTransform x:Name="ModeThumbShift"/>
+                                                    </Border.RenderTransform>
+                                                </Border>
+                                                <RadioButton x:Name="SegmentRadio" Grid.Column="0" GroupName="PromptMode"
+                                                             Style="{StaticResource SegmentedTrackRadio}"
+                                                             Content="{DynamicResource S.Settings.OpenAiModeSegment}"
+                                                             Checked="Mode_Changed"/>
+                                                <RadioButton x:Name="BatchRadio" Grid.Column="1" GroupName="PromptMode"
+                                                             Style="{StaticResource SegmentedTrackRadio}"
+                                                             Content="{DynamicResource S.Settings.OpenAiModeBatch}"
+                                                             Checked="Mode_Changed"/>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource FieldHint}"
+                                               Text="{DynamicResource S.Settings.OpenAiModeHint}"
+                                               Margin="0,6,0,0"/>
+
                                     <TextBlock Style="{StaticResource FieldHint}"
                                                Text="{DynamicResource S.Settings.PromptTemplateHint}"
                                                Margin="0,12,0,0"/>
@@ -550,6 +595,25 @@
                                                         </Border>
                                                         <Border Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource ParamLastCell}">
                                                             <TextBlock Text="{DynamicResource S.Settings.PromptParamContext}"
+                                                                       Style="{StaticResource ParamText}"
+                                                                       TextTrimming="None"
+                                                                       TextWrapping="Wrap"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Style="{StaticResource ParamCell}">
+                                                            <TextBlock Text="{}{count}" Style="{StaticResource ParamName}"/>
+                                                        </Border>
+                                                        <Border Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource ParamLastCell}">
+                                                            <TextBlock Text="{DynamicResource S.Settings.PromptParamCount}"
                                                                        Style="{StaticResource ParamText}"
                                                                        TextTrimming="None"
                                                                        TextWrapping="Wrap"/>
@@ -745,6 +809,68 @@
                                 Padding="18,0"
                                 Content="{DynamicResource S.Settings.PromptDelete}"
                                 Click="ConfirmDeleteButton_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ══════════ Switching the way with a template of the user's own ══════════ -->
+        <!-- The delete confirmation's frame. Asked because the default of the other way would write
+             over prose the user wrote; the way switches whichever is answered, so this is only about
+             the box. Keeping is first and focused, and Escape answers it: the safe half. -->
+        <Grid x:Name="ModeConfirmLayer"
+              Visibility="Collapsed"
+              Background="#8C000000"
+              MouseLeftButtonDown="ConfirmScrim_MouseLeftButtonDown">
+            <Border Width="400"
+                    UseLayoutRounding="True"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    CornerRadius="12"
+                    Background="{DynamicResource AppCardBg}"
+                    BorderBrush="{DynamicResource AppBorder}"
+                    BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
+                </Border.Effect>
+
+                <StackPanel Margin="24,20,24,20">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="&#xE946;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="18"
+                                   Foreground="{DynamicResource AppAccent}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock Text="{DynamicResource S.Settings.PromptModeSwitchTitle}"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppTextPrimary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock x:Name="ModeConfirmMessage"
+                               FontFamily="{DynamicResource AppFont}"
+                               FontSize="{StaticResource AppFontSize}"
+                               Foreground="{DynamicResource AppTextSecondary}"
+                               LineHeight="20"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,18"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="ModeKeepButton"
+                                Style="{StaticResource FlatButton}"
+                                Height="34"
+                                Padding="18,0"
+                                Content="{DynamicResource S.Settings.PromptModeKeep}"
+                                Click="ModeKeepButton_Click"/>
+                        <Button x:Name="ModeUseDefaultButton"
+                                Style="{StaticResource AccentButton}"
+                                Height="34"
+                                Margin="10,0,0,0"
+                                Padding="18,0"
+                                Click="ModeUseDefaultButton_Click"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

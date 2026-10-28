@@ -196,8 +196,6 @@ public partial class ServiceSettingsOverlay : UserControl
             OpenAiBaseUrlBox.Text = s.OpenAiBaseUrl;
             OpenAiApiKeyBox.Secret = s.OpenAiApiKey;
             OpenAiTimeoutBox.Text = s.OpenAiTimeoutSeconds?.ToString(CultureInfo.InvariantCulture) ?? "";
-            OpenAiSegmentRadio.IsChecked = !s.OpenAiBatch;
-            OpenAiBatchRadio.IsChecked = s.OpenAiBatch;
             LoadPromptLibrary(s);
 
             // Set here rather than in XAML because the guide has a copy per interface language, and
@@ -251,38 +249,6 @@ public partial class ServiceSettingsOverlay : UserControl
             });
         }
     }
-
-    // ── 翻譯方式 ─────────────────────────────────────────────────────────────
-
-    private void OpenAiMode_Changed(object sender, RoutedEventArgs e)
-    {
-        // Ahead of the guard: the marker follows the choice when it is loaded too.
-        MoveOpenAiModeThumb(animate: true);
-        Persist(s => s.OpenAiBatch = ReferenceEquals(sender, OpenAiBatchRadio));
-    }
-
-    /// <summary>Puts the marker under the chosen half — as 偵錯工具's tray does, at the same speed.</summary>
-    private void MoveOpenAiModeThumb(bool animate)
-    {
-        var target = OpenAiBatchRadio.IsChecked == true ? OpenAiModeThumb.ActualWidth : 0;
-        if (!animate || OpenAiModeThumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
-        {
-            OpenAiModeThumbShift.BeginAnimation(TranslateTransform.XProperty, null);
-            OpenAiModeThumbShift.X = target;
-            return;
-        }
-
-        OpenAiModeThumbShift.BeginAnimation(
-            TranslateTransform.XProperty,
-            new DoubleAnimation(target, new Duration(TimeSpan.FromMilliseconds(220)))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-            });
-    }
-
-    /// <summary>Places the marker again once the halves have a width, without animating.</summary>
-    private void OpenAiModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) =>
-        MoveOpenAiModeThumb(animate: false);
 
     // ── DeepL ────────────────────────────────────────────────────────────────
 
@@ -642,8 +608,10 @@ public partial class ServiceSettingsOverlay : UserControl
         // a CRLF as two breaks.
         var isDefault = profile.Template.Trim().Length == 0;
         TemplateDefaultTag.Visibility = isDefault ? Visibility.Visible : Visibility.Collapsed;
+        TemplateModeText.Text = LocalizationService.Get(
+            profile.Batch ? "S.Settings.OpenAiModeBatch" : "S.Settings.OpenAiModeSegment");
         TemplateText.Text = isDefault
-            ? OpenAiCompatibleProvider.DefaultTemplate()
+            ? OpenAiCompatibleProvider.DefaultTemplate(profile.Batch)
             : OpenAiSettings.NormaliseLineBreaks(profile.Template).TrimEnd();
     }
 

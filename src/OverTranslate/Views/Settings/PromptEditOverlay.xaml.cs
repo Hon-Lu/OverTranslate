@@ -52,6 +52,9 @@ public partial class PromptEditOverlay : UserControl
     /// </remarks>
     private string _editingId = "";
 
+    /// <summary>Whether the setting on this card sends as a batch — the tray beside the template.</summary>
+    private bool _batch;
+
     /// <summary>Raised once the stored prompt library has changed, before the card closes.</summary>
     public event EventHandler? Changed;
 
@@ -85,10 +88,14 @@ public partial class PromptEditOverlay : UserControl
 
             NameBox.Text = profile?.Name ?? suggestedName;
 
-            // An empty template is the application's, and opens as its text in the interface's
-            // language rather than as an empty box: what is sent is what is on screen.
+            // An empty template is the application's for the way the setting sends, and opens as its
+            // text in the interface's language rather than as an empty box: what is sent is what is
+            // on screen.
             var built = OpenAiCompatibleProvider.BuiltInProfile();
-            _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate();
+            _batch = (profile ?? built).Batch;
+            SegmentRadio.IsChecked = !_batch;
+            BatchRadio.IsChecked = _batch;
+            _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
             var template = profile?.Template ?? built.Template;
             TemplateBox.Text = template.Trim().Length == 0
                 ? _defaultTemplate
@@ -115,6 +122,7 @@ public partial class PromptEditOverlay : UserControl
 
             // Left open by a card that was closed from inside the confirmation, otherwise.
             ConfirmLayer.Visibility = Visibility.Collapsed;
+            ModeConfirmLayer.Visibility = Visibility.Collapsed;
         }
         finally
         {
@@ -191,13 +199,14 @@ public partial class PromptEditOverlay : UserControl
         // Assigned rather than put in through Refill: nothing of the user's is replaced, and the
         // undo history of a box that was never written in is nothing to keep.
         var wasDefault = IsDefault(TemplateBox.Text);
-        _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate();
+        _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
         if (wasDefault) TemplateBox.Text = _defaultTemplate;
         UpdateChrome();
 
         // Only while the question is on screen; it names the prompt, so it is composed rather than
         // bound and has to be written again in the new language.
         if (ConfirmLayer.Visibility == Visibility.Visible) WriteConfirmMessage();
+        if (ModeConfirmLayer.Visibility == Visibility.Visible) WriteModeConfirm();
     }
 
     /// <summary>
@@ -212,8 +221,10 @@ public partial class PromptEditOverlay : UserControl
         if (e.Key == Key.Escape)
         {
             // The question first: Escape answers the thing on top, and dismissing the card out from
-            // under an unanswered confirmation would look like the delete had happened.
+            // under an unanswered confirmation would look like the delete had happened. On the
+            // switch's question it is the safe answer, keeping the box as it is.
             if (ConfirmLayer.Visibility == Visibility.Visible) CloseConfirm();
+            else if (ModeConfirmLayer.Visibility == Visibility.Visible) CloseModeConfirm();
             else Close();
 
             e.Handled = true;
@@ -237,8 +248,9 @@ public partial class PromptEditOverlay : UserControl
     }
 
     /// <summary>
-    /// The application's template in the interface's language, as the box was last given it — what
-    /// the box is compared against to tell the default from the user's own.
+    /// The application's template for the way the setting sends, in the interface's language, as
+    /// the box was last given it — what the box is compared against to tell the default from the
+    /// user's own.
     /// </summary>
     private string _defaultTemplate = "";
 
@@ -250,12 +262,91 @@ public partial class PromptEditOverlay : UserControl
         return trimmed.Length == 0 || trimmed == _defaultTemplate;
     }
 
-    /// <summary>Puts the application's template back, undoably.</summary>
+    /// <summary>Puts the application's template for the way the setting sends back, undoably.</summary>
     private void TemplateResetButton_Click(object sender, RoutedEventArgs e)
     {
         Refill(TemplateBox, _defaultTemplate);
         UpdateChrome();
     }
+
+    // ── 翻譯方式 ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Switches the way the setting sends, and the template with it while the box is the default:
+    /// the other way's default goes in without a question. A template of the user's own is asked
+    /// about — see <see cref="OpenAiCompatibleProvider.TemplateOnSwitch"/>.
+    /// </summary>
+    private void Mode_Changed(object sender, RoutedEventArgs e)
+    {
+        // Ahead of the guard: the marker follows the choice when it is loaded too.
+        MoveModeThumb(animate: !_loading);
+        if (_loading) return;
+
+        var toBatch = ReferenceEquals(sender, BatchRadio);
+        if (toBatch == _batch) return;
+
+        var next = OpenAiCompatibleProvider.TemplateOnSwitch(TemplateBox.Text, toBatch);
+        _batch = toBatch;
+        _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
+
+        if (next is not null)
+        {
+            // Assigned rather than put in through Refill, as on a language change: nothing of the
+            // user's is replaced.
+            TemplateBox.Text = next;
+            UpdateChrome();
+            return;
+        }
+
+        UpdateChrome();
+        WriteModeConfirm();
+        ModeConfirmLayer.Visibility = Visibility.Visible;
+        ModeKeepButton.Focus();
+    }
+
+    /// <summary>The question and the button that answers it, naming the way switched to.</summary>
+    private void WriteModeConfirm()
+    {
+        ModeConfirmMessage.Text = LocalizationService.Get(
+            _batch ? "S.Settings.PromptModeSwitchToBatch" : "S.Settings.PromptModeSwitchToSegment");
+        ModeUseDefaultButton.Content = LocalizationService.Get(
+            _batch ? "S.Settings.PromptModeUseBatchDefault" : "S.Settings.PromptModeUseSegmentDefault");
+    }
+
+    private void CloseModeConfirm() => ModeConfirmLayer.Visibility = Visibility.Collapsed;
+
+    /// <summary>Leaves the box as the user wrote it; the way stays switched.</summary>
+    private void ModeKeepButton_Click(object sender, RoutedEventArgs e) => CloseModeConfirm();
+
+    /// <summary>Puts the new way's default in, undoably: Ctrl+Z brings the user's text back.</summary>
+    private void ModeUseDefaultButton_Click(object sender, RoutedEventArgs e)
+    {
+        CloseModeConfirm();
+        Refill(TemplateBox, OpenAiCompatibleProvider.TemplateAfterAnswer(TemplateBox.Text, _batch, useDefault: true));
+        UpdateChrome();
+    }
+
+    /// <summary>Puts the marker under the chosen half, at the speed of the other trays.</summary>
+    private void MoveModeThumb(bool animate)
+    {
+        var target = BatchRadio.IsChecked == true ? ModeThumb.ActualWidth : 0;
+        if (!animate || ModeThumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
+        {
+            ModeThumbShift.BeginAnimation(TranslateTransform.XProperty, null);
+            ModeThumbShift.X = target;
+            return;
+        }
+
+        ModeThumbShift.BeginAnimation(
+            TranslateTransform.XProperty,
+            new DoubleAnimation(target, new Duration(TimeSpan.FromMilliseconds(220)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            });
+    }
+
+    /// <summary>Places the marker again once the halves have a width, without animating.</summary>
+    private void ModeThumb_SizeChanged(object sender, SizeChangedEventArgs e) => MoveModeThumb(animate: false);
 
     private void ParamsToggle_Click(object sender, RoutedEventArgs e)
     {
@@ -621,7 +712,8 @@ public partial class PromptEditOverlay : UserControl
         profile.TopP = ReadNumber(TopPBox, MaxTopP);
         profile.SeedEnabled = SeedEnabledCheckBox.IsChecked == true;
         profile.Seed = ReadSeed();
-        profile.Template = OpenAiCompatibleProvider.TemplateToStore(TemplateBox.Text);
+        profile.Batch = _batch;
+        profile.Template = OpenAiCompatibleProvider.TemplateToStore(TemplateBox.Text, _batch);
 
         Commit();
     }
