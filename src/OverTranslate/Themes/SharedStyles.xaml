@@ -1965,6 +1965,41 @@
         </Setter>
     </Style>
 
+    <!-- A half of the capture toolbar's 橫排／直排 switch: the segment above in the switch's own
+         colours, which the theme files explain. A style of its own because the segment's colours are
+         set by its template's triggers, which a derived style's triggers cannot outrank. -->
+    <Style x:Key="ToolbarDirectionSegment" TargetType="RadioButton" BasedOn="{StaticResource ToolbarSegmentButton}">
+        <Setter Property="Foreground" Value="{DynamicResource ToolbarDirectionIdleFg}"/>
+        <Setter Property="Padding"    Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Root"
+                            Background="Transparent"
+                            CornerRadius="7"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked"   Value="False"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource ToolbarDirectionChosenFg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- The direction mark in front of a segment's label: strokes standing for lines of text, the
          last one short the way a last line is. The two are the same drawing a quarter turn apart,
          and the short stroke lands where that script's last line really is — the bottom for

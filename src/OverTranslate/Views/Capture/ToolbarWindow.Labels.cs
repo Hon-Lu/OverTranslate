@@ -22,6 +22,14 @@ public partial class ToolbarWindow
 
         Labels.Add(TtsBtn, () => LocalizationService.Get(_isSpeaking ? "S.Toolbar.SpeakStopLabel" : "S.Toolbar.Speak"));
         Labels.Add(SwapBtn, () => LocalizationService.Get("S.Toolbar.Swap"));
+        // The name is on the half that is not chosen and gone from the one that is, so the card is
+        // where the chosen half says what it is — and the hints the picker's list used to carry.
+        Labels.Add(HorizontalSeg,
+            () => LocalizationService.Get("S.Toolbar.DirectionHorizontal"),
+            () => LocalizationService.Get("S.Toolbar.DirectionHorizontalHint"));
+        Labels.Add(VerticalSeg,
+            () => LocalizationService.Get("S.Toolbar.DirectionVertical"),
+            () => LocalizationService.Get("S.Toolbar.DirectionVerticalHint"));
         Labels.Add(ToggleBtn,
             () => LocalizationService.Get(_bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"),
             () => LocalizationService.Get(_bubblesVisible ? "S.Toolbar.ShowSourceHint" : "S.Toolbar.ShowTranslationHint"));
