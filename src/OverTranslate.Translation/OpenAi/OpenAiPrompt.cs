@@ -109,13 +109,14 @@ public sealed record OpenAiPrompt(
     /// counted the texts did no better than one that does not. A blank line sets it apart from the
     /// texts, and it keeps its brackets: reworded as a sentence — with a colon before the example, or
     /// none — or set off by a rule instead, it had batches answered with their first number alone,
-    /// on one seed or both, where the bracketed line after a blank line lost none.
+    /// on one seed or both, where the bracketed line after a blank line lost none. Half-width
+    /// brackets measured no worse than full-width ones.
     /// </param>
     public static string DefaultTemplate(OpenAiPromptLanguage language, bool batch = false)
     {
         var words = Wording.For(language);
         var instruction = batch ? words.BatchInstruction : words.Instruction;
-        var template = ContextPlaceholder + "\n\n" + words.Lead + instruction + "\n" + TextPlaceholder;
+        var template = ContextPlaceholder + "\n\n" + instruction + "\n" + TextPlaceholder;
         return batch ? template + "\n\n" + words.Batch : template;
     }
 
@@ -131,17 +132,15 @@ public sealed record OpenAiPrompt(
     /// can be paragraphs.</para>
     ///
     /// <para>No context to give empties <c>{context}</c> and the blank lines around it with it, so
-    /// the template reads as if it had never had one — and the words right after it that point back
-    /// at it, 參考上面的上下文，, when they are there. Measured on every text and every screen sent with
-    /// no context, on two seeds: a text at a time read the same either way, but a batch that kept the
-    /// words — with nothing above them, or under the heading with （無） or None below it — gave
-    /// about twice as many texts back untranslated, and more of its numbers went missing.</para>
+    /// the template reads as if it had never had one; nothing else in it is touched. That is why the
+    /// heading says what the translations are for and the instruction never points back at them.
+    /// Measured on every text and every screen sent with no context: a batch whose instruction
+    /// pointed at a context that was not there — with nothing above it, or under the heading with
+    /// （無） or None below it, or reworded — had batches answered with their first number alone,
+    /// where one whose instruction says nothing of it lost none.</para>
     /// </remarks>
-    public string Build(string text, IReadOnlyList<OpenAiTranslationPair>? earlier = null)
-    {
-        var words = Wording.For(Language);
-        return Fill(words, Template, Context(words, earlier), Bare(text));
-    }
+    public string Build(string text, IReadOnlyList<OpenAiTranslationPair>? earlier = null) =>
+        Fill(Template, Context(Wording.For(Language), earlier), Bare(text));
 
     /// <summary>The user message for texts in one request, read back by number.</summary>
     /// <param name="texts">The texts, in order: numbered from 1. One is a batch of one.</param>
@@ -159,17 +158,16 @@ public sealed record OpenAiPrompt(
     /// </remarks>
     public string BuildBatch(IReadOnlyList<string> texts, IReadOnlyList<OpenAiTranslationPair>? earlier = null)
     {
-        var words = Wording.For(Language);
         var body = string.Join("\n", texts.Select((text, i) => $"<{i + 1}>{OneLine(text)}</{i + 1}>"));
-        return Fill(words, Template, Context(words, earlier), body);
+        return Fill(Template, Context(Wording.For(Language), earlier), body);
     }
 
     /// <summary><paramref name="template"/> with <c>{context}</c> and <c>{text}</c> filled in.</summary>
-    private static string Fill(Wording words, string template, string context, string text)
+    private static string Fill(string template, string context, string text)
     {
         var hasText = false;
 
-        var message = words.Placeholders.Replace(template, match =>
+        var message = Placeholders.Replace(template, match =>
         {
             if (!match.Groups["before"].Success)
             {
@@ -177,21 +175,23 @@ public sealed record OpenAiPrompt(
                 return text;
             }
 
-            var before = match.Groups["before"].Length;
-            var after = match.Groups["after"].Length;
             if (context.Length > 0)
-                return match.Groups["before"].Value + context + match.Groups["after"].Value
-                    + match.Groups["lead"].Value + match.Groups["rest"].Value;
+                return match.Groups["before"].Value + context + match.Groups["after"].Value;
 
             // At either end of the template there is nothing to keep apart.
             var atStart = match.Index == 0;
             var atEnd = match.Index + match.Length == template.Length;
-            var gap = atStart || atEnd ? "" : new string('\n', Math.Min(2, Math.Max(before, after)));
-            return match.Groups["lead"].Success ? gap + CapitalFirst(match.Groups["rest"].Value) : gap;
+            var gap = Math.Min(2, Math.Max(match.Groups["before"].Length, match.Groups["after"].Length));
+            return atStart || atEnd ? "" : new string('\n', gap);
         });
 
         return hasText ? message : message + text;
     }
+
+    /// <summary><c>{context}</c> with the blank lines around it, or <c>{text}</c>.</summary>
+    private static readonly Regex Placeholders = new(
+        @"(?<before>\n*)\{context\}(?<after>\n*)|\{text\}",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>What <c>{context}</c> becomes: the translations done before under their heading, or nothing.</summary>
     private string Context(Wording words, IReadOnlyList<OpenAiTranslationPair>? earlier)
@@ -203,10 +203,6 @@ public sealed record OpenAiPrompt(
             source + words.Colon + OneLine(pair.Source) + "\n" + TargetLabel + words.Colon + OneLine(pair.Translation)));
     }
 
-    /// <summary>The first character in upper case: the instruction once its lead is taken off.</summary>
-    private static string CapitalFirst(string text) =>
-        text.Length > 0 ? char.ToUpperInvariant(text[0]) + text[1..] : text;
-
     /// <summary>Every run of whitespace, line breaks included, as one space.</summary>
     internal static string OneLine(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
@@ -215,17 +211,13 @@ public sealed record OpenAiPrompt(
     private static string Bare(string text) => text.Replace("\r\n", "\n").Replace('\r', '\n');
 
     /// <summary>One language's wording. <c>{target_name}</c> is the target language.</summary>
-    /// <param name="Lead">
-    /// What opens the instruction to point back at the context — taken off with it when there is
-    /// none, wherever a template has it right after <c>{context}</c>.
-    /// </param>
-    /// <param name="History">The heading of the translations done before.</param>
+    /// <param name="History">The heading of the translations done before, saying what they are for.</param>
     /// <param name="BatchInstruction"><paramref name="Instruction"/> for a batch.</param>
     /// <param name="Batch">The line saying how to answer a batch, after its texts.</param>
     /// <param name="AutomaticSource">What a source line is labelled with when its language is detected.</param>
     /// <param name="Colon">What follows a label: the full-width colon in Chinese, a colon and a space in English.</param>
     private sealed record Wording(
-        string Lead, string Instruction, string History, string BatchInstruction, string Batch,
+        string Instruction, string History, string BatchInstruction, string Batch,
         string AutomaticSource, string Colon)
     {
         public static Wording For(OpenAiPromptLanguage language) => language switch
@@ -235,34 +227,26 @@ public sealed record OpenAiPrompt(
             _ => English,
         };
 
-        /// <summary><c>{context}</c> with the blank lines around it and the lead after it, or <c>{text}</c>.</summary>
-        public Regex Placeholders { get; } = new(
-            @"(?<before>\n*)\{context\}(?<after>\n*)(?:(?<lead>" + Regex.Escape(Lead) + @")(?<rest>.?))?|\{text\}",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
         private static readonly Wording TraditionalChinese = new(
-            "參考上面的上下文，",
             $"將以下文本翻譯為{TargetNamePlaceholder}，只輸出譯文，不加標籤，不要解釋：",
-            "之前的翻譯，只供參考：",
+            "以下是之前的翻譯，翻譯時可參考：",
             $"將以下文本翻譯為{TargetNamePlaceholder}，英文單字與短語也要翻譯，只輸出譯文，不加標籤，不要解釋：",
-            "（依編號輸出譯文，例如 <1>譯文</1>，一段一行）",
+            "(依編號輸出譯文，例如 <1>譯文</1>，一段一行)",
             "原文",
             "：");
 
         private static readonly Wording SimplifiedChinese = new(
-            "参考上面的上下文，",
             $"将以下文本翻译为{TargetNamePlaceholder}，只输出译文，不加标签，不要解释：",
-            "之前的翻译，仅供参考：",
+            "以下是之前的翻译，翻译时可参考：",
             $"将以下文本翻译为{TargetNamePlaceholder}，英文单词与短语也要翻译，只输出译文，不加标签，不要解释：",
-            "（按编号输出译文，例如 <1>译文</1>，一段一行）",
+            "(按编号输出译文，例如 <1>译文</1>，一段一行)",
             "原文",
             "：");
 
         private static readonly Wording English = new(
-            "Using the context above, ",
-            $"translate the following text into {TargetNamePlaceholder}. Output only the translation, with no tags and no explanation:",
-            "Earlier translations, for reference only:",
-            $"translate the following text into {TargetNamePlaceholder}, English words and phrases included. Output only the translation, with no tags and no explanation:",
+            $"Translate the following text into {TargetNamePlaceholder}. Output only the translation, with no tags and no explanation:",
+            "Earlier translations, for reference while translating:",
+            $"Translate the following text into {TargetNamePlaceholder}, English words and phrases included. Output only the translation, with no tags and no explanation:",
             "(Output each translation by its number, for example <1>translation</1>, one per line.)",
             "Source",
             ": ");

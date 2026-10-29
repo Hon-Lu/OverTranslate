@@ -537,7 +537,7 @@
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻译时发送给模型的内容。花括号标示的参数会替换成实际的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>
     <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，照原样放入；整批时是各段加上编号（&lt;1&gt;…&lt;/1&gt;），一段一行，模板要说明按编号输出译文，没说明时会改成一段一段发送。没有这个参数时，原文接在最后。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、画面上已有的译文和这次已翻好的段），每段写成两行，用语言名称标出原文与译文，仅供参考；还没翻的段不会放进来。没有可附的内容时，连同紧接在后的“参考上面的上下文，”一起去掉。没有这个参数时不附上下文，各段同时发送。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、画面上已有的译文和这次已翻好的段），每段写成两行，用语言名称标出原文与译文，仅供参考；还没翻的段不会放进来。没有可附的内容时，连同前后的空行一起去掉。没有这个参数时不附上下文，各段同时发送。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的设置 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">高级</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">带入推荐模型</sys:String>

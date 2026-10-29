@@ -29,7 +29,7 @@ public class OpenAiBatchTests
 
     private const string BatchInstruction = "將以下文本翻譯為繁體中文，英文單字與短語也要翻譯，只輸出譯文，不加標籤，不要解釋：";
 
-    private const string FormatLine = "（依編號輸出譯文，例如 <1>譯文</1>，一段一行）";
+    private const string FormatLine = "(依編號輸出譯文，例如 <1>譯文</1>，一段一行)";
 
     private static OpenAiPrompt Own(string template) => Prompt with { Template = template, IsDefault = false };
 
@@ -121,7 +121,7 @@ public class OpenAiBatchTests
         var message = Prompt.BuildBatch(["a b", "c d"], [new("前", "之前")]);
 
         Assert.StartsWith(
-            "之前的翻譯，只供參考：\n原文：前\n繁體中文：之前\n\n參考上面的上下文，",
+            "以下是之前的翻譯，翻譯時可參考：\n原文：前\n繁體中文：之前\n\n" + BatchInstruction,
             message);
         Assert.EndsWith("<1>a b</1>\n<2>c d</2>\n\n" + FormatLine, message);
     }
@@ -145,7 +145,7 @@ public class OpenAiBatchTests
 
         Assert.Equal("<1>a</1>\n<2>b</2>", hans.BuildBatch(["a", "b"]));
         Assert.Equal("<1>a</1>\n<2>b</2>", english.BuildBatch(["a", "b"]));
-        Assert.EndsWith("{text}\n\n（按编号输出译文，例如 <1>译文</1>，一段一行）",
+        Assert.EndsWith("{text}\n\n(按编号输出译文，例如 <1>译文</1>，一段一行)",
             OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.SimplifiedChinese, batch: true));
         Assert.EndsWith("{text}\n\n(Output each translation by its number, for example <1>translation</1>, one per line.)",
             OpenAiPrompt.DefaultTemplate(OpenAiPromptLanguage.English, batch: true));
