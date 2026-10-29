@@ -75,7 +75,7 @@ internal static class ToolbarLayout
         Console.WriteLine();
         Console.WriteLine("pills   shiftX is where the pill sits now; one column's width is a full travel");
         Pill(toolbar, "LayoutModeThumb", "LayoutModeThumbShift");
-        Pill(toolbar, "DirectionThumb", "DirectionThumbShift");
+        DirectionPill(toolbar);
 
         // The travel is only observable by moving it, and the pill animates — so read the target
         // the animation was given rather than a frame of it.
@@ -89,7 +89,7 @@ internal static class ToolbarLayout
         Settle(toolbar);
         Console.WriteLine($"  mode={toolbar.CurrentLayoutMode} vertical={toolbar.IsVerticalText}");
         Pill(toolbar, "LayoutModeThumb", "LayoutModeThumbShift");
-        Pill(toolbar, "DirectionThumb", "DirectionThumbShift");
+        DirectionPill(toolbar);
 
         toolbar.Close();
     }
@@ -101,6 +101,21 @@ internal static class ToolbarLayout
         Console.WriteLine($"  {thumb,-16} w={border.ActualWidth,6:0.0} shiftX={transform.X,6:0.0}");
     }
 
+    /// <summary>
+    /// The direction switch shares out a fixed width rather than two equal columns: the chosen half
+    /// is a mark, the other a mark and its name, and the pill — one mark wide — sits on its left margin.
+    /// </summary>
+    private static void DirectionPill(ToolbarWindow toolbar)
+    {
+        var thumb = (FrameworkElement)toolbar.FindName("DirectionThumb")!;
+        var tray = (FrameworkElement)toolbar.FindName("DirectionSwitch")!;
+        var h = (FrameworkElement)toolbar.FindName("HorizontalSeg")!;
+        var v = (FrameworkElement)toolbar.FindName("VerticalSeg")!;
+        Console.WriteLine(
+            $"  {"DirectionThumb",-16} w={thumb.ActualWidth,6:0.0} left={thumb.Margin.Left,6:0.0} " +
+            $"tray={tray.ActualWidth:0.0} halves={h.ActualWidth:0.0}+{v.ActualWidth:0.0}");
+    }
+
     private static void Press(ToolbarWindow toolbar, string segment) =>
         ((RadioButton)toolbar.FindName(segment)!).IsChecked = true;
 
@@ -109,14 +124,15 @@ internal static class ToolbarLayout
     /// pill set off from.
     /// </summary>
     /// <remarks>
-    /// The travel is a 220ms eased animation (see ToolbarWindow.RenderLayoutModeThumb). Read
+    /// The layout-mode travel is a 220ms eased animation (see ToolbarWindow.RenderLayoutModeThumb),
+    /// the direction switch a spring that settles in well under a second (ToolbarWindow.Direction). Read
     /// immediately after the press, the transform reports 0 whichever half is now chosen, which
     /// looks exactly like a pill that never moved. Pumping the dispatcher for longer than the
     /// animation is the difference between measuring the travel and measuring the start of it.
     /// </remarks>
     private static void Settle(ToolbarWindow toolbar)
     {
-        var until = DateTime.UtcNow.AddMilliseconds(400);
+        var until = DateTime.UtcNow.AddMilliseconds(900);
         while (DateTime.UtcNow < until)
         {
             toolbar.Dispatcher.Invoke(() => { }, DispatcherPriority.Background);

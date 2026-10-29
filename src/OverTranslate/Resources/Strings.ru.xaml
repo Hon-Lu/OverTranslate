@@ -215,8 +215,8 @@
     <sys:String x:Key="S.Toolbar.Direction">Направление письма оригинала</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">Горизонтально</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">Вертикально</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">Текст идет по строкам слева направо</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">Текст идет столбцами сверху вниз, справа налево&#x0a;(японские книги и манга)</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">Текст расположен слева направо.</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">Текст расположен сверху вниз. В основном предназначен для вертикального текста, но также может переводить некоторые горизонтальные тексты (японские книги и манга).</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">Содержимое выделения</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">Обычное</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">Интерфейс</sys:String>

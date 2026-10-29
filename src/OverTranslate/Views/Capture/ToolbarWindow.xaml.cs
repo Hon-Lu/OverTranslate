@@ -69,7 +69,7 @@ public partial class ToolbarWindow : Window
     /// Restored from <see cref="AppSettings.Capture"/> when the toolbar opens and saved on each
     /// explicit switch, so consecutive pages from the same manga or game keep the chosen direction.
     /// </remarks>
-    public bool IsVerticalText => DirectionBox.SelectedItem == DirectionOption.Vertical;
+    public bool IsVerticalText => VerticalSeg.IsChecked == true;
 
     /// <summary>
     /// The effective capture mode. The single-mode release always uses General.
@@ -111,10 +111,7 @@ public partial class ToolbarWindow : Window
         LocationChanged += (_, _) => MorePopup.IsOpen = false;
         MoreBtn.MouseLeave += (_, _) => _ignoreMoreClick = false;
 
-        DirectionBox.ItemsSource = DirectionOption.All;
-        DirectionBox.SelectedItem = SettingsService.Instance.Current.Capture.VerticalText
-            ? DirectionOption.Vertical
-            : DirectionOption.Horizontal;
+        InitializeDirectionSwitch(SettingsService.Instance.Current.Capture.VerticalText);
         _initializingDirection = false;
 
         // A mode this build cannot read — a file from a later release, or one still naming a v1
@@ -137,7 +134,6 @@ public partial class ToolbarWindow : Window
         SrcLangBox.SelectionChanged  += SrcLangBox_SelectionChanged;
         TgtLangBox.SelectionChanged  += TgtLangBox_SelectionChanged;
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
-        DirectionBox.SelectionChanged += DirectionBox_SelectionChanged;
 
         // The shared columns do not have a width until layout. A remembered vertical choice already
         // checks the right half above; this places the thumb under it on the first rendered frame.
@@ -280,24 +276,6 @@ public partial class ToolbarWindow : Window
             TgtLangBox.SelectedValue = targetCode;
         }
         if (TgtLangBox.SelectedValue == null) TgtLangBox.SelectedIndex = 0;
-    }
-
-    /// <summary>
-    /// The direction just picked: kept for next time, and the manga hint brought in line with it.
-    /// </summary>
-    /// <remarks>
-    /// A picker that names the current direction rather than the two-way switch it was (#349). The
-    /// switch spelled out both words side by side, and in the longer languages they were the widest
-    /// thing on the bar; it was also a mode, and a pair of icons did not say what it was a choice
-    /// of. The picker reads like the language pickers to its left — a setting showing its value —
-    /// and opening it explains each choice in a line under its name.
-    /// </remarks>
-    private void DirectionBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-        if (!_initializingDirection)
-            SaveTextDirectionSelection();
-
-        RenderMangaHint();
     }
 
     /// <summary>
@@ -673,7 +651,22 @@ public partial class ToolbarWindow : Window
     /// for one capture session and the interface language cannot change underneath it, but the
     /// provider box measures only what it can show, and that can: the services on offer, plus a hidden
     /// one only for as long as it is the selection (<see cref="OverTranslate.Controls.ProviderPicker.ShowableItems"/>).</para>
+    ///
+    /// <para>No wider than <see cref="MaxSelectorWidth"/>, whatever the longest entry: past that the
+    /// closed label ends in an ellipsis, and the list still opens to the full names. Without a ceiling
+    /// one long name — a language or service added later, or a longer translation of one — would
+    /// widen the bar for everyone using that interface language, whether or not they ever pick it.</para>
     /// </remarks>
+    /// <summary>
+    /// The widest any of the three pickers is allowed to be, in DIP.
+    /// </summary>
+    /// <remarks>
+    /// Measured against every interface language: 150 still fits the longest names people actually
+    /// pick — Traditional Chinese, Китайский (упрощ.), 自動（中・英・日） — and today shortens only
+    /// two, the English automatic source and the Russian name of the standard Google service.
+    /// </remarks>
+    internal const double MaxSelectorWidth = 150;
+
     private void SizeSelectorsToClosedLabels()
     {
         double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
@@ -681,8 +674,6 @@ public partial class ToolbarWindow : Window
         SrcLangBox.Width  = ClosedWidth(SrcLangBox, LanguageData.OcrSourceLanguages.Select(l => l.ShortName));
         TgtLangBox.Width  = ClosedWidth(TgtLangBox, LanguageData.TargetLanguages.Select(l => l.ShortName));
         ProviderBox.Width = ClosedWidth(ProviderBox, OverTranslate.Controls.ProviderPicker.ShowableItems(ProviderBox).Select(p => p.ShortName));
-        // Plus the direction's own mark in front of its name: 14 wide and 6 from the word.
-        DirectionBox.Width = ClosedWidth(DirectionBox, DirectionOption.All.Select(o => o.Name)) + 14 + 6;
 
         double ClosedWidth(System.Windows.Controls.ComboBox box, IEnumerable<string> labels)
         {
@@ -699,7 +690,7 @@ public partial class ToolbarWindow : Window
             // The label sits in ModernComboBox's ContentSite, inset 9 on the left and 28 on the
             // right to clear the arrow, inside a 1px border either side. The last pixel is for
             // rounding: half a pixel short is a whole character replaced by an ellipsis.
-            return Math.Ceiling(widest) + 9 + 28 + 2 + 1;
+            return Math.Min(Math.Ceiling(widest) + 9 + 28 + 2 + 1, MaxSelectorWidth);
         }
     }
 

@@ -219,8 +219,8 @@
     <sys:String x:Key="S.Toolbar.Direction">原文の書字方向</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">横書き</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">縦書き</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文は横書きで、左から右に読みます</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">原文は縦書きで、上から下・右から左に読みます&#x0a;（日本語の書籍やマンガ）</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文は左から右へ横に並びます</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文は上から下へ並びます。主に縦書き向けで、一部の横書きにも対応しています（日本語の書籍・漫画）</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">選択範囲の内容の種類</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">UI</sys:String>

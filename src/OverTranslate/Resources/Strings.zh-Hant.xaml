@@ -225,8 +225,8 @@
     <sys:String x:Key="S.Toolbar.Direction">原文的書寫方向</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionHorizontal">橫排</sys:String>
     <sys:String x:Key="S.Toolbar.DirectionVertical">直排</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文橫著寫，由左至右</sys:String>
-    <sys:String x:Key="S.Toolbar.DirectionVerticalHint" xml:space="preserve">原文直著寫，由上至下、由右至左&#x0a;（日文書籍、漫畫）</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionHorizontalHint">原文橫向排列，由左至右</sys:String>
+    <sys:String x:Key="S.Toolbar.DirectionVerticalHint">原文由上至下排列，主要用於直排文字，也可翻譯部分橫排文字（日文書籍、漫畫）</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutMode">框選內容的類型</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.LayoutModeInterface">介面</sys:String>

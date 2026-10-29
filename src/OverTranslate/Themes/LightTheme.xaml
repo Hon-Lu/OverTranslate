@@ -122,6 +122,12 @@
          theme is used. -->
     <SolidColorBrush x:Key="ToolbarSegmentThumbBg"     Color="#FFFFFF"/>
     <SolidColorBrush x:Key="ToolbarSegmentThumbBorder" Color="#D8D8D8"/>
+
+    <!-- The 橫排／直排 switch: see DarkTheme for why the pill is tinted rather than grey. -->
+    <SolidColorBrush x:Key="ToolbarDirectionThumbBg"     Color="#CFE2F8"/>
+    <SolidColorBrush x:Key="ToolbarDirectionThumbBorder" Color="#6FA8E3"/>
+    <SolidColorBrush x:Key="ToolbarDirectionChosenFg"    Color="#005BB0"/>
+    <SolidColorBrush x:Key="ToolbarDirectionIdleFg"      Color="#6E6E6E"/>
     <Color x:Key="ToolbarShadowColor"          >#000000</Color>
 
     <!-- What comes up over a control to name or explain it: ToolTip's own template and the

@@ -138,6 +138,16 @@
          value already says it. -->
     <SolidColorBrush x:Key="ToolbarSegmentThumbBg"     Color="#4E4E4E"/>
     <SolidColorBrush x:Key="ToolbarSegmentThumbBorder" Color="Transparent"/>
+
+    <!-- The 橫排／直排 switch, where the half that is not chosen carries a word and the chosen one
+         only a mark: in grey the word outweighs the pill and reads as the current state. So the pill
+         takes a tint of the accent and the chosen mark the accent itself, and the worded half steps
+         down to a grey that still reads as text. A tint rather than a fill, so it does not stand next
+         to 翻譯 as a second solid blue button. -->
+    <SolidColorBrush x:Key="ToolbarDirectionThumbBg"     Color="#663B82F6"/>
+    <SolidColorBrush x:Key="ToolbarDirectionThumbBorder" Color="#CC60A5FA"/>
+    <SolidColorBrush x:Key="ToolbarDirectionChosenFg"    Color="#B4D7FE"/>
+    <SolidColorBrush x:Key="ToolbarDirectionIdleFg"      Color="#9A9A9A"/>
     <Color x:Key="ToolbarShadowColor"          >#000000</Color>
 
     <!-- What comes up over a control to name or explain it: ToolTip's own template and the
