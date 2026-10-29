@@ -9,8 +9,8 @@ namespace OverTranslate.Views.Capture;
 /// <remarks>
 /// <para>Everything moves on one number, the progress from horizontal (0) to vertical (1). The
 /// switch is always two marks plus the longer of the two names wide, and that width is shared out
-/// between the halves: the chosen one gets a mark, the other a mark and the name. The pill is one
-/// mark wide and travels the rest, so the name is seen to be pushed across by it.</para>
+/// between the halves: the other half gets its mark and its own name, the chosen half the rest. The
+/// pill covers the chosen half, so the name is seen to be pushed across by it.</para>
 ///
 /// <para>A fixed total, because the bar sizes to its content and is centred on the selection: a
 /// switch that grew or shrank by the difference between two words would move the whole bar under
@@ -23,21 +23,22 @@ namespace OverTranslate.Views.Capture;
 /// </remarks>
 public partial class ToolbarWindow
 {
-    /// <summary>The width of one half with only its mark showing. Public because the markup reads it.</summary>
+    /// <summary>The narrowest a half gets: its mark alone. Public because the markup reads it.</summary>
     public const double DirectionMarkWidth = 32;
 
     // How long the spring takes to get most of the way, in seconds. At damping 1 it does not
     // overshoot, so this is close to the time it reads as taking.
     private const double DirectionResponse = 0.3;
 
-    private double _directionRoom;
+    private double _horizontalNameWidth;
+    private double _verticalNameWidth;
     private double _directionProgress;
     private double _directionVelocity;
     private TimeSpan _directionLastFrame;
     private bool _directionAnimating;
 
     /// <summary>
-    /// Restores the remembered direction and measures the room the names need.
+    /// Restores the remembered direction and measures the names.
     /// </summary>
     /// <remarks>
     /// The names are measured once: the toolbar lives for one capture session and the interface
@@ -48,8 +49,8 @@ public partial class ToolbarWindow
         var infinite = new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity);
         HorizontalName.Measure(infinite);
         VerticalName.Measure(infinite);
-        _directionRoom = Math.Ceiling(Math.Max(HorizontalName.DesiredSize.Width, VerticalName.DesiredSize.Width));
-        DirectionThumb.Width = DirectionMarkWidth;
+        _horizontalNameWidth = Math.Ceiling(HorizontalName.DesiredSize.Width);
+        _verticalNameWidth = Math.Ceiling(VerticalName.DesiredSize.Width);
 
         // CompositionTarget.Rendering is static: a spring still running when the bar closes would
         // keep the window alive through it.
@@ -138,45 +139,65 @@ public partial class ToolbarWindow
 
     private void LayOutDirectionSwitch()
     {
-        var layout = DirectionSwitchLayout.At(_directionProgress, _directionRoom);
+        var layout = DirectionSwitchLayout.At(_directionProgress, _horizontalNameWidth, _verticalNameWidth);
+        HorizontalMark.Width = layout.HorizontalMarkWidth;
+        VerticalMark.Width = layout.VerticalMarkWidth;
         HorizontalNameSlot.Width = layout.HorizontalNameWidth;
         VerticalNameSlot.Width = layout.VerticalNameWidth;
         HorizontalName.Opacity = layout.HorizontalNameOpacity;
         VerticalName.Opacity = layout.VerticalNameOpacity;
+        DirectionThumb.Width = layout.ThumbWidth;
         DirectionThumb.Margin = new Thickness(layout.ThumbLeft, 0, 0, 0);
     }
 }
 
 /// <summary>Where everything in the direction switch sits at one point of its travel.</summary>
+/// <param name="HorizontalMarkWidth">The cell 橫排's mark is centred in.</param>
 /// <param name="HorizontalNameWidth">How much of 橫排's name is showing.</param>
+/// <param name="VerticalMarkWidth">The cell 直排's mark is centred in.</param>
 /// <param name="VerticalNameWidth">How much of 直排's name is showing.</param>
 /// <param name="ThumbLeft">The pill's left edge, from the inside of the tray.</param>
+/// <param name="ThumbWidth">The pill's width: the chosen half's mark cell.</param>
 internal readonly record struct DirectionSwitchLayout(
+    double HorizontalMarkWidth,
     double HorizontalNameWidth,
+    double VerticalMarkWidth,
     double VerticalNameWidth,
     double HorizontalNameOpacity,
     double VerticalNameOpacity,
-    double ThumbLeft)
+    double ThumbLeft,
+    double ThumbWidth)
 {
     /// <param name="progress">0 with horizontal chosen, 1 with vertical chosen.</param>
-    /// <param name="room">The longer of the two names, with its margin.</param>
-    public static DirectionSwitchLayout At(double progress, double room)
+    /// <param name="horizontalName">橫排's name, with its margin.</param>
+    /// <param name="verticalName">直排's name, with its margin.</param>
+    public static DirectionSwitchLayout At(double progress, double horizontalName, double verticalName)
     {
+        const double mark = ToolbarWindow.DirectionMarkWidth;
         double p = Math.Clamp(progress, 0, 1);
+        double room = Math.Max(horizontalName, verticalName);
 
-        // The horizontal half shows its name while vertical is chosen, and the other way round.
-        // The two always add up to one name's room, so the switch never changes width.
-        double horizontal = p * room;
-        double vertical = (1 - p) * room;
+        // The half that is not chosen is its mark and exactly its own name, so the name sits against
+        // its mark however much shorter it is than the other. What the shorter name leaves over goes
+        // to the chosen half, whose pill widens to take it — in English the pill on 橫排 is wider
+        // than the one on 直排, rather than "Vertical" sitting in a slot cut for "Horizontal" with a
+        // hole on its right. The two always add up to one room, so the switch never changes width.
+        double horizontalShown = p * horizontalName;
+        double verticalShown = (1 - p) * verticalName;
+        double horizontalMark = mark + (1 - p) * (room - verticalName);
+        double verticalMark = mark + p * (room - horizontalName);
 
         // The names fade over the last three quarters of their travel, so a name is never seen
         // squeezed to a couple of letters at full strength.
         double horizontalOpacity = Math.Max(0, (p - 0.25) / 0.75);
         double verticalOpacity = Math.Max(0, (1 - p - 0.25) / 0.75);
 
-        // Past the horizontal half, which is a mark plus however much of its name is showing.
-        double thumb = p * (ToolbarWindow.DirectionMarkWidth + room);
+        // The pill covers one mark cell and travels between the two: on the horizontal one at 0, on
+        // the vertical one, past the horizontal mark and its name, at 1.
+        double thumbLeft = p * (mark + horizontalName);
+        double thumbWidth = (1 - p) * (mark + room - verticalName) + p * (mark + room - horizontalName);
 
-        return new(horizontal, vertical, horizontalOpacity, verticalOpacity, thumb);
+        return new(horizontalMark, horizontalShown, verticalMark, verticalShown,
+            horizontalOpacity, verticalOpacity, thumbLeft, thumbWidth);
     }
 }

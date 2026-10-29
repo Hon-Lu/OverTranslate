@@ -14,15 +14,18 @@ namespace OverTranslate.Tests;
 public class CaptureDirectionSwitchTests
 {
     private const double Mark = ToolbarWindow.DirectionMarkWidth;
-    private const double Room = 83.4; // Горизонтально, the longest name in any interface language
+
+    // Горизонтально and Вертикально, the pair furthest apart in any interface language.
+    private const double Long = 83.4;
+    private const double Short = 72.1;
 
     [Fact]
     public void WithHorizontalChosenOnlyTheVerticalNameShows()
     {
-        var layout = DirectionSwitchLayout.At(0, Room);
+        var layout = DirectionSwitchLayout.At(0, Long, Short);
 
         Assert.Equal(0, layout.HorizontalNameWidth);
-        Assert.Equal(Room, layout.VerticalNameWidth);
+        Assert.Equal(Short, layout.VerticalNameWidth);
         Assert.Equal(0, layout.HorizontalNameOpacity);
         Assert.Equal(1, layout.VerticalNameOpacity);
         Assert.Equal(0, layout.ThumbLeft);
@@ -31,14 +34,46 @@ public class CaptureDirectionSwitchTests
     [Fact]
     public void WithVerticalChosenOnlyTheHorizontalNameShows()
     {
-        var layout = DirectionSwitchLayout.At(1, Room);
+        var layout = DirectionSwitchLayout.At(1, Long, Short);
 
-        Assert.Equal(Room, layout.HorizontalNameWidth);
+        Assert.Equal(Long, layout.HorizontalNameWidth);
         Assert.Equal(0, layout.VerticalNameWidth);
         Assert.Equal(1, layout.HorizontalNameOpacity);
         Assert.Equal(0, layout.VerticalNameOpacity);
         // On the vertical half's mark, which starts after the horizontal mark and its name.
-        Assert.Equal(Mark + Room, layout.ThumbLeft);
+        Assert.Equal(Mark + Long, layout.ThumbLeft);
+    }
+
+    /// <summary>
+    /// The half that is not chosen is its mark and its own name, nothing more: the difference between
+    /// the two names goes to the chosen half and its pill, not into a gap after the shorter name.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void TheShorterNameLeavesNoGapAfterIt(double progress)
+    {
+        var layout = DirectionSwitchLayout.At(progress, Long, Short);
+
+        if (progress == 0)
+        {
+            Assert.Equal(Mark, layout.VerticalMarkWidth);
+            Assert.Equal(Mark + Long - Short, layout.HorizontalMarkWidth);
+            Assert.Equal(layout.HorizontalMarkWidth, layout.ThumbWidth);
+        }
+        else
+        {
+            Assert.Equal(Mark, layout.HorizontalMarkWidth);
+            Assert.Equal(Mark, layout.VerticalMarkWidth);
+            Assert.Equal(Mark, layout.ThumbWidth);
+        }
+    }
+
+    [Fact]
+    public void NamesOfOneWidthLeaveThePillOneMarkWide()
+    {
+        foreach (var progress in new[] { 0.0, 0.5, 1.0 })
+            Assert.Equal(Mark, DirectionSwitchLayout.At(progress, Long, Long).ThumbWidth, 6);
     }
 
     [Theory]
@@ -49,25 +84,27 @@ public class CaptureDirectionSwitchTests
     [InlineData(1)]
     public void TheSwitchKeepsOneWidthThroughoutItsTravel(double progress)
     {
-        var layout = DirectionSwitchLayout.At(progress, Room);
+        var layout = DirectionSwitchLayout.At(progress, Long, Short);
 
-        double width = Mark + layout.HorizontalNameWidth + Mark + layout.VerticalNameWidth;
-        Assert.Equal(2 * Mark + Room, width, 6);
+        double width = layout.HorizontalMarkWidth + layout.HorizontalNameWidth +
+                       layout.VerticalMarkWidth + layout.VerticalNameWidth;
+        Assert.Equal(2 * Mark + Long, width, 6);
     }
 
     /// <summary>
-    /// The pill is one mark wide and always sits on a mark, never across a name: at every point of
-    /// the travel its left edge stays inside the span from the first mark to the second.
+    /// The pill always sits on a mark cell, never across a name: at every point of the travel it
+    /// stays inside the tray.
     /// </summary>
     [Theory]
     [InlineData(0.25)]
     [InlineData(0.5)]
     [InlineData(0.75)]
-    public void ThePillTravelsBetweenTheTwoMarks(double progress)
+    public void ThePillStaysInsideTheTray(double progress)
     {
-        var layout = DirectionSwitchLayout.At(progress, Room);
+        var layout = DirectionSwitchLayout.At(progress, Long, Short);
 
-        Assert.InRange(layout.ThumbLeft, 0, Mark + Room);
+        Assert.InRange(layout.ThumbLeft, 0, Mark + Long);
+        Assert.InRange(layout.ThumbLeft + layout.ThumbWidth, 0, 2 * Mark + Long);
     }
 
     /// <summary>
@@ -79,8 +116,8 @@ public class CaptureDirectionSwitchTests
     [InlineData(1.2)]
     public void ProgressOutsideTheTravelIsHeldAtItsEnds(double progress)
     {
-        var layout = DirectionSwitchLayout.At(progress, Room);
-        var end = DirectionSwitchLayout.At(progress < 0 ? 0 : 1, Room);
+        var layout = DirectionSwitchLayout.At(progress, Long, Short);
+        var end = DirectionSwitchLayout.At(progress < 0 ? 0 : 1, Long, Short);
 
         Assert.Equal(end, layout);
     }

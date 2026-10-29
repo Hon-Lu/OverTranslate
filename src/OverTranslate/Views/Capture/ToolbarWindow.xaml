@@ -298,7 +298,7 @@
                                                  PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
                                                  Checked="DirectionSegment_Checked">
                                         <StackPanel Orientation="Horizontal">
-                                            <Border Width="{x:Static local:ToolbarWindow.DirectionMarkWidth}">
+                                            <Border x:Name="HorizontalMark" Width="{x:Static local:ToolbarWindow.DirectionMarkWidth}">
                                                 <Path Style="{StaticResource ToolbarSegmentGlyph}"
                                                       Margin="0"
                                                       HorizontalAlignment="Center"
@@ -320,7 +320,7 @@
                                                  PreviewMouseLeftButtonDown="DirectionSegment_PreviewMouseLeftButtonDown"
                                                  Checked="DirectionSegment_Checked">
                                         <StackPanel Orientation="Horizontal">
-                                            <Border Width="{x:Static local:ToolbarWindow.DirectionMarkWidth}">
+                                            <Border x:Name="VerticalMark" Width="{x:Static local:ToolbarWindow.DirectionMarkWidth}">
                                                 <Path Style="{StaticResource ToolbarSegmentGlyph}"
                                                       Margin="0"
                                                       HorizontalAlignment="Center"
