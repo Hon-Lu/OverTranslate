@@ -542,10 +542,9 @@
     <sys:String x:Key="S.Settings.PromptTemplate">提示词</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻译时发送给模型的内容。花括号标示的参数会替换成实际的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，一次一段。没有这个参数时，原文接在最后。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTextBatch">要翻译的各段，加上编号（&lt;1&gt;…&lt;/1&gt;）一段一行。模板要请模型按编号输出；没按编号回来的段会改成一段一段补翻。没有这个参数时，原文接在最后。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落，用语言名称标出原文与译文，供模型参考；还没有时连同前后空行一起去掉。没有这个参数时不附上下文，各段改为同时发送。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContextBatch">之前翻好的段落，用语言名称标出原文与译文，供模型参考；还没有时连同前后空行一起去掉。没有这个参数时不附上下文。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，每次处理一个文字区块。未使用此参数时，{text} 会自动附加在提示词末尾。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTextBatch">要翻译的多个文字区块，每个区块会加上编号（&lt;1&gt;text...&lt;/1&gt;），并以换行分隔。模型需按编号输出译文；若有区块遗漏，程序会逐一补翻。未使用此参数时，{text} 会自动附加在提示词末尾。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">先前翻译的原文与译文，供模型参考上下文及用词。没有可参考的内容时，会自动移除此部分及多余的空行。未使用此参数时，不提供上下文（模型无法参考先前的翻译内容）。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的设置 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">高级</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">带入推荐模型</sys:String>

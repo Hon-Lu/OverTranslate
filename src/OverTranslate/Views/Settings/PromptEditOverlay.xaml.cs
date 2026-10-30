@@ -319,17 +319,13 @@ public partial class PromptEditOverlay : UserControl
     }
 
     /// <summary>
-    /// Describes <c>{text}</c> and <c>{context}</c> for the way picked: the two send them
-    /// differently, and a table that described both at once was mostly about the other one.
+    /// Describes <c>{text}</c> for the way picked: one block, or numbered blocks the template has to
+    /// ask for back by number, and a description of both at once was mostly about the other one.
     /// </summary>
     /// <remarks>A resource reference rather than a copy, so the text follows the interface language.</remarks>
-    private void ShowParamDescriptions()
-    {
+    private void ShowParamDescriptions() =>
         ParamTextDescription.SetResourceReference(TextBlock.TextProperty,
             _batch ? "S.Settings.PromptParamTextBatch" : "S.Settings.PromptParamText");
-        ParamContextDescription.SetResourceReference(TextBlock.TextProperty,
-            _batch ? "S.Settings.PromptParamContextBatch" : "S.Settings.PromptParamContext");
-    }
 
     /// <summary>The question, naming the way switched to.</summary>
     private void WriteModeConfirm() =>

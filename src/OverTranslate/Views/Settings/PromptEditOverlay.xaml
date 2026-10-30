@@ -700,8 +700,8 @@
                             <StackPanel x:Name="ParamsContent" Margin="0,6,0,0" Visibility="Collapsed">
                                 <!-- Two columns, the name and what it becomes, the example after the
                                      description in the quieter colour. The two that carry the
-                                     content come first, described for the way picked above - see
-                                     ShowParamDescriptions. -->
+                                     content come first; {text} is described for the way picked
+                                     above - see ShowParamDescriptions. -->
                                 <!-- {} escapes the brace: XAML reads a leading { as a markup extension. -->
                                 <Border BorderBrush="{DynamicResource AppBorder}"
                                         BorderThickness="1"
@@ -732,8 +732,8 @@
                                                     <Border Style="{StaticResource ParamTableName}">
                                                         <TextBlock Text="{}{context}" Style="{StaticResource ParamTableNameText}"/>
                                                     </Border>
-                                                    <TextBlock x:Name="ParamContextDescription"
-                                                               Grid.Column="1" Margin="14,0,0,0"
+                                                    <TextBlock Grid.Column="1" Margin="14,0,0,0"
+                                                               Text="{DynamicResource S.Settings.PromptParamContext}"
                                                                Style="{StaticResource ParamTableText}"/>
                                                 </Grid>
                                             </Border>

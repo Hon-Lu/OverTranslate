@@ -542,10 +542,9 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">Prompt</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">What is sent to the model for each translation. Parameters in curly braces are replaced with the actual text.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Restore default</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">The text to translate, one part at a time. Without it, the text is added at the end.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamTextBatch">The parts to translate, numbered (&lt;1&gt;…&lt;/1&gt;), one per line. The template should ask for the translations by number; parts that come back without one are translated again one at a time. Without it, the text is added at the end.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">Parts already translated, the source and the translation each labelled with its language, for reference; removed with the blank lines around it while there are none. Without it, no context is sent and the parts are sent all at once.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContextBatch">Parts already translated, the source and the translation each labelled with its language, for reference; removed with the blank lines around it while there are none. Without it, no context is sent.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">The source text, one text block at a time. If the template doesn't use it, {text} is added at the end of the prompt.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTextBatch">Several text blocks, each numbered (&lt;1&gt;text...&lt;/1&gt;) and on its own line. The model must return the translations by number; any block it misses is translated again on its own. If the template doesn't use it, {text} is added at the end of the prompt.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">Earlier source text and translations, so the model can follow the context and terminology. When there is nothing to refer to, this part and the extra blank lines are removed. If the template doesn't use it, no context is sent (the model can't see earlier translations).</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">My settings {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">Advanced</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">Use the recommended model</sys:String>
