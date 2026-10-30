@@ -500,12 +500,12 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0}设置</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API 地址</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">超时</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiMode">翻译方式</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">翻译模式</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">标准</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">整批</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">将画面上的文字区块分别翻译，翻译结果较稳定，适合本地模型。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">将画面上的所有文字区块合并后一次翻译，可减少请求次数，适合云端服务。（使用本地模型时，翻译速度可能较慢。）</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">切换翻译方式</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">切换翻译模式</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">当前使用自定义提示词，要切换成“整批”的默认提示词吗？</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">当前使用自定义提示词，要切换成“标准”的默认提示词吗？</sys:String>
     <sys:String x:Key="S.Settings.PromptModeUseDefault">切换默认</sys:String>

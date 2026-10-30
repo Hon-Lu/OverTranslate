@@ -504,12 +504,12 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} の設定</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API アドレス</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">タイムアウト</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiMode">送信方式</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">翻訳モード</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">標準</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">一括</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">画面上のテキストブロックを個別に翻訳します。結果が安定しやすく、ローカルモデルに向いています。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">画面上のすべてのテキストブロックをまとめて一度に翻訳します。リクエスト数を減らせるため、クラウドサービスに向いています。（ローカルモデルでは翻訳が遅くなる場合があります。）</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">翻訳方式の切り替え</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">翻訳モードの切り替え</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">カスタムプロンプトを使用中です。「一括」の既定のプロンプトに切り替えますか？</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">カスタムプロンプトを使用中です。「標準」の既定のプロンプトに切り替えますか？</sys:String>
     <sys:String x:Key="S.Settings.PromptModeUseDefault">既定に切り替え</sys:String>

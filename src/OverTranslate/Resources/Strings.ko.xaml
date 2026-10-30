@@ -504,12 +504,12 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} 설정</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API 주소</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">시간 제한</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiMode">전송 방식</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">번역 모드</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">표준</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">일괄</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">화면의 텍스트 블록을 하나씩 따로 번역합니다. 번역 결과가 더 안정적이며 로컬 모델에 적합합니다.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">화면의 모든 텍스트 블록을 합쳐 한 번에 번역합니다. 요청 횟수를 줄일 수 있어 클라우드 서비스에 적합합니다. (로컬 모델에서는 번역이 느려질 수 있습니다.)</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">번역 방식 전환</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">번역 모드 전환</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">사용자 지정 프롬프트를 사용 중입니다. '일괄' 기본 프롬프트로 전환할까요?</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">사용자 지정 프롬프트를 사용 중입니다. '표준' 기본 프롬프트로 전환할까요?</sys:String>
     <sys:String x:Key="S.Settings.PromptModeUseDefault">기본값으로 전환</sys:String>

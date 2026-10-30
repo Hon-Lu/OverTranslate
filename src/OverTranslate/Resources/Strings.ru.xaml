@@ -495,12 +495,12 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">Настройки {0}</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">URL API</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">Тайм-аут</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiMode">Отправка</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">Режим перевода</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">Обычный</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">Пакетом</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">Каждый текстовый блок на экране переводится отдельно. Результат стабильнее; подходит для локальных моделей.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">Все текстовые блоки на экране объединяются и переводятся за один раз, запросов меньше; подходит для облачных сервисов. (С локальной моделью перевод может идти медленнее.)</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">Смена способа перевода</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">Смена режима перевода</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">Сейчас используется ваш промпт. Переключиться на промпт по умолчанию для режима «Пакетом»?</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">Сейчас используется ваш промпт. Переключиться на промпт по умолчанию для режима «Обычный»?</sys:String>
     <sys:String x:Key="S.Settings.PromptModeUseDefault">По умолчанию</sys:String>

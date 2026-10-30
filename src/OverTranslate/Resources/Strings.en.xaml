@@ -500,7 +500,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0} settings</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API URL</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">Timeout</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiMode">Requests</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">Translation mode</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">Standard</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">Batch</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">Translates each text block on screen separately. Results are more consistent; suited to local models.</sys:String>
