@@ -691,6 +691,7 @@
     <sys:String x:Key="S.Lang.Swedish">Шведский</sys:String>
     <sys:String x:Key="S.Lang.Turkish">Турецкий</sys:String>
     <sys:String x:Key="S.Lang.Ukrainian">Украинский</sys:String>
+    <sys:String x:Key="S.Lang.Vietnamese">Вьетнамский</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">Отладка</sys:String>
     <sys:String x:Key="S.Toolbar.DebugAssistOn">Включено: {0}</sys:String>

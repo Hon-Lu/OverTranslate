@@ -50,6 +50,7 @@ internal static class MicrosoftVoices
         ["sv"]    = ("sv-SE-SofieNeural", "sv-SE"),
         ["tr"]    = ("tr-TR-EmelNeural", "tr-TR"),
         ["uk"]    = ("uk-UA-PolinaNeural", "uk-UA"),
+        ["vi"]    = ("vi-VN-HoaiMyNeural", "vi-VN"),
         ["zh-CN"] = ("zh-CN-XiaoxiaoNeural", "zh-CN"),
         ["zh-TW"] = ("zh-TW-HsiaoChenNeural", "zh-TW"),
     };
