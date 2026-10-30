@@ -168,8 +168,9 @@ public class OpenAiModelProfile
 /// <c>AutoPrompts</c>, <c>ExplicitPrompts</c>, <c>OpenAiModel</c> and the flat temperature pair —
 /// were dropped rather than migrated, on the owner's call. A stored prompt has no name and no model
 /// beside it, and carrying one into this list would mean inventing both. A profile's own
-/// <c>Auto</c> and <c>Explicit</c> prompt pairs are different: they belong to a named profile, and
-/// decide its <see cref="OpenAiModelProfile.Template"/> — see <see cref="OpenAiPromptMigration"/>.
+/// <c>Auto</c> and <c>Explicit</c> prompt pairs went the same way when templates came in: every
+/// profile starts on the default template, and the file from before is kept beside the new one —
+/// see <see cref="Services.SettingsBackup"/>.
 /// </remarks>
 public class OpenAiSettings
 {
