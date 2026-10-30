@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using NLog;
 using OverTranslate.Services;
 using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -34,6 +35,8 @@ namespace OverTranslate.Views.Realtime;
 /// </remarks>
 internal partial class RealtimeLanguageMenu : Window
 {
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
     // The two widths the design settled on: the source list is five short names, the target list
     // also carries the search box and thirty names, some of them long in Russian.
     private const double SourceWidth = 184;
@@ -67,6 +70,11 @@ internal partial class RealtimeLanguageMenu : Window
     private IntPtr _previousForeground;
     private double _windowScale = 1.0;
     private bool _closing;
+
+    // For the log only (#358): a list that was pressed open and never seen left nothing behind to
+    // say how far it got, so each step says so, and the close says why and after how long.
+    private readonly System.Diagnostics.Stopwatch _age = System.Diagnostics.Stopwatch.StartNew();
+    private string _closeReason = "closed without Dismiss";
 
     /// <param name="kind">Which half of the pair this menu changes.</param>
     /// <param name="selectedCode">The language in use, marked in the list.</param>
@@ -108,6 +116,10 @@ internal partial class RealtimeLanguageMenu : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
         Loaded += (_, _) => Dispatcher.BeginInvoke(new Action(Place), DispatcherPriority.Loaded);
+
+        Log.Info(
+            "Realtime language list {Kind}: created, selected={Selected} entries={Count} anchor={Anchor} bar={Bar} screen={Screen}",
+            kind, selectedCode, _entries.Count, anchor, bar, screen);
     }
 
     public RealtimeLanguageMenuKind Kind { get; }
@@ -125,6 +137,10 @@ internal partial class RealtimeLanguageMenu : Window
         // Opened at the anchor, so the window starts on the monitor it will be placed on and the scale
         // read in Place is that monitor's.
         ScreenGeometry.MoveToPhysical(this, _anchor.Left, _anchor.Bottom);
+
+        Log.Info(
+            "Realtime language list {Kind}: window created after {Ms}ms, hwnd={Hwnd:X} foreground={Foreground:X}",
+            Kind, _age.ElapsedMilliseconds, new WindowInteropHelper(this).Handle.ToInt64(), _previousForeground.ToInt64());
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -139,10 +155,16 @@ internal partial class RealtimeLanguageMenu : Window
     /// </summary>
     private void Place()
     {
-        if (_closing) return;
+        if (_closing)
+        {
+            Log.Info("Realtime language list {Kind}: placement skipped, already closing ({Reason})", Kind, _closeReason);
+            return;
+        }
 
         if (PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
             _windowScale = target.TransformToDevice.M11;
+        else
+            Log.Info("Realtime language list {Kind}: no composition target at placement", Kind);
 
         // The capsule's own correction — see RealtimeControlWindow.ApplyScreenScale — so the menu
         // comes out the same physical size as the bar it drops from.
@@ -172,7 +194,14 @@ internal partial class RealtimeLanguageMenu : Window
 
         ScreenGeometry.MoveToPhysical(this, chromeLeft - Physical(margin.Left), chromeTop - Physical(margin.Top));
 
-        if (Opacity < 1)
+        var first = Opacity < 1;
+        Log.Info(
+            "Realtime language list {Kind}: placed after {Ms}ms, first={First} windowScale={WindowScale} screenScale={ScreenScale} " +
+            "chrome={ChromeLeft},{ChromeTop} {ChromeWidth}x{ChromeHeight} opensUp={OpensUp} window={Bounds}",
+            Kind, _age.ElapsedMilliseconds, first, _windowScale, screenScale,
+            chromeLeft, chromeTop, chromeWidth, chromeHeight, opensUp, ScreenGeometry.PhysicalBounds(this));
+
+        if (first)
         {
             Opacity = 1;
             TakeForeground();
@@ -281,7 +310,7 @@ internal partial class RealtimeLanguageMenu : Window
         {
             case Key.Escape:
                 e.Handled = true;
-                Dismiss(giveBackForeground: true);
+                Dismiss(giveBackForeground: true, "Esc");
                 break;
 
             case Key.Enter:
@@ -321,7 +350,7 @@ internal partial class RealtimeLanguageMenu : Window
 
         // Closed first: what the pick sets off rebuilds the overlays, and the menu has nothing to
         // show over them.
-        Dismiss(giveBackForeground: true);
+        Dismiss(giveBackForeground: true, $"picked {entry.Code}");
         LanguagePicked?.Invoke(this, entry.Code);
     }
 
@@ -330,10 +359,12 @@ internal partial class RealtimeLanguageMenu : Window
     /// Whether to hand the keyboard back to the window that had it before the menu opened — true when
     /// the user finished here, false when they clicked somewhere else and that is where it should go.
     /// </param>
-    public void Dismiss(bool giveBackForeground)
+    /// <param name="reason">What closed it, for the log.</param>
+    public void Dismiss(bool giveBackForeground, string reason)
     {
         if (_closing) return;
         _closing = true;
+        _closeReason = reason;
 
         if (giveBackForeground && IsActive) GiveBackForeground();
         Close();
@@ -345,7 +376,23 @@ internal partial class RealtimeLanguageMenu : Window
 
         // Before the first placement the window is still invisible and may be deactivated by the
         // very handoff that is giving it the foreground.
-        if (Opacity >= 1) Dismiss(giveBackForeground: false);
+        if (Opacity >= 1)
+        {
+            Dismiss(giveBackForeground: false, $"deactivated, foreground={GetForegroundWindow().ToInt64():X}");
+            return;
+        }
+
+        Log.Info(
+            "Realtime language list {Kind}: deactivated before it was shown, after {Ms}ms, foreground={Foreground:X}",
+            Kind, _age.ElapsedMilliseconds, GetForegroundWindow().ToInt64());
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        Log.Info(
+            "Realtime language list {Kind}: closed after {Ms}ms, shown={Shown}, reason={Reason}",
+            Kind, _age.ElapsedMilliseconds, Opacity >= 1, _closeReason);
     }
 
     // ── Foreground ──────────────────────────────────────────────────────────────────────────────
@@ -359,22 +406,31 @@ internal partial class RealtimeLanguageMenu : Window
     private void TakeForeground()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero) return;
+        if (hwnd == IntPtr.Zero)
+        {
+            Log.Info("Realtime language list {Kind}: no window handle to take the foreground with", Kind);
+            return;
+        }
 
         var foreground = GetForegroundWindow();
         var owner = GetWindowThreadProcessId(foreground, out _);
         var self = GetCurrentThreadId();
         var attached = owner != 0 && owner != self && AttachThreadInput(self, owner, true);
+        bool allowed;
 
         try
         {
-            SetForegroundWindow(hwnd);
+            allowed = SetForegroundWindow(hwnd);
             Activate();
         }
         finally
         {
             if (attached) AttachThreadInput(self, owner, false);
         }
+
+        Log.Info(
+            "Realtime language list {Kind}: foreground taken, before={Before:X} attached={Attached} allowed={Allowed} after={After:X} active={Active}",
+            Kind, foreground.ToInt64(), attached, allowed, GetForegroundWindow().ToInt64(), IsActive);
     }
 
     private void GiveBackForeground()

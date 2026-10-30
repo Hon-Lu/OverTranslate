@@ -5,6 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using NLog;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -42,6 +43,7 @@ public enum RealtimeMessageKind
 /// </remarks>
 public partial class RealtimeControlWindow : Window
 {
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
     private static readonly TimeSpan MessageDuration = TimeSpan.FromSeconds(2.6);
 
     // The session's screen, as it is now: replaced when the display changes shape under a running
@@ -180,7 +182,7 @@ public partial class RealtimeControlWindow : Window
         Closed += (_, _) =>
         {
             _scaleFixupSettle.Stop();
-            CloseMenu();
+            CloseMenu("bar closed");
             CloseAppearance();
         };
 
@@ -189,7 +191,7 @@ public partial class RealtimeControlWindow : Window
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible) return;
-            CloseMenu();
+            CloseMenu("bar hidden");
             CloseAppearance();
         };
 
@@ -205,7 +207,7 @@ public partial class RealtimeControlWindow : Window
         PreviewMouseLeftButtonDown += (_, _) =>
         {
             _menuClosedByPress = _menu?.Kind;
-            CloseMenu();
+            CloseMenu("press on the bar");
         };
 
         Loaded += (_, _) =>
@@ -501,7 +503,7 @@ public partial class RealtimeControlWindow : Window
     public void SetMode(RealtimeControlMode mode)
     {
         _mode = mode;
-        CloseMenu();
+        CloseMenu($"mode {mode}");
         CloseAppearance();
         Labels.Hide();
         EditPanel.Visibility = mode == RealtimeControlMode.Edit ? Visibility.Visible : Visibility.Collapsed;
@@ -811,9 +813,17 @@ public partial class RealtimeControlWindow : Window
         // this one, closing it was the whole answer.
         var closedByPress = _menuClosedByPress;
         _menuClosedByPress = null;
-        if (closedByPress == kind) return;
+        if (closedByPress == kind)
+        {
+            Log.Info("Realtime language list {Kind}: button pressed, the press closed this list so it stays closed", kind);
+            return;
+        }
 
-        CloseMenu();
+        Log.Info(
+            "Realtime language list {Kind}: button pressed, mode={Mode} paused={Paused} collapsed={Collapsed} pairVisible={PairVisible} open={Open}",
+            kind, _mode, _isPaused, _collapsed, LangPairPanel.Visibility == Visibility.Visible, _menu?.Kind);
+
+        CloseMenu("another list opening");
         // One thing open over the capsule at a time: the two would open into the same space.
         CloseAppearance();
 
@@ -853,17 +863,18 @@ public partial class RealtimeControlWindow : Window
     private void CloseMenuIfPairHidden()
     {
         if (_menu is not null && (LangPairPanel.Visibility != Visibility.Visible || _collapsed))
-            CloseMenu();
+            CloseMenu(_collapsed ? "bar collapsed" : "pair hidden");
     }
 
-    private void CloseMenu()
+    /// <param name="reason">What closed it, for the log (#358).</param>
+    private void CloseMenu(string reason)
     {
         var menu = _menu;
         if (menu is null) return;
         _menu = null;
         SourceLangBtn.Tag = null;
         TargetLangBtn.Tag = null;
-        menu.Dismiss(giveBackForeground: true);
+        menu.Dismiss(giveBackForeground: true, reason);
     }
 
     // ── 顯示外觀 (#355) ─────────────────────────────────────────────────────────────────────────
@@ -878,7 +889,7 @@ public partial class RealtimeControlWindow : Window
             return;
         }
 
-        CloseMenu();
+        CloseMenu("appearance panel opening");
 
         var panel = new RealtimeAppearancePanel(PhysicalRect(Chrome), _screenBounds);
         panel.AppearanceChanged += (_, _) => AppearanceChanged?.Invoke(this, EventArgs.Empty);
