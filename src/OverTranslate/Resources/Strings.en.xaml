@@ -430,6 +430,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Provider.Microsoft">Microsoft</sys:String>
     <sys:String x:Key="S.Provider.Youdao">Youdao</sys:String>
     <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
+    <sys:String x:Key="S.Provider.Yandex">Yandex</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Requires an API key from DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

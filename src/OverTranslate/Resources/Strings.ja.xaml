@@ -434,6 +434,7 @@
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻訳</sys:String>
     <sys:String x:Key="S.Provider.Youdao">Youdao 翻訳</sys:String>
     <sys:String x:Key="S.Provider.TranSmart">Tencent 翻訳</sys:String>
+    <sys:String x:Key="S.Provider.Yandex">Yandex 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">DeepL の公式サイトで登録して API キーを取得する必要があります</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

@@ -15,20 +15,26 @@ namespace OverTranslate.Translation;
 /// by the engine. Nothing here decides a language — kana is not taken to mean Japanese, nor Han to
 /// mean Chinese — it only keeps texts the detector would have to read differently apart, so its one
 /// answer is right for all of them. A screen in one script is still one request.</para>
+///
+/// <para>Cyrillic is kept apart from Latin only when asked for. Yandex, whose users read Russian,
+/// sees Russian and English on one screen all the time, and read a request that began with
+/// 「Меч сломан.」 as Russian into Russian, leaving the English beside it as it was (measured
+/// 2026-10-30).</para>
 /// </remarks>
 internal static class ScriptGroups
 {
-    private enum Script { Kana, Hangul, Han, Other }
+    private enum Script { Kana, Hangul, Han, Cyrillic, Other }
 
     /// <summary>The texts' indices, one list per script found, in the order each script first appears.</summary>
-    public static IReadOnlyList<IReadOnlyList<int>> Of(IReadOnlyList<string> texts)
+    /// <param name="separateCyrillic">Whether Cyrillic is a script of its own rather than one with Latin.</param>
+    public static IReadOnlyList<IReadOnlyList<int>> Of(IReadOnlyList<string> texts, bool separateCyrillic = false)
     {
         var groups = new Dictionary<Script, List<int>>();
         var order = new List<Script>();
 
         for (var i = 0; i < texts.Count; i++)
         {
-            var script = ScriptOf(texts[i]);
+            var script = ScriptOf(texts[i], separateCyrillic);
             if (!groups.TryGetValue(script, out var indices))
             {
                 groups[script] = indices = [];
@@ -45,11 +51,13 @@ internal static class ScriptGroups
     /// the order the texts were given.
     /// </summary>
     /// <param name="send">Sends one request; must answer exactly one entry per text it was given.</param>
+    /// <param name="separateCyrillic">See <see cref="Of"/>.</param>
     public static async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         string engineName, IReadOnlyList<string> texts,
-        Func<IReadOnlyList<string>, Task<IReadOnlyList<TextTranslation?>>> send)
+        Func<IReadOnlyList<string>, Task<IReadOnlyList<TextTranslation?>>> send,
+        bool separateCyrillic = false)
     {
-        var groups = Of(texts);
+        var groups = Of(texts, separateCyrillic);
         if (groups.Count == 1) return await send(texts);
 
         var answers = await Task.WhenAll(groups.Select(group => send(group.Select(i => texts[i]).ToList())));
@@ -72,17 +80,22 @@ internal static class ScriptGroups
     /// <remarks>
     /// Kana before Han, because Japanese is written with both and a single kana is what tells it
     /// apart; Hangul before Han for the same reason in the rarer Korean text that carries Hanja.
+    /// A single Cyrillic letter makes a text Cyrillic, as 「HP: Здоровье」 is a Russian label.
     /// </remarks>
-    private static Script ScriptOf(string text)
+    private static Script ScriptOf(string text, bool separateCyrillic)
     {
-        bool han = false, hangul = false;
+        bool han = false, hangul = false, cyrillic = false;
         foreach (var c in text)
         {
             if (c is >= '぀' and <= 'ヿ' or >= 'ㇰ' and <= 'ㇿ' or >= 'ｦ' and <= 'ﾟ') return Script.Kana;
             if (c is >= '가' and <= '힯' or >= 'ᄀ' and <= 'ᇿ' or >= '㄰' and <= '㆏') hangul = true;
             else if (c is >= '㐀' and <= '鿿' or >= '豈' and <= '﫿') han = true;
+            else if (c is >= '\u0400' and <= '\u052F') cyrillic = true;
         }
 
-        return hangul ? Script.Hangul : han ? Script.Han : Script.Other;
+        return hangul ? Script.Hangul
+            : han ? Script.Han
+            : cyrillic && separateCyrillic ? Script.Cyrillic
+            : Script.Other;
     }
 }

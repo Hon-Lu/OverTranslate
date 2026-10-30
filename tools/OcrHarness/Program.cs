@@ -5,6 +5,7 @@ using OverTranslate.Translation.Bing;
 using OverTranslate.Translation.Google;
 using OverTranslate.Translation.Microsoft;
 using OverTranslate.Translation.Tencent;
+using OverTranslate.Translation.Yandex;
 using OverTranslate.Translation.Youdao;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
@@ -324,8 +325,9 @@ if (args[0] == "--xlate-line")
         return 1;
     }
 
-    // All seven, named apart. "Google" is three different endpoints and they need not behave
-    // alike, so a limit measured on one says nothing about the others.
+    // All eight, named apart. "Google" is three different endpoints and they need not behave
+    // alike, so a limit measured on one says nothing about the others. Yandex has no Traditional
+    // Chinese and says so.
     //
     // There used to be a --raw that bypassed TranslationRequestChunks. Cutting is now each engine's
     // own business (OverTranslate.Translation.BatchTranslator), so reproducing an endpoint past its
@@ -342,6 +344,7 @@ if (args[0] == "--xlate-line")
                  ("Bing         ", new EngineProvider(new BingTranslator(http))),
                  ("Youdao       ", new EngineProvider(new YoudaoTranslator(http))),
                  ("TranSmart    ", new EngineProvider(new TranSmartTranslator(http))),
+                 ("Yandex       ", new EngineProvider(new YandexTranslator(http))),
              })
     {
         try

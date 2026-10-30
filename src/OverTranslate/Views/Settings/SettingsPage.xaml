@@ -1370,6 +1370,17 @@
                                             <TextBlock Text="{DynamicResource S.Provider.TranSmart}" Style="{StaticResource ProviderCardName}"/>
                                         </StackPanel>
                                     </CheckBox>
+
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.Yandex}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource YandexMarkImage}" Width="27" Height="27"/>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource S.Provider.Yandex}" Style="{StaticResource ProviderCardName}"/>
+                                        </StackPanel>
+                                    </CheckBox>
                                 </UniformGrid>
                             </StackPanel>
                         </Grid>

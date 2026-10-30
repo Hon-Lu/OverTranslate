@@ -17,6 +17,7 @@ public class DictionaryLookupTests
     [InlineData(TranslationProvider.DeepL, "EN-US", "Google:EN-US:False,Microsoft:EN-US:False")]
     [InlineData(TranslationProvider.Youdao, "EN-US", "Youdao:EN-US:False,Microsoft:EN-US:False,Google:EN-US:False")]
     [InlineData(TranslationProvider.TranSmart, "EN-US", "Youdao:EN-US:False,Microsoft:EN-US:False,Google:EN-US:False")]
+    [InlineData(TranslationProvider.Yandex, "EN-US", "Google:EN-US:False,Microsoft:EN-US:False")]
     [InlineData(TranslationProvider.Google, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True,Bing:ZH-HANS:True")]
     [InlineData(TranslationProvider.Google2, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
     [InlineData(TranslationProvider.GoogleChrome, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
@@ -25,6 +26,7 @@ public class DictionaryLookupTests
     [InlineData(TranslationProvider.DeepL, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
     [InlineData(TranslationProvider.Youdao, "ZH-HANT", "Youdao:ZH-HANT:False,Microsoft:ZH-HANS:True,Google:ZH-HANT:False")]
     [InlineData(TranslationProvider.TranSmart, "ZH-HANT", "Youdao:ZH-HANT:False,Microsoft:ZH-HANS:True,Google:ZH-HANT:False")]
+    [InlineData(TranslationProvider.Yandex, "ZH-HANT", "Google:ZH-HANT:False,Microsoft:ZH-HANS:True")]
     [InlineData(TranslationProvider.OpenAI, "ZH-HANT", "")]
     public void Dictionary_fallback_plan_matches_the_selected_provider_and_target(
         TranslationProvider provider, string targetLanguage, string expected)
@@ -44,6 +46,7 @@ public class DictionaryLookupTests
     [InlineData(TranslationProvider.DeepL)]
     [InlineData(TranslationProvider.Youdao)]
     [InlineData(TranslationProvider.TranSmart)]
+    [InlineData(TranslationProvider.Yandex)]
     public void Traditional_Chinese_source_is_simplified_only_for_Microsoft_and_Bing(
         TranslationProvider provider)
     {
@@ -275,7 +278,7 @@ public class DictionaryLookupTests
     }
 
     // Google Web, Bing, Microsoft and Youdao are the engines with a dictionary; RPC, Chrome, DeepL,
-    // OpenAI and TranSmart have none, so whichever of those is chosen, the plan must send the lookup elsewhere.
+    // OpenAI, TranSmart and Yandex have none, so whichever of those is chosen, the plan must send the lookup elsewhere.
     [Theory]
     [InlineData("EN-US")]
     [InlineData("ZH-HANT")]

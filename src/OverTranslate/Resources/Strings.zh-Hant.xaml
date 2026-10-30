@@ -452,6 +452,7 @@
     <sys:String x:Key="S.Provider.Microsoft">Microsoft 翻譯</sys:String>
     <sys:String x:Key="S.Provider.Youdao">有道翻譯</sys:String>
     <sys:String x:Key="S.Provider.TranSmart">騰訊翻譯</sys:String>
+    <sys:String x:Key="S.Provider.Yandex">Yandex 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">需至 DeepL 官方註冊並取得 API Key</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
