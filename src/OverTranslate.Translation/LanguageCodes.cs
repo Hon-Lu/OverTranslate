@@ -128,4 +128,26 @@ internal static class LanguageCodes
         "zh" => "zh-CN",
         _    => code,
     };
+
+    /// <summary>A Google-style code as Yandex writes it.</summary>
+    /// <remarks>
+    /// Yandex has one Chinese, <c>zh</c>, written simplified; Traditional Chinese is read as it as a
+    /// source and not offered as a target (<c>YandexTranslator.Supports</c>). Every other language
+    /// the application offers is the same code in its list (<c>tr.json/getLangs</c>, 2026-10-30) —
+    /// Norwegian is <c>no</c> there too, and <c>nb</c> answers <c>501</c>.
+    /// </remarks>
+    public static string ToYandex(string code) => code switch
+    {
+        "zh-CN" or "zh-TW" => "zh",
+        _                  => code,
+    };
+
+    /// <summary>A language Yandex detected, as Google would have written it.</summary>
+    public static string FromYandex(string code) => code switch
+    {
+        "zh"      => "zh-CN",
+        "sr-Latn" => "sr",
+        "pt-BR"   => "pt",
+        _         => code,
+    };
 }

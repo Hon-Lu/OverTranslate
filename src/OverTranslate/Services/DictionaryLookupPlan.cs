@@ -50,7 +50,7 @@ internal static class DictionaryLookupPlan
                 Native(TranslationProvider.Microsoft, sourceLanguage, targetLanguage),
                 Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
             ],
-            TranslationProvider.DeepL =>
+            TranslationProvider.DeepL or TranslationProvider.Yandex =>
             [
                 Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
                 Native(TranslationProvider.Microsoft, sourceLanguage, targetLanguage),
@@ -92,7 +92,7 @@ internal static class DictionaryLookupPlan
             Converted(TranslationProvider.Microsoft, sourceLanguage),
             Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
         ],
-        TranslationProvider.DeepL =>
+        TranslationProvider.DeepL or TranslationProvider.Yandex =>
         [
             Native(TranslationProvider.Google, sourceLanguage, targetLanguage),
             Converted(TranslationProvider.Microsoft, sourceLanguage),

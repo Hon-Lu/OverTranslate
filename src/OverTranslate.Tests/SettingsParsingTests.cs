@@ -35,6 +35,15 @@ public class SettingsParsingTests
     }
 
     [Fact]
+    public void Yandex_IsReadBackByName()
+    {
+        var settings = SettingsService.Parse("""{"Provider":"Yandex","Realtime":{"Provider":"Yandex"}}""");
+
+        Assert.Equal(TranslationProvider.Yandex, settings.Provider);
+        Assert.Equal(TranslationProvider.Yandex, settings.Realtime.Provider);
+    }
+
+    [Fact]
     public void QuickTranslateDefaultsToEnglishWithoutChangingOtherDefaults()
     {
         Assert.Equal("EN-US", new QuickTranslateSettings().TargetLanguage);

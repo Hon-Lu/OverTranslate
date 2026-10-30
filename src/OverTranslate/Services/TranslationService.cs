@@ -6,6 +6,7 @@ using OverTranslate.Translation.Google;
 using OverTranslate.Translation.Lookup;
 using OverTranslate.Translation.Microsoft;
 using OverTranslate.Translation.Tencent;
+using OverTranslate.Translation.Yandex;
 using OverTranslate.Translation.Youdao;
 using OverTranslate.Layout;
 using OverTranslate.Models;
@@ -78,6 +79,7 @@ public class TranslationService
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
     private readonly YoudaoTranslator       _youdao       = new(Http);
     private readonly TranSmartTranslator    _tranSmart    = new(Http);
+    private readonly YandexTranslator       _yandex       = new(Http);
     // DeepL's own, because it is an official API spoken to with the user's key and has no reason to
     // introduce itself as a browser. Its clock is everyone's: see TranslationTiming.
     private static readonly HttpClient DeepLHttp = new() { Timeout = TranslationTiming.Request };
@@ -99,6 +101,7 @@ public class TranslationService
     private readonly ResilientProvider _microsoftR;
     private readonly ResilientProvider _youdaoR;
     private readonly ResilientProvider _tranSmartR;
+    private readonly ResilientProvider _yandexR;
 
     // The same engines on their own, for callers that asked for no fallback.
     private readonly EngineProvider _googleS;
@@ -107,6 +110,7 @@ public class TranslationService
     private readonly EngineProvider _microsoftS;
     private readonly EngineProvider _youdaoS;
     private readonly EngineProvider _tranSmartS;
+    private readonly EngineProvider _yandexS;
 
     // Which option each engine is part of, so the backup badge names what the dropdown names.
     private readonly Dictionary<string, TranslationProvider> _optionOf;
@@ -122,6 +126,7 @@ public class TranslationService
             [_microsoft.Name]    = TranslationProvider.Microsoft,
             [_youdao.Name]       = TranslationProvider.Youdao,
             [_tranSmart.Name]    = TranslationProvider.TranSmart,
+            [_yandex.Name]       = TranslationProvider.Yandex,
         };
 
         // Each backup list leads with the engine that writes most like the primary, because a
@@ -138,12 +143,17 @@ public class TranslationService
         // 有道 and 騰訊 are there for users Google cannot reach, so neither falls back to
         // Google: each backs the other up — the two reachable engines nearest in kind — and Microsoft,
         // reachable from the same places, is behind both.
+        //
+        // Yandex is there for Russian, and nothing else writes like it; its users reach Google, so
+        // it gets the fast batch engines, as Bing does. They also write Traditional Chinese, which
+        // Yandex refuses.
         _googleR       = Chain([_google, _google2, _microsoft]);
         _googleChromeR = Chain([_googleChrome, _google, _google2]);
         _bingR         = Chain([_bing, _google, _microsoft]);
         _microsoftR    = Chain([_microsoft, _google, _google2]);
         _youdaoR       = Chain([_youdao, _tranSmart, _microsoft]);
         _tranSmartR    = Chain([_tranSmart, _youdao, _microsoft]);
+        _yandexR       = Chain([_yandex, _google, _microsoft]);
 
         _googleS       = new EngineProvider(_google);
         _googleChromeS = new EngineProvider(_googleChrome);
@@ -151,6 +161,7 @@ public class TranslationService
         _microsoftS    = new EngineProvider(_microsoft);
         _youdaoS       = new EngineProvider(_youdao);
         _tranSmartS    = new EngineProvider(_tranSmart);
+        _yandexS       = new EngineProvider(_yandex);
     }
 
     private ResilientProvider Chain(IReadOnlyList<ITextTranslator> engines) =>
@@ -173,6 +184,7 @@ public class TranslationService
         TranslationProvider.Microsoft => _microsoftR,
         TranslationProvider.Youdao    => _youdaoR,
         TranslationProvider.TranSmart => _tranSmartR,
+        TranslationProvider.Yandex    => _yandexR,
         TranslationProvider.DeepL     => _deepL,
         TranslationProvider.OpenAI    => _openAi,
         _                             => _googleR,
@@ -187,6 +199,7 @@ public class TranslationService
         TranslationProvider.Microsoft    => _microsoftS,
         TranslationProvider.Youdao       => _youdaoS,
         TranslationProvider.TranSmart    => _tranSmartS,
+        TranslationProvider.Yandex       => _yandexS,
         TranslationProvider.DeepL        => _deepL,
         TranslationProvider.OpenAI       => _openAi,
         _                                => _googleS,

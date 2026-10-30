@@ -8,6 +8,7 @@ using OverTranslate.Translation.DeepL;
 using OverTranslate.Translation.Google;
 using OverTranslate.Translation.Microsoft;
 using OverTranslate.Translation.Tencent;
+using OverTranslate.Translation.Yandex;
 using OverTranslate.Translation.Youdao;
 using Xunit;
 
@@ -701,6 +702,153 @@ public class EngineProtocolTests
     [InlineData("はい", "是的。", "zh-TW", "是的。")]
     public void TranSmart_TheGlossAfterAShortAnswerIsTakenOff(string piece, string answer, string target, string expected) =>
         Assert.Equal(expected, TranSmartTranslator.WithoutGloss(piece, answer, target));
+
+    // ---- Yandex --------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Yandex_SendsEveryTextAsItsOwnParameter_AndMapsItsLanguageCodes()
+    {
+        var handler = new Canned(_ => Json("""{"code":200,"lang":"ja-zh","nmt_code":200,"text":["一","二"]}"""));
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["いち", "に"], "zh-CN", "ja");
+
+        var request = Assert.Single(handler.Requests);
+        Assert.StartsWith("https://browser.translate.yandex.net/api/v1/tr.json/translate?", request.Uri);
+        Assert.Equal("", request.Body);
+        Assert.Equal(["ja-zh"], Query(request.Uri, "lang"));
+        Assert.Equal(["yabrowser"], Query(request.Uri, "srv"));
+        Assert.Equal(["html"], Query(request.Uri, "format"));
+        Assert.Matches("^[0-9a-f]{32}-0-0$", Assert.Single(Query(request.Uri, "id")));
+        Assert.Equal(["いち", "に"], Query(request.Uri, "text"));
+        Assert.Equal(["一", "二"], answers.Select(a => a.Text));
+
+        // Given, not detected: nothing to report.
+        Assert.All(answers, a => Assert.Equal("", a.DetectedLanguage));
+    }
+
+    [Fact]
+    public async Task Yandex_MarkupInATextIsEscapedGoingOut_AndUnescapedComingBack()
+    {
+        var handler = new Canned(request => Json(JsonSerializer.Serialize(new
+        {
+            code = 200,
+            lang = "en-ru",
+            text = Query(request.Uri, "text"),
+        })));
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["A < B & C", "<b>Tom</b> &amp; Jerry"], "ru", "en");
+
+        Assert.Equal(["A &lt; B &amp; C", "&lt;b&gt;Tom&lt;/b&gt; &amp;amp; Jerry"], Query(Assert.Single(handler.Requests).Uri, "text"));
+        Assert.Equal(["A < B & C", "<b>Tom</b> &amp; Jerry"], answers.Select(a => a.Text));
+    }
+
+    [Fact]
+    public async Task Yandex_ADetectedRequestIsSentOncePerScript_CyrillicApartFromLatin()
+    {
+        var handler = new Canned(request =>
+        {
+            var texts = Query(request.Uri, "text");
+            var language = texts[0].Any(c => c is >= '぀' and <= 'ヿ') ? "ja" : texts[0].Any(c => c is >= 'А' and <= 'я') ? "ru" : "en";
+            return Json(JsonSerializer.Serialize(new { code = 200, lang = $"{language}-ru", text = texts.Select(t => $"<{t}>") }));
+        });
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["Меч сломан.", "The door is locked.", "こんにちは", "HP: Здоровье"], "ru");
+
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.All(handler.Requests, request => Assert.Equal(["ru"], Query(request.Uri, "lang")));
+        Assert.Equal(["<Меч сломан.>", "<The door is locked.>", "<こんにちは>", "<HP: Здоровье>"], answers.Select(a => a.Text));
+        Assert.Equal(["ru", "en", "ja", "ru"], answers.Select(a => a.DetectedLanguage));
+    }
+
+    [Fact]
+    public async Task Yandex_ADetectedChineseSourceIsReportedAsGoogleWritesIt()
+    {
+        var handler = new Canned(_ => Json("""{"code":200,"lang":"zh-ru","nmt_code":200,"text":["Меч сломан."]}"""));
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var answer = Assert.Single(await engine.TranslateAsync(["剑断了。"], "ru"));
+
+        Assert.Equal("zh-CN", answer.DetectedLanguage);
+    }
+
+    [Fact]
+    public async Task Yandex_ARefusal_IsAFailure()
+    {
+        var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.RequestEntityTooLarge)
+        {
+            Content = new StringContent("""{"code":413,"message":"The text size exceeds the maximum"}""", Encoding.UTF8, "application/json"),
+        });
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], "ru", "en"));
+
+        Assert.Contains("413", failure.Message);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Yandex_ARefusalInsideA200_IsAFailure()
+    {
+        var handler = new Canned(_ => Json("""{"code":501,"message":"The specified translation direction is not supported"}"""));
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], "ru", "en"));
+
+        Assert.Contains("501", failure.Message);
+    }
+
+    // Yandex writes one Chinese, simplified: Traditional Chinese is left to a backup.
+    [Theory]
+    [InlineData("en")]
+    [InlineData(null)]
+    public async Task Yandex_TraditionalChineseAsATarget_IsRefusedWithoutARequest(string? source)
+    {
+        var handler = new Canned();
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], "zh-TW", source));
+
+        Assert.Contains("unsupported", failure.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Yandex_TraditionalChineseAsASource_IsSentAsItsOneChinese()
+    {
+        var handler = new Canned(_ => Json("""{"code":200,"lang":"zh-ru","text":["Меч сломан."]}"""));
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        await engine.TranslateAsync(["劍斷了。"], "ru", "zh-TW");
+
+        Assert.Equal(["zh-ru"], Query(Assert.Single(handler.Requests).Uri, "lang"));
+    }
+
+    [Fact]
+    public async Task Yandex_ALineBreakInsideATextIsJoined_AndABlankLineKept()
+    {
+        var handler = new Canned(request => Json(JsonSerializer.Serialize(new
+        {
+            code = 200,
+            lang = "ja-ru",
+            text = Query(request.Uri, "text").Select(t => $"<{t}>"),
+        })));
+        var engine = new YandexTranslator(new HttpClient(handler));
+
+        var answers = await engine.TranslateAsync(["おはよう\nございます", "First line\nwraps.\n\nSecond."], "ru", "ja");
+
+        Assert.Equal(["<おはようございます>", "<First line wraps.>\n\n<Second.>"], answers.Select(a => a.Text));
+    }
+
+    /// <summary>Every value a query string gives a name, in order.</summary>
+    private static List<string> Query(string uri, string name) =>
+        new Uri(uri).Query.TrimStart('?').Split('&')
+            .Select(pair => pair.Split('=', 2))
+            .Where(pair => pair[0] == name)
+            .Select(pair => Uri.UnescapeDataString(pair[1]))
+            .ToList();
 
     // ---- Youdao --------------------------------------------------------------------------
 

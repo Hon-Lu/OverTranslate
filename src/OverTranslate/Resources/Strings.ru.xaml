@@ -427,6 +427,7 @@
     <sys:String x:Key="S.Provider.Microsoft">Microsoft</sys:String>
     <sys:String x:Key="S.Provider.Youdao">Youdao</sys:String>
     <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
+    <sys:String x:Key="S.Provider.Yandex">Яндекс</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Нужен ключ API от DeepL</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>

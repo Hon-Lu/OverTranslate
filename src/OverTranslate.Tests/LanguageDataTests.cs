@@ -47,6 +47,20 @@ public class LanguageDataTests
         Assert.False(item.RequiresApiKey);
     }
 
+    // Keyless as well, so with the others before the two that need setting up, and after the two
+    // Chinese ones, which came first.
+    [Fact]
+    public void Yandex_IsListedAfterTheChineseEnginesAndBeforeDeepL()
+    {
+        var order = LanguageData.Providers.Select(item => item.Provider).ToList();
+        var item = LanguageData.Providers.Single(item => item.Provider == TranslationProvider.Yandex);
+
+        Assert.Equal(order.IndexOf(TranslationProvider.TranSmart) + 1, order.IndexOf(TranslationProvider.Yandex));
+        Assert.Equal(order.IndexOf(TranslationProvider.DeepL) - 1, order.IndexOf(TranslationProvider.Yandex));
+        Assert.Equal("S.Provider.Yandex", item.DisplayKey);
+        Assert.False(item.RequiresApiKey);
+    }
+
     [Fact]
     public void OpenAiCompatibleProvider_IsAvailableWithoutRequiringAKey()
     {
