@@ -1615,6 +1615,9 @@ public partial class MainWindow : Window
 
         _captureWindow?.SetAnnotationHold(true);
         _overlayWindow.BeginAnnotating(panel.Tool, panel.InkColor, panel.Thickness, panel.InkOpacity);
+        _overlayWindow.SetAnnotationTextStyle(
+            panel.TextSize, panel.TextBold, panel.TextItalic, panel.TextUnderline, panel.TextStrikethrough);
+        _overlayWindow.KeepTextEditingOnPress = panel.ContainsPhysical;
 
         // Ctrl+Z and Ctrl+Y, for as long as the panel is up. Nothing in this session takes the
         // keyboard focus, so the two buttons on the panel are otherwise the only way to reach these.
@@ -1642,6 +1645,9 @@ public partial class MainWindow : Window
         _overlayWindow?.SetAnnotationColor(_annotationPanel.InkColor);
         _overlayWindow?.SetAnnotationThickness(_annotationPanel.Thickness);
         _overlayWindow?.SetAnnotationOpacity(_annotationPanel.InkOpacity);
+        _overlayWindow?.SetAnnotationTextStyle(
+            _annotationPanel.TextSize, _annotationPanel.TextBold, _annotationPanel.TextItalic,
+            _annotationPanel.TextUnderline, _annotationPanel.TextStrikethrough);
 
         // Deliberately not placed again. 螢光筆 carries a control the other two do not, so the panel
         // is wider in that mode — and left alone it simply grows to the right, because the window
@@ -1705,6 +1711,7 @@ public partial class MainWindow : Window
         _annotationKeys = null;
 
         _overlayWindow?.EndAnnotating();
+        if (_overlayWindow is not null) _overlayWindow.KeepTextEditingOnPress = null;
         _captureWindow?.SetAnnotationHold(false);
 
         // The panel edits the preferences in memory as the user goes; they are written once here

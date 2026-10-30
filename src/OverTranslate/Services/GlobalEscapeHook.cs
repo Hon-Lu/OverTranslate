@@ -85,7 +85,9 @@ internal sealed class GlobalEscapeHook : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN && Marshal.ReadInt32(lParam) == VK_ESCAPE)
+        // Typing into one of ours, Esc belongs to the box — see TypingWindows.
+        if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN && Marshal.ReadInt32(lParam) == VK_ESCAPE
+            && !TypingWindows.HaveForeground)
         {
             // Post, never wait. A low-level hook callback that runs longer than
             // LowLevelHooksTimeout (5s by default) gets silently dropped from the hook chain by

@@ -10,6 +10,87 @@
         Background="Transparent"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
+    <Window.Resources>
+        <!-- 文字's small square switches: B, I, U, S and the size field's chevron. Flat until hovered,
+             and checked the way the tool buttons are — the accent plate and edge — so "on" reads the
+             same everywhere on the panel. -->
+        <Style x:Key="TextOptionToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground"  Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Width"       Value="30"/>
+            <Setter Property="Height"      Value="30"/>
+            <Setter Property="Focusable"   Value="False"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked"   Value="False"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Root" Property="Background"  Value="{DynamicResource AppAccentSubtle}"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The letters on B I U S: a serif, because those four are the convention every editor shows
+             them in, and in the interface's own face an I is a bare stroke. -->
+        <Style x:Key="TextOptionGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Georgia, Times New Roman"/>
+            <Setter Property="FontSize"   Value="15"/>
+            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+        </Style>
+
+        <!-- A size in the tray under the field. -->
+        <Style x:Key="TextSizeChoice" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="MinWidth"   Value="40"/>
+            <Setter Property="Height"     Value="28"/>
+            <Setter Property="Focusable"  Value="False"/>
+            <Setter Property="Cursor"     Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="7" Padding="6,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <!-- The same margin the capture toolbar leaves, and for the same reason: a blur still carrying
          opacity at the window's edge is cut off by a straight line, which reads as a stray border
          around the bar. -->
@@ -145,6 +226,23 @@
                             </StackPanel>
                         </ToggleButton>
 
+                        <!-- 文字 (#362): a click puts a box where the words will go. Its own button
+                             rather than a fifth thing behind 形狀 — it is typed, not dragged out, and
+                             it brings its own controls with it. -->
+                        <ToggleButton x:Name="TextTool"
+                                      Style="{StaticResource ToolbarStackToggleButton}"
+                                      Click="ToolBtn_Click">
+                            <StackPanel>
+                                <Grid Style="{StaticResource ToolbarActionIcon}">
+                                  <Grid Style="{StaticResource ToolbarActionDrawing}">
+                                    <Path Style="{StaticResource ToolbarToolStroke}"
+                                          Data="M3,4.4 V2.6 H15 V4.4 M9,2.6 V15.4 M6.4,15.4 H11.6"/>
+                                  </Grid>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource S.Annotate.Text}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
                         <ToggleButton x:Name="EraserTool"
                                       Style="{StaticResource ToolbarStackToggleButton}"
                                       Click="ToolBtn_Click">
@@ -230,7 +328,7 @@
                              it reads 大小 / 小 / 大 while the two pens read 粗細 / 細 / 粗. Same
                              control, same position, same value — a second slider that appeared in
                              its place would be a different control in the same spot. -->
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,4,0">
+                        <StackPanel x:Name="ThicknessBlock" VerticalAlignment="Center" Margin="0,0,4,0">
                             <TextBlock x:Name="ThicknessTitle"
                                        Style="{StaticResource AnnotationSliderTitle}"/>
                             <Slider x:Name="ThicknessSlider"
@@ -245,6 +343,123 @@
                                            HorizontalAlignment="Right"
                                            Style="{StaticResource AnnotationSliderEnd}"/>
                             </Grid>
+                        </StackPanel>
+
+                        <!-- 文字's size, in the slider's place: words are measured in pixels the user
+                             can type, not a width chosen by eye. The number is typed straight into
+                             the field, or picked from the tray the chevron opens. No name over it,
+                             unlike the sliders: a number in px already says what it is, and the
+                             title only pushed the field off the row's centre line. -->
+                        <StackPanel x:Name="TextSizeBlock"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Visibility="Collapsed">
+                            <Border x:Name="TextSizeFrame"
+                                    Height="30"
+                                    CornerRadius="7"
+                                    BorderThickness="1"
+                                    Background="{DynamicResource AppButtonBg}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <DockPanel>
+                                    <ToggleButton x:Name="TextSizeDrop"
+                                                  DockPanel.Dock="Right"
+                                                  Style="{StaticResource TextOptionToggle}"
+                                                  Width="26"
+                                                  Height="28"
+                                                  Click="TextSizeDrop_Click">
+                                        <Path Style="{StaticResource ToolbarToolStroke}"
+                                              StrokeThickness="1.2"
+                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                              Data="M0,0 L3,3 L6,0"/>
+                                    </ToggleButton>
+                                    <TextBlock Text="px"
+                                               DockPanel.Dock="Right"
+                                               Margin="2,0,2,1"
+                                               VerticalAlignment="Center"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="11.5"
+                                               Foreground="{DynamicResource AppTextSecondary}"/>
+                                    <TextBox x:Name="TextSizeBox"
+                                             Width="34"
+                                             Margin="6,0,0,0"
+                                             VerticalAlignment="Center"
+                                             BorderThickness="0"
+                                             Background="Transparent"
+                                             Padding="0"
+                                             HorizontalContentAlignment="Right"
+                                             FontFamily="{DynamicResource AppFont}"
+                                             FontSize="13"
+                                             Foreground="{DynamicResource AppTextPrimary}"
+                                             CaretBrush="{DynamicResource AppTextPrimary}"
+                                             SelectionBrush="{DynamicResource AppAccent}"
+                                             MaxLength="3"
+                                             InputMethod.IsInputMethodEnabled="False"
+                                             AutomationProperties.Name="{DynamicResource S.Annotate.Size}"
+                                             PreviewMouseLeftButtonDown="TextSizeBox_PreviewMouseLeftButtonDown"
+                                             PreviewTextInput="TextSizeBox_PreviewTextInput"
+                                             PreviewKeyDown="TextSizeBox_PreviewKeyDown"
+                                             GotKeyboardFocus="TextSizeBox_GotKeyboardFocus"
+                                             LostKeyboardFocus="TextSizeBox_LostKeyboardFocus"
+                                             MouseWheel="TextSizeBox_MouseWheel"
+                                             DataObject.Pasting="TextSizeBox_Pasting"/>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- B I U S, for the whole of the words rather than a selection in them: a
+                             note on a screenshot is set one way, and per-character styling would make
+                             the box a document editor. Shown only with 文字 in hand, like 透明度. -->
+                        <Rectangle x:Name="TextStyleDivider"
+                                   Width="1"
+                                   Margin="12,6,12,6"
+                                   Fill="{DynamicResource ToolbarDivider}"
+                                   Visibility="Collapsed"/>
+
+                        <StackPanel x:Name="TextStyleBlock"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Visibility="Collapsed">
+                            <ToggleButton x:Name="BoldToggle"
+                                          Style="{StaticResource TextOptionToggle}"
+                                          ToolTip="{DynamicResource S.Annotate.Bold}"
+                                          AutomationProperties.Name="{DynamicResource S.Annotate.Bold}"
+                                          Click="TextStyleToggle_Click">
+                                <TextBlock Style="{StaticResource TextOptionGlyph}" Text="B" FontWeight="Bold"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="ItalicToggle"
+                                          Margin="2,0,0,0"
+                                          Style="{StaticResource TextOptionToggle}"
+                                          ToolTip="{DynamicResource S.Annotate.Italic}"
+                                          AutomationProperties.Name="{DynamicResource S.Annotate.Italic}"
+                                          Click="TextStyleToggle_Click">
+                                <TextBlock Style="{StaticResource TextOptionGlyph}" Text="I" FontStyle="Italic"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="UnderlineToggle"
+                                          Margin="2,0,0,0"
+                                          Style="{StaticResource TextOptionToggle}"
+                                          ToolTip="{DynamicResource S.Annotate.Underline}"
+                                          AutomationProperties.Name="{DynamicResource S.Annotate.Underline}"
+                                          Click="TextStyleToggle_Click">
+                                <TextBlock Style="{StaticResource TextOptionGlyph}" Text="U" TextDecorations="Underline"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="StrikethroughToggle"
+                                          Margin="2,0,0,0"
+                                          Style="{StaticResource TextOptionToggle}"
+                                          ToolTip="{DynamicResource S.Annotate.Strikethrough}"
+                                          AutomationProperties.Name="{DynamicResource S.Annotate.Strikethrough}"
+                                          Click="TextStyleToggle_Click">
+                                <TextBlock Style="{StaticResource TextOptionGlyph}" Text="S" TextDecorations="Strikethrough"/>
+                            </ToggleButton>
                         </StackPanel>
 
                         <!-- How much of the page still shows through, for the one tool the question
@@ -360,6 +575,31 @@
                             </StackPanel>
                         </ToggleButton>
                     </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- The sizes behind the 文字 size field's chevron, hung off the bar the same way the
+                 shapes are behind 形狀. Filled from code — see BuildTextSizeTray. -->
+            <Grid x:Name="TextSizeTray"
+                  HorizontalAlignment="Left"
+                  Visibility="Collapsed">
+                <Border Background="{DynamicResource ToolbarBg}"
+                        Margin="2"
+                        CornerRadius="12">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Direction="270"
+                                          Opacity="0.20" Color="#000000"/>
+                    </Border.Effect>
+                </Border>
+
+                <Border x:Name="TextSizeTraySurface"
+                        Background="{DynamicResource ToolbarBg}"
+                        BorderBrush="{DynamicResource ToolbarBorder}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="6"
+                        RenderOptions.ClearTypeHint="Enabled">
+                    <StackPanel x:Name="TextSizeChoices" Orientation="Horizontal"/>
                 </Border>
             </Grid>
         </StackPanel>

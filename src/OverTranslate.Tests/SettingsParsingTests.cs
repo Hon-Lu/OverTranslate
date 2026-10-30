@@ -824,4 +824,34 @@ public class SettingsParsingTests
         Assert.Equal(0.3, annotation.HighlighterOpacity);
         Assert.Equal(AnnotationTool.Ellipse, annotation.Shape);
     }
+
+    /// <summary>A settings file from before 文字 (#362) opens on 24 px with all four styles off.</summary>
+    [Fact]
+    public void ASettingsFileWithoutTextPreferences_OpensOnTheTextDefaults()
+    {
+        var annotation = SettingsService.Parse("""{"Capture":{"Annotation":{"Color":"#EF4444"}}}""").Capture.Annotation;
+
+        Assert.Equal(24, annotation.TextSize);
+        Assert.False(annotation.TextBold);
+        Assert.False(annotation.TextItalic);
+        Assert.False(annotation.TextUnderline);
+        Assert.False(annotation.TextStrikethrough);
+    }
+
+    /// <summary>The 文字 size and styles are remembered between captures (#362).</summary>
+    [Fact]
+    public void TextPreferences_RoundTripThroughTheFile()
+    {
+        var written = new AppSettings();
+        written.Capture.Annotation.TextSize = 137;
+        written.Capture.Annotation.TextBold = true;
+        written.Capture.Annotation.TextStrikethrough = true;
+
+        var annotation = SettingsService.Parse(SettingsService.Serialize(written)).Capture.Annotation;
+        Assert.Equal(137, annotation.TextSize);
+        Assert.True(annotation.TextBold);
+        Assert.False(annotation.TextItalic);
+        Assert.False(annotation.TextUnderline);
+        Assert.True(annotation.TextStrikethrough);
+    }
 }

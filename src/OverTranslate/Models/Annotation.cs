@@ -36,6 +36,44 @@ public enum AnnotationTool
 
     /// <summary>The outline of the ellipse inscribed in the box the drag spans.</summary>
     Ellipse,
+
+    /// <summary>Words typed where the user clicked (#362).</summary>
+    Text,
+}
+
+/// <summary>How a 文字 mark is set: one style for the whole of it, never per character.</summary>
+/// <param name="Size">The em size in the overlay's own DIP.</param>
+public sealed record AnnotationTextStyle(
+    System.Windows.Media.FontFamily Family,
+    double Size,
+    bool Bold,
+    bool Italic,
+    bool Underline,
+    bool Strikethrough)
+{
+    /// <summary>The words laid out as they are drawn, with the top-left of the first line at the origin.</summary>
+    /// <param name="pixelsPerDip">Of whatever the text is being drawn into; it only moves glyphs onto whole pixels.</param>
+    public FormattedText Layout(string text, Color color, double pixelsPerDip)
+    {
+        var formatted = new FormattedText(
+            text,
+            System.Globalization.CultureInfo.CurrentUICulture,
+            System.Windows.FlowDirection.LeftToRight,
+            new Typeface(Family,
+                Italic ? FontStyles.Italic  : FontStyles.Normal,
+                Bold   ? FontWeights.Bold   : FontWeights.Normal,
+                FontStretches.Normal),
+            Size,
+            new SolidColorBrush(color),
+            pixelsPerDip);
+
+        var decorations = new TextDecorationCollection();
+        if (Underline)     decorations.Add(TextDecorations.Underline);
+        if (Strikethrough) decorations.Add(TextDecorations.Strikethrough);
+        if (decorations.Count > 0) formatted.SetTextDecorations(decorations);
+
+        return formatted;
+    }
 }
 
 /// <summary>
@@ -77,6 +115,16 @@ public sealed class AnnotationStroke
     /// compose the stroke once and then fade the result, so the band is even.
     /// </remarks>
     public required double Opacity { get; init; }
+
+    /// <summary>What a 文字 mark says, with lines split on '\n'. Null for every other tool.</summary>
+    /// <remarks>
+    /// A 文字 mark keeps one point, the top-left of its first line, and is laid out again from this
+    /// and <see cref="TextStyle"/> whenever it is drawn — the same way a shape keeps its two corners
+    /// rather than its outline.
+    /// </remarks>
+    public string? Text { get; init; }
+
+    public AnnotationTextStyle? TextStyle { get; init; }
 
     /// <summary>Whether this is one of the drag-out shapes rather than a freehand line.</summary>
     /// <remarks>
@@ -229,6 +277,8 @@ public sealed class AnnotationStroke
 
     private Rect MeasureBounds()
     {
+        if (TextBounds() is { } text) return text;
+
         {
             double minX = double.MaxValue, minY = double.MaxValue;
             double maxX = double.MinValue, maxY = double.MinValue;
@@ -260,6 +310,24 @@ public sealed class AnnotationStroke
 
             return new Rect(minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2);
         }
+    }
+
+    /// <summary>The box a 文字 mark's lines take, or null for anything else.</summary>
+    /// <remarks>
+    /// Widened by a fraction of the em on every side, because the line box is not quite where the
+    /// ink is: an italic leans out past its advance on the right, and a glyph with a tail can reach
+    /// below the line it sits on. The bounds only have to be certainly big enough — see
+    /// <see cref="Bounds"/>.
+    /// </remarks>
+    private Rect? TextBounds()
+    {
+        if (Tool != AnnotationTool.Text || Text is null || TextStyle is null || Points.Count == 0) return null;
+
+        var formatted = TextStyle.Layout(Text, Color, 1);
+        double pad = TextStyle.Size * 0.3 + 1;
+        return new Rect(
+            Points[0].X - pad, Points[0].Y - pad,
+            formatted.WidthIncludingTrailingWhitespace + pad * 2, formatted.Height + pad * 2);
     }
 
     /// <summary>
@@ -320,6 +388,12 @@ public sealed class AnnotationStroke
     {
         double reach = radius + Thickness / 2;
         double reachSq = reach * reach;
+
+        if (TextBounds() is { } text)
+        {
+            text.Inflate(radius, radius);
+            return text.Contains(point);
+        }
 
         if (Tool == AnnotationTool.Arrow && Points.Count == 2)
         {

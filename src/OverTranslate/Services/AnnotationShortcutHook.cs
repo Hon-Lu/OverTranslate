@@ -90,6 +90,10 @@ internal sealed class AnnotationShortcutHook : IDisposable
         if ((key != VK_Z && key != VK_Y) || !IsDown(VK_CONTROL))
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
 
+        // Typing into one of ours, the shortcut is the box's own undo — see TypingWindows.
+        if (TypingWindows.HaveForeground)
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+
         // Ctrl+Y, or Ctrl+Shift+Z, is redo; plain Ctrl+Z is undo.
         var action = key == VK_Y || IsDown(VK_SHIFT) ? _onRedo : _onUndo;
 

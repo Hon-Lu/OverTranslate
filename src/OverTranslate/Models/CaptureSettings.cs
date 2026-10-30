@@ -97,4 +97,28 @@ public class CaptureAnnotationSettings
 
     /// <summary>What 形狀 gives when pressed. Anything but one of the three shapes reads as Rectangle.</summary>
     public AnnotationTool Shape { get; set; } = AnnotationTool.Rectangle;
+
+    /// <summary>The 文字 size in physical pixels of the capture, which is what the panel shows (#362).</summary>
+    /// <remarks>
+    /// A number of pixels rather than a slider position like the widths, because the user types it
+    /// and reads it back. One outside <see cref="MinTextSize"/>..<see cref="MaxTextSize"/> is put back
+    /// inside by the panel.
+    /// </remarks>
+    public int TextSize { get; set; } = DefaultTextSize;
+
+    public bool TextBold { get; set; } = false;
+
+    public bool TextItalic { get; set; } = false;
+
+    public bool TextUnderline { get; set; } = false;
+
+    public bool TextStrikethrough { get; set; } = false;
+
+    public const int DefaultTextSize = 24;
+
+    /// <summary>Below this, CJK glyphs are a smudge.</summary>
+    public const int MinTextSize = 8;
+
+    /// <summary>A quarter of a 4K screen's height; at 1080p one line is already half the screen.</summary>
+    public const int MaxTextSize = 500;
 }
