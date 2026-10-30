@@ -825,6 +825,25 @@ p:last-child { margin-bottom: 0; }
 }
 .aside p { margin: 0; }
 
+/* 支援語言：從內文抽出來排成標籤，一眼掃得到，內文只講用法 */
+.langs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 20px;
+}
+.langs__label { color: var(--ink-3); font-size: 0.82rem; font-weight: 650; letter-spacing: 0.02em; }
+.langs__list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.langs__list li {
+  padding: 4px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.82rem;
+}
+
 /* facts：補充說明，不加框，讓下方的模式卡片成為唯一的容器 */
 .facts {
   display: flex;
