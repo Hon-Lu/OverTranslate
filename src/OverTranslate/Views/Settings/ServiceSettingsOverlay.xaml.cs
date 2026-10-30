@@ -637,6 +637,11 @@ public partial class ServiceSettingsOverlay : UserControl
             "S.Settings.ProfileAdd", count, OpenAiSettings.MaxProfiles);
     }
 
+    // Round the list to the inside of its border, so a filled row does not square off the corners or
+    // paint over the line under the last one.
+    private void PromptLibraryBody_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        ((FrameworkElement)sender).Clip = new RectangleGeometry(new Rect(e.NewSize), 9, 9);
+
     private void OllamaGuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
