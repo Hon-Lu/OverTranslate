@@ -702,6 +702,7 @@
     <sys:String x:Key="S.Lang.Swedish">스웨덴어</sys:String>
     <sys:String x:Key="S.Lang.Turkish">튀르키예어</sys:String>
     <sys:String x:Key="S.Lang.Ukrainian">우크라이나어</sys:String>
+    <sys:String x:Key="S.Lang.Vietnamese">베트남어</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">인식 보조</sys:String>
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0}개 켜짐</sys:String>

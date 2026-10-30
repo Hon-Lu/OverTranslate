@@ -223,6 +223,7 @@ public static class LanguageData
         new("SV",      "S.Lang.Swedish",            "Swedish"),
         new("TR",      "S.Lang.Turkish",            "Turkish"),
         new("UK",      "S.Lang.Ukrainian",          "Ukrainian"),
+        new("VI",      "S.Lang.Vietnamese",         "Vietnamese"),
     ];
 
     public static string? MapTargetToSourceCode(string targetCode)

@@ -700,6 +700,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Lang.Swedish">Swedish</sys:String>
     <sys:String x:Key="S.Lang.Turkish">Turkish</sys:String>
     <sys:String x:Key="S.Lang.Ukrainian">Ukrainian</sys:String>
+    <sys:String x:Key="S.Lang.Vietnamese">Vietnamese</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">Debug aids</sys:String>
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} on</sys:String>

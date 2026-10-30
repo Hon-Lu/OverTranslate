@@ -698,6 +698,7 @@
     <sys:String x:Key="S.Lang.Swedish">瑞典语</sys:String>
     <sys:String x:Key="S.Lang.Turkish">土耳其语</sys:String>
     <sys:String x:Key="S.Lang.Ukrainian">乌克兰语</sys:String>
+    <sys:String x:Key="S.Lang.Vietnamese">越南语</sys:String>
 
     <sys:String x:Key="S.Toolbar.DebugAssist">调试辅助</sys:String>
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} 项开启</sys:String>
