@@ -97,6 +97,7 @@ public partial class PromptEditOverlay : UserControl
             _batch = (profile ?? built).Batch;
             SegmentRadio.IsChecked = !_batch;
             BatchRadio.IsChecked = _batch;
+            ShowParamDescriptions();
             _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
             var template = profile?.Template ?? built.Template;
             TemplateBox.Text = template.Trim().Length == 0
@@ -283,7 +284,7 @@ public partial class PromptEditOverlay : UserControl
         UpdateChrome();
     }
 
-    // ── 翻譯方式 ─────────────────────────────────────────────────────────────
+    // ── 翻譯模式 ─────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Switches the way the setting sends, and the template with it while the box is the default:
@@ -300,6 +301,7 @@ public partial class PromptEditOverlay : UserControl
         var next = OpenAiCompatibleProvider.TemplateOnSwitch(TemplateBox.Text, toBatch);
         _batch = toBatch;
         _defaultTemplate = OpenAiCompatibleProvider.DefaultTemplate(_batch);
+        ShowParamDescriptions();
 
         if (next is not null)
         {
@@ -314,6 +316,19 @@ public partial class PromptEditOverlay : UserControl
         WriteModeConfirm();
         ModeConfirmLayer.Visibility = Visibility.Visible;
         ModeKeepButton.Focus();
+    }
+
+    /// <summary>
+    /// Describes <c>{text}</c> and <c>{context}</c> for the way picked: the two send them
+    /// differently, and a table that described both at once was mostly about the other one.
+    /// </summary>
+    /// <remarks>A resource reference rather than a copy, so the text follows the interface language.</remarks>
+    private void ShowParamDescriptions()
+    {
+        ParamTextDescription.SetResourceReference(TextBlock.TextProperty,
+            _batch ? "S.Settings.PromptParamTextBatch" : "S.Settings.PromptParamText");
+        ParamContextDescription.SetResourceReference(TextBlock.TextProperty,
+            _batch ? "S.Settings.PromptParamContextBatch" : "S.Settings.PromptParamContext");
     }
 
     /// <summary>The question, naming the way switched to.</summary>

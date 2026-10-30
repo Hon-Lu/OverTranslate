@@ -567,8 +567,10 @@
     <sys:String x:Key="S.Settings.PromptTemplate">提示詞</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻譯時送給模型的內容。大括號標示的參數會換成實際的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">還原預設</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">要翻譯的原文，照原樣放入；整批時是各段加上編號（&lt;1&gt;…&lt;/1&gt;），一段一行，模板要說明依編號輸出譯文，沒說明時會改成一段一段送。沒有這個參數時，原文接在最後。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、畫面上已有的譯文與這次已翻好的段），每段寫成兩行，用語言名稱標出原文與譯文，只供參考；還沒翻的段不會放進來。沒有可附的內容時，連同前後的空行一起拿掉。沒有這個參數時不附上下文，各段同時送出。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">要翻譯的原文，一次一段。沒有這個參數時，原文接在最後。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTextBatch">要翻譯的各段，加上編號（&lt;1&gt;…&lt;/1&gt;）一段一行。模板要請模型依編號輸出；沒依編號回來的段會改成一段一段補翻。沒有這個參數時，原文接在最後。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落，用語言名稱標出原文與譯文，供模型參考；還沒有時連同前後空行一起拿掉。沒有這個參數時不附上下文，各段改為同時送出。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContextBatch">之前翻好的段落，用語言名稱標出原文與譯文，供模型參考；還沒有時連同前後空行一起拿掉。沒有這個參數時不附上下文。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的設定 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">進階</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">帶入推薦模型</sys:String>

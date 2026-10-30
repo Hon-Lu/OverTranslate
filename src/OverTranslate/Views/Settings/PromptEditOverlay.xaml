@@ -7,7 +7,7 @@
 
     <UserControl.Resources>
         <!-- ══════════ Section heading ══════════ -->
-        <!-- 翻譯方式 and 提示詞 name the two halves of the card below the fold, at one size. -->
+        <!-- 翻譯模式 and 提示詞 name the two halves of the card below the fold, at one size. -->
         <Style x:Key="EditorHeading" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize"   Value="14"/>
@@ -700,7 +700,8 @@
                             <StackPanel x:Name="ParamsContent" Margin="0,6,0,0" Visibility="Collapsed">
                                 <!-- Two columns, the name and what it becomes, the example after the
                                      description in the quieter colour. The two that carry the
-                                     content come first. -->
+                                     content come first, described for the way picked above - see
+                                     ShowParamDescriptions. -->
                                 <!-- {} escapes the brace: XAML reads a leading { as a markup extension. -->
                                 <Border BorderBrush="{DynamicResource AppBorder}"
                                         BorderThickness="1"
@@ -717,8 +718,8 @@
                                                     <Border Style="{StaticResource ParamTableName}">
                                                         <TextBlock Text="{}{text}" Style="{StaticResource ParamTableNameText}"/>
                                                     </Border>
-                                                    <TextBlock Grid.Column="1" Margin="14,0,0,0"
-                                                               Text="{DynamicResource S.Settings.PromptParamText}"
+                                                    <TextBlock x:Name="ParamTextDescription"
+                                                               Grid.Column="1" Margin="14,0,0,0"
                                                                Style="{StaticResource ParamTableText}"/>
                                                 </Grid>
                                             </Border>
@@ -731,8 +732,8 @@
                                                     <Border Style="{StaticResource ParamTableName}">
                                                         <TextBlock Text="{}{context}" Style="{StaticResource ParamTableNameText}"/>
                                                     </Border>
-                                                    <TextBlock Grid.Column="1" Margin="14,0,0,0"
-                                                               Text="{DynamicResource S.Settings.PromptParamContext}"
+                                                    <TextBlock x:Name="ParamContextDescription"
+                                                               Grid.Column="1" Margin="14,0,0,0"
                                                                Style="{StaticResource ParamTableText}"/>
                                                 </Grid>
                                             </Border>

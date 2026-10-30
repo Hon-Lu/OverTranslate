@@ -546,8 +546,10 @@
     <sys:String x:Key="S.Settings.PromptTemplate">프롬프트</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">번역할 때 모델에 보내는 내용입니다. 중괄호로 표시한 매개변수는 실제 텍스트로 바뀝니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">기본값으로 복원</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">번역할 원문을 그대로 넣습니다. '일괄'일 때는 각 부분에 번호를 붙여(&lt;1&gt;…&lt;/1&gt;) 한 줄씩 넣으므로, 번호별로 번역을 출력하라고 템플릿에 적어 주세요. 적지 않으면 한 부분씩 다시 보냅니다. 이 매개변수가 없으면 원문이 맨 끝에 붙습니다.</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">이미 번역한 부분(앞의 문장, 화면에 이미 있는 번역문, 이번에 방금 번역한 부분)으로, 하나당 두 줄로 원문과 번역문을 각각 언어 이름으로 표시하며 참고용입니다. 아직 번역하지 않은 부분은 넣지 않습니다. 붙일 내용이 없으면 앞뒤의 빈 줄과 함께 지웁니다. 이 매개변수가 없으면 문맥 없이 각 부분을 동시에 보냅니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">번역할 원문이 하나씩 들어갑니다. 이 매개변수가 없으면 원문이 맨 끝에 붙습니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTextBatch">번역할 각 부분에 번호를 붙여(&lt;1&gt;…&lt;/1&gt;) 한 줄씩 넣습니다. 번호별로 번역을 출력하라고 템플릿에 적어 주세요. 번호 없이 돌아온 부분은 하나씩 다시 번역합니다. 이 매개변수가 없으면 원문이 맨 끝에 붙습니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">이미 번역한 부분으로, 원문과 번역문을 각각 언어 이름으로 표시한 참고용 내용입니다. 아직 없으면 앞뒤 빈 줄과 함께 지웁니다. 이 매개변수가 없으면 문맥 없이 각 부분을 동시에 보냅니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContextBatch">이미 번역한 부분으로, 원문과 번역문을 각각 언어 이름으로 표시한 참고용 내용입니다. 아직 없으면 앞뒤 빈 줄과 함께 지웁니다. 이 매개변수가 없으면 문맥을 붙이지 않습니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">내 설정 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">고급</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">권장 모델 넣기</sys:String>
