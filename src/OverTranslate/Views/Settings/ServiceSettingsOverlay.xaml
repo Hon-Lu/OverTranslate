@@ -374,9 +374,8 @@
                                     Margin="0,10,0,0"
                                     BorderBrush="{DynamicResource AppBorder}"
                                     BorderThickness="1"
-                                    CornerRadius="10"
-                                    ClipToBounds="True">
-                                <StackPanel>
+                                    CornerRadius="10">
+                                <StackPanel SizeChanged="PromptLibraryBody_SizeChanged">
                                     <ItemsControl x:Name="PromptPresetList">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>

@@ -500,12 +500,12 @@
     <sys:String x:Key="S.Settings.ServiceDialogTitle">{0}设置</sys:String>
     <sys:String x:Key="S.Settings.ApiBaseUrl">API 地址</sys:String>
     <sys:String x:Key="S.Settings.OpenAiTimeout">超时</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiMode">翻译方式</sys:String>
+    <sys:String x:Key="S.Settings.OpenAiMode">翻译模式</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegment">标准</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatch">整批</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">将画面上的文字区块分别翻译，翻译结果较稳定，适合本地模型。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">将画面上的所有文字区块合并后一次翻译，可减少请求次数，适合云端服务。（使用本地模型时，翻译速度可能较慢。）</sys:String>
-    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">切换翻译方式</sys:String>
+    <sys:String x:Key="S.Settings.PromptModeSwitchTitle">切换翻译模式</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToBatch">当前使用自定义提示词，要切换成“整批”的默认提示词吗？</sys:String>
     <sys:String x:Key="S.Settings.PromptModeSwitchToSegment">当前使用自定义提示词，要切换成“标准”的默认提示词吗？</sys:String>
     <sys:String x:Key="S.Settings.PromptModeUseDefault">切换默认</sys:String>
@@ -542,8 +542,9 @@
     <sys:String x:Key="S.Settings.PromptTemplate">提示词</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻译时发送给模型的内容。花括号标示的参数会替换成实际的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，照原样放入；整批时是各段加上编号（&lt;1&gt;…&lt;/1&gt;），一段一行，模板要说明按编号输出译文，没说明时会改成一段一段发送。没有这个参数时，原文接在最后。</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamContext">之前翻好的段落（前文、画面上已有的译文和这次已翻好的段），每段写成两行，用语言名称标出原文与译文，仅供参考；还没翻的段不会放进来。没有可附的内容时，连同前后的空行一起去掉。没有这个参数时不附上下文，各段同时发送。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamText">要翻译的原文，每次处理一个文字区块。未使用此参数时，{text} 会自动附加在提示词末尾。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamTextBatch">要翻译的多个文字区块，每个区块会加上编号（&lt;1&gt;text...&lt;/1&gt;），并以换行分隔。模型需按编号输出译文；若有区块遗漏，程序会逐一补翻。未使用此参数时，{text} 会自动附加在提示词末尾。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamContext">先前翻译的原文与译文，供模型参考上下文及用词。没有可参考的内容时，会自动移除此部分及多余的空行。未使用此参数时，不提供上下文（模型无法参考先前的翻译内容）。</sys:String>
     <sys:String x:Key="S.Settings.PromptNewName">我的设置 {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiAdvanced">高级</sys:String>
     <sys:String x:Key="S.Settings.ModelResetTip">带入推荐模型</sys:String>
