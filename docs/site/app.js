@@ -321,17 +321,6 @@
       if (copy) copy.style.width = fittedWidth(ratio) + 'px';
     }
 
-    // A portrait comic already fills most of the screen's height on the page, so
-    // the overlay could not make it any larger — on a laptop it would come out
-    // smaller. The button only shows where opening is worth it.
-    var MIN_GAIN = 1.2;
-    function updateButton(el) {
-      var btn = el._zoomBtn;
-      var rect = el.getBoundingClientRect();
-      if (!btn || !rect.width || !rect.height) return;
-      btn.hidden = fittedWidth(rect.width / rect.height) < rect.width * MIN_GAIN;
-    }
-
     function offset() {
       var from = source.getBoundingClientRect();
       var to = copy.getBoundingClientRect();
@@ -400,10 +389,6 @@
       if (lastFocus && lastFocus.focus) lastFocus.focus();
     }
 
-    function updateButtons() {
-      Array.prototype.forEach.call(compares, updateButton);
-    }
-
     Array.prototype.forEach.call(compares, function (el) {
       var btn = tpl.content.firstElementChild.cloneNode(true);
       btn.addEventListener('click', function (e) {
@@ -411,8 +396,6 @@
         open(el);
       });
       el.appendChild(btn);
-      el._zoomBtn = btn;
-      updateButton(el);
     });
 
     // The backdrop closes it; the compare itself is for dragging.
@@ -421,14 +404,7 @@
       close();
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-    // A card's size only moves with the viewport (its aspect is fixed in CSS)
-    // or when the tab panel it sits in is shown — a hidden one measures 0 and
-    // is skipped until then.
-    window.addEventListener('resize', function () {
-      fit();
-      updateButtons();
-    });
-    document.addEventListener('ot:tabchange', updateButtons);
+    window.addEventListener('resize', fit);
   })();
 
   /* ---------------- tabs ---------------- */
@@ -481,8 +457,6 @@
       moveInk(button, animate);
       gos.forEach(function (g) { g.classList.toggle('is-on', g.getAttribute('data-tab-go') === button.id); });
       if (focus) button.focus({ preventScroll: true });
-      // what was hidden now has a size; the compare zoom buttons go by it
-      document.dispatchEvent(new CustomEvent('ot:tabchange'));
     }
 
     buttons.forEach(function (button, index) {
