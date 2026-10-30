@@ -71,20 +71,47 @@ public class SettingsService
 
     public void Load()
     {
-        var json = ReadFirstAvailable();
+        Current = Load(SettingsPath, LegacySettingsPath, SettingsBackup.CurrentVersion, settings =>
+        {
+            Current = settings;
+            Save();
+        });
+    }
+
+    /// <summary>
+    /// <see cref="Load()"/> with the paths, the running version and the save passed in, for a test
+    /// that cannot use the real ones.
+    /// </summary>
+    /// <remarks>
+    /// The backup comes before every save: once anything is saved, the file it would copy is gone.
+    /// </remarks>
+    internal static AppSettings Load(string path, string legacyPath, string version, Action<AppSettings> save)
+    {
+        var (json, readFrom) = ReadFirstAvailable(path, legacyPath);
         if (json is null)
         {
-            Current = new AppSettings();
-            Save();
-            return;
+            var fresh = new AppSettings { LastRunVersion = version };
+            save(fresh);
+            return fresh;
         }
 
-        Current = Parse(json);
+        var settings = Parse(json);
+        if (settings.LastRunVersion != version)
+        {
+            // The first start after an update (or after 2.9.0 or earlier, which never wrote a
+            // version). Anything else a later version has to do once on its way in goes here too,
+            // before the version is written: after that this branch is not taken again.
+            if (SettingsBackup.Needed(settings.LastRunVersion))
+                SettingsBackup.Copy(readFrom!, SettingsBackup.PathFor(path, version));
 
+            settings.LastRunVersion = version;
+            save(settings);
+        }
         // Nothing at the canonical path means what we just read came from the legacy one. Persist it
         // now rather than waiting for the user to happen to change a setting.
-        if (!File.Exists(SettingsPath))
-            Save();
+        else if (!File.Exists(path))
+            save(settings);
+        return settings;
     }
 
     /// <summary>
@@ -299,16 +326,17 @@ public class SettingsService
         }
     }
 
-    private static string? ReadFirstAvailable()
+    /// <returns>The text of the first file that could be read, and which file that was.</returns>
+    private static (string? Json, string? Path) ReadFirstAvailable(params string[] paths)
     {
-        foreach (var path in new[] { SettingsPath, LegacySettingsPath })
+        foreach (var path in paths)
         {
             if (!File.Exists(path))
                 continue;
 
             try
             {
-                return File.ReadAllText(path);
+                return (File.ReadAllText(path), path);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -316,6 +344,6 @@ public class SettingsService
             }
         }
 
-        return null;
+        return (null, null);
     }
 }

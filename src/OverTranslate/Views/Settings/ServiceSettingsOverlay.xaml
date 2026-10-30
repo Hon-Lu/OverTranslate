@@ -8,13 +8,13 @@
 
     <UserControl.Resources>
 
-        <!-- ══════════ Prompt library row ══════════ -->
-        <!-- One row of the list, and the control that picks it. A full-width row rather than a
-             tile like ChoiceTile: the list runs to six entries, and six tiles is a wall. The tick
-             is what says which prompt gets sent — a filled row alone reads as a hover, on a row
-             that also carries a button. The tick keeps its width while unchecked so the names
-             stay in one column. -->
-        <Style x:Key="PromptPresetRow" TargetType="RadioButton">
+        <!-- ══════════ Model setting row ══════════ -->
+        <!-- One row of the list, and the control that picks it: the whole row takes the click, and
+             the ring at its start is what says which setting is sent - a filled row alone reads as a
+             hover, on a row that also carries a button. Three lines, because a name means nothing
+             without the model it is for, and the parameters below that are what makes two settings
+             for one model different; what used to be a second pane beside the list is now the row. -->
+        <Style x:Key="ProfileRow" TargetType="RadioButton">
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
@@ -27,28 +27,26 @@
                                 Background="Transparent"
                                 BorderBrush="{DynamicResource AppBorder}"
                                 BorderThickness="0,0,0,1"
-                                Padding="12,0">
-                            <Grid Height="42">
+                                Padding="16,12,10,12">
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="Tick"
-                                           Grid.Column="0"
-                                           Text="&#xE73E;"
-                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                           FontSize="13"
-                                           Foreground="{DynamicResource AppAccent}"
-                                           Opacity="0"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,10,0"/>
+                                <Ellipse x:Name="Ring"
+                                         Grid.Column="0"
+                                         Width="18" Height="18"
+                                         Stroke="{DynamicResource AppTextSecondary}"
+                                         StrokeThickness="1.5"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,14,0"/>
                                 <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <!-- Hover only where it means something: a checked row is already
-                                 filled, and lighting it again on the way to its edit button would
-                                 read as the click having changed the selection. -->
+                                 filled, and lighting it again on the way to its button would read
+                                 as the click having changed the selection. -->
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsChecked" Value="False"/>
@@ -58,7 +56,8 @@
                                         Value="{DynamicResource AppButtonHoverBg}"/>
                             </MultiTrigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Tick" Property="Opacity" Value="1"/>
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AppAccent}"/>
+                                <Setter TargetName="Ring" Property="StrokeThickness" Value="5.5"/>
                                 <Setter TargetName="Root" Property="Background"
                                         Value="{DynamicResource AppAccentSubtle}"/>
                             </Trigger>
@@ -66,6 +65,18 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- The small tags after a row's name. 整批 carries the accent because it is the one that
+             changes what is sent; 唯讀 and 自訂提示詞 describe the row and stay quiet. -->
+        <Style x:Key="ProfileTag" TargetType="Border">
+            <Setter Property="Background"        Value="{DynamicResource AppButtonBg}"/>
+            <Setter Property="BorderBrush"       Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness"   Value="1"/>
+            <Setter Property="CornerRadius"      Value="9"/>
+            <Setter Property="Padding"           Value="7,0,7,1"/>
+            <Setter Property="Margin"            Value="8,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <!-- The last row of the same list, and the only one that is an action. It keeps the rows'
@@ -83,10 +94,8 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Root"
                                 Background="Transparent"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="12,0">
-                            <ContentPresenter Height="42" VerticalAlignment="Center"/>
+                                Padding="16,0">
+                            <ContentPresenter Height="44" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -103,7 +112,6 @@
             </Setter>
         </Style>
 
-        <!-- ══════════ Advanced toggle ══════════ -->
     </UserControl.Resources>
 
     <Grid>
@@ -118,7 +126,7 @@
              positioned, which reads as a soft card rather than a misplaced one. -->
         <Border x:Name="Card"
                 Width="620"
-                MaxHeight="640"
+                MaxHeight="720"
                 UseLayoutRounding="True"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
@@ -208,6 +216,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <!-- The guide comes before the fields rather than after them: this
@@ -249,12 +258,25 @@
                                                    Foreground="{DynamicResource AppAccent}"
                                                    RequestNavigate="OllamaGuideLink_RequestNavigate"><Run Text="{DynamicResource S.Settings.OllamaGuide}"/></Hyperlink>
                                     </TextBlock>
+                                    <!-- Says the link opens a page outside the app, drawn for the
+                                         book's reason. -->
+                                    <Path Width="10" Height="10"
+                                          Margin="8,1,0,0"
+                                          VerticalAlignment="Center"
+                                          Stretch="Uniform"
+                                          Stroke="{DynamicResource AppAccent}"
+                                          StrokeThickness="1.3"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="M1,9 L9,1 M3,1 L9,1 L9,7"/>
                                 </StackPanel>
                             </Border>
 
                             <TextBlock Grid.Column="0" Grid.Row="1" Text="{DynamicResource S.Settings.ApiBaseUrl}"
+                                       Margin="0,16,12,0"
                                        Style="{StaticResource FieldLabel}"/>
-                            <Grid Grid.Column="1" Grid.Row="1">
+                            <Grid Grid.Column="1" Grid.Row="1" Margin="0,16,0,0">
                                 <TextBox x:Name="OpenAiBaseUrlBox"
                                          Style="{StaticResource ModernTextBox}"
                                          TextChanged="OpenAiSetting_TextChanged"/>
@@ -269,10 +291,10 @@
                             </Grid>
 
                             <TextBlock Grid.Column="0" Grid.Row="2" Text="{DynamicResource S.Common.ApiKey}"
-                                       Margin="0,10,0,0"
+                                       Margin="0,12,12,0"
                                        Style="{StaticResource FieldLabel}"/>
                             <controls:SecretBox Grid.Column="1" Grid.Row="2" x:Name="OpenAiApiKeyBox"
-                                                Margin="0,10,0,0"
+                                                Margin="0,12,0,0"
                                                 SecretChanged="OpenAiSecret_SecretChanged"/>
 
                             <!-- Digits only, empty for the default the placeholder shows. Narrow
@@ -280,9 +302,9 @@
                                  for an address. The IME is off so a CJK keyboard types digits
                                  here rather than composing. -->
                             <TextBlock Grid.Column="0" Grid.Row="3" Text="{DynamicResource S.Settings.OpenAiTimeout}"
-                                       Margin="0,10,0,0"
+                                       Margin="0,12,12,0"
                                        Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Grid.Column="1" Grid.Row="3" Margin="0,10,0,0"
+                            <StackPanel Grid.Column="1" Grid.Row="3" Margin="0,12,0,0"
                                         Orientation="Horizontal" HorizontalAlignment="Left">
                                 <Grid Width="120">
                                     <TextBox x:Name="OpenAiTimeoutBox"
@@ -315,518 +337,179 @@
 
 
 
+
                             <!-- Everything above is the server; everything below is the model. The
                                  two boxes above are set once and forgotten, while which model is
                                  loaded decides what a translation reads like — so the model, the
-                                 prompts written for it and the temperature its documentation asks
+                                 prompt written for it and the temperature its documentation asks
                                  for are one saved thing, named and picked from a list, rather than
                                  three fields that have to be changed together and can be left
-                                 disagreeing. A heading rather than the rule that used to sit here:
-                                 a rule says the fields stopped, a heading says what starts. -->
-                            <TextBlock Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2"
-                                       Text="{DynamicResource S.Settings.ModelProfiles}"
-                                       Style="{StaticResource SectionHeader}"
-                                       Margin="0,22,0,0"/>
+                                 disagreeing. -->
+                            <StackPanel Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2"
+                                        Orientation="Horizontal"
+                                        Margin="0,26,0,0">
+                                <TextBlock Text="{DynamicResource S.Settings.ModelProfiles}"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AppTextPrimary}"
+                                           VerticalAlignment="Bottom"/>
+                                <TextBlock Text="{DynamicResource S.Settings.ProfileListHint}"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource AppTextSecondary}"
+                                           VerticalAlignment="Bottom"
+                                           Margin="10,0,0,1"/>
+                            </StackPanel>
 
-                            <!-- The list and what the picked row resolves to, side by side. The
-                                 two were stacked, which put the settings that actually get sent
-                                 below the fold on a card this tall — and the names in the list mean
-                                 nothing without them. Beside each other, picking a row and reading
-                                 the result is one glance.
-
-                                 Named so LayoutProbe can render this one card offscreen; that is
-                                 the only reason the name exists. -->
+                            <!-- One column: each row says what it is - the model, the parameters
+                                 it sends, whether it is a batch and whose prompt it carries - so
+                                 the pane beside the list that used to say it for the picked row
+                                 only repeated one of them. The built-in row carries the copy
+                                 rather than a pencil: it cannot be edited, because it is what
+                                 everyone who never writes one keeps following as the shipped
+                                 wording improves, and a copy of it is how to keep today's. -->
                             <Border x:Name="PromptLibraryCard"
                                     Grid.Column="0" Grid.Row="7" Grid.ColumnSpan="2"
                                     Margin="0,10,0,0"
                                     BorderBrush="{DynamicResource AppBorder}"
                                     BorderThickness="1"
-                                    CornerRadius="8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <!-- The names are short and the prompt is a
-                                                         paragraph, so the split is not even. -->
-                                                    <ColumnDefinition Width="4*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="6*"/>
-                                                </Grid.ColumnDefinitions>
+                                    CornerRadius="10"
+                                    ClipToBounds="True">
+                                <StackPanel>
+                                    <ItemsControl x:Name="PromptPresetList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <RadioButton GroupName="PromptPreset"
+                                                             Style="{StaticResource ProfileRow}"
+                                                             Tag="{Binding Id}"
+                                                             AutomationProperties.Name="{Binding Name}"
+                                                             IsChecked="{Binding IsSelected, Mode=OneTime}"
+                                                             Checked="PromptPreset_Checked">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
 
-                                                <!-- ── The library ──────────────────────────── -->
-                                                <!-- The built-in prompt is its first row and carries
-                                                     no button: it cannot be edited, because it is
-                                                     what everyone who never writes one keeps
-                                                     following as the shipped wording improves.
-                                                     Editing it means adding one of your own, which
-                                                     is the row at the bottom. -->
-                                                <Grid Grid.Column="0" Margin="14,12,14,12">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-
-                                                    <TextBlock Grid.Row="0"
-                                                               Text="{DynamicResource S.Settings.ProfileListTitle}"
-                                                               Style="{StaticResource SectionHeader}"
-                                                               Margin="2,0,0,8"/>
-
-                                                    <!-- The built-in row is the one thing in this
-                                                         list nobody owns: it is rewritten by every
-                                                         update, model and prompts together, which is
-                                                         the point of it. That also means a setup
-                                                         somebody is happy with disappears the next
-                                                         time they update, without their having
-                                                         touched anything. The card says so, and the
-                                                         button turns this version's wording into a
-                                                         row of their own before that happens. -->
-                                                    <Border Grid.Row="1"
-                                                            Style="{StaticResource InfoCardBorder}"
-                                                            Margin="0,0,0,10">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <TextBlock Grid.Column="0"
-                                                                       Text="&#xE946;"
-                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                       FontSize="15"
-                                                                       Foreground="{DynamicResource AppTextSecondary}"
-                                                                       VerticalAlignment="Top"
-                                                                       Margin="0,1,10,0"/>
-
-                                                            <StackPanel Grid.Column="1">
-                                                                <TextBlock Text="{DynamicResource S.Settings.ProfileSnapshotTitle}"
-                                                                           FontFamily="{DynamicResource AppFont}"
-                                                                           FontSize="{StaticResource AppFontSize}"
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           MaxWidth="320"
                                                                            FontWeight="SemiBold"
-                                                                           Foreground="{DynamicResource AppTextPrimary}"
-                                                                           TextWrapping="Wrap"/>
-
-                                                                <TextBlock Text="{DynamicResource S.Settings.ProfileSnapshotBody}"
-                                                                           FontFamily="{DynamicResource AppFont}"
-                                                                           FontSize="12"
-                                                                           Foreground="{DynamicResource AppTextSecondary}"
-                                                                           TextWrapping="Wrap"
-                                                                           LineHeight="17"
-                                                                           Margin="0,3,0,0"/>
-
-                                                                <Button x:Name="ProfileSnapshotButton"
-                                                                        Style="{StaticResource FlatButton}"
-                                                                        Height="28"
-                                                                        HorizontalAlignment="Left"
-                                                                        Margin="0,9,0,0"
-                                                                        Click="ProfileSnapshotButton_Click">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE8C8;"
-                                                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                                   FontSize="12"
-                                                                                   VerticalAlignment="Center"
-                                                                                   Margin="0,0,8,0"/>
-                                                                        <TextBlock Text="{DynamicResource S.Settings.ProfileSnapshotAction}"
-                                                                                   VerticalAlignment="Center"/>
-                                                                    </StackPanel>
-                                                                </Button>
+                                                                           VerticalAlignment="Center"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <ItemsControl ItemsSource="{Binding Tags}" Focusable="False">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <StackPanel Orientation="Horizontal"/>
+                                                                        </ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Border x:Name="Tag" Style="{StaticResource ProfileTag}">
+                                                                                <TextBlock x:Name="TagText"
+                                                                                           Text="{Binding Text}"
+                                                                                           FontFamily="{DynamicResource AppFont}"
+                                                                                           FontSize="11"
+                                                                                           Foreground="{DynamicResource AppTextSecondary}"/>
+                                                                            </Border>
+                                                                            <DataTemplate.Triggers>
+                                                                                <DataTrigger Binding="{Binding Accent}" Value="True">
+                                                                                    <Setter TargetName="Tag" Property="Background" Value="{DynamicResource AppAccentSubtle}"/>
+                                                                                    <Setter TargetName="Tag" Property="BorderBrush" Value="{DynamicResource AppAccentSubtle}"/>
+                                                                                    <Setter TargetName="TagText" Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                                                                                </DataTrigger>
+                                                                            </DataTemplate.Triggers>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
                                                             </StackPanel>
-                                                        </Grid>
-                                                    </Border>
 
-                                                    <Border Grid.Row="2"
-                                                            BorderBrush="{DynamicResource AppBorder}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="6">
-                                                        <Grid>
-                                                            <Grid.RowDefinitions>
-                                                                <RowDefinition Height="*"/>
-                                                                <RowDefinition Height="Auto"/>
-                                                            </Grid.RowDefinitions>
+                                                            <!-- An identifier, matched character by
+                                                                 character against what is installed,
+                                                                 which is what a fixed pitch is for. -->
+                                                            <TextBlock Text="{Binding Model}"
+                                                                       FontFamily="Consolas, Cascadia Mono"
+                                                                       FontSize="12.5"
+                                                                       Foreground="{DynamicResource AppTextSecondary}"
+                                                                       Margin="0,4,0,0"
+                                                                       TextTrimming="CharacterEllipsis"/>
 
-                                                            <!-- Room for three rows whether or not
-                                                                 there are three: the box would
-                                                                 otherwise change height as prompts
-                                                                 are added and deleted, and take the
-                                                                 preview beside it with it. -->
-                                                            <ItemsControl x:Name="PromptPresetList"
-                                                                          Grid.Row="0"
-                                                                          MinHeight="126"
-                                                                          VerticalAlignment="Top">
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate>
-                                                                        <RadioButton GroupName="PromptPreset"
-                                                                                     Style="{StaticResource PromptPresetRow}"
-                                                                                     Tag="{Binding Id}"
-                                                                                     IsChecked="{Binding IsSelected, Mode=OneTime}"
-                                                                                     Checked="PromptPreset_Checked">
-                                                                            <Grid>
-                                                                                <Grid.ColumnDefinitions>
-                                                                                    <ColumnDefinition Width="*"/>
-                                                                                    <ColumnDefinition Width="Auto"/>
-                                                                                </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Parameters}"
+                                                                       Visibility="{Binding ParametersVisibility}"
+                                                                       FontFamily="{DynamicResource AppFont}"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource AppTextSecondary}"
+                                                                       Opacity="0.85"
+                                                                       Margin="0,3,0,0"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
 
-                                                                                <TextBlock Grid.Column="0"
-                                                                                           Text="{Binding Name}"
-                                                                                           VerticalAlignment="Center"
-                                                                                           TextTrimming="CharacterEllipsis"/>
-
-                                                                                <!-- The badge and the
-                                                                                     button share the
-                                                                                     column: exactly one
-                                                                                     of the two is ever
-                                                                                     on a row. -->
-                                                                                <Border Grid.Column="1"
-                                                                                        Visibility="{Binding BuiltInBadgeVisibility}"
-                                                                                        BorderBrush="{DynamicResource AppBorder}"
-                                                                                        BorderThickness="1"
-                                                                                        CornerRadius="4"
-                                                                                        Padding="6,1"
-                                                                                        Margin="8,0,2,0"
-                                                                                        VerticalAlignment="Center">
-                                                                                    <TextBlock Text="{DynamicResource S.Settings.PromptReadOnly}"
-                                                                                               FontFamily="{DynamicResource AppFont}"
-                                                                                               FontSize="11"
-                                                                                               Foreground="{DynamicResource AppTextSecondary}"/>
-                                                                                </Border>
-
-                                                                                <Button Grid.Column="1"
-                                                                                        Visibility="{Binding ActionsVisibility}"
-                                                                                        Style="{StaticResource IconButton}"
-                                                                                        Width="30" Height="30"
-                                                                                        Margin="8,0,0,0"
-                                                                                        Tag="{Binding Id}"
-                                                                                        ToolTip="{DynamicResource S.Settings.PromptEditTitle}"
-                                                                                        Click="PromptEditPreset_Click">
-                                                                                    <TextBlock Text="&#xE70F;"
-                                                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                                               FontSize="13"
-                                                                                               Foreground="{DynamicResource AppTextSecondary}"/>
-                                                                                </Button>
-                                                                            </Grid>
-                                                                        </RadioButton>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-
-                                                            <Button x:Name="PromptAddButton"
-                                                                    Grid.Row="1"
-                                                                    Style="{StaticResource PromptAddRow}"
-                                                                    BorderBrush="{DynamicResource AppBorder}"
-                                                                    BorderThickness="0,1,0,0"
-                                                                    Click="PromptAddButton_Click">
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="&#xE710;"
-                                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                               FontSize="12"
-                                                                               VerticalAlignment="Center"
-                                                                               Margin="0,0,10,0"/>
-                                                                    <TextBlock x:Name="PromptAddText"
-                                                                               VerticalAlignment="Center"/>
-                                                                </StackPanel>
-                                                            </Button>
-                                                        </Grid>
-                                                    </Border>
-                                                </Grid>
-
-                                                <Rectangle Grid.Column="1"
-                                                           Width="1"
-                                                           Fill="{DynamicResource AppBorder}"/>
-
-                                                <!-- ── What the picked row says ─────────────── -->
-                                                <!-- Unfilled, and read-only for the same reason the
-                                                     built-in row has no pencil on it: the list is
-                                                     names, and a name is not a prompt. -->
-                                                <Grid Grid.Column="2" Margin="14,12,14,12">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-
-                                                    <TextBlock Grid.Row="0"
-                                                               Text="{DynamicResource S.Settings.ProfileInUse}"
-                                                               Style="{StaticResource SectionHeader}"
-                                                               Margin="2,0,0,8"/>
-
-                                                    <!-- The two settings that are not prose, above the
-                                                         two that are. They are what makes this a model
-                                                         setting rather than a prompt: the wording below
-                                                         was written for this model, at this
-                                                         temperature, and reading one without the other
-                                                         two is how they come to disagree. -->
-                                                    <StackPanel Grid.Row="1">
-                                                        <!-- The model on a card of its own, above
-                                                             the three numbers. It is the answer to a
-                                                             different question - which model this
-                                                             setting is for, rather than how it is
-                                                             asked - and it is the one value a reader
-                                                             takes away with them, which is what the
-                                                             copy beside it is for. -->
-                                                        <Border Style="{StaticResource ProfileCard}">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <!-- The glyph inside the well
-                                                                     rather than stacked on top of
-                                                                     it in the same cell: two
-                                                                     siblings each centre themselves
-                                                                     against the row, which is
-                                                                     taller than the well, and the
-                                                                     two centres are not the same
-                                                                     point. -->
-                                                                <Border Grid.Column="0"
-                                                                        Style="{StaticResource ProfileCardIconWell}">
-                                                                    <TextBlock Text="&#xF158;"
-                                                                               Style="{StaticResource ProfileCardIcon}"/>
-                                                                </Border>
-
-                                                                <StackPanel Grid.Column="1"
-                                                                            VerticalAlignment="Center"
-                                                                            Margin="10,0,8,0">
-                                                                    <TextBlock Text="{DynamicResource S.Settings.ModelName}"
-                                                                               Style="{StaticResource ProfileCardLabel}"/>
-                                                                    <TextBlock x:Name="ProfileModelText"
-                                                                               Style="{StaticResource ProfileCardMono}"/>
-                                                                </StackPanel>
-
-                                                                <Button Grid.Column="2"
-                                                                        x:Name="ProfileModelCopyButton"
-                                                                        Width="34" Height="34"
-                                                                        Padding="0"
-                                                                        VerticalAlignment="Center"
-                                                                        Style="{StaticResource FlatButton}"
-                                                                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                        FontSize="14"
-                                                                        Foreground="{DynamicResource AppTextSecondary}"
-                                                                        Content="&#xE8C8;"
-                                                                        ToolTip="{DynamicResource S.Settings.CopyModelName}"
-                                                                        AutomationProperties.Name="{DynamicResource S.Settings.CopyModelName}"
-                                                                        Click="ProfileModelCopy_Click"/>
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <!-- The three side by side rather than
-                                                             stacked: each is a number two or three
-                                                             characters long, and they are read
-                                                             together - what a temperature means
-                                                             depends on the Top P beside it. -->
-                                                        <Grid Margin="0,8,0,0">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                            </Grid.ColumnDefinitions>
-                                                        <Border Grid.Column="0"
-                                                                Style="{StaticResource ProfileCard}"
-                                                                Margin="0,0,4,0">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <Border Grid.Column="0"
-                                                                        Style="{StaticResource ProfileCardIconWell}">
-                                                                    <TextBlock Text="&#xE9CA;"
-                                                                               Style="{StaticResource ProfileCardIcon}"/>
-                                                                </Border>
-                                                                <StackPanel Grid.Column="1"
-                                                                            VerticalAlignment="Center"
-                                                                            Margin="10,0,0,0">
-                                                                    <TextBlock Text="{DynamicResource S.Settings.Temperature}"
-                                                                               Style="{StaticResource ProfileCardLabel}"/>
-                                                                    <TextBlock x:Name="ProfileTemperatureText"
-                                                                               Style="{StaticResource ProfileCardValue}"/>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </Border>
-                                                        <Border Grid.Column="1"
-                                                                Style="{StaticResource ProfileCard}"
-                                                                Margin="4,0,4,0">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <Border Grid.Column="0"
-                                                                        Style="{StaticResource ProfileCardIconWell}">
-                                                                    <TextBlock Text="&#xE9E9;"
-                                                                               Style="{StaticResource ProfileCardIcon}"/>
-                                                                </Border>
-                                                                <StackPanel Grid.Column="1"
-                                                                            VerticalAlignment="Center"
-                                                                            Margin="10,0,0,0">
-                                                                    <TextBlock Text="{DynamicResource S.Settings.TopP}"
-                                                                               Style="{StaticResource ProfileCardLabel}"/>
-                                                                    <TextBlock x:Name="ProfileTopPText"
-                                                                               Style="{StaticResource ProfileCardValue}"/>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </Border>
-                                                        <Border Grid.Column="2"
-                                                                Style="{StaticResource ProfileCard}"
-                                                                Margin="4,0,0,0">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <Border Grid.Column="0"
-                                                                        Style="{StaticResource ProfileCardIconWell}">
-                                                                    <TextBlock Text="&#xE943;"
-                                                                               Style="{StaticResource ProfileCardIcon}"/>
-                                                                </Border>
-                                                                <StackPanel Grid.Column="1"
-                                                                            VerticalAlignment="Center"
-                                                                            Margin="10,0,0,0">
-                                                                    <TextBlock Text="{DynamicResource S.Settings.Seed}"
-                                                                               Style="{StaticResource ProfileCardLabel}"/>
-                                                                    <TextBlock x:Name="ProfileSeedText"
-                                                                               Style="{StaticResource ProfileCardValue}"/>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </Border>
-                                                        </Grid>
-                                                    </StackPanel>
-
-                                                    <Rectangle Grid.Row="2"
-                                                               Height="1"
-                                                               Margin="0,12,0,0"
-                                                               Fill="{DynamicResource AppSeparator}"/>
-
-                                                    <!-- The pair of tabs used to sit above the whole
-                                                         card, where it read as choosing how the app
-                                                         translates. All it has ever picked is which of
-                                                         the two sets of prompts is on screen, and now
-                                                         that the card also holds a model and a
-                                                         temperature - which the pair does not scope -
-                                                         it has to sit against the prompts themselves. -->
-                                                    <StackPanel Grid.Row="3" Margin="0,12,0,0">
-                                                        <Border BorderBrush="{DynamicResource AppBorder}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="6"
-                                                                ClipToBounds="True">
-                                                            <Grid>
-                                                                <!-- An even split rather than tabs sized
-                                                                     to their own labels: the two names
-                                                                     run to a similar length in every
-                                                                     language this ships in, and two tabs
-                                                                     of different widths read as one
-                                                                     being the main one. -->
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <!-- Neither tab is checked here: a
-                                                                     checked state set in markup raises
-                                                                     Checked while the panel is still
-                                                                     being constructed, before the
-                                                                     debounce timers its handler writes
-                                                                     through exist. Opening the panel
-                                                                     sets it. -->
-                                                                <RadioButton x:Name="PromptAutoTab"
-                                                                             Grid.Column="0"
-                                                                             GroupName="PromptTab"
-                                                                             Style="{StaticResource PromptTab}"
-                                                                             Content="{DynamicResource S.Settings.PromptAuto}"
-                                                                             Checked="PromptTab_Checked"/>
-                                                                <RadioButton x:Name="PromptExplicitTab"
-                                                                             Grid.Column="1"
-                                                                             GroupName="PromptTab"
-                                                                             Style="{StaticResource PromptTab}"
-                                                                             Content="{DynamicResource S.Settings.PromptExplicit}"
-                                                                             Checked="PromptTab_Checked"/>
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <!-- Says when the prompt on screen is the one
-                                                             that gets sent: the tab names alone leave a
-                                                             reader to guess whether the other one is
-                                                             off. -->
-                                                        <TextBlock x:Name="PromptTabHint"
-                                                                   Style="{StaticResource FieldHint}"
-                                                                   Margin="2,8,0,0"/>
-                                                    </StackPanel>
-
-                                                    <!-- One panel per chat role, stacked in the order
-                                                         they are sent. Both halves are always drawn,
-                                                         at the same height, whichever one the prompt
-                                                         fills: the pair is the shape of the thing
-                                                         being previewed, and a panel that appears
-                                                         only when it has content would make the
-                                                         other one move every time the picked row
-                                                         changes. An unused half says so — see
-                                                         PromptRoleEmptyText. -->
-                                                    <Grid Grid.Row="4" Margin="0,10,0,0">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="10"/>
-                                                            <RowDefinition Height="*"/>
-                                                        </Grid.RowDefinitions>
-
-                                                        <Border Grid.Row="0" Style="{StaticResource PromptRoleFrame}">
-                                                            <Grid>
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto"/>
-                                                                    <RowDefinition Height="*"/>
-                                                                </Grid.RowDefinitions>
-                                                                <Border Grid.Row="0" Style="{StaticResource PromptRoleHeaderBar}">
-                                                                    <TextBlock Text="System Prompt"
-                                                                               Style="{StaticResource PromptRoleLabel}"/>
-                                                                </Border>
-                                                                <ScrollViewer Grid.Row="1"
-                                                                              Padding="14,11"
-                                                                              VerticalScrollBarVisibility="Auto"
-                                                                              HorizontalScrollBarVisibility="Disabled">
-                                                                    <Grid>
-                                                                        <TextBlock x:Name="PromptPreviewSystemText"
-                                                                                   Style="{StaticResource PromptRoleBodyText}"/>
-                                                                        <TextBlock x:Name="PromptPreviewSystemEmpty"
-                                                                                   Style="{StaticResource PromptRoleEmptyText}"
-                                                                                   Text="{DynamicResource S.Settings.PromptRoleEmpty}"
-                                                                                   Visibility="Collapsed"/>
-                                                                    </Grid>
-                                                                </ScrollViewer>
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <Border Grid.Row="2" Style="{StaticResource PromptRoleFrame}">
-                                                            <Grid>
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto"/>
-                                                                    <RowDefinition Height="*"/>
-                                                                </Grid.RowDefinitions>
-                                                                <Border Grid.Row="0" Style="{StaticResource PromptRoleHeaderBar}">
-                                                                    <TextBlock Text="User Prompt"
-                                                                               Style="{StaticResource PromptRoleLabel}"/>
-                                                                </Border>
-                                                                <ScrollViewer Grid.Row="1"
-                                                                              Padding="14,11"
-                                                                              VerticalScrollBarVisibility="Auto"
-                                                                              HorizontalScrollBarVisibility="Disabled">
-                                                                    <Grid>
-                                                                        <TextBlock x:Name="PromptPreviewUserText"
-                                                                                   Style="{StaticResource PromptRoleBodyText}"/>
-                                                                        <TextBlock x:Name="PromptPreviewUserEmpty"
-                                                                                   Style="{StaticResource PromptRoleEmptyText}"
-                                                                                   Text="{DynamicResource S.Settings.PromptRoleEmpty}"
-                                                                                   Visibility="Collapsed"/>
-                                                                    </Grid>
-                                                                </ScrollViewer>
-                                                            </Grid>
-                                                        </Border>
+                                                        <!-- Exactly one of the two is ever on a row. -->
+                                                        <Button Grid.Column="1"
+                                                                Visibility="{Binding EditVisibility}"
+                                                                Style="{StaticResource IconButton}"
+                                                                Margin="8,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                Tag="{Binding Id}"
+                                                                ToolTip="{DynamicResource S.Settings.PromptEditTitle}"
+                                                                AutomationProperties.Name="{DynamicResource S.Settings.PromptEditTitle}"
+                                                                Click="PromptEditPreset_Click">
+                                                            <TextBlock Text="&#xE70F;"
+                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                       FontSize="14"/>
+                                                        </Button>
+                                                        <!-- ToolTipService.ShowOnDisabled: at the cap the
+                                                             button greys, and the tip still says what it
+                                                             would have done. -->
+                                                        <Button Grid.Column="1"
+                                                                Visibility="{Binding CopyVisibility}"
+                                                                IsEnabled="{Binding CopyEnabled}"
+                                                                Style="{StaticResource IconButton}"
+                                                                Margin="8,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip="{DynamicResource S.Settings.ProfileCopy}"
+                                                                ToolTipService.ShowOnDisabled="True"
+                                                                AutomationProperties.Name="{DynamicResource S.Settings.ProfileCopy}"
+                                                                Click="ProfileCopy_Click">
+                                                            <TextBlock Text="&#xE8C8;"
+                                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                       FontSize="14"/>
+                                                        </Button>
                                                     </Grid>
-                                                </Grid>
-                                            </Grid>
+                                                </RadioButton>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Button x:Name="PromptAddButton"
+                                            Style="{StaticResource PromptAddRow}"
+                                            Click="PromptAddButton_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE710;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="12"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,10,0"/>
+                                            <TextBlock x:Name="PromptAddText"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Border>
+
+                            <!-- What used to be a card of its own above the list: the built-in row is
+                                 the one thing here nobody owns, rewritten by every update, so a setup
+                                 somebody is happy with can change under them without their having
+                                 touched anything. One line under the list says so and where the copy
+                                 is. -->
+                            <TextBlock Grid.Column="0" Grid.Row="8" Grid.ColumnSpan="2"
+                                       Text="{DynamicResource S.Settings.ProfileBuiltInNote}"
+                                       Style="{StaticResource FieldHint}"
+                                       FontSize="12"
+                                       LineHeight="18"
+                                       Margin="2,8,0,0"/>
                         </Grid>
                     </Grid>
                 </ScrollViewer>

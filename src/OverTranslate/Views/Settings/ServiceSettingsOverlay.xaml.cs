@@ -19,7 +19,6 @@ using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Size = System.Windows.Size;
 using RadioButton = System.Windows.Controls.RadioButton;
 using Button = System.Windows.Controls.Button;
-using Clipboard = System.Windows.Clipboard;
 
 namespace OverTranslate.Views.Settings;
 
@@ -42,17 +41,6 @@ public partial class ServiceSettingsOverlay : UserControl
 
     private readonly DispatcherTimer _apiKeyDebounce;
     private readonly DispatcherTimer _openAiSettingsDebounce;
-
-    private const int PromptAutoSegment = 0;
-    private const int PromptExplicitSegment = 1;
-
-    /// <summary>
-    /// Which of the two prompt libraries the list underneath the tabs is showing. Kept alongside
-    /// the tab's own checked state because every handler that reads or writes a prompt has to know
-    /// which of the two lists it belongs to, and asking two RadioButtons that each time reads worse
-    /// than asking this.
-    /// </summary>
-    private int _promptSegment = PromptAutoSegment;
 
     /// <summary>True while the controls are being populated, so initialization never writes back.</summary>
     private bool _loading;
@@ -198,9 +186,9 @@ public partial class ServiceSettingsOverlay : UserControl
             OpenAiPanel.Visibility = deepL ? Visibility.Collapsed : Visibility.Visible;
 
             // The card is sized for the wider of the two panels, and DeepL is one field. OpenAI's
-            // width is set by the prompt library rather than by the fields above it: the list and
-            // the prompt it resolves to sit side by side, and the prompt is a paragraph.
-            Card.Width = deepL ? 460 : 760;
+            // width is set by the list rather than by the fields above it: a row is a name with its
+            // tags, and a model name in a fixed pitch under it.
+            Card.Width = deepL ? 460 : 640;
 
             ApiKeyBox.Secret = s.ApiKey;
 
@@ -222,7 +210,7 @@ public partial class ServiceSettingsOverlay : UserControl
     }
 
     /// <summary>
-    /// Re-renders the text this panel composes in code: the title, the note under the prompt tabs,
+    /// Re-renders the text this panel composes in code: the title,
     /// the built-in row's name and the label on the add row.
     /// </summary>
     private void OnLanguageChanged(object? sender, EventArgs e) => LoadSettings();
@@ -383,18 +371,98 @@ public partial class ServiceSettingsOverlay : UserControl
 
         public bool IsSelected { get; init; }
 
+        /// <summary>The model, or what an empty one means: the row is unusable until it has one.</summary>
+        public string Model { get; init; } = "";
+
+        /// <summary>The tags after the name — see <see cref="TagsFor"/>.</summary>
+        public IReadOnlyList<ProfileTag> Tags { get; init; } = [];
+
+        /// <summary>The parameters the row sends, on one line — see <see cref="ParameterSummary"/>.</summary>
+        public string Parameters { get; init; } = "";
+
+        /// <summary>Whether the copy may be made: it counts against the cap the Add row does.</summary>
+        public bool CopyEnabled { get; init; }
+
         public bool IsBuiltIn => Id.Length == 0;
 
         /// <inheritdoc cref="IsBuiltIn"/>
-        public Visibility ActionsVisibility => IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
+        public Visibility EditVisibility => IsBuiltIn ? Visibility.Collapsed : Visibility.Visible;
 
         /// <inheritdoc cref="IsBuiltIn"/>
-        public Visibility BuiltInBadgeVisibility => IsBuiltIn ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility CopyVisibility => IsBuiltIn ? Visibility.Visible : Visibility.Collapsed;
+
+        /// <summary>No line at all when nothing is sent, rather than a line that says so.</summary>
+        public Visibility ParametersVisibility => Parameters.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>One tag after a row's name; <see cref="Accent"/> for the one that changes what is sent.</summary>
+    public sealed record ProfileTag(string Text, bool Accent);
+
+    /// <summary>What a row's tags say, in the order they are drawn.</summary>
+    internal enum ProfileTagKind { ReadOnly, Batch, CustomPrompt }
+
+    /// <summary>
+    /// The tags a row carries: 唯讀 on the built-in one, 整批 when the setting sends a screen as a
+    /// batch, and 自訂提示詞 when its template is the user's own rather than the default.
+    /// </summary>
+    /// <remarks>
+    /// The template is the user's own exactly when it is stored: a box saved as the default is stored
+    /// empty — see <see cref="OpenAiCompatibleProvider.TemplateToStore"/> — so nothing is compared.
+    /// </remarks>
+    internal static IReadOnlyList<ProfileTagKind> TagsFor(OpenAiModelProfile profile, bool builtIn)
+    {
+        var tags = new List<ProfileTagKind>();
+        if (builtIn) tags.Add(ProfileTagKind.ReadOnly);
+        if (profile.Batch) tags.Add(ProfileTagKind.Batch);
+        if (profile.Template.Trim().Length > 0) tags.Add(ProfileTagKind.CustomPrompt);
+        return tags;
     }
 
     /// <summary>
-    /// Fills the tabs and the list under them. Also the language-change path, since the built-in
-    /// row's name, the note above the list and the label on the add row are all localized.
+    /// The parameters a setting sends, as one line — "Temperature 0.7 · Top P 0.6 · Seed 42" — in the
+    /// editor's order, or empty when it sends none of them.
+    /// </summary>
+    /// <param name="label">Looks a string up by key, so a test can run without the dictionaries.</param>
+    /// <remarks>
+    /// Only what is sent. A parameter switched off is simply missing, which is what it is in the
+    /// request; the editor is where the full set is read.
+    /// </remarks>
+    internal static string ParameterSummary(OpenAiModelProfile profile, Func<string, string> label)
+    {
+        var parts = new List<string>();
+        if (profile.ThinkingOff) parts.Add(label("S.Settings.ThinkingOff"));
+        if (profile.TemperatureEnabled) parts.Add($"{label("S.Settings.Temperature")} {Number(profile.Temperature)}");
+        if (profile.TopPEnabled) parts.Add($"{label("S.Settings.TopP")} {Number(profile.TopP)}");
+        if (profile.SeedEnabled) parts.Add($"{label("S.Settings.Seed")} {profile.Seed.ToString(CultureInfo.InvariantCulture)}");
+        return string.Join(" · ", parts);
+
+        static string Number(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>A row for one setting, the built-in one included.</summary>
+    private static PromptPresetRow Row(OpenAiModelProfile profile, string id, string name, bool selected, bool canAdd)
+    {
+        var model = profile.Model.Trim();
+        return new PromptPresetRow
+        {
+            Id = id,
+            Name = name,
+            IsSelected = selected,
+            Model = model.Length > 0 ? model : LocalizationService.Get("S.Settings.ModelRequired"),
+            Tags = TagsFor(profile, builtIn: id.Length == 0).Select(kind => kind switch
+            {
+                ProfileTagKind.ReadOnly => new ProfileTag(LocalizationService.Get("S.Settings.PromptReadOnly"), false),
+                ProfileTagKind.Batch => new ProfileTag(LocalizationService.Get("S.Settings.OpenAiModeBatch"), true),
+                _ => new ProfileTag(LocalizationService.Get("S.Settings.ProfileTagCustomPrompt"), false),
+            }).ToList(),
+            Parameters = ParameterSummary(profile, LocalizationService.Get),
+            CopyEnabled = canAdd,
+        };
+    }
+
+    /// <summary>
+    /// Fills the list. Also the language-change path, since the built-in row's name and the label
+    /// on the add row are localized.
     /// </summary>
     /// <remarks>
     /// Rebuilt whole on every change rather than kept in sync: the list is at most six short rows,
@@ -403,12 +471,6 @@ public partial class ServiceSettingsOverlay : UserControl
     /// </remarks>
     private void LoadPromptLibrary(AppSettings s)
     {
-        if (_promptSegment == PromptAutoSegment) PromptAutoTab.IsChecked = true;
-        else PromptExplicitTab.IsChecked = true;
-
-        // One list, whichever tab is showing. A saved profile carries a model, a temperature and both
-        // prompt pairs, so the tab beside the panels changes what is drawn in them and nothing else.
-        // It used to be two lists, and picking a row in one said nothing about the other.
         var profiles = s.OpenAi.Profiles;
         var selectedId = s.OpenAi.SelectedProfileId;
 
@@ -417,36 +479,21 @@ public partial class ServiceSettingsOverlay : UserControl
         // row writes it back, and nothing reads the stale value in between.
         if (selectedId.Length > 0 && profiles.All(p => p.Id != selectedId)) selectedId = "";
 
+        var canAdd = profiles.Count < OpenAiSettings.MaxProfiles;
         var rows = new List<PromptPresetRow>
         {
-            new()
-            {
-                Name = LocalizationService.Get("S.Settings.PromptDefaultName"),
-                IsSelected = selectedId.Length == 0,
-            },
+            Row(OpenAiCompatibleProvider.BuiltInProfile(), "",
+                LocalizationService.Get("S.Settings.PromptDefaultName"), selectedId.Length == 0, canAdd),
         };
 
-        rows.AddRange(profiles.Select(p => new PromptPresetRow
-        {
-            Id = p.Id,
-            Name = p.Name,
-            IsSelected = p.Id == selectedId,
-        }));
+        rows.AddRange(profiles.Select(p => Row(p, p.Id, p.Name, p.Id == selectedId, canAdd)));
 
         PromptPresetList.ItemsSource = rows;
 
         UpdatePromptChrome();
     }
 
-    private void PromptTab_Checked(object sender, RoutedEventArgs e)
-    {
-        if (_loading) return;
-
-        _promptSegment = PromptExplicitTab.IsChecked == true ? PromptExplicitSegment : PromptAutoSegment;
-        LoadPromptLibrary(SettingsService.Instance.Current);
-    }
-
-    /// <summary>Picks the prompt this case sends.</summary>
+    /// <summary>Picks the setting that is sent.</summary>
     /// <remarks>
     /// Also the path a rebuilt list takes when the stored selection comes up checked, so it writes
     /// only when the value actually moved — which is why it needs no guard of its own. The rows are
@@ -472,10 +519,7 @@ public partial class ServiceSettingsOverlay : UserControl
         var profiles = SettingsService.Instance.Current.OpenAi.Profiles;
         if (profiles.Count >= OpenAiSettings.MaxProfiles) return;
 
-        PromptEditor.Open(
-            _promptSegment == PromptAutoSegment,
-            profile: null,
-            suggestedName: SuggestProfileName(profiles));
+        PromptEditor.Open(profile: null, suggestedName: SuggestProfileName(profiles));
     }
 
     private void PromptEditPreset_Click(object sender, RoutedEventArgs e)
@@ -486,9 +530,7 @@ public partial class ServiceSettingsOverlay : UserControl
             .FirstOrDefault(p => p.Id == id);
         if (profile is null) return;
 
-        // The card opens on the tab the panel is showing, which is the one the reader was looking at
-        // when they reached for the pencil — it edits both pairs either way.
-        PromptEditor.Open(_promptSegment == PromptAutoSegment, profile, suggestedName: "");
+        PromptEditor.Open(profile, suggestedName: "");
     }
 
     /// <summary>
@@ -500,17 +542,17 @@ public partial class ServiceSettingsOverlay : UserControl
     /// made — editable, renameable, deletable. Anything else would mean a second kind of row whose
     /// only difference is where it came from.
     ///
-    /// It copies <see cref="OpenAiCompatibleProvider.BuiltInProfile"/> rather than whatever row is
-    /// checked. The card beside it is about one thing — the built-in wording being rewritten by
-    /// updates — and a copy of an already-saved profile would be a duplicate nobody asked for, under
-    /// a name that claims to be the shipped default.
+    /// It is on the built-in row and nowhere else: what it is for is the built-in wording being
+    /// rewritten by updates — the line under the list says so — and a copy of an already-saved
+    /// profile would be a duplicate nobody asked for, under a name that claims to be the shipped
+    /// default.
     ///
     /// The selection is deliberately left alone. The new row is byte for byte what is already in use,
     /// so switching to it changes nothing today, and moving someone off the row they picked is not
     /// what a button called 複製 says it will do. It matters after the next update, and by then the
     /// row is in the list to pick.
     /// </remarks>
-    private void ProfileSnapshotButton_Click(object sender, RoutedEventArgs e)
+    private void ProfileCopy_Click(object sender, RoutedEventArgs e)
     {
         var openAi = SettingsService.Instance.Current.OpenAi;
         if (openAi.Profiles.Count >= OpenAiSettings.MaxProfiles) return;
@@ -586,205 +628,13 @@ public partial class ServiceSettingsOverlay : UserControl
         return LocalizationService.Format("S.Settings.PromptNewName", profiles.Count + 1);
     }
 
-    /// <summary>
-    /// Brings the note, the add row and the preview in line with what is on screen.
-    /// </summary>
+    /// <summary>Brings the add row in line with the list: the count, and disabled at the cap.</summary>
     private void UpdatePromptChrome()
     {
-        var automatic = _promptSegment == PromptAutoSegment;
-        var openAi = SettingsService.Instance.Current.OpenAi;
-
-        PromptTabHint.Text = LocalizationService.Get(
-            automatic ? "S.Settings.PromptAutoHint" : "S.Settings.PromptExplicitHint");
-
-        var count = openAi.Profiles.Count;
+        var count = SettingsService.Instance.Current.OpenAi.Profiles.Count;
         PromptAddButton.IsEnabled = count < OpenAiSettings.MaxProfiles;
         PromptAddText.Text = LocalizationService.Format(
             "S.Settings.ProfileAdd", count, OpenAiSettings.MaxProfiles);
-
-        // The copy writes into the same list, so it stops offering on the same cap the Add row does.
-        // Greyed rather than hidden: the card's sentence still applies at five settings, and a button
-        // that vanishes reads as a feature that went away rather than as a list that is full.
-        ProfileSnapshotButton.IsEnabled = count < OpenAiSettings.MaxProfiles;
-
-        // One profile answers every question this pane asks, including which model and which
-        // temperature: that is what makes it a 模型設定 rather than a prompt. The built-in one stands
-        // in when nothing is picked, and it is a profile of the same shape — see
-        // OpenAiCompatibleProvider.BuiltInProfile — so nothing here is a special case.
-        var profile = openAi.SelectedProfile() ?? OpenAiCompatibleProvider.BuiltInProfile();
-
-        var model = profile.Model.Trim();
-        ProfileModelText.Text = model.Length > 0
-            ? model
-            : LocalizationService.Get("S.Settings.ModelRequired");
-        ProfileModelText.Opacity = model.Length > 0 ? 1 : 0.55;
-
-        // A parameter that is switched off is drawn as 不傳送 rather than left blank or hidden: the
-        // reason a model behaves the way it does is as often a field that was left out as a value
-        // that was sent, and a row that disappears when it is off cannot be read as either.
-        ProfileTemperatureText.Text = Sampling(profile.TemperatureEnabled, profile.Temperature);
-        ProfileTopPText.Text = Sampling(profile.TopPEnabled, profile.TopP);
-        ProfileSeedText.Text = Sampling(profile.SeedEnabled, profile.Seed);
-
-        // An em dash rather than a phrase for a parameter that is switched off. The three cards are
-        // read as a row of values, and a sentence in one of them is longer than the card, pushes the
-        // label into ellipsis and stops the row scanning as three of the same thing. A dash is the
-        // conventional "no value here", and the same mark in any language.
-        static string Sampling(bool enabled, double value) => enabled
-            ? value.ToString("0.##", CultureInfo.InvariantCulture)
-            : "\u2014";
-
-        // The tab decides which of the profile's two pairs is drawn and nothing else: the model and
-        // the temperature above belong to the profile, not to one of its cases.
-        var prompts = profile.PromptsFor(automatic);
-        WritePromptRole(PromptPreviewSystemText, PromptPreviewSystemEmpty, prompts.SystemPrompt);
-        WritePromptRole(PromptPreviewUserText, PromptPreviewUserEmpty, prompts.UserPrompt);
-    }
-
-    /// <summary>
-    /// Puts the model name on the clipboard, which is the one value on this pane someone needs
-    /// somewhere else — in a terminal, next to `ollama list`.
-    /// </summary>
-    /// <remarks>
-    /// The glyph answers rather than a toast: this panel has no status line of its own, and a message
-    /// that has to appear somewhere would have to be dismissed from somewhere. A tick where the copy
-    /// icon was is feedback in the place the click happened, and it goes back on its own.
-    ///
-    /// Nothing is said when the clipboard refuses — another application can hold it open — because
-    /// the icon staying as it was is already the honest answer: nothing was copied. The alternative
-    /// is an error dialog over a settings panel for a value the reader can select and copy by hand.
-    /// </remarks>
-    private void ProfileModelCopy_Click(object sender, RoutedEventArgs e)
-    {
-        var model = ProfileModelText.Text.Trim();
-        if (model.Length == 0) return;
-
-        try
-        {
-            Clipboard.SetText(model);
-        }
-        catch (Exception)
-        {
-            return;
-        }
-
-        ProfileModelCopyButton.Content = "\uE73E";
-
-        _copyFeedback?.Stop();
-        _copyFeedback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1400) };
-        _copyFeedback.Tick += (_, _) =>
-        {
-            _copyFeedback?.Stop();
-            _copyFeedback = null;
-            ProfileModelCopyButton.Content = "\uE8C8";
-        };
-        _copyFeedback.Start();
-    }
-
-    /// <summary>Puts the copy icon back after the tick. Null while no tick is showing.</summary>
-    private DispatcherTimer? _copyFeedback;
-
-    /// <summary>
-    /// Fills one role's panel, or shows the line that says the role is deliberately unused.
-    /// </summary>
-    /// <remarks>
-    /// The two TextBlocks are stacked rather than one being retargeted, because the prose is written
-    /// as Inlines with the placeholders picked out — see <see cref="WritePlaceholderAware"/> — and
-    /// the empty line is a plain string in a different style.
-    /// </remarks>
-    private static void WritePromptRole(TextBlock body, TextBlock empty, string text)
-    {
-        var hasText = text.Trim().Length > 0;
-
-        body.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
-        empty.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
-
-        // Drawn exactly as stored, trailing breaks included. This pane is what someone checks a
-        // prompt against before deciding it is wrong, and the break at the end of the user prompt is
-        // load-bearing: it is the blank line between the instruction and the text being translated,
-        // which nothing else inserts. Tidied away here, the one thing the reader cannot see would be
-        // the one thing easiest to delete by accident.
-        if (hasText) WritePlaceholderAware(body, text);
-        else body.Inlines.Clear();
-    }
-
-    /// <summary>
-    /// Writes prose that mentions the prompt placeholders, with each picked out in the accent colour.
-    /// </summary>
-    /// <remarks>
-    /// They are the only part of the sentence that is machinery rather than words — what the user
-    /// types into their own prompt to have a language substituted in — and the colour is what says
-    /// so without a sentence explaining it. The same colour the rest of the app uses for the thing
-    /// being pointed at, through a resource reference so it follows a theme change.
-    /// </remarks>
-    private static void WritePlaceholderAware(TextBlock target, string text)
-    {
-        target.Inlines.Clear();
-        foreach (var (segment, isPlaceholder) in SplitOnPlaceholders(text))
-        {
-            if (isPlaceholder)
-            {
-                var placeholder = new Run(segment);
-                placeholder.SetResourceReference(TextElement.ForegroundProperty, "AppAccent");
-                target.Inlines.Add(placeholder);
-                continue;
-            }
-
-            // The prose between placeholders may carry a line break — the explicit hint lists the
-            // source pair and the target pair one per line. Added as a LineBreak rather than left in
-            // a Run, so it does not depend on the block's wrapping to show up.
-            //
-            // Normalised first, or a CRLF splits into a piece ending in \r, which WPF draws as a
-            // break of its own on top of the one added here — the paragraph gap doubles. Presets
-            // saved before OpenAiSettings.NormaliseLineBreaks existed still hold mixed breaks.
-            var lines = OpenAiSettings.NormaliseLineBreaks(segment).Split('\n');
-            for (var i = 0; i < lines.Length; i++)
-            {
-                if (i > 0) target.Inlines.Add(new LineBreak());
-                if (lines[i].Length > 0) target.Inlines.Add(new Run(lines[i]));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Splits text into runs of ordinary prose and the placeholder tokens between them, in order.
-    /// </summary>
-    private static IEnumerable<(string Text, bool IsPlaceholder)> SplitOnPlaceholders(string text)
-    {
-        // All four, or the tag placeholders would be the only machinery in the sentence left looking
-        // like prose. None is a prefix of another once the closing brace is counted, so the
-        // earliest-match loop below cannot pick the wrong one.
-        string[] tokens =
-        [
-            OpenAiCompatibleProvider.SourcePlaceholder,
-            OpenAiCompatibleProvider.TargetPlaceholder,
-            OpenAiCompatibleProvider.SourceCodePlaceholder,
-            OpenAiCompatibleProvider.TargetCodePlaceholder,
-        ];
-
-        var index = 0;
-        while (index < text.Length)
-        {
-            var at = -1;
-            var length = 0;
-            foreach (var token in tokens)
-            {
-                var found = text.IndexOf(token, index, StringComparison.OrdinalIgnoreCase);
-                if (found < 0 || (at >= 0 && found >= at)) continue;
-                at = found;
-                length = token.Length;
-            }
-
-            if (at < 0)
-            {
-                yield return (text[index..], false);
-                yield break;
-            }
-
-            if (at > index) yield return (text[index..at], false);
-            yield return (text.Substring(at, length), true);
-            index = at + length;
-        }
     }
 
     private void OllamaGuideLink_RequestNavigate(object sender, RequestNavigateEventArgs e)

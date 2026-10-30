@@ -224,14 +224,26 @@ public class TranslationService
     /// </param>
     public async Task<(List<TranslatedBlock> Blocks, string DetectedLang)> TranslateAsync(
         List<OcrTextBlock> blocks, string sourceLang, string targetLang, string apiKey, bool resilient = true,
-        CancellationToken cancellationToken = default, TranslationProvider? engine = null)
+        CancellationToken cancellationToken = default, TranslationProvider? engine = null,
+        TranslationContext? context = null)
     {
         var chosen   = engine ?? Saved;
         var provider = resilient ? Resilient(chosen) : Single(chosen);
-        var result   = await provider.TranslateAsync(blocks, sourceLang, targetLang, apiKey, cancellationToken);
+        var result   = await provider.TranslateAsync(blocks, sourceLang, targetLang, apiKey, cancellationToken, context);
         LastEngineUsage = (provider as ResilientProvider)?.LastUsage;
         return result;
     }
+
+    /// <summary>
+    /// Has <paramref name="engine"/> ready to answer before the first translation is asked of it:
+    /// a model loaded on a server, for 「OpenAI 相容」, and nothing for an engine, which has no
+    /// model of ours to load. Throws as the request did.
+    /// </summary>
+    public Task WarmUpAsync(
+        TranslationProvider engine, string sourceLang, string targetLang, CancellationToken cancellationToken = default) =>
+        engine == TranslationProvider.OpenAI
+            ? _openAi.WarmUpAsync(sourceLang, targetLang, cancellationToken)
+            : Task.CompletedTask;
 
     /// <summary>
     /// Looks up rich dictionary data only when the caller explicitly asks for it. Normal translation,

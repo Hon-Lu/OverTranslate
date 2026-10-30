@@ -202,6 +202,17 @@ public class AppSettings
     public string GoogleChromeApiKey { get; set; } = "";
 
     public string Theme { get; set; } = "Dark";
+
+    /// <summary>
+    /// The version that last started with this file, written at every start that finds a different
+    /// one. Empty in a file from 2.9.0 or earlier, which never wrote it.
+    /// </summary>
+    /// <remarks>
+    /// Read once, before anything is saved, to decide whether to keep a copy of the file from before
+    /// an update that changes what it means — see <see cref="Services.SettingsBackup"/>.
+    /// </remarks>
+    public string LastRunVersion { get; set; } = "";
+
     /// <summary>
     /// The interface language — one of the codes in
     /// <see cref="Services.LocalizationService.Options"/>, such as "zh-Hant" or "en".

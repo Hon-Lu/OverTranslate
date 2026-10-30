@@ -1,48 +1,6 @@
 namespace OverTranslate.Models;
 
 /// <summary>
-/// The two messages one case sends: the system message and the user one.
-/// </summary>
-/// <remarks>
-/// Both, rather than the single system prompt that shipped before, because the models this provider
-/// is pointed at do not agree on where an instruction goes. A translation model is trained to be
-/// told what to do in the user message with the text right under it, and sending that model a system
-/// message it never saw in training changes what comes back; a general chat model wants the opposite.
-/// Which half is used is the model's business, so the editor asks for one of the two rather than for
-/// both — see <see cref="IsEmpty"/>, the one shape that is not a setting.
-///
-/// Kept as a pair rather than two properties on the profile so the two cases stay symmetrical: 自動
-/// and 指定語言 each own one of these, and nothing has to remember which of four flat names goes
-/// with which case.
-/// </remarks>
-public class OpenAiPromptPair
-{
-    /// <summary>
-    /// The system message, or empty to send none at all.
-    /// </summary>
-    /// <remarks>
-    /// Empty means the request carries no system message, not that it carries an empty one: an empty
-    /// system message is still a turn the model has to account for, and the built-in setting is
-    /// written for a model whose documented format has no system turn in it.
-    /// </remarks>
-    public string SystemPrompt { get; set; } = "";
-
-    /// <summary>
-    /// What goes in front of the text to translate, in the user message, or empty to send the text
-    /// on its own.
-    /// </summary>
-    /// <remarks>
-    /// In front of rather than instead of: the text being translated is the rest of that same
-    /// message — see <c>OpenAiChatTranslator.BuildMessages</c>. This is
-    /// why the built-in wording ends in a colon.
-    /// </remarks>
-    public string UserPrompt { get; set; } = "";
-
-    /// <summary>Whether this case would send no instruction at all.</summary>
-    public bool IsEmpty => SystemPrompt.Trim().Length == 0 && UserPrompt.Trim().Length == 0;
-}
-
-/// <summary>
 /// One named setting for an OpenAI-compatible model: which model, at what temperature, told what.
 /// </summary>
 /// <remarks>
@@ -145,14 +103,54 @@ public class OpenAiModelProfile
     /// <inheritdoc cref="DefaultTemperature"/>
     public const int DefaultSeed = 42;
 
-    /// <summary>What this profile sends when the source language is 自動.</summary>
-    public OpenAiPromptPair Auto { get; set; } = new();
+    /// <summary>
+    /// Whether the request carries <c>reasoning_effort: "none"</c>; off, the field is not sent at all.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, unlike the three sampling switches above, and off means the field is not sent
+    /// — no detection, and nothing remembered about a server that refused it. The built-in model does
+    /// not reason, so the field would buy nothing there, and a hosted model that does not know it
+    /// answers 400. It is for the general chat models that think before answering unless told not
+    /// to: through the OpenAI-compatible route only this field turns that off, and left on, one
+    /// screen takes longer than the timeout.
+    ///
+    /// A switch rather than a choice of effort: "none" is the one value a translation wants, and the
+    /// others only buy a slower answer. The list of efforts and its own switch never shipped, so their
+    /// keys are not read — a file that has them opens with this off.
+    /// </remarks>
+    public bool ThinkingOff { get; set; }
 
-    /// <summary>What this profile sends when a source language has been chosen.</summary>
-    public OpenAiPromptPair Explicit { get; set; } = new();
+    /// <summary>What <see cref="ThinkingOff"/> sends.</summary>
+    public const string ThinkingOffEffort = "none";
 
-    /// <summary>The pair for one case.</summary>
-    public OpenAiPromptPair PromptsFor(bool automatic) => automatic ? Auto : Explicit;
+    /// <summary>
+    /// Whether a screen goes as few requests as fit rather than a text at a time — see
+    /// <see cref="OverTranslate.Translation.OpenAi.OpenAiChatRequest.Batch"/>.
+    /// </summary>
+    /// <remarks>
+    /// Off by default: a local server runs one request at a time, so a batch saves it nothing and
+    /// comes back with more lines untranslated. On the profile rather than beside the address,
+    /// because each way has its own default template and the template is the profile's — and a
+    /// profile is how a model is switched, a hosted one included.
+    /// </remarks>
+    public bool Batch { get; set; }
+
+    /// <summary>
+    /// The whole message each request sends, the user's own, or empty for the application's — see
+    /// <see cref="Services.Providers.OpenAiCompatibleProvider.BuildPrompt"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>One template whatever the source language: the language placeholders say what changes.
+    /// <c>{context}</c> is where the screen and the session's earlier lines go, and a template
+    /// without it is sent none; <c>{text}</c> is where the text goes, and a template without it has
+    /// the text written straight after its end, as the user prompts it replaces did.</para>
+    ///
+    /// <para>Empty rather than a copy of the application's, so the application's follows the
+    /// interface language, any later revision of it, and <see cref="Batch"/> — empty is the default
+    /// of whichever way the profile sends. Line breaks are stored bare — see
+    /// <see cref="OpenAiSettings.NormaliseLineBreaks"/>.</para>
+    /// </remarks>
+    public string Template { get; set; } = "";
 }
 
 /// <summary>
@@ -169,7 +167,10 @@ public class OpenAiModelProfile
 /// The keys that did ship and are gone — <c>OpenAiPromptAuto</c>, <c>OpenAiPromptExplicit</c>,
 /// <c>AutoPrompts</c>, <c>ExplicitPrompts</c>, <c>OpenAiModel</c> and the flat temperature pair —
 /// were dropped rather than migrated, on the owner's call. A stored prompt has no name and no model
-/// beside it, and carrying one into this list would mean inventing both.
+/// beside it, and carrying one into this list would mean inventing both. A profile's own
+/// <c>Auto</c> and <c>Explicit</c> prompt pairs went the same way when templates came in: every
+/// profile starts on the default template, and the file from before is kept beside the new one —
+/// see <see cref="Services.SettingsBackup"/>.
 /// </remarks>
 public class OpenAiSettings
 {

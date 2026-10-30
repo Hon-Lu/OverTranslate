@@ -1,0 +1,167 @@
+using System.Text.RegularExpressions;
+
+namespace OverTranslate.Translation.OpenAi;
+
+/// <summary>An answer to one text read back into its translation.</summary>
+internal static class OpenAiAnswer
+{
+    private static readonly Regex OpeningTag = new(
+        @"<t\s+id\s*=\s*[""']?(\d+)[""']?\s*>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex ClosingTag = new(
+        @"</t\s*>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex Wrapped = new(
+        @"^<t>(?<body>.*)</t>$",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    /// <summary>The tags the context was once written in, and a model still sometimes answers in.</summary>
+    private static readonly Regex ContextTag = new(
+        @"</?(?:s|t|history)>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex Fence = new(
+        @"^```[a-zA-Z]*\n(.*?)\n?```$",
+        RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    /// <summary>Quotation marks a model can put around the whole of its answer, as pairs.</summary>
+    private static readonly (char Open, char Close)[] Quotes = [('"', '"'), ('“', '”'), ('「', '」'), ('『', '』')];
+
+    /// <summary>The translation in <paramref name="answer"/>, or null when there is none.</summary>
+    /// <param name="source">The text that was asked for, to tell a quote it had from one the model added.</param>
+    /// <remarks>
+    /// <para>The whole answer, less its thinking, is the translation — asked for nothing else, a model
+    /// mostly gives nothing else. What it does sometimes add is taken off: a code fence around all of
+    /// it; a <c>&lt;t&gt;</c> around all of it, the tag the context once gave a translation, when there is
+    /// no other tag inside; a segment tag, a habit of the tagged format this replaced — the last one
+    /// numbered 1, and none at all when every tag is numbered otherwise; and a pair of quotation marks around all of
+    /// it, when the source has neither mark anywhere — a source that opens a title and leaves it
+    /// open, 「アイライク ユアライク, is rightly answered with the title closed.</para>
+    /// </remarks>
+    public static string? Read(string answer, string source)
+    {
+        var text = OpenAiChatTranslator.StripThinking(answer);
+
+        var fence = Fence.Match(text);
+        if (fence.Success) text = fence.Groups[1].Value.Trim();
+
+        var wrapped = Wrapped.Match(text);
+        if (wrapped.Success && !ContextTag.IsMatch(wrapped.Groups["body"].Value))
+            text = wrapped.Groups["body"].Value.Trim();
+
+        if (OpeningTag.IsMatch(text))
+        {
+            text = LastFirstTag(text) ?? "";
+            if (text.Length == 0) return null;
+        }
+
+        var trimmed = source.Trim();
+        foreach (var (open, close) in Quotes)
+        {
+            if (text.Length >= 2 && text[0] == open && text[^1] == close
+                && text.IndexOf(close, 1) == text.Length - 1
+                && !trimmed.Contains(open) && !trimmed.Contains(close))
+            {
+                text = text[1..^1].Trim();
+                break;
+            }
+        }
+
+        return text.Length > 0 ? text : null;
+    }
+
+    private static readonly Regex Numbered = new(
+        @"<(\d+)>(.*?)(?=</\1>|<\d+>|\z)",
+        RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    private static readonly Regex NumberedClosing = new(
+        @"</\d+>",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The translations in an answer to <see cref="OpenAiPrompt.BuildBatch"/>, one per text, null
+    /// for a number that is missing or empty.
+    /// </summary>
+    /// <remarks>
+    /// A tag runs to its closing tag, or to the next numbered tag or the end when the model left it
+    /// open or closed it with another opening tag, <c>&lt;1&gt;…&lt;1&gt;</c>. A number given twice is
+    /// read the first time. A number past <paramref name="count"/> is not one that was asked for.
+    /// </remarks>
+    public static string?[] ReadNumbered(string answer, int count)
+    {
+        var text = OpenAiChatTranslator.StripThinking(answer);
+        var fence = Fence.Match(text);
+        if (fence.Success) text = fence.Groups[1].Value.Trim();
+
+        var translations = new string?[count];
+        foreach (Match match in Numbered.Matches(text))
+        {
+            if (!int.TryParse(match.Groups[1].Value, out var number) || number < 1 || number > count) continue;
+
+            var translation = NumberedClosing.Replace(match.Groups[2].Value, "").Trim();
+            if (translations[number - 1] is null && translation.Length > 0)
+                translations[number - 1] = translation;
+        }
+
+        return translations;
+    }
+
+    private static readonly Regex AnyNumbered = new(
+        @"</?\d+>",
+        RegexOptions.CultureInvariant);
+
+    private static readonly Regex WrappedInNumber = new(
+        @"^<(\d+)>(?<body>.*)</\1>$",
+        RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+    /// <summary>The translation in an answer to a batch of one, or null when there is none.</summary>
+    /// <param name="isDefault">Whether the template is the application's — see <see cref="OpenAiPrompt.IsDefault"/>.</param>
+    /// <remarks>
+    /// Its number first, as <see cref="ReadNumbered"/> reads it. Otherwise the whole answer, read as
+    /// an answer to one text is, a numbered tag around all of it taken off: there being one text, it
+    /// cannot belong to another — and a template written for a text at a time is answered with no
+    /// number at all. One with numbered tags inside it, none of them the one asked for, is not
+    /// read as anything.
+    /// </remarks>
+    public static string? ReadOfOne(string answer, string source, bool isDefault)
+    {
+        if (ReadNumbered(answer, 1)[0] is { } numbered) return numbered;
+
+        var text = OpenAiChatTranslator.StripThinking(answer);
+        var wrapped = WrappedInNumber.Match(text);
+        if (wrapped.Success) text = wrapped.Groups["body"].Value.Trim();
+        if (AnyNumbered.IsMatch(text)) return null;
+        return isDefault ? Read(text, source) : text;
+    }
+
+    /// <summary>
+    /// The text of the last tag numbered 1, up to its closing tag — or, when the model never closed
+    /// it, to the end of its line or the next tag.
+    /// </summary>
+    private static string? LastFirstTag(string text)
+    {
+        var openings = OpeningTag.Matches(text);
+        for (var i = openings.Count - 1; i >= 0; i--)
+        {
+            if (openings[i].Groups[1].Value != "1") continue;
+
+            var start = openings[i].Index + openings[i].Length;
+            var next = i + 1 < openings.Count ? openings[i + 1].Index : text.Length;
+            var closing = ClosingTag.Match(text, start);
+            int end;
+            if (closing.Success && closing.Index <= next)
+                end = closing.Index;
+            else
+            {
+                var lineEnd = text.IndexOf('\n', start);
+                end = lineEnd >= 0 && lineEnd < next ? lineEnd : next;
+            }
+
+            return text[start..end].Trim();
+        }
+
+        return null;
+    }
+}
