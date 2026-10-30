@@ -86,7 +86,7 @@ Once the selection is done, the toolbar offers:
 
 - **Copy text:** copies the recognized text straight to the clipboard, no translation needed
 - **Screenshot:** copies the selected area to the clipboard, and also saves an image file when "Save screenshots" is turned on in the settings
-- **Annotate:** mark up the capture directly with the pen, highlighter or shapes such as lines, arrows, rectangles and ellipses, then copy or save what you drew with Screenshot; some settings are remembered
+- **Annotate:** mark up the capture directly with the pen, text and other tools, then copy or save what you drew with Screenshot
 - **Settings:** Auto-translate, Close after screenshot, Save screenshots and more
 
 ![截圖翻譯-標記.png](docs/images/截圖翻譯-標記.png)
@@ -205,6 +205,7 @@ built-in text to speech (TTS) reads both the original text and the translation a
 - Microsoft Translator **(default)**
 - Youdao Translate
 - Tencent Translate
+- Yandex
 
 **Customizable services**: bring your own API key or endpoint (see "System Requirements" below).
 
@@ -225,10 +226,11 @@ when a translation fails or responds too slowly, the app first retries the same 
 |---------|-------------|
 | API URL | Empty uses `http://localhost:11434/v1` (Ollama's local default) |
 | API Key | Can be left empty for a local server |
-| Model settings | One setting = a model name, the advanced parameters, and a System / User prompt pair for each of **automatic** and **a chosen source language**. Switching settings switches all of it |
+| Model settings | One setting = a model name, the advanced parameters, a translation mode and a prompt. Switching settings switches all of it |
 | Built-in | The read-only one, on the model the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md) recommends, with wording that follows the interface language |
-| Add | Up to five; the model name is required, and at least one of the System / User prompts has to be filled in |
+| Add | Up to five; the model name is required |
 | Advanced parameters | Under **Advanced** in the editor; each can be switched off on its own, and a parameter that is off is left out of the request |
+| Translation mode | **Standard** (default) suits local models; **Batch** translates all text blocks on screen in one go and suits cloud services |
 
 Advanced parameters:
 
@@ -237,6 +239,7 @@ Advanced parameters:
 | Temperature | How strongly the model favours the likeliest phrasing; the higher it is, the more chance other ways of saying something have | 0.0 ~ 2.0 | 0.7 |
 | Top P | How many candidates the model may choose between; the lower it is, the fewer of the likeliest are kept | 0.0 ~ 1.0 | 0.6 |
 | Seed | Makes a result easier to reproduce: with the same model, prompts and settings, the same seed usually gives the same output | Whole number | 42 |
+| Turn off thinking | Asks the model to answer directly without thinking first (sends `reasoning_effort: none`) | On / Off | Off |
 
 Prompt parameters (the **Available parameters** block on the settings page lists them with descriptions and examples too):
 
@@ -246,6 +249,8 @@ Prompt parameters (the **Available parameters** block on the settings page lists
 | `{source_code}` | Source language code | en |
 | `{target_name}` | Target language name | Japanese |
 | `{target_code}` | Target language code | ja |
+| `{text}` | The source text; if the prompt doesn't use it, it is added at the end | — |
+| `{context}` | Earlier source text and translations for the model to use as context; if the prompt doesn't use it, no context is sent | — |
 
 > Language names follow the interface language (an English interface fills in "Japanese", a 繁體中文 one fills in "日文"); the codes are always the tag the model uses.
 

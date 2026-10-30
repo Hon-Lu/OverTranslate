@@ -56,8 +56,6 @@ This version is about **3.1 GB**, so the download time depends on your connectio
 > `hf.co/unsloth/Hy-MT2-7B-GGUF:<build name>`
 >
 > In general, smaller files need fewer hardware resources and are lighter to run, but translation quality may also decrease.
->
-> If your graphics card only has **4 GB of VRAM**, the smaller `maternion/hy-mt2:1.8b` model is recommended. Its model file is about **1.1 GB**.
 
 You can also look for other suitable models here:
 
@@ -66,7 +64,7 @@ You can also look for other suitable models here:
 
 If a Hugging Face repository only provides the original model files, such as Safetensors, and no GGUF build is available, you will first need to convert a compatible model to GGUF with [llama.cpp](https://github.com/ggml-org/llama.cpp), then import it into Ollama.
 
-If you are not sure what to choose, using the model recommended in this guide is the simplest option. Models that **do not use a thinking/reasoning mode** are also generally a better fit for real-time translation in OverTranslate.
+If you are not sure what to choose, using the model recommended in this guide is the simplest option. Models that **do not use a thinking/reasoning mode** are also generally a better fit for real-time translation in OverTranslate. If a model thinks before answering by default, tick **Turn off thinking** under **Advanced** in its model settings.
 
 ## 3. Configure OverTranslate
 
@@ -88,16 +86,16 @@ The matching prompts and advanced parameters are already configured as well, so 
 
 > **Want to use a different model?**
 >
-> In the **settings list**, choose **Add**, enter the full model name and the prompts required by that model, then save and select the new configuration.
+> In the **settings list**, choose **Add**, enter the full model name, then save and select the new configuration. You can start with the default prompt and adjust it following that model's instructions if needed.
 >
 > If the model comes from Hugging Face, include the full name starting with `hf.co/`.
 >
 > Each model configuration includes:
 >
 > - Model name
-> - Temperature
-> - System / User prompts used for automatic language detection
-> - System / User prompts used when the source language is specified
+> - Advanced parameters (Temperature, Top P, Seed, Turn off thinking)
+> - Translation mode (Standard / Batch)
+> - Prompt
 >
 > When you switch configurations, all of these settings switch together.
 
@@ -105,9 +103,9 @@ The matching prompts and advanced parameters are already configured as well, so 
 >
 > OverTranslate's built-in prompts follow the current interface language and are already adjusted for the recommended Hy-MT2 model.
 >
-> This model uses a **User Prompt** without a **System Prompt** by default, following the usage format shown in the model's documentation.
+> Each model configuration has a single prompt and does not use a System Prompt, following the usage format shown in the recommended model's documentation.
 >
-> Other models may require a different prompt format. When adding your own model, follow that model's instructions. You do not need to fill in both the System Prompt and User Prompt; at least one of them is enough.
+> Other models may require a different prompt format. When adding your own model, adjust the prompt following that model's instructions.
 >
 > The recommended model uses these advanced parameters by default:
 >

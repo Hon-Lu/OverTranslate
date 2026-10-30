@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=dd5b5b0a29" />
+<link rel="stylesheet" href="../site/styles.css?v=95f0b9f8e3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -275,7 +275,7 @@
         <ul class="ticks">
           <li><strong data-i18n="capture.tool1.title">文字をコピー</strong><span data-i18n="capture.tool1.body">翻訳せずに、読み取った文字をそのままクリップボードへコピーします。</span></li>
           <li><strong data-i18n="capture.tool2.title">スクリーンショット</strong><span data-i18n="capture.tool2.body">選んだ範囲をクリップボードへコピーします。設定で「スクリーンショットを保存」を有効にすると画像も保存されます。</span></li>
-          <li><strong data-i18n="capture.tool3.title">注釈</strong><span data-i18n="capture.tool3.body">ペン、蛍光ペン、直線・矢印・四角・楕円などの図形でキャプチャに直接書き込み、そのままコピーや保存ができます。一部の設定は保存されます。</span></li>
+          <li><strong data-i18n="capture.tool3.title">注釈</strong><span data-i18n="capture.tool3.body">ペンやテキストなどのツールでキャプチャに直接書き込み、そのままコピーや保存ができます。</span></li>
         </ul>
       </div>
       <div class="split__media">
@@ -537,6 +537,9 @@
       <li class="engine">
         <h3 data-i18n="engines.tencent.name">Tencent 翻訳</h3>
       </li>
+      <li class="engine">
+        <h3 data-i18n="engines.yandex.name">Yandex 翻訳</h3>
+      </li>
     </ul>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.custom">カスタマイズできるサービス</h3>
@@ -548,16 +551,22 @@
       <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 互換 API</span>
-        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ja.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">ローカル AI モデルの導入ガイド</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
       </li>
     </ul>
 
-    <div class="enginenote reveal">
-      <h3 class="h3" data-i18n="engines.fallback.title">自動フォールバック</h3>
-      <p data-i18n="engines.fallback.body">ある翻訳サービスが使えない、または応答が遅いときは、まず同じサービスで再試行し、それでも翻訳できない場合に使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。DeepL と OpenAI には適用されません。</p>
+    <div class="enginenotes reveal">
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.openai.title">文脈を踏まえた AI 翻訳</h3>
+        <p data-i18n="engines.openai.body">OpenAI 互換サービスでは、それまでに訳した内容を参考に翻訳するため、続く字幕や会話でも人名・用語・口調がそろいます。ローカルモデルなら完全にオフラインで使え、プロンプトもカスタマイズできます。</p>
+        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ja.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">ローカル AI モデルの導入ガイド</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </div>
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.fallback.title">自動フォールバック</h3>
+        <p data-i18n="engines.fallback.body">ある翻訳サービスが使えない、または応答が遅いときは、まず同じサービスで再試行し、それでも翻訳できない場合に使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。DeepL と OpenAI には適用されません。</p>
+      </div>
     </div>
   </div>
 </section>

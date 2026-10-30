@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=dd5b5b0a29" />
+<link rel="stylesheet" href="../site/styles.css?v=95f0b9f8e3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -275,7 +275,7 @@
         <ul class="ticks">
           <li><strong data-i18n="capture.tool1.title">Copy text</strong><span data-i18n="capture.tool1.body">Copies the recognized text to the clipboard without translating it.</span></li>
           <li><strong data-i18n="capture.tool2.title">Screenshot</strong><span data-i18n="capture.tool2.body">Copies the selected area to the clipboard, and saves a file too when "Save screenshots" is on.</span></li>
-          <li><strong data-i18n="capture.tool3.title">Annotate</strong><span data-i18n="capture.tool3.body">Mark up the capture with the pen, highlighter or shapes such as lines, arrows, rectangles and ellipses, then copy or save what you drew; some settings are remembered.</span></li>
+          <li><strong data-i18n="capture.tool3.title">Annotate</strong><span data-i18n="capture.tool3.body">Mark up the capture with the pen, text and other tools, then copy or save what you drew.</span></li>
         </ul>
       </div>
       <div class="split__media">
@@ -537,6 +537,9 @@
       <li class="engine">
         <h3 data-i18n="engines.tencent.name">Tencent Translate</h3>
       </li>
+      <li class="engine">
+        <h3 data-i18n="engines.yandex.name">Yandex</h3>
+      </li>
     </ul>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.custom">Customizable services</h3>
@@ -548,16 +551,22 @@
       <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI-compatible API</span>
-        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
       </li>
     </ul>
 
-    <div class="enginenote reveal">
-      <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
-      <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
+    <div class="enginenotes reveal">
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.openai.title">AI translation with context</h3>
+        <p data-i18n="engines.openai.body">With an OpenAI-compatible service, translation refers to what has already been translated, so names, terms and tone stay consistent across subtitles and dialogue. With a local model it runs fully offline, and the prompt can be customized.</p>
+        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </div>
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
+        <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
+      </div>
     </div>
   </div>
 </section>

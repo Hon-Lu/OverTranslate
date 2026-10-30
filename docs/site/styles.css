@@ -1030,28 +1030,27 @@ p:last-child { margin-bottom: 0; }
 .tool .shot { margin-top: 6px; }
 
 /* engines */
+/* 服務只是名稱清單，排成自動換行的標籤，數量增減都不會留下落單的格子；
+   說明另外放在下方的 enginenotes，不塞進標籤裡把高度撐得不一致 */
 .engines {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin: 0 0 clamp(36px, 5vw, 56px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-@media (min-width: 880px) { .engines { grid-template-columns: repeat(3, 1fr); } }
 .engine {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
   align-items: center;
-  gap: 6px 10px;
-  padding: 18px 20px;
+  gap: 10px;
+  padding: 12px 18px;
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-m);
+  border-radius: 12px;
   background: var(--surface);
 }
-.engine h3 { font-size: 1rem; letter-spacing: -0.012em; margin: 0; }
-/* 兩組服務：一般服務排三欄、可自訂服務排兩欄，組名和 app 設定頁的分組一致 */
+.engine h3 { font-size: 0.98rem; letter-spacing: -0.012em; margin: 0; }
+/* 組名和 app 設定頁的分組一致 */
 .enginegroup {
   margin: 0 0 12px;
   color: var(--ink-3);
@@ -1060,10 +1059,14 @@ p:last-child { margin-bottom: 0; }
   letter-spacing: 0.02em;
 }
 .engines--general { margin-bottom: clamp(28px, 4vw, 40px); }
-@media (min-width: 880px) { .engines--custom { grid-template-columns: repeat(2, 1fr); } }
-.engine__link { flex-basis: 100%; margin-top: 6px; font-size: 0.86rem; }
-.enginenote { max-width: 46rem; }
+.enginenotes {
+  display: grid;
+  gap: clamp(28px, 4vw, 40px) clamp(32px, 5vw, 64px);
+  margin-top: clamp(40px, 6vw, 64px);
+}
+@media (min-width: 880px) { .enginenotes { grid-template-columns: 1fr 1fr; } }
 .enginenote p { color: var(--ink-2); line-height: 1.8; }
+.enginenote .textlink { margin-top: 4px; font-size: 0.9rem; }
 .pill {
   display: inline-block;
   padding: 3px 10px;

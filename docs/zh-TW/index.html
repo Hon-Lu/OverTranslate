@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=dd5b5b0a29" />
+<link rel="stylesheet" href="../site/styles.css?v=95f0b9f8e3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -275,7 +275,7 @@
         <ul class="ticks">
           <li><strong data-i18n="capture.tool1.title">複製文字</strong><span data-i18n="capture.tool1.body">不需翻譯即可將辨識出的文字複製到剪貼簿。</span></li>
           <li><strong data-i18n="capture.tool2.title">截圖</strong><span data-i18n="capture.tool2.body">將框選畫面複製到剪貼簿，也可在設定中開啟「儲存截圖」同步存檔。</span></li>
-          <li><strong data-i18n="capture.tool3.title">標記</strong><span data-i18n="capture.tool3.body">用畫筆、螢光筆與直線、箭頭、方框、圓框等形狀直接在截圖上標記，再複製或儲存畫面內容；部分設定值會進行儲存。</span></li>
+          <li><strong data-i18n="capture.tool3.title">標記</strong><span data-i18n="capture.tool3.body">用畫筆、文字等工具直接在截圖上標記，再複製或儲存畫面內容。</span></li>
         </ul>
       </div>
       <div class="split__media">
@@ -537,6 +537,9 @@
       <li class="engine">
         <h3 data-i18n="engines.tencent.name">騰訊翻譯</h3>
       </li>
+      <li class="engine">
+        <h3 data-i18n="engines.yandex.name">Yandex 翻譯</h3>
+      </li>
     </ul>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.custom">可自訂服務</h3>
@@ -548,16 +551,22 @@
       <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 相容 API</span>
-        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
       </li>
     </ul>
 
-    <div class="enginenote reveal">
-      <h3 class="h3" data-i18n="engines.fallback.title">自動備援</h3>
-      <p data-i18n="engines.fallback.body">當某個翻譯服務無法使用或回應過慢時，會先重新嘗試，仍無法翻譯才自動切換到其他可用的服務，不需要自己重試或改設定。DeepL 與 OpenAI 不適用。</p>
+    <div class="enginenotes reveal">
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.openai.title">參考上下文的 AI 翻譯</h3>
+        <p data-i18n="engines.openai.body">使用 OpenAI 相容服務時，翻譯會參考前面已翻好的內容，連續的字幕與對話中，人名、用詞與語氣更一致；搭配本機模型可完全離線使用，也能自訂提示詞。</p>
+        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </div>
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.fallback.title">自動備援</h3>
+        <p data-i18n="engines.fallback.body">當某個翻譯服務無法使用或回應過慢時，會先重新嘗試，仍無法翻譯才自動切換到其他可用的服務，不需要自己重試或改設定。DeepL 與 OpenAI 不適用。</p>
+      </div>
     </div>
   </div>
 </section>
