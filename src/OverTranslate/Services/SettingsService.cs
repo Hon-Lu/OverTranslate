@@ -96,16 +96,21 @@ public class SettingsService
         }
 
         var settings = Parse(json);
-        if (SettingsBackup.Needed(settings.LastRunVersion))
-            SettingsBackup.Copy(readFrom!, SettingsBackup.PathFor(path, version));
-
-        // Nothing at the canonical path means what we just read came from the legacy one. Persist it
-        // now rather than waiting for the user to happen to change a setting.
-        if (!File.Exists(path) || settings.LastRunVersion != version)
+        if (settings.LastRunVersion != version)
         {
+            // The first start after an update (or after 2.9.0 or earlier, which never wrote a
+            // version). Anything else a later version has to do once on its way in goes here too,
+            // before the version is written: after that this branch is not taken again.
+            if (SettingsBackup.Needed(settings.LastRunVersion))
+                SettingsBackup.Copy(readFrom!, SettingsBackup.PathFor(path, version));
+
             settings.LastRunVersion = version;
             save(settings);
         }
+        // Nothing at the canonical path means what we just read came from the legacy one. Persist it
+        // now rather than waiting for the user to happen to change a setting.
+        else if (!File.Exists(path))
+            save(settings);
         return settings;
     }
 

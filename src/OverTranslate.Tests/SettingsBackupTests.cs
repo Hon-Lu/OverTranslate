@@ -74,6 +74,22 @@ public class SettingsBackupTests : IDisposable
         Assert.Equal(copied, File.Exists(BackupPath("2.10.1")));
     }
 
+    /// <summary>
+    /// The same version as last time is not a first start after an update: no copy, even one that
+    /// would otherwise be due and is missing, and nothing saved.
+    /// </summary>
+    [Fact]
+    public void TheSameVersionAsLastTime_CopiesNothing()
+    {
+        File.WriteAllText(SettingsPath, WithLastRun("2.9.0"));
+        var saves = 0;
+
+        Start("2.9.0", () => saves++);
+
+        Assert.False(File.Exists(BackupPath("2.9.0")));
+        Assert.Equal(0, saves);
+    }
+
     [Fact]
     public void AFreshInstall_HasNothingToCopy()
     {
