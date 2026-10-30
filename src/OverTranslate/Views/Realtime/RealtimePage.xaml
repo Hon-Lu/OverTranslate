@@ -622,7 +622,7 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceSwatch"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0"
-                                           Text="&#xEF3C;"
+                                           Text="&#xE8D3;"
                                            Style="{StaticResource ToggleRowGlyph}"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="{DynamicResource S.Realtime.TextColor}"
@@ -703,9 +703,17 @@
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceTray"/>
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="RealtimeAppearanceSwatch"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="&#xE790;"
-                                               Style="{StaticResource ToggleRowGlyph}"/>
+                                    <!-- ToggleRowGlyph's 18 px, from the geometry's 16-unit em -->
+                                    <Path Grid.Column="0"
+                                          Data="{StaticResource ScrimColorGlyphGeometry}"
+                                          Width="18" Height="18"
+                                          Fill="{DynamicResource AppTextSecondary}"
+                                          VerticalAlignment="Center"
+                                          Margin="2,0,14,0">
+                                        <Path.RenderTransform>
+                                            <ScaleTransform ScaleX="1.125" ScaleY="1.125"/>
+                                        </Path.RenderTransform>
+                                    </Path>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{DynamicResource S.Realtime.ScrimColor}"
                                                    FontFamily="{DynamicResource AppFont}"
