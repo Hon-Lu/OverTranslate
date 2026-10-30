@@ -1,120 +1,84 @@
-# Local LLM Setup Guide (using Ollama as the example)
+# Run a Local Translation Model with Ollama
 
 > **Language:** **[繁體中文](OLLAMA_GUIDE.md)** ｜ **English ✓** ｜ **[简体中文](OLLAMA_GUIDE.zh-Hans.md)** ｜ **[日本語](OLLAMA_GUIDE.ja.md)** ｜ **[한국어](OLLAMA_GUIDE.ko.md)**
 
-OverTranslate's **OpenAI** translation service supports OpenAI API-compatible endpoints, which means you can also use [Ollama](https://ollama.com/) to run a model directly on your own computer.
+OverTranslate's **OpenAI** translation service works with any OpenAI-compatible API, so you can pair it with [Ollama](https://ollama.com/) and run a translation model on your own computer. Your text stays on your machine, and there are no fees for an external translation API.
 
-With a local model, there are no separate API fees, and the text you translate does not need to be sent to an external server.
+This guide uses Ollama with the Hy-MT2 translation model. Follow the steps below to install and set it up. You can also use other OpenAI-compatible services such as LM Studio or OpenRouter — see "Other OpenAI-compatible services" at the end.
 
-> This guide uses Ollama as the example. Other OpenAI-compatible services such as LM Studio and OpenRouter work too — see "4. Using other OpenAI-compatible services" at the end.
+## System requirements
 
-This guide uses `hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS` as the example. Hy-MT2 is a translation-focused model from Tencent that supports translation between 33 languages. The version used here is a smaller repackaged build provided by Unsloth.
+The model in this guide is about **3.1 GB** and uses about **4.1 GB of VRAM** once loaded, so a dedicated graphics card with at least **6 GB of VRAM** is recommended. If you run games or other GPU programs at the same time, **8 GB of VRAM or more** is recommended.
 
-> **What kind of hardware do I need?**
->
-> Local models use your computer's CPU and GPU. For smoother translation speed, a computer with a dedicated graphics card is recommended.
->
-> The model used in this guide is about **3.1 GB** to download and uses roughly **4.1 GB of VRAM** once loaded, so a graphics card with at least **6 GB of VRAM** is recommended.
->
-> If you plan to use OverTranslate while gaming, keep in mind that the game will also use VRAM. In that case, **8 GB or more** is a better target.
->
-> Actual usage can vary depending on Ollama, the length of the text being translated, and how much GPU memory other applications are using.
->
-> If you run out of VRAM, part of the model may fall back to the CPU and translation can become much slower. If that happens, try one of the smaller versions described below.
+Actual usage varies with the text being translated and other programs. When VRAM runs short, part of the work may move to the CPU and translation slows down; in that case, try a smaller version (see "Other models").
 
 ## 1. Install Ollama
 
-1. Go to the [Ollama website](https://ollama.com/download) and download the version for your operating system
-2. Run the installer and complete the installation using the default options
-
-After installation, open Ollama.
-
-Its default API endpoint is:
-
-`http://localhost:11434`
-
-If you have not changed Ollama's settings, you can simply leave it at the default.
+Download and install it from the [Ollama website](https://ollama.com/download) with the default options. Open Ollama once it is installed, and keep it running while you translate with OverTranslate.
 
 ## 2. Download the translation model
 
-Open Command Prompt or PowerShell and run:
+Open Windows "Command Prompt" or "PowerShell" and run:
 
 ```text
 ollama pull hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS
 ```
 
-Then wait for the download to finish.
+Wait for the download to finish. The model file is about **3.1 GB**, so how long it takes depends on your connection.
 
-This version is about **3.1 GB**, so the download time depends on your connection speed.
+Hy-MT2 is a translation model from Tencent that translates between 33 languages; this is a smaller version repackaged by Unsloth.
 
-> **Want a different-sized version?**
->
-> Visit [unsloth/Hy-MT2-7B-GGUF](https://huggingface.co/unsloth/Hy-MT2-7B-GGUF) and choose another quantized build of the same model.
->
-> Once you have picked one, use:
->
-> `hf.co/unsloth/Hy-MT2-7B-GGUF:<build name>`
->
-> In general, smaller files need fewer hardware resources and are lighter to run, but translation quality may also decrease.
+## 3. Set up OverTranslate
 
-You can also look for other suitable models here:
+1. Open **Settings** in OverTranslate.
+2. Choose **OpenAI** as the translation service.
+3. Leave **API URL** and **API key** empty.
+4. Keep **Built-in** selected under **Model settings**.
 
-- [Ollama Models](https://ollama.com/search): the easiest option, with models already prepared for use with Ollama.
-- [Hugging Face](https://huggingface.co/models): offers a much wider selection. For use with Ollama, look for a model that **already provides a GGUF version**. These repositories often include `GGUF` in their name, for example names ending in `-GGUF`.
+That's all you need to start translating. With the API URL empty, OverTranslate uses Ollama's local address `http://localhost:11434/v1`, and a local Ollama needs no API key. **Built-in** already includes the model, prompt and advanced parameters used in this guide, so there is nothing else to change.
 
-If a Hugging Face repository only provides the original model files, such as Safetensors, and no GGUF build is available, you will first need to convert a compatible model to GGUF with [llama.cpp](https://github.com/ggml-org/llama.cpp), then import it into Ollama.
+## Other models
 
-If you are not sure what to choose, using the model recommended in this guide is the simplest option. Models that **do not use a thinking/reasoning mode** are also generally a better fit for real-time translation in OverTranslate. If a model thinks before answering by default, tick **Turn off thinking** under **Advanced** in its model settings.
+### Other sizes of the same model
 
-## 3. Configure OverTranslate
+Pick another quantized version on [unsloth/Hy-MT2-7B-GGUF](https://huggingface.co/unsloth/Hy-MT2-7B-GGUF) and replace the version name at the end of the command:
 
-Once the model has finished downloading, return to OverTranslate:
+```text
+ollama pull hf.co/unsloth/Hy-MT2-7B-GGUF:<version name>
+```
 
-1. Open **Settings**
-2. Choose **OpenAI** as the translation service
-3. Leave both **API endpoint** and **API Key** empty
-4. Keep the **model setting** on the built-in recommended configuration
-5. Close Settings and start translating with the local model
+Smaller files need fewer hardware resources, but translation quality may drop.
 
-When the API endpoint is left blank, OverTranslate uses Ollama's default local address. A locally running Ollama server also does not require an API key.
+### Different models
 
-OverTranslate's built-in recommended configuration already uses the model from this guide:
+You can look for models on [Ollama Models](https://ollama.com/search) or [Hugging Face](https://huggingface.co/models).
 
-`hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS`
+On Hugging Face, choose a model that already offers a **GGUF** version. If only the original format such as Safetensors is available, first check whether the model can be converted, then convert it to GGUF with [llama.cpp](https://github.com/ggml-org/llama.cpp) before importing it into Ollama.
 
-The matching prompts and advanced parameters are already configured as well, so if you simply want to start using it, **there is nothing else you need to change**.
+### Switching model settings
 
-> **Want to use a different model?**
->
-> In the **settings list**, choose **Add**, enter the full model name, then save and select the new configuration. You can start with the default prompt and adjust it following that model's instructions if needed.
->
-> If the model comes from Hugging Face, include the full name starting with `hf.co/`.
->
-> Each model configuration includes:
->
-> - Model name
-> - Advanced parameters (Temperature, Top P, Seed, Turn off thinking)
-> - Translation mode (Standard / Batch)
-> - Prompt
->
-> When you switch configurations, all of these settings switch together.
+1. In OverTranslate's **Model settings**, choose **Add settings**.
+2. Enter the model name, save, and select the new setting.
+3. If needed, adjust the prompt and advanced parameters following the model's documentation.
 
-> **About prompts and advanced parameters**
->
-> OverTranslate's built-in prompts follow the current interface language and are already adjusted for the recommended Hy-MT2 model.
->
-> Each model configuration has a single prompt and does not use a System Prompt, following the usage format shown in the recommended model's documentation.
->
-> Other models may require a different prompt format. When adding your own model, adjust the prompt following that model's instructions.
->
-> The recommended model uses these advanced parameters by default:
->
-> - Temperature: `0.7`
-> - Top P: `0.6`
-> - Seed: `42`
->
-> These values follow the recommended settings in the model documentation. With a fixed seed, the same source text under the same settings can produce more consistent translations.
+Models downloaded from Hugging Face need the `hf.co/` prefix in their name, for example:
 
-## 4. Using other OpenAI-compatible services
+```text
+hf.co/unsloth/Hy-MT2-7B-GGUF:UD-IQ3_XXS
+```
 
-Other services that offer an OpenAI-compatible API, such as LM Studio and OpenRouter, work too. Enter the service's API endpoint and API key in Settings, then add a model setting with its model name. See that service's documentation for details.
+Each model setting keeps its model name, advanced parameters, translation mode and prompt together, and switching settings switches all of them.
+
+Different models may need different prompts and parameters, so check the model's own usage notes first. OverTranslate's built-in prompt follows the interface language and is tuned for the recommended Hy-MT2 model.
+
+The advanced parameters in **Built-in** are:
+
+- Temperature: `0.7`
+- Top P: `0.6`
+- Seed: `42`
+
+These values follow the recommended model's official documentation. A fixed seed helps keep results consistent under the same settings. If a model thinks before it outputs the translation, tick **Turn off thinking** under **Advanced** in its model settings; real-time translation usually works better with models that output the translation directly.
+
+## Other OpenAI-compatible services
+
+Services such as LM Studio and OpenRouter also work with OverTranslate. Enter the **API URL** and **API key** the service provides in the translation service settings, then add a model setting with its model name. For anything else, see the service's own documentation.
