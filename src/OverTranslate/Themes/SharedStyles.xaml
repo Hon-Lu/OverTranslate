@@ -328,6 +328,12 @@
          what makes it "look this word up". -->
     <Geometry x:Key="QuickLookupMarkGeometry">M0.8,6.9 A6.1,6.1 0 1 1 13,6.9 A6.1,6.1 0 1 1 0.8,6.9 Z M11.3,11.3 L15.2,15.2 M4.95,9.3 L6.9,3.9 L8.85,9.3 M5.42,8 H8.38</Geometry>
 
+    <!-- 底色: an A inside a box, beside 文字顏色's Segoe E8D3 (an A over a bar) - the colour behind the
+         letter against the colour of it. The box is Segoe's E739, the very square 邊框 sits on below
+         it, and the A is E8D3's own outline at 0.84, so the three rows read as one family: a bare box
+         for the border, a box with the letter in it for what fills it. Filled, in a 16-unit em. -->
+    <Geometry x:Key="ScrimColorGlyphGeometry">M1.961,16 Q1.57,16 1.215,15.84 Q0.859,15.68 0.59,15.41 Q0.32,15.141 0.16,14.785 Q0,14.43 0,14.039 L0,1.961 Q0,1.57 0.16,1.215 Q0.32,0.859 0.59,0.59 Q0.859,0.32 1.215,0.16 Q1.57,0 1.961,0 L14.039,0 Q14.43,0 14.785,0.16 Q15.141,0.32 15.41,0.59 Q15.68,0.859 15.84,1.215 Q16,1.57 16,1.961 L16,14.039 Q16,14.43 15.84,14.785 Q15.68,15.141 15.41,15.41 Q15.141,15.68 14.785,15.84 Q14.43,16 14.039,16 Z M14,15 Q14.211,15 14.391,14.922 Q14.57,14.844 14.707,14.707 Q14.844,14.57 14.922,14.391 Q15,14.211 15,14 L15,2 Q15,1.797 14.922,1.613 Q14.844,1.43 14.707,1.293 Q14.57,1.156 14.387,1.078 Q14.203,1 14,1 L2,1 Q1.789,1 1.609,1.078 Q1.43,1.156 1.293,1.293 Q1.156,1.43 1.078,1.609 Q1,1.789 1,2 L1,14 Q1,14.211 1.078,14.395 Q1.156,14.578 1.289,14.711 Q1.422,14.844 1.605,14.922 Q1.789,15 2,15 Z M5.06,11.143 Q5.06,11.065 5.093,10.979 L7.613,4.679 Q7.659,4.561 7.77,4.502 Q7.882,4.443 8,4.443 Q8.131,4.443 8.233,4.499 Q8.335,4.555 8.387,4.679 L10.907,10.979 Q10.94,11.065 10.94,11.143 Q10.94,11.314 10.815,11.435 Q10.691,11.557 10.52,11.557 Q10.389,11.557 10.287,11.485 Q10.185,11.412 10.133,11.294 L9.398,9.457 L6.602,9.457 L5.867,11.294 Q5.815,11.412 5.716,11.485 Q5.618,11.557 5.487,11.557 Q5.316,11.557 5.188,11.439 Q5.06,11.321 5.06,11.143 Z M9.063,8.617 L8,5.966 L6.937,8.617 Z</Geometry>
+
     <!-- The ⓘ that opens a note under a settings row. Drawn rather than set as Segoe's E946,
          which is the only way to know where it is: a glyph is positioned inside a line box by its
          font's own metrics, so aligning it with the text beside it means aligning two boxes whose

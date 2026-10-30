@@ -160,7 +160,7 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Switch"/>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Value"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="&#xEF3C;" Style="{StaticResource RowGlyph}"/>
+                                <TextBlock Grid.Column="0" Text="&#xE8D3;" Style="{StaticResource RowGlyph}"/>
                                 <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.TextColor}" Style="{StaticResource RowLabel}"/>
                                 <ctl:SegmentedSwitch x:Name="TextColorMode" Grid.Column="2"
                                                      AutomationProperties.Name="{DynamicResource S.Realtime.TextColorMode}"/>
@@ -189,7 +189,9 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Switch"/>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Value"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="&#xE790;" Style="{StaticResource RowGlyph}"/>
+                                <Path Grid.Column="0" Data="{StaticResource ScrimColorGlyphGeometry}"
+                                      Width="16" Height="16" Fill="{DynamicResource AppTextSecondary}"
+                                      VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.ScrimColor}" Style="{StaticResource RowLabel}"/>
                                 <ctl:SegmentedSwitch x:Name="ScrimColorMode" Grid.Column="2"
                                                      AutomationProperties.Name="{DynamicResource S.Realtime.ScrimColorMode}"/>
