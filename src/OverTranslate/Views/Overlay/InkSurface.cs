@@ -271,6 +271,15 @@ public sealed class InkSurface
                 // marks still darken where they cross, as two passes of a real highlighter do.
                 dc.PushOpacity(Math.Clamp(stroke.Opacity, 0, 1));
 
+                if (stroke.Tool == AnnotationTool.Text)
+                {
+                    if (stroke.Text is { } text && stroke.TextStyle is { } style && stroke.Points.Count > 0)
+                        dc.DrawText(style.Layout(text, stroke.Color, _scale), stroke.Points[0]);
+
+                    dc.Pop();
+                    continue;
+                }
+
                 // A single point is a tap. A round nib leaves a dot; a chisel one has no width
                 // across a point it never moved off, so there is nothing to lay down.
                 if (stroke.IsShape && stroke.Points.Count == 2)

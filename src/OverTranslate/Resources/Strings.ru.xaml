@@ -189,6 +189,11 @@
     <sys:String x:Key="S.Annotate.Arrow">Стрелка</sys:String>
     <sys:String x:Key="S.Annotate.Rectangle">Прямоугольник</sys:String>
     <sys:String x:Key="S.Annotate.Ellipse">Эллипс</sys:String>
+    <sys:String x:Key="S.Annotate.Text">Текст</sys:String>
+    <sys:String x:Key="S.Annotate.Bold">Жирный</sys:String>
+    <sys:String x:Key="S.Annotate.Italic">Курсив</sys:String>
+    <sys:String x:Key="S.Annotate.Underline">Подчёркнутый</sys:String>
+    <sys:String x:Key="S.Annotate.Strikethrough">Зачёркнутый</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">Ластик</sys:String>
     <sys:String x:Key="S.Annotate.Undo">Отменить</sys:String>
     <sys:String x:Key="S.Annotate.Redo">Повторить</sys:String>

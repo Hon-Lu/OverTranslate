@@ -199,6 +199,11 @@
     <sys:String x:Key="S.Annotate.Arrow">箭頭</sys:String>
     <sys:String x:Key="S.Annotate.Rectangle">方框</sys:String>
     <sys:String x:Key="S.Annotate.Ellipse">圓框</sys:String>
+    <sys:String x:Key="S.Annotate.Text">文字</sys:String>
+    <sys:String x:Key="S.Annotate.Bold">粗體</sys:String>
+    <sys:String x:Key="S.Annotate.Italic">斜體</sys:String>
+    <sys:String x:Key="S.Annotate.Underline">底線</sys:String>
+    <sys:String x:Key="S.Annotate.Strikethrough">刪除線</sys:String>
     <sys:String x:Key="S.Annotate.Eraser">橡皮擦</sys:String>
     <sys:String x:Key="S.Annotate.Undo">復原</sys:String>
     <sys:String x:Key="S.Annotate.Redo">重做</sys:String>

@@ -5,6 +5,7 @@ using System.Windows.Media;
 using OverTranslate.Models;
 using OverTranslate.Services;
 // UseWindowsForms puts System.Drawing and System.Windows.Forms in the implicit usings
+using Button = System.Windows.Controls.Button;
 using Color = System.Windows.Media.Color;
 using Point = System.Windows.Point;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
@@ -100,6 +101,21 @@ public partial class AnnotationPanelWindow : Window
     public AnnotationTool Tool { get; private set; }
     public Color InkColor { get; private set; }
 
+    /// <summary>The 文字 size in physical pixels, always inside the range the field allows.</summary>
+    public int TextSize => Math.Clamp(_prefs.TextSize, CaptureAnnotationSettings.MinTextSize, CaptureAnnotationSettings.MaxTextSize);
+
+    public bool TextBold          => _prefs.TextBold;
+    public bool TextItalic        => _prefs.TextItalic;
+    public bool TextUnderline     => _prefs.TextUnderline;
+    public bool TextStrikethrough => _prefs.TextStrikethrough;
+
+    /// <summary>The sizes the tray under the 文字 size field offers.</summary>
+    /// <remarks>
+    /// The last two are for 4K screens: the size is in the capture's own pixels, so a size that is
+    /// large on a 1080p screen is half as tall on one with twice the pixels.
+    /// </remarks>
+    private static readonly int[] TextSizeChoiceValues = [12, 16, 20, 24, 32, 40, 48, 64, 96, 128];
+
     /// <summary>How see-through a highlight drawn now would be.</summary>
     /// <remarks>
     /// Named for the ink and not just "Opacity" because a Window already has one of those, and it
@@ -178,6 +194,8 @@ public partial class AnnotationPanelWindow : Window
         if (AnnotationStroke.IsShapeTool(prefs.Shape)) _lastShape = prefs.Shape;
 
         BuildPalette();
+        BuildTextSizeTray();
+        RenderTextOptions();
         RenderToolSelection();
         OpacitySlider.Value = Math.Clamp(prefs.HighlighterOpacity, 0, 1);
         _initializing = false;
@@ -197,6 +215,25 @@ public partial class AnnotationPanelWindow : Window
         // activation from the application being captured would be the one piece of this session that
         // interrupted what the user was doing.
         WindowStyles.ApplyNoActivate(this);
+
+        // And no click on it activates anybody else either. DefWindowProc forwards WM_MOUSEACTIVATE
+        // to the owner — see OverlayWindow.RefuseMouseActivate — so a press on a swatch activated
+        // ScreenCaptureWindow, and a 文字 box being typed into lost the keyboard to it (#362): the
+        // style picked on the way was applied and the next key went nowhere. The size field still
+        // gets the keyboard, by asking for it — see TextSizeBox_PreviewMouseLeftButtonDown.
+        System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle)
+            ?.AddHook(RefuseMouseActivate);
+    }
+
+    private const int WM_MOUSEACTIVATE = 0x0021;
+    private const int MA_NOACTIVATE = 3;
+
+    private static IntPtr RefuseMouseActivate(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != WM_MOUSEACTIVATE) return IntPtr.Zero;
+
+        handled = true;
+        return (IntPtr)MA_NOACTIVATE;
     }
 
     /// <summary>Reflects whether there is anything left to undo or redo.</summary>
@@ -319,6 +356,7 @@ public partial class AnnotationPanelWindow : Window
         {
             _ when ReferenceEquals(sender, HighlighterTool) => AnnotationTool.Highlighter,
             _ when ReferenceEquals(sender, EraserTool)      => AnnotationTool.Eraser,
+            _ when ReferenceEquals(sender, TextTool)        => AnnotationTool.Text,
             _                                               => AnnotationTool.Pen,
         };
 
@@ -377,38 +415,49 @@ public partial class AnnotationPanelWindow : Window
     private const double ShapeTrayGap = GapFromToolbar;
 
     /// <summary>Opens the tray under the 形狀 button, or above it when below is not an option.</summary>
+    private void ShowShapeTray() => ShowTray(ShapeTray, ShapeTraySurface, ShapeTool);
+
+    /// <summary>
+    /// Opens <paramref name="tray"/> under <paramref name="anchor"/>, or above it when below is not an
+    /// option. One tray at a time: whichever was open is put away first.
+    /// </summary>
     /// <remarks>
     /// Away from the capture toolbar where it can be: hung on the toolbar's side it lands in the gap
     /// between the two bars and over the toolbar itself. Off the bottom of the monitor is worse than
     /// that, though — a choice the user cannot reach — so a panel with no room under it opens upward
     /// anyway.
     /// </remarks>
-    private void ShowShapeTray()
+    private void ShowTray(Grid tray, FrameworkElement surface, FrameworkElement anchor)
     {
-        if (ShapeTray.Visibility == Visibility.Visible) return;
+        if (ReferenceEquals(_openTray, tray)) return;
+        HideShapeTray();
+
+        _openTray        = tray;
+        _openTraySurface = surface;
+        _openTrayAnchor  = anchor;
 
         // Laid out below first: that is where it goes unless it will not fit, and the room it needs
         // is only known once it has been measured.
         PlaceTray(upward: false);
-        ShapeTray.Visibility = Visibility.Visible;
+        tray.Visibility = Visibility.Visible;
         UpdateLayout();
 
         // Centred under the button, but never past either end of the bar.
-        double buttonCentre = ShapeTool.TranslatePoint(new Point(ShapeTool.ActualWidth / 2, 0), PanelBar).X;
+        double buttonCentre = anchor.TranslatePoint(new Point(anchor.ActualWidth / 2, 0), PanelBar).X;
         double left = Math.Clamp(
-            buttonCentre - ShapeTray.ActualWidth / 2, 0, Math.Max(0, PanelBar.ActualWidth - ShapeTray.ActualWidth));
-        ShapeTray.Margin = new Thickness(left, ShapeTray.Margin.Top, 0, ShapeTray.Margin.Bottom);
+            buttonCentre - tray.ActualWidth / 2, 0, Math.Max(0, PanelBar.ActualWidth - tray.ActualWidth));
+        tray.Margin = new Thickness(left, tray.Margin.Top, 0, tray.Margin.Bottom);
 
         // Above instead when the panel is above the toolbar — below would land on the toolbar — or
         // when below would run off the bottom of the monitor.
-        if (_placedAbove || RunsOffScreenBottom(ShapeTraySurface))
+        if (_placedAbove || RunsOffScreenBottom(surface))
         {
             PlaceTray(upward: true);
-            ShapeTray.Margin = new Thickness(left, 0, 0, ShapeTrayGap);
+            tray.Margin = new Thickness(left, 0, 0, ShapeTrayGap);
 
             // The window sizes to its content and grows from its top edge, so it is moved up by what
             // the tray added: the bar stays where the user is looking.
-            _trayShift = ShapeTray.ActualHeight + ShapeTrayGap;
+            _trayShift = tray.ActualHeight + ShapeTrayGap;
             Top -= _trayShift;
         }
 
@@ -417,10 +466,16 @@ public partial class AnnotationPanelWindow : Window
 
     private void PlaceTray(bool upward)
     {
-        PanelStack.Children.Remove(ShapeTray);
-        PanelStack.Children.Insert(upward ? 0 : 1, ShapeTray);
-        ShapeTray.Margin = upward ? new Thickness(0, 0, 0, ShapeTrayGap) : new Thickness(0, ShapeTrayGap, 0, 0);
+        if (_openTray is not { } tray) return;
+        PanelStack.Children.Remove(tray);
+        PanelStack.Children.Insert(upward ? 0 : 1, tray);
+        tray.Margin = upward ? new Thickness(0, 0, 0, ShapeTrayGap) : new Thickness(0, ShapeTrayGap, 0, 0);
     }
+
+    // The tray that is open, if any, what it is drawn on, and the button it hangs from.
+    private Grid? _openTray;
+    private FrameworkElement? _openTraySurface;
+    private FrameworkElement? _openTrayAnchor;
 
     private static bool RunsOffScreenBottom(FrameworkElement element)
     {
@@ -434,14 +489,20 @@ public partial class AnnotationPanelWindow : Window
     /// <summary>How far the window was moved up to open the tray above the bar, to move it back by.</summary>
     private double _trayShift;
 
+    /// <summary>Puts away whichever tray is open — 形狀's or the 文字 sizes.</summary>
     private void HideShapeTray()
     {
-        if (ShapeTray.Visibility == Visibility.Visible)
+        if (_openTray is { } tray)
         {
-            ShapeTray.Visibility = Visibility.Collapsed;
+            tray.Visibility = Visibility.Collapsed;
             Top += _trayShift;
             _trayShift = 0;
         }
+
+        _openTray = null;
+        _openTraySurface = null;
+        _openTrayAnchor = null;
+        TextSizeDrop.IsChecked = false;
 
         _trayCloser?.Dispose();
         _trayCloser = null;
@@ -461,10 +522,14 @@ public partial class AnnotationPanelWindow : Window
     /// </remarks>
     private void OnAnyMouseDown(Point screenPoint)
     {
-        if (ShapeTray.Visibility != Visibility.Visible) return;
-        if (ContainsScreenPoint(ShapeTraySurface, screenPoint) || ContainsScreenPoint(ShapeTool, screenPoint)) return;
+        if (_openTraySurface is null || _openTrayAnchor is null) return;
+        if (ContainsScreenPoint(_openTraySurface, screenPoint) || ContainsScreenPoint(_openTrayAnchor, screenPoint)) return;
         HideShapeTray();
     }
+
+    /// <summary>Whether a physical screen point is on this panel, tray included.</summary>
+    public bool ContainsPhysical(Point screenPoint) =>
+        IsVisible && ContainsScreenPoint(PanelStack, screenPoint);
 
     private static bool ContainsScreenPoint(FrameworkElement element, Point screenPoint)
     {
@@ -478,6 +543,7 @@ public partial class AnnotationPanelWindow : Window
     {
         _trayCloser?.Dispose();
         _trayCloser = null;
+        TypingWindows.Remove(new System.Windows.Interop.WindowInteropHelper(this).Handle);
         base.OnClosed(e);
     }
 
@@ -489,6 +555,7 @@ public partial class AnnotationPanelWindow : Window
         PenTool.IsChecked         = Tool == AnnotationTool.Pen;
         HighlighterTool.IsChecked = Tool == AnnotationTool.Highlighter;
         EraserTool.IsChecked      = Tool == AnnotationTool.Eraser;
+        TextTool.IsChecked        = Tool == AnnotationTool.Text;
         ShapeTool.IsChecked       = shape;
         LineTool.IsChecked        = Tool == AnnotationTool.Line;
         ArrowTool.IsChecked       = Tool == AnnotationTool.Arrow;
@@ -521,6 +588,15 @@ public partial class AnnotationPanelWindow : Window
             : Visibility.Collapsed;
         OpacityBlock.Visibility   = opacityVisibility;
         OpacityDivider.Visibility = opacityVisibility;
+
+        // 文字 swaps the slider for a size in pixels and brings its four styles, in the same way and
+        // for the same reason 透明度 comes and goes: they belong on screen exactly when the tool is.
+        bool text = Tool == AnnotationTool.Text;
+        ThicknessBlock.Visibility   = text ? Visibility.Collapsed : Visibility.Visible;
+        TextSizeBlock.Visibility    = text ? Visibility.Visible   : Visibility.Collapsed;
+        TextStyleDivider.Visibility = text ? Visibility.Visible   : Visibility.Collapsed;
+        TextStyleBlock.Visibility   = text ? Visibility.Visible   : Visibility.Collapsed;
+        if (!text) EndTyping();
 
         // 粗細 is how wide a mark is. The eraser makes no mark: what its slider sets is how much of
         // the picture the circle covers, and calling that 粗細 would be asking the user to translate
@@ -578,6 +654,190 @@ public partial class AnnotationPanelWindow : Window
                 return;
             }
         }
+    }
+
+    // ── 文字 (#362) ───────────────────────────────────────────────────────────────────────────────
+
+    private void BuildTextSizeTray()
+    {
+        foreach (int size in TextSizeChoiceValues)
+        {
+            var choice = new Button
+            {
+                Style   = (Style)FindResource("TextSizeChoice"),
+                Content = $"{size} px",
+                Tag     = size,
+            };
+            choice.Click += TextSizeChoice_Click;
+            TextSizeChoices.Children.Add(choice);
+        }
+    }
+
+    /// <summary>Shows the size and the four styles the preferences hold.</summary>
+    private void RenderTextOptions()
+    {
+        TextSizeBox.Text = TextSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        BoldToggle.IsChecked          = _prefs.TextBold;
+        ItalicToggle.IsChecked        = _prefs.TextItalic;
+        UnderlineToggle.IsChecked     = _prefs.TextUnderline;
+        StrikethroughToggle.IsChecked = _prefs.TextStrikethrough;
+    }
+
+    private void TextStyleToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _prefs.TextBold          = BoldToggle.IsChecked == true;
+        _prefs.TextItalic        = ItalicToggle.IsChecked == true;
+        _prefs.TextUnderline     = UnderlineToggle.IsChecked == true;
+        _prefs.TextStrikethrough = StrikethroughToggle.IsChecked == true;
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void TextSizeDrop_Click(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(_openTray, TextSizeTray))
+        {
+            HideShapeTray();
+            return;
+        }
+
+        // A size half typed is applied before choosing another, so the field never shows one value
+        // while the words are set in a different one.
+        EndTyping();
+        ShowTray(TextSizeTray, TextSizeTraySurface, TextSizeFrame);
+        TextSizeDrop.IsChecked = true;
+    }
+
+    private void TextSizeChoice_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: int size }) return;
+        HideShapeTray();
+        SetTextSize(size);
+    }
+
+    /// <summary>Takes a size, clamped to the field's range, shows it and passes it on.</summary>
+    private void SetTextSize(int size)
+    {
+        size = Math.Clamp(size, CaptureAnnotationSettings.MinTextSize, CaptureAnnotationSettings.MaxTextSize);
+        TextSizeBox.Text = size.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (size == _prefs.TextSize) return;
+
+        _prefs.TextSize = size;
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Applies what is in the field. Anything that is not a number — the field emptied, a paste that
+    /// slipped through — puts back the size there was.
+    /// </summary>
+    private void CommitTypedTextSize()
+    {
+        if (int.TryParse(TextSizeBox.Text, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int typed))
+            SetTextSize(typed);
+        else
+            TextSizeBox.Text = TextSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>What had the keyboard before the size field took it, to hand it back to.</summary>
+    /// <remarks>
+    /// Either the application under the capture or, with words being typed, the 文字 box — which is
+    /// then where the typing carries on once the size is in.
+    /// </remarks>
+    private IntPtr _typingPrevious;
+    private bool _typing;
+
+    /// <summary>
+    /// The panel takes the keyboard for the size field, and only for it. A click is what asks: this
+    /// window is no-activate, so without this the field would show a caret while the keys went to
+    /// the application underneath.
+    /// </summary>
+    private void TextSizeBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        HideShapeTray();
+        if (_typing) return;
+
+        _typing = true;
+        _typingPrevious = KeyboardForeground.Take(this);
+
+        // Focused here rather than left to the click, so the whole number is selected and the first
+        // digit typed replaces it — the same as the realtime panel's size field.
+        TextSizeBox.Focus();
+        e.Handled = true;
+    }
+
+    private void TextSizeBox_GotKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e) =>
+        TextSizeBox.SelectAll();
+
+    private void TextSizeBox_LostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e) =>
+        CommitTypedTextSize();
+
+    private void TextSizeBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e) =>
+        e.Handled = !e.Text.All(char.IsAsciiDigit);
+
+    private void TextSizeBox_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (e.DataObject.GetData(typeof(string)) is not string pasted || !pasted.All(char.IsAsciiDigit))
+            e.CancelCommand();
+    }
+
+    private void TextSizeBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.Enter:
+                CommitTypedTextSize();
+                EndTyping();
+                e.Handled = true;
+                break;
+
+            // Leaves the size as it was. Not the capture: the Esc hook stands aside while the
+            // field has the keyboard — see TypingWindows.
+            case System.Windows.Input.Key.Escape:
+                TextSizeBox.Text = TextSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                EndTyping();
+                e.Handled = true;
+                break;
+
+            case System.Windows.Input.Key.Up:
+            case System.Windows.Input.Key.Down:
+                CommitTypedTextSize();
+                SetTextSize(TextSize + (e.Key == System.Windows.Input.Key.Up ? 1 : -1));
+                TextSizeBox.SelectAll();
+                e.Handled = true;
+                break;
+        }
+    }
+
+    /// <summary>One pixel a notch, without having to click into the field first.</summary>
+    private void TextSizeBox_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        CommitTypedTextSize();
+        SetTextSize(TextSize + Math.Sign(e.Delta));
+        e.Handled = true;
+    }
+
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        EndTyping();
+    }
+
+    /// <summary>
+    /// The size typing is over, whoever ended it. What is in the field is applied, and the keyboard
+    /// goes back to whatever had it.
+    /// </summary>
+    private void EndTyping()
+    {
+        if (!_typing) return;
+        _typing = false;
+
+        CommitTypedTextSize();
+        if (IsKeyboardFocusWithin) System.Windows.Input.Keyboard.ClearFocus();
+        System.Windows.Input.FocusManager.SetFocusedElement(this, null);
+
+        var previous = _typingPrevious;
+        _typingPrevious = IntPtr.Zero;
+        KeyboardForeground.Release(this, previous);
     }
 
     private void UndoBtn_Click(object sender, RoutedEventArgs e)

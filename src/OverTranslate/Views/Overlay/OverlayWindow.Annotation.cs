@@ -100,6 +100,21 @@ public partial class OverlayWindow
     /// <summary>Where the pointer was last seen over the surface, for the eraser's ring to sit on.</summary>
     private Point? _lastPointer;
 
+    // 文字 (#362): the box being typed into, if one is open, and how the next mark is set.
+    private AnnotationTextEditor? _textEditor;
+    private int _textSizePx = CaptureAnnotationSettings.DefaultTextSize;
+    private bool _textBold;
+    private bool _textItalic;
+    private bool _textUnderline;
+    private bool _textStrikethrough;
+
+    /// <summary>
+    /// Whether a press at this physical point leaves a 文字 mark being typed. For the 標記 panel,
+    /// which this window does not know about: changing the colour or the size is adjusting the words,
+    /// not moving on from them.
+    /// </summary>
+    public Func<Point, bool>? KeepTextEditingOnPress { get; set; }
+
     /// <summary>Raised whenever the marks, or what can be undone, changed.</summary>
     public event EventHandler? AnnotationsChanged;
 
@@ -192,6 +207,9 @@ public partial class OverlayWindow
     public void EndAnnotating()
     {
         if (!_isAnnotating) return;
+
+        // Typed words are kept, not dropped: turning 標記 off is not the same as Esc on an empty box.
+        FinishText();
         _isAnnotating = false;
 
         AbandonWetStroke();
@@ -204,11 +222,30 @@ public partial class OverlayWindow
 
     public void SetAnnotationTool(AnnotationTool tool)
     {
+        // Picking up another tool is moving on from the words, the same as clicking away from them.
+        if (tool != AnnotationTool.Text) FinishText();
+
         _annotationTool = tool;
         ApplyAnnotationCursor();
     }
 
-    public void SetAnnotationColor(Color color) => _annotationColor = color;
+    public void SetAnnotationColor(Color color)
+    {
+        _annotationColor = color;
+        ApplyTextEditorStyle();
+    }
+
+    /// <summary>How the next 文字 mark is set, and the one being typed if there is one.</summary>
+    /// <param name="sizePx">The em size in physical pixels of the capture.</param>
+    public void SetAnnotationTextStyle(int sizePx, bool bold, bool italic, bool underline, bool strikethrough)
+    {
+        _textSizePx        = sizePx;
+        _textBold          = bold;
+        _textItalic        = italic;
+        _textUnderline     = underline;
+        _textStrikethrough = strikethrough;
+        ApplyTextEditorStyle();
+    }
 
     public void SetAnnotationThickness(double thickness) => _annotationThickness = thickness;
 
@@ -262,6 +299,7 @@ public partial class OverlayWindow
         // from, and the pen's nib hides the very pixel it is on.
         AnnotationSurface.Cursor = erasing ? Cursors.None
             : AnnotationStroke.IsShapeTool(_annotationTool) ? Cursors.Cross
+            : _annotationTool == AnnotationTool.Text ? Cursors.IBeam
             : Cursors.Pen;
         if (!erasing) HideEraserRing();
         else RenderEraserRing();
@@ -288,6 +326,21 @@ public partial class OverlayWindow
     private void AnnotationSurface_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (!_isAnnotating) return;
+
+        // A press on the picture while words are being typed only finishes them. Starting the next
+        // box on the same press would leave an empty one wherever the user clicked to be done.
+        if (_textEditor is not null)
+        {
+            FinishText();
+            return;
+        }
+
+        if (_annotationTool == AnnotationTool.Text)
+        {
+            BeginText(e.GetPosition(AnnotationInputCanvas));
+            return;
+        }
+
         AnnotationSurface.CaptureMouse();
         var point = e.GetPosition(AnnotationInputCanvas);
 
@@ -476,6 +529,67 @@ public partial class OverlayWindow
     }
 
 
+
+    /// <summary>Opens a box for a 文字 mark with its first line starting at <paramref name="point"/>.</summary>
+    private void BeginText(Point point)
+    {
+        var physical = new Point(_physBounds.Left + point.X * _dpiX, _physBounds.Top + point.Y * _dpiY);
+
+        // The surface's own presses are left to the handler above, so that a click on the picture
+        // finishes the words exactly once and does not also open the next box.
+        var editor = new AnnotationTextEditor(p =>
+            _annotationBoundsPhys.Contains(p) || KeepTextEditingOnPress?.Invoke(p) == true);
+        editor.Finished += (_, _) => CommitText(editor);
+
+        _textEditor = editor;
+        ApplyTextEditorStyle();
+        editor.ShowAt(physical);
+    }
+
+    private void ApplyTextEditorStyle() =>
+        _textEditor?.ApplyStyle(TextFamily, _textSizePx, _annotationColor,
+            _textBold, _textItalic, _textUnderline, _textStrikethrough);
+
+    /// <summary>The words are set in the interface's own font, which is chosen for its language.</summary>
+    private static System.Windows.Media.FontFamily TextFamily =>
+        System.Windows.Application.Current?.TryFindResource("AppFont") as System.Windows.Media.FontFamily
+        ?? new System.Windows.Media.FontFamily("Segoe UI");
+
+    /// <summary>Finishes the words being typed, if any, and lays them down.</summary>
+    public void FinishText() => _textEditor?.Finish();
+
+    /// <summary>
+    /// Lays what was typed into the picture as one mark. A box left empty leaves nothing, not even
+    /// a step in the history.
+    /// </summary>
+    private void CommitText(AnnotationTextEditor editor)
+    {
+        if (!ReferenceEquals(_textEditor, editor)) return;
+        _textEditor = null;
+
+        var text = editor.Text.Replace("\r\n", "\n").Replace('\r', '\n');
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        // Where the box actually drew its first line rather than where the click was, so the mark
+        // lands on the words the user was looking at even if the box could not be put exactly there.
+        var origin = editor.TextOriginPhysical;
+        var stroke = new AnnotationStroke
+        {
+            Tool      = AnnotationTool.Text,
+            Color     = _annotationColor,
+            Thickness = 0,
+            Opacity   = 1,
+            Points    = [new Point((origin.X - _physBounds.Left) / _dpiX, (origin.Y - _physBounds.Top) / _dpiY)],
+            Text      = text,
+            TextStyle = new AnnotationTextStyle(
+                TextFamily, _textSizePx / _dpiX,
+                _textBold, _textItalic, _textUnderline, _textStrikethrough),
+        };
+
+        EnsureInkSurface();
+        _ink.Lay(stroke);
+        CommitStrokes([.. CurrentStrokes, stroke], alreadyPainted: true);
+    }
 
     private void CommitStrokes(List<AnnotationStroke> next, bool alreadyPainted = false)
     {
