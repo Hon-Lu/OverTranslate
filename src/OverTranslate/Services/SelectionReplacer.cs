@@ -102,12 +102,17 @@ internal static class SelectionReplacer
     /// WPF already retries for about a second before it throws, so a throw here means the clipboard
     /// stayed locked for that whole second — and a paste sent anyway would put whatever was on it
     /// before over the user's selection.
+    ///
+    /// Not flushed (copy:false): the translation only has to last until the paste, after which
+    /// <see cref="ClipboardBackup.Restore"/> replaces it, so outliving this process is no use. The
+    /// flush reopens the clipboard straight after the copy shortcut and the snapshot, and on
+    /// Windows 11 a clipboard listener still holding it makes that fail with CLIPBRD_E_CANT_OPEN.
     /// </remarks>
     private static bool TryPut(string text)
     {
         try
         {
-            Clipboard.SetText(text);
+            Clipboard.SetDataObject(text, copy: false);
             return true;
         }
         catch (Exception ex)
