@@ -220,7 +220,9 @@ when a translation fails or responds too slowly, the app first retries the same 
 
 ### OpenAI settings
 
-![OpenAI settings](docs/images/OpenAI.png)
+| OpenAI settings | Edit settings |
+|------|----------|
+| ![OpenAI settings](docs/images/OpenAI-1.png) | ![Edit settings](docs/images/OpenAI-2.png) |
 
 | Setting | Description |
 |---------|-------------|

@@ -222,7 +222,9 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 
 ### OpenAI 설정
 
-![OpenAI](docs/images/OpenAI.png)
+| OpenAI 설정 | 설정 편집 |
+|------|----------|
+| ![OpenAI 설정](docs/images/OpenAI-1.png) | ![설정 편집](docs/images/OpenAI-2.png) |
 
 | 항목 | 설명 |
 |------|------|

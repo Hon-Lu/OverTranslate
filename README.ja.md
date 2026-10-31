@@ -222,7 +222,9 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 
 ### OpenAI の設定
 
-![OpenAI](docs/images/OpenAI.png)
+| OpenAI の設定 | 設定を編集 |
+|------|----------|
+| ![OpenAI の設定](docs/images/OpenAI-1.png) | ![設定を編集](docs/images/OpenAI-2.png) |
 
 | 項目 | 説明 |
 |------|------|

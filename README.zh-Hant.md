@@ -222,7 +222,9 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 ### OpenAI 設定
 
-![OpenAI.png](docs/images/OpenAI.png)
+| OpenAI設定 | 編輯設定 |
+|------|----------|
+| ![OpenAI設定](docs/images/OpenAI-1.png) | ![編輯設定](docs/images/OpenAI-2.png) |
 
 | 項目 | 說明 |
 |------|------|
