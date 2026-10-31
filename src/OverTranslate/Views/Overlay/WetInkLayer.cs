@@ -142,6 +142,47 @@ internal sealed class WetInkLayer : FrameworkElement
         AnnotationStroke.DrawShape(dc, _pen, _shapeTool, start, end);
     }
 
+    /// <summary>
+    /// Redraws the stroke so far at a new width — the wheel turned while it is being drawn (#373).
+    /// The whole stroke changes, not just what comes after, because the finished mark has one width.
+    /// </summary>
+    /// <param name="points">The freehand stroke's points so far; ignored for a shape, which the caller reshapes.</param>
+    public void SetThickness(double thickness, IReadOnlyList<Point>? points)
+    {
+        if (_pen is not { } old) return;
+
+        _pen = new Pen(old.Brush, thickness)
+        {
+            StartLineCap = old.StartLineCap,
+            EndLineCap   = old.EndLineCap,
+            LineJoin     = old.LineJoin,
+        };
+        _pen.Freeze();
+
+        if (points is not { Count: > 0 }) return;
+
+        // Built up again exactly as Extend built it, a block at a time, but each block drawn once.
+        _blocks.Clear();
+        _isFirstBlock = true;
+        _activePoints = [points[0]];
+        _active = new DrawingVisual();
+        _blocks.Add(_active);
+
+        for (int i = 1; i < points.Count; i++)
+        {
+            _activePoints.Add(points[i]);
+            if (_activePoints.Count < BlockSize) continue;
+
+            Redraw();
+            _activePoints = [_activePoints[^2], _activePoints[^1]];
+            _isFirstBlock = false;
+            _active = new DrawingVisual();
+            _blocks.Add(_active);
+        }
+
+        Redraw();
+    }
+
     /// <summary>Takes the stroke away, which is what happens once it has been committed.</summary>
     public void Clear()
     {

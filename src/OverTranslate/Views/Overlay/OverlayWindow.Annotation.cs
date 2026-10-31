@@ -92,6 +92,37 @@ public partial class OverlayWindow
     private Point _eraseLast;
     private bool _eraseTookSomething;
 
+    /// <summary>
+    /// The parts of the rub in progress already done at an earlier size, each with the diameter it
+    /// was done at. The wheel can change the eraser's size mid-rub (#373), and a rub is replayed from
+    /// its record, so each size has to be a record of its own.
+    /// </summary>
+    private readonly List<(List<Point> Points, double Diameter)> _eraseDone = [];
+
+    /// <summary>The wheel while a mark is being made (#373) — see <see cref="MouseWheelHook"/>.</summary>
+    private MouseWheelHook? _wheelHook;
+
+    /// <summary>
+    /// Raised with whole notches when the wheel is turned while a stroke is being drawn or a 文字 box
+    /// is open: the size of the tool in hand is to go up or down by that many steps. Whoever owns the
+    /// size changes it and sets it back here.
+    /// </summary>
+    public event Action<int>? AnnotationSizeWheel;
+
+    /// <summary>Whether the wheel should size the mark now: a stroke in progress, or words being typed.</summary>
+    private bool WheelSizesMark =>
+        _isAnnotating && (_wetPoints is not null || _shapeStart is not null || _erasePoints is not null || _textEditor is not null);
+
+    private void UpdateWheelTaking()
+    {
+        if (_wheelHook is { } hook) hook.IsTaking = WheelSizesMark;
+    }
+
+    private void OnWheelNotches(int notches)
+    {
+        if (WheelSizesMark) AnnotationSizeWheel?.Invoke(notches);
+    }
+
     private readonly InkSurface _ink = new();
 
     private Rect _annotationBounds;
@@ -201,6 +232,8 @@ public partial class OverlayWindow
         IsHitTestVisible = true;
         AnnotationSurface.Visibility = Visibility.Visible;
         ApplyAnnotationCursor();
+
+        _wheelHook ??= MouseWheelHook.Install(OnWheelNotches);
     }
 
     /// <summary>Gives the pointer back to whatever is underneath. The marks stay on screen.</summary>
@@ -218,6 +251,9 @@ public partial class OverlayWindow
         AnnotationSurface.Visibility = Visibility.Collapsed;
         IsHitTestVisible = false;
         WindowStyles.SetClickThrough(this, true);
+
+        _wheelHook?.Dispose();
+        _wheelHook = null;
     }
 
     public void SetAnnotationTool(AnnotationTool tool)
@@ -247,7 +283,33 @@ public partial class OverlayWindow
         ApplyTextEditorStyle();
     }
 
-    public void SetAnnotationThickness(double thickness) => _annotationThickness = thickness;
+    /// <summary>The width of the next mark — and of the one being drawn, when the wheel turned during it (#373).</summary>
+    public void SetAnnotationThickness(double thickness)
+    {
+        if (thickness == _annotationThickness) return;
+        double oldDiameter = EraserRadius * 2;
+        _annotationThickness = thickness;
+
+        if (_shapeStart is { } start)
+        {
+            _wetLayer.SetThickness(thickness, null);
+            _wetLayer.ReshapeTo(start, _shapeEnd);
+        }
+        else if (_wetPoints is { } points)
+        {
+            _wetLayer.SetThickness(thickness, points);
+        }
+        else if (_erasePoints is { } rubbed)
+        {
+            // What has been rubbed so far stays at the size it was rubbed at, and the rest of the
+            // rub carries on from here at the new one — starting with the spot under the ring now.
+            _eraseDone.Add((rubbed, oldDiameter));
+            _erasePoints = [_eraseLast];
+            if (_ink.Erase(_eraseLast, _eraseLast, EraserRadius)) _eraseTookSomething = true;
+        }
+
+        RenderEraserRing();
+    }
 
     /// <summary>How see-through the next highlight will be. Ignored by the other two tools.</summary>
     public void SetAnnotationOpacity(double opacity) => _annotationOpacity = opacity;
@@ -347,9 +409,11 @@ public partial class OverlayWindow
         if (_annotationTool == AnnotationTool.Eraser)
         {
             EnsureInkSurface();
+            _eraseDone.Clear();
             _erasePoints = [point];
             _eraseLast = point;
             _eraseTookSomething = _ink.Erase(point, point, EraserRadius);
+            UpdateWheelTaking();
             return;
         }
 
@@ -359,6 +423,7 @@ public partial class OverlayWindow
             _shapeEnd   = point;
             _wetLayer.BeginShape(_annotationColor, _annotationThickness, _annotationTool, point);
             AnnotationCanvas.Children.Add(_wetLayer);
+            UpdateWheelTaking();
             return;
         }
 
@@ -369,6 +434,7 @@ public partial class OverlayWindow
             _annotationTool == AnnotationTool.Highlighter ? PenLineCap.Flat : PenLineCap.Round,
             point);
         AnnotationCanvas.Children.Add(_wetLayer);
+        UpdateWheelTaking();
     }
 
     private void AnnotationSurface_MouseMove(object sender, MouseEventArgs e)
@@ -432,10 +498,12 @@ public partial class OverlayWindow
 
         if (_erasePoints is not null)
         {
-            var path = _erasePoints;
+            List<(List<Point> Points, double Diameter)> parts = [.. _eraseDone, (_erasePoints, EraserRadius * 2)];
             bool took = _eraseTookSomething;
             _erasePoints = null;
+            _eraseDone.Clear();
             _eraseTookSomething = false;
+            UpdateWheelTaking();
 
             // Nothing changed if the drag never met a mark — and a history entry for that would be a
             // press of 復原 that visibly does nothing.
@@ -444,15 +512,16 @@ public partial class OverlayWindow
             // The rub is recorded as a stroke of its own rather than as a change to the strokes it
             // crossed. The picture cannot be stepped backwards, so going back a step repaints it
             // from this list, and a rub has to be one of the things on the list to be repainted —
-            // in its place, so that a mark drawn afterwards is not rubbed out along with it.
-            CommitStrokes([.. CurrentStrokes, new AnnotationStroke
+            // in its place, so that a mark drawn afterwards is not rubbed out along with it. One
+            // stroke per size it was done at, all in the one step, so 復原 takes the whole rub back.
+            CommitStrokes([.. CurrentStrokes, .. parts.Select(part => new AnnotationStroke
             {
                 Tool      = AnnotationTool.Eraser,
                 Color     = Colors.Transparent,
-                Thickness = EraserRadius * 2,
+                Thickness = part.Diameter,
                 Opacity   = 1,
-                Points    = path,
-            }], alreadyPainted: true);
+                Points    = part.Points,
+            })], alreadyPainted: true);
             return;
         }
 
@@ -523,9 +592,11 @@ public partial class OverlayWindow
         // the only place that happened — so the marks that are still on the list are painted again.
         bool wasRubbing = _erasePoints is not null;
         _erasePoints = null;
+        _eraseDone.Clear();
         _eraseTookSomething = false;
         if (wasRubbing) RedrawAnnotations();
         if (AnnotationSurface.IsMouseCaptured) AnnotationSurface.ReleaseMouseCapture();
+        UpdateWheelTaking();
     }
 
 
@@ -540,10 +611,12 @@ public partial class OverlayWindow
         var editor = new AnnotationTextEditor(p =>
             _annotationBoundsPhys.Contains(p) || KeepTextEditingOnPress?.Invoke(p) == true);
         editor.Finished += (_, _) => CommitText(editor);
+        editor.AnchorBounds = _annotationBoundsPhys;
 
         _textEditor = editor;
         ApplyTextEditorStyle();
         editor.ShowAt(physical);
+        UpdateWheelTaking();
     }
 
     private void ApplyTextEditorStyle() =>
@@ -566,6 +639,7 @@ public partial class OverlayWindow
     {
         if (!ReferenceEquals(_textEditor, editor)) return;
         _textEditor = null;
+        UpdateWheelTaking();
 
         var text = editor.Text.Replace("\r\n", "\n").Replace('\r', '\n');
         if (string.IsNullOrWhiteSpace(text)) return;

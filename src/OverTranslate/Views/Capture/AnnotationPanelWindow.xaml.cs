@@ -149,13 +149,13 @@ public partial class AnnotationPanelWindow : Window
         }
     }
 
-    public double Thickness
+    public double Thickness => ThicknessAt(Tool, ThicknessFraction);
+
+    /// <summary>The width the slider gives at <paramref name="fraction"/> for <paramref name="tool"/>.</summary>
+    internal static double ThicknessAt(AnnotationTool tool, double fraction)
     {
-        get
-        {
-            var (min, max) = RangeFor(Tool);
-            return min + (max - min) * Math.Pow(ThicknessFraction, CurveFor(Tool));
-        }
+        var (min, max) = RangeFor(tool);
+        return min + (max - min) * Math.Pow(fraction, CurveFor(tool));
     }
 
     /// <summary>
@@ -180,6 +180,67 @@ public partial class AnnotationPanelWindow : Window
 
     /// <summary>The exponent that puts the slider's middle at <paramref name="share"/> of the range.</summary>
     private static double MiddleAt(double share) => Math.Log(share) / Math.Log(0.5);
+
+    /// <summary>Where the slider sits for a width of <paramref name="thickness"/> — the inverse of <see cref="Thickness"/>.</summary>
+    internal static double FractionFor(AnnotationTool tool, double thickness)
+    {
+        var (min, max) = RangeFor(tool);
+        double share = Math.Clamp((thickness - min) / (max - min), 0, 1);
+        return Math.Pow(share, 1 / CurveFor(tool));
+    }
+
+    /// <summary>
+    /// The width <paramref name="notches"/> of the wheel make of <paramref name="thickness"/> (#373):
+    /// a whole step each, about eleven across the tool's range, so a few notches go from thin to thick
+    /// and every stop is a round number of pixels.
+    /// </summary>
+    internal static double NudgedThickness(AnnotationTool tool, double thickness, int notches)
+    {
+        var (min, max) = RangeFor(tool);
+        double step = Math.Max(1, Math.Round((max - min) / 11));
+        return Math.Clamp(Math.Round(thickness) + notches * step, min, max);
+    }
+
+    /// <summary>
+    /// The 文字 size <paramref name="notches"/> of the wheel make of <paramref name="size"/> (#373): a
+    /// tenth of the size a notch, never less than a pixel, so it moves as fast at 128 as it does at 16.
+    /// </summary>
+    internal static int NudgedTextSize(int size, int notches)
+    {
+        for (int i = 0; i < Math.Abs(notches); i++)
+        {
+            int step = Math.Max(1, (int)Math.Round(size / 10.0));
+            size = Math.Clamp(size + Math.Sign(notches) * step,
+                CaptureAnnotationSettings.MinTextSize, CaptureAnnotationSettings.MaxTextSize);
+        }
+        return size;
+    }
+
+    /// <summary>
+    /// Makes the tool in hand bigger or smaller by <paramref name="notches"/> of the wheel — turned
+    /// while drawing, or while a 文字 box is open (#373). Shown on the panel and kept for the next
+    /// mark, the same as moving the slider.
+    /// </summary>
+    public void NudgeSize(int notches)
+    {
+        if (notches == 0) return;
+
+        if (Tool == AnnotationTool.Text)
+        {
+            EndTyping();
+            SetTextSize(NudgedTextSize(TextSize, notches));
+            return;
+        }
+
+        double next = NudgedThickness(Tool, Thickness, notches);
+        if (next == Thickness) return;
+
+        ThicknessFraction = FractionFor(Tool, next);
+        _showingToolThickness = true;
+        ThicknessSlider.Value = ThicknessFraction;
+        _showingToolThickness = false;
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     public AnnotationPanelWindow(AnnotationTool tool, CaptureAnnotationSettings prefs)
     {

@@ -1618,6 +1618,8 @@ public partial class MainWindow : Window
         _overlayWindow.SetAnnotationTextStyle(
             panel.TextSize, panel.TextBold, panel.TextItalic, panel.TextUnderline, panel.TextStrikethrough);
         _overlayWindow.KeepTextEditingOnPress = panel.ContainsPhysical;
+        _overlayWindow.AnnotationSizeWheel -= OnAnnotationSizeWheel;
+        _overlayWindow.AnnotationSizeWheel += OnAnnotationSizeWheel;
 
         // Ctrl+Z and Ctrl+Y, for as long as the panel is up. Nothing in this session takes the
         // keyboard focus, so the two buttons on the panel are otherwise the only way to reach these.
@@ -1631,6 +1633,9 @@ public partial class MainWindow : Window
         RaiseToolbarsAboveInk();
         panel.SetHistoryState(_overlayWindow.CanUndoAnnotation, _overlayWindow.CanRedoAnnotation);
     }
+
+    /// <summary>The wheel turned during a stroke or with a 文字 box open (#373): the panel owns the sizes.</summary>
+    private void OnAnnotationSizeWheel(int notches) => _annotationPanel?.NudgeSize(notches);
 
     /// <summary>
     /// Pushes what the panel now says onto the pen, and holds it for the rest of this capture.
