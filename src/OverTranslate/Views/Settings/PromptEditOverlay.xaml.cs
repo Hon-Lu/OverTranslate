@@ -126,14 +126,12 @@ public partial class PromptEditOverlay : UserControl
             ConfirmLayer.Visibility = Visibility.Collapsed;
             ModeConfirmLayer.Visibility = Visibility.Collapsed;
 
-            // Both folds shut and the card at its top, however it was left: what is folded is looked
-            // up when it is wanted, and a card that opened on the parameters would put the name, the
-            // one thing a new setting is missing, out of sight.
+            // The fold shut and the card at its top, however it was left: what is folded is looked
+            // up when it is wanted, and a card that opened further down would put the name, the one
+            // thing a new setting is missing, out of sight.
             _advancedExpanded = false;
             ++_advancedTransition;
             ShutFold(AdvancedHost, AdvancedChevronRotation);
-            ParamsContent.Visibility = Visibility.Collapsed;
-            ParamsChevronRotation.Angle = 0;
             Scroller.ScrollToTop();
         }
         finally
@@ -343,20 +341,6 @@ public partial class PromptEditOverlay : UserControl
         CloseModeConfirm();
         Refill(TemplateBox, OpenAiCompatibleProvider.TemplateAfterAnswer(TemplateBox.Text, _batch, useDefault: true));
         UpdateChrome();
-    }
-
-    private void ParamsToggle_Click(object sender, RoutedEventArgs e)
-    {
-        var open = ParamsContent.Visibility != Visibility.Visible;
-        ParamsContent.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        ParamsChevronRotation.Angle = open ? 180 : 0;
-
-        // It opens at the bottom of the scroller, below the box, so opened is scrolled to.
-        if (open)
-        {
-            ParamsContent.UpdateLayout();
-            ParamsContent.BringIntoView();
-        }
     }
 
     /// <summary>Puts the text in the box, to write over or to write from.</summary>

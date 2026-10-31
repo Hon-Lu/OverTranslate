@@ -395,15 +395,23 @@ public partial class ServiceSettingsOverlay : UserControl
         public Visibility ParametersVisibility => Parameters.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>One tag after a row's name; <see cref="Accent"/> for the one that changes what is sent.</summary>
-    public sealed record ProfileTag(string Text, bool Accent);
-
-    /// <summary>What a row's tags say, in the order they are drawn.</summary>
-    internal enum ProfileTagKind { ReadOnly, Batch, CustomPrompt }
+    /// <summary>One tag after a row's name, coloured by <see cref="Tone"/>.</summary>
+    public sealed record ProfileTag(string Text, ProfileTagTone Tone);
 
     /// <summary>
-    /// The tags a row carries: 唯讀 on the built-in one, 整批 when the setting sends a screen as a
-    /// batch, and 自訂提示詞 when its template is the user's own rather than the default.
+    /// How a tag is coloured: the way of sending in colour, each way its own, since it changes what is
+    /// sent and the two have to be told apart at a glance; what only describes the row stays quiet.
+    /// </summary>
+    public enum ProfileTagTone { Quiet, Segment, Batch }
+
+    /// <summary>What a row's tags say, in the order they are drawn.</summary>
+    internal enum ProfileTagKind { ReadOnly, Segment, Batch, CustomPrompt }
+
+    /// <summary>
+    /// The tags a row carries: 唯讀 on the built-in one, the way it sends — 標準 or 整批 — on every
+    /// one, and 自訂提示詞 when its template is the user's own rather than the default. The way is on
+    /// every row rather than only on 整批: with nothing on the others, which way they send was left
+    /// to be inferred from a missing tag.
     /// </summary>
     /// <remarks>
     /// The template is the user's own exactly when it is stored: a box saved as the default is stored
@@ -413,7 +421,7 @@ public partial class ServiceSettingsOverlay : UserControl
     {
         var tags = new List<ProfileTagKind>();
         if (builtIn) tags.Add(ProfileTagKind.ReadOnly);
-        if (profile.Batch) tags.Add(ProfileTagKind.Batch);
+        tags.Add(profile.Batch ? ProfileTagKind.Batch : ProfileTagKind.Segment);
         if (profile.Template.Trim().Length > 0) tags.Add(ProfileTagKind.CustomPrompt);
         return tags;
     }
@@ -451,9 +459,10 @@ public partial class ServiceSettingsOverlay : UserControl
             Model = model.Length > 0 ? model : LocalizationService.Get("S.Settings.ModelRequired"),
             Tags = TagsFor(profile, builtIn: id.Length == 0).Select(kind => kind switch
             {
-                ProfileTagKind.ReadOnly => new ProfileTag(LocalizationService.Get("S.Settings.PromptReadOnly"), false),
-                ProfileTagKind.Batch => new ProfileTag(LocalizationService.Get("S.Settings.OpenAiModeBatch"), true),
-                _ => new ProfileTag(LocalizationService.Get("S.Settings.ProfileTagCustomPrompt"), false),
+                ProfileTagKind.ReadOnly => new ProfileTag(LocalizationService.Get("S.Settings.PromptReadOnly"), ProfileTagTone.Quiet),
+                ProfileTagKind.Segment => new ProfileTag(LocalizationService.Get("S.Settings.OpenAiModeSegment"), ProfileTagTone.Segment),
+                ProfileTagKind.Batch => new ProfileTag(LocalizationService.Get("S.Settings.OpenAiModeBatch"), ProfileTagTone.Batch),
+                _ => new ProfileTag(LocalizationService.Get("S.Settings.ProfileTagCustomPrompt"), ProfileTagTone.Quiet),
             }).ToList(),
             Parameters = ParameterSummary(profile, LocalizationService.Get),
             CopyEnabled = canAdd,

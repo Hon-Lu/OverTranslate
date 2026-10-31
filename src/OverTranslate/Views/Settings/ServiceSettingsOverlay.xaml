@@ -67,8 +67,9 @@
             </Setter>
         </Style>
 
-        <!-- The small tags after a row's name. 整批 carries the accent because it is the one that
-             changes what is sent; 唯讀 and 自訂提示詞 describe the row and stay quiet. -->
+        <!-- The small tags after a row's name. 標準 and 整批 are in colour, each its own, because
+             the way of sending changes what is sent; 唯讀 and 自訂提示詞 describe the row and stay
+             quiet. -->
         <Style x:Key="ProfileTag" TargetType="Border">
             <Setter Property="Background"        Value="{DynamicResource AppButtonBg}"/>
             <Setter Property="BorderBrush"       Value="{DynamicResource AppBorder}"/>
@@ -414,10 +415,15 @@
                                                                                            Foreground="{DynamicResource AppTextSecondary}"/>
                                                                             </Border>
                                                                             <DataTemplate.Triggers>
-                                                                                <DataTrigger Binding="{Binding Accent}" Value="True">
-                                                                                    <Setter TargetName="Tag" Property="Background" Value="{DynamicResource AppAccentSubtle}"/>
-                                                                                    <Setter TargetName="Tag" Property="BorderBrush" Value="{DynamicResource AppAccentSubtle}"/>
+                                                                                <DataTrigger Binding="{Binding Tone}" Value="Segment">
+                                                                                    <Setter TargetName="Tag" Property="Background" Value="{DynamicResource AppModeSegmentTagBg}"/>
+                                                                                    <Setter TargetName="Tag" Property="BorderBrush" Value="{DynamicResource AppModeSegmentTagBorder}"/>
                                                                                     <Setter TargetName="TagText" Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding Tone}" Value="Batch">
+                                                                                    <Setter TargetName="Tag" Property="Background" Value="{DynamicResource AppModeBatchTagBg}"/>
+                                                                                    <Setter TargetName="Tag" Property="BorderBrush" Value="{DynamicResource AppModeBatchTagBorder}"/>
+                                                                                    <Setter TargetName="TagText" Property="Foreground" Value="{DynamicResource AppModeBatch}"/>
                                                                                 </DataTrigger>
                                                                             </DataTemplate.Triggers>
                                                                         </DataTemplate>

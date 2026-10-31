@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=dd5b5b0a29" />
+<link rel="stylesheet" href="../site/styles.css?v=cb095021e9" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -224,7 +224,17 @@
       <div class="split__text reveal">
         <p class="kicker" data-i18n="capture.kicker">Screenshot Translation</p>
         <h2 class="h2" data-i18n="capture.title">Select an area, and the translation covers the original</h2>
-        <p data-i18n="capture.body1">Press the hotkey, select the area you want translated, and the text on screen is read with OCR and translated. Works on web pages, PDFs, images, manga, video and games, and recognises Traditional Chinese, Simplified Chinese, English, Japanese and Korean automatically.</p>
+        <p data-i18n="capture.body1">Press the hotkey and select an area to read and translate the text on screen. Works on web pages, PDFs, images, manga, video and games.</p>
+        <div class="langs">
+          <span class="langs__label" data-i18n="capture.langs.label">Recognises</span>
+          <ul class="langs__list">
+            <li data-i18n="capture.langs.zht">Traditional Chinese</li>
+            <li data-i18n="capture.langs.zhs">Simplified Chinese</li>
+            <li data-i18n="capture.langs.en">English</li>
+            <li data-i18n="capture.langs.ja">Japanese</li>
+            <li data-i18n="capture.langs.ko">Korean</li>
+          </ul>
+        </div>
         <aside class="aside">
           <p data-i18n="capture.tray">The main window can be closed — the app stays in the system tray, so there is no need to keep it open.</p>
         </aside>
@@ -254,9 +264,9 @@
       </figure>
       <figure class="shot">
         <div class="compare compare--comic" data-compare>
-          <img class="compare__img" src="../images/截圖翻譯1-後.png" width="842" height="1305" alt="A comic page after translation" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
+          <img class="compare__img" src="../images/截圖翻譯1-後.png" width="872" height="1344" alt="A comic page after translation" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
           <div class="compare__clip">
-            <img class="compare__img" src="../images/截圖翻譯1-前.png" width="842" height="1305" alt="The same comic page in Japanese" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
+            <img class="compare__img" src="../images/截圖翻譯1-前.png" width="872" height="1344" alt="The same comic page in Japanese" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
           </div>
           <span class="compare__tag compare__tag--before" data-i18n="compare.before">Original</span>
           <span class="compare__tag compare__tag--after" data-i18n="compare.after">Translated</span>
@@ -275,12 +285,12 @@
         <ul class="ticks">
           <li><strong data-i18n="capture.tool1.title">Copy text</strong><span data-i18n="capture.tool1.body">Copies the recognized text to the clipboard without translating it.</span></li>
           <li><strong data-i18n="capture.tool2.title">Screenshot</strong><span data-i18n="capture.tool2.body">Copies the selected area to the clipboard, and saves a file too when "Save screenshots" is on.</span></li>
-          <li><strong data-i18n="capture.tool3.title">Annotate</strong><span data-i18n="capture.tool3.body">Mark up the capture with the pen, highlighter or shapes such as lines, arrows, rectangles and ellipses, then copy or save what you drew; some settings are remembered.</span></li>
+          <li><strong data-i18n="capture.tool3.title">Annotate</strong><span data-i18n="capture.tool3.body">Mark up the capture with the pen, text and other tools, then copy or save what you drew.</span></li>
         </ul>
       </div>
       <div class="split__media">
         <figure class="shot shot--plain">
-          <img src="../images/截圖翻譯-標記.png" width="1347" height="726" alt="The annotate tools on the screenshot toolbar" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
+          <img src="../images/截圖翻譯-標記.png" width="1295" height="815" alt="The annotate tools on the screenshot toolbar" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
         </figure>
       </div>
     </div>
@@ -338,9 +348,9 @@
           </figure>
           <figure class="shot">
             <div class="compare compare--tall" data-compare>
-              <img class="compare__img" src="../images/即時翻譯1-漫畫翻譯.png" width="1048" height="1343" alt="A comic page after real-time translation" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
+              <img class="compare__img" src="../images/即時翻譯1-漫畫翻譯.png" width="919" height="1363" alt="A comic page after real-time translation" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="../images/即時翻譯1-漫畫框.png" width="1048" height="1343" alt="The same comic page in Japanese" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="../images/即時翻譯1-漫畫框.png" width="919" height="1363" alt="The same comic page in Japanese" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
               </div>
               <span class="compare__tag compare__tag--before" data-i18n="compare.select">Selection</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">Translated</span>
@@ -537,6 +547,9 @@
       <li class="engine">
         <h3 data-i18n="engines.tencent.name">Tencent Translate</h3>
       </li>
+      <li class="engine">
+        <h3 data-i18n="engines.yandex.name">Yandex</h3>
+      </li>
     </ul>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.custom">Customizable services</h3>
@@ -548,16 +561,22 @@
       <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI-compatible API</span>
-        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
       </li>
     </ul>
 
-    <div class="enginenote reveal">
-      <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
-      <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
+    <div class="enginenotes reveal">
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.openai.title">AI translation with context</h3>
+        <p data-i18n="engines.openai.body">With an OpenAI-compatible service, translation refers to what has already been translated, so names, terms and tone stay consistent across subtitles and dialogue. With a local model it runs fully offline, and the prompt can be customized.</p>
+        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </div>
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
+        <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -732,6 +751,6 @@
   </button>
 </div>
 
-<script src="../site/app.js?v=03618d89f2" defer></script>
+<script src="../site/app.js?v=ffbd667f75" defer></script>
 </body>
 </html>

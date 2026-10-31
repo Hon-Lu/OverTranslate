@@ -43,6 +43,14 @@
          thing that moved, and a dark one reads as a hole in a light track. -->
     <SolidColorBrush x:Key="AppToggleKnobOn"   Color="#FFFFFF"/>
     <SolidColorBrush x:Key="AppAccentSubtle"   Color="#1A2E3D"/>
+    <!-- The two ways an OpenAI setting sends, told apart at a glance on its tag: 標準 in the
+         accent, 整批 in a hue of its own beside it. The tag fills are see-through, so a tag
+         still shows on a row already filled with the accent for being chosen. -->
+    <SolidColorBrush x:Key="AppModeBatch"           Color="#4FD1B5"/>
+    <SolidColorBrush x:Key="AppModeBatchTagBg"      Color="#334FD1B5"/>
+    <SolidColorBrush x:Key="AppModeBatchTagBorder"  Color="#664FD1B5"/>
+    <SolidColorBrush x:Key="AppModeSegmentTagBg"    Color="#3352C4FA"/>
+    <SolidColorBrush x:Key="AppModeSegmentTagBorder" Color="#6652C4FA"/>
 
     <!-- Interaction steps for AppAccentSubtle, for tonal surfaces that stay tonal on hover instead
          of flipping to the solid accent — a full-width nav card is far too large a area to flood

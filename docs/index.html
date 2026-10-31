@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="site/styles.css?v=dd5b5b0a29" />
+<link rel="stylesheet" href="site/styles.css?v=cb095021e9" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -224,7 +224,17 @@
       <div class="split__text reveal">
         <p class="kicker" data-i18n="capture.kicker">截圖翻譯</p>
         <h2 class="h2" data-i18n="capture.title">框選畫面，譯文直接覆蓋原文</h2>
-        <p data-i18n="capture.body1">按下快捷鍵框選需要翻譯的區域，即可透過 OCR 辨識並翻譯畫面文字。支援網頁、PDF、圖片、漫畫、影音與遊戲，並可自動辨識繁體中文、簡體中文、英文、日文與韓文。</p>
+        <p data-i18n="capture.body1">按下快捷鍵框選區域，就能辨識並翻譯畫面上的文字，網頁、PDF、圖片、漫畫、影音與遊戲都適用。</p>
+        <div class="langs">
+          <span class="langs__label" data-i18n="capture.langs.label">辨識語言</span>
+          <ul class="langs__list">
+            <li data-i18n="capture.langs.zht">繁體中文</li>
+            <li data-i18n="capture.langs.zhs">簡體中文</li>
+            <li data-i18n="capture.langs.en">英文</li>
+            <li data-i18n="capture.langs.ja">日文</li>
+            <li data-i18n="capture.langs.ko">韓文</li>
+          </ul>
+        </div>
         <aside class="aside">
           <p data-i18n="capture.tray">主視窗可以直接關閉，程式常駐系統匣，平常不需要一直開著。</p>
         </aside>
@@ -254,9 +264,9 @@
       </figure>
       <figure class="shot">
         <div class="compare compare--comic" data-compare>
-          <img class="compare__img" src="images/截圖翻譯1-後.png" width="842" height="1305" alt="漫畫翻譯後的畫面" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
+          <img class="compare__img" src="images/截圖翻譯1-後.png" width="872" height="1344" alt="漫畫翻譯後的畫面" data-i18n-attr="alt|shot.comicpage.after" loading="lazy" decoding="async" />
           <div class="compare__clip">
-            <img class="compare__img" src="images/截圖翻譯1-前.png" width="842" height="1305" alt="翻譯前的日文漫畫" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
+            <img class="compare__img" src="images/截圖翻譯1-前.png" width="872" height="1344" alt="翻譯前的日文漫畫" data-i18n-attr="alt|shot.comicpage.before" loading="lazy" decoding="async" />
           </div>
           <span class="compare__tag compare__tag--before" data-i18n="compare.before">原文</span>
           <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
@@ -275,12 +285,12 @@
         <ul class="ticks">
           <li><strong data-i18n="capture.tool1.title">複製文字</strong><span data-i18n="capture.tool1.body">不需翻譯即可將辨識出的文字複製到剪貼簿。</span></li>
           <li><strong data-i18n="capture.tool2.title">截圖</strong><span data-i18n="capture.tool2.body">將框選畫面複製到剪貼簿，也可在設定中開啟「儲存截圖」同步存檔。</span></li>
-          <li><strong data-i18n="capture.tool3.title">標記</strong><span data-i18n="capture.tool3.body">用畫筆、螢光筆與直線、箭頭、方框、圓框等形狀直接在截圖上標記，再複製或儲存畫面內容；部分設定值會進行儲存。</span></li>
+          <li><strong data-i18n="capture.tool3.title">標記</strong><span data-i18n="capture.tool3.body">用畫筆、文字等工具直接在截圖上標記，再複製或儲存畫面內容。</span></li>
         </ul>
       </div>
       <div class="split__media">
         <figure class="shot shot--plain">
-          <img src="images/截圖翻譯-標記.png" width="1347" height="726" alt="截圖工具列的標記功能" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
+          <img src="images/截圖翻譯-標記.png" width="1295" height="815" alt="截圖工具列的標記功能" data-i18n-attr="alt|shot.annotate" loading="lazy" decoding="async" data-zoom />
         </figure>
       </div>
     </div>
@@ -338,9 +348,9 @@
           </figure>
           <figure class="shot">
             <div class="compare compare--tall" data-compare>
-              <img class="compare__img" src="images/即時翻譯1-漫畫翻譯.png" width="1048" height="1343" alt="漫畫即時翻譯後的畫面" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
+              <img class="compare__img" src="images/即時翻譯1-漫畫翻譯.png" width="919" height="1363" alt="漫畫即時翻譯後的畫面" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="images/即時翻譯1-漫畫框.png" width="1048" height="1343" alt="翻譯前的日文漫畫畫面" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="images/即時翻譯1-漫畫框.png" width="919" height="1363" alt="翻譯前的日文漫畫畫面" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
               </div>
               <span class="compare__tag compare__tag--before" data-i18n="compare.select">框選</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">譯文</span>
@@ -537,6 +547,9 @@
       <li class="engine">
         <h3 data-i18n="engines.tencent.name">騰訊翻譯</h3>
       </li>
+      <li class="engine">
+        <h3 data-i18n="engines.yandex.name">Yandex 翻譯</h3>
+      </li>
     </ul>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.custom">可自訂服務</h3>
@@ -548,16 +561,22 @@
       <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 相容 API</span>
-        <a class="textlink engine__link" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
       </li>
     </ul>
 
-    <div class="enginenote reveal">
-      <h3 class="h3" data-i18n="engines.fallback.title">自動備援</h3>
-      <p data-i18n="engines.fallback.body">當某個翻譯服務無法使用或回應過慢時，會先重新嘗試，仍無法翻譯才自動切換到其他可用的服務，不需要自己重試或改設定。DeepL 與 OpenAI 不適用。</p>
+    <div class="enginenotes reveal">
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.openai.title">參考上下文的 AI 翻譯</h3>
+        <p data-i18n="engines.openai.body">使用 OpenAI 相容服務時，翻譯會參考前面已翻好的內容，連續的字幕與對話中，人名、用詞與語氣更一致；搭配本機模型可完全離線使用，也能自訂提示詞。</p>
+        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
+          <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+        </a>
+      </div>
+      <div class="enginenote">
+        <h3 class="h3" data-i18n="engines.fallback.title">自動備援</h3>
+        <p data-i18n="engines.fallback.body">當某個翻譯服務無法使用或回應過慢時，會先重新嘗試，仍無法翻譯才自動切換到其他可用的服務，不需要自己重試或改設定。DeepL 與 OpenAI 不適用。</p>
+      </div>
     </div>
   </div>
 </section>
@@ -732,6 +751,6 @@
   </button>
 </div>
 
-<script src="site/app.js?v=03618d89f2" defer></script>
+<script src="site/app.js?v=ffbd667f75" defer></script>
 </body>
 </html>

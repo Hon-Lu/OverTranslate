@@ -661,7 +661,6 @@ p:last-child { margin-bottom: 0; }
   cursor: zoom-in;
   transition: background 160ms ease, scale 200ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
-.compare__zoom[hidden] { display: none; }
 .compare__zoom:hover { background: rgba(8, 13, 22, 0.84); scale: 1.06; }
 .compare__zoom:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .compare__zoom svg { width: 18px; height: 18px; stroke-width: 2; }
@@ -671,9 +670,9 @@ p:last-child { margin-bottom: 0; }
 /* Aspect boxes keep the two frames locked to the same geometry. */
 .shot--hero .compare { aspect-ratio: 2060 / 1160; }
 .compare--capture0 { aspect-ratio: 751 / 1002; }
-.compare--comic { aspect-ratio: 842 / 1305; }
+.compare--comic { aspect-ratio: 872 / 1344; }
 .compare--comicai { aspect-ratio: 786 / 1291; }
-.compare--tall { aspect-ratio: 1048 / 1343; }
+.compare--tall { aspect-ratio: 919 / 1363; }
 .compare--video,
 #panel-ui .compare { aspect-ratio: 16 / 9; }
 #panel-ui .compare--chat { aspect-ratio: 596 / 998; }
@@ -825,6 +824,25 @@ p:last-child { margin-bottom: 0; }
   line-height: 1.75;
 }
 .aside p { margin: 0; }
+
+/* 支援語言：從內文抽出來排成標籤，一眼掃得到，內文只講用法 */
+.langs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 20px;
+}
+.langs__label { color: var(--ink-3); font-size: 0.82rem; font-weight: 650; letter-spacing: 0.02em; }
+.langs__list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.langs__list li {
+  padding: 4px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.82rem;
+}
 
 /* facts：補充說明，不加框，讓下方的模式卡片成為唯一的容器 */
 .facts {
@@ -1011,8 +1029,8 @@ p:last-child { margin-bottom: 0; }
 @media (min-width: 820px) {
   .grid2 { grid-template-columns: 1fr 1fr; align-items: start; }
   /* 並排的兩張比例不同：欄寬依各自的寬高比分配，兩張才會一樣高 */
-  .capture__compares { grid-template-columns: minmax(0, 0.75fr) minmax(0, 0.645fr); }
-  .prose__comics { grid-template-columns: minmax(0, 0.609fr) minmax(0, 0.78fr); }
+  .capture__compares { grid-template-columns: minmax(0, 0.75fr) minmax(0, 0.649fr); }
+  .prose__comics { grid-template-columns: minmax(0, 0.609fr) minmax(0, 0.674fr); }
   /* 聊天室比對框佔左欄兩列，右欄疊聊天室比對圖與 Crab Champions */
   #panel-ui .grid2 { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); }
   #panel-ui .grid2 > :nth-child(1) { grid-row: span 2; }
@@ -1030,28 +1048,27 @@ p:last-child { margin-bottom: 0; }
 .tool .shot { margin-top: 6px; }
 
 /* engines */
+/* 服務只是名稱清單，排成自動換行的標籤，數量增減都不會留下落單的格子；
+   說明另外放在下方的 enginenotes，不塞進標籤裡把高度撐得不一致 */
 .engines {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin: 0 0 clamp(36px, 5vw, 56px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-@media (min-width: 880px) { .engines { grid-template-columns: repeat(3, 1fr); } }
 .engine {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
   align-items: center;
-  gap: 6px 10px;
-  padding: 18px 20px;
+  gap: 10px;
+  padding: 12px 18px;
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-m);
+  border-radius: 12px;
   background: var(--surface);
 }
-.engine h3 { font-size: 1rem; letter-spacing: -0.012em; margin: 0; }
-/* 兩組服務：一般服務排三欄、可自訂服務排兩欄，組名和 app 設定頁的分組一致 */
+.engine h3 { font-size: 0.98rem; letter-spacing: -0.012em; margin: 0; }
+/* 組名和 app 設定頁的分組一致 */
 .enginegroup {
   margin: 0 0 12px;
   color: var(--ink-3);
@@ -1060,10 +1077,14 @@ p:last-child { margin-bottom: 0; }
   letter-spacing: 0.02em;
 }
 .engines--general { margin-bottom: clamp(28px, 4vw, 40px); }
-@media (min-width: 880px) { .engines--custom { grid-template-columns: repeat(2, 1fr); } }
-.engine__link { flex-basis: 100%; margin-top: 6px; font-size: 0.86rem; }
-.enginenote { max-width: 46rem; }
+.enginenotes {
+  display: grid;
+  gap: clamp(28px, 4vw, 40px) clamp(32px, 5vw, 64px);
+  margin-top: clamp(40px, 6vw, 64px);
+}
+@media (min-width: 880px) { .enginenotes { grid-template-columns: 1fr 1fr; } }
 .enginenote p { color: var(--ink-2); line-height: 1.8; }
+.enginenote .textlink { margin-top: 4px; font-size: 0.9rem; }
 .pill {
   display: inline-block;
   padding: 3px 10px;
