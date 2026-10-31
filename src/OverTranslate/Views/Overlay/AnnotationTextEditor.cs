@@ -517,8 +517,15 @@ internal sealed class AnnotationTextEditor : Window
         {
             if (_finished || IsActive) return;
 
-            // The size field typing: it hands the keyboard back itself when it is done.
-            if (TypingWindows.HaveForeground) return;
+            // The size field typing: it hands the keyboard back itself when it is done. Raised again
+            // meanwhile, though: the panel is owned by the capture window, and activating an owned
+            // window brings its owner up with it — the capture window, which covers the whole
+            // selection, landed over this box and hid the words while the size was typed (#373).
+            if (TypingWindows.HaveForeground)
+            {
+                AlwaysOnTop.Reassert(this);
+                return;
+            }
 
             if (!KeyboardForeground.IsOwnForeground())
             {
