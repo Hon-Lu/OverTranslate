@@ -62,9 +62,12 @@ public partial class TranslationPage : UserControl
         SourceTextBox.MaxLength = SourceTextLimit.MaxLength;
 
         // A Persian translation reads right to left and starts at the box's right edge, whichever
-        // way it got into the box — see Layout.TextDirection.
+        // way it got into the box — see Layout.TextDirection. So does Persian pasted in to be
+        // translated, which 自動 accepts.
         TranslatedTextBox.TextChanged += (_, _) =>
             TranslatedTextBox.FlowDirection = Layout.TextDirection.Of(TranslatedTextBox.Text);
+        SourceTextBox.TextChanged += (_, _) =>
+            SourceTextBox.FlowDirection = Layout.TextDirection.Of(SourceTextBox.Text);
 
         _debounce = new DispatcherTimer { Interval = DebounceDelay };
         _debounce.Tick += (_, _) => { _debounce.Stop(); _ = TranslateNowAsync(); };
