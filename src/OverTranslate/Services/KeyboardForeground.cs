@@ -85,7 +85,15 @@ internal static class KeyboardForeground
         var title = new System.Text.StringBuilder(128);
         GetClassName(foreground, cls, cls.Capacity);
         GetWindowText(foreground, title, title.Capacity);
-        return $"0x{foreground:X} {cls} \"{title}\"";
+
+        // Our own windows all have the same WPF class and most have no title, so which one it is
+        // is said by type — "lost the keyboard to HwndWrapper" told nobody which window took it.
+        string? own = null;
+        if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == true)
+            foreach (Window w in System.Windows.Application.Current.Windows)
+                if (new WindowInteropHelper(w).Handle == foreground) { own = w.GetType().Name; break; }
+
+        return own is null ? $"0x{foreground:X} {cls} \"{title}\"" : $"0x{foreground:X} {own}";
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
