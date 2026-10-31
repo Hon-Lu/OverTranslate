@@ -224,7 +224,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 | OpenAI设置 | 编辑设置 |
 |------|----------|
-| ![OpenAI设置](docs/images/OpenAI-1.png) | ![编辑设置](docs/images/OpenAI-2.png) |
+| ![OpenAI设置](docs/images/OpenAI-1_zh-Hans.png) | ![编辑设置](docs/images/OpenAI-2_zh-Hans.png) |
 
 | 项目 | 说明 |
 |------|------|
