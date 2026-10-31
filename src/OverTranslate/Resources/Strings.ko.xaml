@@ -695,6 +695,7 @@
     <sys:String x:Key="S.Lang.Greek">그리스어</sys:String>
     <sys:String x:Key="S.Lang.Spanish">스페인어</sys:String>
     <sys:String x:Key="S.Lang.Estonian">에스토니아어</sys:String>
+    <sys:String x:Key="S.Lang.Persian">페르시아어</sys:String>
     <sys:String x:Key="S.Lang.Finnish">핀란드어</sys:String>
     <sys:String x:Key="S.Lang.French">프랑스어</sys:String>
     <sys:String x:Key="S.Lang.Hungarian">헝가리어</sys:String>

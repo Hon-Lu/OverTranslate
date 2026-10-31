@@ -693,6 +693,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Lang.Greek">Greek</sys:String>
     <sys:String x:Key="S.Lang.Spanish">Spanish</sys:String>
     <sys:String x:Key="S.Lang.Estonian">Estonian</sys:String>
+    <sys:String x:Key="S.Lang.Persian">Persian</sys:String>
     <sys:String x:Key="S.Lang.Finnish">Finnish</sys:String>
     <sys:String x:Key="S.Lang.French">French</sys:String>
     <sys:String x:Key="S.Lang.Hungarian">Hungarian</sys:String>

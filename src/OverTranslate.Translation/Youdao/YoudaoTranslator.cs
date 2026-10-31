@@ -45,13 +45,27 @@ public sealed class YoudaoTranslator(HttpClient http) : BatchTranslator(http)
     /// <summary>Each paragraph its own piece, and the lines within it joined.</summary>
     private protected override IReadOnlyList<TranslationRequestChunk> Split(string text) => SplitJoiningLines(text);
 
+    /// <summary>Whether Youdao translates into <paramref name="targetLanguage"/>.</summary>
+    /// <remarks>
+    /// Persian answers <c>code 40</c> from Japanese, English and 自動 alike (measured 2026-11-01).
+    /// </remarks>
+    internal static bool Supports(string targetLanguage) => targetLanguage != "fa";
+
     protected override async Task<IReadOnlyList<TextTranslation?>> SendAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
-        CancellationToken cancellationToken) =>
-        sourceLanguage is null
+        CancellationToken cancellationToken)
+    {
+        // Refused here rather than by the endpoint, as TranSmart refuses its own: a refusal looks
+        // like credentials gone stale, so the endpoint's answer would cost a fresh key and a second
+        // try before the backups were asked.
+        if (!Supports(targetLanguage))
+            throw new TranslationEngineException(Name, $"unsupported language pair ({sourceLanguage ?? "auto"} → {targetLanguage})");
+
+        return sourceLanguage is null
             ? await ScriptGroups.SendAsync(Name, pieces,
                 group => SendOneAsync(group, targetLanguage, null, cancellationToken))
             : await SendOneAsync(pieces, targetLanguage, sourceLanguage, cancellationToken);
+    }
 
     private async Task<IReadOnlyList<TextTranslation?>> SendOneAsync(
         IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,

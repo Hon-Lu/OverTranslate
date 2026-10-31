@@ -19,6 +19,7 @@ public class LanguageDataTests
     [InlineData("ZH-HANT", "zh-Hant")]
     [InlineData("PT-BR", "pt-BR")]       // keeps its region, unlike EN-US
     [InlineData("BG", "bg")]             // no entry in the table; lower-casing is already right
+    [InlineData("FA", "fa")]
     public void ModelLanguageTag_IsTheFormATranslationModelExpects(string code, string expected) =>
         Assert.Equal(expected, LanguageData.GetModelLanguageTag(code));
 

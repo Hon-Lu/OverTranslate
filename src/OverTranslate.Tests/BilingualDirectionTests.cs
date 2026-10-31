@@ -18,6 +18,7 @@ public class BilingualDirectionTests
     private const string Japanese = "JA";
     private const string Korean = "KO";
     private const string French = "FR";
+    private const string Persian = "FA";
 
     // ═══════════ The pairs this application is actually set to ═══════════
 
@@ -123,6 +124,39 @@ public class BilingualDirectionTests
     public void TheProlongedSoundMarkStillCounts()
     {
         Assert.Equal(Japanese, BilingualDirection.ResolveSource("サーバー", Hant, Japanese));
+    }
+
+    // ═══════════ Persian (#372) ═══════════
+
+    [Theory]
+    [InlineData("آب")]
+    [InlineData("F5 را فشار دهید")]       // a key name inside Persian: the Persian letters outnumber it
+    public void PersianGoesToEnglishUnderThePersianEnglishPair(string text)
+    {
+        Assert.Equal(Persian, BilingualDirection.ResolveSource(text, English, Persian));
+        Assert.Equal(Persian, BilingualDirection.ResolveSource(text, Persian, English));
+    }
+
+    [Fact]
+    public void EnglishGoesToPersianUnderThePersianEnglishPair()
+    {
+        Assert.Equal(English, BilingualDirection.ResolveSource("water", Persian, English));
+    }
+
+    /// <remarks>
+    /// Persian digits and the Arabic question mark are not Persian writing on their own, as digits
+    /// and punctuation are nobody's anywhere else.
+    /// </remarks>
+    [Fact]
+    public void PersianDigitsAndPunctuationCountForNobody()
+    {
+        Assert.Null(BilingualDirection.ResolveSource("۱۲۳؟", Persian, English));
+    }
+
+    [Fact]
+    public void PersianIsNamedAsTheThirdLanguageOfAPairWithoutIt()
+    {
+        Assert.Equal(Persian, BilingualDirection.ResolveSource("سلام", Hant, Japanese));
     }
 
     // ═══════════ Text in neither language ═══════════

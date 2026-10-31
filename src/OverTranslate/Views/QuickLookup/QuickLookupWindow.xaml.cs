@@ -1253,6 +1253,11 @@ public partial class QuickLookupWindow : Window
     private void StyleTranslatedText()
     {
         var text = TranslatedText.Text;
+
+        // First, because the line count below is measured in it: a Persian translation is set right
+        // to left and starts at the panel's right edge — see Layout.TextDirection.
+        TranslatedText.FlowDirection = Layout.TextDirection.Of(text);
+
         var width = TranslatedText.ActualWidth;
         if (width <= 0) return;   // Not laid out yet; SizeChanged brings it back once it is.
         if (text == _translatedTextStyledFor && Math.Abs(width - _translatedTextStyledWidth) < 0.5) return;
@@ -1313,6 +1318,7 @@ public partial class QuickLookupWindow : Window
         CompactStatusText.Text = "";
         CompactStatusText.Visibility = Visibility.Collapsed;
         CompactTranslatedText.Text = TranslatedText.Text;
+        CompactTranslatedText.FlowDirection = TranslatedText.FlowDirection;
         CompactTranslationRow.Margin = new Thickness(0);
         CompactTranslatedText.Visibility = TranslatedText.Text.Length > 0
             ? Visibility.Visible

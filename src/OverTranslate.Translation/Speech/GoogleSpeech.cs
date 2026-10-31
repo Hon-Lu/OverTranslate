@@ -6,8 +6,9 @@ namespace OverTranslate.Translation.Speech;
 internal static class GoogleVoices
 {
     /// <remarks>
-    /// The list GTranslate carries (MIT, d4n3436/GTranslate), in Google's codes. Slovenian is the
-    /// one language the application offers that is not on it, and goes to Microsoft.
+    /// The list GTranslate carries (MIT, d4n3436/GTranslate), in Google's codes. Slovenian and
+    /// Persian are the languages the application offers that are not on it, and go to Microsoft:
+    /// both Google endpoints refuse <c>fa</c> (HTTP 400 and a refused call, measured 2026-11-01).
     /// </remarks>
     private static readonly HashSet<string> Languages = new(StringComparer.OrdinalIgnoreCase)
     {

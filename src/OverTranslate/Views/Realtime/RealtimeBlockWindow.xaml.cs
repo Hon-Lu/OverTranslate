@@ -719,7 +719,11 @@ public partial class RealtimeBlockWindow : Window
                 // One line is centred as text; a wrapped one is centred as a block, with its own
                 // lines still starting at the same left edge. A paragraph with every line centred is
                 // a poster, and this is something the reader has to get through at speed.
+                //
+                // Read right to left, the lines start at the same right edge instead: Left is the
+                // start of a line, and a TextBlock set right to left mirrors it (TextDirection).
                 TextAlignment = wrapped ? TextAlignment.Left : TextAlignment.Center,
+                FlowDirection = TextDirection.Of(line.TranslatedText),
                 HorizontalAlignment = wrapped
                     ? System.Windows.HorizontalAlignment.Center
                     : System.Windows.HorizontalAlignment.Stretch,
@@ -891,9 +895,13 @@ public partial class RealtimeBlockWindow : Window
                 TextTrimming = TextTrimming.None,
                 VerticalAlignment = VerticalAlignment.Center,
                 // Against the card's margin, where its lines begin: a comment on a card is set
-                // ragged right, and the box's left edge is that margin.
+                // ragged right, and the box's left edge is that margin. A translation read right to
+                // left starts at the other margin, the box's right edge, and is ragged left.
                 TextAlignment = TextAlignment.Left,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                HorizontalAlignment = TextDirection.IsRightToLeft(line.TranslatedText)
+                    ? System.Windows.HorizontalAlignment.Right
+                    : System.Windows.HorizontalAlignment.Left,
+                FlowDirection = TextDirection.Of(line.TranslatedText),
             })
         };
         Canvas.SetLeft(text, bandLeft);
@@ -947,7 +955,7 @@ public partial class RealtimeBlockWindow : Window
                         _latinSourceToCjkTarget),
                     (block.SourceLineBounds ?? [block.Bounds]).Min(r => r.Height) / _dpiY / LineHeightRatio));
                 var rows = RealtimePanelLines.Split(block,
-                    text => new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                    text => new FormattedText(text, CultureInfo.CurrentCulture, TextDirection.Of(text),
                         typeface, fontSize, Brushes.Black, _dpiY).WidthIncludingTrailingWhitespace * _dpiX,
                     RealtimePanelLines.AvailableWidths(block, _lines));
                 if (rows.Count == 1 && rows[0].SourceLineBounds is { Count: > 1 })
@@ -1219,6 +1227,7 @@ public partial class RealtimeBlockWindow : Window
                 TextTrimming = TextTrimming.None,
                 // Every line centred: a balloon is lettered that way, not set as a paragraph.
                 TextAlignment = TextAlignment.Center,
+                FlowDirection = TextDirection.Of(text),
             }),
         };
         Canvas.SetLeft(written, textLeft);
@@ -1287,6 +1296,7 @@ public partial class RealtimeBlockWindow : Window
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.None,
                 TextAlignment = TextAlignment.Center,
+                FlowDirection = TextDirection.Of(text),
             }),
             RenderTransform = TiltedPlacement.For(tilt, ToCanvas, textLeft, textTop),
         };
@@ -1774,11 +1784,15 @@ public partial class RealtimeBlockWindow : Window
                 StretchDirection = StretchDirection.DownOnly,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Center,
+                // On the source row's own start, the left one, whichever way the row reads: each row
+                // has a box of its own, as ragged at the right as the source's lines were, and only
+                // their left edges line up — a menu read down its margin stays read down it.
                 Child = Outlined(edge, fontSize, () => new TextBlock
                 {
                     Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,
                     FontWeight = _textWeight, Foreground = foreground,
                     TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.None,
+                    FlowDirection = TextDirection.Of(line.TranslatedText),
                 }),
             },
         };
@@ -2063,17 +2077,19 @@ public partial class RealtimeBlockWindow : Window
     {
         // Wrapped text is measured by the TextBlock that draws it, since FormattedText breaks some
         // lines differently — see WrappedTextMeasure. One line has no breaks to disagree on.
+        // In the direction it is drawn in, as everything else about it is.
         Size measured;
+        var direction = TextDirection.Of(text);
         if (maxWidth is { } width)
         {
-            measured = _wrappedMeasure.Measure(text, typeface, fontSize, width);
+            measured = _wrappedMeasure.Measure(text, typeface, fontSize, width, flowDirection: direction);
         }
         else
         {
             var formatted = new FormattedText(
                 text,
                 CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
+                direction,
                 typeface,
                 fontSize,
                 Brushes.Black,
