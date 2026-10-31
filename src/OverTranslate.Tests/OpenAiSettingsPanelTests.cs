@@ -21,15 +21,15 @@ public class OpenAiSettingsPanelTests
     // ── Tags ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public void TheBuiltInRow_IsTaggedReadOnlyAndNothingElse()
+    public void TheBuiltInRow_IsTaggedReadOnlyAndStandard()
     {
-        Assert.Equal([Kind.ReadOnly], ServiceSettingsOverlay.TagsFor(OpenAiCompatibleProvider.BuiltInProfile(), builtIn: true));
+        Assert.Equal([Kind.ReadOnly, Kind.Segment], ServiceSettingsOverlay.TagsFor(OpenAiCompatibleProvider.BuiltInProfile(), builtIn: true));
     }
 
     [Fact]
-    public void ASavedRowOnTheDefaults_HasNoTags()
+    public void ASavedRowOnTheDefaults_IsTaggedStandardAndNothingElse()
     {
-        Assert.Empty(ServiceSettingsOverlay.TagsFor(new OpenAiModelProfile { Id = "a", Model = "m" }, builtIn: false));
+        Assert.Equal([Kind.Segment], ServiceSettingsOverlay.TagsFor(new OpenAiModelProfile { Id = "a", Model = "m" }, builtIn: false));
     }
 
     [Fact]

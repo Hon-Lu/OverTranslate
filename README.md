@@ -230,7 +230,7 @@ when a translation fails or responds too slowly, the app first retries the same 
 | Built-in | The read-only one, on the model the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md) recommends, with wording that follows the interface language |
 | Add | Up to five; the model name is required |
 | Advanced parameters | Under **Advanced** in the editor; each can be switched off on its own, and a parameter that is off is left out of the request |
-| Translation mode | **Standard** (default) suits local models; **Batch** translates all text blocks on screen in one go and suits cloud services |
+| Translation mode | **Standard** (default) translates text blocks one at a time and is faster with local models; best for video subtitles and story dialogue. **Batch** combines the text blocks on screen and translates them together, so it sees the whole screen; best for comics and chat windows, and with fewer requests it suits cloud services better |
 
 Advanced parameters:
 
@@ -249,8 +249,8 @@ Prompt parameters (the **Available parameters** block on the settings page lists
 | `{source_code}` | Source language code | en |
 | `{target_name}` | Target language name | Japanese |
 | `{target_code}` | Target language code | ja |
-| `{text}` | The source text; if the prompt doesn't use it, it is added at the end | — |
 | `{context}` | Earlier source text and translations for the model to use as context; if the prompt doesn't use it, no context is sent | — |
+| `{text}` | The source text; if the prompt doesn't use it, it is added at the end | — |
 
 > Language names follow the interface language (an English interface fills in "Japanese", a 繁體中文 one fills in "日文"); the codes are always the tag the model uses.
 

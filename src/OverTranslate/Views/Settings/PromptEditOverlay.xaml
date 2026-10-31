@@ -96,7 +96,88 @@
 
         <!-- ══════════ Way-of-sending card ══════════ -->
         <!-- Each way with what it does under its name, both on screen at once: the choice is
-             between the two sentences, and showing only the chosen one hid what the other would do. -->
+             between the two, and showing only the chosen one hid what the other would do. The name
+             is the Tag and the content is what goes under it: a sentence, two ticked strengths and
+             the screens it suits, read down the two cards side by side line for line. -->
+        <Style x:Key="ModeBodyText" TargetType="TextBlock">
+            <Setter Property="FontFamily"   Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"     Value="12"/>
+            <Setter Property="LineHeight"   Value="19"/>
+            <Setter Property="Foreground"   Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- A strength, ticked. The tick takes the accent with the card it is on. -->
+        <Style x:Key="ModePro" TargetType="ContentControl">
+            <Setter Property="Margin" Value="0,2,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE73E;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="11"
+                                       Margin="0,4,0,0"
+                                       VerticalAlignment="Top">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=RadioButton}}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                       Style="{StaticResource ModeBodyText}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A screen the way suits. Filled and borderless, so it reads as a label on the card
+             rather than one more thing on it to click. The fill is a tint laid over the card, not a
+             colour of its own, so it sits on either card ground in either theme: the text colour on
+             the card's own, the accent on the chosen one. Its text stays as quiet as the strengths
+             above it; the strengths are why the way is chosen. -->
+        <Style x:Key="ModeTag" TargetType="ContentControl">
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <Grid>
+                            <Border x:Name="Tint"
+                                    Background="{DynamicResource AppTextPrimary}"
+                                    Opacity="0.08"
+                                    CornerRadius="4"/>
+                            <TextBlock x:Name="Label"
+                                       Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="12"
+                                       Margin="7,1,7,2"
+                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=RadioButton}}" Value="True">
+                                <Setter TargetName="Tint" Property="Background" Value="{DynamicResource AppAccent}"/>
+                                <Setter TargetName="Tint" Property="Opacity" Value="0.2"/>
+                                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ModeCard" TargetType="RadioButton">
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
@@ -111,26 +192,21 @@
                                 BorderThickness="1.5"
                                 CornerRadius="10"
                                 Padding="14,12">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
                                     <Ellipse x:Name="Ring"
                                              Width="16" Height="16"
                                              Stroke="{DynamicResource AppTextSecondary}"
                                              StrokeThickness="1.5"
                                              VerticalAlignment="Center"
                                              Margin="0,0,9,0"/>
-                                    <ContentPresenter VerticalAlignment="Center"
-                                                      TextElement.FontWeight="SemiBold"
-                                                      TextElement.FontSize="14"/>
+                                    <TextBlock Text="{TemplateBinding Tag}"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               FontSize="14"/>
                                 </StackPanel>
-                                <TextBlock Text="{TemplateBinding Tag}"
-                                           FontFamily="{DynamicResource AppFont}"
-                                           FontSize="12"
-                                           LineHeight="19"
-                                           Foreground="{DynamicResource AppTextSecondary}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,6,0,0"/>
-                            </StackPanel>
+                                <ContentPresenter Margin="0,6,0,0"/>
+                            </DockPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <MultiTrigger>
@@ -607,16 +683,58 @@
                                              GroupName="PromptMode"
                                              Style="{StaticResource ModeCard}"
                                              Margin="0,0,5,0"
-                                             Content="{DynamicResource S.Settings.OpenAiModeSegment}"
-                                             Tag="{DynamicResource S.Settings.OpenAiModeSegmentHint}"
-                                             Checked="Mode_Changed"/>
+                                             Tag="{DynamicResource S.Settings.OpenAiModeSegment}"
+                                             AutomationProperties.Name="{DynamicResource S.Settings.OpenAiModeSegment}"
+                                             Checked="Mode_Changed">
+                                    <DockPanel>
+                                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.OpenAiModeSuits}"
+                                                       Style="{StaticResource ModeBodyText}"
+                                                       Opacity="0.75"
+                                                       VerticalAlignment="Center"/>
+                                            <ContentControl Style="{StaticResource ModeTag}"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeSegmentTag1}"/>
+                                            <ContentControl Style="{StaticResource ModeTag}"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeSegmentTag2}"/>
+                                        </WrapPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="{DynamicResource S.Settings.OpenAiModeSegmentHint}"
+                                                       Style="{StaticResource ModeBodyText}"/>
+                                            <ContentControl Style="{StaticResource ModePro}" Margin="0,6,0,0"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeSegmentPro1}"/>
+                                            <ContentControl Style="{StaticResource ModePro}"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeSegmentPro2}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </RadioButton>
                                 <RadioButton x:Name="BatchRadio"
                                              GroupName="PromptMode"
                                              Style="{StaticResource ModeCard}"
                                              Margin="5,0,0,0"
-                                             Content="{DynamicResource S.Settings.OpenAiModeBatch}"
-                                             Tag="{DynamicResource S.Settings.OpenAiModeBatchHint}"
-                                             Checked="Mode_Changed"/>
+                                             Tag="{DynamicResource S.Settings.OpenAiModeBatch}"
+                                             AutomationProperties.Name="{DynamicResource S.Settings.OpenAiModeBatch}"
+                                             Checked="Mode_Changed">
+                                    <DockPanel>
+                                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.OpenAiModeSuits}"
+                                                       Style="{StaticResource ModeBodyText}"
+                                                       Opacity="0.75"
+                                                       VerticalAlignment="Center"/>
+                                            <ContentControl Style="{StaticResource ModeTag}"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeBatchTag1}"/>
+                                            <ContentControl Style="{StaticResource ModeTag}"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeBatchTag2}"/>
+                                        </WrapPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="{DynamicResource S.Settings.OpenAiModeBatchHint}"
+                                                       Style="{StaticResource ModeBodyText}"/>
+                                            <ContentControl Style="{StaticResource ModePro}" Margin="0,6,0,0"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeBatchPro1}"/>
+                                            <ContentControl Style="{StaticResource ModePro}"
+                                                            Content="{DynamicResource S.Settings.OpenAiModeBatchPro2}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </RadioButton>
                             </UniformGrid>
 
                             <!-- The whole of what each request says. It opens on the application's
@@ -670,38 +788,21 @@
                                                            Highlight="{DynamicResource AppAccentSubtle}"/>
                             </Grid>
 
-                            <!-- 可用參數, folded: reference for the box above, looked up rather than
-                                 read, and the box is what this half is for. -->
-                            <Button x:Name="ParamsToggle"
-                                    Style="{StaticResource AdvancedToggleRow}"
-                                    Margin="0,8,0,0"
-                                    Click="ParamsToggle_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{DynamicResource S.Settings.PromptParams}"
-                                               VerticalAlignment="Center"/>
-                                    <Path Width="9" Height="6"
-                                          VerticalAlignment="Center"
-                                          Margin="8,1,0,0"
-                                          Stretch="Uniform"
-                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                          StrokeThickness="1.4"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round"
-                                          Data="M1,1 L5,5 L9,1"
-                                          RenderTransformOrigin="0.5,0.5">
-                                        <Path.RenderTransform>
-                                            <RotateTransform x:Name="ParamsChevronRotation"/>
-                                        </Path.RenderTransform>
-                                    </Path>
-                                </StackPanel>
-                            </Button>
+                            <!-- 可用參數: reference for the box above, always shown. It is the last
+                                 thing on the card, so open it pushes nothing out of sight, and folded
+                                 it only cost a click to reach what the box is written with. -->
+                            <TextBlock Text="{DynamicResource S.Settings.PromptParams}"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="{StaticResource AppFontSize}"
+                                       Foreground="{DynamicResource AppTextSecondary}"
+                                       Margin="0,16,0,0"/>
 
-                            <StackPanel x:Name="ParamsContent" Margin="0,6,0,0" Visibility="Collapsed">
+                            <StackPanel Margin="0,8,0,0">
                                 <!-- Two columns, the name and what it becomes, the example after the
                                      description in the quieter colour. The two that carry the
-                                     content come first; {text} is described for the way picked
-                                     above - see ShowParamDescriptions. -->
+                                     content come first, in the order the default template has them;
+                                     {text} is described for the way picked above - see
+                                     ShowParamDescriptions. -->
                                 <!-- {} escapes the brace: XAML reads a leading { as a markup extension. -->
                                 <Border BorderBrush="{DynamicResource AppBorder}"
                                         BorderThickness="1"
@@ -716,10 +817,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <Border Style="{StaticResource ParamTableName}">
-                                                        <TextBlock Text="{}{text}" Style="{StaticResource ParamTableNameText}"/>
+                                                        <TextBlock Text="{}{context}" Style="{StaticResource ParamTableNameText}"/>
                                                     </Border>
-                                                    <TextBlock x:Name="ParamTextDescription"
-                                                               Grid.Column="1" Margin="14,0,0,0"
+                                                    <TextBlock Grid.Column="1" Margin="14,0,0,0"
+                                                               Text="{DynamicResource S.Settings.PromptParamContext}"
                                                                Style="{StaticResource ParamTableText}"/>
                                                 </Grid>
                                             </Border>
@@ -730,10 +831,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <Border Style="{StaticResource ParamTableName}">
-                                                        <TextBlock Text="{}{context}" Style="{StaticResource ParamTableNameText}"/>
+                                                        <TextBlock Text="{}{text}" Style="{StaticResource ParamTableNameText}"/>
                                                     </Border>
-                                                    <TextBlock Grid.Column="1" Margin="14,0,0,0"
-                                                               Text="{DynamicResource S.Settings.PromptParamContext}"
+                                                    <TextBlock x:Name="ParamTextDescription"
+                                                               Grid.Column="1" Margin="14,0,0,0"
                                                                Style="{StaticResource ParamTableText}"/>
                                                 </Grid>
                                             </Border>

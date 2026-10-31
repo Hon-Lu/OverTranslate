@@ -34,6 +34,14 @@
          such problem (#1A2E3D on #1C1C1C separates by 33 levels of blue), which is why only this
          theme moves. -->
     <SolidColorBrush x:Key="AppAccentSubtle"   Color="#DEEDFB"/>
+    <!-- The two ways an OpenAI setting sends, told apart at a glance on its tag: 標準 in the
+         accent, 整批 in a hue of its own beside it. The tag fills are see-through, so a tag
+         still shows on a row already filled with the accent for being chosen. -->
+    <SolidColorBrush x:Key="AppModeBatch"           Color="#0B7A69"/>
+    <SolidColorBrush x:Key="AppModeBatchTagBg"      Color="#220B7A69"/>
+    <SolidColorBrush x:Key="AppModeBatchTagBorder"  Color="#550B7A69"/>
+    <SolidColorBrush x:Key="AppModeSegmentTagBg"    Color="#220078D4"/>
+    <SolidColorBrush x:Key="AppModeSegmentTagBorder" Color="#550078D4"/>
 
     <!-- Interaction steps for AppAccentSubtle, for tonal surfaces that stay tonal on hover instead
          of flipping to the solid accent — a full-width nav card is far too large an area to flood
