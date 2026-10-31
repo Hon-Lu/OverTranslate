@@ -10,6 +10,11 @@ using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
 using FontFamily = System.Windows.Media.FontFamily;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Cursors = System.Windows.Input.Cursors;
+using Size = System.Windows.Size;
+using Pen = System.Windows.Media.Pen;
+using OverTranslate.Models;
 using Point = System.Windows.Point;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using TextBox = System.Windows.Controls.TextBox;
@@ -90,7 +95,22 @@ internal sealed class AnnotationTextEditor : Window
             // somewhere fall through to the overlay, which would end the typing instead.
             Background = new SolidColorBrush(Color.FromArgb(1, 128, 128, 128)),
         };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(_box, "AnnotationTextBox");
         _box.PreviewKeyDown += Box_PreviewKeyDown;
+        _box.TextChanged += (_, _) => _colorView.InvalidateVisual();
+
+        // What the input method is still composing, which the box would underline in its own text
+        // colour — and that colour is now see-through, so the view draws the underline instead.
+        TextCompositionManager.AddPreviewTextInputStartHandler(_box, OnComposing);
+        TextCompositionManager.AddPreviewTextInputUpdateHandler(_box, OnComposing);
+        TextCompositionManager.AddPreviewTextInputHandler(_box, (_, _) => _colorView.Composing = null);
+
+        // The box's own glyphs are not shown: WPF draws an emoji as a one-colour outline, so the
+        // words are drawn over it by the same code that lays the finished mark down (#373). The box
+        // still places the caret and the selection, and the two agree because both lay the words
+        // out the same way.
+        _box.Foreground = Brushes.Transparent;
+        _colorView = new ColorTextView(_box) { Margin = _box.Margin };
 
         // Two frames, light under dark and dashed, so the box can be found on any screenshot.
         var light = new Rectangle { Stroke = Brushes.White, StrokeThickness = 1, Opacity = 0.9 };
@@ -101,11 +121,210 @@ internal sealed class AnnotationTextEditor : Window
             StrokeDashArray = [4, 3],
         };
 
-        var root = new Grid();
-        root.Children.Add(light);
-        root.Children.Add(dark);
-        root.Children.Add(_box);
-        Content = root;
+        var framed = new Grid();
+        framed.Children.Add(light);
+        framed.Children.Add(dark);
+        framed.Children.Add(_box);
+        framed.Children.Add(_colorView);
+
+        // The handle the box is moved by (#373): a band round the frame, and the room between the
+        // frame and the words. Painted, not left empty, for the same reason as the box's background.
+        var handle = new Border
+        {
+            Padding    = new Thickness(HandleOutside),
+            Background = new SolidColorBrush(Color.FromArgb(1, 128, 128, 128)),
+            Cursor     = Cursors.SizeAll,
+            Child      = framed,
+        };
+        handle.MouseLeftButtonDown += Handle_MouseLeftButtonDown;
+        handle.MouseMove           += Handle_MouseMove;
+        handle.MouseLeftButtonUp   += Handle_MouseLeftButtonUp;
+        handle.LostMouseCapture    += (_, _) => _dragFrom = null;
+        _box.Cursor = Cursors.IBeam;
+
+        Content = handle;
+    }
+
+    /// <summary>How far outside the frame the handle reaches, in DIP.</summary>
+    private const double HandleOutside = 5;
+
+    private readonly ColorTextView _colorView;
+
+    /// <summary>Where a drag of the handle started — the pointer and the anchor, physical pixels — while one is going on.</summary>
+    private (Point Pointer, Point Anchor)? _dragFrom;
+
+    /// <summary>
+    /// Where the first line may be dragged to, in physical pixels: the selection, so the words are
+    /// never moved out of the picture they are going into.
+    /// </summary>
+    public Rect AnchorBounds { get; set; } = Rect.Empty;
+
+    private void Handle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // The words themselves place the caret as before; only the band round them moves the box.
+        if (IsInside(_box, e.OriginalSource)) return;
+
+        var handle = (UIElement)sender;
+        _dragFrom = (handle.PointToScreen(e.GetPosition(handle)), _anchor);
+        handle.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void Handle_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_dragFrom is not { } from) return;
+
+        // In screen pixels, because the window moves under the pointer and anything measured
+        // against the window would move with it.
+        var handle = (UIElement)sender;
+        var now = handle.PointToScreen(e.GetPosition(handle));
+        var anchor = new Point(from.Anchor.X + now.X - from.Pointer.X, from.Anchor.Y + now.Y - from.Pointer.Y);
+        if (!AnchorBounds.IsEmpty)
+        {
+            // The words kept whole inside the selection — clipped at its edge they would simply
+            // vanish from the picture. Words bigger than the selection keep their first line in it.
+            double scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            var origin = TextOriginIn(_box);
+            double wordsW = Math.Max(0, _box.ActualWidth  - origin.X) * scale;
+            double wordsH = Math.Max(0, _box.ActualHeight - origin.Y) * scale;
+            anchor = new Point(
+                Math.Clamp(anchor.X, AnchorBounds.Left, Math.Max(AnchorBounds.Left, AnchorBounds.Right  - wordsW)),
+                Math.Clamp(anchor.Y, AnchorBounds.Top,  Math.Max(AnchorBounds.Top,  AnchorBounds.Bottom - wordsH)));
+        }
+
+        if (anchor == _anchor) return;
+        _anchor = anchor;
+        Place();
+    }
+
+    private void Handle_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_dragFrom is null) return;
+        _dragFrom = null;
+        ((UIElement)sender).ReleaseMouseCapture();
+
+        // Still typing: the words were moved, not finished.
+        _box.Focus();
+        e.Handled = true;
+    }
+
+    private void OnComposing(object sender, TextCompositionEventArgs e)
+    {
+        // The length is taken from the composed text, not CompositionLength: measured with 注音, that
+        // reports the length before the update — 0 for ㄨ, 1 for ㄨㄛ, 2 for 我. The offset is right.
+        _colorView.Composing =
+            e.TextComposition is System.Windows.Documents.FrameworkTextComposition { CompositionText.Length: > 0 } c
+                ? (c.CompositionOffset, c.CompositionText.Length)
+                : null;
+    }
+
+    private static bool IsInside(DependencyObject ancestor, object source)
+    {
+        for (var node = source as DependencyObject; node is not null; node = Parent(node))
+            if (ReferenceEquals(node, ancestor)) return true;
+        return false;
+
+        static DependencyObject? Parent(DependencyObject node) =>
+            node is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(node)
+                : LogicalTreeHelper.GetParent(node);
+    }
+
+    /// <summary>
+    /// What has been typed, drawn the way the mark will be — emoji in colour — over the box that
+    /// holds the caret.
+    /// </summary>
+    private sealed class ColorTextView : FrameworkElement
+    {
+        private readonly TextBox box;
+
+        public ColorTextView(TextBox box)
+        {
+            this.box = box;
+            IsHitTestVisible = false;
+        }
+
+        public Color Color { get; set; }
+        public AnnotationTextStyle? Style { get; set; }
+
+        /// <summary>The characters the input method is still composing, as (offset, length) into the box's text.</summary>
+        public (int Offset, int Length)? Composing
+        {
+            get => _composing;
+            set
+            {
+                if (_composing == value) return;
+                _composing = value;
+                InvalidateVisual();
+            }
+        }
+
+        private (int Offset, int Length)? _composing;
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            if (Style is not { } style || box.Text.Length == 0) return;
+
+            var text = box.Text.Replace("\r\n", "\n").Replace('\r', '\n');
+            double ppd = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var laid = style.Layout(text, Color, ppd);
+            var origin = TextOriginIn(box);
+            ColorGlyphText.Draw(dc, laid, origin);
+
+            DrawCompositionUnderline(dc, laid, origin, style.Size);
+        }
+
+        /// <summary>A dotted line under what is still being composed, a line at a time.</summary>
+        /// <remarks>
+        /// Placed from the same layout the words were just drawn from, not asked of the box: while a
+        /// composition is changing, the box's own layout is not up to date when this is drawn, and
+        /// it answers with nothing.
+        /// </remarks>
+        private void DrawCompositionUnderline(DrawingContext dc, FormattedText laid, Point origin, double emSize)
+        {
+            if (_composing is not { } c) return;
+
+            // Offsets into the box's text, which keeps "\r\n" where the layout has "\n".
+            int start = ToLaid(c.Offset);
+            int end   = ToLaid(c.Offset + c.Length);
+            if (end <= start) return;
+
+            double thickness = Math.Max(1, emSize / 16);
+            var pen = new Pen(new SolidColorBrush(Color), thickness) { DashStyle = new DashStyle([2, 1.5], 0) };
+            pen.Freeze();
+
+            Rect? run = null;
+            for (int i = start; i < end; i++)
+            {
+                if (laid.BuildHighlightGeometry(origin, i, 1) is not { } g || g.Bounds.IsEmpty) continue;
+                var piece = g.Bounds;
+                if (run is { } r && Math.Abs(r.Top - piece.Top) < 0.5) run = Rect.Union(r, piece);
+                else
+                {
+                    if (run is { } done) Underline(done);
+                    run = piece;
+                }
+            }
+            if (run is { } last) Underline(last);
+
+            void Underline(Rect line)
+            {
+                double y = line.Bottom - thickness * 1.5;
+                dc.DrawLine(pen, new Point(line.Left, y), new Point(line.Right, y));
+            }
+
+            int ToLaid(int offset)
+            {
+                var raw = box.Text;
+                offset = Math.Clamp(offset, 0, raw.Length);
+                int crlf = 0;
+                for (int i = 0; i + 1 < offset; i++)
+                    if (raw[i] == '\r' && raw[i + 1] == '\n') crlf++;
+                return offset - crlf;
+            }
+        }
+
+        protected override Size MeasureOverride(Size availableSize) => default;
     }
 
     /// <summary>What has been typed.</summary>
@@ -136,7 +355,6 @@ internal sealed class AnnotationTextEditor : Window
 
         var brush = new SolidColorBrush(color);
         _box.FontFamily = family;
-        _box.Foreground = brush;
         _box.CaretBrush = brush;
         _box.FontWeight = bold   ? FontWeights.Bold  : FontWeights.Normal;
         _box.FontStyle  = italic ? FontStyles.Italic : FontStyles.Normal;
@@ -146,8 +364,22 @@ internal sealed class AnnotationTextEditor : Window
         if (strikethrough) decorations.Add(TextDecorations.Strikethrough);
         _box.TextDecorations = decorations;
 
+        _style = (family, bold, italic, underline, strikethrough);
+        _colorView.Color = color;
+
         ApplySize();
         if (IsVisible) Place();
+    }
+
+    private (FontFamily Family, bool Bold, bool Italic, bool Underline, bool Strikethrough) _style =
+        (new FontFamily("Segoe UI"), false, false, false, false);
+
+    /// <summary>Hands the drawn words the box's current look, in the box's own DIP.</summary>
+    private void SyncColorView()
+    {
+        _colorView.Style = new AnnotationTextStyle(
+            _style.Family, _box.FontSize, _style.Bold, _style.Italic, _style.Underline, _style.Strikethrough);
+        _colorView.InvalidateVisual();
     }
 
     /// <summary>
@@ -161,6 +393,7 @@ internal sealed class AnnotationTextEditor : Window
 
         // Wide enough for the caret and the frame round it to be seen before anything is typed.
         _box.MinWidth = _box.FontSize * 0.6;
+        SyncColorView();
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -214,8 +447,58 @@ internal sealed class AnnotationTextEditor : Window
         var own = ScreenGeometry.PhysicalBounds(this);
         if (own.Contains((int)physical.X, (int)physical.Y)) return;
         if (_keepOnPress(physical)) return;
+        if (IsSystemTextInput(physical)) return;
 
         Finish();
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(System.Drawing.Point point);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    /// <summary>
+    /// Whether the press was on Windows' own text input — the emoji panel (Win+.) or the touch
+    /// keyboard (#373). Those type into this box; a click on an emoji in them is choosing what to
+    /// type, not moving on from the words.
+    /// </summary>
+    /// <remarks>
+    /// Told by the process, not the window class, which has changed between Windows releases. Both
+    /// 10 and 11 draw the panel in a TextInputHost window — older builds of 10 in an InputApp — but
+    /// hang it inside a frame that belongs to explorer, so the window under the pointer is asked and
+    /// then each window it sits in, not only the top one.
+    /// </remarks>
+    private static bool IsSystemTextInput(Point physical)
+    {
+        const uint GA_PARENT = 1;
+        uint own = (uint)Environment.ProcessId;
+
+        // Bounded, in case a parent chain ever loops back on itself; real ones are a handful deep.
+        var hwnd = WindowFromPoint(new System.Drawing.Point((int)physical.X, (int)physical.Y));
+        for (int depth = 0; depth < 32 && hwnd != IntPtr.Zero; depth++, hwnd = GetAncestor(hwnd, GA_PARENT))
+        {
+            GetWindowThreadProcessId(hwnd, out uint pid);
+            if (pid == 0 || pid == own) continue;
+
+            try
+            {
+                using var process = System.Diagnostics.Process.GetProcessById((int)pid);
+                string name = process.ProcessName;
+                if (name.Equals("TextInputHost", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("TextInput.InputApp", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                // Gone between the two calls: not something to keep typing for.
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -234,8 +517,15 @@ internal sealed class AnnotationTextEditor : Window
         {
             if (_finished || IsActive) return;
 
-            // The size field typing: it hands the keyboard back itself when it is done.
-            if (TypingWindows.HaveForeground) return;
+            // The size field typing: it hands the keyboard back itself when it is done. Raised again
+            // meanwhile, though: the panel is owned by the capture window, and activating an owned
+            // window brings its owner up with it — the capture window, which covers the whole
+            // selection, landed over this box and hid the words while the size was typed (#373).
+            if (TypingWindows.HaveForeground)
+            {
+                AlwaysOnTop.Reassert(this);
+                return;
+            }
 
             if (!KeyboardForeground.IsOwnForeground())
             {

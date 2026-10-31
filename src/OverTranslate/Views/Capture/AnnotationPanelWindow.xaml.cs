@@ -149,13 +149,13 @@ public partial class AnnotationPanelWindow : Window
         }
     }
 
-    public double Thickness
+    public double Thickness => ThicknessAt(Tool, ThicknessFraction);
+
+    /// <summary>The width the slider gives at <paramref name="fraction"/> for <paramref name="tool"/>.</summary>
+    internal static double ThicknessAt(AnnotationTool tool, double fraction)
     {
-        get
-        {
-            var (min, max) = RangeFor(Tool);
-            return min + (max - min) * Math.Pow(ThicknessFraction, CurveFor(Tool));
-        }
+        var (min, max) = RangeFor(tool);
+        return min + (max - min) * Math.Pow(fraction, CurveFor(tool));
     }
 
     /// <summary>
@@ -181,6 +181,67 @@ public partial class AnnotationPanelWindow : Window
     /// <summary>The exponent that puts the slider's middle at <paramref name="share"/> of the range.</summary>
     private static double MiddleAt(double share) => Math.Log(share) / Math.Log(0.5);
 
+    /// <summary>Where the slider sits for a width of <paramref name="thickness"/> — the inverse of <see cref="Thickness"/>.</summary>
+    internal static double FractionFor(AnnotationTool tool, double thickness)
+    {
+        var (min, max) = RangeFor(tool);
+        double share = Math.Clamp((thickness - min) / (max - min), 0, 1);
+        return Math.Pow(share, 1 / CurveFor(tool));
+    }
+
+    /// <summary>
+    /// The width <paramref name="notches"/> of the wheel make of <paramref name="thickness"/> (#373):
+    /// a whole step each, about eleven across the tool's range, so a few notches go from thin to thick
+    /// and every stop is a round number of pixels.
+    /// </summary>
+    internal static double NudgedThickness(AnnotationTool tool, double thickness, int notches)
+    {
+        var (min, max) = RangeFor(tool);
+        double step = Math.Max(1, Math.Round((max - min) / 11));
+        return Math.Clamp(Math.Round(thickness) + notches * step, min, max);
+    }
+
+    /// <summary>
+    /// The 文字 size <paramref name="notches"/> of the wheel make of <paramref name="size"/> (#373): a
+    /// tenth of the size a notch, never less than a pixel, so it moves as fast at 128 as it does at 16.
+    /// </summary>
+    internal static int NudgedTextSize(int size, int notches)
+    {
+        for (int i = 0; i < Math.Abs(notches); i++)
+        {
+            int step = Math.Max(1, (int)Math.Round(size / 10.0));
+            size = Math.Clamp(size + Math.Sign(notches) * step,
+                CaptureAnnotationSettings.MinTextSize, CaptureAnnotationSettings.MaxTextSize);
+        }
+        return size;
+    }
+
+    /// <summary>
+    /// Makes the tool in hand bigger or smaller by <paramref name="notches"/> of the wheel — turned
+    /// while drawing, or while a 文字 box is open (#373). Shown on the panel and kept for the next
+    /// mark, the same as moving the slider.
+    /// </summary>
+    public void NudgeSize(int notches)
+    {
+        if (notches == 0) return;
+
+        if (Tool == AnnotationTool.Text)
+        {
+            EndTyping();
+            SetTextSize(NudgedTextSize(TextSize, notches));
+            return;
+        }
+
+        double next = NudgedThickness(Tool, Thickness, notches);
+        if (next == Thickness) return;
+
+        ThicknessFraction = FractionFor(Tool, next);
+        _showingToolThickness = true;
+        ThicknessSlider.Value = ThicknessFraction;
+        _showingToolThickness = false;
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public AnnotationPanelWindow(AnnotationTool tool, CaptureAnnotationSettings prefs)
     {
         InitializeComponent();
@@ -199,6 +260,51 @@ public partial class AnnotationPanelWindow : Window
         RenderToolSelection();
         OpacitySlider.Value = Math.Clamp(prefs.HighlighterOpacity, 0, 1);
         _initializing = false;
+
+        PreviewGotKeyboardFocus += RefuseKeyboardFocus;
+        AddHandler(PreviewMouseDownEvent, new System.Windows.Input.MouseButtonEventHandler(EndTypingOnPressElsewhere), true);
+    }
+
+    /// <summary>
+    /// A press anywhere else on the panel finishes a size being typed and gives the keyboard back.
+    /// </summary>
+    /// <remarks>
+    /// The size field keeps the keyboard until it is done with, and pressing something else is being
+    /// done with it. Without this the panel went on holding the keyboard after a size was typed and a
+    /// tool or a style picked: the 文字 box stayed without it, under the capture window the panel's
+    /// activation had raised, and the next keys went into the size field (#373).
+    /// </remarks>
+    private void EndTypingOnPressElsewhere(object sender, MouseButtonEventArgs e)
+    {
+        if (!_typing) return;
+        for (var node = e.OriginalSource as DependencyObject; node is not null;
+             node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+            if (ReferenceEquals(node, TextSizeBox)) return;
+
+        EndTyping();
+    }
+
+    /// <summary>
+    /// Nothing on the panel takes the keyboard focus, except the size field while it is asked to.
+    /// </summary>
+    /// <remarks>
+    /// <para>The window is no-activate and refuses activation by click, but that only covers the
+    /// window. Its buttons, swatches and sliders are focusable, and a press on one moves WPF's
+    /// keyboard focus to it — which is one focus for the whole thread, shared with the 文字 box
+    /// (#373). Two things followed from every press while words were being typed: the next keys went
+    /// to the button instead of the box and were lost; and moving the focus made WPF call SetFocus on
+    /// this window, which activates it whatever its styles say. Activating it raised the capture
+    /// window it is owned by over the box, and the box took the keyboard back a moment later — the
+    /// box blinking out, or staying under the capture window when the taking back did not happen.</para>
+    ///
+    /// <para>Refused here, for the whole window, rather than by making each control unfocusable:
+    /// a control added later is then covered without anyone having to know. A click does not need
+    /// the focus — a button still clicks and a slider still drags without it.</para>
+    /// </remarks>
+    private void RefuseKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+    {
+        if (_typing && ReferenceEquals(e.NewFocus, TextSizeBox)) return;
+        e.Handled = true;
     }
 
     private static Color? TryParseColor(string? text)
