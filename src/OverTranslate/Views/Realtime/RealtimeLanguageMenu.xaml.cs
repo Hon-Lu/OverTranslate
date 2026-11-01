@@ -8,9 +8,11 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using NLog;
 using OverTranslate.Services;
+using OverTranslate.Services.Realtime.Capture;
 using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Orientation = System.Windows.Controls.Orientation;
+using Point = System.Windows.Point;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -22,9 +24,16 @@ namespace OverTranslate.Views.Realtime;
 /// <para>A window of its own rather than a Popup in the capsule. The capsule never takes
 /// activation, so that it cannot pull focus from a full-screen game, and a Popup inside a window
 /// that is never active gets no keyboard — the target list's search box would show a caret and type
-/// nothing. This one does activate, for as long as it is open, because the user has just clicked to
-/// use it; it gives the foreground back to whatever had it when it closes on a choice or on Esc.
-/// Clicking anywhere else is the user moving on, and whatever they clicked keeps the focus.</para>
+/// nothing.</para>
+///
+/// <para>Like 顯示外觀, it does not take the foreground when it opens (#358). It used to, and close
+/// on losing it; but some applications in the foreground — the Photos app, measured — have Windows
+/// refuse the handoff, and the list was activated for an instant, deactivated at once and closed
+/// before it was ever seen. The rows are picked with the mouse, so the list needs no keyboard
+/// until the search box is pressed; only then is the foreground asked for, and given back on a
+/// choice, Enter or Esc. The list is put away by a press anywhere outside it or the foreground
+/// moving to another application — watched for, since a window that never activates hears of
+/// neither through a deactivation.</para>
 ///
 /// <para>Nothing about the session's rules for windows of its own is special-cased here. It is a
 /// visible top-level window of this process, so the capture leaves it out of every frame
@@ -71,6 +80,13 @@ internal partial class RealtimeLanguageMenu : Window
     private double _windowScale = 1.0;
     private bool _closing;
 
+    // While the list is up: what puts it away when the user moves on — see the remarks.
+    private MouseDownHook? _pressWatch;
+    private ForegroundChangeWatch? _foregroundWatch;
+
+    // Set while the search box holds the keyboard.
+    private bool _typing;
+
     // For the log only (#358): a list that was pressed open and never seen left nothing behind to
     // say how far it got, so each step says so, and the close says why and after how long.
     private readonly System.Diagnostics.Stopwatch _age = System.Diagnostics.Stopwatch.StartNew();
@@ -115,6 +131,7 @@ internal partial class RealtimeLanguageMenu : Window
         }
 
         PreviewKeyDown += OnPreviewKeyDown;
+        PreviewMouseLeftButtonDown += OnPreviewMouseLeftButtonDown;
         Loaded += (_, _) => Dispatcher.BeginInvoke(new Action(Place), DispatcherPriority.Loaded);
 
         Log.Info(
@@ -131,7 +148,8 @@ internal partial class RealtimeLanguageMenu : Window
     {
         base.OnSourceInitialized(e);
 
-        // Before Show hands this window the foreground: what had it is where the keyboard goes back.
+        // Before Show could hand it the foreground: see the remarks for why it does not take it.
+        WindowStyles.ApplyNoActivate(this);
         _previousForeground = GetForegroundWindow();
 
         // Opened at the anchor, so the window starts on the monitor it will be placed on and the scale
@@ -204,9 +222,41 @@ internal partial class RealtimeLanguageMenu : Window
         if (first)
         {
             Opacity = 1;
-            TakeForeground();
-            FocusFirst();
+            _pressWatch = MouseDownHook.Install(OnAnyPress);
+            _foregroundWatch = ForegroundChangeWatch.Install(OnForegroundChanged);
         }
+    }
+
+    // ── Putting it away ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>A press outside the list is the user moving on, and whatever they pressed keeps the focus.</summary>
+    /// <remarks>
+    /// One on the capsule is left to the capsule, which closes the list itself and has to know it did,
+    /// so the press on an open list's own name closes it rather than opening it again — see
+    /// RealtimeControlWindow.ToggleMenu.
+    /// </remarks>
+    private void OnAnyPress(Point screenPoint)
+    {
+        if (_closing) return;
+        if (ContainsScreenPoint(Chrome, screenPoint)) return;
+        if (_bar.Contains((int)screenPoint.X, (int)screenPoint.Y)) return;
+
+        Dismiss(giveBackForeground: false, $"press outside at {(int)screenPoint.X},{(int)screenPoint.Y}");
+    }
+
+    /// <summary>Another application in the foreground — Alt+Tab, or one coming forward by itself.</summary>
+    private void OnForegroundChanged()
+    {
+        if (_closing || KeyboardForeground.IsOwnForeground()) return;
+        Dismiss(giveBackForeground: false, $"foreground moved to {KeyboardForeground.Describe()}");
+    }
+
+    private static bool ContainsScreenPoint(FrameworkElement element, Point screenPoint)
+    {
+        if (PresentationSource.FromVisual(element) is null) return false;
+        var topLeft = element.PointToScreen(new Point(0, 0));
+        var bottomRight = element.PointToScreen(new Point(element.ActualWidth, element.ActualHeight));
+        return new Rect(topLeft, bottomRight).Contains(screenPoint);
     }
 
     /// <summary>
@@ -281,19 +331,33 @@ internal partial class RealtimeLanguageMenu : Window
     }
 
     /// <summary>
-    /// The caret in the search box the moment the list is up, so the user can type straight away;
-    /// on the source list, which has none, the language in use.
+    /// A press in the search box is the one thing here that wants the keyboard, so it is the one
+    /// thing that takes the foreground — 顯示外觀's size and colour boxes work the same way.
     /// </summary>
-    private void FocusFirst()
+    private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (SearchBox.Visibility == Visibility.Visible)
-        {
-            FocusWhenReady(SearchBox, attemptsLeft: 8);
-            return;
-        }
+        if (_typing || !IsInside(e.OriginalSource as DependencyObject, SearchBox)) return;
 
-        var selected = _rows.FirstOrDefault(row => ((RealtimeLanguageMenuEntry)row.Tag).IsSelected) ?? _rows.FirstOrDefault();
-        if (selected is not null) FocusWhenReady(selected, attemptsLeft: 8);
+        var before = GetForegroundWindow();
+        var previous = KeyboardForeground.Take(this);
+        if (previous != IntPtr.Zero) _previousForeground = previous;
+        _typing = true;
+
+        Log.Info(
+            "Realtime language list {Kind}: search box pressed, foreground before={Before:X} after={After:X}",
+            Kind, before.ToInt64(), GetForegroundWindow().ToInt64());
+
+        // The activation that hands this window the keyboard also puts WPF's focus back where the
+        // window last had it — nowhere — after the press has already given it to the box.
+        FocusWhenReady(SearchBox, attemptsLeft: 8);
+    }
+
+    private static bool IsInside(DependencyObject? element, DependencyObject ancestor)
+    {
+        for (var node = element; node is not null;
+             node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+            if (ReferenceEquals(node, ancestor)) return true;
+        return false;
     }
 
     // The window has only just been handed the foreground, and focus set in the same pass is
@@ -366,24 +430,39 @@ internal partial class RealtimeLanguageMenu : Window
         _closing = true;
         _closeReason = reason;
 
-        if (giveBackForeground && IsActive) GiveBackForeground();
+        _pressWatch?.Dispose();
+        _pressWatch = null;
+        _foregroundWatch?.Dispose();
+        _foregroundWatch = null;
+
+        // Handed back only if the search box still holds it: a press somewhere else has already
+        // moved it there, and pulling it back would undo the press.
+        if (_typing)
+        {
+            _typing = false;
+            if (giveBackForeground) KeyboardForeground.Release(this, _previousForeground);
+            else TypingWindows.Remove(new WindowInteropHelper(this).Handle);
+        }
+
         Close();
     }
 
+    /// <summary>
+    /// The typing is over: the keyboard went elsewhere, or a handoff Windows refused gave it to this
+    /// window for an instant only. The list stays — it is a press outside it or the foreground
+    /// moving to another application that puts it away — and a press on it no longer activates it.
+    /// </summary>
     protected override void OnDeactivated(EventArgs e)
     {
         base.OnDeactivated(e);
+        if (!_typing || _closing) return;
 
-        // Before the first placement the window is still invisible and may be deactivated by the
-        // very handoff that is giving it the foreground.
-        if (Opacity >= 1)
-        {
-            Dismiss(giveBackForeground: false, $"deactivated, foreground={GetForegroundWindow().ToInt64():X}");
-            return;
-        }
+        _typing = false;
+        TypingWindows.Remove(new WindowInteropHelper(this).Handle);
+        WindowStyles.SetNoActivate(this, enabled: true);
 
         Log.Info(
-            "Realtime language list {Kind}: deactivated before it was shown, after {Ms}ms, foreground={Foreground:X}",
+            "Realtime language list {Kind}: search box lost the keyboard after {Ms}ms, foreground={Foreground:X}",
             Kind, _age.ElapsedMilliseconds, GetForegroundWindow().ToInt64());
     }
 
@@ -395,72 +474,6 @@ internal partial class RealtimeLanguageMenu : Window
             Kind, _age.ElapsedMilliseconds, Opacity >= 1, _closeReason);
     }
 
-    // ── Foreground ──────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>Makes this the window the keyboard talks to; see QuickLookupWindow.TakeForeground.</summary>
-    /// <remarks>
-    /// Usually allowed outright — the user has just clicked the capsule, which is this process — but
-    /// the capsule never activates, and Windows weighs which window is foreground as well as who got
-    /// the last input. Sharing the foreground thread's input queue for the call lifts the refusal.
-    /// </remarks>
-    private void TakeForeground()
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero)
-        {
-            Log.Info("Realtime language list {Kind}: no window handle to take the foreground with", Kind);
-            return;
-        }
-
-        var foreground = GetForegroundWindow();
-        var owner = GetWindowThreadProcessId(foreground, out _);
-        var self = GetCurrentThreadId();
-        var attached = owner != 0 && owner != self && AttachThreadInput(self, owner, true);
-        bool allowed;
-
-        try
-        {
-            allowed = SetForegroundWindow(hwnd);
-            Activate();
-        }
-        finally
-        {
-            if (attached) AttachThreadInput(self, owner, false);
-        }
-
-        Log.Info(
-            "Realtime language list {Kind}: foreground taken, before={Before:X} attached={Attached} allowed={Allowed} after={After:X} active={Active}",
-            Kind, foreground.ToInt64(), attached, allowed, GetForegroundWindow().ToInt64(), IsActive);
-    }
-
-    private void GiveBackForeground()
-    {
-        var previous = _previousForeground;
-        if (previous == IntPtr.Zero || !IsWindow(previous)) return;
-        if (previous == new WindowInteropHelper(this).Handle) return;
-
-        // Allowed without ceremony: this window holds the foreground, and the holder may pass it on.
-        SetForegroundWindow(previous);
-    }
-
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-
-    [DllImport("kernel32.dll")]
-    private static extern uint GetCurrentThreadId();
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
 }
