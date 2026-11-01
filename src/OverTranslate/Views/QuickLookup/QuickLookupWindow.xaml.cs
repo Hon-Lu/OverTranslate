@@ -1323,6 +1323,10 @@ public partial class QuickLookupWindow : Window
         CompactStatusText.Text = "";
         CompactStatusText.Visibility = Visibility.Collapsed;
         CompactTranslatedText.Text = TranslatedText.Text;
+        // The whole row turns round for a Persian translation, as the expanded view's text does: the
+        // text starts at the right edge and the speaker follows its end, on its left. The button
+        // keeps its own direction in the markup, so its glyph is not mirrored with it.
+        CompactTranslationRow.FlowDirection = TranslatedText.FlowDirection;
         CompactTranslatedText.FlowDirection = TranslatedText.FlowDirection;
         CompactTranslationRow.Margin = new Thickness(0);
         CompactTranslatedText.Visibility = TranslatedText.Text.Length > 0
