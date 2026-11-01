@@ -633,18 +633,21 @@ public class EngineProtocolTests
         Assert.Single(handler.Requests);
     }
 
-    // Youdao answers code 40 for Persian, which looks like stale credentials and would cost a fresh
-    // key and a second try before the backups were asked; refused before anything is sent instead.
+    // Youdao answers code 40 for Persian either way round, which looks like stale credentials and
+    // would cost a fresh key and a second try before the backups were asked; refused before anything
+    // is sent instead.
     [Theory]
-    [InlineData("ja")]
-    [InlineData("en")]
-    [InlineData(null)]
-    public async Task Youdao_PersianIsRefusedWithoutARequest(string? source)
+    [InlineData("ja", "fa")]
+    [InlineData("en", "fa")]
+    [InlineData(null, "fa")]
+    [InlineData("fa", "zh-TW")]
+    [InlineData("fa", "en")]
+    public async Task Youdao_PersianIsRefusedWithoutARequest(string? source, string target)
     {
         var handler = new Canned();
         var engine = new YoudaoTranslator(new HttpClient(handler));
 
-        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], "fa", source));
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["Hello"], target, source));
 
         Assert.Contains("unsupported", failure.Message);
         Assert.Empty(handler.Requests);

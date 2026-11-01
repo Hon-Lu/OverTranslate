@@ -62,12 +62,10 @@ public partial class TranslationPage : UserControl
         SourceTextBox.MaxLength = SourceTextLimit.MaxLength;
 
         // A Persian translation reads right to left and starts at the box's right edge, whichever
-        // way it got into the box — see Layout.TextDirection. So does Persian pasted in to be
-        // translated, which 自動 accepts.
-        TranslatedTextBox.TextChanged += (_, _) =>
-            TranslatedTextBox.FlowDirection = Layout.TextDirection.Of(TranslatedTextBox.Text);
-        SourceTextBox.TextChanged += (_, _) =>
-            SourceTextBox.FlowDirection = Layout.TextDirection.Of(SourceTextBox.Text);
+        // way it got into the box — see Layout.TextDirection. So does a Persian original, with
+        // Persian chosen as the source. Any other pair of languages leaves both boxes as they were.
+        TranslatedTextBox.TextChanged += (_, _) => UpdateTextDirections();
+        SourceTextBox.TextChanged += (_, _) => UpdateTextDirections();
 
         _debounce = new DispatcherTimer { Interval = DebounceDelay };
         _debounce.Tick += (_, _) => { _debounce.Stop(); _ = TranslateNowAsync(); };
@@ -254,7 +252,24 @@ public partial class TranslationPage : UserControl
         // The engine was asked about a pair that is no longer the one on screen.
         _detectedLang = "";
         RenderSourceActions();
+        UpdateTextDirections();
         RequestTranslate();
+    }
+
+    /// <summary>
+    /// Sets each box the way its text reads, in the language its picker says it is in — see
+    /// <see cref="Layout.TextDirection"/>.
+    /// </summary>
+    /// <remarks>
+    /// The pickers rather than what an engine detected: 自動 is never Persian here, so pasting text
+    /// with a stray Arabic letter into 自動 leaves the box as it was.
+    /// </remarks>
+    private void UpdateTextDirections()
+    {
+        SourceTextBox.FlowDirection = Layout.TextDirection.Of(
+            SourceTextBox.Text, SrcLangBox.SelectedValue as string);
+        TranslatedTextBox.FlowDirection = Layout.TextDirection.Of(
+            TranslatedTextBox.Text, TgtLangBox.SelectedValue as string);
     }
 
     // The target says nothing about what the source text is, so the detected language survives it.
@@ -263,6 +278,7 @@ public partial class TranslationPage : UserControl
     private void TgtLangBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!_reloadingPreferences) SaveCurrentLanguageSelection();
+        UpdateTextDirections();
         RequestTranslate();
     }
 

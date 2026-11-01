@@ -97,6 +97,22 @@ public class LanguageDataTests
             LanguageData.TargetLanguages.Take(5).Select(language => language.Code));
     }
 
+    /// <summary>
+    /// Text that is typed or carried in can be in any language an engine reads, so every target is
+    /// also offered as a text source. Text read off the screen is limited to what OCR reads, which
+    /// Persian is not.
+    /// </summary>
+    [Theory]
+    [InlineData("FA")]
+    public void TextSources_OfferTheTargetLanguage(string code)
+    {
+        Assert.Contains(LanguageData.SourceLanguages, language => language.Code == code);
+        Assert.Contains(LanguageData.TargetLanguages, language => language.Code == code);
+        Assert.Equal(code, LanguageData.MapTargetToSourceCode(code));
+        Assert.Equal(code, LanguageData.MapSourceToTargetCode(code));
+        Assert.DoesNotContain(LanguageData.OcrSourceLanguages, language => language.Code == code);
+    }
+
     [Fact]
     public void AutomaticSource_IsAvailableWithSupportedLanguagesInLabel()
     {

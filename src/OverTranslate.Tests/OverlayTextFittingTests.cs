@@ -199,6 +199,18 @@ public class OverlayTextFittingTests
     }
 
     /// <summary>
+    /// Under any target but Persian the text is not looked at: Persian letters in a translation into
+    /// Chinese leave it set left to right, drawn and measured exactly as before #372.
+    /// </summary>
+    [Fact]
+    public void Persian_letters_under_another_target_stay_left_to_right()
+    {
+        var drawn = Draw(Line("Thanks, سلام!", "謝謝，سلام！", new Rect(20, 15, 300, 34)), target: "ZH-HANT");
+
+        Assert.Equal(FlowDirection.LeftToRight, drawn.Direction);
+    }
+
+    /// <summary>
     /// A comment on a tilted card starts at the card's margin. For a translation read right to left
     /// that is the right-hand one.
     /// </summary>

@@ -723,7 +723,7 @@ public partial class RealtimeBlockWindow : Window
                 // Read right to left, the lines start at the same right edge instead: Left is the
                 // start of a line, and a TextBlock set right to left mirrors it (TextDirection).
                 TextAlignment = wrapped ? TextAlignment.Left : TextAlignment.Center,
-                FlowDirection = TextDirection.Of(line.TranslatedText),
+                FlowDirection = TextDirection.Of(line.TranslatedText, _targetLanguage),
                 HorizontalAlignment = wrapped
                     ? System.Windows.HorizontalAlignment.Center
                     : System.Windows.HorizontalAlignment.Stretch,
@@ -898,10 +898,10 @@ public partial class RealtimeBlockWindow : Window
                 // ragged right, and the box's left edge is that margin. A translation read right to
                 // left starts at the other margin, the box's right edge, and is ragged left.
                 TextAlignment = TextAlignment.Left,
-                HorizontalAlignment = TextDirection.IsRightToLeft(line.TranslatedText)
+                HorizontalAlignment = TextDirection.IsRightToLeft(line.TranslatedText, _targetLanguage)
                     ? System.Windows.HorizontalAlignment.Right
                     : System.Windows.HorizontalAlignment.Left,
-                FlowDirection = TextDirection.Of(line.TranslatedText),
+                FlowDirection = TextDirection.Of(line.TranslatedText, _targetLanguage),
             })
         };
         Canvas.SetLeft(text, bandLeft);
@@ -955,7 +955,7 @@ public partial class RealtimeBlockWindow : Window
                         _latinSourceToCjkTarget),
                     (block.SourceLineBounds ?? [block.Bounds]).Min(r => r.Height) / _dpiY / LineHeightRatio));
                 var rows = RealtimePanelLines.Split(block,
-                    text => new FormattedText(text, CultureInfo.CurrentCulture, TextDirection.Of(text),
+                    text => new FormattedText(text, CultureInfo.CurrentCulture, TextDirection.Of(text, _targetLanguage),
                         typeface, fontSize, Brushes.Black, _dpiY).WidthIncludingTrailingWhitespace * _dpiX,
                     RealtimePanelLines.AvailableWidths(block, _lines));
                 if (rows.Count == 1 && rows[0].SourceLineBounds is { Count: > 1 })
@@ -1227,7 +1227,7 @@ public partial class RealtimeBlockWindow : Window
                 TextTrimming = TextTrimming.None,
                 // Every line centred: a balloon is lettered that way, not set as a paragraph.
                 TextAlignment = TextAlignment.Center,
-                FlowDirection = TextDirection.Of(text),
+                FlowDirection = TextDirection.Of(text, _targetLanguage),
             }),
         };
         Canvas.SetLeft(written, textLeft);
@@ -1296,7 +1296,7 @@ public partial class RealtimeBlockWindow : Window
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.None,
                 TextAlignment = TextAlignment.Center,
-                FlowDirection = TextDirection.Of(text),
+                FlowDirection = TextDirection.Of(text, _targetLanguage),
             }),
             RenderTransform = TiltedPlacement.For(tilt, ToCanvas, textLeft, textTop),
         };
@@ -1792,7 +1792,7 @@ public partial class RealtimeBlockWindow : Window
                     Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,
                     FontWeight = _textWeight, Foreground = foreground,
                     TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.None,
-                    FlowDirection = TextDirection.Of(line.TranslatedText),
+                    FlowDirection = TextDirection.Of(line.TranslatedText, _targetLanguage),
                 }),
             },
         };
@@ -2079,7 +2079,7 @@ public partial class RealtimeBlockWindow : Window
         // lines differently — see WrappedTextMeasure. One line has no breaks to disagree on.
         // In the direction it is drawn in, as everything else about it is.
         Size measured;
-        var direction = TextDirection.Of(text);
+        var direction = TextDirection.Of(text, _targetLanguage);
         if (maxWidth is { } width)
         {
             measured = _wrappedMeasure.Measure(text, typeface, fontSize, width, flowDirection: direction);
