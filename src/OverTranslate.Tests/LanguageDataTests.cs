@@ -99,19 +99,30 @@ public class LanguageDataTests
 
     /// <summary>
     /// Text that is typed or carried in can be in any language an engine reads, so every target is
-    /// also offered as a text source. Text read off the screen is limited to what OCR reads, which
-    /// Persian is not.
+    /// also offered as a text source, and 交換 carries each one across and back. Missing one is easy
+    /// when a target is added — Vietnamese (2.10.0) and Persian (#372) both arrived without theirs.
+    /// </summary>
+    [Fact]
+    public void EveryTarget_IsAlsoATextSource()
+    {
+        foreach (var target in LanguageData.TargetLanguages.Select(language => language.Code))
+        {
+            var source = LanguageData.MapTargetToSourceCode(target);
+
+            Assert.True(source is not null, $"{target} has no text source");
+            Assert.Equal(target, LanguageData.MapSourceToTargetCode(source!));
+        }
+    }
+
+    /// <summary>
+    /// Text read off the screen is limited to the languages there is an OCR model for, and these two
+    /// are only text sources.
     /// </summary>
     [Theory]
     [InlineData("FA")]
-    public void TextSources_OfferTheTargetLanguage(string code)
-    {
-        Assert.Contains(LanguageData.SourceLanguages, language => language.Code == code);
-        Assert.Contains(LanguageData.TargetLanguages, language => language.Code == code);
-        Assert.Equal(code, LanguageData.MapTargetToSourceCode(code));
-        Assert.Equal(code, LanguageData.MapSourceToTargetCode(code));
+    [InlineData("VI")]
+    public void OcrSources_LeaveOutWhatOcrCannotRead(string code) =>
         Assert.DoesNotContain(LanguageData.OcrSourceLanguages, language => language.Code == code);
-    }
 
     [Fact]
     public void AutomaticSource_IsAvailableWithSupportedLanguagesInLabel()
