@@ -30,6 +30,7 @@ internal static class MicrosoftVoices
         ["en"]    = ("en-US-AriaNeural", "en-US"),
         ["es"]    = ("es-ES-ElviraNeural", "es-ES"),
         ["et"]    = ("et-EE-AnuNeural", "et-EE"),
+        ["fa"]    = ("fa-IR-DilaraNeural", "fa-IR"),
         ["fi"]    = ("fi-FI-NooraNeural", "fi-FI"),
         ["fr"]    = ("fr-FR-DeniseNeural", "fr-FR"),
         ["hu"]    = ("hu-HU-TamasNeural", "hu-HU"),

@@ -132,6 +132,7 @@ public static class LanguageData
         new("EL",      "S.Lang.Greek",              "Greek"),
         new("ES",      "S.Lang.Spanish",            "Spanish"),
         new("ET",      "S.Lang.Estonian",           "Estonian"),
+        new("FA",      "S.Lang.Persian",            "Persian"),
         new("FI",      "S.Lang.Finnish",            "Finnish"),
         new("FR",      "S.Lang.French",             "French"),
         new("HU",      "S.Lang.Hungarian",          "Hungarian"),
@@ -150,6 +151,7 @@ public static class LanguageData
         new("SV",      "S.Lang.Swedish",            "Swedish"),
         new("TR",      "S.Lang.Turkish",            "Turkish"),
         new("UK",      "S.Lang.Ukrainian",          "Ukrainian"),
+        new("VI",      "S.Lang.Vietnamese",         "Vietnamese"),
     ];
 
     public static readonly List<LangItem> OcrSourceLanguages =
@@ -206,6 +208,7 @@ public static class LanguageData
         new("EL",      "S.Lang.Greek",              "Greek"),
         new("ES",      "S.Lang.Spanish",            "Spanish"),
         new("ET",      "S.Lang.Estonian",           "Estonian"),
+        new("FA",      "S.Lang.Persian",            "Persian"),
         new("FI",      "S.Lang.Finnish",            "Finnish"),
         new("FR",      "S.Lang.French",             "French"),
         new("HU",      "S.Lang.Hungarian",          "Hungarian"),

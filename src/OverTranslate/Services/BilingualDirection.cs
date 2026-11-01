@@ -90,17 +90,19 @@ internal static class BilingualDirection
     /// The one language a script belongs to, where there is only one.
     /// </summary>
     /// <remarks>
-    /// Kana, Hangul and Greek each name a language by themselves among the languages this
-    /// application offers. Han does not — it could be either Chinese or Japanese — and Latin and
-    /// Cyrillic are shared by twenty-odd languages between them, so those stay unnamed.
+    /// Kana, Hangul, Greek and the Arabic script each name a language by themselves among the
+    /// languages this application offers; the Arabic script names Persian. Han does not — it could
+    /// be either Chinese or Japanese — and Latin and Cyrillic are shared by twenty-odd languages
+    /// between them, so those stay unnamed.
     /// </remarks>
     private static string? SoleLanguageOf(in ScriptTally tally)
     {
-        var best = Math.Max(tally.Kana, Math.Max(tally.Hangul, tally.Greek));
+        var best = Math.Max(Math.Max(tally.Kana, tally.Hangul), Math.Max(tally.Greek, tally.Arabic));
         if (best == 0) return null;
 
         if (tally.Kana == best) return "JA";
-        return tally.Hangul == best ? "KO" : "EL";
+        if (tally.Hangul == best) return "KO";
+        return tally.Greek == best ? "EL" : "FA";
     }
 
     private static int Score(string languageCode, in ScriptTally tally) => FamilyOf(languageCode) switch
@@ -116,6 +118,7 @@ internal static class BilingualDirection
 
         LanguageFamily.Cyrillic => tally.Cyrillic,
         LanguageFamily.Greek    => tally.Greek,
+        LanguageFamily.Arabic   => tally.Arabic,
 
         // Latin letters count for Latin languages alone, never for 日文 or 中文. Japanese prose is
         // full of Latin words, and letting it claim them would make 「iPhone」 a tie under 日文／英文
@@ -123,7 +126,7 @@ internal static class BilingualDirection
         _ => tally.Latin,
     };
 
-    private enum LanguageFamily { Latin, Chinese, Japanese, Korean, Cyrillic, Greek }
+    private enum LanguageFamily { Latin, Chinese, Japanese, Korean, Cyrillic, Greek, Arabic }
 
     /// <remarks>
     /// Takes both the target codes the pair is stored in (EN-US, ZH-HANT, PT-BR) and the source-side
@@ -141,12 +144,13 @@ internal static class BilingualDirection
             "KO" => LanguageFamily.Korean,
             "BG" or "RU" or "UK" => LanguageFamily.Cyrillic,
             "EL" => LanguageFamily.Greek,
+            "FA" => LanguageFamily.Arabic,
             _ => LanguageFamily.Latin,
         };
     }
 
     private readonly record struct ScriptTally(
-        int Han, int Kana, int Hangul, int Latin, int Cyrillic, int Greek);
+        int Han, int Kana, int Hangul, int Latin, int Cyrillic, int Greek, int Arabic);
 
     /// <remarks>
     /// Runes rather than chars, so the Han extensions above the basic plane are counted once each
@@ -163,7 +167,7 @@ internal static class BilingualDirection
     /// </remarks>
     private static ScriptTally Tally(string text)
     {
-        int han = 0, kana = 0, hangul = 0, latin = 0, cyrillic = 0, greek = 0;
+        int han = 0, kana = 0, hangul = 0, latin = 0, cyrillic = 0, greek = 0, arabic = 0;
 
         foreach (var rune in text.EnumerateRunes())
         {
@@ -175,10 +179,11 @@ internal static class BilingualDirection
                 case var v when IsLatin(v):    latin++;    break;
                 case var v when IsCyrillic(v): cyrillic++; break;
                 case var v when IsGreek(v):    greek++;    break;
+                case var v when IsArabic(v) && Rune.IsLetter(rune): arabic++; break;
             }
         }
 
-        return new ScriptTally(han, kana, hangul, latin, cyrillic, greek);
+        return new ScriptTally(han, kana, hangul, latin, cyrillic, greek, arabic);
     }
 
     private static bool IsHan(int v) =>
@@ -220,4 +225,16 @@ internal static class BilingualDirection
     private static bool IsGreek(int v) =>
         v is >= 0x0370 and <= 0x03FF or
             >= 0x1F00 and <= 0x1FFF;
+
+    /// <remarks>
+    /// Letters only, checked by the caller: the block also holds the Arabic and Persian digits, the
+    /// Arabic comma and question mark, and the vowel marks, and those count for nobody, as digits
+    /// and punctuation do everywhere else here.
+    /// </remarks>
+    private static bool IsArabic(int v) =>
+        v is >= 0x0600 and <= 0x06FF or    // Arabic
+            >= 0x0750 and <= 0x077F or     // Arabic Supplement
+            >= 0x08A0 and <= 0x08FF or     // Arabic Extended-A
+            >= 0xFB50 and <= 0xFDFF or     // Presentation Forms-A
+            >= 0xFE70 and <= 0xFEFF;       // Presentation Forms-B
 }

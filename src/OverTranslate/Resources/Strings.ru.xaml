@@ -684,6 +684,7 @@
     <sys:String x:Key="S.Lang.Greek">Греческий</sys:String>
     <sys:String x:Key="S.Lang.Spanish">Испанский</sys:String>
     <sys:String x:Key="S.Lang.Estonian">Эстонский</sys:String>
+    <sys:String x:Key="S.Lang.Persian">Персидский</sys:String>
     <sys:String x:Key="S.Lang.Finnish">Финский</sys:String>
     <sys:String x:Key="S.Lang.French">Французский</sys:String>
     <sys:String x:Key="S.Lang.Hungarian">Венгерский</sys:String>

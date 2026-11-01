@@ -155,9 +155,85 @@ public class OverlayTextFittingTests
             $"band holds {drawn.InnerWidth:0.##}px, the drawn line is {drawn.LaidOutWidth:0.##}px");
     }
 
+    // ═══════════ Right to left (#372) ═══════════
+
+    private const string PersianRunOn =
+        "خب، پس از این به بعد همان‌طور که قبلاً درباره‌اش صحبت کردیم، کارها را یکی‌یکی و با حوصله انجام " +
+        "می‌دهیم تا چیزی از قلم نیفتد و وقت هیچ‌کس هم هدر نرود. اگر نظری داری، هر وقت خواستی بگو تا با هم " +
+        "درباره‌اش صحبت کنیم؛ اگر مشکلی نیست، همین حالا شروع می‌کنیم و نسخهٔ 2.1 را با کلید F5 ذخیره می‌کنیم.";
+
+    [Fact]
+    public void A_persian_line_is_set_right_to_left()
+    {
+        var drawn = Draw(Line("そうだね", "حق با توست.", new Rect(20, 15, 300, 34)), target: "FA");
+
+        Assert.False(drawn.Wrapped);
+        Assert.Equal(FlowDirection.RightToLeft, drawn.Direction);
+    }
+
+    /// <summary>
+    /// Wrapped, a Persian paragraph keeps the alignment a wrapped line always has, which a
+    /// TextBlock set right to left mirrors onto the right edge — and its box still holds it all,
+    /// measured in the direction it is drawn in.
+    /// </summary>
+    [Fact]
+    public void A_wrapped_persian_paragraph_starts_its_lines_at_the_right_and_is_drawn_whole()
+    {
+        var drawn = Draw(Line("うん、じゃあ次はね", PersianRunOn, new Rect(20, 15, 600, 34)), target: "FA");
+
+        Assert.True(drawn.Wrapped);
+        Assert.Equal(FlowDirection.RightToLeft, drawn.Direction);
+        Assert.Equal(TextAlignment.Left, drawn.Alignment);
+    }
+
+    /// <summary>
+    /// What came back untranslated — a name, a product — is English, and set as English: right to
+    /// left, 「Steam!」 would read 「!Steam」.
+    /// </summary>
+    [Fact]
+    public void An_untranslated_english_line_under_a_persian_target_stays_left_to_right()
+    {
+        var drawn = Draw(Line("Steam!", "Steam!", new Rect(20, 15, 300, 34)), target: "FA");
+
+        Assert.Equal(FlowDirection.LeftToRight, drawn.Direction);
+    }
+
+    /// <summary>
+    /// Under any target but Persian the text is not looked at: Persian letters in a translation into
+    /// Chinese leave it set left to right, drawn and measured exactly as before #372.
+    /// </summary>
+    [Fact]
+    public void Persian_letters_under_another_target_stay_left_to_right()
+    {
+        var drawn = Draw(Line("Thanks, سلام!", "謝謝，سلام！", new Rect(20, 15, 300, 34)), target: "ZH-HANT");
+
+        Assert.Equal(FlowDirection.LeftToRight, drawn.Direction);
+    }
+
+    /// <summary>
+    /// A comment on a tilted card starts at the card's margin. For a translation read right to left
+    /// that is the right-hand one.
+    /// </summary>
+    [Fact]
+    public void A_persian_line_on_a_tilted_card_starts_at_the_cards_right_margin()
+    {
+        var tilted = new TranslatedBlock(
+            "I THINK THAT GUY'S A PLAYER TOO.",
+            "فکر کنم آن پسر هم یک بازیکن است.",
+            new Rect(100, 50, 322, 211),
+            RenderGlyphHeight: 173) { FontGlyphHeight = 17.8, Tilt = TiltedCard() };
+
+        var drawn = Draw(tilted, new System.Drawing.Rectangle(0, 0, 650, 400), target: "FA");
+
+        Assert.Equal(FlowDirection.RightToLeft, drawn.Direction);
+        Assert.Equal(System.Windows.HorizontalAlignment.Right, drawn.Placement);
+    }
+
     private readonly record struct DrawnLine(
         bool Wrapped, double FontSize, double BandHeight,
-        FontWeight Weight = default, double InnerWidth = 0, double LaidOutWidth = 0);
+        FontWeight Weight = default, double InnerWidth = 0, double LaidOutWidth = 0,
+        FlowDirection Direction = FlowDirection.LeftToRight, TextAlignment Alignment = TextAlignment.Left,
+        System.Windows.HorizontalAlignment Placement = System.Windows.HorizontalAlignment.Stretch);
 
     /// <summary>
     /// Builds the block window for real, checks the box it produced against the text put inside it,
@@ -196,7 +272,7 @@ public class OverlayTextFittingTests
             var laidOut = new FormattedText(
                 text.Text,
                 CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
+                text.FlowDirection,
                 new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch),
                 text.FontSize,
                 Brushes.Black,
@@ -222,8 +298,13 @@ public class OverlayTextFittingTests
             }
 
             return new DrawnLine(
-                wrapped, text.FontSize, container.Height, text.FontWeight, innerWidth, laidOut.Width);
+                wrapped, text.FontSize, container.Height, text.FontWeight, innerWidth, laidOut.Width,
+                text.FlowDirection, text.TextAlignment, text.HorizontalAlignment);
         });
+
+    /// <summary>A card turned 12°, one line long, round the middle of the block's source.</summary>
+    private static Services.Ocr.TiltedText TiltedCard() =>
+        new(12, false, new Point(261, 155), new Rect(100, 140, 322, 30), []);
 
     private static TranslatedBlock Line(
         string original, string translated, Rect bounds, IReadOnlyList<Rect>? sourceLines = null) =>

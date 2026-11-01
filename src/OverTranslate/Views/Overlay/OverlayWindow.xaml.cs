@@ -664,6 +664,8 @@ public partial class OverlayWindow : Window
                     // actually looked at.
                     VerticalAlignment = VerticalAlignment.Center,
                     FontFamily = translatedFont,
+                    // Right to left for Persian: starts at the bubble's right edge — see TextDirection.
+                    FlowDirection = TextDirection.Of(block.TranslatedText, _currentTargetLanguage),
                 }
             };
 
@@ -798,10 +800,12 @@ public partial class OverlayWindow : Window
                 Foreground = new SolidColorBrush(textColor),
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.None,
-                // Against the card's margin, where its lines begin.
+                // Against the card's margin, where its lines begin — the right one for a translation
+                // read right to left, which mirrors Left (TextDirection).
                 TextAlignment = TextAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Center,
                 FontFamily = translatedFont,
+                FlowDirection = TextDirection.Of(block.TranslatedText, _currentTargetLanguage),
             },
         };
         Canvas.SetLeft(text, corner.X);
@@ -906,6 +910,7 @@ public partial class OverlayWindow : Window
             TextTrimming = TextTrimming.None,
             // Every line centred: this is a balloon, lettered the way a balloon is, not a paragraph.
             TextAlignment = TextAlignment.Center,
+            FlowDirection = TextDirection.Of(text, _currentTargetLanguage),
         };
         Canvas.SetLeft(written, textLeft);
         Canvas.SetTop(written, textTop);
@@ -967,6 +972,7 @@ public partial class OverlayWindow : Window
             TextWrapping = TextWrapping.Wrap,
             TextTrimming = TextTrimming.None,
             TextAlignment = TextAlignment.Center,
+            FlowDirection = TextDirection.Of(text, _currentTargetLanguage),
         };
         Canvas.SetLeft(written, fit.Left - left);
         Canvas.SetTop(written, fit.Top - top);
@@ -1625,14 +1631,16 @@ public partial class OverlayWindow : Window
     private System.Windows.Size MeasureText(string text, Typeface typeface, double fontSize, double? maxTextWidth = null)
     {
         // Wrapped text is measured by the TextBlock that draws it, since FormattedText breaks some
-        // lines differently — see WrappedTextMeasure. One line has no breaks to disagree on.
+        // lines differently — see WrappedTextMeasure. One line has no breaks to disagree on. In the
+        // direction it is drawn in, as everything else about it is.
+        var direction = TextDirection.Of(text, _currentTargetLanguage);
         if (maxTextWidth is { } width)
-            return _wrappedMeasure.Measure(text, typeface, fontSize, width);
+            return _wrappedMeasure.Measure(text, typeface, fontSize, width, flowDirection: direction);
 
         var formattedText = new FormattedText(
             text,
             CultureInfo.CurrentCulture,
-            System.Windows.FlowDirection.LeftToRight,
+            direction,
             typeface,
             fontSize,
             System.Windows.Media.Brushes.Black,

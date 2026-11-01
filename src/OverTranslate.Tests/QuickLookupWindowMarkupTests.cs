@@ -118,6 +118,20 @@ public class QuickLookupWindowMarkupTests
         Assert.Equal("TgtTtsBtn_Click", (string?)button.Attribute("Click"));
     }
 
+    /// <summary>
+    /// The compact row turns round for a Persian translation (#372), and the speaker goes with it to
+    /// the text's left; its own direction is fixed so the glyph is not mirrored along with the row.
+    /// </summary>
+    [Fact]
+    public void The_compact_speaker_glyph_is_not_mirrored_with_a_right_to_left_row()
+    {
+        var button = Window()
+            .Descendants()
+            .Single(e => (string?)e.Attribute(X + "Name") == "CompactTgtTtsBtn");
+
+        Assert.Equal("LeftToRight", (string?)button.Attribute("FlowDirection"));
+    }
+
     /// <summary>Auto-copy feedback overlays both result layouts without resizing or intercepting them.</summary>
     [Fact]
     public void Auto_copy_confirmation_is_a_non_interactive_overlay()

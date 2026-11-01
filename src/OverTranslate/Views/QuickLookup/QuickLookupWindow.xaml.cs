@@ -1095,6 +1095,7 @@ public partial class QuickLookupWindow : Window
 
             SetTranslationLoading(false);
             _detectedLang = detected ?? "";
+            _translatedTextLanguage = tgtLang;
             TranslatedText.Text = results.FirstOrDefault()?.TranslatedText ?? "";
             StyleTranslatedText();
             if (settings.QuickLookup.AutoCopyTranslation)
@@ -1241,6 +1242,10 @@ public partial class QuickLookupWindow : Window
     private double _translatedTextStyledWidth = -1;
     private string? _translatedTextStyledFor;
 
+    // The language TranslatedText is in — the target it was asked for, which under 雙語互譯 is
+    // whichever of the pair the text resolved to. Only a Persian one is ever set right to left.
+    private string? _translatedTextLanguage;
+
     private void TranslatedText_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (e.WidthChanged) StyleTranslatedText();
@@ -1253,6 +1258,11 @@ public partial class QuickLookupWindow : Window
     private void StyleTranslatedText()
     {
         var text = TranslatedText.Text;
+
+        // First, because the line count below is measured in it: a Persian translation is set right
+        // to left and starts at the panel's right edge — see Layout.TextDirection.
+        TranslatedText.FlowDirection = Layout.TextDirection.Of(text, _translatedTextLanguage);
+
         var width = TranslatedText.ActualWidth;
         if (width <= 0) return;   // Not laid out yet; SizeChanged brings it back once it is.
         if (text == _translatedTextStyledFor && Math.Abs(width - _translatedTextStyledWidth) < 0.5) return;
@@ -1313,6 +1323,11 @@ public partial class QuickLookupWindow : Window
         CompactStatusText.Text = "";
         CompactStatusText.Visibility = Visibility.Collapsed;
         CompactTranslatedText.Text = TranslatedText.Text;
+        // The whole row turns round for a Persian translation, as the expanded view's text does: the
+        // text starts at the right edge and the speaker follows its end, on its left. The button
+        // keeps its own direction in the markup, so its glyph is not mirrored with it.
+        CompactTranslationRow.FlowDirection = TranslatedText.FlowDirection;
+        CompactTranslatedText.FlowDirection = TranslatedText.FlowDirection;
         CompactTranslationRow.Margin = new Thickness(0);
         CompactTranslatedText.Visibility = TranslatedText.Text.Length > 0
             ? Visibility.Visible
@@ -1942,7 +1957,9 @@ public partial class QuickLookupWindow : Window
 
             // Shown flipped now rather than left saying the old thing until the round trip lands.
             // Translating a translation back gives the text it came from, so this already is the
-            // answer; waiting for the engine to agree would just read as lag.
+            // answer; waiting for the engine to agree would just read as lag. In the language the
+            // original was in, which is the target from here on.
+            _translatedTextLanguage = srcVal.Length > 0 ? LanguageData.MapSourceToTargetCode(srcVal) : null;
             TranslatedText.Text = wasOriginal;
             StyleTranslatedText();
         }

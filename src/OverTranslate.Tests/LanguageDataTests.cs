@@ -19,6 +19,7 @@ public class LanguageDataTests
     [InlineData("ZH-HANT", "zh-Hant")]
     [InlineData("PT-BR", "pt-BR")]       // keeps its region, unlike EN-US
     [InlineData("BG", "bg")]             // no entry in the table; lower-casing is already right
+    [InlineData("FA", "fa")]
     public void ModelLanguageTag_IsTheFormATranslationModelExpects(string code, string expected) =>
         Assert.Equal(expected, LanguageData.GetModelLanguageTag(code));
 
@@ -95,6 +96,33 @@ public class LanguageDataTests
             ["EN-US", "JA", "KO", "ZH-HANT", "ZH-HANS"],
             LanguageData.TargetLanguages.Take(5).Select(language => language.Code));
     }
+
+    /// <summary>
+    /// Text that is typed or carried in can be in any language an engine reads, so every target is
+    /// also offered as a text source, and 交換 carries each one across and back. Missing one is easy
+    /// when a target is added — Vietnamese (2.10.0) and Persian (#372) both arrived without theirs.
+    /// </summary>
+    [Fact]
+    public void EveryTarget_IsAlsoATextSource()
+    {
+        foreach (var target in LanguageData.TargetLanguages.Select(language => language.Code))
+        {
+            var source = LanguageData.MapTargetToSourceCode(target);
+
+            Assert.True(source is not null, $"{target} has no text source");
+            Assert.Equal(target, LanguageData.MapSourceToTargetCode(source!));
+        }
+    }
+
+    /// <summary>
+    /// Text read off the screen is limited to the languages there is an OCR model for, and these two
+    /// are only text sources.
+    /// </summary>
+    [Theory]
+    [InlineData("FA")]
+    [InlineData("VI")]
+    public void OcrSources_LeaveOutWhatOcrCannotRead(string code) =>
+        Assert.DoesNotContain(LanguageData.OcrSourceLanguages, language => language.Code == code);
 
     [Fact]
     public void AutomaticSource_IsAvailableWithSupportedLanguagesInLabel()

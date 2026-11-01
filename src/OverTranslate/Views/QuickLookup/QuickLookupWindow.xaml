@@ -705,6 +705,7 @@
                                             Style="{StaticResource HeaderIconButton}"
                                             Content="{Binding Text, ElementName=TgtTtsGlyph}"
                                             Margin="8,0,0,0"
+                                            FlowDirection="LeftToRight"
                                             VerticalAlignment="Top"
                                             Visibility="{Binding Visibility, ElementName=CompactTranslatedText}"
                                             ToolTip="{DynamicResource S.Translation.SpeakResult}"

@@ -691,6 +691,7 @@
     <sys:String x:Key="S.Lang.Greek">希腊语</sys:String>
     <sys:String x:Key="S.Lang.Spanish">西班牙语</sys:String>
     <sys:String x:Key="S.Lang.Estonian">爱沙尼亚语</sys:String>
+    <sys:String x:Key="S.Lang.Persian">波斯语</sys:String>
     <sys:String x:Key="S.Lang.Finnish">芬兰语</sys:String>
     <sys:String x:Key="S.Lang.French">法语</sys:String>
     <sys:String x:Key="S.Lang.Hungarian">匈牙利语</sys:String>
