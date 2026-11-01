@@ -7,7 +7,7 @@
         SizeToContent="WidthAndHeight"
         Topmost="True"
         ShowInTaskbar="False"
-        ShowActivated="True"
+        ShowActivated="False"
         AllowsTransparency="True"
         Background="Transparent"
         Opacity="0">
