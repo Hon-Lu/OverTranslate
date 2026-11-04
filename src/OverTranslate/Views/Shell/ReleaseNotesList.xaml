@@ -57,7 +57,7 @@
                           HorizontalAlignment="Left"
                           IsChecked="True"
                           Visibility="Collapsed"
-                          Click="StickyRow_Click">
+                          Unchecked="StickyRow_Unchecked">
                 <ToggleButton.RenderTransform>
                     <TranslateTransform x:Name="StickyShift"/>
                 </ToggleButton.RenderTransform>

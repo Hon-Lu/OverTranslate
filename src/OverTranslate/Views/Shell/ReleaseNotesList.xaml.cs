@@ -44,6 +44,9 @@ public partial class ReleaseNotesList : UserControl
     private readonly List<VersionItem> _items = [];
     private VersionItem? _open;
 
+    // True while SetOpen is moving the rows itself, so their changes are not read as the user's.
+    private bool _settingRows;
+
     public ReleaseNotesList()
     {
         InitializeComponent();
@@ -89,7 +92,16 @@ public partial class ReleaseNotesList : UserControl
         if (!withRow) return item;
 
         var row = new ToggleButton { Style = (Style)Resources["VersionRow"] };
-        row.Click += (_, _) => SetOpen(item == _open ? null : item, scrollToIt: true);
+
+        // The state rather than Click: assistive technology toggles the row without ever clicking it.
+        row.Checked += (_, _) =>
+        {
+            if (!_settingRows) SetOpen(item, scrollToIt: true);
+        };
+        row.Unchecked += (_, _) =>
+        {
+            if (!_settingRows) SetOpen(null, scrollToIt: false);
+        };
         item.Row = row;
         return item;
     }
@@ -330,6 +342,7 @@ public partial class ReleaseNotesList : UserControl
     private void SetOpen(VersionItem? item, bool scrollToIt)
     {
         _open = item;
+        _settingRows = true;
 
         foreach (var each in _items)
         {
@@ -342,6 +355,8 @@ public partial class ReleaseNotesList : UserControl
                 each.Row.Content = RowContent(each, isOpen);
             }
         }
+
+        _settingRows = false;
 
         // A single version has no row to close it by, so it is simply always open.
         if (item is null && _items.Count == 1) _items[0].Panel.Visibility = Visibility.Visible;
@@ -394,9 +409,9 @@ public partial class ReleaseNotesList : UserControl
         StickyRow.Visibility = Visibility.Visible;
     }
 
-    private void StickyRow_Click(object sender, RoutedEventArgs e)
+    private void StickyRow_Unchecked(object sender, RoutedEventArgs e)
     {
-        // Pressing it toggled it; it only ever stands for the open version, so it stays lit.
+        // It only ever stands for the open version, so it stays lit and closes that one instead.
         StickyRow.IsChecked = true;
         if (_open?.Row is { } row)
         {

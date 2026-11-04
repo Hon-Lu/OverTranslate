@@ -66,18 +66,70 @@
                                Foreground="{DynamicResource AppTextPrimary}"
                                HorizontalAlignment="Center"
                                Margin="0,11,0,0"/>
-                    <TextBlock x:Name="VersionText"
-                               FontFamily="{DynamicResource AppFont}"
-                               FontSize="14"
-                               Foreground="{DynamicResource AppTextSecondary}"
-                               HorizontalAlignment="Center"
-                               Margin="0,6,0,0"/>
+                    <!-- The version and what is in it, as one control: someone wondering what changed
+                         is already looking at the version number, and this way the card's buttons below
+                         stay about the things outside the application. -->
+                    <Button x:Name="VersionPill"
+                            AutomationProperties.Name="{DynamicResource S.Update.HistoryHeading}"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"
+                            Cursor="Hand"
+                            FocusVisualStyle="{x:Null}"
+                            Click="VersionPill_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Outline"
+                                        Height="30"
+                                        CornerRadius="15"
+                                        Background="{DynamicResource AppSurfaceBg}"
+                                        BorderBrush="{DynamicResource AppBorder}"
+                                        BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ContentPresenter VerticalAlignment="Center" Margin="12,0"/>
+                                        <Border x:Name="LinkPart"
+                                                CornerRadius="0,14,14,0"
+                                                Background="{DynamicResource AppAccentSubtle}"
+                                                Padding="12,0,10,0">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Update.HistoryHeading}"
+                                                           FontFamily="{DynamicResource AppFont}"
+                                                           FontSize="13"
+                                                           Foreground="{DynamicResource AppAccent}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="&#xE76C;"
+                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           FontSize="9"
+                                                           Foreground="{DynamicResource AppAccent}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="5,1,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="LinkPart" Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="LinkPart" Property="Background" Value="{DynamicResource AppAccentSubtlePressed}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                        <Setter TargetName="Outline" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock x:Name="VersionText"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource AppTextSecondary}"/>
+                    </Button>
                     <TextBlock Text="Hon.Lu (Hon-Lu)"
                                FontFamily="{DynamicResource AppFont}"
                                FontSize="12.5"
                                Foreground="{DynamicResource AppTextSecondary}"
                                HorizontalAlignment="Center"
-                               Margin="0,3,0,0"/>
+                               Margin="0,6,0,0"/>
                 </StackPanel>
 
                 <!-- Starring is the one thing a reader of this card can do that actually helps, so

@@ -1,5 +1,9 @@
 using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using OverTranslate.Services;
+using OverTranslate.Views.Shell;
 using Velopack;
 using Xunit;
 
@@ -226,6 +230,54 @@ public class ReleaseNotesTests
     [InlineData("not a url", null)]
     public void FindsTheListingForARepository(string repository, string? expected) =>
         Assert.Equal(expected, ReleaseNotesService.ListingUrl(repository));
+
+    // Through IsChecked rather than a click, which is how assistive technology toggles a row: a list
+    // that only listened for clicks lit the row and left its notes closed.
+    [Fact]
+    public void OnlyOneVersionIsEverOpen()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var entries = new[] { "2.10.0", "2.9.0", "2.8.0" }
+                    .Select(v => new ReleaseEntry(v, null, Body, "https://example.com"))
+                    .ToList();
+
+                var list = new ReleaseNotesList();
+                list.Show(new ReleaseNotesFeed(entries, 3, false), ReleaseNotesTag.Latest);
+                list.Measure(new System.Windows.Size(400, 300));
+                list.Arrange(new System.Windows.Rect(0, 0, 400, 300));
+
+                var items = (StackPanel)list.FindName("Items");
+                var rows = items.Children.OfType<ToggleButton>().ToList();
+                var panels = items.Children.OfType<Border>().ToList();
+                bool[] Open() => panels.Select(p => p.Visibility == Visibility.Visible).ToArray();
+                bool[] Lit() => rows.Select(r => r.IsChecked == true).ToArray();
+
+                Assert.Equal(new[] { true, false, false }, Open());
+                Assert.Equal(new[] { true, false, false }, Lit());
+
+                rows[1].IsChecked = true;
+                Assert.Equal(new[] { false, true, false }, Open());
+                Assert.Equal(new[] { false, true, false }, Lit());
+
+                rows[1].IsChecked = false;
+                Assert.Equal(new[] { false, false, false }, Open());
+                Assert.Equal(new[] { false, false, false }, Lit());
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
+    }
 
     private static ReleaseNotesFeed? ForUpdate(string current, string target, params ReleaseRecord[] listing) =>
         ReleaseNotesSelection.ForUpdate(listing, V(current), V(target), includeFlagged: false, pageSize: 30);
