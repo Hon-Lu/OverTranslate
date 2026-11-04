@@ -22,8 +22,8 @@ public partial class UpdateWindow : Window
     /// </summary>
     private static readonly TimeSpan NotesPatience = TimeSpan.FromSeconds(3);
 
-    /// <summary>Tall enough for the notes on a small laptop screen at 125%, which has about 570 to give.</summary>
-    private const double TallestWindow = 540;
+    /// <summary>The height with several versions listed. A smaller screen gets what it has; see ApplyMode.</summary>
+    private const double TallestWindow = 620;
 
     // Null when the window is only showing the release history, with nothing on offer.
     private readonly UpdateInfo? _updateInfo;
