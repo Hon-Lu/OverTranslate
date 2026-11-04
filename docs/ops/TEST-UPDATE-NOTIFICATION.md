@@ -19,6 +19,8 @@
 | `OVERTRANSLATE_FAKE_UPDATE` | 版本號，例如 `99.0.0` | 假裝找到這個版本。未設 = 走真實檢查 |
 | `OVERTRANSLATE_FAKE_UPDATE_AFTER` | 次數，例如 `1` | 前 N 次檢查裝作沒有，第 N+1 次才「發現」。未設 = 第一次就有 |
 | `OVERTRANSLATE_UPDATE_POLL_SECONDS` | 秒數，例如 `10` | 把輪詢間隔從 1 小時縮短。未設 = 1 小時 |
+| `OVERTRANSLATE_FAKE_UPDATE_FROM` | 版本號，例如 `2.7.0` | 假裝目前是這個版本，用來看跨多版的更新內容（內容仍從 GitHub 抓）。未設 = 實際版本 |
+| `OVERTRANSLATE_SHOW_RELEASE_HISTORY` | 任意值，例如 `1` | 啟動時開啟「更新紀錄」畫面（目前還沒有入口）。未設 = 不開 |
 
 以下指令都用 **User 層級**（`'User'`），所以重開終端機、從 Visual Studio 啟動、直接雙擊 exe 都吃得到。
 

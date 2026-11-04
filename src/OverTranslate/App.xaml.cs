@@ -134,6 +134,13 @@ public partial class App
     /// </remarks>
     private static async Task PromptForUpdateAsync()
     {
+        // The release history has no way in yet, so this is the only way to look at it.
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OVERTRANSLATE_SHOW_RELEASE_HISTORY")))
+        {
+            Current.Dispatcher.Invoke(UpdateWindow.ShowHistory);
+            return;
+        }
+
         var info = await UpdateNotifier.CheckAsync();
         if (info is null || UpdateNotifier.IsSkipped(info)) return;
         Current.Dispatcher.Invoke(() => UpdateWindow.ShowOrActivate(info));

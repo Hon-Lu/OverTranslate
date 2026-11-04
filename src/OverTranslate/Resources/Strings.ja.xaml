@@ -60,14 +60,26 @@
     <!-- ── Update ── -->
     <sys:String x:Key="S.Update.WindowTitle">新しいバージョンがあります</sys:String>
     <sys:String x:Key="S.Update.Heading">新しいバージョンがあります</sys:String>
+    <sys:String x:Key="S.Update.HeadingDownloading">アップデートをダウンロード中…</sys:String>
+    <sys:String x:Key="S.Update.HeadingInstalling">アップデートをインストール中…</sys:String>
+    <sys:String x:Key="S.Update.HistoryHeading">更新履歴</sys:String>
+    <sys:String x:Key="S.Update.HistoryCurrent">現在のバージョン {0}</sys:String>
+    <sys:String x:Key="S.Update.IncludesVersions">{0} バージョン分の更新</sys:String>
+    <sys:String x:Key="S.Update.LatestTag">最新</sys:String>
+    <sys:String x:Key="S.Update.CurrentTag">現在のバージョン</sys:String>
+    <sys:String x:Key="S.Update.EarlierVersions">以前のバージョンがあと {0} 件あります</sys:String>
+    <sys:String x:Key="S.Update.EarlierLink">GitHub で見る</sys:String>
+    <sys:String x:Key="S.Update.AllVersionsLink">すべてのバージョンを GitHub で見る</sys:String>
+    <sys:String x:Key="S.Update.HistoryUnavailable">現在、更新内容を取得できません。</sys:String>
+    <sys:String x:Key="S.Update.PeekSeparator" xml:space="preserve">、</sys:String>
     <sys:String x:Key="S.Update.Explanation">「今すぐ更新」を押すとダウンロードして適用し、完了後に自動で再起動します。</sys:String>
     <sys:String x:Key="S.Update.NotesBefore" xml:space="preserve">変更内容が気になりますか？</sys:String>
     <sys:String x:Key="S.Update.NotesLink">リリースノートを見る</sys:String>
     <sys:String x:Key="S.Update.Later">あとで</sys:String>
     <sys:String x:Key="S.Update.Now">今すぐ更新</sys:String>
     <sys:String x:Key="S.Update.Skip">このバージョンをスキップして通知しない</sys:String>
-    <sys:String x:Key="S.Update.DownloadingDelta">更新ファイルをダウンロード中 {0} · {1}</sys:String>
-    <sys:String x:Key="S.Update.DownloadingFull">完全パッケージをダウンロード中 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">更新ファイルをダウンロード中 {0}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">完全パッケージをダウンロード中 {0}</sys:String>
     <sys:String x:Key="S.Update.Patching">更新を適用中…</sys:String>
     <sys:String x:Key="S.Update.Preparing">インストールの準備中…</sys:String>
     <sys:String x:Key="S.Update.Applying">インストール中…</sys:String>

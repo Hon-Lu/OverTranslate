@@ -61,14 +61,26 @@
     <!-- ── Update ── -->
     <sys:String x:Key="S.Update.WindowTitle">發現新版本</sys:String>
     <sys:String x:Key="S.Update.Heading">發現新版本！</sys:String>
+    <sys:String x:Key="S.Update.HeadingDownloading">正在下載更新…</sys:String>
+    <sys:String x:Key="S.Update.HeadingInstalling">正在安裝更新…</sys:String>
+    <sys:String x:Key="S.Update.HistoryHeading">更新紀錄</sys:String>
+    <sys:String x:Key="S.Update.HistoryCurrent">目前版本 {0}</sys:String>
+    <sys:String x:Key="S.Update.IncludesVersions">包含 {0} 個版本的更新</sys:String>
+    <sys:String x:Key="S.Update.LatestTag">最新</sys:String>
+    <sys:String x:Key="S.Update.CurrentTag">目前版本</sys:String>
+    <sys:String x:Key="S.Update.EarlierVersions">還有 {0} 個更早的版本</sys:String>
+    <sys:String x:Key="S.Update.EarlierLink">在 GitHub 查看</sys:String>
+    <sys:String x:Key="S.Update.AllVersionsLink">在 GitHub 查看所有版本</sys:String>
+    <sys:String x:Key="S.Update.HistoryUnavailable">目前無法取得更新內容。</sys:String>
+    <sys:String x:Key="S.Update.PeekSeparator" xml:space="preserve">、</sys:String>
     <sys:String x:Key="S.Update.Explanation">點擊「立即更新」後將自動下載並套用，完成後自動重新啟動。</sys:String>
     <sys:String x:Key="S.Update.NotesBefore" xml:space="preserve">想了解這次更新了什麼？</sys:String>
     <sys:String x:Key="S.Update.NotesLink">查看更新內容</sys:String>
     <sys:String x:Key="S.Update.Later">稍後再說</sys:String>
     <sys:String x:Key="S.Update.Now">立即更新</sys:String>
     <sys:String x:Key="S.Update.Skip">跳過此版本，不要再提醒我</sys:String>
-    <sys:String x:Key="S.Update.DownloadingDelta">下載更新檔 {0} · {1}</sys:String>
-    <sys:String x:Key="S.Update.DownloadingFull">下載完整安裝包 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">下載更新檔 {0}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">下載完整安裝包 {0}</sys:String>
     <sys:String x:Key="S.Update.Patching">套用更新中…</sys:String>
     <sys:String x:Key="S.Update.Preparing">準備安裝…</sys:String>
     <sys:String x:Key="S.Update.Applying">安裝中…</sys:String>

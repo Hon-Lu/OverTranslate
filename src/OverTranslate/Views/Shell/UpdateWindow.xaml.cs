@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
-using System.Reflection;
 using System.Windows;
-using System.Windows.Documents;
+using System.Windows.Controls;
 using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using System.Windows.Threading;
@@ -14,7 +13,21 @@ public partial class UpdateWindow : Window
 {
     private static UpdateWindow? _instance;
 
-    private readonly UpdateInfo _updateInfo;
+    // True while the notes are being waited for, so a second press cannot open a second window.
+    private static bool _opening;
+
+    /// <summary>
+    /// How long the window will wait for its notes before opening without them. Opening first and
+    /// filling in afterwards would have it change height in front of the user.
+    /// </summary>
+    private static readonly TimeSpan NotesPatience = TimeSpan.FromSeconds(3);
+
+    /// <summary>Tall enough for the notes on a small laptop screen at 125%, which has about 570 to give.</summary>
+    private const double TallestWindow = 540;
+
+    // Null when the window is only showing the release history, with nothing on offer.
+    private readonly UpdateInfo? _updateInfo;
+    private readonly ReleaseNotesFeed? _feed;
     private Phase _phase = Phase.Offering;
 
     // Alive only for the length of one download attempt.
@@ -34,7 +47,19 @@ public partial class UpdateWindow : Window
     /// rail's is a button the user can press while the window it opens is already on screen behind
     /// the shell. A second instance would be a second download button for the same release.
     /// </remarks>
-    public static void ShowOrActivate(UpdateInfo info)
+    public static void ShowOrActivate(UpdateInfo info) =>
+        Open(ReleaseNotesService.GetForUpdateAsync(info), info);
+
+    /// <summary>
+    /// Opens the window with nothing on offer, to read what recent releases brought.
+    /// </summary>
+    /// <remarks>
+    /// The same window because it is the same reading, and a second copy of the list would have to be
+    /// kept looking like this one by hand.
+    /// </remarks>
+    public static void ShowHistory() => Open(ReleaseNotesService.GetHistoryAsync(), null);
+
+    private static async void Open(Task<ReleaseNotesFeed?> notes, UpdateInfo? info)
     {
         if (_instance is not null)
         {
@@ -42,26 +67,39 @@ public partial class UpdateWindow : Window
             return;
         }
 
-        var window = new UpdateWindow(info);
+        if (_opening) return;
+        _opening = true;
+
+        ReleaseNotesFeed? feed;
+        try
+        {
+            feed = await ReleaseNotesService.WithinAsync(notes, NotesPatience);
+        }
+        finally
+        {
+            _opening = false;
+        }
+
+        var window = new UpdateWindow(info, feed);
         _instance = window;
         window.Closed += (_, _) => _instance = null;
         window.Show();
     }
 
-    public UpdateWindow(UpdateInfo info)
+    public UpdateWindow(UpdateInfo? info, ReleaseNotesFeed? feed)
     {
         InitializeComponent();
         _updateInfo = info;
+        _feed = feed;
 
         var compactIcon = AppIconService.CreateCompactIcon();
         Icon = compactIcon;
         TitleIcon.Source = compactIcon;
 
-        // "v" on both, matching the rail's version line and its update chip — the number is the
-        // same number, and dropping the prefix here would make it look like a different notation.
-        var current = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
-        CurrentVersionText.Text = $"v{current}";
-        LatestVersionText.Text  = $"v{info.LatestVersion}";
+        ApplyMode();
+        ApplyLanguage();
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += (_, _) => LocalizationService.LanguageChanged -= OnLanguageChanged;
 
         // The system title bar is gone, so what it used to do for itself is done here: the rounded
         // corner and the outer edge, in the application's own border colour rather than the
@@ -73,6 +111,92 @@ public partial class UpdateWindow : Window
     }
 
     private void OnThemeChanged(object? sender, EventArgs e) => WindowFrame.ApplyAppearance(this);
+
+    private void OnLanguageChanged(object? sender, EventArgs e) => ApplyLanguage();
+
+    /// <summary>
+    /// Sets up what depends on what the window was opened with, none of which changes afterwards.
+    /// </summary>
+    /// <remarks>
+    /// Several versions get the full height from the start and keep it, so opening a short version
+    /// after a long one does not resize the window under the pointer. A single version has nothing to
+    /// switch between and is sized to what it says. The ceiling applies to both, and follows the screen
+    /// on a display too small to give the full height.
+    /// </remarks>
+    private void ApplyMode()
+    {
+        var history = _updateInfo is null;
+        var hasNotes = _feed is not null;
+
+        NotesList.Visibility = hasNotes ? Visibility.Visible : Visibility.Collapsed;
+        ExplanationText.Visibility = hasNotes && !history ? Visibility.Visible : Visibility.Collapsed;
+        NoNotesCard.Visibility = hasNotes ? Visibility.Collapsed : Visibility.Visible;
+
+        // Everything between the notes and the buttons brings its own space when the notes are there;
+        // without them the card above already ends with its own margin.
+        if (!hasNotes)
+        {
+            ErrorText.Margin = new Thickness(0, 0, 0, 12);
+            ProgressCard.Margin = new Thickness(0, 0, 0, 12);
+        }
+
+        UpdateAnswers.Visibility = history ? Visibility.Collapsed : Visibility.Visible;
+        SkipLine.Visibility = history ? Visibility.Collapsed : Visibility.Visible;
+        HistoryCloseBtn.Visibility = history ? Visibility.Visible : Visibility.Collapsed;
+
+        if (history)
+        {
+            HeadingText.SetResourceReference(TextBlock.TextProperty, "S.Update.HistoryHeading");
+            SetResourceReference(TitleProperty, "S.Update.HistoryHeading");
+            HeadingGlyph.Text = "\uE81C";
+            VersionArrow.Visibility = Visibility.Collapsed;
+            LatestVersionText.Visibility = Visibility.Collapsed;
+
+            if (!hasNotes)
+            {
+                NoNotesText.SetResourceReference(TextBlock.TextProperty, "S.Update.HistoryUnavailable");
+                NotesBeforeRun.Text = "";
+            }
+        }
+
+        MaxHeight = Math.Min(TallestWindow, SystemParameters.WorkArea.Height);
+        if (_feed?.Shown.Count > 1)
+        {
+            SizeToContent = SizeToContent.Manual;
+            Height = MaxHeight;
+        }
+    }
+
+    /// <summary>Everything in the window that is composed rather than bound to a resource.</summary>
+    private void ApplyLanguage()
+    {
+        // "v" on all of these, matching the rail's version line and its update chip — the number is the
+        // same number, and dropping the prefix here would make it look like a different notation.
+        var current = $"v{UpdateService.InstalledVersion()}";
+        var history = _updateInfo is null;
+
+        if (history)
+        {
+            CurrentVersionText.Text = LocalizationService.Format("S.Update.HistoryCurrent", current);
+        }
+        else
+        {
+            CurrentVersionText.Text = current;
+            LatestVersionText.Text = $"v{_updateInfo!.LatestVersion}";
+        }
+
+        if (_feed is null) return;
+
+        var spansSeveral = !history && _feed.Total > 1;
+        VersionCountText.Visibility = spansSeveral ? Visibility.Visible : Visibility.Collapsed;
+        if (spansSeveral)
+        {
+            var count = _feed.TotalIsPartial ? $"{_feed.Total}+" : _feed.Total.ToString(CultureInfo.CurrentCulture);
+            VersionCountText.Text = "· " + LocalizationService.Format("S.Update.IncludesVersions", count);
+        }
+
+        NotesList.Show(_feed, history ? ReleaseNotesTag.Current : ReleaseNotesTag.Latest);
+    }
 
     /// <summary>
     /// Starts the update, or — while one is downloading — abandons it.
@@ -108,14 +232,12 @@ public partial class UpdateWindow : Window
             ErrorText.Visibility = Visibility.Collapsed;
             FallbackNote.Visibility = Visibility.Collapsed;
             _fetching = WillFetchDelta() ? Fetching.Delta : Fetching.Full;
-            DownloadProgress.IsIndeterminate = false;
             DownloadProgress.Value = 0;
-            DownloadProgress.Visibility = Visibility.Visible;
             SetDownloadStatus(0);
             StartSlowHintTimer();
 
             await UpdateService.DownloadAndApplyAsync(
-                _updateInfo, OnDownloadProgress, OnFellBackToFull, OnApplyingAsync, cancel.Token);
+                _updateInfo!, OnDownloadProgress, OnFellBackToFull, OnApplyingAsync, cancel.Token);
         }
         catch (OperationCanceledException)
         {
@@ -134,10 +256,10 @@ public partial class UpdateWindow : Window
             DownloadBtnText.Text = LocalizationService.Get("S.Update.Retry");
             DownloadProgress.BeginAnimation(System.Windows.Controls.ProgressBar.ValueProperty, null);
             DownloadProgress.IsIndeterminate = false;
-            DownloadProgress.Visibility = Visibility.Collapsed;
             SetStatus(null);
             ErrorText.Text = LocalizationService.Format("S.Update.Failed", ex.Message);
             ErrorText.Visibility = Visibility.Visible;
+            ExplanationText.Visibility = Visibility.Collapsed;
         }
         finally
         {
@@ -155,7 +277,6 @@ public partial class UpdateWindow : Window
         DownloadProgress.BeginAnimation(System.Windows.Controls.ProgressBar.ValueProperty, null);
         DownloadProgress.IsIndeterminate = false;
         DownloadProgress.Value = 0;
-        DownloadProgress.Visibility = Visibility.Collapsed;
         SetStatus(null);
     }
 
@@ -219,7 +340,7 @@ public partial class UpdateWindow : Window
     /// </remarks>
     private bool WillFetchDelta()
     {
-        var info = _updateInfo.VelopackInfo;
+        var info = _updateInfo!.VelopackInfo;
         if (info.BaseRelease?.FileName is null || info.DeltasToTarget.Length == 0)
             return false;
 
@@ -229,8 +350,8 @@ public partial class UpdateWindow : Window
 
     private long CurrentDownloadSize() =>
         _fetching == Fetching.Delta
-            ? _updateInfo.VelopackInfo.DeltasToTarget.Sum(d => d.Size)
-            : _updateInfo.VelopackInfo.TargetFullRelease.Size;
+            ? _updateInfo!.VelopackInfo.DeltasToTarget.Sum(d => d.Size)
+            : _updateInfo!.VelopackInfo.TargetFullRelease.Size;
 
     /// <summary>Sizes a download the way Explorer does: kilobytes below a megabyte, megabytes above.</summary>
     /// <remarks>
@@ -238,8 +359,8 @@ public partial class UpdateWindow : Window
     /// tens of kilobytes, and "0.0 MB" sitting next to a live percentage reads as a bug rather than
     /// as a small file.
     ///
-    /// The space before the unit is non-breaking. The line wraps on a 360px window in the longer
-    /// languages, and left to itself WPF will happily put "139.8" on one line and "MB" on the next.
+    /// The space before the unit is non-breaking. The line can wrap in the longer languages, and left
+    /// to itself WPF will happily put "139.8" on one line and "MB" on the next.
     /// </remarks>
     private static string FormatSize(long bytes)
     {
@@ -286,6 +407,19 @@ public partial class UpdateWindow : Window
             !cancelling ? "S.Update.Now" : cancelRequested ? "S.Update.Cancelling" : "S.Update.Cancel");
         DownloadBtnGlyph.Text = cancelling ? "" : "";
 
+        ProgressCard.Visibility = phase == Phase.Offering ? Visibility.Collapsed : Visibility.Visible;
+        HeadingText.SetResourceReference(TextBlock.TextProperty, phase switch
+        {
+            Phase.Offering => "S.Update.Heading",
+            Phase.Downloading => "S.Update.HeadingDownloading",
+            _ => "S.Update.HeadingInstalling",
+        });
+
+        // The progress card takes the explanation's place: by now it has been acted on. A failure
+        // takes it back out again, once its message is up.
+        if (_feed is not null)
+            ExplanationText.Visibility = phase == Phase.Offering ? Visibility.Visible : Visibility.Collapsed;
+
         if (phase == Phase.Offering) CloseBtn.ToolTip = null;
         else CloseBtn.SetResourceReference(ToolTipProperty, "S.Update.CloseBlocked");
     }
@@ -331,17 +465,16 @@ public partial class UpdateWindow : Window
         _slowHintTimer = null;
     }
 
-    /// <summary>Puts a line under the progress bar, or takes it away.</summary>
+    /// <summary>Sets the progress card's line, and clears its figure: this is a stretch with none.</summary>
     private void SetStatus(string? text)
     {
-        StatusText.Inlines.Clear();
-        if (text is not null) StatusText.Inlines.Add(new Run(text));
-        StatusText.Visibility = text is null ? Visibility.Collapsed : Visibility.Visible;
+        StatusText.Text = text ?? "";
+        PercentText.Text = "";
     }
 
     /// <summary>
-    /// The line under the bar: what is being fetched, how far in, and how big it is — or, once the
-    /// bytes are in, what is being done with them.
+    /// The progress card: what is being fetched and how big it is, how far in — or, once the bytes
+    /// are in, what is being done with them.
     /// </summary>
     /// <remarks>
     /// Naming the file is what keeps the fallback from looking like a fault. When Velopack gives up
@@ -350,64 +483,25 @@ public partial class UpdateWindow : Window
     /// "full installer" alongside a size that jumped from 21 MB to 140 MB does explain it, and the
     /// note in <c>FallbackNote</c> says the rest.
     ///
-    /// The two stretches with no progress of their own get their own sentences rather than a frozen
-    /// figure: the delta merge at <see cref="DeltaDownloadCeiling"/>, and everything between the
-    /// last byte and the handover — Velopack still has to pull the new Update.exe out of the
-    /// package and sweep the directory.
-    ///
-    /// The figure is the part that is coloured, in the same accent as the progress bar directly
-    /// above it, which is what it is a readout of. The unit travels with the figure: "45" and "%"
-    /// are one number, and splitting them across two colours would read as two.
-    ///
-    /// Built out of runs rather than formatted into one string, so the placeholder can be found and
-    /// what surrounds it left in whatever order the language puts it. The percent sign is inside
-    /// the placeholder rather than in the resource for the same reason — a language that writes
-    /// "%45" keeps it attached to the figure without the resource having to say so twice.
-    ///
-    /// SetResourceReference rather than a resolved brush: this line is on screen for the whole
-    /// download, which is long enough for the theme to be switched underneath it.
+    /// The bar moves on its own wherever there is no figure to show: from the press until the first
+    /// report, which is the moment that used to look as if nothing had happened, and for the two
+    /// stretches with no progress of their own — the delta merge at
+    /// <see cref="DeltaDownloadCeiling"/>, and everything between the last byte and the handover.
     /// </remarks>
     private void SetDownloadStatus(int percent)
     {
-        if (percent >= 100)
-        {
-            SetStatus(LocalizationService.Get("S.Update.Preparing"));
-            return;
-        }
+        var bytesIn = percent >= 100 || (_fetching == Fetching.Delta && percent >= DeltaDownloadCeiling);
+        DownloadProgress.IsIndeterminate = bytesIn || percent <= 0;
 
-        if (_fetching == Fetching.Delta && percent >= DeltaDownloadCeiling)
+        if (bytesIn)
         {
-            SetStatus(LocalizationService.Get("S.Update.Patching"));
+            SetStatus(LocalizationService.Get(percent >= 100 ? "S.Update.Preparing" : "S.Update.Patching"));
             return;
         }
 
         var key = _fetching == Fetching.Delta ? "S.Update.DownloadingDelta" : "S.Update.DownloadingFull";
-        var template = LocalizationService.Get(key);
-        var size = FormatSize(CurrentDownloadSize());
-        var at = template.IndexOf("{0}", StringComparison.Ordinal);
-
-        StatusText.Inlines.Clear();
-
-        if (at < 0)
-        {
-            // A translation that dropped the placeholder still has to show the number.
-            StatusText.Inlines.Add(new Run(LocalizationService.Format(key, $"{percent}%", size)));
-        }
-        else
-        {
-            var figure = new Run($"{percent}%") { FontWeight = FontWeights.SemiBold };
-            figure.SetResourceReference(TextElement.ForegroundProperty, "AppAccent");
-
-            if (at > 0) StatusText.Inlines.Add(new Run(WithSize(template[..at], size)));
-            StatusText.Inlines.Add(figure);
-            if (at + 3 < template.Length) StatusText.Inlines.Add(new Run(WithSize(template[(at + 3)..], size)));
-        }
-
-        StatusText.Visibility = Visibility.Visible;
-
-        // The size is a plain substitution wherever the language puts it; only the figure needs a
-        // run of its own, so only the figure's placeholder is worth splitting the template on.
-        static string WithSize(string part, string size) => part.Replace("{1}", size);
+        StatusText.Text = LocalizationService.Format(key, FormatSize(CurrentDownloadSize()));
+        PercentText.Text = percent > 0 ? $"{percent}%" : "";
     }
 
     /// <summary>
@@ -472,6 +566,7 @@ public partial class UpdateWindow : Window
         // Said before the bar finishes moving rather than after it: this is the step there is no
         // way back from, and the button that could have stopped it went dead a line ago.
         SetStatus(LocalizationService.Get("S.Update.Applying"));
+        DownloadProgress.IsIndeterminate = false;
         await AnimateProgressToFullAsync();
 
         // The apply step exposes no progress at all, so an indeterminate bar is the honest signal:
@@ -533,7 +628,7 @@ public partial class UpdateWindow : Window
     /// </remarks>
     private void SkipVersionLink_Click(object sender, RoutedEventArgs e)
     {
-        UpdateNotifier.Skip(_updateInfo);
+        UpdateNotifier.Skip(_updateInfo!);
         Close();
     }
 
