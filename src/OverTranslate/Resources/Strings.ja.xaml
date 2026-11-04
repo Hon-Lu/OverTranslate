@@ -46,7 +46,7 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">公式サイトを開く</sys:String>
-    <sys:String x:Key="S.About.Star">GitHub で Star をつけて応援</sys:String>
+    <sys:String x:Key="S.About.Star">Star で、もっと多くの人へ</sys:String>
     <sys:String x:Key="S.About.Sponsor">支援する</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Buy Me a Coffee で支援する</sys:String>
     <sys:String x:Key="S.About.Version">バージョン {0}</sys:String>

@@ -45,8 +45,8 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">前往官方网站</sys:String>
-    <sys:String x:Key="S.About.Star">到 GitHub 点颗 Star 支持</sys:String>
-    <sys:String x:Key="S.About.Sponsor">赞助</sys:String>
+    <sys:String x:Key="S.About.Star">给颗 Star，让更多人看到</sys:String>
+    <sys:String x:Key="S.About.Sponsor">赞助支持</sys:String>
     <sys:String x:Key="S.About.SponsorTip">通过 Buy Me a Coffee 赞助</sys:String>
     <sys:String x:Key="S.About.Version">版本 {0}</sys:String>
     <sys:String x:Key="S.About.OpenSource">免费开源，可自由使用。</sys:String>
