@@ -103,6 +103,9 @@ public static class UpdateNotifier
         {
             Available = info;
             AvailabilityChanged?.Invoke(null, EventArgs.Empty);
+
+            // Fetched now so the nav rail's entry can open the window with its notes already in hand.
+            _ = ReleaseNotesService.GetForUpdateAsync(info);
         }
 
         return info;

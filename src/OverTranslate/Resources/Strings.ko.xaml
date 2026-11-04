@@ -46,7 +46,8 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">공식 웹사이트 열기</sys:String>
-    <sys:String x:Key="S.About.Star">GitHub에서 Star로 응원하기</sys:String>
+    <sys:String x:Key="S.About.Star">Star로 더 많은 사람에게 알리기</sys:String>
+    <sys:String x:Key="S.About.StarTip">GitHub로 이동</sys:String>
     <sys:String x:Key="S.About.Sponsor">후원하기</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Buy Me a Coffee로 후원하기</sys:String>
     <sys:String x:Key="S.About.Version">버전 {0}</sys:String>
@@ -60,14 +61,26 @@
     <!-- ── Update ── -->
     <sys:String x:Key="S.Update.WindowTitle">새 버전이 있습니다</sys:String>
     <sys:String x:Key="S.Update.Heading">새 버전이 있습니다</sys:String>
+    <sys:String x:Key="S.Update.HeadingDownloading">업데이트 내려받는 중...</sys:String>
+    <sys:String x:Key="S.Update.HeadingInstalling">업데이트 설치 중...</sys:String>
+    <sys:String x:Key="S.Update.HistoryHeading">업데이트 기록</sys:String>
+    <sys:String x:Key="S.Update.HistoryCurrent">현재 버전 {0}</sys:String>
+    <sys:String x:Key="S.Update.IncludesVersions">{0}개 버전의 업데이트 포함</sys:String>
+    <sys:String x:Key="S.Update.LatestTag">최신</sys:String>
+    <sys:String x:Key="S.Update.CurrentTag">현재 버전</sys:String>
+    <sys:String x:Key="S.Update.EarlierVersions">이전 버전 {0}개 더 있음</sys:String>
+    <sys:String x:Key="S.Update.EarlierLink">GitHub에서 보기</sys:String>
+    <sys:String x:Key="S.Update.AllVersionsLink">GitHub에서 모든 버전 보기</sys:String>
+    <sys:String x:Key="S.Update.HistoryUnavailable">지금은 업데이트 내용을 불러올 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Update.PeekSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Update.Explanation">‘지금 업데이트’를 누르면 내려받아 적용하고, 완료 후 자동으로 다시 시작합니다.</sys:String>
     <sys:String x:Key="S.Update.NotesBefore" xml:space="preserve">무엇이 바뀌었는지 궁금하신가요?</sys:String>
     <sys:String x:Key="S.Update.NotesLink">릴리스 노트 보기</sys:String>
     <sys:String x:Key="S.Update.Later">나중에</sys:String>
     <sys:String x:Key="S.Update.Now">지금 업데이트</sys:String>
     <sys:String x:Key="S.Update.Skip">이 버전 건너뛰고 다시 알리지 않기</sys:String>
-    <sys:String x:Key="S.Update.DownloadingDelta">업데이트 파일 내려받는 중 {0} · {1}</sys:String>
-    <sys:String x:Key="S.Update.DownloadingFull">전체 설치 파일 내려받는 중 {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">업데이트 파일 내려받는 중 {0}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">전체 설치 파일 내려받는 중 {0}</sys:String>
     <sys:String x:Key="S.Update.Patching">업데이트 적용 중…</sys:String>
     <sys:String x:Key="S.Update.Preparing">설치 준비 중…</sys:String>
     <sys:String x:Key="S.Update.Applying">설치 중…</sys:String>

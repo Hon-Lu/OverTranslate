@@ -48,7 +48,8 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">Открыть сайт</sys:String>
-    <sys:String x:Key="S.About.Star">Звезда на GitHub</sys:String>
+    <sys:String x:Key="S.About.Star">Звезда поможет другим найти</sys:String>
+    <sys:String x:Key="S.About.StarTip">Перейти на GitHub</sys:String>
     <sys:String x:Key="S.About.Sponsor">Поддержать</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Поддержать через Buy Me a Coffee</sys:String>
     <sys:String x:Key="S.About.Version">Версия {0}</sys:String>
@@ -62,14 +63,26 @@
     <!-- ── Update ── -->
     <sys:String x:Key="S.Update.WindowTitle">Доступно обновление</sys:String>
     <sys:String x:Key="S.Update.Heading">Доступно обновление</sys:String>
+    <sys:String x:Key="S.Update.HeadingDownloading">Загрузка обновления…</sys:String>
+    <sys:String x:Key="S.Update.HeadingInstalling">Установка обновления…</sys:String>
+    <sys:String x:Key="S.Update.HistoryHeading">История обновлений</sys:String>
+    <sys:String x:Key="S.Update.HistoryCurrent">Текущая версия: {0}</sys:String>
+    <sys:String x:Key="S.Update.IncludesVersions">Версий в обновлении: {0}</sys:String>
+    <sys:String x:Key="S.Update.LatestTag">Новая</sys:String>
+    <sys:String x:Key="S.Update.CurrentTag">Текущая</sys:String>
+    <sys:String x:Key="S.Update.EarlierVersions">Более ранних версий: {0}</sys:String>
+    <sys:String x:Key="S.Update.EarlierLink">Смотреть на GitHub</sys:String>
+    <sys:String x:Key="S.Update.AllVersionsLink">Все версии на GitHub</sys:String>
+    <sys:String x:Key="S.Update.HistoryUnavailable">Сейчас не удается загрузить список изменений.</sys:String>
+    <sys:String x:Key="S.Update.PeekSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Update.Explanation">«Обновить сейчас» скачает и установит обновление, после чего программа перезапустится.</sys:String>
     <sys:String x:Key="S.Update.NotesBefore" xml:space="preserve">Что нового? </sys:String>
     <sys:String x:Key="S.Update.NotesLink">Посмотреть список изменений</sys:String>
     <sys:String x:Key="S.Update.Later">Позже</sys:String>
     <sys:String x:Key="S.Update.Now">Обновить сейчас</sys:String>
     <sys:String x:Key="S.Update.Skip">Пропустить эту версию и больше не напоминать</sys:String>
-    <sys:String x:Key="S.Update.DownloadingDelta">Загрузка обновления {0} · {1}</sys:String>
-    <sys:String x:Key="S.Update.DownloadingFull">Загрузка полного установщика {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">Загрузка обновления {0}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">Загрузка полного установщика {0}</sys:String>
     <sys:String x:Key="S.Update.Patching">Применение обновления...</sys:String>
     <sys:String x:Key="S.Update.Preparing">Подготовка к установке...</sys:String>
     <sys:String x:Key="S.Update.Applying">Установка...</sys:String>

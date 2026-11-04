@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using Velopack;
 using Velopack.Locators;
 using Velopack.Logging;
@@ -11,6 +12,14 @@ public sealed record UpdateInfo(
     string LatestVersion,
     DeltaAwareUpdateManager Manager,
     VelopackUpdateInfo VelopackInfo);
+
+/// <summary>Where updates come from, as the environment overrides below leave it.</summary>
+public sealed record UpdateFeedSource(
+    string RepositoryUrl,
+    string? Token,
+    string Channel,
+    bool IsBeta,
+    bool SeesPrerelease);
 
 /// <summary>
 /// Velopack's UpdateManager, with two changes to how its download treats the deltas: it says out
@@ -314,11 +323,45 @@ public static class UpdateService
     /// </remarks>
     private static DeltaAwareUpdateManager CreateManager()
     {
+        var source = ResolveFeedSource();
+        var options = new UpdateOptions { ExplicitChannel = source.Channel };
+
+        return new DeltaAwareUpdateManager(
+            new GithubSource(source.RepositoryUrl, source.Token, prerelease: source.SeesPrerelease), options);
+    }
+
+    /// <summary>
+    /// The version running, or what OVERTRANSLATE_FAKE_UPDATE_FROM says it is. The override exists for
+    /// the same reason as OVERTRANSLATE_FAKE_UPDATE: a development build is always the newest version
+    /// there is, so an update spanning several releases cannot otherwise be looked at.
+    /// </summary>
+    public static SemanticVersion InstalledVersion()
+    {
+        var fake = Environment.GetEnvironmentVariable("OVERTRANSLATE_FAKE_UPDATE_FROM");
+        if (SemanticVersion.TryParse(fake, out var parsed))
+            return parsed;
+
+        // Velopack's answer first: the packaged version comes from the tag, while the assembly's comes
+        // from the project file, which a tag does not have to have touched.
+        try
+        {
+            var installed = CreateManager().CurrentVersion;
+            if (installed is not null) return installed;
+        }
+        catch
+        {
+            // Not an installed build; the assembly is all there is to go on.
+        }
+
+        return SemanticVersion.Parse(Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0");
+    }
+
+    public static UpdateFeedSource ResolveFeedSource()
+    {
         // 設 OVERTRANSLATE_CHANNEL=beta → 訂閱 beta 先行版管線；未設 → 穩定版 (win)。
         var envChannel = Environment.GetEnvironmentVariable("OVERTRANSLATE_CHANNEL");
         var isBeta = string.Equals(envChannel, BetaChannel, StringComparison.OrdinalIgnoreCase);
         var channel = isBeta ? BetaChannel : StableChannel;
-        var options = new UpdateOptions { ExplicitChannel = channel };
 
         // beta 的 GitHub Release 會標記為 pre-release，需 prerelease:true 才找得到。
         // 設 OVERTRANSLATE_UPDATE_PRERELEASE（"0" 以外的任何值）可單獨打開這個開關而不換 channel。
@@ -333,6 +376,6 @@ public static class UpdateService
         if (string.IsNullOrWhiteSpace(repoUrl))
             repoUrl = GitHubRepoUrl;
 
-        return new DeltaAwareUpdateManager(new GithubSource(repoUrl, token, prerelease: seesPrerelease), options);
+        return new UpdateFeedSource(repoUrl, token, channel, isBeta, seesPrerelease);
     }
 }

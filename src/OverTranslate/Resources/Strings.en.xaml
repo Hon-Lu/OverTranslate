@@ -45,7 +45,8 @@
 
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">Visit the website</sys:String>
-    <sys:String x:Key="S.About.Star">Star on GitHub</sys:String>
+    <sys:String x:Key="S.About.Star">Star it to help others find it</sys:String>
+    <sys:String x:Key="S.About.StarTip">Go to GitHub</sys:String>
     <sys:String x:Key="S.About.Sponsor">Support</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Support via Buy Me a Coffee</sys:String>
     <sys:String x:Key="S.About.Version">Version {0}</sys:String>
@@ -59,14 +60,26 @@
     <!-- ── Update ── -->
     <sys:String x:Key="S.Update.WindowTitle">Update available</sys:String>
     <sys:String x:Key="S.Update.Heading">Update available</sys:String>
+    <sys:String x:Key="S.Update.HeadingDownloading">Downloading update...</sys:String>
+    <sys:String x:Key="S.Update.HeadingInstalling">Installing update...</sys:String>
+    <sys:String x:Key="S.Update.HistoryHeading">Release notes</sys:String>
+    <sys:String x:Key="S.Update.HistoryCurrent">Current version {0}</sys:String>
+    <sys:String x:Key="S.Update.IncludesVersions">Includes {0} versions</sys:String>
+    <sys:String x:Key="S.Update.LatestTag">Latest</sys:String>
+    <sys:String x:Key="S.Update.CurrentTag">Current</sys:String>
+    <sys:String x:Key="S.Update.EarlierVersions">{0} earlier versions</sys:String>
+    <sys:String x:Key="S.Update.EarlierLink">View on GitHub</sys:String>
+    <sys:String x:Key="S.Update.AllVersionsLink">View all versions on GitHub</sys:String>
+    <sys:String x:Key="S.Update.HistoryUnavailable">Release notes can't be loaded right now.</sys:String>
+    <sys:String x:Key="S.Update.PeekSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Update.Explanation">"Update now" downloads and applies the update, then restarts the app.</sys:String>
     <sys:String x:Key="S.Update.NotesBefore" xml:space="preserve">Curious what changed? </sys:String>
     <sys:String x:Key="S.Update.NotesLink">See the release notes</sys:String>
     <sys:String x:Key="S.Update.Later">Later</sys:String>
     <sys:String x:Key="S.Update.Now">Update now</sys:String>
     <sys:String x:Key="S.Update.Skip">Skip this version and stop reminding me</sys:String>
-    <sys:String x:Key="S.Update.DownloadingDelta">Downloading update {0} · {1}</sys:String>
-    <sys:String x:Key="S.Update.DownloadingFull">Downloading full installer {0} · {1}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingDelta">Downloading update {0}</sys:String>
+    <sys:String x:Key="S.Update.DownloadingFull">Downloading full installer {0}</sys:String>
     <sys:String x:Key="S.Update.Patching">Applying update...</sys:String>
     <sys:String x:Key="S.Update.Preparing">Preparing to install...</sys:String>
     <sys:String x:Key="S.Update.Applying">Installing...</sys:String>

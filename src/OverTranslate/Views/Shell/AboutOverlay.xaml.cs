@@ -115,6 +115,13 @@ public partial class AboutOverlay : UserControl
         base.OnKeyDown(e);
     }
 
+    private void VersionPill_Click(object sender, RoutedEventArgs e)
+    {
+        // Its own window, so the scrim would otherwise be left waiting behind it.
+        Close();
+        UpdateWindow.ShowHistory();
+    }
+
     private void WebsiteBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(WebsiteUrl);
 
     private void StarBtn_Click(object sender, RoutedEventArgs e) => OpenInBrowser(GitHubUrl);
