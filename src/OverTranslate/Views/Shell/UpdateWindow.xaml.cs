@@ -22,8 +22,8 @@ public partial class UpdateWindow : Window
     /// </summary>
     private static readonly TimeSpan NotesPatience = TimeSpan.FromSeconds(3);
 
-    /// <summary>Tall enough for the notes on a small laptop screen at 125%, which has about 570 to give.</summary>
-    private const double TallestWindow = 540;
+    /// <summary>The height with several versions listed. A smaller screen gets what it has; see ApplyMode.</summary>
+    private const double TallestWindow = 580;
 
     // Null when the window is only showing the release history, with nothing on offer.
     private readonly UpdateInfo? _updateInfo;
@@ -59,11 +59,23 @@ public partial class UpdateWindow : Window
     /// </remarks>
     public static void ShowHistory() => Open(ReleaseNotesService.GetHistoryAsync(), null);
 
+    /// <summary>
+    /// Whether a request should replace the window on screen, rather than simply bring it forward.
+    /// </summary>
+    /// <remarks>
+    /// The update takes priority. Asked for while the history is open, it replaces the history: bringing
+    /// the history forward would leave the only way to the update being to close it and ask again. The
+    /// other way round the update stays, which also means a running download is never interrupted.
+    /// </remarks>
+    public static bool ShouldReplace(bool openIsHistory, bool wantHistory) => openIsHistory && !wantHistory;
+
+    private bool IsHistory => _updateInfo is null;
+
     private static async void Open(Task<ReleaseNotesFeed?> notes, UpdateInfo? info)
     {
-        if (_instance is not null)
+        if (_instance is { } open && !ShouldReplace(open.IsHistory, wantHistory: info is null))
         {
-            _instance.Activate();
+            open.Activate();
             return;
         }
 
@@ -80,10 +92,26 @@ public partial class UpdateWindow : Window
             _opening = false;
         }
 
+        var previous = _instance;
+
         var window = new UpdateWindow(info, feed);
         _instance = window;
-        window.Closed += (_, _) => _instance = null;
+        window.Closed += (_, _) =>
+        {
+            if (_instance == window) _instance = null;
+        };
+
+        // Where the old one was rather than the middle of the screen, and opened before it is closed,
+        // so this reads as the window changing instead of one leaving and another arriving.
+        if (previous is not null)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = previous.Left;
+            window.Top = previous.Top;
+        }
+
         window.Show();
+        previous?.Close();
     }
 
     public UpdateWindow(UpdateInfo? info, ReleaseNotesFeed? feed)

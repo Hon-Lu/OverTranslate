@@ -279,6 +279,14 @@ public class ReleaseNotesTests
         if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
     }
 
+    [Theory]
+    [InlineData(true, false, true)]    // history open, update asked for: the update replaces it
+    [InlineData(false, true, false)]   // update open, history asked for: the update comes forward
+    [InlineData(true, true, false)]    // the same one asked for again: it just comes forward
+    [InlineData(false, false, false)]
+    public void TheUpdateTakesPriorityOverTheHistory(bool openIsHistory, bool wantHistory, bool replaces) =>
+        Assert.Equal(replaces, UpdateWindow.ShouldReplace(openIsHistory, wantHistory));
+
     private static ReleaseNotesFeed? ForUpdate(string current, string target, params ReleaseRecord[] listing) =>
         ReleaseNotesSelection.ForUpdate(listing, V(current), V(target), includeFlagged: false, pageSize: 30);
 
