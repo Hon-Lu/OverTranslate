@@ -41,6 +41,9 @@ public partial class ReleaseNotesList : UserControl
     private const string ChevronOpen = "";
     private const string ReleasesPage = "https://github.com/Hon-Lu/OverTranslate/releases";
 
+    /// <summary>Where the words of a section's title and of its lines begin.</summary>
+    private const double TextIndent = 15;
+
     private readonly List<VersionItem> _items = [];
     private VersionItem? _open;
 
@@ -196,7 +199,7 @@ public partial class ReleaseNotesList : UserControl
         foreach (var section in sections)
         {
             if (section.Title.Length > 0)
-                stack.Children.Add(BuildSectionTitle(section));
+                stack.Children.Add(BuildSectionTitle(section, isFirst: stack.Children.Count == 0));
 
             foreach (var line in section.Lines)
                 stack.Children.Add(BuildLine(line));
@@ -212,7 +215,7 @@ public partial class ReleaseNotesList : UserControl
 
         var panel = new Border
         {
-            Padding = new Thickness(14, 0, 14, 14),
+            Padding = new Thickness(16, 0, 16, 18),
             BorderThickness = new Thickness(0, 0, 0, separated ? 1 : 0),
             Child = stack,
             Visibility = Visibility.Collapsed,
@@ -221,62 +224,84 @@ public partial class ReleaseNotesList : UserControl
         return panel;
     }
 
-    private static UIElement BuildSectionTitle(NotesSection section)
+    /// <remarks>
+    /// Set apart from its lines by size and by the space above it, which is what tells one section
+    /// from the next. The mark sits in a column as wide as a line's bullet and gap, so a title and the
+    /// lines under it start at the same place.
+    /// </remarks>
+    private static UIElement BuildSectionTitle(NotesSection section, bool isFirst)
     {
+        var row = new Grid { Margin = new Thickness(0, isFirst ? 14 : 20, 0, 8) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(TextIndent) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
         var title = new TextBlock
         {
-            FontSize = 12.5,
+            Text = section.Title,
+            FontSize = 13.5,
             FontWeight = FontWeights.SemiBold,
+            LineHeight = 20,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 12, 0, 4),
         };
         title.SetResourceReference(TextBlock.ForegroundProperty, "AppTextPrimary");
+        Grid.SetColumn(title, section.Glyph.Length > 0 ? 1 : 0);
+        Grid.SetColumnSpan(title, section.Glyph.Length > 0 ? 1 : 2);
+        row.Children.Add(title);
 
         if (section.Glyph.Length > 0)
         {
-            var glyph = new Run(section.Glyph + " ");
-            glyph.SetResourceReference(TextElement.ForegroundProperty, "AppAccent");
-            title.Inlines.Add(glyph);
+            var glyph = new TextBlock
+            {
+                Text = section.Glyph,
+                FontSize = 9,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 5, 0, 0),
+            };
+            glyph.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+            row.Children.Add(glyph);
         }
 
-        title.Inlines.Add(new Run(section.Title));
-        return title;
+        return row;
     }
 
     private static UIElement BuildLine(NotesLine line)
     {
+        var nested = line.Level > 0;
         var text = new TextBlock
         {
-            FontSize = 12.5,
-            LineHeight = 19,
+            FontSize = nested ? 12 : 12.5,
+            LineHeight = nested ? 19 : 20,
             TextWrapping = TextWrapping.Wrap,
         };
-        text.SetResourceReference(TextBlock.ForegroundProperty, line.Level > 0 ? "AppTextSecondary" : "AppTextPrimary");
+        text.SetResourceReference(TextBlock.ForegroundProperty, nested ? "AppTextSecondary" : "AppTextPrimary");
 
         foreach (var span in line.Spans)
         {
-            var run = new Run(span.Text);
+            // A Run has no padding of its own, so thin spaces keep the tint off the letters beside it.
+            var run = new Run(span.Kind == NotesSpanKind.Code ? $"\u2009{span.Text}\u2009" : span.Text);
             if (span.Kind == NotesSpanKind.Bold) run.FontWeight = FontWeights.SemiBold;
             if (span.Kind == NotesSpanKind.Code) run.SetResourceReference(TextElement.BackgroundProperty, "AppSubtleBorder");
             text.Inlines.Add(run);
         }
 
-        var row = new Grid { Margin = new Thickness(line.Level > 0 ? 14 : 0, 0, 0, 3) };
+        var row = new Grid { Margin = new Thickness(nested ? TextIndent + 3 : 3, 0, 0, nested ? 4 : 6) };
         if (!line.Bullet)
         {
+            row.Margin = new Thickness(0, 0, 0, 6);
             row.Children.Add(text);
             return row;
         }
 
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(TextIndent - 3) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var dot = new Ellipse
         {
             Width = 3,
             Height = 3,
-            Margin = new Thickness(0, 8, 7, 0),
+            HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, nested ? 8 : 9, 0, 0),
         };
         dot.SetResourceReference(Shape.FillProperty, "AppTextSecondary");
         row.Children.Add(dot);
