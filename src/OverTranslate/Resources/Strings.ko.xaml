@@ -47,6 +47,7 @@
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">공식 웹사이트 열기</sys:String>
     <sys:String x:Key="S.About.Star">Star로 더 많은 사람에게 알리기</sys:String>
+    <sys:String x:Key="S.About.StarTip">GitHub로 이동</sys:String>
     <sys:String x:Key="S.About.Sponsor">후원하기</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Buy Me a Coffee로 후원하기</sys:String>
     <sys:String x:Key="S.About.Version">버전 {0}</sys:String>

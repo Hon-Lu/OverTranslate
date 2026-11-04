@@ -49,6 +49,7 @@
     <!-- ── About ── -->
     <sys:String x:Key="S.About.Website">Открыть сайт</sys:String>
     <sys:String x:Key="S.About.Star">Звезда поможет другим найти</sys:String>
+    <sys:String x:Key="S.About.StarTip">Перейти на GitHub</sys:String>
     <sys:String x:Key="S.About.Sponsor">Поддержать</sys:String>
     <sys:String x:Key="S.About.SponsorTip">Поддержать через Buy Me a Coffee</sys:String>
     <sys:String x:Key="S.About.Version">Версия {0}</sys:String>
