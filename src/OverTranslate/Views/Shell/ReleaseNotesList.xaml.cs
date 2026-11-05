@@ -173,13 +173,14 @@ public partial class ReleaseNotesList : UserControl
             top.Children.Add(date);
         }
 
-        if (open || item.Sections.Count == 0) return top;
+        var titles = item.Sections.Where(s => s.Title.Length > 0).Select(s => s.Title).ToList();
+        if (open || titles.Count == 0) return top;
 
         // A reason to open it: what the release is about, without opening it.
         var separator = LocalizationService.Get("S.Update.PeekSeparator");
         var peek = new TextBlock
         {
-            Text = string.Join(separator, item.Sections.Where(s => s.Title.Length > 0).Select(s => s.Title)),
+            Text = string.Join(separator, titles),
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             Margin = new Thickness(20, 2, 0, 0),
@@ -205,9 +206,13 @@ public partial class ReleaseNotesList : UserControl
                 stack.Children.Add(BuildLine(line));
         }
 
+        // A title brings its own space above it, and prose ahead of the first title has none.
+        if (sections.Count > 0 && sections[0].Title.Length == 0 && stack.Children[0] is FrameworkElement first)
+            first.Margin = new Thickness(first.Margin.Left, 14, first.Margin.Right, first.Margin.Bottom);
+
         if (sections.Count == 0)
         {
-            // Not in the shape the template produces, so all there is to offer is the page itself.
+            // Nothing in it could be read for this language, so all there is to offer is the page itself.
             var text = new TextBlock { FontSize = 12.5, Margin = new Thickness(0, 12, 0, 0) };
             text.Inlines.Add(BuildLink("S.Update.NotesLink", entry.HtmlUrl));
             stack.Children.Add(text);
@@ -346,7 +351,7 @@ public partial class ReleaseNotesList : UserControl
 
         var link = new Hyperlink(run)
         {
-            NavigateUri = new Uri(url),
+            NavigateUri = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri : new Uri(ReleasesPage),
             TextDecorations = null,
         };
         link.SetResourceReference(TextElement.ForegroundProperty, "AppAccent");
