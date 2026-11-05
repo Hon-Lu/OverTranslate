@@ -118,7 +118,10 @@ public partial class UpdateWindow : Window
     {
         InitializeComponent();
         _updateInfo = info;
-        _feed = feed;
+
+        // Releases with nothing to read are no different from having no notes: a list of nothing but
+        // links would look broken, where the window's own answer to that already says what to do.
+        _feed = feed?.HasAnythingToRead(LocalizationService.Current) == true ? feed : null;
 
         var compactIcon = AppIconService.CreateCompactIcon();
         Icon = compactIcon;

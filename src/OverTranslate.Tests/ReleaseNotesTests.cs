@@ -119,6 +119,19 @@ public class ReleaseNotesTests
         Assert.Empty(ReleaseNotesParser.Parse(body!, LocalizationService.English));
     }
 
+    [Theory]
+    [InlineData(true, "", Body)]    // one readable release is enough
+    [InlineData(false, "", "<details>\n<summary><b>Deutsch</b></summary>\n\n## ◆ Neu\n</details>")]
+    public void AFeedHasSomethingToReadWhenAnyReleaseDoes(bool expected, string first, string second)
+    {
+        var feed = new ReleaseNotesFeed(
+            [new ReleaseEntry("2.10.0", null, first, ""), new ReleaseEntry("2.9.0", null, second, "")],
+            2,
+            false);
+
+        Assert.Equal(expected, feed.HasAnythingToRead(LocalizationService.English));
+    }
+
     [Fact]
     public void ALanguageWrittenTwiceKeepsTheFirst()
     {

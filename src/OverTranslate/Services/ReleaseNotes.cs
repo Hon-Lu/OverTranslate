@@ -31,6 +31,10 @@ public sealed record ReleaseNotesFeed(
     bool TotalIsPartial)
 {
     public int Earlier => Total - Shown.Count;
+
+    /// <summary>Whether any release listed has words to show in <paramref name="language"/>.</summary>
+    public bool HasAnythingToRead(string language) =>
+        Shown.Any(entry => ReleaseNotesParser.Parse(entry.Body, language).Count > 0);
 }
 
 /// <summary>Decides which releases the update window lists.</summary>
