@@ -120,6 +120,7 @@ public partial class App
         // single-instance check, rather than when the store is built: a second launch must not clear
         // the folder the running instance is downloading into.
         _ = Task.Run(AppServices.MangaModels.DiscardIncomplete);
+        _ = Task.Run(OverTranslate.Services.Ocr.OcrLanguagePacks.DiscardIncomplete);
     }
 
     /// <summary>

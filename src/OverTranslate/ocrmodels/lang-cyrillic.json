@@ -1,0 +1,27 @@
+{
+  "version": "1",
+  "sources": [
+    {
+      "name": "huggingface",
+      "url": "https://huggingface.co/hon-lu/ppocr-language-packs/resolve/main/cyrillic/{name}"
+    },
+    {
+      "name": "github",
+      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/ppocr-language-packs/{name}"
+    }
+  ],
+  "files": [
+    {
+      "role": "recognizer",
+      "name": "cyrillic-v1-rec.onnx",
+      "size": 8074092,
+      "sha256": "90f761b4bfcce0c8c561c0cb5c887b0971d3ec01c32164bdf7374a35b0982711"
+    },
+    {
+      "role": "dictionary",
+      "name": "cyrillic-v1-dict.txt",
+      "size": 2781,
+      "sha256": "db40aa52ceb112055be80c694afdf655d5d2c4f7873704524cc16a447ca913ba"
+    }
+  ]
+}

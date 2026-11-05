@@ -101,7 +101,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">No model name is set. Enter the model to use in the translation service settings.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Unknown error</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">No error details provided</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR currently supports AUTO, EN, ZH, ZH-HANT, JA and KO only; "{0}" is not supported yet.</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR currently supports AUTO, EN, ZH, ZH-HANT, JA, KO, RU and UK only; "{0}" is not supported yet.</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">Timed out waiting for other recognition to finish before switching OCR models.</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">Could not convert the image into a format the ONNX OCR can read.</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">OCR model file not found: {0}</sys:String>
@@ -752,4 +752,15 @@ same settings, the same seed usually gives the same output.</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">Source only: outlines are drawn on the source view only.&#x0A;Source and translation: outlines are drawn on both the source view and the translation view</sys:String>
+
+    <!-- Recognition languages downloaded on demand: OcrLanguagePackCard, OcrLanguagePacksCard. -->
+    <sys:String x:Key="S.OcrPack.CyrillicLanguages">Russian and Ukrainian</sys:String>
+    <sys:String x:Key="S.OcrPack.AskTitle">Download the {0} recognition model?</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBody">Reading this language needs a separate model. {0} share it, so you only download it once.</sys:String>
+    <sys:String x:Key="S.OcrPack.Size">About {0} MB</sys:String>
+    <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
+    <sys:String x:Key="S.OcrPack.Download">Download</sys:String>
+    <sys:String x:Key="S.OcrPack.Downloading">Downloading the {0} recognition model</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">Recognition languages</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDesc">These models are not built in. They download when you choose the language.</sys:String>
 </ResourceDictionary>

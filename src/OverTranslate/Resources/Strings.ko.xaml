@@ -102,7 +102,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">모델 이름이 설정되지 않았습니다. 번역 서비스 설정에서 사용할 모델을 입력하세요.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">알 수 없는 오류</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">오류 내용이 없습니다</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR은 현재 AUTO, EN, ZH, ZH-HANT, JA, KO만 지원합니다. ‘{0}’은(는) 아직 지원하지 않습니다.</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR은 현재 AUTO, EN, ZH, ZH-HANT, JA, KO, RU, UK만 지원합니다. ‘{0}’은(는) 아직 지원하지 않습니다.</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">OCR 모델을 바꾸려고 다른 인식이 끝나기를 기다렸으나 시간이 초과되었습니다.</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">이미지를 ONNX OCR이 읽을 수 있는 형식으로 변환하지 못했습니다.</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">OCR 모델 파일을 찾을 수 없습니다: {0}</sys:String>
@@ -754,4 +754,15 @@
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">원문만: 테두리를 원문 화면에만 표시합니다.&#x0A;원문과 번역: 원문과 번역 화면 모두에 테두리를 표시합니다</sys:String>
+
+    <!-- Recognition languages downloaded on demand: OcrLanguagePackCard, OcrLanguagePacksCard. -->
+    <sys:String x:Key="S.OcrPack.CyrillicLanguages">러시아어와 우크라이나어</sys:String>
+    <sys:String x:Key="S.OcrPack.AskTitle">{0} 인식 모델을 다운로드할까요?</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBody">이 언어를 인식하려면 별도의 모델이 필요합니다. {0}는 같은 모델을 사용하므로 한 번만 다운로드하면 됩니다.</sys:String>
+    <sys:String x:Key="S.OcrPack.Size">약 {0} MB</sys:String>
+    <sys:String x:Key="S.OcrPack.RowSize">{0}MB</sys:String>
+    <sys:String x:Key="S.OcrPack.Download">다운로드</sys:String>
+    <sys:String x:Key="S.OcrPack.Downloading">{0} 인식 모델 다운로드 중</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">인식 언어 팩</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDesc">이 모델들은 기본 포함되어 있지 않으며, 언어를 선택할 때 다운로드됩니다.</sys:String>
 </ResourceDictionary>

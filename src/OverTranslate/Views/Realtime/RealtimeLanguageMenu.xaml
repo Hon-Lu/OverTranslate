@@ -163,6 +163,12 @@
                                TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource AppTextSecondary}"
                                Visibility="Collapsed"/>
+
+                    <!-- Where the list was, once a language still to be downloaded is picked. -->
+                    <ContentControl x:Name="CardHost"
+                                    Margin="10,8,10,8"
+                                    Focusable="False"
+                                    Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
         </Grid>

@@ -138,6 +138,7 @@ public partial class RealtimePage : UserControl
         // Attached after the initial value is set, so initialisation does not fire the handler
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
         TgtLangBox.SelectionChanged += TgtLangBox_SelectionChanged;
+        _sourcePicker = new global::OverTranslate.Controls.OcrSourcePicker(SrcLangBox, () => LanguageData.DefaultRealtimeSourceLanguage);
         SrcLangBox.SelectionChanged += SrcLangBox_SelectionChanged;
 
         // The slider's own drag events, which it forwards from its thumb rather than surfacing as
@@ -375,8 +376,12 @@ public partial class RealtimePage : UserControl
     /// — see <see cref="BindPickers"/>. Without that guard, changing the interface language would
     /// blank this preference on its way past.
     /// </remarks>
+    private readonly global::OverTranslate.Controls.OcrSourcePicker _sourcePicker;
+
     private void SrcLangBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_sourcePicker.Intercept(e)) return;
+
         if (SrcLangBox.SelectedValue is string sourceLanguage)
             SaveTranslationPreference(settings =>
                 settings.Realtime.SourceLanguage = LanguageData.GetValidOcrSourceCode(sourceLanguage));

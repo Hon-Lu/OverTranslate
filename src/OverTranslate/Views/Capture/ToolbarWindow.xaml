@@ -91,7 +91,7 @@
                              what these boxes show when closed depends on the interface language, and a
                              number typed in the markup is a guess about a string it cannot see. -->
                         <ComboBox x:Name="SrcLangBox"
-                                  Style="{StaticResource ToolbarComboBox}"
+                                  Style="{StaticResource ToolbarOcrSourceComboBox}"
                                   SelectedValuePath="Code"
                                   VerticalContentAlignment="Center"/>
 

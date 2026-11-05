@@ -18,11 +18,11 @@ public class RealtimeLanguageSwitchTests
     // ── The lists ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void SourceMenu_ListsTheFiveReadableLanguages_WithoutAutomatic()
+    public void SourceMenu_ListsTheReadableLanguages_WithoutAutomatic()
     {
         var codes = RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Source, "EN").Select(e => e.Code);
 
-        Assert.Equal(["EN", "JA", "KO", "ZH-HANT", "ZH"], codes);
+        Assert.Equal(["EN", "JA", "KO", "ZH-HANT", "ZH", "RU", "UK"], codes);
     }
 
     [Fact]

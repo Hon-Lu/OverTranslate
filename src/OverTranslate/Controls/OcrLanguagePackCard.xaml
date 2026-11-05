@@ -1,0 +1,54 @@
+<UserControl x:Class="OverTranslate.Controls.OcrLanguagePackCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:ClassModifier="internal"
+             Width="264">
+    <StackPanel>
+        <TextBlock x:Name="TitleText"
+                   FontFamily="{DynamicResource AppFont}"
+                   FontSize="13.5"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource AppTextPrimary}"
+                   TextWrapping="Wrap"/>
+
+        <TextBlock x:Name="BodyText"
+                   Margin="0,6,0,0"
+                   FontFamily="{DynamicResource AppFont}"
+                   FontSize="12.5"
+                   LineHeight="18"
+                   Foreground="{DynamicResource AppTextSecondary}"
+                   TextWrapping="Wrap"/>
+
+        <Grid x:Name="ProgressTrack" Height="4" Margin="0,10,0,0" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="ProgressDone" Width="0*"/>
+                <ColumnDefinition x:Name="ProgressLeft" Width="100*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.ColumnSpan="2" CornerRadius="2" Background="{DynamicResource AppButtonBorder}"/>
+            <Border Grid.Column="0" CornerRadius="2" Background="{DynamicResource AppAccent}"/>
+        </Grid>
+
+        <DockPanel Margin="0,12,0,0" LastChildFill="False">
+            <TextBlock x:Name="DetailText"
+                       DockPanel.Dock="Left"
+                       VerticalAlignment="Center"
+                       FontFamily="{DynamicResource AppFont}"
+                       FontSize="12"
+                       Foreground="{DynamicResource AppTextSecondary}"/>
+            <Button x:Name="PrimaryButton"
+                    DockPanel.Dock="Right"
+                    Style="{StaticResource AccentButton}"
+                    Height="30"
+                    Padding="14,0"
+                    Margin="8,0,0,0"
+                    Click="PrimaryButton_Click"/>
+            <Button x:Name="CancelButton"
+                    DockPanel.Dock="Right"
+                    Style="{StaticResource FlatButton}"
+                    Height="30"
+                    Padding="14,0"
+                    Content="{DynamicResource S.Common.Cancel}"
+                    Click="CancelButton_Click"/>
+        </DockPanel>
+    </StackPanel>
+</UserControl>

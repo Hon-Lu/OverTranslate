@@ -104,7 +104,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">Не указано имя модели. Введите модель в настройках службы перевода.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Неизвестная ошибка</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">Подробности ошибки отсутствуют</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">Распознавание текста сейчас поддерживает только AUTO, EN, ZH, ZH-HANT, JA и KO; «{0}» пока не поддерживается.</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">Распознавание текста сейчас поддерживает только AUTO, EN, ZH, ZH-HANT, JA, KO, RU и UK; «{0}» пока не поддерживается.</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">Истекло время ожидания завершения другого распознавания перед сменой модели OCR.</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">Не удалось преобразовать изображение в формат, понятный ONNX OCR.</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">Файл модели OCR не найден: {0}</sys:String>
@@ -743,4 +743,15 @@
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">Только оригинал: рамки рисуются только в окне оригинала.&#x0A;Оригинал и перевод: рамки рисуются и в окне оригинала, и в окне перевода</sys:String>
+
+    <!-- Recognition languages downloaded on demand: OcrLanguagePackCard, OcrLanguagePacksCard. -->
+    <sys:String x:Key="S.OcrPack.CyrillicLanguages">Русский и украинский</sys:String>
+    <sys:String x:Key="S.OcrPack.AskTitle">Скачать модель распознавания ({0})?</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBody">Для распознавания этого языка нужна отдельная модель. {0} используют одну модель, поэтому скачать её нужно один раз.</sys:String>
+    <sys:String x:Key="S.OcrPack.Size">Около {0} МБ</sys:String>
+    <sys:String x:Key="S.OcrPack.RowSize">{0} МБ</sys:String>
+    <sys:String x:Key="S.OcrPack.Download">Скачать</sys:String>
+    <sys:String x:Key="S.OcrPack.Downloading">Скачивание модели распознавания ({0})</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">Языки распознавания</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDesc">Эти модели не встроены в приложение и скачиваются, когда вы выбираете язык.</sys:String>
 </ResourceDictionary>

@@ -107,7 +107,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">尚未指定模型名稱。請在「翻譯服務設定」中填入要使用的模型。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">未知錯誤</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">未提供錯誤內容</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">目前 OCR 僅支援 AUTO、EN、ZH、ZH-HANT、JA、KO；「{0}」尚未支援。</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">目前 OCR 僅支援 AUTO、EN、ZH、ZH-HANT、JA、KO、RU、UK；「{0}」尚未支援。</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">等待其他辨識結束以切換 OCR 模型時逾時。</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">無法將影像轉換為 ONNX OCR 可讀格式。</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">找不到 OCR 模型檔案：{0}</sys:String>
@@ -773,4 +773,15 @@
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">僅原文：框線只顯示於原文畫面&#x0A;原文與譯文：原文、譯文畫面皆顯示框線</sys:String>
+
+    <!-- Recognition languages downloaded on demand: OcrLanguagePackCard, OcrLanguagePacksCard. -->
+    <sys:String x:Key="S.OcrPack.CyrillicLanguages">俄文和烏克蘭文</sys:String>
+    <sys:String x:Key="S.OcrPack.AskTitle">下載{0}辨識模型？</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBody">辨識這個語言需要另外下載模型。{0}共用這個模型，只需下載一次。</sys:String>
+    <sys:String x:Key="S.OcrPack.Size">約 {0} MB</sys:String>
+    <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
+    <sys:String x:Key="S.OcrPack.Download">下載</sys:String>
+    <sys:String x:Key="S.OcrPack.Downloading">正在下載{0}辨識模型</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">辨識語言包</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDesc">這些語言的模型沒有內建，選到時才下載。</sys:String>
 </ResourceDictionary>

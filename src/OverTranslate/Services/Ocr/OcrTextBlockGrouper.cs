@@ -590,9 +590,20 @@ internal static class OcrTextBlockGrouper
         if (right.Length == 0)
             return left;
 
-        var needsSpace = char.IsAsciiLetterOrDigit(left[^1]) && char.IsAsciiLetterOrDigit(right[0]);
+        var needsSpace = IsSpacedWordCharacter(left[^1]) && IsSpacedWordCharacter(right[0]);
+
+        // A Cyrillic word after punctuation too, where the same cut reads as one run-on word. Only
+        // Cyrillic: nothing has measured what this would do to the Latin text the rule was tuned on.
+        needsSpace |= IsCyrillic(right[0]) && left[^1] is ',' or '.' or '!' or '?' or ':' or ';';
+
         return needsSpace ? $"{left} {right}" : $"{left}{right}";
     }
+
+    // Cyrillic beside ASCII, not "every letter": Hangul and kana are letters as well, and Korean and
+    // Japanese fragments are joined without a space on purpose.
+    private static bool IsSpacedWordCharacter(char c) => char.IsAsciiLetterOrDigit(c) || IsCyrillic(c);
+
+    private static bool IsCyrillic(char c) => c is >= '\u0400' and <= '\u052F';
 
     /// <summary>
     /// Which of the groups opened so far this line carries on, or null if it starts a new one.
