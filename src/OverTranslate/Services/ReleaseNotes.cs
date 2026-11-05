@@ -31,6 +31,10 @@ public sealed record ReleaseNotesFeed(
     bool TotalIsPartial)
 {
     public int Earlier => Total - Shown.Count;
+
+    /// <summary>Whether any release listed has words to show in <paramref name="language"/>.</summary>
+    public bool HasAnythingToRead(string language) =>
+        Shown.Any(entry => ReleaseNotesParser.Parse(entry.Body, language).Count > 0);
 }
 
 /// <summary>Decides which releases the update window lists.</summary>
@@ -113,13 +117,19 @@ public sealed record NotesSection(string Glyph, string Title, IReadOnlyList<Note
 /// Only what that template writes is understood; anything else is kept as plain text rather than
 /// dropped, so a one-off line in a future release still reaches the reader. Links lose their address:
 /// these bodies are read here for their words, and the full page is a click away.
+/// <para>
+/// A body is text someone typed into a web page, and the window that shows it opens at startup, so
+/// no body may make this throw: a mistake in one has to cost at most that release's notes. A block
+/// ends at the next one's start as well as at its own close, so a lost close cannot swallow the next
+/// language.
+/// </para>
 /// </remarks>
 public static class ReleaseNotesParser
 {
     private const string InstallSectionMark = "↓";
 
     private static readonly Regex Block = new(
-        @"<summary>\s*<b>(?<label>.*?)</b>\s*</summary>(?<body>.*?)</details>",
+        @"<summary>\s*(?:<b>)?(?<label>.*?)(?:</b>)?\s*</summary>(?<body>.*?)(?=</details>|<details\b|<summary>|\z)",
         RegexOptions.Singleline | RegexOptions.Compiled);
 
     private static readonly Regex Inline = new(
@@ -140,12 +150,17 @@ public static class ReleaseNotesParser
 
     /// <summary>
     /// The sections for <paramref name="language"/>, or for English when the notes are not written
-    /// in it. Empty when the body holds neither.
+    /// in it. A body with no language blocks at all is read whole. Empty when it has blocks but
+    /// neither of those, or has nothing to read.
     /// </summary>
     public static IReadOnlyList<NotesSection> Parse(string body, string language)
     {
-        var blocks = Block.Matches(body ?? "")
-            .ToDictionary(m => m.Groups["label"].Value.Trim(), m => m.Groups["body"].Value, StringComparer.Ordinal);
+        var matches = Block.Matches(body ?? "");
+        if (matches.Count == 0) return ParseBlock(body ?? "");
+
+        var blocks = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (Match match in matches)
+            blocks.TryAdd(match.Groups["label"].Value.Trim(), match.Groups["body"].Value);
 
         var wanted = Labels.GetValueOrDefault(language, Labels[LocalizationService.English]);
         if (!blocks.TryGetValue(wanted, out var text)
@@ -193,7 +208,8 @@ public static class ReleaseNotesParser
             var item = ListItem.Match(line);
             if (item.Success)
             {
-                var level = item.Groups["indent"].Length >= 2 ? 1 : 0;
+                var indent = item.Groups["indent"].Value;
+                var level = indent.Length >= 2 || indent.Contains('\t') ? 1 : 0;
                 lines.Add(new NotesLine(level, true, Spans(item.Groups["text"].Value)));
                 continue;
             }

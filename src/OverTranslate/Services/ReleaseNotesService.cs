@@ -137,6 +137,8 @@ public static class ReleaseNotesService
 
         foreach (var item in root.EnumerateArray())
         {
+            if (item.ValueKind != JsonValueKind.Object) continue;
+
             records.Add(new ReleaseRecord(
                 Text(item, "tag_name"),
                 Flag(item, "draft"),

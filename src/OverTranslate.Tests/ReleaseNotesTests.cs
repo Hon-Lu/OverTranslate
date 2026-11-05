@@ -87,9 +87,155 @@ public class ReleaseNotesTests
     }
 
     [Fact]
-    public void ABodyNotInTheTemplatesShapeHasNoSections()
+    public void ABodyWithNoLanguageBlocksIsReadWhole()
     {
-        Assert.Empty(ReleaseNotesParser.Parse("Just some text.", LocalizationService.English));
+        const string body = """
+            # OverTranslate 2.11.0
+
+            Thanks for testing.
+
+            ## ◆ Fixes
+            - Fixed a crash
+
+            ## ↓ Install
+            - Download it
+            """;
+
+        var sections = ReleaseNotesParser.Parse(body, LocalizationService.Japanese);
+
+        Assert.Equal(["", "Fixes"], sections.Select(s => s.Title));
+        Assert.False(sections[0].Lines[0].Bullet);
+        Assert.True(sections[1].Lines[0].Bullet);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("\n---\n")]
+    [InlineData("<details>\n<summary><b>Deutsch</b></summary>\n\n## ◆ Neu\n- Etwas\n\n</details>")]
+    [InlineData("<details>\n<summary><b>English</b></summary>\n\n## ↓ Install\n- Download\n\n</details>")]
+    public void ABodyWithNothingToReadHasNoSections(string? body)
+    {
+        Assert.Empty(ReleaseNotesParser.Parse(body!, LocalizationService.English));
+    }
+
+    [Theory]
+    [InlineData(true, "", Body)]    // one readable release is enough
+    [InlineData(false, "", "<details>\n<summary><b>Deutsch</b></summary>\n\n## ◆ Neu\n</details>")]
+    public void AFeedHasSomethingToReadWhenAnyReleaseDoes(bool expected, string first, string second)
+    {
+        var feed = new ReleaseNotesFeed(
+            [new ReleaseEntry("2.10.0", null, first, ""), new ReleaseEntry("2.9.0", null, second, "")],
+            2,
+            false);
+
+        Assert.Equal(expected, feed.HasAnythingToRead(LocalizationService.English));
+    }
+
+    [Fact]
+    public void ALanguageWrittenTwiceKeepsTheFirst()
+    {
+        const string body = """
+            <details>
+            <summary><b>English</b></summary>
+
+            ## ◆ First
+            - a
+
+            </details>
+
+            <details>
+            <summary><b>English</b></summary>
+
+            ## ◆ Second
+            - b
+
+            </details>
+            """;
+
+        var sections = ReleaseNotesParser.Parse(body, LocalizationService.English);
+
+        Assert.Equal(["First"], sections.Select(s => s.Title));
+    }
+
+    [Fact]
+    public void ALostCloseDoesNotSwallowTheNextLanguage()
+    {
+        const string body = """
+            <details>
+            <summary><b>English</b></summary>
+
+            ## ◆ Fixes
+            - a
+
+            <details>
+            <summary><b>繁體中文</b></summary>
+
+            ## ◆ 修正
+            - b
+            """;
+
+        var english = ReleaseNotesParser.Parse(body, LocalizationService.English);
+        var chinese = ReleaseNotesParser.Parse(body, LocalizationService.TraditionalChinese);
+
+        Assert.Equal(["Fixes"], english.Select(s => s.Title));
+        Assert.Single(english[0].Lines);
+        Assert.Equal(["修正"], chinese.Select(s => s.Title));
+    }
+
+    [Fact]
+    public void ALabelWithoutBoldIsStillALabel()
+    {
+        const string body = "<details>\n<summary>English</summary>\n\n## ◆ Fixes\n- a\n\n</details>";
+
+        Assert.Equal(["Fixes"], ReleaseNotesParser.Parse(body, LocalizationService.English).Select(s => s.Title));
+    }
+
+    [Fact]
+    public void ATabIndentedItemIsNested()
+    {
+        var sections = ReleaseNotesParser.Parse("## ◆ Fixes\n- a\n\t- b", LocalizationService.English);
+
+        Assert.Equal([0, 1], sections[0].Lines.Select(l => l.Level));
+    }
+
+    // Reads the real template rather than a copy of it: changing it without the parser would raise no
+    // error anywhere, and every release from then on would quietly lose its formatting.
+    [Theory]
+    [InlineData(".claude")]
+    [InlineData(".codex")]
+    public void EveryLanguageInTheReleaseTemplateIsRead(string agentFolder)
+    {
+        var body = File.ReadAllText(ReleaseTemplatePath(agentFolder))
+            .Replace("{VERSION}", "2.11.0")
+            .Replace("{BODY_EN}", "## ◆ Section EN\n- line")
+            .Replace("{BODY_ZH_HANT}", "## ◆ Section ZH_HANT\n- line")
+            .Replace("{BODY_ZH_HANS}", "## ◆ Section ZH_HANS\n- line")
+            .Replace("{BODY_JA}", "## ◆ Section JA\n- line")
+            .Replace("{BODY_KO}", "## ◆ Section KO\n- line");
+
+        Assert.Equal(["Section EN"], TitlesIn(LocalizationService.English));
+        Assert.Equal(["Section ZH_HANT"], TitlesIn(LocalizationService.TraditionalChinese));
+        Assert.Equal(["Section ZH_HANS"], TitlesIn(LocalizationService.SimplifiedChinese));
+        Assert.Equal(["Section JA"], TitlesIn(LocalizationService.Japanese));
+        Assert.Equal(["Section KO"], TitlesIn(LocalizationService.Korean));
+
+        IEnumerable<string> TitlesIn(string language) =>
+            ReleaseNotesParser.Parse(body, language).Select(s => s.Title);
+    }
+
+    // Found by walking up rather than copied at build time, so that moving the template fails this
+    // test and not the whole test project's build.
+    private static string ReleaseTemplatePath(string agentFolder)
+    {
+        var relative = Path.Combine(agentFolder, "skills", "git-release-overtranslate", "template.md");
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var path = Path.Combine(dir.FullName, relative);
+            if (File.Exists(path)) return path;
+        }
+
+        throw new FileNotFoundException($"No {relative} above {AppContext.BaseDirectory}");
     }
 
     [Fact]
@@ -216,6 +362,14 @@ public class ReleaseNotesTests
     }
 
     [Fact]
+    public void AListingEntryThatIsNotAnObjectIsSkipped()
+    {
+        using var document = JsonDocument.Parse("""[1, null, {"tag_name":"2.9.0"}]""");
+
+        Assert.Equal("2.9.0", Assert.Single(ReleaseNotesService.ParseListing(document.RootElement)).Tag);
+    }
+
+    [Fact]
     public void AVPrefixedTagKeepsItsVersionWithoutThePrefix()
     {
         var feed = ForUpdate("2.8.0", "2.10.0", Release("v2.10.0"));
@@ -230,6 +384,39 @@ public class ReleaseNotesTests
     [InlineData("not a url", null)]
     public void FindsTheListingForARepository(string repository, string? expected) =>
         Assert.Equal(expected, ReleaseNotesService.ListingUrl(repository));
+
+    [Theory]
+    [InlineData("Just some text.", "https://example.com")]   // nothing but prose: no empty peek line
+    [InlineData("", "")]                                     // only a link, with no address to give it
+    [InlineData("", "not a url")]
+    public void AReleaseThatCannotBeReadStillLists(string body, string url)
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var entries = new[] { "2.10.0", "2.9.0" }
+                    .Select(v => new ReleaseEntry(v, null, body, url))
+                    .ToList();
+
+                var list = new ReleaseNotesList();
+                list.Show(new ReleaseNotesFeed(entries, 2, false), ReleaseNotesTag.Latest);
+
+                var rows = ((StackPanel)list.FindName("Items")).Children.OfType<ToggleButton>().ToList();
+                Assert.IsType<Grid>(rows[1].Content);
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
+    }
 
     // Through IsChecked rather than a click, which is how assistive technology toggles a row: a list
     // that only listened for clicks lit the row and left its notes closed.
