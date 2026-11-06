@@ -342,7 +342,7 @@ public partial class QuickTranslateHintWindow : Window
 
     /// <remarks>
     /// The clipboard belongs to whatever else is running, and any of it can hold the clipboard open
-    /// long enough for this to fail — WPF already retries for about a second before throwing. Left
+    /// long enough for this to fail — ClipboardWriter retries for about a second before throwing. Left
     /// unhandled that throw reaches the dispatcher and takes the whole application down, over a copy
     /// button on a card that was about to dismiss itself anyway.
     /// </remarks>
@@ -352,7 +352,7 @@ public partial class QuickTranslateHintWindow : Window
 
         try
         {
-            Clipboard.SetText(_copyText);
+            ClipboardWriter.SetText(_copyText);
         }
         catch (Exception ex)
         {

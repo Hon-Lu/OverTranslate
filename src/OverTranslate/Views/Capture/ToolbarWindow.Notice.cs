@@ -348,17 +348,15 @@ public partial class ToolbarWindow
     }
 
     /// <remarks>
-    /// A throw does not settle whether the text was copied. SetText publishes it and then flushes
-    /// it so it outlives this process, and the flush is the half that fails most often — which
-    /// leaves the text on the clipboard, pasteable until OverTranslate exits. Telling the reader it
-    /// failed when their next paste would have worked is the worse of the two mistakes, so ask the
-    /// clipboard what actually happened rather than inferring it from the exception.
+    /// A throw from ClipboardWriter means nothing was written: it either opened the clipboard and
+    /// put the text in whole, or never got it open. So the answer is the exception's, with no need to
+    /// read the clipboard back.
     /// </remarks>
     private static bool TryCopy(string text)
     {
         try
         {
-            System.Windows.Clipboard.SetText(text);
+            OverTranslate.Services.ClipboardWriter.SetText(text);
 
             // Debug rather than Info: on its own a successful copy is not worth a line in everyone's
             // log, but without it a log cannot tell a copy that worked from a button that was never
@@ -369,26 +367,6 @@ public partial class ToolbarWindow
         catch (Exception ex)
         {
             Log.Warn(ex, "Could not copy the toolbar notice to the clipboard");
-        }
-
-        try
-        {
-            var landed = System.Windows.Clipboard.ContainsText()
-                && System.Windows.Clipboard.GetText() == text;
-
-            // Pairs with the warning above: it says the copy threw, this says whether the text got
-            // there anyway. Without both, that warning reads as a failure the user never saw.
-            Log.Debug(landed
-                ? "Toolbar notice was on the clipboard despite the failed copy"
-                : "Toolbar notice did not reach the clipboard");
-            return landed;
-        }
-        catch (Exception ex)
-        {
-            // Whatever holds the clipboard shut holds it shut both ways. Unreadable is not the same
-            // as absent, but from here the two are indistinguishable and the safe answer is the one
-            // that leaves the message on screen.
-            Log.Trace(ex, "Could not read the clipboard back after a failed copy");
             return false;
         }
     }

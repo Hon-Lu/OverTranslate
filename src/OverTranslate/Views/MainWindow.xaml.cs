@@ -1359,7 +1359,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        System.Windows.Clipboard.SetText(payload);
+        ClipboardWriter.SetText(payload);
         ShowNotice(
             LocalizationService.Get("S.Main.CopiedTitle"),
             LocalizationService.Get(
@@ -1410,7 +1410,7 @@ public partial class MainWindow : Window
                 result = composed;
             }
 
-            System.Windows.Clipboard.SetImage(result);
+            ClipboardWriter.SetImage(result);
             _toolbarWindow?.ShowScreenshotCopied();
 
             var settings = SettingsService.Instance.Current;
