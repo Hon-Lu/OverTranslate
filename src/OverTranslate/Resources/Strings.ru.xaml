@@ -492,6 +492,7 @@
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ Одной клавишей можно назначить только F1–F24, Pause или Scroll Lock — для остальных нужны Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">Общие</sys:String>
+    <sys:String x:Key="S.Settings.Options">Параметры</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">Снимок экрана</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">Нажмите это сочетание, чтобы начать [[перевод снимка экрана]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Открыть окно</sys:String>

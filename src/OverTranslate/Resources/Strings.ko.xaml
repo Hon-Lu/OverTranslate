@@ -501,6 +501,7 @@
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 단독으로 쓸 수 있는 키는 F1–F24, Pause, Scroll Lock뿐입니다. 다른 키는 Ctrl／Alt／Shift와 함께 사용하세요</sys:String>
 
     <sys:String x:Key="S.Settings.General">일반</sys:String>
+    <sys:String x:Key="S.Settings.Options">옵션</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">캡처 번역</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">단축키로 [[캡처 번역]] 시작</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">번역 창 열기</sys:String>

@@ -501,6 +501,7 @@
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 単独で使えるのは F1–F24、Pause、Scroll Lock のみです。ほかのキーは Ctrl／Alt／Shift と組み合わせてください</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般</sys:String>
+    <sys:String x:Key="S.Settings.Options">オプション</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">キャプチャ翻訳</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">ショートカットキーで[[キャプチャ翻訳]]を開始する</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">翻訳ウィンドウを開く</sys:String>

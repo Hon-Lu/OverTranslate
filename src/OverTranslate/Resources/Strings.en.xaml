@@ -497,6 +497,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ A single key can only be F1–F24, Pause or Scroll Lock — other keys need Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">General</sys:String>
+    <sys:String x:Key="S.Settings.Options">Options</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">Capture</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">Press this shortcut to start a [[screen capture translation]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Open window</sys:String>

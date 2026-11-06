@@ -519,6 +519,7 @@
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 單一按鍵只能是 F1–F24、Pause 或 Scroll Lock，其他按鍵請搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般設定</sys:String>
+    <sys:String x:Key="S.Settings.Options">選項</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">截圖翻譯</sys:String>
     <!-- [[…]] 內的字會以主題色強調，見 Views/Controls/HighlightedText。兩種語言的標記數量必須一致，
          StringsParityTests 會擋。 -->

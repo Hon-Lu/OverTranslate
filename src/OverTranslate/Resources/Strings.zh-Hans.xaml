@@ -497,6 +497,7 @@
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 单个按键只能是 F1–F24、Pause 或 Scroll Lock，其他按键请搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">常规设置</sys:String>
+    <sys:String x:Key="S.Settings.Options">选项</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">截图翻译</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">按下快捷键开始[[截图翻译]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">打开翻译窗口</sys:String>

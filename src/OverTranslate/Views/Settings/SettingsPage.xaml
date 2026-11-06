@@ -525,6 +525,11 @@
                                 </StackPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
+                                <!-- A heading over the ticks as 介面語言 and 主題 have over theirs: general,
+                                     because what goes here next need not be like these two. -->
+                                <TextBlock Text="{DynamicResource S.Settings.Options}"
+                                           Style="{StaticResource FieldLabel}"
+                                           Margin="0,0,0,7"/>
                                 <!-- 開機自動啟動 -->
                                 <Grid Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
