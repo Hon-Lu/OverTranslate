@@ -1065,17 +1065,16 @@
                                                        Margin="0"
                                                        VerticalAlignment="Top"/>
                                         </Grid>
-                                        <ToggleButton Grid.Column="1" x:Name="QuickTranslateSettingsToggle"
-                                                      Checked="QuickTranslateSettings_Toggled"
-                                                      Unchecked="QuickTranslateSettings_Toggled"
+                                        <Button Grid.Column="1" x:Name="QuickTranslateSettingsBtn"
+                                                      Click="QuickTranslateSettingsBtn_Click"
                                                       HorizontalAlignment="Right"
                                                       VerticalAlignment="Center"
                                                       Padding="10,5"
                                                       Foreground="{DynamicResource AppAccent}"
                                                       FocusVisualStyle="{StaticResource CardFoldFocusVisual}"
                                                       AutomationProperties.Name="{DynamicResource S.Settings.QuickTranslateSettings}">
-                                            <ToggleButton.Template>
-                                                <ControlTemplate TargetType="ToggleButton">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
                                                     <Border x:Name="Root" CornerRadius="6"
                                                             Padding="{TemplateBinding Padding}"
                                                             Background="{DynamicResource AppAccentSubtle}"
@@ -1085,9 +1084,6 @@
                                                                           HorizontalAlignment="Center"/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsChecked" Value="True">
-                                                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
-                                                        </Trigger>
                                                         <Trigger Property="IsMouseOver" Value="True">
                                                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
                                                         </Trigger>
@@ -1096,119 +1092,19 @@
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
-                                            </ToggleButton.Template>
+                                            </Button.Template>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                                            FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                 <TextBlock Text="{DynamicResource S.Settings.QuickTranslateSettings}"
                                                            FontSize="12" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                        </ToggleButton>
+                                        </Button>
                                     </Grid>
 
                                     <ContentControl x:Name="QuickTranslateElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                 </StackPanel>
                             </Border>
-
-                                    <Border x:Name="QuickTranslateSettingsFold" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,8"
-                                            Height="0" Visibility="Collapsed" ClipToBounds="True">
-                                        <Border x:Name="QuickTranslateSettingsBody" Opacity="0" Margin="0" Padding="12,10"
-                                                BorderBrush="{DynamicResource AppButtonBorder}"
-                                                BorderThickness="1" CornerRadius="6">
-                                            <StackPanel>
-                                                <!-- 雙語互譯 first, because it decides what the pickers under it mean: off, they are
-                                                     the fixed 來源／目標 pair; on, they are the two languages the direction is chosen
-                                                     between. Same name, wording and rules as 取詞翻譯's (#322) — one feature, two
-                                                     places. -->
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                                                        <TextBlock Text="{DynamicResource S.QuickLookup.Bilingual}"
-                                                                   Style="{StaticResource OptionTitle}"/>
-                                                        <TextBlock Text="{DynamicResource S.Settings.QuickTranslateBilingualHint}"
-                                                                   Style="{StaticResource OptionDescription}"/>
-                                                    </StackPanel>
-                                                    <CheckBox Grid.Column="1" x:Name="QuickTranslateBilingualToggle"
-                                                              Style="{StaticResource ToggleSwitch}"
-                                                              VerticalAlignment="Center"
-                                                              AutomationProperties.Name="{DynamicResource S.QuickLookup.Bilingual}"
-                                                              Checked="QuickTranslateBilingual_Toggled"
-                                                              Unchecked="QuickTranslateBilingual_Toggled"/>
-                                                </Grid>
-
-                                                <!-- The two sets of pickers take turns in one place rather than stacking: the switch
-                                                     changes what the languages mean, not where they are set. -->
-                                                <Grid x:Name="QuickTranslateFixedPair">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="20"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel>
-                                                        <TextBlock Text="{DynamicResource S.Realtime.SourceLanguage}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                        <ComboBox x:Name="QuickTranslateSourceBox"
-                                                                  ctl:ComboBoxSearch.IsEnabled="True"
-                                                                  Style="{StaticResource ModernComboBox}"
-                                                                  DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                                  AutomationProperties.Name="{DynamicResource S.Realtime.SourceLanguage}"
-                                                                  SelectionChanged="QuickTranslateLanguage_Changed"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="2">
-                                                        <TextBlock Text="{DynamicResource S.Realtime.TargetLanguage}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                        <ComboBox x:Name="QuickTranslateTargetBox"
-                                                                  ctl:ComboBoxSearch.IsEnabled="True"
-                                                                  Style="{StaticResource ModernComboBox}"
-                                                                  DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                                  AutomationProperties.Name="{DynamicResource S.Realtime.TargetLanguage}"
-                                                                  SelectionChanged="QuickTranslateLanguage_Changed"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <Grid x:Name="QuickTranslateBilingualPair" Visibility="Collapsed">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="20"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Text="{DynamicResource S.QuickLookup.BilingualFirst}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                    <ComboBox Grid.Row="1" x:Name="QuickTranslateBilingualFirstBox"
-                                                              ctl:ComboBoxSearch.IsEnabled="True"
-                                                              Style="{StaticResource ModernComboBox}"
-                                                              DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                              AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualFirst}"
-                                                              SelectionChanged="QuickTranslateBilingualPair_Changed"/>
-                                                    <!-- Punctuation rather than a control, as in 取詞翻譯: the order is the fallback
-                                                         order, and swapping is picking the other language in either box. -->
-                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="⇄"
-                                                               FontFamily="{DynamicResource AppFont}"
-                                                               FontSize="13"
-                                                               Foreground="{DynamicResource AppTextSecondary}"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="2" Text="{DynamicResource S.QuickLookup.BilingualSecond}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                    <ComboBox Grid.Row="1" Grid.Column="2" x:Name="QuickTranslateBilingualSecondBox"
-                                                              ctl:ComboBoxSearch.IsEnabled="True"
-                                                              Style="{StaticResource ModernComboBox}"
-                                                              DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                              AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualSecond}"
-                                                              SelectionChanged="QuickTranslateBilingualPair_Changed"/>
-                                                </Grid>
-                                                <!-- Names whichever language is first, so it is written from code. -->
-                                                <TextBlock x:Name="QuickTranslateBilingualFallbackHint"
-                                                           Style="{StaticResource FieldHint}"
-                                                           Visibility="Collapsed"
-                                                           Margin="0,8,0,0"/>
-                                                <TextBlock Text="{DynamicResource S.Settings.QuickTranslateLanguageNote}"
-                                                           Style="{StaticResource FieldHint}" Margin="0,8,0,0"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </Border>
 
                             <!-- Translation window. Same editing controls as the capture shortcut and
                                  deliberately nothing else: this one opens a window that is already one

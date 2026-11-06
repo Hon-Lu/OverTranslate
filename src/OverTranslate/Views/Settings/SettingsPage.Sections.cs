@@ -138,7 +138,7 @@ public partial class SettingsPage
         LayoutHotkeys(e.NewSize.Width >= HotkeyTwoColumnWidth);
 
     /// <summary>
-    /// Two columns: 截圖｜取詞, 替換｜翻譯視窗, 替換翻譯's settings across both, 即時翻譯. One: all of
+    /// Two columns: 截圖｜取詞, 替換｜翻譯視窗, 即時翻譯. One: all of
     /// them down the left in that order. The rows keep their own bottom margin; the gap between the
     /// columns is split between the two sides.
     /// </summary>
@@ -152,25 +152,19 @@ public partial class SettingsPage
             [
                 (CaptureHotkeyRow, 0, 0), (QuickLookupHotkeyRow, 0, 1),
                 (QuickTranslateHotkeyRow, 1, 0), (WindowHotkeyRow, 1, 1),
-                (QuickTranslateSettingsFold, 2, 0),
-                (RealtimePauseHotkeyRow, 3, 0),
+                (RealtimePauseHotkeyRow, 2, 0),
             ]
             :
             [
                 (CaptureHotkeyRow, 0, 0), (QuickLookupHotkeyRow, 1, 0),
-                (QuickTranslateHotkeyRow, 2, 0), (QuickTranslateSettingsFold, 3, 0),
-                (WindowHotkeyRow, 4, 0), (RealtimePauseHotkeyRow, 5, 0),
+                (QuickTranslateHotkeyRow, 2, 0),
+                (WindowHotkeyRow, 3, 0), (RealtimePauseHotkeyRow, 4, 0),
             ];
 
         foreach (var (element, row, column) in cells)
         {
             Grid.SetRow(element, row);
             Grid.SetColumn(element, column);
-            if (ReferenceEquals(element, QuickTranslateSettingsFold))
-            {
-                Grid.SetColumnSpan(element, 2);
-                continue;
-            }
 
             var bottom = element.Margin.Bottom;
             element.Margin = !twoColumns ? new Thickness(0, 0, 0, bottom)
@@ -200,28 +194,40 @@ public partial class SettingsPage
     }
 
     /// <summary>
-    /// 已下載 on the section heading: everything under the assets folder, the manga models, their
-    /// runtime and the language packs alike, since that is what 開啟資料夾 beside it shows. Blank
-    /// while there is nothing.
+    /// 已下載 on the section heading: what the section shows as downloaded and nothing else - the
+    /// manga models with their DirectML runtime once they are ready, and each language pack that is.
+    /// A runtime left behind by deleted manga models is not counted: nothing on the page says it is
+    /// there, so a number that included it could not be accounted for. Blank while there is nothing.
     /// </summary>
     private void RefreshModelsUsed()
     {
         long bytes = 0;
+        var manga = AppServices.MangaModels;
+        if (manga.State == Services.Ocr.Manga.MangaModelState.Ready)
+            bytes += FolderBytes(manga.Folder) + FolderBytes(manga.RuntimeFolder);
+        foreach (var pack in OcrLanguagePacks.All)
+            if (pack.IsReady) bytes += FolderBytes(pack.Store.Folder);
+
+        ModelsUsedText.Text = bytes > 0
+            ? LocalizationService.Format("S.Settings.ModelsUsed", FormatSize(bytes))
+            : "";
+        ModelsUsedText.Visibility = bytes > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static long FolderBytes(string? folder)
+    {
+        long bytes = 0;
         try
         {
-            if (Directory.Exists(AppDataPaths.AssetsRoot))
-                foreach (var file in new DirectoryInfo(AppDataPaths.AssetsRoot).EnumerateFiles("*", SearchOption.AllDirectories))
+            if (folder is not null && Directory.Exists(folder))
+                foreach (var file in new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories))
                     bytes += file.Length;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // A file removed while being counted; the next change counts again.
         }
-
-        ModelsUsedText.Text = bytes > 0
-            ? LocalizationService.Format("S.Settings.ModelsUsed", FormatSize(bytes))
-            : "";
-        ModelsUsedText.Visibility = bytes > 0 ? Visibility.Visible : Visibility.Collapsed;
+        return bytes;
     }
 
     internal static string FormatSize(long bytes)

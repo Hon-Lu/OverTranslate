@@ -712,6 +712,9 @@ public partial class ShellWindow : Window
     public void OpenDiagnosticNote(string bundlePath)
         => DiagnosticNote.Open(bundlePath);
 
+    /// <summary>Opens 替換翻譯's languages over the shell, for the same reason as the service panel.</summary>
+    public void OpenQuickTranslateSettings() => QuickTranslateSettings.Open();
+
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         // RestoreBounds rather than the live size: a maximised window's actual size is the screen's,

@@ -3,8 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- The recognition languages beside the manga models in 辨識模型: the built-in ones first, so it is
          clear why the rest are downloads, then one line per language pack with what it takes and the
-         one thing that can be done with it now. Getting one is mostly the source-language pickers' job;
-         the line under the list says so. No card of its own: the section around it is the card. -->
+         one thing that can be done with it now. No card of its own: the section around it is the card. -->
     <StackPanel>
         <Grid Margin="0,0,0,2">
             <Grid.ColumnDefinitions>
@@ -21,11 +20,5 @@
                     Background="{DynamicResource AppSeparator}"/>
         </Grid>
         <StackPanel x:Name="Rows"/>
-        <TextBlock Text="{DynamicResource S.Settings.OcrPacksHint}"
-                   Margin="0,8,0,0"
-                   FontFamily="{DynamicResource AppFont}"
-                   FontSize="12"
-                   Foreground="{DynamicResource AppTextSecondary}"
-                   TextWrapping="Wrap"/>
     </StackPanel>
 </UserControl>

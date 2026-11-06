@@ -783,7 +783,6 @@
     <sys:String x:Key="S.OcrPack.Download">下載</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">正在下載{0}辨識模型</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">辨識語言</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksHint">在來源語言選單選到未下載的語言時，也會詢問是否下載。</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksBuiltIn">內建</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksReady">已下載 · {0}</sys:String>

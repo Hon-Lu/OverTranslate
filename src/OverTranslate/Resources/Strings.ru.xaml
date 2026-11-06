@@ -753,7 +753,6 @@
     <sys:String x:Key="S.OcrPack.Download">Скачать</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Скачивание модели распознавания ({0})</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Языки распознавания</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksHint">Скачать язык также предложат, когда вы выберете его в меню исходного языка.</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Встроено</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Settings.OcrPacksReady">Скачано · {0}</sys:String>

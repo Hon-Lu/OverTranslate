@@ -233,21 +233,6 @@ public partial class SettingsPage : UserControl
             UiLanguageBox.SelectedValue = LocalizationService.Current;
             if (UiLanguageBox.SelectedValue == null) UiLanguageBox.SelectedIndex = 0;
 
-            QuickTranslateSourceBox.ItemsSource = LanguageData.SourceLanguages;
-            QuickTranslateTargetBox.ItemsSource = LanguageData.TargetLanguages;
-            QuickTranslateSourceBox.SelectedValue = LanguageData.GetValidSourceCode(s.QuickTranslate.SourceLanguage);
-            QuickTranslateTargetBox.SelectedValue = LanguageData.GetValidTargetCode(s.QuickTranslate.TargetLanguage);
-            QuickTranslateSourceBox.Items.Refresh();
-            QuickTranslateTargetBox.Items.Refresh();
-
-            QuickTranslateBilingualFirstBox.ItemsSource = LanguageData.TargetLanguages;
-            QuickTranslateBilingualSecondBox.ItemsSource = LanguageData.TargetLanguages;
-            QuickTranslateBilingualToggle.IsChecked = s.QuickTranslate.BilingualEnabled;
-            ShowQuickTranslatePair(BilingualPair.Load(
-                s.QuickTranslate.BilingualFirstLanguage, s.QuickTranslate.BilingualSecondLanguage));
-            QuickTranslateBilingualFirstBox.Items.Refresh();
-            QuickTranslateBilingualSecondBox.Items.Refresh();
-            RenderQuickTranslateMode();
 
             StartupCheckBox.IsChecked = StartupService.IsEnabled;
 
@@ -277,124 +262,14 @@ public partial class SettingsPage : UserControl
 
     // ── Persistence ──────────────────────────────────────────────────────────
 
-    private int _quickTranslateFoldVersion;
-
-    private void QuickTranslateSettings_Toggled(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// 替換翻譯's languages open over the shell, as a service's settings do, so the card covers the
+    /// rail as well — see <see cref="QuickTranslateSettingsOverlay"/>.
+    /// </summary>
+    private void QuickTranslateSettingsBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (QuickTranslateSettingsFold is null) return;
-
-        var expanded = QuickTranslateSettingsToggle.IsChecked == true;
-        var version = ++_quickTranslateFoldVersion;
-        var fold = QuickTranslateSettingsFold;
-        var body = QuickTranslateSettingsBody;
-        var fromHeight = fold.Visibility == Visibility.Collapsed ? 0 : fold.ActualHeight;
-        if (expanded) fold.Visibility = Visibility.Visible;
-
-        void Finish()
-        {
-            fold.BeginAnimation(HeightProperty, null);
-            body.BeginAnimation(OpacityProperty, null);
-            fold.Height = expanded ? double.NaN : 0;
-            body.Opacity = expanded ? 1 : 0;
-            fold.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        if (!IsLoaded || !SystemParameters.ClientAreaAnimation)
-        {
-            Finish();
-            return;
-        }
-
-        // Measure the body at the available width, including wrapped hints and its top margin.
-        // Return to Auto after opening so resizing and language changes can reflow naturally.
-        var width = ((FrameworkElement)fold.Parent).ActualWidth;
-        body.Measure(new System.Windows.Size(width, double.PositiveInfinity));
-        var target = expanded ? body.DesiredSize.Height : 0;
-        fold.Height = fromHeight;
-        var duration = TimeSpan.FromMilliseconds(expanded ? 200 : 160);
-        var height = new DoubleAnimation(target, duration)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        height.Completed += (_, _) =>
-        {
-            if (version == _quickTranslateFoldVersion) Finish();
-        };
-        fold.BeginAnimation(HeightProperty, height);
-        body.BeginAnimation(OpacityProperty, new DoubleAnimation(expanded ? 1 : 0, duration));
-    }
-
-    private void QuickTranslateLanguage_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (_loading || QuickTranslateSourceBox.SelectedValue is not string source ||
-            QuickTranslateTargetBox.SelectedValue is not string target) return;
-
-        Persist(s =>
-        {
-            s.QuickTranslate.SourceLanguage = LanguageData.GetValidSourceCode(source);
-            s.QuickTranslate.TargetLanguage = LanguageData.GetValidTargetCode(target);
-        });
-    }
-
-    /// <summary>The 雙語互譯 pair as the pickers show it — see <see cref="BilingualPair.Pick"/>.</summary>
-    private BilingualPair _quickTranslatePair = BilingualPair.Load(null, null);
-
-    private void QuickTranslateBilingual_Toggled(object sender, RoutedEventArgs e)
-    {
-        RenderQuickTranslateMode();
-        Persist(s => s.QuickTranslate.BilingualEnabled = QuickTranslateBilingualToggle.IsChecked == true);
-    }
-
-    private void QuickTranslateBilingualPair_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (_loading || ((System.Windows.Controls.ComboBox)sender).SelectedValue is not string picked) return;
-
-        var pair = _quickTranslatePair.Pick(
-            picked, firstSlot: ReferenceEquals(sender, QuickTranslateBilingualFirstBox));
-        ShowQuickTranslatePair(pair);
-
-        Persist(s =>
-        {
-            s.QuickTranslate.BilingualFirstLanguage = pair.First;
-            s.QuickTranslate.BilingualSecondLanguage = pair.Second;
-        });
-    }
-
-    /// <summary>Writes the pair into both pickers and the fallback line under them.</summary>
-    /// <remarks>
-    /// Both pickers, because a pick in one can move the other — that is how the pair is turned
-    /// around. The line names whichever language is first, so it is rebuilt with the pair, and with
-    /// the interface language through LoadSettings.
-    /// </remarks>
-    private void ShowQuickTranslatePair(BilingualPair pair)
-    {
-        _quickTranslatePair = pair;
-
-        var wasLoading = _loading;
-        _loading = true;
-        try
-        {
-            QuickTranslateBilingualFirstBox.SelectedValue = pair.First;
-            QuickTranslateBilingualSecondBox.SelectedValue = pair.Second;
-        }
-        finally
-        {
-            _loading = wasLoading;
-        }
-
-        QuickTranslateBilingualFallbackHint.Text = LocalizationService.Format(
-            "S.QuickLookup.BilingualFallback", LanguageData.GetTargetDisplayName(pair.First));
-    }
-
-    /// <summary>Shows the fixed pair or the 雙語互譯 pair, whichever the switch says is in use.</summary>
-    private void RenderQuickTranslateMode()
-    {
-        if (QuickTranslateFixedPair is null) return;
-
-        var bilingual = QuickTranslateBilingualToggle.IsChecked == true;
-        QuickTranslateFixedPair.Visibility = bilingual ? Visibility.Collapsed : Visibility.Visible;
-        QuickTranslateBilingualPair.Visibility = bilingual ? Visibility.Visible : Visibility.Collapsed;
-        QuickTranslateBilingualFallbackHint.Visibility = QuickTranslateBilingualPair.Visibility;
+        if (Window.GetWindow(this) is Shell.ShellWindow shell)
+            shell.OpenQuickTranslateSettings();
     }
 
     /// <summary>

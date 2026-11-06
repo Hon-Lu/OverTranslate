@@ -464,6 +464,7 @@
             <shell:AboutOverlay Grid.ColumnSpan="2" x:Name="About"/>
             <settings:ServiceSettingsOverlay Grid.ColumnSpan="2" x:Name="ServiceSettings"/>
             <settings:DiagnosticNoteOverlay Grid.ColumnSpan="2" x:Name="DiagnosticNote"/>
+            <settings:QuickTranslateSettingsOverlay Grid.ColumnSpan="2" x:Name="QuickTranslateSettings"/>
         </Grid>
     </Grid>
 </Window>

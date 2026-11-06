@@ -762,7 +762,6 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.OcrPack.Download">Download</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Downloading the {0} recognition model</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Recognition languages</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksHint">You'll also be asked to download a language when you choose it as the source language.</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Built in</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Settings.OcrPacksReady">Downloaded · {0}</sys:String>

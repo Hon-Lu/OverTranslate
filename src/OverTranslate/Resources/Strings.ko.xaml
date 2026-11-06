@@ -764,7 +764,6 @@
     <sys:String x:Key="S.OcrPack.Download">다운로드</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0} 인식 모델 다운로드 중</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">인식 언어</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksHint">원본 언어 메뉴에서 다운로드하지 않은 언어를 선택할 때도 다운로드 여부를 묻습니다.</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksBuiltIn">기본 포함</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Settings.OcrPacksReady">다운로드됨 · {0}</sys:String>
