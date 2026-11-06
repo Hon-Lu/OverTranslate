@@ -214,6 +214,41 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- An action on a section heading that goes somewhere else - 開啟資料夾 on 辨識模型 - drawn
+             like 可用按鍵說明 beside 快捷鍵 so the two headings match, but with the folder it opens
+             in front instead of a chevron, since nothing here unfolds. -->
+        <Style x:Key="HeadingActionButton" TargetType="Button" BasedOn="{StaticResource HotkeyGuideButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Hit"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="7,4,8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE838;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="12"
+                                           Margin="0,1,6,0"
+                                           VerticalAlignment="Center"/>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Hit" Property="Background"
+                                        Value="{DynamicResource AppSurfaceBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Hit" Property="Background"
+                                        Value="{DynamicResource AppSubtleBorder}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- The guide panel's row names: a column of short nouns the eye runs down to find the
              kind of input it is after. Top-aligned with the first line of keys beside it. -->
         <Style x:Key="HotkeyGuideLabel" TargetType="TextBlock">
@@ -431,34 +466,215 @@
         <!-- Settings cards scroll; the auto-save bar below stays put so it is always reachable -->
         <ScrollViewer Grid.Row="1"
                       x:Name="CardsScroll"
+                      ScrollChanged="CardsScroll_ScrollChanged"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Padding="0,0,8,0">
-            <!-- Two columns rather than one, so the short cards sit beside the tall one they used
-                 to be scrolled past. MaxWidth keeps the text readable on a wide window; below it
-                 the columns simply narrow, and every card inside wraps rather than clipping.
+            <!-- One section after another, each the full width, in the order the rail lists them
+                 (ShellWindow's settings sections). Side by side happens inside a section, where the
+                 halves are the same kind of thing; across sections the heights differed too much and
+                 the shorter side was left with a hole. MaxWidth keeps the text readable on a wide
+                 window.
 
                  IsSharedSizeScope aligns the label column of the rows that still read
                  label-then-field, so those stay lined up across cards. -->
-            <Grid MaxWidth="1120" Grid.IsSharedSizeScope="True">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.4*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+            <StackPanel x:Name="SectionsPanel" MaxWidth="1120" Grid.IsSharedSizeScope="True">
+
+                <!-- ══════════ 一般設定 ══════════
+                     First on the page: 介面語言 is the one setting that changes how every other setting reads,
+                     so a user who opened this page because they cannot read it finds it without scrolling.
+                     主題 joined it from a card of its own that held nothing else. -->
+                <Border x:Name="GeneralSection" Style="{StaticResource CardBorder}">
+                    <StackPanel>
+                        <StackPanel Style="{StaticResource CardHeaderRow}">
+                            <TextBlock Text="&#xE713;" Style="{StaticResource CardHeaderIcon}"/>
+                            <TextBlock Text="{DynamicResource S.Settings.General}"
+                                       Style="{StaticResource CardTitle}"/>
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{DynamicResource S.Settings.UiLanguage}"
+                                           Style="{StaticResource FieldLabel}"
+                                           Margin="0,0,0,7"/>
+                                <ComboBox x:Name="UiLanguageBox"
+                                          ctl:ComboBoxSearch.IsEnabled="True"
+                                          Style="{StaticResource ModernComboBox}"
+                                          AutomationProperties.Name="{DynamicResource S.Settings.UiLanguage}"
+                                          SelectedValuePath="Code"
+                                          SelectionChanged="UiLanguageBox_SelectionChanged"/>
+                                <TextBlock Text="{DynamicResource S.Settings.Theme}"
+                                           Style="{StaticResource FieldLabel}"
+                                           Margin="0,14,0,7"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton x:Name="LightThemeRadio"
+                                                 Content="{DynamicResource S.Settings.ThemeLight}"
+                                                 GroupName="ThemeGroup"
+                                                 Style="{StaticResource ThemeRadioButton}"
+                                                 Checked="ThemeRadio_Checked"/>
+                                    <RadioButton x:Name="DarkThemeRadio"
+                                                 Content="{DynamicResource S.Settings.ThemeDark}"
+                                                 GroupName="ThemeGroup"
+                                                 Style="{StaticResource ThemeRadioButton}"
+                                                 Margin="0"
+                                                 Checked="ThemeRadio_Checked"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <!-- A heading over the ticks as 介面語言 and 主題 have over theirs: general,
+                                     because what goes here next need not be like these two. -->
+                                <TextBlock Text="{DynamicResource S.Settings.Options}"
+                                           Style="{StaticResource FieldLabel}"
+                                           Margin="0,0,0,7"/>
+                                <!-- 開機自動啟動 -->
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox  Grid.Column="0" x:Name="StartupCheckBox"
+                                               Style="{StaticResource ModernCheckBox}"
+                                               VerticalAlignment="Top"
+                                               ToolTip="{DynamicResource S.Settings.Startup}"
+                                               Checked="Startup_Toggled"
+                                               Unchecked="Startup_Toggled"/>
+                                    <TextBlock Grid.Column="1" Text="&#xE7E8;" Style="{StaticResource OptionGlyph}"/>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="{DynamicResource S.Settings.Startup}"
+                                                   Style="{StaticResource OptionTitle}"/>
+                                        <TextBlock Text="{DynamicResource S.Settings.StartupCheck}"
+                                                   Style="{StaticResource OptionDescription}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- 同時儲存到本機. The save-path row travels with this tick rather than
+                                     standing on its own: it is the same decision, and it is only shown
+                                     once the box is ticked. -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <CheckBox  Grid.Column="0" Grid.Row="0" x:Name="SaveScreenshotCheckBox"
+                                               Style="{StaticResource ModernCheckBox}"
+                                               VerticalAlignment="Top"
+                                               ToolTip="{DynamicResource S.Settings.SaveScreenshot}"
+                                               Checked="SaveScreenshotCheckBox_Toggled"
+                                               Unchecked="SaveScreenshotCheckBox_Toggled"/>
+                                    <TextBlock Grid.Column="1" Grid.Row="0" Text="&#xE74E;" Style="{StaticResource OptionGlyph}"/>
+                                    <StackPanel Grid.Column="2" Grid.Row="0">
+                                        <TextBlock Text="{DynamicResource S.Settings.SaveScreenshot}"
+                                                   Style="{StaticResource OptionTitle}"/>
+                                        <TextBlock Text="{DynamicResource S.Settings.SaveScreenshotCheck}"
+                                                   Style="{StaticResource OptionDescription}"/>
+                                    </StackPanel>
+
+                                    <!-- 儲存位置（僅在開關開啟時顯示）. Indented under the tick it belongs
+                                         to rather than starting a row of its own. -->
+                                    <Grid Grid.Column="2" Grid.Row="1" x:Name="ScreenshotPathRow" Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <!-- Above the box rather than beside it: this row is already
+                                             indented under the tick that owns it, and a second column of
+                                             label would leave the path itself too narrow to read. -->
+                                        <TextBlock Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2"
+                                                   Text="{DynamicResource S.Settings.SavePath}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0,0,0,4"/>
+                                        <TextBox   Grid.Column="0" Grid.Row="1" x:Name="ScreenshotPathBox"
+                                                   Style="{StaticResource ModernTextBox}"
+                                                   IsReadOnly="True"
+                                                   Cursor="Hand"
+                                                   Margin="0,0,4,0"
+                                                   ToolTip="{DynamicResource S.Settings.SavePathTip}"
+                                                   PreviewMouseLeftButtonDown="ScreenshotPathBox_PreviewMouseLeftButtonDown"/>
+                                        <Button    Grid.Column="1" Grid.Row="1" x:Name="OpenScreenshotFolderBtn"
+                                                   Content="📂"
+                                                   Style="{StaticResource IconButton}"
+                                                   Height="34"
+                                                   ToolTip="{DynamicResource S.Settings.OpenFolderTip}"
+                                                   Click="OpenScreenshotFolderBtn_Click"/>
+                                    </Grid>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ══════════ 辨識模型 ══════════
+                     Second, so it is on the first screen: the manga models are the one download here worth
+                     telling every user about. They keep their own card and colour on the left; the languages
+                     beside them are a plain list, the built-in ones first, so it is clear why the rest are
+                     downloads. The total and the folder are on the heading because they cover both. -->
+                <Border x:Name="ModelsSection" Style="{StaticResource CardBorder}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE896;" Style="{StaticResource CardHeaderIcon}"/>
+                                <TextBlock Text="{DynamicResource S.Settings.Models}"
+                                           Style="{StaticResource CardTitle}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="ModelsUsedText"
+                                           FontFamily="{DynamicResource AppFont}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource AppTextSecondary}"
+                                           VerticalAlignment="Center"/>
+                                <Button x:Name="OpenModelsFolderBtn"
+                                        Style="{StaticResource HeadingActionButton}"
+                                        Content="{DynamicResource S.Settings.ModelsOpenFolder}"
+                                        VerticalAlignment="Center"
+                                        Margin="6,-4,-6,-4"
+                                        Click="OpenModelsFolderBtn_Click"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid x:Name="ModelsGrid" SizeChanged="ModelsGrid_SizeChanged">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.05*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <local:MangaModelCard x:Name="MangaCard" Grid.Column="0"
+                                                  VerticalAlignment="Top"
+                                                  ErrorRaised="MangaModelCard_ErrorRaised"/>
+                            <local:OcrLanguagePacksCard x:Name="LanguagePacks" Grid.Column="2"
+                                                        VerticalAlignment="Top"
+                                                        ErrorRaised="MangaModelCard_ErrorRaised"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
                 <!-- ══════════ 快捷鍵 ══════════
                      Order is priority order: a combination claimed by a row above turns the row
                      below off rather than one of the two silently failing to register. See
                      Services/HotkeyBindings. -->
-                <Border Grid.Column="0" Grid.Row="0"
+                <Border x:Name="HotkeysSection"
                         Style="{StaticResource CardBorder}"
-                        Margin="0,0,12,12">
+                        Margin="0,0,0,12">
                     <StackPanel>
                         <!-- What a shortcut may be at all is behind 可用按鍵 rather than in a tooltip:
                              it is several kinds of input and two ways of being heard, which is more
@@ -593,227 +809,132 @@
                             </Popup>
                         </Grid>
 
-                        <!-- Capture has no on/off tick at all: this is the feature the application
-                             is for. Its last column is empty and still here, so the three rows'
-                             shortcut boxes end at the same place — see SharedSizeGroup. -->
-                        <Border Style="{StaticResource HotkeyRow}">
-                            <StackPanel>
-                                <Grid>
-                                    <!-- The shortcut box grows with the window rather than sitting
-                                         at a fixed width: while recording it holds a whole sentence
-                                         asking for a key, which no width that also suits a card
-                                         beside another card can show in full. MinWidth is on the
-                                         column, not the box — a star column will squeeze a child
-                                         past its own minimum and clip it, and the rows have to keep
-                                         ending at the same place.
+                        <!-- Two to a line, in the priority order the comment above gives, read across then down:
+                             截圖｜取詞, 替換｜翻譯視窗, 即時翻譯. 替換翻譯's settings open in a line of their own
+                             under its row and across both columns, so opening them does not stretch the row
+                             beside it. Below a width where two rows no longer fit side by side, LayoutHotkeys
+                             puts them back one to a line. -->
+                        <Grid x:Name="HotkeyGrid" SizeChanged="HotkeyGrid_SizeChanged">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                                         The name and description column has no minimum of its own:
-                                         it is the one thing here that can give, and at the narrowest
-                                         window it has to, or the switch on the end is pushed out of
-                                         the card and the row loses a control instead of losing a
-                                         line of prose. -->
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                    </Grid.ColumnDefinitions>
+                            <!-- Capture has no on/off tick at all: this is the feature the application
+                                 is for. Its last column is empty and still here, so the three rows'
+                                 shortcut boxes end at the same place — see SharedSizeGroup. -->
+                            <Border x:Name="CaptureHotkeyRow" Grid.Row="0" Grid.Column="0" Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <Grid>
+                                        <!-- The shortcut box grows with the window rather than sitting
+                                             at a fixed width: while recording it holds a whole sentence
+                                             asking for a key, which no width that also suits a card
+                                             beside another card can show in full. MinWidth is on the
+                                             column, not the box — a star column will squeeze a child
+                                             past its own minimum and clip it, and the rows have to keep
+                                             ending at the same place.
 
-                                    <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                        <Path Style="{StaticResource DrawnMark}"
-                                              Data="{StaticResource CaptureMarkGeometry}"
-                                              Stroke="{DynamicResource AppAccent}"/>
-                                    </Border>
+                                             The name and description column has no minimum of its own:
+                                             it is the one thing here that can give, and at the narrowest
+                                             window it has to, or the switch on the end is pushed out of
+                                             the card and the row loses a control instead of losing a
+                                             line of prose. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="{DynamicResource S.Settings.CaptureHotkey}"
-                                                   Style="{StaticResource OptionTitle}"/>
-                                        <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.CaptureHotkeyHint}"
-                                                   Style="{StaticResource OptionDescription}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxHeight="34"/>
-                                    </StackPanel>
+                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                            <Path Style="{StaticResource DrawnMark}"
+                                                  Data="{StaticResource CaptureMarkGeometry}"
+                                                  Stroke="{DynamicResource AppAccent}"/>
+                                        </Border>
 
-                                    <TextBox Grid.Column="2" x:Name="HotkeyBox"
-                                             Style="{StaticResource HotkeyBox}"
-                                             PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                             PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                             GotFocus="HotkeyBox_GotFocus"
-                                             LostFocus="HotkeyBox_LostFocus"/>
-                                </Grid>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.CaptureHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.CaptureHotkeyHint}"
+                                                       Style="{StaticResource OptionDescription}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34"/>
+                                        </StackPanel>
 
-                                <ContentControl x:Name="CaptureElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                            </StackPanel>
-                        </Border>
+                                        <TextBox Grid.Column="2" x:Name="HotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
+                                    </Grid>
 
-                        <!-- 取詞翻譯. The only feature with no way in but a shortcut, which is why
-                             this row is the one place in the interface that names it. -->
-                        <Border Style="{StaticResource HotkeyRow}">
-                            <StackPanel>
-                                <Grid>
-                                    <!-- The column widths are the row above this one's, and have to
-                                         stay that way: they are what makes the four boxes end at
-                                         the same place. See the comment on that row for why the
-                                         minimum is on the column rather than the box. -->
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                    </Grid.ColumnDefinitions>
+                                    <ContentControl x:Name="CaptureElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                </StackPanel>
+                            </Border>
 
-                                    <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                        <Path Style="{StaticResource DrawnMark}"
-                                              Data="{StaticResource QuickLookupMarkGeometry}"
-                                              Stroke="{DynamicResource AppAccent}"/>
-                                    </Border>
+                            <!-- 取詞翻譯. The only feature with no way in but a shortcut, which is why
+                                 this row is the one place in the interface that names it. -->
+                            <Border x:Name="QuickLookupHotkeyRow" Grid.Row="0" Grid.Column="1" Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <Grid>
+                                        <!-- The column widths are the row above this one's, and have to
+                                             stay that way: they are what makes the four boxes end at
+                                             the same place. See the comment on that row for why the
+                                             minimum is on the column rather than the box. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="{DynamicResource S.Settings.QuickLookupHotkey}"
-                                                   Style="{StaticResource OptionTitle}"/>
-                                        <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.QuickLookupHotkeyHint}"
-                                                   Style="{StaticResource OptionDescription}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxHeight="34"/>
-                                    </StackPanel>
+                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                            <Path Style="{StaticResource DrawnMark}"
+                                                  Data="{StaticResource QuickLookupMarkGeometry}"
+                                                  Stroke="{DynamicResource AppAccent}"/>
+                                        </Border>
 
-                                    <TextBox Grid.Column="2" x:Name="QuickLookupHotkeyBox"
-                                             Style="{StaticResource HotkeyBox}"
-                                             PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                             PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                             GotFocus="HotkeyBox_GotFocus"
-                                             LostFocus="HotkeyBox_LostFocus"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.QuickLookupHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.QuickLookupHotkeyHint}"
+                                                       Style="{StaticResource OptionDescription}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34"/>
+                                        </StackPanel>
 
-                                    <StackPanel Grid.Column="3"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center"
-                                                Margin="12,0,0,0">
-                                        <CheckBox x:Name="QuickLookupHotkeyEnabledCheckBox"
-                                                  Style="{StaticResource ToggleSwitch}"
-                                                  Checked="HotkeyEnabled_Toggled"
-                                                  Unchecked="HotkeyEnabled_Toggled"/>
-                                    </StackPanel>
-                                </Grid>
+                                        <TextBox Grid.Column="2" x:Name="QuickLookupHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
 
-                                <!-- The one thing about this shortcut that the name does not say,
-                                     inside the row it is about. -->
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="3"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="12,0,0,0">
+                                            <CheckBox x:Name="QuickLookupHotkeyEnabledCheckBox"
+                                                      Style="{StaticResource ToggleSwitch}"
+                                                      Checked="HotkeyEnabled_Toggled"
+                                                      Unchecked="HotkeyEnabled_Toggled"/>
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <Path Grid.Column="0"
-                                          Data="{StaticResource InfoMarkGeometry}"
-                                          Stroke="{DynamicResource AppTextSecondary}"
-                                          StrokeThickness="1.1"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          Stretch="None"
-                                          Width="12" Height="12"
-                                          VerticalAlignment="Top"
-                                          Margin="0,1.7,8,0"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
-                                               Style="{StaticResource FieldHint}"
-                                               Margin="0"
-                                               VerticalAlignment="Top"/>
-                                </Grid>
-
-                                <ContentControl x:Name="QuickLookupElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 替換翻譯. Beside 取詞翻譯 because the two start from the same gesture —
-                             select some text, press a key — and differ only in where the answer
-                             goes: that one shows it, this one writes it into the document. After
-                             it, because reading an answer is the smaller step of the two and the
-                             one to meet first. -->
-                        <Border Style="{StaticResource HotkeyRow}">
-                            <StackPanel>
-                                <Grid>
-                                    <!-- The column widths are the rows above this one's, and have to
-                                         stay that way: they are what makes the boxes end at the same
-                                         place. See the capture row for why the minimum is on the
-                                         column rather than the box. -->
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                        <!-- The one mark in the set drawn in more than one pass —
-                                             see the geometries in SharedStyles.xaml for why, and
-                                             for why all three are given the same explicit box.
-
-                                             And the one drawn larger than 16. Its two plates sit on
-                                             a diagonal, so the corners of the square it is drawn in
-                                             are empty and it reads smaller than the single shapes
-                                             beside it at the same size. The Viewbox is what takes it
-                                             up to the tile: scaling the drawing rather than redrawing
-                                             it keeps the geometries in the same 16-unit square every
-                                             other mark is authored in. -->
-                                        <Viewbox Width="22" Height="22">
-                                            <Grid Width="16" Height="16">
-                                                <Path Data="{StaticResource QuickTranslateTilesGeometry}"
-                                                      Fill="{DynamicResource QuickTranslateTileFill}"
-                                                      Stretch="None" Width="16" Height="16"/>
-                                                <Path Data="{StaticResource QuickTranslateGlyphsGeometry}"
-                                                      Fill="{DynamicResource QuickTranslateGlyphFill}"
-                                                      Stretch="None" Width="16" Height="16"/>
-                                                <!-- 0.92 is the drawing's own 2.8 scaled to 16; the
-                                                     Viewbox takes it back up to about the 1.2 the
-                                                     marks beside it are stroked at. -->
-                                                <Path Data="{StaticResource QuickTranslateArrowsGeometry}"
-                                                      Stroke="{DynamicResource QuickTranslateArrowStroke}"
-                                                      StrokeThickness="0.92"
-                                                      StrokeLineJoin="Round"
-                                                      StrokeStartLineCap="Round"
-                                                      StrokeEndLineCap="Round"
-                                                      Stretch="None" Width="16" Height="16"/>
-                                            </Grid>
-                                        </Viewbox>
-                                    </Border>
-
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="{DynamicResource S.Settings.QuickTranslateHotkey}"
-                                                   Style="{StaticResource OptionTitle}"/>
-                                        <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.QuickTranslateHotkeyHint}"
-                                                   Style="{StaticResource OptionDescription}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxHeight="34"/>
-                                    </StackPanel>
-
-                                    <TextBox Grid.Column="2" x:Name="QuickTranslateHotkeyBox"
-                                             Style="{StaticResource HotkeyBox}"
-                                             PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                             PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                             GotFocus="HotkeyBox_GotFocus"
-                                             LostFocus="HotkeyBox_LostFocus"/>
-
-                                    <StackPanel Grid.Column="3"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center"
-                                                Margin="12,0,0,0">
-                                        <CheckBox x:Name="QuickTranslateHotkeyEnabledCheckBox"
-                                                  Style="{StaticResource ToggleSwitch}"
-                                                  Checked="HotkeyEnabled_Toggled"
-                                                  Unchecked="HotkeyEnabled_Toggled"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- The note wraps within its column while the button keeps its width. -->
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <!-- The one thing about this shortcut that the name does not say,
+                                         inside the row it is about. -->
+                                    <Grid Margin="0,8,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
@@ -830,429 +951,319 @@
                                               VerticalAlignment="Top"
                                               Margin="0,1.7,8,0"/>
                                         <TextBlock Grid.Column="1"
-                                                   Text="{DynamicResource S.Settings.QuickTranslateHotkeyNote}"
+                                                   Text="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
                                                    Style="{StaticResource FieldHint}"
                                                    Margin="0"
                                                    VerticalAlignment="Top"/>
                                     </Grid>
-                                    <ToggleButton Grid.Column="1" x:Name="QuickTranslateSettingsToggle"
-                                                  Checked="QuickTranslateSettings_Toggled"
-                                                  Unchecked="QuickTranslateSettings_Toggled"
-                                                  HorizontalAlignment="Right"
-                                                  VerticalAlignment="Center"
-                                                  Padding="10,5"
-                                                  Foreground="{DynamicResource AppAccent}"
-                                                  FocusVisualStyle="{StaticResource CardFoldFocusVisual}"
-                                                  AutomationProperties.Name="{DynamicResource S.Settings.QuickTranslateSettings}">
-                                        <ToggleButton.Template>
-                                            <ControlTemplate TargetType="ToggleButton">
-                                                <Border x:Name="Root" CornerRadius="6"
-                                                        Padding="{TemplateBinding Padding}"
-                                                        Background="{DynamicResource AppAccentSubtle}"
-                                                        BorderBrush="{DynamicResource AppAccentSubtleHover}"
-                                                        BorderThickness="1">
-                                                    <ContentPresenter VerticalAlignment="Center"
-                                                                      HorizontalAlignment="Center"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsChecked" Value="True">
-                                                        <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsPressed" Value="True">
-                                                        <Setter TargetName="Root" Property="Opacity" Value="0.7"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </ToggleButton.Template>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                       FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="{DynamicResource S.Settings.QuickTranslateSettings}"
-                                                       FontSize="12" VerticalAlignment="Center"/>
+
+                                    <ContentControl x:Name="QuickLookupElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 替換翻譯. Beside 取詞翻譯 because the two start from the same gesture —
+                                 select some text, press a key — and differ only in where the answer
+                                 goes: that one shows it, this one writes it into the document. After
+                                 it, because reading an answer is the smaller step of the two and the
+                                 one to meet first. -->
+                            <Border x:Name="QuickTranslateHotkeyRow" Grid.Row="1" Grid.Column="0" Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <Grid>
+                                        <!-- The column widths are the rows above this one's, and have to
+                                             stay that way: they are what makes the boxes end at the same
+                                             place. See the capture row for why the minimum is on the
+                                             column rather than the box. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                            <!-- The one mark in the set drawn in more than one pass —
+                                                 see the geometries in SharedStyles.xaml for why, and
+                                                 for why all three are given the same explicit box.
+
+                                                 And the one drawn larger than 16. Its two plates sit on
+                                                 a diagonal, so the corners of the square it is drawn in
+                                                 are empty and it reads smaller than the single shapes
+                                                 beside it at the same size. The Viewbox is what takes it
+                                                 up to the tile: scaling the drawing rather than redrawing
+                                                 it keeps the geometries in the same 16-unit square every
+                                                 other mark is authored in. -->
+                                            <Viewbox Width="22" Height="22">
+                                                <Grid Width="16" Height="16">
+                                                    <Path Data="{StaticResource QuickTranslateTilesGeometry}"
+                                                          Fill="{DynamicResource QuickTranslateTileFill}"
+                                                          Stretch="None" Width="16" Height="16"/>
+                                                    <Path Data="{StaticResource QuickTranslateGlyphsGeometry}"
+                                                          Fill="{DynamicResource QuickTranslateGlyphFill}"
+                                                          Stretch="None" Width="16" Height="16"/>
+                                                    <!-- 0.92 is the drawing's own 2.8 scaled to 16; the
+                                                         Viewbox takes it back up to about the 1.2 the
+                                                         marks beside it are stroked at. -->
+                                                    <Path Data="{StaticResource QuickTranslateArrowsGeometry}"
+                                                          Stroke="{DynamicResource QuickTranslateArrowStroke}"
+                                                          StrokeThickness="0.92"
+                                                          StrokeLineJoin="Round"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          Stretch="None" Width="16" Height="16"/>
+                                                </Grid>
+                                            </Viewbox>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.QuickTranslateHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.QuickTranslateHotkeyHint}"
+                                                       Style="{StaticResource OptionDescription}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34"/>
                                         </StackPanel>
-                                    </ToggleButton>
-                                </Grid>
 
-                                <Border x:Name="QuickTranslateSettingsFold"
-                                        Height="0" Visibility="Collapsed" ClipToBounds="True">
-                                    <Border x:Name="QuickTranslateSettingsBody" Opacity="0" Margin="0,8,0,0" Padding="12,10"
-                                            BorderBrush="{DynamicResource AppButtonBorder}"
-                                            BorderThickness="1" CornerRadius="6">
-                                        <StackPanel>
-                                            <!-- 雙語互譯 first, because it decides what the pickers under it mean: off, they are
-                                                 the fixed 來源／目標 pair; on, they are the two languages the direction is chosen
-                                                 between. Same name, wording and rules as 取詞翻譯's (#322) — one feature, two
-                                                 places. -->
-                                            <Grid Margin="0,0,0,12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                                                    <TextBlock Text="{DynamicResource S.QuickLookup.Bilingual}"
-                                                               Style="{StaticResource OptionTitle}"/>
-                                                    <TextBlock Text="{DynamicResource S.Settings.QuickTranslateBilingualHint}"
-                                                               Style="{StaticResource OptionDescription}"/>
-                                                </StackPanel>
-                                                <CheckBox Grid.Column="1" x:Name="QuickTranslateBilingualToggle"
-                                                          Style="{StaticResource ToggleSwitch}"
-                                                          VerticalAlignment="Center"
-                                                          AutomationProperties.Name="{DynamicResource S.QuickLookup.Bilingual}"
-                                                          Checked="QuickTranslateBilingual_Toggled"
-                                                          Unchecked="QuickTranslateBilingual_Toggled"/>
-                                            </Grid>
+                                        <TextBox Grid.Column="2" x:Name="QuickTranslateHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
 
-                                            <!-- The two sets of pickers take turns in one place rather than stacking: the switch
-                                                 changes what the languages mean, not where they are set. -->
-                                            <Grid x:Name="QuickTranslateFixedPair">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="20"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel>
-                                                    <TextBlock Text="{DynamicResource S.Realtime.SourceLanguage}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                    <ComboBox x:Name="QuickTranslateSourceBox"
-                                                              ctl:ComboBoxSearch.IsEnabled="True"
-                                                              Style="{StaticResource ModernComboBox}"
-                                                              DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                              AutomationProperties.Name="{DynamicResource S.Realtime.SourceLanguage}"
-                                                              SelectionChanged="QuickTranslateLanguage_Changed"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2">
-                                                    <TextBlock Text="{DynamicResource S.Realtime.TargetLanguage}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                    <ComboBox x:Name="QuickTranslateTargetBox"
-                                                              ctl:ComboBoxSearch.IsEnabled="True"
-                                                              Style="{StaticResource ModernComboBox}"
-                                                              DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                              AutomationProperties.Name="{DynamicResource S.Realtime.TargetLanguage}"
-                                                              SelectionChanged="QuickTranslateLanguage_Changed"/>
-                                                </StackPanel>
-                                            </Grid>
-                                            <Grid x:Name="QuickTranslateBilingualPair" Visibility="Collapsed">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="20"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-                                                <TextBlock Text="{DynamicResource S.QuickLookup.BilingualFirst}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                <ComboBox Grid.Row="1" x:Name="QuickTranslateBilingualFirstBox"
-                                                          ctl:ComboBoxSearch.IsEnabled="True"
-                                                          Style="{StaticResource ModernComboBox}"
-                                                          DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                          AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualFirst}"
-                                                          SelectionChanged="QuickTranslateBilingualPair_Changed"/>
-                                                <!-- Punctuation rather than a control, as in 取詞翻譯: the order is the fallback
-                                                     order, and swapping is picking the other language in either box. -->
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="⇄"
-                                                           FontFamily="{DynamicResource AppFont}"
-                                                           FontSize="13"
-                                                           Foreground="{DynamicResource AppTextSecondary}"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="2" Text="{DynamicResource S.QuickLookup.BilingualSecond}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                                <ComboBox Grid.Row="1" Grid.Column="2" x:Name="QuickTranslateBilingualSecondBox"
-                                                          ctl:ComboBoxSearch.IsEnabled="True"
-                                                          Style="{StaticResource ModernComboBox}"
-                                                          DisplayMemberPath="Display" SelectedValuePath="Code"
-                                                          AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualSecond}"
-                                                          SelectionChanged="QuickTranslateBilingualPair_Changed"/>
-                                            </Grid>
-                                            <!-- Names whichever language is first, so it is written from code. -->
-                                            <TextBlock x:Name="QuickTranslateBilingualFallbackHint"
+                                        <StackPanel Grid.Column="3"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="12,0,0,0">
+                                            <CheckBox x:Name="QuickTranslateHotkeyEnabledCheckBox"
+                                                      Style="{StaticResource ToggleSwitch}"
+                                                      Checked="HotkeyEnabled_Toggled"
+                                                      Unchecked="HotkeyEnabled_Toggled"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- The note wraps within its column while the button keeps its width. -->
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Path Grid.Column="0"
+                                                  Data="{StaticResource InfoMarkGeometry}"
+                                                  Stroke="{DynamicResource AppTextSecondary}"
+                                                  StrokeThickness="1.1"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  Stretch="None"
+                                                  Width="12" Height="12"
+                                                  VerticalAlignment="Top"
+                                                  Margin="0,1.7,8,0"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{DynamicResource S.Settings.QuickTranslateHotkeyNote}"
                                                        Style="{StaticResource FieldHint}"
-                                                       Visibility="Collapsed"
-                                                       Margin="0,8,0,0"/>
-                                            <TextBlock Text="{DynamicResource S.Settings.QuickTranslateLanguageNote}"
-                                                       Style="{StaticResource FieldHint}" Margin="0,8,0,0"/>
+                                                       Margin="0"
+                                                       VerticalAlignment="Top"/>
+                                        </Grid>
+                                        <Button Grid.Column="1" x:Name="QuickTranslateSettingsBtn"
+                                                      Click="QuickTranslateSettingsBtn_Click"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"
+                                                      Padding="10,5"
+                                                      Foreground="{DynamicResource AppAccent}"
+                                                      FocusVisualStyle="{StaticResource CardFoldFocusVisual}"
+                                                      AutomationProperties.Name="{DynamicResource S.Settings.QuickTranslateSettings}">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="Root" CornerRadius="6"
+                                                            Padding="{TemplateBinding Padding}"
+                                                            Background="{DynamicResource AppAccentSubtle}"
+                                                            BorderBrush="{DynamicResource AppAccentSubtleHover}"
+                                                            BorderThickness="1">
+                                                        <ContentPresenter VerticalAlignment="Center"
+                                                                          HorizontalAlignment="Center"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Setter TargetName="Root" Property="Opacity" Value="0.7"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock Text="{DynamicResource S.Settings.QuickTranslateSettings}"
+                                                           FontSize="12" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+
+                                    <ContentControl x:Name="QuickTranslateElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Translation window. Same editing controls as the capture shortcut and
+                                 deliberately nothing else: this one opens a window that is already one
+                                 tray click away, so it is not announced at startup. -->
+                            <Border x:Name="WindowHotkeyRow" Grid.Row="1" Grid.Column="1" Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <Grid>
+                                        <!-- The shortcut box grows with the window rather than sitting
+                                             at a fixed width: while recording it holds a whole sentence
+                                             asking for a key, which no width that also suits a card
+                                             beside another card can show in full. MinWidth is on the
+                                             column, not the box — a star column will squeeze a child
+                                             past its own minimum and clip it, and the rows have to keep
+                                             ending at the same place.
+
+                                             The name and description column has no minimum of its own:
+                                             it is the one thing here that can give, and at the narrowest
+                                             window it has to, or the switch on the end is pushed out of
+                                             the card and the row loses a control instead of losing a
+                                             line of prose. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                            <TextBlock Text="&#xE737;" Style="{StaticResource HotkeyRowGlyph}"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.WindowHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.WindowHotkeyHint}"
+                                                       Style="{StaticResource OptionDescription}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34"/>
                                         </StackPanel>
-                                    </Border>
-                                </Border>
 
-                                <ContentControl x:Name="QuickTranslateElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                            </StackPanel>
-                        </Border>
+                                        <TextBox Grid.Column="2" x:Name="WindowHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
 
-                        <!-- Translation window. Same editing controls as the capture shortcut and
-                             deliberately nothing else: this one opens a window that is already one
-                             tray click away, so it is not announced at startup. -->
-                        <Border Style="{StaticResource HotkeyRow}">
-                            <StackPanel>
-                                <Grid>
-                                    <!-- The shortcut box grows with the window rather than sitting
-                                         at a fixed width: while recording it holds a whole sentence
-                                         asking for a key, which no width that also suits a card
-                                         beside another card can show in full. MinWidth is on the
-                                         column, not the box — a star column will squeeze a child
-                                         past its own minimum and clip it, and the rows have to keep
-                                         ending at the same place.
+                                        <StackPanel Grid.Column="3"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="12,0,0,0">
+                                            <CheckBox x:Name="WindowHotkeyEnabledCheckBox"
+                                                      Style="{StaticResource ToggleSwitch}"
+                                                      Checked="HotkeyEnabled_Toggled"
+                                                      Unchecked="HotkeyEnabled_Toggled"/>
+                                        </StackPanel>
+                                    </Grid>
 
-                                         The name and description column has no minimum of its own:
-                                         it is the one thing here that can give, and at the narrowest
-                                         window it has to, or the switch on the end is pushed out of
-                                         the card and the row loses a control instead of losing a
-                                         line of prose. -->
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                    </Grid.ColumnDefinitions>
+                                    <ContentControl x:Name="WindowElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                </StackPanel>
+                            </Border>
 
-                                    <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                        <TextBlock Text="&#xE737;" Style="{StaticResource HotkeyRowGlyph}"/>
-                                    </Border>
+                            <!-- Pausing a running session. The only realtime shortcut there is: block
+                                 framing had one above this until a session started by naming a window on
+                                 the page, which is not something a shortcut can answer. -->
+                            <Border x:Name="RealtimePauseHotkeyRow" Grid.Row="3" Grid.Column="0" Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <Grid>
+                                        <!-- The shortcut box grows with the window rather than sitting
+                                             at a fixed width: while recording it holds a whole sentence
+                                             asking for a key, which no width that also suits a card
+                                             beside another card can show in full. MinWidth is on the
+                                             column, not the box — a star column will squeeze a child
+                                             past its own minimum and clip it, and the rows have to keep
+                                             ending at the same place.
 
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="{DynamicResource S.Settings.WindowHotkey}"
-                                                   Style="{StaticResource OptionTitle}"/>
-                                        <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.WindowHotkeyHint}"
-                                                   Style="{StaticResource OptionDescription}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxHeight="34"/>
-                                    </StackPanel>
+                                             The name and description column has no minimum of its own:
+                                             it is the one thing here that can give, and at the narrowest
+                                             window it has to, or the switch on the end is pushed out of
+                                             the card and the row loses a control instead of losing a
+                                             line of prose. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <TextBox Grid.Column="2" x:Name="WindowHotkeyBox"
-                                             Style="{StaticResource HotkeyBox}"
-                                             PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                             PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                             GotFocus="HotkeyBox_GotFocus"
-                                             LostFocus="HotkeyBox_LostFocus"/>
+                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                            <Path Style="{StaticResource DrawnMark}"
+                                                  Data="{StaticResource RealtimeMarkGeometry}"
+                                                  Stroke="{DynamicResource AppAccent}"/>
+                                        </Border>
 
-                                    <StackPanel Grid.Column="3"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center"
-                                                Margin="12,0,0,0">
-                                        <CheckBox x:Name="WindowHotkeyEnabledCheckBox"
-                                                  Style="{StaticResource ToggleSwitch}"
-                                                  Checked="HotkeyEnabled_Toggled"
-                                                  Unchecked="HotkeyEnabled_Toggled"/>
-                                    </StackPanel>
-                                </Grid>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.RealtimePauseHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.RealtimePauseHotkeyHint}"
+                                                       Style="{StaticResource OptionDescription}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34"/>
+                                        </StackPanel>
 
-                                <ContentControl x:Name="WindowElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                            </StackPanel>
-                        </Border>
+                                        <TextBox Grid.Column="2" x:Name="RealtimePauseHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
 
-                        <!-- Pausing a running session. The only realtime shortcut there is: block
-                             framing had one above this until a session started by naming a window on
-                             the page, which is not something a shortcut can answer. -->
-                        <Border Style="{StaticResource HotkeyRow}">
-                            <StackPanel>
-                                <Grid>
-                                    <!-- The shortcut box grows with the window rather than sitting
-                                         at a fixed width: while recording it holds a whole sentence
-                                         asking for a key, which no width that also suits a card
-                                         beside another card can show in full. MinWidth is on the
-                                         column, not the box — a star column will squeeze a child
-                                         past its own minimum and clip it, and the rows have to keep
-                                         ending at the same place.
+                                        <StackPanel Grid.Column="3"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="12,0,0,0">
+                                            <CheckBox x:Name="RealtimePauseHotkeyEnabledCheckBox"
+                                                      Style="{StaticResource ToggleSwitch}"
+                                                      Checked="HotkeyEnabled_Toggled"
+                                                      Unchecked="HotkeyEnabled_Toggled"/>
+                                        </StackPanel>
+                                    </Grid>
 
-                                         The name and description column has no minimum of its own:
-                                         it is the one thing here that can give, and at the narrowest
-                                         window it has to, or the switch on the end is pushed out of
-                                         the card and the row loses a control instead of losing a
-                                         line of prose. -->
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                    </Grid.ColumnDefinitions>
+                                    <!-- When this shortcut does nothing, inside the row it is about
+                                         rather than under the three of them: nothing here applies to
+                                         the other two. -->
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                        <Path Style="{StaticResource DrawnMark}"
-                                              Data="{StaticResource RealtimeMarkGeometry}"
-                                              Stroke="{DynamicResource AppAccent}"/>
-                                    </Border>
+                                        <Path Grid.Column="0"
+                                              Data="{StaticResource InfoMarkGeometry}"
+                                              Stroke="{DynamicResource AppTextSecondary}"
+                                              StrokeThickness="1.1"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              Stretch="None"
+                                              Width="12" Height="12"
+                                              VerticalAlignment="Top"
+                                              Margin="0,1.7,8,0"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0"
+                                                   VerticalAlignment="Top"/>
+                                    </Grid>
 
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="{DynamicResource S.Settings.RealtimePauseHotkey}"
-                                                   Style="{StaticResource OptionTitle}"/>
-                                        <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.RealtimePauseHotkeyHint}"
-                                                   Style="{StaticResource OptionDescription}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxHeight="34"/>
-                                    </StackPanel>
-
-                                    <TextBox Grid.Column="2" x:Name="RealtimePauseHotkeyBox"
-                                             Style="{StaticResource HotkeyBox}"
-                                             PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                             PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                             PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                             GotFocus="HotkeyBox_GotFocus"
-                                             LostFocus="HotkeyBox_LostFocus"/>
-
-                                    <StackPanel Grid.Column="3"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center"
-                                                Margin="12,0,0,0">
-                                        <CheckBox x:Name="RealtimePauseHotkeyEnabledCheckBox"
-                                                  Style="{StaticResource ToggleSwitch}"
-                                                  Checked="HotkeyEnabled_Toggled"
-                                                  Unchecked="HotkeyEnabled_Toggled"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- When this shortcut does nothing, inside the row it is about
-                                     rather than under the three of them: nothing here applies to
-                                     the other two. -->
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <Path Grid.Column="0"
-                                          Data="{StaticResource InfoMarkGeometry}"
-                                          Stroke="{DynamicResource AppTextSecondary}"
-                                          StrokeThickness="1.1"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          Stretch="None"
-                                          Width="12" Height="12"
-                                          VerticalAlignment="Top"
-                                          Margin="0,1.7,8,0"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
-                                               Style="{StaticResource FieldHint}"
-                                               Margin="0"
-                                               VerticalAlignment="Top"/>
-                                </Grid>
-
-                                <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                            </StackPanel>
-                        </Border>
-
-                    </StackPanel>
-                </Border>
-
-                <!-- ══════════ 一般設定 ══════════
-                     介面語言 leads the card rather than sitting in 外觀 at the foot of the page: it
-                     is the one setting that changes how every other setting reads, so a user who
-                     opened this page because they cannot read it finds it without scrolling. -->
-                <Border Grid.Column="1" Grid.Row="0" Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <StackPanel Style="{StaticResource CardHeaderRow}">
-                            <TextBlock Text="&#xE713;" Style="{StaticResource CardHeaderIcon}"/>
-                            <TextBlock Text="{DynamicResource S.Settings.General}"
-                                       Style="{StaticResource CardTitle}"/>
-                        </StackPanel>
-
-                        <TextBlock Text="{DynamicResource S.Settings.UiLanguage}"
-                                   Style="{StaticResource FieldLabel}"
-                                   Margin="0,0,0,7"/>
-                        <ComboBox x:Name="UiLanguageBox"
-                                  ctl:ComboBoxSearch.IsEnabled="True"
-                                  Style="{StaticResource ModernComboBox}"
-                                  AutomationProperties.Name="{DynamicResource S.Settings.UiLanguage}"
-                                  SelectedValuePath="Code"
-                                  SelectionChanged="UiLanguageBox_SelectionChanged"/>
-
-                        <Border Height="1" Margin="0,14,0,12"
-                                Background="{DynamicResource AppSeparator}"/>
-
-                        <!-- 開機自動啟動 -->
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <CheckBox  Grid.Column="0" x:Name="StartupCheckBox"
-                                       Style="{StaticResource ModernCheckBox}"
-                                       VerticalAlignment="Top"
-                                       ToolTip="{DynamicResource S.Settings.Startup}"
-                                       Checked="Startup_Toggled"
-                                       Unchecked="Startup_Toggled"/>
-                            <TextBlock Grid.Column="1" Text="&#xE7E8;" Style="{StaticResource OptionGlyph}"/>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="{DynamicResource S.Settings.Startup}"
-                                           Style="{StaticResource OptionTitle}"/>
-                                <TextBlock Text="{DynamicResource S.Settings.StartupCheck}"
-                                           Style="{StaticResource OptionDescription}"/>
-                            </StackPanel>
+                                    <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                </StackPanel>
+                            </Border>
                         </Grid>
 
-                        <!-- 同時儲存到本機. The save-path row travels with this tick rather than
-                             standing on its own: it is the same decision, and it is only shown
-                             once the box is ticked. -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <CheckBox  Grid.Column="0" Grid.Row="0" x:Name="SaveScreenshotCheckBox"
-                                       Style="{StaticResource ModernCheckBox}"
-                                       VerticalAlignment="Top"
-                                       ToolTip="{DynamicResource S.Settings.SaveScreenshot}"
-                                       Checked="SaveScreenshotCheckBox_Toggled"
-                                       Unchecked="SaveScreenshotCheckBox_Toggled"/>
-                            <TextBlock Grid.Column="1" Grid.Row="0" Text="&#xE74E;" Style="{StaticResource OptionGlyph}"/>
-                            <StackPanel Grid.Column="2" Grid.Row="0">
-                                <TextBlock Text="{DynamicResource S.Settings.SaveScreenshot}"
-                                           Style="{StaticResource OptionTitle}"/>
-                                <TextBlock Text="{DynamicResource S.Settings.SaveScreenshotCheck}"
-                                           Style="{StaticResource OptionDescription}"/>
-                            </StackPanel>
-
-                            <!-- 儲存位置（僅在開關開啟時顯示）. Indented under the tick it belongs
-                                 to rather than starting a row of its own. -->
-                            <Grid Grid.Column="2" Grid.Row="1" x:Name="ScreenshotPathRow" Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <!-- Above the box rather than beside it: this row is already
-                                     indented under the tick that owns it, and a second column of
-                                     label would leave the path itself too narrow to read. -->
-                                <TextBlock Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2"
-                                           Text="{DynamicResource S.Settings.SavePath}"
-                                           Style="{StaticResource FieldHint}"
-                                           Margin="0,0,0,4"/>
-                                <TextBox   Grid.Column="0" Grid.Row="1" x:Name="ScreenshotPathBox"
-                                           Style="{StaticResource ModernTextBox}"
-                                           IsReadOnly="True"
-                                           Cursor="Hand"
-                                           Margin="0,0,4,0"
-                                           ToolTip="{DynamicResource S.Settings.SavePathTip}"
-                                           PreviewMouseLeftButtonDown="ScreenshotPathBox_PreviewMouseLeftButtonDown"/>
-                                <Button    Grid.Column="1" Grid.Row="1" x:Name="OpenScreenshotFolderBtn"
-                                           Content="📂"
-                                           Style="{StaticResource IconButton}"
-                                           Height="34"
-                                           ToolTip="{DynamicResource S.Settings.OpenFolderTip}"
-                                           Click="OpenScreenshotFolderBtn_Click"/>
-                            </Grid>
-                        </Grid>
-
-                        <!-- 漫畫直排模型. A download rather than a switch: with the models present and a
-                             GPU that can run them, Japanese vertical text simply reads with them, and
-                             without either it reads the way it always has. So the card only says what
-                             they are, whether they are here, and why they would not be used; what it
-                             shows at the foot changes with that (MangaModelCard). -->
-                        <local:MangaModelCard Margin="0,16,0,0"
-                                              ErrorRaised="MangaModelCard_ErrorRaised"/>
-
-                        <local:OcrLanguagePacksCard Margin="0,12,0,0"
-                                                    ErrorRaised="MangaModelCard_ErrorRaised"/>
                     </StackPanel>
                 </Border>
 
@@ -1266,7 +1277,7 @@
                      neighbours carry, and two groups, split by whether there is anything to set: the
                      six free services two to a line, and the two with a key or an endpoint a line
                      each, wide enough for their state badge and 設定 button. -->
-                <Border Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
+                <Border x:Name="ServicesSection"
                         Style="{StaticResource CardBorder}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource CardHeaderRow}">
@@ -1501,330 +1512,280 @@
                     </StackPanel>
                 </Border>
 
-                <!-- The bottom row splits evenly, unlike the 1.6*/* the rows above it use.
-                     Those columns are sized by what is in them — four shortcut rows against one
-                     checkbox and a path. These two are a theme picker and a logging card, and
-                     neither has a claim on the extra width, so a shared row of their own keeps the
-                     split off the columns the rows above depend on. -->
-                <Grid Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2">
-                    <!-- Not an even split: 外觀 is two radio buttons and a list, while 進階設定 carries
-                         the row of buttons whose labels are the longest on the page in every
-                         language. The extra width goes where there is something to fit. -->
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="0.9*"/>
-                        <ColumnDefinition Width="1.1*"/>
-                    </Grid.ColumnDefinitions>
-                    <!-- ══════════ 外觀 ══════════ -->
-                    <Border Grid.Column="0"
-                            Style="{StaticResource CardBorder}"
-                            Margin="0,0,12,12">
-                        <StackPanel>
-                            <StackPanel Style="{StaticResource CardHeaderRow}">
-                                <TextBlock Text="&#xE790;" Style="{StaticResource CardHeaderIcon}"/>
-                                <TextBlock Text="{DynamicResource S.Settings.Appearance}"
-                                           Style="{StaticResource CardTitle}"/>
-                            </StackPanel>
+                <!-- ══════════ 進階設定 ══════════
+                     Nothing here is part of translating, and a user who never has a problem to
+                     report never needs to read it. -->
+                <Border x:Name="AdvancedSection" Style="{StaticResource CardBorder}">
+                    <StackPanel>
+                        <StackPanel Style="{StaticResource CardHeaderRow}">
+                            <TextBlock Text="&#xE7BA;" Style="{StaticResource CardHeaderIcon}"/>
+                            <TextBlock Text="{DynamicResource S.Settings.Advanced}"
+                                       Style="{StaticResource CardTitle}"/>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabel"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{DynamicResource S.Settings.Theme}"
-                                           Style="{StaticResource FieldLabel}"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <RadioButton x:Name="LightThemeRadio"
-                                                 Content="{DynamicResource S.Settings.ThemeLight}"
-                                                 GroupName="ThemeGroup"
-                                                 Style="{StaticResource ThemeRadioButton}"
-                                                 Checked="ThemeRadio_Checked"/>
-                                    <RadioButton x:Name="DarkThemeRadio"
-                                                 Content="{DynamicResource S.Settings.ThemeDark}"
-                                                 GroupName="ThemeGroup"
-                                                 Style="{StaticResource ThemeRadioButton}"
-                                                 Margin="0"
-                                                 Checked="ThemeRadio_Checked"/>
-                                </StackPanel>
-                            </Grid>
+                            <!-- What the export actually collects, on the heading for the same
+                                 reason the shortcut card's does: it is read once, before the first
+                                 export, and never again — while a paragraph spelling it out sits
+                                 above the buttons for good, taking more room than the two controls
+                                 it describes. Background and Padding as there: a bare TextBlock is
+                                 only hit-testable across the glyph's own strokes. -->
+                            <TextBlock Text="&#xE946;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AppTextSecondary}"
+                                       Background="Transparent"
+                                       Padding="4,2"
+                                       Margin="7,1,0,0"
+                                       VerticalAlignment="Center"
+                                       Cursor="Help">
+                                <controls:HoverToolTip.Content>
+                                    <TextBlock x:Name="DiagnosticsHintText"
+                                               Text="{DynamicResource S.Settings.DiagnosticsHint}"
+                                               MaxWidth="420"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="{StaticResource AppFontSize}"
+                                               TextWrapping="Wrap"
+                                               LineHeight="18"/>
+                                </controls:HoverToolTip.Content>
+                            </TextBlock>
                         </StackPanel>
-                    </Border>
 
-                    <!-- ══════════ 進階設定 ══════════
-                         Nothing here is part of translating, and a user who never has a problem to
-                         report never needs to read it. -->
-                    <Border Grid.Column="1" Style="{StaticResource CardBorder}">
-                        <StackPanel>
-                            <StackPanel Style="{StaticResource CardHeaderRow}">
-                                <TextBlock Text="&#xE7BA;" Style="{StaticResource CardHeaderIcon}"/>
-                                <TextBlock Text="{DynamicResource S.Settings.Advanced}"
-                                           Style="{StaticResource CardTitle}"/>
-
-                                <!-- What the export actually collects, on the heading for the same
-                                     reason the shortcut card's does: it is read once, before the first
-                                     export, and never again — while a paragraph spelling it out sits
-                                     above the buttons for good, taking more room than the two controls
-                                     it describes. Background and Padding as there: a bare TextBlock is
-                                     only hit-testable across the glyph's own strokes. -->
-                                <TextBlock Text="&#xE946;"
-                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                           FontSize="14"
-                                           Foreground="{DynamicResource AppTextSecondary}"
-                                           Background="Transparent"
-                                           Padding="4,2"
-                                           Margin="7,1,0,0"
-                                           VerticalAlignment="Center"
-                                           Cursor="Help">
-                                    <controls:HoverToolTip.Content>
-                                        <TextBlock x:Name="DiagnosticsHintText"
-                                                   Text="{DynamicResource S.Settings.DiagnosticsHint}"
-                                                   MaxWidth="420"
-                                                   FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="{StaticResource AppFontSize}"
-                                                   TextWrapping="Wrap"
-                                                   LineHeight="18"/>
-                                    </controls:HoverToolTip.Content>
-                                </TextBlock>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <CheckBox  Grid.Column="0" x:Name="VerboseLoggingCheckBox"
+                                       Style="{StaticResource ModernCheckBox}"
+                                       VerticalAlignment="Top"
+                                       ToolTip="{DynamicResource S.Settings.Logging}"
+                                       Checked="VerboseLogging_Toggled"
+                                       Unchecked="VerboseLogging_Toggled"/>
+                            <TextBlock Grid.Column="1" Text="&#xE9D9;" Style="{StaticResource OptionGlyph}"/>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{DynamicResource S.Settings.LoggingCheck}"
+                                           Style="{StaticResource OptionTitle}"/>
+                                <TextBlock x:Name="VerboseLoggingHint"
+                                           Text="{DynamicResource S.Settings.LoggingHint}"
+                                           Style="{StaticResource OptionDescription}"/>
                             </StackPanel>
+                        </Grid>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <CheckBox  Grid.Column="0" x:Name="VerboseLoggingCheckBox"
-                                           Style="{StaticResource ModernCheckBox}"
-                                           VerticalAlignment="Top"
-                                           ToolTip="{DynamicResource S.Settings.Logging}"
-                                           Checked="VerboseLogging_Toggled"
-                                           Unchecked="VerboseLogging_Toggled"/>
-                                <TextBlock Grid.Column="1" Text="&#xE9D9;" Style="{StaticResource OptionGlyph}"/>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="{DynamicResource S.Settings.LoggingCheck}"
-                                               Style="{StaticResource OptionTitle}"/>
-                                    <TextBlock x:Name="VerboseLoggingHint"
-                                               Text="{DynamicResource S.Settings.LoggingHint}"
-                                               Style="{StaticResource OptionDescription}"/>
+                        <!-- Below the checkbox rather than beside it: the box decides what gets
+                             written, these two decide what happens to what was written, and the
+                             usual order of that conversation is tick, reproduce, then hand over.
+
+                             Two equal columns filling the card rather than two buttons sized to
+                             their own labels. The labels are different lengths in both languages,
+                             so left-packed buttons leave a ragged edge against a card whose every
+                             other row runs the full width.
+
+                             Accent on the export and not on the folder: one of these is what the
+                             card is for and the other is the way out for someone who wants to look
+                             before they hand anything over. -->
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" x:Name="ExportDiagnosticsBtn"
+                                    Style="{StaticResource AccentButton}"
+                                    Height="34"
+                                    Margin="0,0,4,0"
+                                    Click="ExportDiagnosticsBtn_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Save, because that is now all this press does: it writes
+                                         a file and stops. The upload arrow it used to carry has
+                                         moved to the button that actually uploads, in the panel
+                                         below, where the two now read as the two steps they are.
+                                         No Foreground on either block: both inherit the button's,
+                                         which is the one thing that differs between these two
+                                         styles and the one thing that must keep differing. -->
+                                    <TextBlock Text="&#xE74E;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock x:Name="ExportDiagnosticsLabel"
+                                               Text="{DynamicResource S.Settings.ExportDiagnostics}"
+                                               VerticalAlignment="Center"/>
                                 </StackPanel>
-                            </Grid>
+                            </Button>
 
-                            <!-- Below the checkbox rather than beside it: the box decides what gets
-                                 written, these two decide what happens to what was written, and the
-                                 usual order of that conversation is tick, reproduce, then hand over.
+                            <Button Grid.Column="1" x:Name="OpenDiagnosticsFolderBtn"
+                                    Style="{StaticResource FlatButton}"
+                                    Height="34"
+                                    Margin="4,0,0,0"
+                                    Click="OpenDiagnosticsFolderBtn_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE838;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{DynamicResource S.Settings.OpenDiagnosticsFolder}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
 
-                                 Two equal columns filling the card rather than two buttons sized to
-                                 their own labels. The labels are different lengths in both languages,
-                                 so left-packed buttons leave a ragged edge against a card whose every
-                                 other row runs the full width.
+                        <!-- The one thing the user has to leave with. It appears only after an
+                             upload has succeeded, and it stays until the page is left: the status
+                             line above fades after a moment, and a code that faded before it was
+                             copied could only be got back by uploading the bundle a second time.
 
-                                 Accent on the export and not on the folder: one of these is what the
-                                 card is for and the other is the way out for someone who wants to look
-                                 before they hand anything over. -->
-                            <Grid Margin="0,16,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <Button Grid.Column="0" x:Name="ExportDiagnosticsBtn"
-                                        Style="{StaticResource AccentButton}"
-                                        Height="34"
-                                        Margin="0,0,4,0"
-                                        Click="ExportDiagnosticsBtn_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <!-- Save, because that is now all this press does: it writes
-                                             a file and stops. The upload arrow it used to carry has
-                                             moved to the button that actually uploads, in the panel
-                                             below, where the two now read as the two steps they are.
-                                             No Foreground on either block: both inherit the button's,
-                                             which is the one thing that differs between these two
-                                             styles and the one thing that must keep differing. -->
-                                        <TextBlock Text="&#xE74E;"
-                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                   FontSize="13"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,6,0"/>
-                                        <TextBlock x:Name="ExportDiagnosticsLabel"
-                                                   Text="{DynamicResource S.Settings.ExportDiagnostics}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <Button Grid.Column="1" x:Name="OpenDiagnosticsFolderBtn"
-                                        Style="{StaticResource FlatButton}"
-                                        Height="34"
-                                        Margin="4,0,0,0"
-                                        Click="OpenDiagnosticsFolderBtn_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE838;"
-                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                   FontSize="13"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,6,0"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.OpenDiagnosticsFolder}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-
-                            <!-- The one thing the user has to leave with. It appears only after an
-                                 upload has succeeded, and it stays until the page is left: the status
-                                 line above fades after a moment, and a code that faded before it was
-                                 copied could only be got back by uploading the bundle a second time.
-
-                                 Open file belongs here rather than in the row above. One press now
-                                 packs and sends, so "what did I just send" is a question this row has
-                                 to be able to answer after the fact. -->
-                            <Border x:Name="DiagnosticsResultPanel"
-                                    Visibility="Collapsed"
-                                    Margin="0,10,0,0"
-                                    Background="{DynamicResource AppInputBg}"
-                                    BorderBrush="{DynamicResource AppBorder}"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12,10">
-                                <StackPanel>
-                                    <!-- Docked rather than laid out in columns. In a row of Auto
-                                         columns the heading took its full width whatever the card
-                                         could spare, so an English title two words longer than the
-                                         Chinese one pushed 開啟檔案 off the edge. Here the buttons
-                                         take what they need first and the heading gets what is
-                                         left: what gives is the wording, not a control the user
-                                         has to be able to press. -->
-                                    <DockPanel LastChildFill="True">
-                                        <!-- 14 to the left of the group: without it a heading that
-                                             happens to fill the row ends up touching the first
-                                             button, and the two read as one run-on control. -->
-                                        <StackPanel DockPanel.Dock="Right"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Margin="14,0,0,0">
-
-                                            <!-- The next step, and the only accent in this panel: the
-                                                 export is done and this is what the user came here to
-                                                 do with it. Gone once a code is showing, because by
-                                                 then it has been done — and back if the send failed,
-                                                 where it is the retry.
-
-                                                 Upload and Copy are never on screen together, so
-                                                 neither needs a margin and only Open carries one. -->
-                                            <Button x:Name="UploadDiagnosticsBtn"
-                                                    Style="{StaticResource AccentButton}"
-                                                    Height="30"
-                                                    Padding="12,0"
-                                                    Visibility="Collapsed"
-                                                    Click="UploadDiagnosticsBtn_Click">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE898;"
-                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                               FontSize="13"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,6,0"/>
-                                                    <TextBlock Text="{DynamicResource S.Settings.UploadBundle}"
-                                                               VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Button>
-
-                                            <Button x:Name="CopyDiagnosticsCodeBtn"
-                                                    Style="{StaticResource FlatButton}"
-                                                    Height="30"
-                                                    Padding="12,0"
-                                                    Click="CopyDiagnosticsCodeBtn_Click">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE8C8;"
-                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                               FontSize="13"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,6,0"/>
-                                                    <TextBlock Text="{DynamicResource S.Settings.CopyCode}"
-                                                               VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Button>
-
-                                            <Button x:Name="OpenDiagnosticsBundleBtn"
-                                                    Style="{StaticResource FlatButton}"
-                                                    Height="30"
-                                                    Padding="12,0"
-                                                    Margin="6,0,0,0"
-                                                    Click="OpenDiagnosticsBundleBtn_Click">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE8E5;"
-                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                               FontSize="13"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,6,0"/>
-                                                    <TextBlock Text="{DynamicResource S.Settings.OpenBundle}"
-                                                               VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Button>
-                                        </StackPanel>
-
-                                        <!-- The glyph carries the state, because the rest of the row
-                                             changes shape between the two: on failure there is no
-                                             code and no Copy, and a heading that differs only in its
-                                             wording is one a reader has to actually read before they
-                                             know which of the two happened.
-
-                                             The heading trims rather than wraps: it sits beside a row
-                                             of buttons, and a second line would push them off their
-                                             own vertical centre. It only reaches that on a window
-                                             narrow enough that the card is already tight. -->
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock x:Name="DiagnosticsResultGlyph"
-                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                       FontSize="15"
-                                                       Foreground="{DynamicResource AppTextSecondary}"
-                                                       VerticalAlignment="Center"
-                                                       Margin="0,0,8,0"/>
-
-                                            <TextBlock x:Name="DiagnosticsResultTitle"
-                                                       Style="{StaticResource OptionTitle}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       VerticalAlignment="Center"/>
-
-                                            <!-- A monospaced face, because these characters get read back
-                                                 one at a time against whatever the user typed into a forum
-                                                 post, and a proportional face is where 0/O and 1/I go
-                                                 wrong. The alphabet the worker draws from already excludes
-                                                 that pair; the face makes the exclusion visible. -->
-                                            <TextBlock x:Name="DiagnosticsCodeText"
-                                                       FontFamily="Consolas, Cascadia Mono, Courier New"
-                                                       FontSize="18"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource AppAccent}"
-                                                       Margin="10,0,0,0"
-                                                       VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </DockPanel>
-
-                                    <TextBlock x:Name="DiagnosticsResultHint"
-                                               Style="{StaticResource OptionDescription}"
-                                               Margin="2,8,0,0"/>
-
-                                    <!-- Shown in both states. The copy on disk is kept for thirty
-                                         days whether or not the upload went through, so this is one
-                                         line that does not have to be read against which of the two
-                                         happened. -->
-                                    <StackPanel x:Name="DiagnosticsRetentionRow"
+                             Open file belongs here rather than in the row above. One press now
+                             packs and sends, so "what did I just send" is a question this row has
+                             to be able to answer after the fact. -->
+                        <Border x:Name="DiagnosticsResultPanel"
+                                Visibility="Collapsed"
+                                Margin="0,10,0,0"
+                                Background="{DynamicResource AppInputBg}"
+                                BorderBrush="{DynamicResource AppBorder}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,10">
+                            <StackPanel>
+                                <!-- Docked rather than laid out in columns. In a row of Auto
+                                     columns the heading took its full width whatever the card
+                                     could spare, so an English title two words longer than the
+                                     Chinese one pushed 開啟檔案 off the edge. Here the buttons
+                                     take what they need first and the heading gets what is
+                                     left: what gives is the wording, not a control the user
+                                     has to be able to press. -->
+                                <DockPanel LastChildFill="True">
+                                    <!-- 14 to the left of the group: without it a heading that
+                                         happens to fill the row ends up touching the first
+                                         button, and the two read as one run-on control. -->
+                                    <StackPanel DockPanel.Dock="Right"
                                                 Orientation="Horizontal"
-                                                Margin="2,10,0,0">
-                                        <TextBlock Text="&#xE823;"
+                                                VerticalAlignment="Center"
+                                                Margin="14,0,0,0">
+
+                                        <!-- The next step, and the only accent in this panel: the
+                                             export is done and this is what the user came here to
+                                             do with it. Gone once a code is showing, because by
+                                             then it has been done — and back if the send failed,
+                                             where it is the retry.
+
+                                             Upload and Copy are never on screen together, so
+                                             neither needs a margin and only Open carries one. -->
+                                        <Button x:Name="UploadDiagnosticsBtn"
+                                                Style="{StaticResource AccentButton}"
+                                                Height="30"
+                                                Padding="12,0"
+                                                Visibility="Collapsed"
+                                                Click="UploadDiagnosticsBtn_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE898;"
+                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,6,0"/>
+                                                <TextBlock Text="{DynamicResource S.Settings.UploadBundle}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <Button x:Name="CopyDiagnosticsCodeBtn"
+                                                Style="{StaticResource FlatButton}"
+                                                Height="30"
+                                                Padding="12,0"
+                                                Click="CopyDiagnosticsCodeBtn_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8C8;"
+                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,6,0"/>
+                                                <TextBlock Text="{DynamicResource S.Settings.CopyCode}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <Button x:Name="OpenDiagnosticsBundleBtn"
+                                                Style="{StaticResource FlatButton}"
+                                                Height="30"
+                                                Padding="12,0"
+                                                Margin="6,0,0,0"
+                                                Click="OpenDiagnosticsBundleBtn_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8E5;"
+                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,6,0"/>
+                                                <TextBlock Text="{DynamicResource S.Settings.OpenBundle}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <!-- The glyph carries the state, because the rest of the row
+                                         changes shape between the two: on failure there is no
+                                         code and no Copy, and a heading that differs only in its
+                                         wording is one a reader has to actually read before they
+                                         know which of the two happened.
+
+                                         The heading trims rather than wraps: it sits beside a row
+                                         of buttons, and a second line would push them off their
+                                         own vertical centre. It only reaches that on a window
+                                         narrow enough that the card is already tight. -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock x:Name="DiagnosticsResultGlyph"
                                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                   FontSize="12"
+                                                   FontSize="15"
                                                    Foreground="{DynamicResource AppTextSecondary}"
                                                    VerticalAlignment="Center"
-                                                   Margin="0,0,6,0"/>
-                                        <TextBlock Text="{DynamicResource S.Settings.DiagnosticsRetention}"
-                                                   Style="{StaticResource OptionDescription}"
-                                                   Margin="0"
+                                                   Margin="0,0,8,0"/>
+
+                                        <TextBlock x:Name="DiagnosticsResultTitle"
+                                                   Style="{StaticResource OptionTitle}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"/>
+
+                                        <!-- A monospaced face, because these characters get read back
+                                             one at a time against whatever the user typed into a forum
+                                             post, and a proportional face is where 0/O and 1/I go
+                                             wrong. The alphabet the worker draws from already excludes
+                                             that pair; the face makes the exclusion visible. -->
+                                        <TextBlock x:Name="DiagnosticsCodeText"
+                                                   FontFamily="Consolas, Cascadia Mono, Courier New"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AppAccent}"
+                                                   Margin="10,0,0,0"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
+                                </DockPanel>
 
-                </Grid>
+                                <TextBlock x:Name="DiagnosticsResultHint"
+                                           Style="{StaticResource OptionDescription}"
+                                           Margin="2,8,0,0"/>
+
+                                <!-- Shown in both states. The copy on disk is kept for thirty
+                                     days whether or not the upload went through, so this is one
+                                     line that does not have to be read against which of the two
+                                     happened. -->
+                                <StackPanel x:Name="DiagnosticsRetentionRow"
+                                            Orientation="Horizontal"
+                                            Margin="2,10,0,0">
+                                    <TextBlock Text="&#xE823;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource AppTextSecondary}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{DynamicResource S.Settings.DiagnosticsRetention}"
+                                               Style="{StaticResource OptionDescription}"
+                                               Margin="0"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
                 <!-- ══════════ 偵錯工具 ══════════
                      Its own full-width row under 進階設定, and last on the page, because it is for
                      working out why a capture was read the way it was and for nothing else. Full
@@ -1841,7 +1802,7 @@
                      to hand: a full-width fold with an animated open, which another feature may yet
                      want. Delete it outright if nothing has by the time it is in the way. -->
                 <Border x:Name="DebugToolsCard"
-                        Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2"
+                        Margin="0,0,0,12"
                         Visibility="Collapsed"
                         Style="{StaticResource CardBorder}">
                     <StackPanel>
@@ -2057,7 +2018,7 @@
                         </Border>
                     </StackPanel>
                 </Border>
-            </Grid>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- ── Status bar ── -->

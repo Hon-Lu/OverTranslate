@@ -146,6 +146,7 @@ public partial class ShellWindow : Window
         // opens the service panel more than once.
         ServiceSettings.Closed += (_, _) => _settingsPage.RefreshServiceTiles();
         DiagnosticNote.Closed += (_, result) => _settingsPage.ReportDiagnosticUpload(result);
+        _settingsPage.CurrentSectionChanged += (_, section) => MarkSettingsSection(section);
 
         // Subscribed rather than refreshed on show: a session ending brings this window back with
         // Show(), not through ShowOrActivate, so nothing else would clear the disabled state and
@@ -575,7 +576,26 @@ public partial class ShellWindow : Window
         };
 
         MoveIndicatorTo(NavItemFor(page));
+        SettingsSubNav.Visibility = page == ShellPage.Settings ? Visibility.Visible : Visibility.Collapsed;
+        if (page == ShellPage.Settings) MarkSettingsSection(_settingsPage.CurrentSection);
         AnimateContentIn();
+    }
+
+    private System.Windows.Controls.RadioButton SettingsSectionNav(SettingsSection section) => section switch
+    {
+        SettingsSection.General  => SettingsGeneralNav,
+        SettingsSection.Models   => SettingsModelsNav,
+        SettingsSection.Hotkeys  => SettingsHotkeysNav,
+        SettingsSection.Services => SettingsServicesNav,
+        _                        => SettingsAdvancedNav,
+    };
+
+    private void MarkSettingsSection(SettingsSection section) => SettingsSectionNav(section).IsChecked = true;
+
+    private void SettingsSubNav_Click(object sender, RoutedEventArgs e)
+    {
+        var section = Enum.GetValues<SettingsSection>().First(s => ReferenceEquals(SettingsSectionNav(s), sender));
+        _settingsPage.ScrollToSection(section);
     }
 
     private System.Windows.Controls.RadioButton NavItemFor(ShellPage page) => page switch
@@ -691,6 +711,9 @@ public partial class ShellWindow : Window
     /// </remarks>
     public void OpenDiagnosticNote(string bundlePath)
         => DiagnosticNote.Open(bundlePath);
+
+    /// <summary>Opens 替換翻譯's languages over the shell, for the same reason as the service panel.</summary>
+    public void OpenQuickTranslateSettings() => QuickTranslateSettings.Open();
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {

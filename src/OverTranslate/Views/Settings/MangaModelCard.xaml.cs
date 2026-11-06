@@ -142,7 +142,6 @@ public partial class MangaModelCard : UserControl
             _ => ("S.Settings.MangaModelsNotDownloaded", "#8E8E93"),
         };
         MangaChipText.Text = LocalizationService.Get(chip);
-        PlaceMangaChip();
         var dotBrush = (Brush)new BrushConverter().ConvertFromString(dot)!;
         // 已停用 is the one state drawn as a ring: a switch that is off, not a light that is out.
         var hollow = state == MangaCardState.Disabled;
@@ -247,6 +246,7 @@ public partial class MangaModelCard : UserControl
     private void ShowMangaCardFoot(FrameworkElement foot, bool animate)
     {
         _mangaCardFoot = foot;
+        PlaceFoot();
         foreach (var part in new FrameworkElement[] { MangaModelsDownloadPanel, MangaModelsProgressPanel, MangaModelsStatusBox })
         {
             if (part == foot)
@@ -308,19 +308,12 @@ public partial class MangaModelCard : UserControl
         SetMangaProgress(total > 0 ? Math.Clamp((double)AppServices.MangaModels.DownloadedBytes / total, 0, 1) : 0, false);
     }
 
-    // Round the card's contents to the inside of its border, so the corner glow does not square it off.
+    // At the window's narrowest the column is barely 200px across: the action in the status box goes
+    // under its sentence instead of squeezing it into a column of one word per line.
     private void MangaCardBody_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        MangaCardBody.Clip = new RectangleGeometry(new Rect(e.NewSize), 11, 11);
         if (!e.WidthChanged) return;
-        PlaceMangaChip();
-
-        // At the window's narrowest the card is barely 200px across: the feature names get the
-        // side margins back so four characters still fit a line, and the action in the status box
-        // goes under its sentence instead of squeezing it into a column of one word per line.
         var compact = e.NewSize.Width < 260;
-        foreach (var feature in new[] { MangaFeature1, MangaFeature2, MangaFeature3 })
-            feature.Margin = new Thickness(compact ? 0 : 4, 5, compact ? 0 : 4, 0);
         foreach (var action in new FrameworkElement[] { MangaModelsDeleteBtn, MangaModelsRetryBtn })
         {
             Grid.SetColumn(action, compact ? 1 : 2);
@@ -332,25 +325,35 @@ public partial class MangaModelCard : UserControl
         }
     }
 
-    // Beside the title when the two fit on one line, else under it. Titles run long in some
-    // languages ("Manga vertical-text models") and the card is only a column wide.
-    private void PlaceMangaChip()
-    {
-        if (MangaCardHead.ActualWidth <= 0) return;
-        var unbounded = new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity);
-        MangaCardTitle.Measure(unbounded);
-        MangaChip.Measure(unbounded);
-        var fits = MangaCardTitle.DesiredSize.Width + MangaChip.DesiredSize.Width <= MangaCardHead.ActualWidth - 44;
+    private bool _horizontal;
 
-        Grid.SetColumn(MangaChip, fits ? 2 : 1);
-        Grid.SetRow(MangaChip, fits ? 0 : 1);
-        Grid.SetRowSpan(MangaChip, fits ? 2 : 1);
-        // Beside it, both centre on the icon; under it, the title takes the first row.
-        Grid.SetRowSpan(MangaCardTitle, fits ? 2 : 1);
-        MangaChip.HorizontalAlignment = fits ? System.Windows.HorizontalAlignment.Stretch : System.Windows.HorizontalAlignment.Left;
-        MangaChip.Margin = fits ? new Thickness(0) : new Thickness(12, 4, 0, 0);
-        // With nothing beside it, the title may use the room the chip left.
-        MangaCardTitle.Margin = new Thickness(12, 0, fits ? 12 : 0, 0);
+    /// <summary>
+    /// Set by the page while 辨識模型 is one column and the card spans it: the download, or the
+    /// progress while it runs, moves to the right of the text and the card reads as a strip. The
+    /// status line with its switch stays under the text, where its sentence has room.
+    /// </summary>
+    public bool Horizontal
+    {
+        get => _horizontal;
+        set
+        {
+            if (_horizontal == value) return;
+            _horizontal = value;
+            PlaceFoot();
+        }
+    }
+
+    private void PlaceFoot()
+    {
+        var side = _horizontal && _mangaCardFoot != MangaModelsStatusBox;
+        MangaSideColumn.Width = side ? GridLength.Auto : new GridLength(0);
+        Grid.SetRow(MangaFoot, side ? 0 : 1);
+        Grid.SetColumn(MangaFoot, side ? 1 : 0);
+        Grid.SetColumnSpan(MangaFoot, side ? 1 : 2);
+        MangaFoot.Margin = side ? new Thickness(20, 0, 0, 0) : new Thickness(0, 12, 0, 0);
+        MangaFoot.VerticalAlignment = side ? VerticalAlignment.Center : VerticalAlignment.Top;
+        MangaFoot.Width = side ? 200 : double.NaN;
+        MangaChip.HorizontalAlignment = side ? System.Windows.HorizontalAlignment.Left : System.Windows.HorizontalAlignment.Right;
     }
 
     private async void MangaModelsDownloadBtn_Click(object sender, RoutedEventArgs e)

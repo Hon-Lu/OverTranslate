@@ -494,10 +494,14 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">文字を入力できる欄でのみ動作し、入力欄以外には貼り付けられません。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻訳設定</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">この言語設定は置換翻訳専用です。スクリーンショット翻訳、テキスト翻訳、リアルタイム翻訳には影響しません。</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">選択したテキストの言語を判別し、指定した 2 つの言語の間で翻訳します</sys:String>
+    <sys:String x:Key="S.QuickTranslate.Mode">翻訳モード</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ModeOneWay">一方向翻訳</sys:String>
+    <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}（選択したテキストの言語で向きを判断）</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 単独で使えるのは F1–F24、Pause、Scroll Lock のみです。ほかのキーは Ctrl／Alt／Shift と組み合わせてください</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般</sys:String>
+    <sys:String x:Key="S.Settings.Options">オプション</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">キャプチャ翻訳</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">ショートカットキーで[[キャプチャ翻訳]]を開始する</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">翻訳ウィンドウを開く</sys:String>
@@ -629,7 +633,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">モデルを保存できませんでした。ディスクの空き容量を確認してください。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">ダウンロードが完了しませんでした。もう一度お試しください。</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">外観</sys:String>
     <sys:String x:Key="S.Settings.Theme">テーマ</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">ライト</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">ダーク</sys:String>
@@ -764,6 +767,14 @@
     <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">ダウンロード</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0}の認識モデルをダウンロード中</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacks">認識言語パック</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">これらのモデルは内蔵されていません。言語を選んだときにダウンロードします。</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">認識言語</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">内蔵</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">ダウンロード済み · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">未ダウンロード · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">削除</sys:String>
+    <sys:String x:Key="S.Settings.Models">認識モデル</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">ダウンロード済み {0}</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">フォルダーを開く</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">翻訳サービス</sys:String>
 </ResourceDictionary>

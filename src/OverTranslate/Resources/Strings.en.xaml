@@ -490,10 +490,14 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Only in fields that accept typed text; nothing can be pasted outside an input area.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Translation settings</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">These languages apply only to in-place translation, without affecting screenshot, text or real-time translation.</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">Detects the language of the selected text and translates between the two languages you choose</sys:String>
+    <sys:String x:Key="S.QuickTranslate.Mode">Mode</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ModeOneWay">One-way</sys:String>
+    <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, by the language of the selected text</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ A single key can only be F1–F24, Pause or Scroll Lock — other keys need Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">General</sys:String>
+    <sys:String x:Key="S.Settings.Options">Options</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">Capture</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">Press this shortcut to start a [[screen capture translation]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Open window</sys:String>
@@ -627,7 +631,6 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">The models could not be saved. Check that there is enough disk space.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">The download did not finish. Please try again.</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">Appearance</sys:String>
     <sys:String x:Key="S.Settings.Theme">Theme</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">Light</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">Dark</sys:String>
@@ -763,5 +766,13 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.OcrPack.Download">Download</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Downloading the {0} recognition model</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Recognition languages</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">These models are not built in. They download when you choose the language.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Built in</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">Downloaded · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">Not downloaded · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">Delete</sys:String>
+    <sys:String x:Key="S.Settings.Models">Recognition models</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">{0} downloaded</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">Open folder</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">Translation services</sys:String>
 </ResourceDictionary>

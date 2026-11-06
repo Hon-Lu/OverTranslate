@@ -512,10 +512,14 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">僅適用於可輸入文字的欄位，非輸入區域則無法貼上。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻譯設定</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此設定僅適用於替換翻譯，不會影響截圖翻譯、文字翻譯或即時翻譯。</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">自動判斷選取文字的語言，在指定的兩種語言之間互譯</sys:String>
+    <sys:String x:Key="S.QuickTranslate.Mode">翻譯模式</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ModeOneWay">單向翻譯</sys:String>
+    <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}，依選取文字的語言決定方向</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 單一按鍵只能是 F1–F24、Pause 或 Scroll Lock，其他按鍵請搭配 Ctrl／Alt／Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般設定</sys:String>
+    <sys:String x:Key="S.Settings.Options">選項</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">截圖翻譯</sys:String>
     <!-- [[…]] 內的字會以主題色強調，見 Views/Controls/HighlightedText。兩種語言的標記數量必須一致，
          StringsParityTests 會擋。 -->
@@ -650,7 +654,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">無法儲存模型，請確認磁碟空間是否足夠。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">下載沒有完成，請再試一次。</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">外觀</sys:String>
     <sys:String x:Key="S.Settings.Theme">主題</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">淺色</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">深色</sys:String>
@@ -783,6 +786,14 @@
     <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">下載</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">正在下載{0}辨識模型</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacks">辨識語言包</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">這些語言的模型沒有內建，選到時才下載。</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">辨識語言</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">內建</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">已下載 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">未下載 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">刪除</sys:String>
+    <sys:String x:Key="S.Settings.Models">辨識模型</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">已下載 {0}</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">開啟資料夾</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">翻譯服務</sys:String>
 </ResourceDictionary>

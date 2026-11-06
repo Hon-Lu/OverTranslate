@@ -485,10 +485,14 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Работает только в полях для ввода текста; вне поля ввода вставить ничего нельзя.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Настройки перевода</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">Эти языки используются только для перевода с заменой и не влияют на перевод снимка экрана, текста и перевод в реальном времени.</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">Определяет язык выделенного текста и переводит между двумя выбранными языками</sys:String>
+    <sys:String x:Key="S.QuickTranslate.Mode">Режим</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ModeOneWay">В одну сторону</sys:String>
+    <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, направление по языку выделенного текста</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ Одной клавишей можно назначить только F1–F24, Pause или Scroll Lock — для остальных нужны Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">Общие</sys:String>
+    <sys:String x:Key="S.Settings.Options">Параметры</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">Снимок экрана</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">Нажмите это сочетание, чтобы начать [[перевод снимка экрана]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Открыть окно</sys:String>
@@ -621,7 +625,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">Не удалось сохранить модели. Проверьте, достаточно ли места на диске.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">Загрузка не завершилась. Повторите попытку.</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">Внешний вид</sys:String>
     <sys:String x:Key="S.Settings.Theme">Тема</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">Светлая</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">Темная</sys:String>
@@ -754,5 +757,13 @@
     <sys:String x:Key="S.OcrPack.Download">Скачать</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Скачивание модели распознавания ({0})</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Языки распознавания</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">Эти модели не встроены в приложение и скачиваются, когда вы выбираете язык.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Встроено</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">Скачано · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">Не скачано · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">Удалить</sys:String>
+    <sys:String x:Key="S.Settings.Models">Модели распознавания</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">Скачано {0}</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">Открыть папку</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">Сервисы перевода</sys:String>
 </ResourceDictionary>

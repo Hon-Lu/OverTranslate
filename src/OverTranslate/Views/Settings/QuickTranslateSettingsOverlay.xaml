@@ -1,0 +1,217 @@
+<UserControl x:Class="OverTranslate.Views.Settings.QuickTranslateSettingsOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:OverTranslate.Controls"
+             Visibility="Collapsed"
+             Focusable="True">
+    <!-- The settings page's own two, which the rows in here came from. -->
+    <UserControl.Resources>
+        <Style x:Key="OptionTitle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+        </Style>
+        <Style x:Key="OptionDescription" TargetType="TextBlock" BasedOn="{StaticResource FieldHint}">
+            <Setter Property="Margin"       Value="0,3,0,0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <!-- One mode: a block that is outlined in the accent while it is the one in use. The outline is
+             set from code (RenderMode), since a Border has no checked state of its own. -->
+        <Style x:Key="ModeCard" TargetType="Border">
+            <Setter Property="BorderBrush"     Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius"    Value="8"/>
+            <Setter Property="Padding"         Value="14,12"/>
+        </Style>
+        <!-- The mode's name and the line under it, with a ring in front that says which is chosen.
+             The whole line takes the click, so a folded block opens wherever it is pressed. -->
+        <Style x:Key="ModeHeader" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Ellipse x:Name="Ring" Width="16" Height="16"
+                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0"
+                                     Stroke="{DynamicResource AppTextSecondary}" StrokeThickness="1.5"/>
+                            <ContentPresenter Grid.Column="1"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AppAccent}"/>
+                                <Setter TargetName="Ring" Property="StrokeThickness" Value="5"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AppAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- → between a source and its target, ⇄ between the two languages of 雙語互譯. -->
+        <Style x:Key="PairMark" TargetType="TextBlock">
+            <Setter Property="FontFamily"          Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"            Value="13"/>
+            <Setter Property="Foreground"          Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+    <!-- 替換翻譯's languages, in a card over the shell the way a service's settings are, rather than
+         unfolding inside the shortcut row: they are a second level of setting under one shortcut, and
+         opened in place they pushed the rest of the page about. -->
+    <Grid x:Name="Scrim"
+          Background="#8C000000"
+          MouseLeftButtonDown="Scrim_MouseLeftButtonDown">
+        <Border x:Name="Card"
+                Width="560"
+                UseLayoutRounding="True"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                CornerRadius="12"
+                Background="{DynamicResource AppCardBg}"
+                BorderBrush="{DynamicResource AppBorder}"
+                BorderThickness="1"
+                RenderTransformOrigin="0.5,0.5"
+                MouseLeftButtonDown="Card_MouseLeftButtonDown">
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
+            </Border.Effect>
+            <Grid Margin="24,18,24,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE713;" Style="{StaticResource CardHeaderIcon}" FontSize="18"/>
+                        <TextBlock FontFamily="{DynamicResource AppFont}"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppTextPrimary}"
+                                   VerticalAlignment="Center">
+                            <Run Text="{DynamicResource S.Settings.QuickTranslateHotkey}"/><Run Text=" · "/><Run Text="{DynamicResource S.Settings.QuickTranslateSettings}"/>
+                        </TextBlock>
+                    </StackPanel>
+                    <Button x:Name="CloseBtn"
+                            Style="{StaticResource OverlayCloseButton}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,-8,0"
+                            ToolTip="{DynamicResource S.Common.Close}"
+                            Click="CloseBtn_Click"/>
+                </Grid>
+                <StackPanel Grid.Row="1" Margin="0,18,0,0">
+                    <!-- Two modes, one chosen: each is a block of its own with its own languages, open
+                         while it is the one in use and folded to a line saying what it is set to when
+                         not. A switch that swapped one pair of pickers for another in the same place
+                         left nothing on screen to say the page had changed. -->
+                    <TextBlock Text="{DynamicResource S.QuickTranslate.Mode}" Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
+
+                    <Border x:Name="OneWayCard" Style="{StaticResource ModeCard}">
+                        <StackPanel>
+                            <RadioButton x:Name="OneWayRadio"
+                                         GroupName="QuickTranslateMode"
+                                         Style="{StaticResource ModeHeader}"
+                                         Checked="Mode_Checked">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource S.QuickTranslate.ModeOneWay}" Style="{StaticResource OptionTitle}"/>
+                                    <TextBlock x:Name="OneWaySummary" Style="{StaticResource OptionDescription}"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <Grid x:Name="OneWayBody" Margin="28,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{DynamicResource S.Realtime.SourceLanguage}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                                <ComboBox Grid.Row="1" x:Name="QuickTranslateSourceBox"
+                                          ctl:ComboBoxSearch.IsEnabled="True"
+                                          Style="{StaticResource ModernComboBox}"
+                                          DisplayMemberPath="Display" SelectedValuePath="Code"
+                                          AutomationProperties.Name="{DynamicResource S.Realtime.SourceLanguage}"
+                                          SelectionChanged="QuickTranslateLanguage_Changed"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="→" Style="{StaticResource PairMark}"/>
+                                <TextBlock Grid.Column="2" Text="{DynamicResource S.Realtime.TargetLanguage}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                                <ComboBox Grid.Row="1" Grid.Column="2" x:Name="QuickTranslateTargetBox"
+                                          ctl:ComboBoxSearch.IsEnabled="True"
+                                          Style="{StaticResource ModernComboBox}"
+                                          DisplayMemberPath="Display" SelectedValuePath="Code"
+                                          AutomationProperties.Name="{DynamicResource S.Realtime.TargetLanguage}"
+                                          SelectionChanged="QuickTranslateLanguage_Changed"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="BilingualCard" Style="{StaticResource ModeCard}" Margin="0,10,0,0">
+                        <StackPanel>
+                            <RadioButton x:Name="BilingualRadio"
+                                         GroupName="QuickTranslateMode"
+                                         Style="{StaticResource ModeHeader}"
+                                         Checked="Mode_Checked">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource S.QuickLookup.Bilingual}" Style="{StaticResource OptionTitle}"/>
+                                    <TextBlock x:Name="BilingualSummary" Style="{StaticResource OptionDescription}"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <StackPanel x:Name="BilingualBody" Margin="28,12,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="22"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{DynamicResource S.QuickLookup.BilingualFirst}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                                    <ComboBox Grid.Row="1" x:Name="QuickTranslateBilingualFirstBox"
+                                              ctl:ComboBoxSearch.IsEnabled="True"
+                                              Style="{StaticResource ModernComboBox}"
+                                              DisplayMemberPath="Display" SelectedValuePath="Code"
+                                              AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualFirst}"
+                                              SelectionChanged="QuickTranslateBilingualPair_Changed"/>
+                                    <!-- Punctuation rather than a control, as in 取詞翻譯: the order is the fallback
+                                         order, and swapping is picking the other language in either box. -->
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="⇄" Style="{StaticResource PairMark}"/>
+                                    <TextBlock Grid.Column="2" Text="{DynamicResource S.QuickLookup.BilingualSecond}" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                                    <ComboBox Grid.Row="1" Grid.Column="2" x:Name="QuickTranslateBilingualSecondBox"
+                                              ctl:ComboBoxSearch.IsEnabled="True"
+                                              Style="{StaticResource ModernComboBox}"
+                                              DisplayMemberPath="Display" SelectedValuePath="Code"
+                                              AutomationProperties.Name="{DynamicResource S.QuickLookup.BilingualSecond}"
+                                              SelectionChanged="QuickTranslateBilingualPair_Changed"/>
+                                </Grid>
+                                <!-- Names whichever language is first, so it is written from code. -->
+                                <TextBlock x:Name="QuickTranslateBilingualFallbackHint"
+                                           Style="{StaticResource FieldHint}"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Height="1" Margin="0,16,0,12" Background="{DynamicResource AppSeparator}"/>
+                    <TextBlock Text="{DynamicResource S.Settings.QuickTranslateLanguageNote}"
+                               Style="{StaticResource FieldHint}" Margin="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

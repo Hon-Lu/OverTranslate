@@ -57,7 +57,11 @@
                                 <Grid>
                                     <ComboBox x:Name="SrcLangBox"
                                               Style="{StaticResource OcrSourceComboBox}"
+                                              ctl:ComboBoxSearch.IsEnabled="True"
                                               SelectedValuePath="Code"/>
+                                    <!-- Out of the way while the list is open: the search field is
+                                         laid over this same spot. Opacity, because Visibility is the
+                                         page's to set (UpdateControls). -->
                                     <TextBlock x:Name="SrcLangPlaceholder"
                                                Text="{DynamicResource S.Realtime.SourceLanguagePrompt}"
                                                FontFamily="{DynamicResource AppFont}"
@@ -65,7 +69,17 @@
                                                Foreground="{DynamicResource AppTextSecondary}"
                                                Margin="9,0,28,0"
                                                VerticalAlignment="Center"
-                                               IsHitTestVisible="False"/>
+                                               IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDropDownOpen, ElementName=SrcLangBox}" Value="True">
+                                                        <Setter Property="Opacity" Value="0"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </Grid>
                             </StackPanel>
 

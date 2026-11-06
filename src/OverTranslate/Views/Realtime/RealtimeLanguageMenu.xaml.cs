@@ -46,11 +46,9 @@ internal partial class RealtimeLanguageMenu : Window
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    // The two widths the design settled on: the source list is a few short names, the target list
-    // also carries the search box and thirty names, some of them long in Russian.
-    private const double SourceWidth = 184;
-    private const double TargetWidth = 220;
-    private const double TargetListMaxHeight = 236;
+    // Room for the search box and thirty names, some of them long in Russian.
+    private const double ListWidth = 220;
+    private const double ListMaxHeight = 236;
 
     // Between the capsule's edge and the menu's.
     private const double Gap = 6;
@@ -112,15 +110,16 @@ internal partial class RealtimeLanguageMenu : Window
         _screen = screen;
         _entries = RealtimeLanguageMenuItems.For(kind, selectedCode);
 
-        var searchable = kind == RealtimeLanguageMenuKind.Target;
-        Chrome.Width = searchable ? TargetWidth : SourceWidth;
-        SearchBox.Visibility = searchable ? Visibility.Visible : Visibility.Collapsed;
+        // Both lists search: the source list grows with every language pack, and is no longer a few
+        // names to glance down.
+        Chrome.Width = ListWidth;
+        SearchBox.Visibility = Visibility.Visible;
         SearchBox.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, "S.Common.SearchLanguage");
-        if (searchable) ItemsScroll.MaxHeight = TargetListMaxHeight;
+        ItemsScroll.MaxHeight = ListMaxHeight;
 
-        // A few names need no search box, and without one the list needs a word to say what it is a
-        // list of: the capsule shows the pair without labels.
-        HeaderText.Visibility = searchable ? Visibility.Collapsed : Visibility.Visible;
+        // The capsule shows the pair without labels, so the source list says what it is a list of;
+        // the target list is the one any translator has, and needs no word for it.
+        HeaderText.Visibility = kind == RealtimeLanguageMenuKind.Source ? Visibility.Visible : Visibility.Collapsed;
         HeaderText.Text = LocalizationService.Get("S.Realtime.SourceLanguage");
 
         foreach (var entry in _entries)
@@ -468,6 +467,8 @@ internal partial class RealtimeLanguageMenu : Window
             PackDownloadRequested?.Invoke(this, entry.Code);
 
         HeaderText.Visibility = Visibility.Collapsed;
+        SearchBox.Visibility = Visibility.Collapsed;
+        NoResultsText.Visibility = Visibility.Collapsed;
         ItemsScroll.Visibility = Visibility.Collapsed;
         CardHost.Content = card;
         CardHost.Visibility = Visibility.Visible;

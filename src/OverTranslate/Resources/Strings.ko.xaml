@@ -494,10 +494,14 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">글자를 입력할 수 있는 칸에서만 동작하며, 입력란이 아니면 붙여넣을 수 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">번역 설정</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">이 언어 설정은 대치 번역에만 적용되며 스크린샷, 텍스트 또는 실시간 번역에는 영향을 주지 않습니다.</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">선택한 텍스트의 언어를 판별해 지정한 두 언어 사이에서 번역합니다</sys:String>
+    <sys:String x:Key="S.QuickTranslate.Mode">번역 모드</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ModeOneWay">단방향 번역</sys:String>
+    <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, 선택한 텍스트의 언어로 방향 결정</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 단독으로 쓸 수 있는 키는 F1–F24, Pause, Scroll Lock뿐입니다. 다른 키는 Ctrl／Alt／Shift와 함께 사용하세요</sys:String>
 
     <sys:String x:Key="S.Settings.General">일반</sys:String>
+    <sys:String x:Key="S.Settings.Options">옵션</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">캡처 번역</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkeyHint">단축키로 [[캡처 번역]] 시작</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">번역 창 열기</sys:String>
@@ -629,7 +633,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">모델을 저장할 수 없습니다. 디스크 여유 공간을 확인하세요.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">다운로드가 완료되지 않았습니다. 다시 시도하세요.</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">외관</sys:String>
     <sys:String x:Key="S.Settings.Theme">테마</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">라이트</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">다크</sys:String>
@@ -764,6 +767,14 @@
     <sys:String x:Key="S.OcrPack.RowSize">{0}MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">다운로드</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0} 인식 모델 다운로드 중</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacks">인식 언어 팩</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">이 모델들은 기본 포함되어 있지 않으며, 언어를 선택할 때 다운로드됩니다.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">인식 언어</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">기본 포함</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">다운로드됨 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">다운로드 안 됨 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">삭제</sys:String>
+    <sys:String x:Key="S.Settings.Models">인식 모델</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">{0} 다운로드됨</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">폴더 열기</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">번역 서비스</sys:String>
 </ResourceDictionary>

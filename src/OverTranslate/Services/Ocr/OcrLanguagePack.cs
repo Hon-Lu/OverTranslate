@@ -189,10 +189,11 @@ internal static class OcrLanguagePacks
 
     internal static IReadOnlyList<OcrLanguagePack> All { get; } =
     [
+        // First, because it was in the installer before any of these, until the automatic model became
+        // the only one there: it is the one people already know. The settings list follows this order.
+        Create("korean", "S.Lang.Korean", ["KO"]),
         // One model for both: its dictionary holds the whole Cyrillic range, і ї є ґ included.
         Create("cyrillic", "S.OcrPack.CyrillicLanguages", ["RU", "UK"]),
-        // Shipped in the installer until the automatic model became the only one there.
-        Create("korean", "S.Lang.Korean", ["KO"]),
     ];
 
     internal static OcrLanguagePack? ForCode(string? code) =>

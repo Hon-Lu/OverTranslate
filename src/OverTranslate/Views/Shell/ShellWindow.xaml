@@ -414,6 +414,25 @@
                                         <TextBlock Text="{DynamicResource S.Shell.Settings}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </RadioButton>
+
+                                <!-- The settings page's sections, shown only while it is the page: a long
+                                     page with no theme of its own needs somewhere to say what is further
+                                     down and to go there. Here rather than in a column of the page, so it
+                                     costs the page none of its width; put the rail away and the page is
+                                     simply scrolled. Which one is marked follows the scroll - see
+                                     SettingsPage.CurrentSectionChanged. -->
+                                <StackPanel x:Name="SettingsSubNav" Visibility="Collapsed" Margin="0,0,0,4">
+                                    <RadioButton x:Name="SettingsGeneralNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
+                                                 Content="{DynamicResource S.Settings.General}" Click="SettingsSubNav_Click"/>
+                                    <RadioButton x:Name="SettingsModelsNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
+                                                 Content="{DynamicResource S.Settings.Models}" Click="SettingsSubNav_Click"/>
+                                    <RadioButton x:Name="SettingsHotkeysNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
+                                                 Content="{DynamicResource S.Settings.Hotkeys}" Click="SettingsSubNav_Click"/>
+                                    <RadioButton x:Name="SettingsServicesNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
+                                                 Content="{DynamicResource S.Settings.NavServices}" Click="SettingsSubNav_Click"/>
+                                    <RadioButton x:Name="SettingsAdvancedNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
+                                                 Content="{DynamicResource S.Settings.Advanced}" Click="SettingsSubNav_Click"/>
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
                     </DockPanel>
@@ -445,6 +464,7 @@
             <shell:AboutOverlay Grid.ColumnSpan="2" x:Name="About"/>
             <settings:ServiceSettingsOverlay Grid.ColumnSpan="2" x:Name="ServiceSettings"/>
             <settings:DiagnosticNoteOverlay Grid.ColumnSpan="2" x:Name="DiagnosticNote"/>
+            <settings:QuickTranslateSettingsOverlay Grid.ColumnSpan="2" x:Name="QuickTranslateSettings"/>
         </Grid>
     </Grid>
 </Window>

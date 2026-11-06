@@ -92,6 +92,7 @@
                              number typed in the markup is a guess about a string it cannot see. -->
                         <ComboBox x:Name="SrcLangBox"
                                   Style="{StaticResource ToolbarOcrSourceComboBox}"
+                                  ctl:ComboBoxSearch.IsEnabled="True"
                                   SelectedValuePath="Code"
                                   VerticalContentAlignment="Center"/>
 
