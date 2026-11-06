@@ -759,6 +759,7 @@
     <sys:String x:Key="S.OcrPack.CyrillicLanguages">러시아어와 우크라이나어</sys:String>
     <sys:String x:Key="S.OcrPack.AskTitle">{0} 인식 모델을 다운로드할까요?</sys:String>
     <sys:String x:Key="S.OcrPack.AskBody">이 언어를 인식하려면 별도의 모델이 필요합니다. {0}는 같은 모델을 사용하므로 한 번만 다운로드하면 됩니다.</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBodySingle">이 언어를 인식하려면 별도의 모델이 필요합니다. 한 번만 다운로드하면 됩니다.</sys:String>
     <sys:String x:Key="S.OcrPack.Size">약 {0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.RowSize">{0}MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">다운로드</sys:String>

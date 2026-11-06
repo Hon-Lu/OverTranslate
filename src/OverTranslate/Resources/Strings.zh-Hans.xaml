@@ -755,6 +755,7 @@
     <sys:String x:Key="S.OcrPack.CyrillicLanguages">俄语和乌克兰语</sys:String>
     <sys:String x:Key="S.OcrPack.AskTitle">下载{0}识别模型？</sys:String>
     <sys:String x:Key="S.OcrPack.AskBody">识别这种语言需要另外下载模型。{0}共用这个模型，只需下载一次。</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBodySingle">识别这种语言需要另外下载模型，只需下载一次。</sys:String>
     <sys:String x:Key="S.OcrPack.Size">约 {0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">下载</sys:String>

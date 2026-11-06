@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using NLog;
+using OverTranslate.Services.Ocr.Manga;
 using RapidOcrNet;
 using SkiaSharp;
 
@@ -360,8 +361,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     internal static string GetModelKeyForLanguage(string language) =>
         OcrLanguageRouter.Normalize(language) switch
         {
+            // Not in the installer: language packs, downloaded when first asked for. See OcrLanguagePack.
             "KO" => "korean",
-            // Not in the installer: a language pack, downloaded when first asked for. See OcrLanguagePack.
             "RU" or "UK" => "cyrillic",
             // Everything else uses the general ("cjk") model — PP-OCRv6_small_rec, one model
             // covering 50 languages: Simplified and Traditional Chinese, English, Japanese, and 46
@@ -1134,9 +1135,14 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
         var detPath = Path.Combine(sharedPath, "det.onnx");
         var clsPath = Path.Combine(sharedPath, "cls.onnx");
+        // A pack reads from its download. Until there is one it can still read from a copy beside the
+        // app, which only the tests and the OCR harness have: they carry the Korean model that way so
+        // they need no network, and the app's own build leaves it out (see OverTranslate.csproj).
         var pack = OcrLanguagePacks.ForModelKey(modelName);
-        var recPath = pack?.PathOf("recognizer") ?? Path.Combine(modelPath, "rec.onnx");
-        var dictPath = pack?.PathOf("dictionary") ?? Path.Combine(modelPath, "dict.txt");
+        var fromPack = pack is not null
+            && (pack.Store.State == MangaModelState.Ready || !File.Exists(Path.Combine(modelPath, "rec.onnx")));
+        var recPath = fromPack ? pack!.PathOf("recognizer") : Path.Combine(modelPath, "rec.onnx");
+        var dictPath = fromPack ? pack!.PathOf("dictionary") : Path.Combine(modelPath, "dict.txt");
 
         EnsureModelFile(detPath);
         EnsureModelFile(clsPath);

@@ -12,8 +12,9 @@ namespace OverTranslate.Services.Ocr;
 /// </summary>
 /// <remarks>
 /// <para>Downloaded rather than shipped because each one only ever serves the people who read that
-/// script, and "it is only a few megabytes" is equally true of every script there is. The languages
-/// in the installer stay the ones that are: Chinese, English, Japanese and Korean.</para>
+/// script, and "it is only a few megabytes" is equally true of every script there is. The installer
+/// keeps only the model behind 自動, which reads Chinese, English and Japanese; every other language,
+/// Korean included, is a pack.</para>
 ///
 /// <para>The files live and are checked exactly as the manga models are, so the same
 /// <see cref="MangaModelStore"/> does the work, given this pack's own manifest and folder. The
@@ -190,6 +191,8 @@ internal static class OcrLanguagePacks
     [
         // One model for both: its dictionary holds the whole Cyrillic range, і ї є ґ included.
         Create("cyrillic", "S.OcrPack.CyrillicLanguages", ["RU", "UK"]),
+        // Shipped in the installer until the automatic model became the only one there.
+        Create("korean", "S.Lang.Korean", ["KO"]),
     ];
 
     internal static OcrLanguagePack? ForCode(string? code) =>

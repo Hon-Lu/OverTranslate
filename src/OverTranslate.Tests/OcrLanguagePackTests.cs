@@ -121,20 +121,46 @@ public sealed class OcrLanguagePackTests : IDisposable
     }
 
     [Theory]
-    [InlineData("EN")]
     [InlineData("KO")]
+    [InlineData("ko")]
+    public void Korean_IsAPackOfItsOwn(string code)
+    {
+        Assert.Equal("korean", OnnxOcrEngine.GetModelKeyForLanguage(code));
+        Assert.Same(OcrLanguagePacks.ForModelKey("korean"), OcrLanguagePacks.ForCode(code));
+        Assert.Equal(["KO"], OcrLanguagePacks.ForCode(code)!.Codes);
+        Assert.True(OcrLanguageRouter.IsSupported(code));
+    }
+
+    // Someone updating from a version that shipped Korean, with it still chosen and nothing downloaded:
+    // the screenshot falls back to 自動 and realtime, which has no 自動, to English.
+    [Fact]
+    public void RememberedKorean_WithoutThePack_FallsBack()
+    {
+        if (OcrLanguagePacks.ForCode("KO") is { IsReady: true }) return; // downloaded on this machine
+
+        Assert.Equal(LanguageData.DefaultOcrSourceLanguage, LanguageData.GetValidOcrSourceCode("KO"));
+        Assert.Equal(LanguageData.DefaultRealtimeSourceLanguage, LanguageData.GetValidRealtimeSourceCode("KO"));
+    }
+
+    // Only what the automatic model reads is in the installer.
+    [Theory]
+    [InlineData("EN")]
+    [InlineData("JA")]
     [InlineData("AUTO")]
     [InlineData("ZH-HANT")]
+    [InlineData("ZH")]
     public void InstalledLanguages_NeedNoPack(string code)
     {
         Assert.Null(OcrLanguagePacks.ForCode(code));
         Assert.True(OcrLanguagePacks.IsUsable(code));
     }
 
-    [Fact]
-    public void ShippedManifest_NamesTheFilesTheEngineAsksFor()
+    [Theory]
+    [InlineData("cyrillic")]
+    [InlineData("korean")]
+    public void ShippedManifest_NamesTheFilesTheEngineAsksFor(string key)
     {
-        var manifest = MangaModelManifest.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ocrmodels", "lang-cyrillic.json")));
+        var manifest = MangaModelManifest.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ocrmodels", $"lang-{key}.json")));
 
         Assert.NotNull(manifest.File("recognizer"));
         Assert.NotNull(manifest.File("dictionary"));
@@ -143,8 +169,26 @@ public sealed class OcrLanguagePackTests : IDisposable
         Assert.All(manifest.Files, file => Assert.Equal(2, manifest.SourcesOf(file).Count));
     }
 
+    /// <summary>
+    /// The Korean the tests read with is the one the pack downloads: the same bytes the manifest asks for,
+    /// so a test passing on the copy says the same of the download.
+    /// </summary>
+    [Theory]
+    [InlineData("recognizer", "rec.onnx")]
+    [InlineData("dictionary", "dict.txt")]
+    public void KoreanManifest_MatchesTheCopyTheTestsReadWith(string role, string copy)
+    {
+        var manifest = MangaModelManifest.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ocrmodels", "lang-korean.json")));
+        var file = manifest.File(role)!;
+        var bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "ocrmodels", "onnx", "korean", copy));
+
+        Assert.Equal(file.Size, bytes.Length);
+        Assert.Equal(file.Sha256, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant());
+    }
+
+    // Korean keeps its place among the languages people already knew; the newer packs come last.
     [Fact]
-    public void OcrSources_ListThePackLanguagesAfterTheInstalledOnes()
+    public void OcrSources_KeepKoreanWhereItWas()
     {
         var codes = LanguageData.OcrSourceLanguages.Select(language => language.Code).ToList();
 
