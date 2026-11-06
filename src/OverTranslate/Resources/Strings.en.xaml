@@ -395,7 +395,8 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">One window</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreenHint">Everything on the screen.</sys:String>
     <sys:String x:Key="S.Realtime.ScreenModeUnsupported">This system does not currently support whole-screen capture.</sys:String>
-    <sys:String x:Key="S.Realtime.RealtimeUnsupported">Realtime translation needs screen capture, which this Windows does not provide</sys:String>
+    <sys:String x:Key="S.Realtime.RealtimeUnsupported">Your Windows does not support screen capture, so realtime translation is unavailable.</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureComponentMissing">Your Windows is missing the screen capture component, so realtime translation is unavailable.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindowHint">One window, even while something covers it.</sys:String>
     <sys:String x:Key="S.Realtime.Step1Label">Step 1</sys:String>
     <sys:String x:Key="S.Realtime.Step1Name">Choose a capture source</sys:String>
@@ -412,7 +413,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Realtime.CaptureWindowOnScreen">Blocks will be framed on {0}.</sys:String>
     <sys:String x:Key="S.Realtime.RefreshWindows">Refresh</sys:String>
     <sys:String x:Key="S.Realtime.ChooseWindowFirst">Choose the window to translate first</sys:String>
-    <sys:String x:Key="S.Realtime.WindowCaptureUnsupported">This version of Windows does not support screen capture.</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureGone">That window has closed or been minimised. Pick a window again.</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFailed">That window cannot be captured. Switch it to borderless window or windowed and try again.</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFullscreen">That display mode cannot be captured. Switch to borderless window or windowed and try again.</sys:String>

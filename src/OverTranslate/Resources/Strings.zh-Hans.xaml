@@ -395,7 +395,8 @@
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">窗口捕获</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreenHint">捕获整个屏幕画面上的所有内容。</sys:String>
     <sys:String x:Key="S.Realtime.ScreenModeUnsupported">此系统目前不支持“屏幕捕获”。</sys:String>
-    <sys:String x:Key="S.Realtime.RealtimeUnsupported">实时翻译需要画面捕获功能，这台 Windows 没有提供</sys:String>
+    <sys:String x:Key="S.Realtime.RealtimeUnsupported">您的 Windows 不支持画面捕获，无法使用实时翻译相关功能。</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureComponentMissing">您的 Windows 缺少画面捕获组件，无法使用实时翻译相关功能。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindowHint">捕获指定窗口内的内容。</sys:String>
     <sys:String x:Key="S.Realtime.Step1Label">步骤 1</sys:String>
     <sys:String x:Key="S.Realtime.Step1Name">选择捕获方式</sys:String>
@@ -412,7 +413,6 @@
     <sys:String x:Key="S.Realtime.CaptureWindowOnScreen">字幕框选会在{0}上进行。</sys:String>
     <sys:String x:Key="S.Realtime.RefreshWindows">刷新</sys:String>
     <sys:String x:Key="S.Realtime.ChooseWindowFirst">请先选择要翻译的窗口</sys:String>
-    <sys:String x:Key="S.Realtime.WindowCaptureUnsupported">当前的 Windows 版本不支持此画面捕获功能。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureGone">指定的窗口已关闭或最小化，请重新选择窗口。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFailed">无法捕获此窗口，请切换到“无边框窗口”或“窗口化”后再试一次。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFullscreen">当前的显示模式无法捕获，请切换到“无边框窗口”或“窗口化”后再试一次。</sys:String>

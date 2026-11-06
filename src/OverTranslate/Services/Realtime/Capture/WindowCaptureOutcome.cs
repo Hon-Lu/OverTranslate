@@ -19,6 +19,13 @@ public enum WindowCaptureOutcome
     /// <summary>The capture never got as far as waiting for a frame.</summary>
     Refused,
 
+    /// <summary>
+    /// This Windows is missing the capture component itself (REGDB_E_CLASSNOTREG from
+    /// CreateForWindow): no window can be captured, whatever its display mode. Seen on a Windows 10
+    /// 22H2 that reported capture as supported — most likely a trimmed-down install.
+    /// </summary>
+    Unavailable,
+
     /// <summary>No frame arrived at all within the start-up window.</summary>
     NoFrame,
 

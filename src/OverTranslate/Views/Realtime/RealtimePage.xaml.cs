@@ -1156,7 +1156,7 @@ public partial class RealtimePage : UserControl
 
         if (!active && !capturable)
         {
-            SetStatus(LocalizationService.Get("S.Realtime.RealtimeUnsupported"), isError: true);
+            SetStatus(LocalizationService.Get(WgcCapability.UnsupportedMessageKey), isError: true);
             return;
         }
 
