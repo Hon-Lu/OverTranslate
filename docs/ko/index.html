@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=cb095021e9" />
+<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -225,7 +225,9 @@
         <p class="kicker" data-i18n="capture.kicker">캡처 번역</p>
         <h2 class="h2" data-i18n="capture.title">영역을 지정하면 번역문이 원문 위를 덮습니다</h2>
         <p data-i18n="capture.body1">단축키로 영역을 지정하면 화면의 글자를 인식해 번역합니다. 웹 페이지, PDF, 이미지, 만화, 영상, 게임에서 모두 쓸 수 있습니다.</p>
-        <div class="langs">
+        <!-- data-collapse：只先列出前幾個，其餘收在「查看全部」後面，展開後同一顆可以再收起。
+             語言會一直加，全列出來會擠成一大片；沒有 JS 時照樣全部顯示。 -->
+        <div class="langs" data-collapse="5">
           <span class="langs__label" data-i18n="capture.langs.label">인식 언어</span>
           <ul class="langs__list">
             <li data-i18n="capture.langs.zht">번체 중국어</li>
@@ -233,6 +235,9 @@
             <li data-i18n="capture.langs.en">영어</li>
             <li data-i18n="capture.langs.ja">일본어</li>
             <li data-i18n="capture.langs.ko">한국어</li>
+            <li data-i18n="capture.langs.ru">러시아어</li>
+            <li data-i18n="capture.langs.uk">우크라이나어</li>
+            <li class="langs__toggle" hidden><button type="button" class="langs__more" aria-expanded="false" data-less="접기" data-i18n-attr="data-less|capture.langs.less" data-i18n="capture.langs.more">모두 보기</button></li>
           </ul>
         </div>
         <aside class="aside">
@@ -617,11 +622,9 @@
         <p class="kicker" data-i18n="settings.kicker">설정</p>
         <h2 class="h2" data-i18n="settings.title">쓰는 방식에 맞게 조정</h2>
         <ul class="ticks">
-          <li><strong data-i18n="settings.1.title">인터페이스 언어</strong><span data-i18n="settings.1.body">번체 중국어, 간체 중국어, 영어, 일본어, 한국어, 러시아어를 지원하며 바꾸면 바로 적용됩니다. 처음 실행할 때는 Windows 표시 언어를 자동으로 따릅니다.</span></li>
+          <li><strong data-i18n="settings.1.title">인터페이스 언어</strong><span data-i18n="settings.1.body">바꾸면 바로 적용됩니다. 처음 실행할 때는 Windows 표시 언어를 자동으로 따릅니다.</span></li>
           <li><strong data-i18n="settings.2.title">단축키</strong><span data-i18n="settings.2.body">조합키, 단일 키, 두 번 누르기(Ctrl + C + C 등), 마우스 버튼, 게임패드 버튼을 지원하며 쓰는 방식에 맞게 지정할 수 있습니다.</span></li>
-          <li><strong data-i18n="settings.3.title">테마</strong><span data-i18n="settings.3.body">밝은 테마와 어두운 테마 두 가지를 제공합니다.</span></li>
-          <li><strong data-i18n="settings.4.title">자동 번역</strong><span data-i18n="settings.4.body">캡처 툴바의 설정에서 켜면 영역을 지정하는 즉시 번역하므로 버튼을 따로 누를 필요가 없습니다.</span></li>
-          <li><strong data-i18n="settings.5.title">시작 프로그램과 캡처 저장</strong><span data-i18n="settings.5.body">Windows 시작 시 자동으로 실행하고, 캡처를 지정한 위치에 자동으로 저장할 수 있습니다.</span></li>
+          <li><strong data-i18n="settings.models.title">인식 모델</strong><span data-i18n="settings.models.body">따로 다운로드하는 인식 언어와 만화 세로쓰기 모델을 여기에서 다운로드하거나 삭제할 수 있습니다.</span></li>
         </ul>
         <p>
           <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/README.ko.md" data-loc-href="readme" target="_blank" rel="noopener">
@@ -751,6 +754,6 @@
   </button>
 </div>
 
-<script src="../site/app.js?v=ffbd667f75" defer></script>
+<script src="../site/app.js?v=09a0128798" defer></script>
 </body>
 </html>

@@ -175,21 +175,10 @@ built-in text to speech (TTS) reads both the original text and the translation a
 
 ![Settings page](docs/images/設定頁_en.png)
 
-| Setting | Description |
-|---------|-------------|
-| Interface language | Traditional Chinese / Simplified Chinese / English / Japanese / Korean / Russian, applied immediately (on first launch it follows your Windows display language) |
-| Screenshot translation (hotkey) | Starts a selection and translates it (default `Ctrl + Alt + A`) |
-| Open translation window (hotkey) | Brings up the main window on the page you left it on (default `Ctrl + Alt + W`); while real-time translation is running, it brings the floating bar to the front |
-| Real-time translation (hotkey) | Starts selecting blocks when **real-time translation** isn't running, starts translating when pressed again during selection, and pauses / resumes while translating (default `Ctrl + Alt + S`); while paused you can read the original text |
-| Quick lookup (hotkey) | Opens the **quick lookup** window (default `Ctrl + C + C`); any text you have selected is picked up automatically |
-| In-place translation (hotkey) | Replaces the selected text with its translation (default `Ctrl + Alt + E`), and can use its own source and target language |
-| Run at startup | Launch automatically when Windows starts |
-| Save screenshots | Save captures automatically, to a folder of your choice (off by default) |
-| Service setup | Choose which services appear in the translation service menus, and set the key, endpoint, and model for DeepL and OpenAI |
-| Theme | Light / Dark |
-| Logging | Records more detailed information about what the app is doing; recommended only while troubleshooting (off by default) |
-
-> As well as key combinations, a shortcut can be a single key (F1 ~ F24, Pause, Scroll Lock), a double press (Ctrl + Ctrl, Ctrl + C + C), the middle or side mouse buttons, or a gamepad button.
+- **Interface language**: Traditional Chinese / Simplified Chinese / English / Japanese / Korean / Russian; on first launch it follows your Windows display language
+- **Shortcuts**: every feature's shortcut can be changed — key combinations, single keys (F1 ~ F24, Pause, Scroll Lock), double presses (Ctrl + Ctrl, Ctrl + C + C), the middle or side mouse buttons, and gamepad buttons all work. There is also **Open window** (default `Ctrl + Alt + W`) to bring up the main window at any time
+- **Recognition models**: manage the [recognition languages](#recognition-languages-ocr) and manga vertical-text models that are downloaded separately
+- **Translation services**: choose which translation services are shown, and set the key, endpoint, and model for DeepL and OpenAI
 
 > Logs are stored on your machine only and are never uploaded automatically; what **Record detailed information** adds also stays on your machine. To report a problem, press **Export diagnostics** and **Upload** on the settings page.
 
@@ -256,19 +245,18 @@ Prompt parameters (the **Available parameters** block on the settings page lists
 
 > Language names follow the interface language (an English interface fills in "Japanese", a 繁體中文 one fills in "日文"); the codes are always the tag the model uses.
 
-### Multi-language OCR
+### Recognition languages (OCR)
 
-OCR is handled by RapidOcrNet with ONNX models. The matching model is selected automatically per language — there's no need to pick an OCR engine manually.
+OCR runs entirely on your PC, and images are never uploaded. Chinese, English, and Japanese are built in; for any other language, you'll be asked whether to download its model the first time you pick it, and you can manage them later under **Recognition models** in Settings.
 
-| Language | Recognition model (rec) |
-|----------|-------------------------|
-| **English / Chinese (Simplified & Traditional) / Japanese** | PP-OCRv6 general recognition model (`PP-OCRv6_small_rec`), a single model covering Chinese, English, Japanese and many Latin-script languages, including common mixed Chinese-English layouts |
-| **Korean** | PP-OCRv5 Korean recognition model (`korean_PP-OCRv5_rec`), covering the Korean characters the general PP-OCRv6 model doesn't include |
+| Language | Model | How to get it |
+|----------|-------|---------------|
+| Chinese (Traditional / Simplified), English, Japanese | `PP-OCRv6_small_rec` | Built in |
+| Korean | `korean_PP-OCRv5_rec_mobile` | Download (about 14 MB) |
+| Russian, Ukrainian | `cyrillic_PP-OCRv5_rec_mobile` | Download (about 8 MB) |
+| Vertical Japanese (manga) | [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector), [CRAFT](https://github.com/clovaai/CRAFT-pytorch) (MIT), [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) (CC BY-NC-SA 4.0) | Download (about 342 MB, requires a graphics card) |
 
-All languages share the same **text detection model** (`PP-OCRv6_det_tiny`) and **orientation classification model** (`cls`); only the recognition model is switched per language.
-OCR runs entirely on your own PC, and images are never uploaded to any external service; the default models run on the CPU, while the manga vertical-text models run on the graphics card.
-
-**Manga vertical-text models**: when the source language is Japanese and vertical text is on, they can be downloaded separately in Settings (about 342 MB, requires a graphics card). [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) detects the text boxes, [CRAFT](https://github.com/clovaai/CRAFT-pytorch) (MIT) splits multi-column text, and [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) (CC BY-NC-SA 4.0) reads the vertical Japanese.
+All languages share the text detection (`PP-OCRv6_det_tiny`) and orientation classification (`cls`) models, run by RapidOcrNet with ONNX; the manga vertical-text models run on the graphics card, everything else on the CPU.
 
 ---
 

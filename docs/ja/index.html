@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=cb095021e9" />
+<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -225,7 +225,9 @@
         <p class="kicker" data-i18n="capture.kicker">キャプチャ翻訳</p>
         <h2 class="h2" data-i18n="capture.title">範囲を選ぶと、訳文が原文の上に重なります</h2>
         <p data-i18n="capture.body1">ショートカットキーで範囲を選ぶだけで、画面の文字を読み取って翻訳します。Web ページ、PDF、画像、漫画、動画、ゲームに対応しています。</p>
-        <div class="langs">
+        <!-- data-collapse：只先列出前幾個，其餘收在「查看全部」後面，展開後同一顆可以再收起。
+             語言會一直加，全列出來會擠成一大片；沒有 JS 時照樣全部顯示。 -->
+        <div class="langs" data-collapse="5">
           <span class="langs__label" data-i18n="capture.langs.label">認識できる言語</span>
           <ul class="langs__list">
             <li data-i18n="capture.langs.zht">繁体字中国語</li>
@@ -233,6 +235,9 @@
             <li data-i18n="capture.langs.en">英語</li>
             <li data-i18n="capture.langs.ja">日本語</li>
             <li data-i18n="capture.langs.ko">韓国語</li>
+            <li data-i18n="capture.langs.ru">ロシア語</li>
+            <li data-i18n="capture.langs.uk">ウクライナ語</li>
+            <li class="langs__toggle" hidden><button type="button" class="langs__more" aria-expanded="false" data-less="閉じる" data-i18n-attr="data-less|capture.langs.less" data-i18n="capture.langs.more">すべて表示</button></li>
           </ul>
         </div>
         <aside class="aside">
@@ -617,11 +622,9 @@
         <p class="kicker" data-i18n="settings.kicker">設定</p>
         <h2 class="h2" data-i18n="settings.title">使い方に合わせて整えられます</h2>
         <ul class="ticks">
-          <li><strong data-i18n="settings.1.title">表示言語</strong><span data-i18n="settings.1.body">繁体字中国語・簡体字中国語・英語・日本語・韓国語・ロシア語に対応し、切り替えるとすぐに反映されます。初回起動時は Windows の表示言語が自動で適用されます。</span></li>
+          <li><strong data-i18n="settings.1.title">表示言語</strong><span data-i18n="settings.1.body">切り替えるとすぐに反映されます。初回起動時は Windows の表示言語が自動で適用されます。</span></li>
           <li><strong data-i18n="settings.2.title">ショートカットキー</strong><span data-i18n="settings.2.body">組み合わせキー、単一キー、2 回押し（Ctrl + C + C など）、マウスのボタン、ゲームパッドのボタンに対応し、使い方に合わせて設定できます。</span></li>
-          <li><strong data-i18n="settings.3.title">テーマ</strong><span data-i18n="settings.3.body">ライトとダークの 2 種類から選べます。</span></li>
-          <li><strong data-i18n="settings.4.title">自動翻訳</strong><span data-i18n="settings.4.body">キャプチャのツールバーの設定でオンにすると、範囲を選んだ時点で翻訳が始まり、ボタンを押す必要はありません。</span></li>
-          <li><strong data-i18n="settings.5.title">スタートアップとキャプチャの保存</strong><span data-i18n="settings.5.body">Windows の起動時に自動で立ち上げ、キャプチャを指定した場所へ自動保存できます。</span></li>
+          <li><strong data-i18n="settings.models.title">認識モデル</strong><span data-i18n="settings.models.body">別途ダウンロードする認識言語と漫画縦書きモデルは、ここでダウンロード・削除できます。</span></li>
         </ul>
         <p>
           <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/README.ja.md" data-loc-href="readme" target="_blank" rel="noopener">
@@ -751,6 +754,6 @@
   </button>
 </div>
 
-<script src="../site/app.js?v=ffbd667f75" defer></script>
+<script src="../site/app.js?v=09a0128798" defer></script>
 </body>
 </html>

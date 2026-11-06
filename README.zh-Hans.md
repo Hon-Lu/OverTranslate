@@ -177,21 +177,10 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 ![设置页.png](docs/images/設定頁_zh-Hans.png)
 
-| 设置项 | 说明 |
-|----------|------|
-| 界面语言 | 繁體中文 / 简体中文 / English / 日本語 / 한국어 / Русский，切换后立即生效（首次启动时依 Windows 显示语言决定） |
-| 截图翻译（快捷键） | 开始框选并翻译（默认 `Ctrl + Alt + A`） |
-| 打开翻译窗口（快捷键） | 呼出主窗口并回到上次打开的页面（默认 `Ctrl + Alt + W`）；实时翻译进行中时，改为把浮动工具栏移到最上层 |
-| 实时翻译（快捷键） | 未启动时开始框选，框选时再按一次开始 **实时翻译**，翻译中可暂停 / 继续（默认 `Ctrl + Alt + S`），暂停时可以查看原文 |
-| 取词翻译（快捷键） | 打开 **取词翻译** 小窗口（默认 `Ctrl + C + C`），已选中的文字会自动带入 |
-| 替换翻译（快捷键） | 把选中的文字直接换成译文（默认 `Ctrl + Alt + E`），可另外设置自己的源语言与目标语言 |
-| 开机启动 | 开机时自动启动 |
-| 保存截图 | 截图时自动保存，可自定义保存位置（默认关闭） |
-| 翻译服务设置 | 选择要显示在翻译服务下拉菜单中的服务，并设置 DeepL 与 OpenAI 的密钥、地址与模型 |
-| 主题 | 浅色 / 深色 |
-| 应用日志 | 记录更详细的运行信息，建议仅在排查问题时开启（默认关闭） |
-
-> 快捷键可以是组合键，也可以是单个按键（F1 ~ F24、Pause、Scroll Lock）、连按两下（Ctrl + Ctrl、Ctrl + C + C）、鼠标中键／侧键或游戏手柄按键。
+- **界面语言**：繁體中文 / 简体中文 / English / 日本語 / 한국어 / Русский，首次启动时依 Windows 显示语言决定
+- **快捷键**：每个功能都可自定义，支持组合键、单个按键（F1 ~ F24、Pause、Scroll Lock）、连按两下（Ctrl + Ctrl、Ctrl + C + C）、鼠标中键／侧键与游戏手柄按键；另有 **打开翻译窗口**（默认 `Ctrl + Alt + W`）可随时呼出主窗口
+- **识别模型**：管理需要另外下载的 [识别语言](#识别语言ocr) 与漫画竖排模型
+- **翻译服务**：选择要显示的翻译服务，并设置 DeepL 与 OpenAI 的密钥、地址与模型
 
 > Log 仅保存在本机，不会自动上传；开启 **记录详细信息** 后的内容同样只会保留在本机。反馈问题时，可在设置页按下 **导出诊断信息** 与 **上传**。
 
@@ -258,19 +247,18 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 > 语言名称会跟着界面语言（简体中文界面代入「日语」，English 界面代入「Japanese」）；语言代码则固定是模型使用的代码。
 
-### 多语言 OCR 识别
+### 识别语言（OCR）
 
-OCR 识别由 RapidOcrNet 搭配 ONNX 模型处理，会依语言自动使用对应模型，不需手动选择 OCR 引擎。
+OCR 全程在本机运行，不会上传图片。中文、英文、日文已内置；其他语言第一次选择时会询问是否下载模型，之后可在设置页的 **识别模型** 管理。
 
-| 识别语言 | 识别模型（rec） |
-|----------|----------------|
-| **英文 / 中文（简繁）/ 日文** | PP-OCRv6 通用识别模型（`PP-OCRv6_small_rec`），单一模型支持中、英、日及多种拉丁语系，也能处理常见的中英混排 |
-| **韩文** | PP-OCRv5 韩文识别模型（`korean_PP-OCRv5_rec`），用于补足 PP-OCRv6 通用模型未涵盖的韩文字符 |
+| 识别语言 | 模型 | 获取方式 |
+|----------|------|----------|
+| 中文（繁／简）、英文、日文 | `PP-OCRv6_small_rec` | 内置 |
+| 韩文 | `korean_PP-OCRv5_rec_mobile` | 下载（约 14 MB） |
+| 俄文、乌克兰文 | `cyrillic_PP-OCRv5_rec_mobile` | 下载（约 8 MB） |
+| 日文竖排（漫画） | [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector)、[CRAFT](https://github.com/clovaai/CRAFT-pytorch)（MIT）、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0） | 下载（约 342 MB，需显卡） |
 
-所有语言共用同一套**文字检测模型**（`PP-OCRv6_det_tiny`）与**方向分类模型**（`cls`），仅识别模型会依语言切换。  
-OCR 全程于本机执行，不会将图片上传至外部服务；默认模型使用 CPU，漫画竖排模型则使用显卡。
-
-**漫画竖排模型**：源语言为日文并开启竖排时，可在设置中另外下载（约 342 MB，需显卡），由 [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector) 检测文字框、[CRAFT](https://github.com/clovaai/CRAFT-pytorch)（MIT）切分多栏文字、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0）识别竖排日文。
+所有语言共用文字检测（`PP-OCRv6_det_tiny`）与方向分类（`cls`）模型，由 RapidOcrNet 以 ONNX 运行；漫画竖排模型使用显卡，其余使用 CPU。
 
 ---
 

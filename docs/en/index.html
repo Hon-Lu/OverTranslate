@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=cb095021e9" />
+<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -225,7 +225,9 @@
         <p class="kicker" data-i18n="capture.kicker">Screenshot Translation</p>
         <h2 class="h2" data-i18n="capture.title">Select an area, and the translation covers the original</h2>
         <p data-i18n="capture.body1">Press the hotkey and select an area to read and translate the text on screen. Works on web pages, PDFs, images, manga, video and games.</p>
-        <div class="langs">
+        <!-- data-collapse：只先列出前幾個，其餘收在「查看全部」後面，展開後同一顆可以再收起。
+             語言會一直加，全列出來會擠成一大片；沒有 JS 時照樣全部顯示。 -->
+        <div class="langs" data-collapse="5">
           <span class="langs__label" data-i18n="capture.langs.label">Recognises</span>
           <ul class="langs__list">
             <li data-i18n="capture.langs.zht">Traditional Chinese</li>
@@ -233,6 +235,9 @@
             <li data-i18n="capture.langs.en">English</li>
             <li data-i18n="capture.langs.ja">Japanese</li>
             <li data-i18n="capture.langs.ko">Korean</li>
+            <li data-i18n="capture.langs.ru">Russian</li>
+            <li data-i18n="capture.langs.uk">Ukrainian</li>
+            <li class="langs__toggle" hidden><button type="button" class="langs__more" aria-expanded="false" data-less="Show less" data-i18n-attr="data-less|capture.langs.less" data-i18n="capture.langs.more">Show all</button></li>
           </ul>
         </div>
         <aside class="aside">
@@ -617,11 +622,9 @@
         <p class="kicker" data-i18n="settings.kicker">Settings</p>
         <h2 class="h2" data-i18n="settings.title">Set it up the way you work</h2>
         <ul class="ticks">
-          <li><strong data-i18n="settings.1.title">Interface language</strong><span data-i18n="settings.1.body">Traditional Chinese, Simplified Chinese, English, Japanese, Korean and Russian, applied immediately; on first launch it follows your Windows display language.</span></li>
+          <li><strong data-i18n="settings.1.title">Interface language</strong><span data-i18n="settings.1.body">Applied immediately; on first launch it follows your Windows display language.</span></li>
           <li><strong data-i18n="settings.2.title">Hotkeys</strong><span data-i18n="settings.2.body">Key combinations, single keys, double presses (such as Ctrl + C + C), mouse buttons and gamepad buttons all work, and each can be set to whatever suits you.</span></li>
-          <li><strong data-i18n="settings.3.title">Theme</strong><span data-i18n="settings.3.body">Light and dark.</span></li>
-          <li><strong data-i18n="settings.4.title">Auto translate</strong><span data-i18n="settings.4.body">Turned on from the settings on the screenshot toolbar, it translates as soon as the area is selected, with no button left to press.</span></li>
-          <li><strong data-i18n="settings.5.title">Run at startup and save screenshots</strong><span data-i18n="settings.5.body">Launch automatically with Windows, and save captures automatically to a folder of your choice.</span></li>
+          <li><strong data-i18n="settings.models.title">Recognition models</strong><span data-i18n="settings.models.body">Download or remove the recognition languages and manga vertical-text models that aren't built in.</span></li>
         </ul>
         <p>
           <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/README.md" data-loc-href="readme" target="_blank" rel="noopener">
@@ -751,6 +754,6 @@
   </button>
 </div>
 
-<script src="../site/app.js?v=ffbd667f75" defer></script>
+<script src="../site/app.js?v=09a0128798" defer></script>
 </body>
 </html>
