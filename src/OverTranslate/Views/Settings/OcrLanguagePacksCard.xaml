@@ -1,0 +1,26 @@
+<UserControl x:Class="OverTranslate.Views.Settings.OcrLanguagePacksCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Where a downloaded language goes away again. Getting one is the source-language pickers' job,
+         so this only has to name what is here; 下載 is offered too for someone who came looking. -->
+    <Border Background="{DynamicResource AppCardBg}"
+            BorderBrush="{DynamicResource AppBorder}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="14,12">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource S.Settings.OcrPacks}"
+                       FontFamily="{DynamicResource AppFont}"
+                       FontSize="13.5"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource AppTextPrimary}"/>
+            <TextBlock Text="{DynamicResource S.Settings.OcrPacksDesc}"
+                       Margin="0,4,0,0"
+                       FontFamily="{DynamicResource AppFont}"
+                       FontSize="12.5"
+                       Foreground="{DynamicResource AppTextSecondary}"
+                       TextWrapping="Wrap"/>
+            <StackPanel x:Name="Rows" Margin="0,10,0,0"/>
+        </StackPanel>
+    </Border>
+</UserControl>

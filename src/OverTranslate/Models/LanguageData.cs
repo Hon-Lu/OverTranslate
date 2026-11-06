@@ -39,6 +39,13 @@ public record LangItem(string Code, string NameKey, string English, bool StandsA
     public string SearchText => $"{Code} {Name} {English}";
 
     /// <summary>
+    /// The download this language needs before it can be read off the screen, or null for one the
+    /// installer already has. Only the source-language pickers look at it.
+    /// </summary>
+    public OverTranslate.Services.Ocr.OcrLanguagePack? Pack =>
+        OverTranslate.Services.Ocr.OcrLanguagePacks.ForCode(Code);
+
+    /// <summary>
     /// The label for the pickers, in whichever language the interface is currently in.
     /// </summary>
     /// <remarks>
@@ -162,6 +169,10 @@ public static class LanguageData
         new("KO",      "S.Lang.Korean",             "Korean"),
         new("ZH-HANT", "S.Lang.TraditionalChinese", "Traditional Chinese"),
         new("ZH",      "S.Lang.SimplifiedChinese",  "Simplified Chinese"),
+
+        // Language packs: listed here like any other, and asked about when picked. See OcrSourcePicker.
+        new("RU",      "S.Lang.Russian",            "Russian"),
+        new("UK",      "S.Lang.Ukrainian",          "Ukrainian"),
     ];
 
     public static readonly List<ProviderItem> Providers =
@@ -287,7 +298,9 @@ public static class LanguageData
 
         var match = OcrSourceLanguages.FirstOrDefault(l =>
             l.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-        return match?.Code ?? DefaultOcrSourceLanguage;
+
+        // A remembered language whose pack has since been deleted is not one that can be read.
+        return match is { Pack: not { IsReady: false } } ? match.Code : DefaultOcrSourceLanguage;
     }
 
     /// <summary>

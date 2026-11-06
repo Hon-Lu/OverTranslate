@@ -131,6 +131,8 @@ public partial class ToolbarWindow : Window
         RenderMangaHint();
 
         // Attach after initial values are set so initialization doesn't trigger a save
+        _sourcePicker = new global::OverTranslate.Controls.OcrSourcePicker(SrcLangBox, () => LanguageData.DefaultOcrSourceLanguage);
+        Closed += (_, _) => _sourcePicker.Dispose();
         SrcLangBox.SelectionChanged  += SrcLangBox_SelectionChanged;
         TgtLangBox.SelectionChanged  += TgtLangBox_SelectionChanged;
         ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
@@ -228,8 +230,12 @@ public partial class ToolbarWindow : Window
         ScreenGeometry.MoveToPhysical(this, (int)Math.Round(left), (int)Math.Round(top));
     }
 
+    private readonly global::OverTranslate.Controls.OcrSourcePicker _sourcePicker;
+
     private void SrcLangBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
+        if (_sourcePicker.Intercept(e)) return;
+
         SaveCurrentLanguageSelection();
 
         // The source language is what decides whether there is a voice to read with — see
@@ -264,8 +270,10 @@ public partial class ToolbarWindow : Window
         // Target → Source: use explicit language mapping (e.g. ZH-HANT stays traditional)
         if (tgtVal != null)
         {
+            // A language still to be downloaded falls through to 自動, as one the list does not have
+            // does: a swap should not stop to ask about a download.
             var sourceCode = LanguageData.MapTargetToSourceCode(tgtVal);
-            SrcLangBox.SelectedValue = sourceCode;
+            SrcLangBox.SelectedValue = OcrLanguagePacks.IsUsable(sourceCode) ? sourceCode : null;
             if (SrcLangBox.SelectedValue == null) SrcLangBox.SelectedIndex = 0;
         }
 

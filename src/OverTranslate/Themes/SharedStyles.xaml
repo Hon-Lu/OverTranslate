@@ -1519,6 +1519,114 @@
     <!--  CAPTURE TOOLBAR                            -->
     <!-- ═══════════════════════════════════════════ -->
 
+    <!-- A source-language box whose list can hold languages still to be downloaded: their row says
+         so at its far end, in the words OcrLanguagePack gives. See OcrSourcePicker. -->
+    <Style x:Key="OcrSourceComboBox" TargetType="ComboBox" BasedOn="{StaticResource ModernComboBox}">
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <DockPanel>
+                        <StackPanel x:Name="PackHint"
+                                    DockPanel.Dock="Right"
+                                    Orientation="Horizontal"
+                                    Margin="14,0,0,0"
+                                    Visibility="Collapsed">
+                            <Path x:Name="PackMark"
+                                  Width="12" Height="12"
+                                  Margin="0,0,4,0"
+                                  Stretch="None"
+                                  VerticalAlignment="Center"
+                                  Visibility="Collapsed"
+                                  Stroke="{DynamicResource AppTextSecondary}"
+                                  StrokeThickness="1.2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Data="M6,1 L6,8 M3,5.2 L6,8.2 L9,5.2 M1.5,11 L10.5,11"/>
+                            <TextBlock Text="{Binding Pack.RowText}"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="11.5"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                        </StackPanel>
+                        <TextBlock x:Name="Label"
+                                   Text="{Binding Display}"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Pack.ShowsRowHint}" Value="True">
+                            <Setter TargetName="PackHint" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Pack.ShowsDownloadMark}" Value="True">
+                            <Setter TargetName="PackMark" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <!-- The closed box only ever holds a language that is ready, but it is drawn
+                             from this template too, and a rebind can pass through it. -->
+                        <DataTrigger Value="{x:Null}"
+                                     Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}">
+                            <Setter TargetName="PackHint" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The same on the capture toolbar, where the closed box shows the short name; see ToolbarComboBox. -->
+    <Style x:Key="ToolbarOcrSourceComboBox" TargetType="ComboBox" BasedOn="{StaticResource ToolbarComboBox}">
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <DockPanel>
+                        <StackPanel x:Name="PackHint"
+                                    DockPanel.Dock="Right"
+                                    Orientation="Horizontal"
+                                    Margin="14,0,0,0"
+                                    Visibility="Collapsed">
+                            <Path x:Name="PackMark"
+                                  Width="12" Height="12"
+                                  Margin="0,0,4,0"
+                                  Stretch="None"
+                                  VerticalAlignment="Center"
+                                  Visibility="Collapsed"
+                                  Stroke="{DynamicResource AppTextSecondary}"
+                                  StrokeThickness="1.2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Data="M6,1 L6,8 M3,5.2 L6,8.2 L9,5.2 M1.5,11 L10.5,11"/>
+                            <TextBlock Text="{Binding Pack.RowText}"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="11.5"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                        </StackPanel>
+                        <TextBlock x:Name="Label"
+                                   Text="{Binding Display}"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Pack.ShowsRowHint}" Value="True">
+                            <Setter TargetName="PackHint" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Pack.ShowsDownloadMark}" Value="True">
+                            <Setter TargetName="PackMark" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <!-- The closed box only ever holds a language that is ready, but it is drawn
+                             from this template too, and a rebind can pass through it. -->
+                        <DataTrigger Value="{x:Null}"
+                                     Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}">
+                            <Setter TargetName="PackHint" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Label" Property="Text" Value="{Binding ShortName}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- The one button on the capture toolbar that starts work. A full-radius pill rather than the
          6px corner every other button here has: colour alone stopped separating it once the actions
          beside it grew their own icons, and shape survives being looked at out of the corner of an

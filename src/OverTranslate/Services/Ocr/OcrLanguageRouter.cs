@@ -10,7 +10,7 @@ internal static class OcrLanguageRouter
     public static bool UsesAutomaticLayout(string code) => Normalize(code) == "AUTO";
 
     public static bool IsSupported(string code) =>
-        Normalize(code) is "AUTO" or "EN" or "ZH" or "ZH-HANT" or "JA" or "KO";
+        Normalize(code) is "AUTO" or "EN" or "ZH" or "ZH-HANT" or "JA" or "KO" or "RU" or "UK";
 
     public static string GetUnsupportedLanguageMessage(string code) =>
         LocalizationService.Format("S.Error.OcrUnsupportedLanguage", Normalize(code));

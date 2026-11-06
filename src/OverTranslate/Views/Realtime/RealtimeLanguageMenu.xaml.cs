@@ -46,7 +46,7 @@ internal partial class RealtimeLanguageMenu : Window
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    // The two widths the design settled on: the source list is five short names, the target list
+    // The two widths the design settled on: the source list is a few short names, the target list
     // also carries the search box and thirty names, some of them long in Russian.
     private const double SourceWidth = 184;
     private const double TargetWidth = 220;
@@ -118,7 +118,7 @@ internal partial class RealtimeLanguageMenu : Window
         SearchBox.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, "S.Common.SearchLanguage");
         if (searchable) ItemsScroll.MaxHeight = TargetListMaxHeight;
 
-        // Five names need no search box, and without one the list needs a word to say what it is a
+        // A few names need no search box, and without one the list needs a word to say what it is a
         // list of: the capsule shows the pair without labels.
         HeaderText.Visibility = searchable ? Visibility.Collapsed : Visibility.Visible;
         HeaderText.Text = LocalizationService.Get("S.Realtime.SourceLanguage");
@@ -143,6 +143,12 @@ internal partial class RealtimeLanguageMenu : Window
 
     /// <summary>Raised with the code of the language the user picked, just before the menu closes.</summary>
     public event EventHandler<string>? LanguagePicked;
+
+    /// <summary>
+    /// Raised with the code of a language the user asked to download. The capsule switches to it when
+    /// the download lands, by which time this menu may well be gone.
+    /// </summary>
+    public event EventHandler<string>? PackDownloadRequested;
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -307,6 +313,12 @@ internal partial class RealtimeLanguageMenu : Window
             DockPanel.SetDock(tick, Dock.Right);
             content.Children.Add(tick);
         }
+        if (entry.Language.Pack is { } pack)
+        {
+            var hint = PackHint(pack);
+            DockPanel.SetDock(hint, Dock.Right);
+            content.Children.Add(hint);
+        }
         content.Children.Add(label);
         row.Content = content;
 
@@ -408,9 +420,70 @@ internal partial class RealtimeLanguageMenu : Window
         return visible[next].Focus();
     }
 
+    // Size, or progress, at the row's far end for as long as the language is not ready. Bound rather
+    // than set: the download runs on whether or not anyone is looking, and this menu may be the one
+    // open while it does.
+    private static FrameworkElement PackHint(OverTranslate.Services.Ocr.OcrLanguagePack pack)
+    {
+        var mark = new Path
+        {
+            Width = 12,
+            Height = 12,
+            Margin = new Thickness(0, 0, 4, 0),
+            Stretch = Stretch.None,
+            StrokeThickness = 1.2,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+            VerticalAlignment = VerticalAlignment.Center,
+            Data = Geometry.Parse("M6,1 L6,8 M3,5.2 L6,8.2 L9,5.2 M1.5,11 L10.5,11")
+        };
+        mark.SetResourceReference(Shape.StrokeProperty, "AppTextSecondary");
+        var visible = new System.Windows.Controls.BooleanToVisibilityConverter();
+        mark.SetBinding(VisibilityProperty, new System.Windows.Data.Binding(nameof(pack.ShowsDownloadMark)) { Source = pack, Converter = visible });
+
+        var text = new TextBlock { FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center };
+        text.SetResourceReference(ForegroundProperty, "AppTextSecondary");
+        text.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(pack.RowText)) { Source = pack });
+
+        var hint = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(8, 0, 0, 0) };
+        hint.Children.Add(mark);
+        hint.Children.Add(text);
+        hint.SetBinding(VisibilityProperty, new System.Windows.Data.Binding(nameof(pack.ShowsRowHint)) { Source = pack, Converter = visible });
+        return hint;
+    }
+
+    // In this window, in place of the list, rather than one of its own: it is already out of the
+    // capture and in the session's re-assert, and it already takes the mouse without the foreground.
+    private void ShowPackCard(RealtimeLanguageMenuEntry entry)
+    {
+        if (entry.Language.Pack is { IsDownloading: false } idle) idle.ClearFailure();
+
+        var card = new global::OverTranslate.Controls.OcrLanguagePackCard(entry.Language);
+        card.DownloadRequested += (_, _) => PackDownloadRequested?.Invoke(this, entry.Code);
+        card.Finished += (_, _) => Dismiss(giveBackForeground: true, "language pack card finished");
+
+        // Asking while it is already on its way means they want this language when it lands.
+        if (entry.Language.Pack is { IsDownloading: true })
+            PackDownloadRequested?.Invoke(this, entry.Code);
+
+        HeaderText.Visibility = Visibility.Collapsed;
+        ItemsScroll.Visibility = Visibility.Collapsed;
+        CardHost.Content = card;
+        CardHost.Visibility = Visibility.Visible;
+        Chrome.Width = card.Width + CardHost.Margin.Left + CardHost.Margin.Right + (MenuBorder + MenuPadding) * 2;
+        Dispatcher.BeginInvoke(new Action(Place), DispatcherPriority.Loaded);
+    }
+
     private void Pick(RealtimeLanguageMenuEntry entry)
     {
         if (_closing) return;
+
+        if (entry.Language.Pack is { IsReady: false })
+        {
+            ShowPackCard(entry);
+            return;
+        }
 
         // Closed first: what the pick sets off rebuilds the overlays, and the menu has nothing to
         // show over them.

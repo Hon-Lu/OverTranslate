@@ -361,6 +361,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         OcrLanguageRouter.Normalize(language) switch
         {
             "KO" => "korean",
+            // Not in the installer: a language pack, downloaded when first asked for. See OcrLanguagePack.
+            "RU" or "UK" => "cyrillic",
             // Everything else uses the general ("cjk") model — PP-OCRv6_small_rec, one model
             // covering 50 languages: Simplified and Traditional Chinese, English, Japanese, and 46
             // Latin-script ones. English UI captures very often contain embedded Chinese (chrome,
@@ -1132,8 +1134,9 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
         var detPath = Path.Combine(sharedPath, "det.onnx");
         var clsPath = Path.Combine(sharedPath, "cls.onnx");
-        var recPath = Path.Combine(modelPath, "rec.onnx");
-        var dictPath = Path.Combine(modelPath, "dict.txt");
+        var pack = OcrLanguagePacks.ForModelKey(modelName);
+        var recPath = pack?.PathOf("recognizer") ?? Path.Combine(modelPath, "rec.onnx");
+        var dictPath = pack?.PathOf("dictionary") ?? Path.Combine(modelPath, "dict.txt");
 
         EnsureModelFile(detPath);
         EnsureModelFile(clsPath);

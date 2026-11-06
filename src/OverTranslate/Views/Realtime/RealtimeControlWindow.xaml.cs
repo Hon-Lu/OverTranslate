@@ -179,6 +179,7 @@ public partial class RealtimeControlWindow : Window
 
         _scaleFixupSettle = new DispatcherTimer { Interval = ScaleFixupSettle };
         _scaleFixupSettle.Tick += (_, _) => { _scaleFixupSettle.Stop(); QueueScaleFixup(); };
+        Closed += (_, _) => StopWatchingPackDownload();
         Closed += (_, _) =>
         {
             _scaleFixupSettle.Stop();
@@ -834,6 +835,7 @@ public partial class RealtimeControlWindow : Window
             PhysicalRect(Chrome),
             _screenBounds);
         menu.LanguagePicked += (_, code) => OnLanguagePicked(kind, code);
+        menu.PackDownloadRequested += (_, code) => WatchPackDownload(code);
         menu.Closed += (_, _) =>
         {
             if (!ReferenceEquals(_menu, menu)) return;
@@ -846,8 +848,48 @@ public partial class RealtimeControlWindow : Window
         menu.Show();
     }
 
+    // The source language being downloaded at the user's request from this capsule, which goes into
+    // use when it lands, unless they have picked another since. Watched here rather than by the menu,
+    // which a press anywhere else puts away while the download carries on.
+    private string? _pendingPackCode;
+
+    private void WatchPackDownload(string code)
+    {
+        StopWatchingPackDownload();
+        _pendingPackCode = code;
+        foreach (var pack in Services.Ocr.OcrLanguagePacks.All)
+            pack.Changed += OnPackChanged;
+    }
+
+    private void StopWatchingPackDownload()
+    {
+        _pendingPackCode = null;
+        foreach (var pack in Services.Ocr.OcrLanguagePacks.All)
+            pack.Changed -= OnPackChanged;
+    }
+
+    private void OnPackChanged(object? sender, EventArgs e)
+    {
+        if (_pendingPackCode is not { } code || sender is not Services.Ocr.OcrLanguagePack pack ||
+            !ReferenceEquals(Services.Ocr.OcrLanguagePacks.ForCode(code), pack)) return;
+
+        if (pack.IsReady)
+        {
+            StopWatchingPackDownload();
+            OnLanguagePicked(RealtimeLanguageMenuKind.Source, code);
+        }
+        else if (!pack.IsDownloading)
+        {
+            // Failed or cancelled. Whatever card is up says so; there is nothing to switch to.
+            StopWatchingPackDownload();
+        }
+    }
+
     private void OnLanguagePicked(RealtimeLanguageMenuKind kind, string code)
     {
+        if (kind == RealtimeLanguageMenuKind.Source && _pendingPackCode != code)
+            StopWatchingPackDownload();
+
         var source = kind == RealtimeLanguageMenuKind.Source ? code : _sourceCode;
         var target = kind == RealtimeLanguageMenuKind.Target ? code : _targetCode;
 

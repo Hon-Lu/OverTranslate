@@ -56,7 +56,7 @@
                                      than shifting when one replaces the other. -->
                                 <Grid>
                                     <ComboBox x:Name="SrcLangBox"
-                                              Style="{StaticResource ModernComboBox}"
+                                              Style="{StaticResource OcrSourceComboBox}"
                                               SelectedValuePath="Code"/>
                                     <TextBlock x:Name="SrcLangPlaceholder"
                                                Text="{DynamicResource S.Realtime.SourceLanguagePrompt}"
