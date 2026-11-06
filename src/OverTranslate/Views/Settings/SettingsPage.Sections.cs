@@ -191,6 +191,7 @@ public partial class SettingsPage
         Grid.SetColumn(LanguagePacks, twoColumns ? 2 : 0);
         Grid.SetColumnSpan(LanguagePacks, twoColumns ? 1 : 3);
         LanguagePacks.Margin = twoColumns ? new Thickness(0) : new Thickness(0, 16, 0, 0);
+        MangaCard.Horizontal = !twoColumns;
     }
 
     /// <summary>
