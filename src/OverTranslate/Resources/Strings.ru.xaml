@@ -392,7 +392,8 @@
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">Одно окно</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreenHint">Все, что есть на экране.</sys:String>
     <sys:String x:Key="S.Realtime.ScreenModeUnsupported">Эта система пока не поддерживает захват всего экрана.</sys:String>
-    <sys:String x:Key="S.Realtime.RealtimeUnsupported">Для перевода в реальном времени нужен захват экрана, которого нет в этой версии Windows</sys:String>
+    <sys:String x:Key="S.Realtime.RealtimeUnsupported">Ваша Windows не поддерживает захват экрана, поэтому перевод в реальном времени недоступен.</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureComponentMissing">В вашей Windows отсутствует компонент захвата экрана, поэтому перевод в реальном времени недоступен.</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindowHint">Даже если окно перекрыто.</sys:String>
     <sys:String x:Key="S.Realtime.Step1Label">Шаг 1</sys:String>
     <sys:String x:Key="S.Realtime.Step1Name">Источник захвата</sys:String>
@@ -409,7 +410,6 @@
     <sys:String x:Key="S.Realtime.CaptureWindowOnScreen">Области будут выделяться на: {0}.</sys:String>
     <sys:String x:Key="S.Realtime.RefreshWindows">Обновить</sys:String>
     <sys:String x:Key="S.Realtime.ChooseWindowFirst">Сначала выберите окно для перевода</sys:String>
-    <sys:String x:Key="S.Realtime.WindowCaptureUnsupported">Эта версия Windows не поддерживает захват экрана.</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureGone">Это окно закрыто или свернуто. Выберите окно заново.</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFailed">Это окно не удается захватить. Переключите его в режим «окно без рамки» или «в окне» и повторите попытку.</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFullscreen">Этот режим отображения нельзя захватить. Переключитесь в режим «окно без рамки» или «в окне» и повторите попытку.</sys:String>

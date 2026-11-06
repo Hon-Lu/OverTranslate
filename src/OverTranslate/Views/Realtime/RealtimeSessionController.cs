@@ -1290,7 +1290,11 @@ internal sealed class RealtimeSessionController
 
         if (!WgcCapability.IsCaptureSupported)
         {
-            refusal = "S.Realtime.WindowCaptureUnsupported";
+            // Pressed again after this run found the component missing: the same answer as the
+            // first time, not the older one about the Windows version.
+            refusal = WgcCapability.IsComponentMissing
+                ? "S.Realtime.CaptureComponentMissing"
+                : "S.Realtime.RealtimeUnsupported";
             Log.Info("Realtime window capture unavailable: this system does not support it");
             return null;
         }
@@ -1317,6 +1321,10 @@ internal sealed class RealtimeSessionController
         {
             refusal = outcome switch
             {
+                // Not the display-mode advice: a report came from someone who pressed 開始翻譯 for
+                // twenty minutes, restarting their game in between, on a Windows that could not
+                // capture any window at all.
+                WindowCaptureOutcome.Unavailable => "S.Realtime.CaptureComponentMissing",
                 WindowCaptureOutcome.Blank => "S.Realtime.WindowCaptureFullscreen",
                 WindowCaptureOutcome.NoFrame => "S.Realtime.WindowCaptureNoFrame",
                 _ => "S.Realtime.WindowCaptureFailed"

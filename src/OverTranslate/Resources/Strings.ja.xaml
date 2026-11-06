@@ -399,7 +399,8 @@
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">ウィンドウ指定</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreenHint">画面に映っているものすべてを取り込みます。</sys:String>
     <sys:String x:Key="S.Realtime.ScreenModeUnsupported">この環境は現在「画面全体」に対応していません。</sys:String>
-    <sys:String x:Key="S.Realtime.RealtimeUnsupported">リアルタイム翻訳には画面キャプチャ機能が必要ですが、この Windows では利用できません</sys:String>
+    <sys:String x:Key="S.Realtime.RealtimeUnsupported">お使いの Windows は画面キャプチャに対応していないため、リアルタイム翻訳の機能を使用できません。</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureComponentMissing">お使いの Windows には画面キャプチャのコンポーネントがないため、リアルタイム翻訳の機能を使用できません。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindowHint">指定したウィンドウの中だけを取り込みます。</sys:String>
     <sys:String x:Key="S.Realtime.Step1Label">ステップ 1</sys:String>
     <sys:String x:Key="S.Realtime.Step1Name">取り込み方法を選ぶ</sys:String>
@@ -416,7 +417,6 @@
     <sys:String x:Key="S.Realtime.CaptureWindowOnScreen">範囲の選択は{0}で行います。</sys:String>
     <sys:String x:Key="S.Realtime.RefreshWindows">再読み込み</sys:String>
     <sys:String x:Key="S.Realtime.ChooseWindowFirst">先に翻訳するウィンドウを選んでください</sys:String>
-    <sys:String x:Key="S.Realtime.WindowCaptureUnsupported">この Windows のバージョンは画面キャプチャに対応していません。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureGone">そのウィンドウは閉じられたか最小化されています。ウィンドウを選び直してください。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFailed">このウィンドウは取り込めません。「ボーダーレスウィンドウ」または「ウィンドウモード」に切り替えてもう一度お試しください。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFullscreen">現在の表示モードでは取り込めません。「ボーダーレスウィンドウ」または「ウィンドウモード」に切り替えてもう一度お試しください。</sys:String>

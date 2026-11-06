@@ -247,6 +247,12 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // a system with no usable graphics device, a window that closed between resolving and
             // attaching, a policy that forbids capturing it.
             Log.Warn(ex, "Could not start window capture for hwnd={Hwnd:X}", hwnd);
+            if (IsComponentMissing(ex))
+            {
+                outcome = WindowCaptureOutcome.Unavailable;
+                WgcCapability.MarkComponentMissing();
+                Log.Warn("Windows.Graphics.Capture has no class to create a capture item with; capture is unavailable on this system");
+            }
             backend?.Dispose();
             if (backend is null)
             {
@@ -255,6 +261,20 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             }
             return (null, outcome);
         }
+    }
+
+    private const int REGDB_E_CLASSNOTREG = unchecked((int)0x80040154);
+
+    /// <summary>
+    /// Whether <paramref name="ex"/>, or anything it wraps, says a class this capture needs is not
+    /// registered on the system — the one failure here that no window and no display mode can fix.
+    /// </summary>
+    internal static bool IsComponentMissing(Exception? ex)
+    {
+        for (; ex is not null; ex = ex.InnerException)
+            if (ex.HResult == REGDB_E_CLASSNOTREG)
+                return true;
+        return false;
     }
 
 

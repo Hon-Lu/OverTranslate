@@ -51,7 +51,27 @@ public static class WgcCapability
     /// platform analyser see that nothing newer than 1809 is reached on a system that only has 1809.
     /// </remarks>
     [SupportedOSPlatformGuard("windows10.0.18362.0")]
-    public static bool IsCaptureSupported => CaptureSupported.Value;
+    public static bool IsCaptureSupported => !_missingComponent && CaptureSupported.Value;
+
+    private static volatile bool _missingComponent;
+
+    /// <summary>
+    /// Records that capturing turned out to be impossible after all — the system said yes to
+    /// <c>IsSupported</c> and then had no class to create a capture item with. From then on this
+    /// process treats capture as unsupported, so 即時翻譯 says so up front instead of letting the
+    /// user press 開始翻譯 again and again.
+    /// </summary>
+    internal static void MarkComponentMissing() => _missingComponent = true;
+
+    /// <summary>Whether <see cref="MarkComponentMissing"/> has been called in this run.</summary>
+    public static bool IsComponentMissing => _missingComponent;
+
+    /// <summary>
+    /// The string key that says why 即時翻譯 cannot run here, for when neither mode is available:
+    /// a missing component is named as such, anything else gets the general sentence.
+    /// </summary>
+    public static string UnsupportedMessageKey =>
+        _missingComponent ? "S.Realtime.CaptureComponentMissing" : "S.Realtime.RealtimeUnsupported";
 
     /// <summary>
     /// Whether the yellow capture indicator around a captured window can be turned off. Present from

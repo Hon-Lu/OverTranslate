@@ -414,7 +414,8 @@
     <sys:String x:Key="S.Realtime.CaptureSourceWindow">視窗擷取</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceScreenHint">擷取完整螢幕畫面上的所有內容。</sys:String>
     <sys:String x:Key="S.Realtime.ScreenModeUnsupported">此系統目前不支援「螢幕擷取」。</sys:String>
-    <sys:String x:Key="S.Realtime.RealtimeUnsupported">即時翻譯需要畫面擷取功能，這台 Windows 沒有提供</sys:String>
+    <sys:String x:Key="S.Realtime.RealtimeUnsupported">您的 Windows 不支援畫面擷取，無法使用即時翻譯相關功能。</sys:String>
+    <sys:String x:Key="S.Realtime.CaptureComponentMissing">您的 Windows 缺少畫面擷取元件，無法使用即時翻譯相關功能。</sys:String>
     <sys:String x:Key="S.Realtime.CaptureSourceWindowHint">擷取指定視窗內的內容。</sys:String>
     <sys:String x:Key="S.Realtime.Step1Label">步驟 1</sys:String>
     <sys:String x:Key="S.Realtime.Step1Name">選擇擷取方式</sys:String>
@@ -431,7 +432,6 @@
     <sys:String x:Key="S.Realtime.CaptureWindowOnScreen">字幕框選會在{0}上進行。</sys:String>
     <sys:String x:Key="S.Realtime.RefreshWindows">重新整理</sys:String>
     <sys:String x:Key="S.Realtime.ChooseWindowFirst">請先選擇要翻譯的視窗</sys:String>
-    <sys:String x:Key="S.Realtime.WindowCaptureUnsupported">目前的 Windows 版本不支援此畫面擷取功能。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureGone">指定的視窗已關閉或最小化，請重新選擇視窗。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFailed">無法擷取此視窗，請切換至「無邊框視窗」或「視窗化」後再試一次。</sys:String>
     <sys:String x:Key="S.Realtime.WindowCaptureFullscreen">目前的顯示模式無法擷取，請切換至「無邊框視窗」或「視窗化」後再試一次。</sys:String>
