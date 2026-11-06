@@ -843,6 +843,25 @@ p:last-child { margin-bottom: 0; }
   color: var(--ink-2);
   font-size: 0.82rem;
 }
+/* 「查看全部」：跟標籤同一排、同樣大小，但是可以按的那一顆 */
+.langs__list li.langs__toggle { padding: 0; border: 0; background: none; }
+.langs__more {
+  padding: 4px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+.langs__more:hover { border-color: var(--accent); }
+.langs__more:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.langs__list li.is-revealed { animation: langlist-in 180ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .langs__list li.is-revealed { animation: none; }
+}
 
 /* facts：補充說明，不加框，讓下方的模式卡片成為唯一的容器 */
 .facts {
@@ -890,6 +909,7 @@ p:last-child { margin-bottom: 0; }
 }
 .ticks strong { display: block; color: var(--ink); font-weight: 620; }
 .ticks--compact li { font-size: 0.89rem; }
+.ticks + p { margin-top: 22px; }
 
 /* tabs */
 .tabs--center { display: grid; justify-items: center; }
