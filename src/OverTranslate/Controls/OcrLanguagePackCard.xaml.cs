@@ -64,7 +64,10 @@ internal partial class OcrLanguagePackCard : UserControl
             : LocalizationService.Format("S.OcrPack.AskTitle", name);
 
         BodyText.Visibility = downloading ? Visibility.Collapsed : Visibility.Visible;
-        BodyText.Text = failure ?? LocalizationService.Format("S.OcrPack.AskBody", _pack.LanguagesText);
+        BodyText.Text = failure
+            ?? (_pack.Codes.Count > 1
+                ? LocalizationService.Format("S.OcrPack.AskBody", _pack.LanguagesText)
+                : LocalizationService.Get("S.OcrPack.AskBodySingle"));
         BodyText.SetResourceReference(ForegroundProperty, failure is null ? "AppTextSecondary" : "AppError");
 
         ProgressTrack.Visibility = downloading ? Visibility.Visible : Visibility.Collapsed;

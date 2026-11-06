@@ -757,6 +757,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.OcrPack.CyrillicLanguages">Russian and Ukrainian</sys:String>
     <sys:String x:Key="S.OcrPack.AskTitle">Download the {0} recognition model?</sys:String>
     <sys:String x:Key="S.OcrPack.AskBody">Reading this language needs a separate model. {0} share it, so you only download it once.</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBodySingle">Reading this language needs a separate model. You only download it once.</sys:String>
     <sys:String x:Key="S.OcrPack.Size">About {0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">Download</sys:String>

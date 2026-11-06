@@ -72,6 +72,11 @@
     <None Update="ocrmodels\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Korean is a language pack (ocrmodels\lang-korean.json), downloaded when first chosen. The copy
+         stays in the repository for the tests and the OCR harness, which link it in themselves. -->
+    <None Update="ocrmodels\onnx\korean\**">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
     <None Update="NLog.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

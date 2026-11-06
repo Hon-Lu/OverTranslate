@@ -42,7 +42,11 @@ public partial class OcrLanguagePacksCard : UserControl
     {
         Rows.Children.Clear();
         foreach (var pack in OcrLanguagePacks.All)
-            Rows.Children.Add(BuildRow(pack));
+        {
+            var row = BuildRow(pack);
+            if (Rows.Children.Count > 0) row.Margin = new Thickness(0, 12, 0, 0);
+            Rows.Children.Add(row);
+        }
     }
 
     private FrameworkElement BuildRow(OcrLanguagePack pack)

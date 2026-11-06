@@ -170,8 +170,9 @@ public static class LanguageData
         new("ZH-HANT", "S.Lang.TraditionalChinese", "Traditional Chinese"),
         new("ZH",      "S.Lang.SimplifiedChinese",  "Simplified Chinese"),
 
-        // Language packs: listed here like any other, and asked about when picked. See OcrSourcePicker.
-        new("RU",      "S.Lang.Russian",            "Russian"),
+        // Language packs, Korean above included: listed like any other, and asked about when picked.
+        // See OcrSourcePicker.
+        new("RU",     "S.Lang.Russian",            "Russian"),
         new("UK",      "S.Lang.Ukrainian",          "Ukrainian"),
     ];
 

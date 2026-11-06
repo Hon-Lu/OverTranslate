@@ -748,6 +748,7 @@
     <sys:String x:Key="S.OcrPack.CyrillicLanguages">Русский и украинский</sys:String>
     <sys:String x:Key="S.OcrPack.AskTitle">Скачать модель распознавания ({0})?</sys:String>
     <sys:String x:Key="S.OcrPack.AskBody">Для распознавания этого языка нужна отдельная модель. {0} используют одну модель, поэтому скачать её нужно один раз.</sys:String>
+    <sys:String x:Key="S.OcrPack.AskBodySingle">Для распознавания этого языка нужна отдельная модель. Скачать её нужно один раз.</sys:String>
     <sys:String x:Key="S.OcrPack.Size">Около {0} МБ</sys:String>
     <sys:String x:Key="S.OcrPack.RowSize">{0} МБ</sys:String>
     <sys:String x:Key="S.OcrPack.Download">Скачать</sys:String>

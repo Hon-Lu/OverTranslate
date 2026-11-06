@@ -1,0 +1,27 @@
+{
+  "version": "1",
+  "sources": [
+    {
+      "name": "huggingface",
+      "url": "https://huggingface.co/hon-lu/ppocr-language-packs/resolve/main/korean/{name}"
+    },
+    {
+      "name": "github",
+      "url": "https://github.com/Hon-Lu/OverTranslate-assets/releases/download/ppocr-language-packs/{name}"
+    }
+  ],
+  "files": [
+    {
+      "role": "recognizer",
+      "name": "korean-v1-rec.onnx",
+      "size": 13488748,
+      "sha256": "cd6e2ea50f6943ca7271eb8c56a877a5a90720b7047fe9c41a2e541a25773c9b"
+    },
+    {
+      "role": "dictionary",
+      "name": "korean-v1-dict.txt",
+      "size": 47451,
+      "sha256": "a88071c68c01707489baa79ebe0405b7beb5cca229f4fc94cc3ef992328802d7"
+    }
+  ]
+}

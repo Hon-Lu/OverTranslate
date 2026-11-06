@@ -36,6 +36,9 @@
     <!-- Wins over the copy the OverTranslate reference brings along, which writes to the user's real
          log — see the comments in the file itself. -->
     <None Include="NLog.config" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The Korean model, which the app downloads as a language pack and so does not copy itself.
+         OnnxOcrEngine reads a copy beside the binary when the pack is not downloaded. -->
+    <None Include="..\OverTranslate\ocrmodels\onnx\korean\**" Link="ocrmodels\onnx\korean\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
