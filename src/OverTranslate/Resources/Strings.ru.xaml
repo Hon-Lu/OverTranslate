@@ -485,7 +485,10 @@
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Работает только в полях для ввода текста; вне поля ввода вставить ничего нельзя.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Настройки перевода</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">Эти языки используются только для перевода с заменой и не влияют на перевод снимка экрана, текста и перевод в реальном времени.</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateBilingualHint">Определяет язык выделенного текста и переводит между двумя выбранными языками</sys:String>
+    <sys:String x:Key="S.QuickTranslate.Mode">Режим</sys:String>
+    <sys:String x:Key="S.QuickTranslate.ModeOneWay">В одну сторону</sys:String>
+    <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
+    <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, направление по языку выделенного текста</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ Одной клавишей можно назначить только F1–F24, Pause или Scroll Lock — для остальных нужны Ctrl/Alt/Shift</sys:String>
 
     <sys:String x:Key="S.Settings.General">Общие</sys:String>

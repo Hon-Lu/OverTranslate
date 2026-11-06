@@ -121,7 +121,7 @@ public partial class QuickTranslateSettingsOverlay : UserControl
 
             QuickTranslateBilingualFirstBox.ItemsSource = LanguageData.TargetLanguages;
             QuickTranslateBilingualSecondBox.ItemsSource = LanguageData.TargetLanguages;
-            QuickTranslateBilingualToggle.IsChecked = s.QuickTranslate.BilingualEnabled;
+            (s.QuickTranslate.BilingualEnabled ? BilingualRadio : OneWayRadio).IsChecked = true;
             ShowQuickTranslatePair(BilingualPair.Load(
                 s.QuickTranslate.BilingualFirstLanguage, s.QuickTranslate.BilingualSecondLanguage));
             QuickTranslateBilingualFirstBox.Items.Refresh();
@@ -151,15 +151,16 @@ public partial class QuickTranslateSettingsOverlay : UserControl
             s.QuickTranslate.SourceLanguage = LanguageData.GetValidSourceCode(source);
             s.QuickTranslate.TargetLanguage = LanguageData.GetValidTargetCode(target);
         });
+        RenderQuickTranslateMode();
     }
 
     /// <summary>The 雙語互譯 pair as the pickers show it — see <see cref="BilingualPair.Pick"/>.</summary>
     private BilingualPair _quickTranslatePair = BilingualPair.Load(null, null);
 
-    private void QuickTranslateBilingual_Toggled(object sender, RoutedEventArgs e)
+    private void Mode_Checked(object sender, RoutedEventArgs e)
     {
         RenderQuickTranslateMode();
-        Persist(s => s.QuickTranslate.BilingualEnabled = QuickTranslateBilingualToggle.IsChecked == true);
+        Persist(s => s.QuickTranslate.BilingualEnabled = BilingualRadio.IsChecked == true);
     }
 
     private void QuickTranslateBilingualPair_Changed(object sender, SelectionChangedEventArgs e)
@@ -201,16 +202,42 @@ public partial class QuickTranslateSettingsOverlay : UserControl
 
         QuickTranslateBilingualFallbackHint.Text = LocalizationService.Format(
             "S.QuickLookup.BilingualFallback", LanguageData.GetTargetDisplayName(pair.First));
+        RenderQuickTranslateMode();
     }
 
-    /// <summary>Shows the fixed pair or the 雙語互譯 pair, whichever the switch says is in use.</summary>
+    /// <summary>
+    /// Opens the chosen mode's block and folds the other to its summary line, outlining the one in
+    /// use. Also rewrites both summaries, which name the languages each block holds.
+    /// </summary>
     private void RenderQuickTranslateMode()
     {
-        if (QuickTranslateFixedPair is null) return;
+        if (OneWayBody is null) return;
 
-        var bilingual = QuickTranslateBilingualToggle.IsChecked == true;
-        QuickTranslateFixedPair.Visibility = bilingual ? Visibility.Collapsed : Visibility.Visible;
-        QuickTranslateBilingualPair.Visibility = bilingual ? Visibility.Visible : Visibility.Collapsed;
-        QuickTranslateBilingualFallbackHint.Visibility = QuickTranslateBilingualPair.Visibility;
+        var bilingual = BilingualRadio.IsChecked == true;
+        OneWayBody.Visibility = bilingual ? Visibility.Collapsed : Visibility.Visible;
+        BilingualBody.Visibility = bilingual ? Visibility.Visible : Visibility.Collapsed;
+        OneWaySummary.Visibility = bilingual ? Visibility.Visible : Visibility.Collapsed;
+        BilingualSummary.Visibility = bilingual ? Visibility.Collapsed : Visibility.Visible;
+        Outline(OneWayCard, !bilingual);
+        Outline(BilingualCard, bilingual);
+
+        OneWaySummary.Text = LocalizationService.Format("S.QuickTranslate.OneWaySummary",
+            SourceName(QuickTranslateSourceBox.SelectedValue as string),
+            LanguageData.GetTargetDisplayName(QuickTranslateTargetBox.SelectedValue as string));
+        BilingualSummary.Text = LocalizationService.Format("S.QuickTranslate.BilingualSummary",
+            LanguageData.GetTargetDisplayName(_quickTranslatePair.First),
+            LanguageData.GetTargetDisplayName(_quickTranslatePair.Second));
     }
+
+    private static void Outline(System.Windows.Controls.Border card, bool inUse)
+    {
+        card.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, inUse ? "AppAccent" : "AppBorder");
+        card.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, inUse ? "AppAccentSubtle" : "AppCardBg");
+    }
+
+    // The text pickers' source list, which has 自動偵測 and every language a service takes - not the
+    // OCR one GetSourceDisplayName reads.
+    private static string SourceName(string? code) =>
+        LanguageData.SourceLanguages.FirstOrDefault(l => l.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name
+        ?? code ?? "";
 }
