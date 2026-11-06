@@ -185,12 +185,14 @@ public partial class SettingsPage : UserControl
             SettingsService.Instance.CaptureOptionsChanged += OnCaptureOptionsChanged;
             OnOcrDebugChanged(this, EventArgs.Empty);
             OnCaptureOptionsChanged(this, EventArgs.Empty);
+            SubscribeModels();
         };
         Unloaded += (_, _) =>
         {
             LocalizationService.LanguageChanged -= OnLanguageChanged;
             SettingsService.Instance.OcrDebugChanged -= OnOcrDebugChanged;
             SettingsService.Instance.CaptureOptionsChanged -= OnCaptureOptionsChanged;
+            UnsubscribeModels();
             StopRecording();
         };
 

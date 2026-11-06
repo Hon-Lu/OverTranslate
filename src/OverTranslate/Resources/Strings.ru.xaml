@@ -621,7 +621,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">Не удалось сохранить модели. Проверьте, достаточно ли места на диске.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">Загрузка не завершилась. Повторите попытку.</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">Внешний вид</sys:String>
     <sys:String x:Key="S.Settings.Theme">Тема</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">Светлая</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">Темная</sys:String>
@@ -754,5 +753,14 @@
     <sys:String x:Key="S.OcrPack.Download">Скачать</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Скачивание модели распознавания ({0})</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Языки распознавания</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">Эти модели не встроены в приложение и скачиваются, когда вы выбираете язык.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksHint">Скачать язык также предложат, когда вы выберете его в меню исходного языка.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Встроено</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">Скачано · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">Не скачано · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">Удалить</sys:String>
+    <sys:String x:Key="S.Settings.Models">Модели распознавания</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">Скачано {0}</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">Открыть папку</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">Сервисы перевода</sys:String>
 </ResourceDictionary>

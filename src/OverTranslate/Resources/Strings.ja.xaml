@@ -629,7 +629,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">モデルを保存できませんでした。ディスクの空き容量を確認してください。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">ダウンロードが完了しませんでした。もう一度お試しください。</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">外観</sys:String>
     <sys:String x:Key="S.Settings.Theme">テーマ</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">ライト</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">ダーク</sys:String>
@@ -764,6 +763,15 @@
     <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">ダウンロード</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0}の認識モデルをダウンロード中</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacks">認識言語パック</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">これらのモデルは内蔵されていません。言語を選んだときにダウンロードします。</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">認識言語</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksHint">認識元の言語メニューで未ダウンロードの言語を選んだときにも、ダウンロードするか確認します。</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">内蔵</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">ダウンロード済み · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">未ダウンロード · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">削除</sys:String>
+    <sys:String x:Key="S.Settings.Models">認識モデル</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">ダウンロード済み {0}</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">フォルダーを開く</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">翻訳サービス</sys:String>
 </ResourceDictionary>

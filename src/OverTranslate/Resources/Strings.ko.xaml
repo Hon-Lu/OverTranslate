@@ -629,7 +629,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">모델을 저장할 수 없습니다. 디스크 여유 공간을 확인하세요.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">다운로드가 완료되지 않았습니다. 다시 시도하세요.</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">외관</sys:String>
     <sys:String x:Key="S.Settings.Theme">테마</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">라이트</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">다크</sys:String>
@@ -764,6 +763,15 @@
     <sys:String x:Key="S.OcrPack.RowSize">{0}MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">다운로드</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0} 인식 모델 다운로드 중</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacks">인식 언어 팩</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">이 모델들은 기본 포함되어 있지 않으며, 언어를 선택할 때 다운로드됩니다.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">인식 언어</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksHint">원본 언어 메뉴에서 다운로드하지 않은 언어를 선택할 때도 다운로드 여부를 묻습니다.</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">기본 포함</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">다운로드됨 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">다운로드 안 됨 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">삭제</sys:String>
+    <sys:String x:Key="S.Settings.Models">인식 모델</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">{0} 다운로드됨</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">폴더 열기</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">번역 서비스</sys:String>
 </ResourceDictionary>

@@ -2576,6 +2576,57 @@
         </Setter>
     </Style>
 
+    <!-- A section of the settings page, under 設定 in the rail while that page is shown. Lighter
+         than NavItem in every way - shorter, smaller type, no fill when chosen - so it reads as a
+         place on the current page rather than another page. The text lines up with NavItem's label:
+         its 8 margin, 12 padding and 24 icon column. The chosen one gets the accent on a short bar
+         at the left of the text, the same mark the rail's own indicator makes. -->
+    <Style x:Key="NavSubItem" TargetType="RadioButton">
+        <Setter Property="FontFamily"  Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"    Value="12.5"/>
+        <Setter Property="Foreground"  Value="{DynamicResource AppTextSecondary}"/>
+        <Setter Property="Background"  Value="Transparent"/>
+        <Setter Property="Cursor"      Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6"
+                            Margin="8,0"
+                            Padding="36,0,12,0"
+                            Height="30">
+                        <Grid>
+                            <Border x:Name="Mark" Width="2" Height="14" CornerRadius="1"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                    Margin="-10,0,0,0"
+                                    Background="{DynamicResource AppAccent}"
+                                    Visibility="Hidden"/>
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource AppButtonHoverBg}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- The rail's "there is a newer version" badge, under the version number it contradicts.
          A badge rather than a nav row: it states a fact about this copy of the application, which
          is what that corner of the rail is already for, and it is absent whenever the fact is not

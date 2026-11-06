@@ -650,7 +650,6 @@
     <sys:String x:Key="S.Settings.MangaModelsErrorDisk">無法儲存模型，請確認磁碟空間是否足夠。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsErrorOther">下載沒有完成，請再試一次。</sys:String>
 
-    <sys:String x:Key="S.Settings.Appearance">外觀</sys:String>
     <sys:String x:Key="S.Settings.Theme">主題</sys:String>
     <sys:String x:Key="S.Settings.ThemeLight">淺色</sys:String>
     <sys:String x:Key="S.Settings.ThemeDark">深色</sys:String>
@@ -783,6 +782,15 @@
     <sys:String x:Key="S.OcrPack.RowSize">{0} MB</sys:String>
     <sys:String x:Key="S.OcrPack.Download">下載</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">正在下載{0}辨識模型</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacks">辨識語言包</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksDesc">這些語言的模型沒有內建，選到時才下載。</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacks">辨識語言</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksHint">在來源語言選單選到未下載的語言時，也會詢問是否下載。</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">內建</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksReady">已下載 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksMissing">未下載 · {0}</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDelete">刪除</sys:String>
+    <sys:String x:Key="S.Settings.Models">辨識模型</sys:String>
+    <sys:String x:Key="S.Settings.ModelsUsed">已下載 {0}</sys:String>
+    <sys:String x:Key="S.Settings.ModelsOpenFolder">開啟資料夾</sys:String>
+    <sys:String x:Key="S.Settings.NavServices">翻譯服務</sys:String>
 </ResourceDictionary>
