@@ -1168,7 +1168,7 @@ public partial class SettingsPage : UserControl
 
         try
         {
-            Clipboard.SetText(code);
+            ClipboardWriter.SetText(code);
             FlashSuccess(LocalizationService.Get("S.Settings.DiagnosticsCodeCopied"));
         }
         catch (Exception)

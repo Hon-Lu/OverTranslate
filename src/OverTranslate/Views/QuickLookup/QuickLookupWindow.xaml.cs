@@ -1464,7 +1464,7 @@ public partial class QuickLookupWindow : Window
 
         try
         {
-            Clipboard.SetText(TranslatedText.Text);
+            ClipboardWriter.SetText(TranslatedText.Text);
         }
         catch (Exception ex)
         {
