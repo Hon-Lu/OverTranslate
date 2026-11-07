@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=cb095021e9" />
+<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -225,7 +225,9 @@
         <p class="kicker" data-i18n="capture.kicker">截圖翻譯</p>
         <h2 class="h2" data-i18n="capture.title">框選畫面，譯文直接覆蓋原文</h2>
         <p data-i18n="capture.body1">按下快捷鍵框選區域，就能辨識並翻譯畫面上的文字，網頁、PDF、圖片、漫畫、影音與遊戲都適用。</p>
-        <div class="langs">
+        <!-- data-collapse：只先列出前幾個，其餘收在「查看全部」後面，展開後同一顆可以再收起。
+             語言會一直加，全列出來會擠成一大片；沒有 JS 時照樣全部顯示。 -->
+        <div class="langs" data-collapse="5">
           <span class="langs__label" data-i18n="capture.langs.label">辨識語言</span>
           <ul class="langs__list">
             <li data-i18n="capture.langs.zht">繁體中文</li>
@@ -233,6 +235,9 @@
             <li data-i18n="capture.langs.en">英文</li>
             <li data-i18n="capture.langs.ja">日文</li>
             <li data-i18n="capture.langs.ko">韓文</li>
+            <li data-i18n="capture.langs.ru">俄文</li>
+            <li data-i18n="capture.langs.uk">烏克蘭文</li>
+            <li class="langs__toggle" hidden><button type="button" class="langs__more" aria-expanded="false" data-less="收起" data-i18n-attr="data-less|capture.langs.less" data-i18n="capture.langs.more">查看全部</button></li>
           </ul>
         </div>
         <aside class="aside">
@@ -617,11 +622,9 @@
         <p class="kicker" data-i18n="settings.kicker">設定</p>
         <h2 class="h2" data-i18n="settings.title">依使用習慣調整</h2>
         <ul class="ticks">
-          <li><strong data-i18n="settings.1.title">介面語言</strong><span data-i18n="settings.1.body">支援繁體中文、簡體中文、英文、日文、韓文與俄文，切換後立即生效；首次啟動時會依 Windows 顯示語言自動套用。</span></li>
+          <li><strong data-i18n="settings.1.title">介面語言</strong><span data-i18n="settings.1.body">切換後立即生效；首次啟動時會依 Windows 顯示語言自動套用。</span></li>
           <li><strong data-i18n="settings.2.title">快捷鍵</strong><span data-i18n="settings.2.body">支援組合鍵、單鍵、連按兩下（Ctrl + C + C 等）、滑鼠按鍵與遊戲手把按鍵，可依使用習慣自訂。</span></li>
-          <li><strong data-i18n="settings.3.title">主題</strong><span data-i18n="settings.3.body">提供淺色與深色兩種顯示模式。</span></li>
-          <li><strong data-i18n="settings.4.title">自動翻譯</strong><span data-i18n="settings.4.body">在截圖工具列的設定開啟後，框選完成即可立即翻譯，無需手動點選按鈕。</span></li>
-          <li><strong data-i18n="settings.5.title">開機啟動與截圖儲存</strong><span data-i18n="settings.5.body">可設定開機自動啟動，並自動儲存截圖與指定儲存位置。</span></li>
+          <li><strong data-i18n="settings.models.title">辨識模型</strong><span data-i18n="settings.models.body">需要另外下載的辨識語言與漫畫直排模型，都可以在這裡下載或刪除。</span></li>
         </ul>
         <p>
           <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/README.zh-Hant.md" data-loc-href="readme" target="_blank" rel="noopener">
@@ -751,6 +754,6 @@
   </button>
 </div>
 
-<script src="../site/app.js?v=ffbd667f75" defer></script>
+<script src="../site/app.js?v=09a0128798" defer></script>
 </body>
 </html>

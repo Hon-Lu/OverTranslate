@@ -665,6 +665,38 @@
     });
   }
 
+  /* ---------------- language chips ----------------
+     data-collapse="N"：先只顯示前 N 個，其餘收在「查看全部」後面；同一顆按鈕展開後
+     變成「收起」，語言再多也收得回去。沒有 JS 時按鈕維持 hidden，所有語言照樣列出。 */
+  var collapsible = document.querySelectorAll('.langs[data-collapse]');
+  for (var c = 0; c < collapsible.length; c++) {
+    (function (box) {
+      var keep = parseInt(box.getAttribute('data-collapse'), 10) || 0;
+      var toggle = box.querySelector('.langs__toggle');
+      if (!toggle) return;
+      var button = toggle.querySelector('button');
+      var items = box.querySelectorAll('.langs__list > li:not(.langs__toggle)');
+      if (items.length <= keep) return;
+      var extra = [];
+      for (var i = keep; i < items.length; i++) {
+        items[i].hidden = true;
+        extra.push(items[i]);
+      }
+      var moreText = button.textContent;
+      var lessText = button.getAttribute('data-less') || moreText;
+      toggle.hidden = false;
+      button.addEventListener('click', function () {
+        var open = button.getAttribute('aria-expanded') !== 'true';
+        extra.forEach(function (li) {
+          li.hidden = !open;
+          li.classList.toggle('is-revealed', open);
+        });
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        button.textContent = open ? lessText : moreText;
+      });
+    })(collapsible[c]);
+  }
+
   /* ---------------- star count ----------------
      數字向 GitHub 要，同一次瀏覽只要一次。要不到就讓它保持收合，
      按鈕本身照常能按，不會留下一塊空白。 */

@@ -33,7 +33,9 @@ import subprocess
 import sys
 import tempfile
 
-from PIL import Image
+import math
+
+from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, 'docs', 'images', 'og')
@@ -77,10 +79,19 @@ SCALE = 2
 # 原圖上緣的留白要留著給「原文／譯文」標籤站，不能從那邊切。
 #
 # 寬度決定了整張圖的版面：對照區是固定比例，窄一點高度就跟著矮，上面留給文字的
-# 空間才長得出來。338 這個高度是量出來的 —— 來源圖最下面那條橘色框線在原圖的
-# 87.4% 處，縮到 960 寬之後落在 316px，再留 22px 才切，框線底部就剛好看得見又
-# 不貼著圖片邊界。換了來源截圖要重新量一次，不要沿用這個數字。
-SHOT_W, SHOT_MAX_H = 960, 338
+# 空間才長得出來。現在的來源是三格漫畫聊天室，重點是聊天內文不是上方的狀聲字，
+# 所以對照區做得比較窄、比較高（約 2.2:1），讓畫面縮小一點、多露出幾則訊息；
+# 高度往上長到副標下方還留約 30px 為止（見 .stack 的註解）。來源圖先裁成同樣比例，就不會再被從底部切。
+# 換了來源截圖要重新看一次，不要沿用這組數字。
+SHOT_W, SHOT_MAX_H = 820, 364
+
+# 卡片內距：圖不貼著卡片邊，四周（底部除外，底部是切出畫面的）留一圈卡片底色，
+# 看起來才是「一個視窗裡的畫面」，而不是一張圖直接貼上去。
+SHOT_PAD = 12
+
+# 分割線的斜度（度），0 是垂直。正值往右上、左下斜（/），愈往下譯文露得愈多。
+# 試過 5 度，最後還是維持垂直。合成兩半的遮罩和 HTML 那條線用同一個角度，兩者才會對齊。
+TILT_DEG = 0
 
 TEMPLATE = u'''<!doctype html>
 <meta charset="utf-8">
@@ -100,9 +111,9 @@ TEMPLATE = u'''<!doctype html>
       radial-gradient(38% 42% at 72% 42%, rgba(98, 239, 246, 0.16), transparent 70%);
   }}
   /* 三行字級都比網站大 —— 縮圖被平台縮到三四百 px 寬是常態，照抄網站的值會
-     小到讀不出來。整塊連同上方留白約 256px，剛好落在卡片上緣（y=292）之上，
-     底下還留得出約 36px 的呼吸空間。改字級記得重算這筆帳。 */
-  .stack {{ position: relative; padding-top: 40px; text-align: center; }}
+     小到讀不出來。整塊連同上方留白約 236px，落在卡片上緣（y=266）之上，
+     底下還留得出約 30px 的呼吸空間。改字級或 SHOT_MAX_H 記得重算這筆帳。 */
+  .stack {{ position: relative; padding-top: 24px; text-align: center; }}
   .name {{
     font-size: 104px; line-height: 1.04; font-weight: 700;
     letter-spacing: -0.035em;
@@ -110,7 +121,7 @@ TEMPLATE = u'''<!doctype html>
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }}
   .claim {{
-    margin-top: 16px; font-size: 38px; line-height: 1.3; font-weight: 600;
+    margin-top: 12px; font-size: 38px; line-height: 1.3; font-weight: 600;
     letter-spacing: -0.018em; color: #e9eef6;
   }}
   .lede {{
@@ -127,17 +138,29 @@ TEMPLATE = u'''<!doctype html>
   }}
   .shot {{
     position: absolute; left: 50%; translate: -50% 0; bottom: 0;
-    width: {shot_w}px; height: {shot_h}px;
+    width: {shot_w}px; height: {shot_h}px; padding: {pad}px {pad}px 0;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-top-color: rgba(255, 255, 255, 0.26); border-bottom: 0;
-    border-radius: 22px 22px 0 0; overflow: hidden; background: #0b1220;
+    border-radius: 22px 22px 0 0; background: #0f1318;
     box-shadow: 0 -26px 60px -10px rgba(0, 0, 0, 0.85),
                 inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }}
-  .shot img {{ display: block; width: {shot_w}px; height: {shot_h}px; }}
-  /* 以下三個都照抄網站的 .compare__handle / .compare__grip / .compare__tag */
+  .pic {{
+    position: relative; width: {pic_w}px; height: {pic_h}px;
+    border-radius: 12px 12px 0 0; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+  }}
+  .pic img {{ display: block; width: {pic_w}px; height: {pic_h}px; }}
+  /* 上緣壓暗一點：來源圖上方的顏色很跳，不壓會比標題還搶眼 */
+  .pic::after {{
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(rgba(7, 12, 20, 0.38), rgba(7, 12, 20, 0) 34%);
+  }}
+  /* 以下三個都照抄網站的 .compare__handle / .compare__grip / .compare__tag，
+     分割線多了 TILT_DEG 的斜度 */
   .divider {{
-    position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px;
+    position: absolute; top: -20%; height: 140%; left: 50%; width: 2px; margin-left: -1px;
+    rotate: {tilt}deg; z-index: 1;
     background: rgba(255, 255, 255, 0.92);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.22), 0 0 18px rgba(0, 0, 0, 0.35);
   }}
@@ -145,7 +168,7 @@ TEMPLATE = u'''<!doctype html>
     position: absolute; top: 50%; left: 50%; translate: -50% -50%;
     display: grid; place-items: center; width: 42px; height: 42px;
     border-radius: 999px; background: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.6); color: #0d1622;
+    box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.6); color: #0d1622; z-index: 2;
   }}
   .grip svg {{
     width: 22px; height: 22px; fill: none; stroke: currentColor;
@@ -154,7 +177,7 @@ TEMPLATE = u'''<!doctype html>
   .tag {{
     position: absolute; top: 11px; padding: 5px 13px; border-radius: 999px;
     background: rgba(8, 13, 22, 0.72); color: #fff;
-    font-size: 15px; font-weight: 620; letter-spacing: 0.02em;
+    font-size: 15px; font-weight: 620; letter-spacing: 0.02em; z-index: 2;
   }}
   .tag--before {{ left: 11px; }}
   .tag--after {{ right: 11px; }}
@@ -166,13 +189,13 @@ TEMPLATE = u'''<!doctype html>
   <p class="lede">{lede}</p>
 </div>
 <div class="halo"></div>
-<div class="shot">
+<div class="shot"><div class="pic">
   <img src="file:///{shot}" alt="">
   <span class="tag tag--before">{tag_before}</span>
   <span class="tag tag--after">{tag_after}</span>
   <span class="divider"></span>
   <span class="grip"><svg viewBox="0 0 24 24"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
-</div>
+</div></div>
 '''
 
 
@@ -184,9 +207,10 @@ def find_edge():
 
 
 def compose_shot():
-    """左半原文、右半譯文，中間一條白線 —— 就是首頁那個比較滑桿的定格。
+    """左半原文、右半譯文，中間一條斜的白線 —— 首頁那個比較滑桿的定格。
 
     兩張圖要是同一塊畫面、同樣的裁切範圍，中間那條線才對得起來。
+    回傳合成圖的路徑與它在版面上的寬高（CSS px）。
     """
     for path in (BEFORE, AFTER):
         if not os.path.exists(path):
@@ -199,29 +223,37 @@ def compose_shot():
                          % (before.size + after.size))
 
     w, h = before.size
-    mid = w // 2
-    shot = before.copy()
-    shot.paste(after.crop((mid, 0, w, h)), (mid, 0))
 
-    # 分割線與握把由 HTML 疊上去，這裡只負責把兩半拼起來。
+    # 先縮放、切好高度，再拼兩半 —— 斜線的位置要用最終尺寸算，才會跟 HTML 那條線重合。
     # 圖本身做成 SCALE 倍，版面尺寸仍用 CSS px —— 交給瀏覽器放大只會更糊。
-    out_w = SHOT_W * SCALE
+    pic_w = SHOT_W - 2 * SHOT_PAD
+    out_w = pic_w * SCALE
     if out_w > w:
         sys.stdout.write(
             '  注意：來源截圖只有 %d px 寬，要填滿 %d px 是放大的。\n'
             '        要更銳利就重拍 og-src-before/after.png，至少 %d px 寬。\n'
             % (w, out_w, out_w))
     out_h = int(round(h * out_w / float(w)))
-    shot = shot.resize((out_w, out_h), Image.LANCZOS)
+    css_h = min(int(round(out_h / float(SCALE))), SHOT_MAX_H - SHOT_PAD)
+    size = (out_w, css_h * SCALE)
+    before = before.resize((out_w, out_h), Image.LANCZOS).crop((0, 0) + size)
+    after = after.resize((out_w, out_h), Image.LANCZOS).crop((0, 0) + size)
 
-    css_h = min(int(round(out_h / float(SCALE))), SHOT_MAX_H)
-    if out_h > css_h * SCALE:
-        shot = shot.crop((0, 0, out_w, css_h * SCALE))
+    # 遮罩：分割線右側取譯文。線通過正中央，上端往右、下端往左偏 TILT_DEG。
+    # 先畫 4 倍再縮，邊緣才不會鋸齒（雖然會被白線蓋住，縮圖放大時還是看得到）。
+    k = 4
+    W, H = size[0] * k, size[1] * k
+    off = math.tan(math.radians(TILT_DEG)) * H / 2.0
+    mask = Image.new('L', (W, H), 0)
+    ImageDraw.Draw(mask).polygon(
+        [(W / 2.0 + off, 0), (W, 0), (W, H), (W / 2.0 - off, H)], fill=255)
+    mask = mask.resize(size, Image.LANCZOS)
+    shot = Image.composite(after, before, mask)
 
     fd, tmp = tempfile.mkstemp(suffix='.png')
     os.close(fd)
     shot.save(tmp)
-    return tmp, css_h
+    return tmp, pic_w, css_h
 
 
 def strings(page):
@@ -241,7 +273,7 @@ def main():
     edge = find_edge()
     if not os.path.isdir(OUT_DIR):
         os.makedirs(OUT_DIR)
-    shot, shot_h = compose_shot()
+    shot, pic_w, pic_h = compose_shot()
 
     try:
         for lang, name, page, font in LANGS:
@@ -249,7 +281,8 @@ def main():
             html = TEMPLATE.format(
                 font=font, claim=s['hero.claim'], lede=LEDE[lang],
                 tag_before=s['compare.before'], tag_after=s['compare.after'],
-                shot=shot.replace('\\', '/'), shot_w=SHOT_W, shot_h=shot_h)
+                shot=shot.replace('\\', '/'), shot_w=SHOT_W, shot_h=pic_h + SHOT_PAD,
+                pad=SHOT_PAD, pic_w=pic_w, pic_h=pic_h, tilt=TILT_DEG)
 
             fd, tmp = tempfile.mkstemp(suffix='.html')
             os.close(fd)

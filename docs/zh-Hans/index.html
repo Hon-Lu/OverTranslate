@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=cb095021e9" />
+<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -225,7 +225,9 @@
         <p class="kicker" data-i18n="capture.kicker">截图翻译</p>
         <h2 class="h2" data-i18n="capture.title">框选画面，译文直接覆盖原文</h2>
         <p data-i18n="capture.body1">按下快捷键框选区域，就能识别并翻译画面上的文字，网页、PDF、图片、漫画、影音与游戏都适用。</p>
-        <div class="langs">
+        <!-- data-collapse：只先列出前幾個，其餘收在「查看全部」後面，展開後同一顆可以再收起。
+             語言會一直加，全列出來會擠成一大片；沒有 JS 時照樣全部顯示。 -->
+        <div class="langs" data-collapse="5">
           <span class="langs__label" data-i18n="capture.langs.label">识别语言</span>
           <ul class="langs__list">
             <li data-i18n="capture.langs.zht">繁体中文</li>
@@ -233,6 +235,9 @@
             <li data-i18n="capture.langs.en">英文</li>
             <li data-i18n="capture.langs.ja">日文</li>
             <li data-i18n="capture.langs.ko">韩文</li>
+            <li data-i18n="capture.langs.ru">俄文</li>
+            <li data-i18n="capture.langs.uk">乌克兰文</li>
+            <li class="langs__toggle" hidden><button type="button" class="langs__more" aria-expanded="false" data-less="收起" data-i18n-attr="data-less|capture.langs.less" data-i18n="capture.langs.more">查看全部</button></li>
           </ul>
         </div>
         <aside class="aside">
@@ -617,11 +622,9 @@
         <p class="kicker" data-i18n="settings.kicker">设置</p>
         <h2 class="h2" data-i18n="settings.title">按使用习惯调整</h2>
         <ul class="ticks">
-          <li><strong data-i18n="settings.1.title">界面语言</strong><span data-i18n="settings.1.body">支持繁体中文、简体中文、英文、日文、韩文与俄文，切换后立即生效；首次启动时会按 Windows 显示语言自动套用。</span></li>
+          <li><strong data-i18n="settings.1.title">界面语言</strong><span data-i18n="settings.1.body">切换后立即生效；首次启动时会按 Windows 显示语言自动套用。</span></li>
           <li><strong data-i18n="settings.2.title">快捷键</strong><span data-i18n="settings.2.body">支持组合键、单键、连按两下（Ctrl + C + C 等）、鼠标按键与游戏手柄按键，可按使用习惯自定义。</span></li>
-          <li><strong data-i18n="settings.3.title">主题</strong><span data-i18n="settings.3.body">提供浅色与深色两种显示模式。</span></li>
-          <li><strong data-i18n="settings.4.title">自动翻译</strong><span data-i18n="settings.4.body">在截图工具栏的设置开启后，框选完成即可立即翻译，无需手动点击按钮。</span></li>
-          <li><strong data-i18n="settings.5.title">开机启动与截图保存</strong><span data-i18n="settings.5.body">可设置开机自动启动，并自动保存截图与指定保存位置。</span></li>
+          <li><strong data-i18n="settings.models.title">识别模型</strong><span data-i18n="settings.models.body">需要另外下载的识别语言与漫画竖排模型，都可以在这里下载或删除。</span></li>
         </ul>
         <p>
           <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/README.zh-Hans.md" data-loc-href="readme" target="_blank" rel="noopener">
@@ -751,6 +754,6 @@
   </button>
 </div>
 
-<script src="../site/app.js?v=ffbd667f75" defer></script>
+<script src="../site/app.js?v=09a0128798" defer></script>
 </body>
 </html>
