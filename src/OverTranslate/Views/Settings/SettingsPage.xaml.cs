@@ -102,6 +102,14 @@ public partial class SettingsPage : UserControl
     {
         InitializeComponent();
 
+        // While shown only, like the other static events a page listens to.
+        Loaded += (_, _) =>
+        {
+            AppServices.LocalAi.Changed += OnLocalAiChanged;
+            UpdateLocalAiStatus();
+        };
+        Unloaded += (_, _) => AppServices.LocalAi.Changed -= OnLocalAiChanged;
+
         // In the order the page lists them, which is not the order HotkeyBindings resolves them in:
         // there, position is priority and the newest shortcut goes last, while here it is what a
         // reader meets first. Nothing depends on this order — rows are looked up by action.
@@ -313,8 +321,11 @@ public partial class SettingsPage : UserControl
         }
         LockLastProviderRow(rows);
 
-        var hidden = rows.Where(r => r.Row.IsChecked != true).Select(r => r.Provider);
+        var hidden = rows.Where(r => r.Row.IsChecked != true).Select(r => r.Provider).ToList();
         if (SettingsService.Instance.UpdateHiddenProviders(hidden)) FlashSaved();
+
+        // Switched off, the model has no business staying in memory until the idle time runs out.
+        if (hidden.Contains(TranslationProvider.LocalAI)) AppServices.LocalAi.Release();
     }
 
     private static void LockLastProviderRow(
@@ -332,7 +343,7 @@ public partial class SettingsPage : UserControl
     private void ProviderGrid_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         const double MinRowWidth = 360;
-        ProviderGrid.Columns = e.NewSize.Width >= 2 * MinRowWidth ? 2 : 1;
+        ProviderGrid.Columns = ProviderKeyedList.Columns = e.NewSize.Width >= 2 * MinRowWidth ? 2 : 1;
     }
 
     private void Persist(Action<AppSettings> apply)
@@ -423,6 +434,7 @@ public partial class SettingsPage : UserControl
     {
         _ when ReferenceEquals(sender, DeepLConfigureBtn)  => TranslationProvider.DeepL,
         _ when ReferenceEquals(sender, OpenAiConfigureBtn) => TranslationProvider.OpenAI,
+        _ when ReferenceEquals(sender, LocalAiConfigureBtn) => TranslationProvider.LocalAI,
         _ => null,
     };
 
@@ -458,7 +470,32 @@ public partial class SettingsPage : UserControl
             s.OpenAiApiKey.Trim().Length > 0 ||
             s.OpenAi.Profiles.Count > 0;
         WriteServiceBadge(OpenAiBadge, OpenAiBadgeText, configured: openAiTouched, required: false);
+
+        UpdateLocalAiStatus();
     }
+
+    /// <summary>The third line of the 本機 AI 翻譯 row: what it is doing now.</summary>
+    private void UpdateLocalAiStatus()
+    {
+        var service = AppServices.LocalAi;
+        var downloading = service.Store.Downloading;
+        var active = service.ActiveModel;
+
+        var (text, brush) = (downloading, active) switch
+        {
+            ({ }, _) => (LocalizationService.Format("S.LocalAi.CardDownloading", (int)(service.Store.Fraction * 100)), "AppAccent"),
+            (null, { } model) when service.Host.State == Services.LocalAi.LocalAiServerState.Running =>
+                (LocalizationService.Format("S.LocalAi.CardRunning", model.ShortName), "AppSuccess"),
+            (null, { } model) => (LocalizationService.Format("S.LocalAi.CardReady", model.ShortName), "AppSuccess"),
+            _ => (LocalizationService.Get("S.LocalAi.CardNoModel"), "AppWarning"),
+        };
+
+        LocalAiStatus.Text = text;
+        LocalAiStatus.SetResourceReference(TextBlock.ForegroundProperty, brush);
+    }
+
+    private void OnLocalAiChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(UpdateLocalAiStatus, System.Windows.Threading.DispatcherPriority.Background);
 
     /// <param name="required">
     /// Whether the service refuses to run until it is configured. Only that case is worth a warning

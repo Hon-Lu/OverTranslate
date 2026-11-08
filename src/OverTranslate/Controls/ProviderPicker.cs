@@ -58,6 +58,28 @@ public static class ProviderPicker
         box.Items.OfType<ProviderItem>()
             .Where(item => !item.IsHiddenSelection || ReferenceEquals(item, box.SelectedItem));
 
+    // A service's name with its small print after it, which only the open list has room for: the
+    // list's entries sit in a ComboBoxItem, and the closed box does not.
+    private static readonly Lazy<DataTemplate> ItemWithDetail = new(() => (DataTemplate)System.Windows.Markup.XamlReader.Parse("""
+        <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="Label" Text="{Binding Display}"
+                           FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="Detail" Text="{Binding Detail}"
+                           FontFamily="{DynamicResource AppFont}" FontSize="11" Opacity="0.7"
+                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Value="{x:Null}"
+                             Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}">
+                    <Setter TargetName="Label" Property="Text" Value="{Binding ShortName}"/>
+                    <Setter TargetName="Detail" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+        """));
+
     private static void Attach(ComboBox box)
     {
         if ((bool)box.GetValue(AttachedProperty)) return;
@@ -68,6 +90,7 @@ public static class ProviderPicker
         hidden.Setters.Add(new Setter(UIElement.IsEnabledProperty, false));
         hidden.Setters.Add(new Setter(UIElement.FocusableProperty, false));
         box.ItemContainerStyle = new Style(typeof(ComboBoxItem), box.ItemContainerStyle) { Triggers = { hidden } };
+        box.ItemTemplate = ItemWithDetail.Value;
 
         box.SelectionChanged += OnSelectionChanged;
     }

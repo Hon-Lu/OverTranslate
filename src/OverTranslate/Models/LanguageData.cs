@@ -100,6 +100,9 @@ public record ProviderItem(
     /// </remarks>
     public string ShortName => Display;
 
+    /// <summary>The small print beside the name in an open menu: which model 本機 AI 翻譯 is using.</summary>
+    public string? Detail => Provider == TranslationProvider.LocalAI ? Services.AppServices.LocalAi.ActiveModel?.ShortName : null;
+
     /// <summary>
     /// True for the one entry a menu holds only because it is that menu's selection while hidden.
     /// </summary>
