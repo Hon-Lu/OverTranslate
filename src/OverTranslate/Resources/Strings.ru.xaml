@@ -518,7 +518,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">Переводит текстовые блоки на экране по одному, по порядку.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">Объединяет текстовые блоки на экране и переводит их вместе.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">Быстрее на локальных моделях</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">Реже пропускает блоки</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">Учитывает весь экран, смысл передаётся связнее</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">Меньше запросов, лучше подходит для облачных сервисов</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">Подходит для</sys:String>

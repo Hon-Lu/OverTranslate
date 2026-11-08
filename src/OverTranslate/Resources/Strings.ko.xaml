@@ -527,7 +527,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">화면의 텍스트 블록을 순서대로 하나씩 번역합니다.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">화면의 텍스트 블록을 모아 함께 번역합니다.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">로컬 모델에서 더 빠름</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">번역 누락이 적음</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">화면 전체를 참고해 문맥이 자연스럽게 이어짐</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">요청 횟수가 적어 클라우드 서비스에 더 적합</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">적합한 용도</sys:String>

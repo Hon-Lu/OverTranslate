@@ -702,8 +702,6 @@
                                                        Style="{StaticResource ModeBodyText}"/>
                                             <ContentControl Style="{StaticResource ModePro}" Margin="0,6,0,0"
                                                             Content="{DynamicResource S.Settings.OpenAiModeSegmentPro1}"/>
-                                            <ContentControl Style="{StaticResource ModePro}"
-                                                            Content="{DynamicResource S.Settings.OpenAiModeSegmentPro2}"/>
                                         </StackPanel>
                                     </DockPanel>
                                 </RadioButton>

@@ -523,7 +523,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">Translates the text blocks on screen one at a time, in order.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">Combines the text blocks on screen and translates them together.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">Faster with local models</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">Less likely to skip a block</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">Sees the whole screen, so meaning flows better</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">Fewer requests, better suited to cloud services</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">Best for</sys:String>

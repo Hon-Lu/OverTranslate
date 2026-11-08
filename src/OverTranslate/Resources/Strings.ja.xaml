@@ -527,7 +527,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">画面上のテキストブロックを順番に1つずつ翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">画面上のテキストブロックをひとまとめにして翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">ローカルモデルでは高速</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">訳し漏れが起きにくい</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">画面全体を参照するため、文意がつながりやすい</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">リクエスト数が少なく、クラウドサービスに向いている</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">向いている用途</sys:String>

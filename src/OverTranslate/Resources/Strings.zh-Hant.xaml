@@ -547,7 +547,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">依序逐一翻譯畫面上的文字區塊。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">將畫面上的文字區塊組合後一起翻譯。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">本機模型上速度較快</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">較不易漏翻</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">參考整個畫面，語意更連貫</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">請求次數較少，更適合雲端服務</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">適合</sys:String>
