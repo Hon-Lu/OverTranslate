@@ -43,6 +43,18 @@ internal sealed record LocalAiCatalog(
     [property: JsonPropertyName("runtime")] LocalAiRuntime Runtime,
     [property: JsonPropertyName("models")] IReadOnlyList<LocalAiModel> Models)
 {
+    /// <summary>The descriptions an entry may name: a mistyped key would show up as the key itself.</summary>
+    private static readonly HashSet<string> DescriptionKeys =
+    [
+        "S.LocalAi.ModelDescHy7B",
+        "S.LocalAi.ModelDescGemmaE4B",
+        "S.LocalAi.ModelDescGemmaE2B",
+        "S.LocalAi.ModelDescHy18B",
+        "S.LocalAi.ModelDescGemma12B",
+        "S.LocalAi.ModelDescHy7BQ8",
+        "S.LocalAi.ModelDescGemma26B",
+    ];
+
     internal static string ShippedPath => Path.Combine(AppContext.BaseDirectory, "localai", "models.json");
 
     internal IEnumerable<LocalAiModel> Recommended => Models.Where(model => model.Recommended);
@@ -77,7 +89,7 @@ internal sealed record LocalAiCatalog(
             if (string.IsNullOrWhiteSpace(model.Id) || !IsSafeName(model.Id) || !IsSafeName(model.File) ||
                 string.IsNullOrWhiteSpace(model.Name) || string.IsNullOrWhiteSpace(model.ShortName) ||
                 model.Size <= 0 || model.VramMiB <= 0 || !IsHash(model.Sha256) || !IsHttps(model.Url) ||
-                string.IsNullOrWhiteSpace(model.DescriptionKey) || !LocalAiPromptFormat.IsKnown(model.Format))
+                !DescriptionKeys.Contains(model.DescriptionKey) || !LocalAiPromptFormat.IsKnown(model.Format))
                 throw new InvalidDataException($"local AI model entry is malformed: {model.Id}");
         }
 

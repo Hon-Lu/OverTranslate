@@ -56,7 +56,7 @@ public class LocalAiCatalogTests
     private static string Json(string file = "a.gguf", string format = "gemma-4", string url = "https://x.test/a.gguf", string sha = Hash) => $$"""
         {"runtime":{"version":"b1","size":1,"sha256":"{{Hash}}","urls":["https://x.test/z.zip"]},
          "models":[{"id":"a","name":"A","shortName":"A","recommended":true,"repo":"r","file":"{{file}}","url":"{{url}}",
-                    "size":1,"sha256":"{{sha}}","vramMiB":1,"format":"{{format}}","descriptionKey":"S.X"}]}
+                    "size":1,"sha256":"{{sha}}","vramMiB":1,"format":"{{format}}","descriptionKey":"S.LocalAi.ModelDescHy7B"}]}
         """;
 
     [Fact]
