@@ -564,7 +564,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">目标语言代码</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英语</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日语</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">源语言为“自动”时，源语言名称为 any language，代码为空。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">当源语言为“自动”时，{source_name} 和 {source_code} 会留空。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">提示词</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻译时发送给模型的内容。花括号标示的参数会替换成实际的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>

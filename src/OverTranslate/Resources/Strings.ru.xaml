@@ -559,7 +559,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">Код языка перевода</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">Английский</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Японский</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">Если язык оригинала определяется автоматически, название языка оригинала — any language, а код пустой.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">Если язык оригинала определяется автоматически, {source_name} и {source_code} остаются пустыми.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">Промпт</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">Текст, который отправляется модели при каждом переводе. Параметры в фигурных скобках заменяются настоящим текстом.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Вернуть по умолчанию</sys:String>

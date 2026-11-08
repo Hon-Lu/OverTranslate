@@ -564,7 +564,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetCode">Target language code</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">English</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Japanese</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">When the source language is Automatic, the source language name is "any language" and the code is empty.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">When the source language is Automatic, {source_name} and {source_code} are left empty.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">Prompt</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">What is sent to the model for each translation. Parameters in curly braces are replaced with the actual text.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Restore default</sys:String>

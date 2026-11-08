@@ -568,7 +568,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">번역할 언어 코드</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">영어</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">일본어</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">원본 언어가 「자동」이면 원본 언어 이름은 any language이고 코드는 비어 있습니다.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">원본 언어가 「자동」이면 {source_name}과 {source_code}는 비워 둡니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">프롬프트</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">번역할 때 모델에 보내는 내용입니다. 중괄호로 표시한 매개변수는 실제 텍스트로 바뀝니다.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">기본값으로 복원</sys:String>

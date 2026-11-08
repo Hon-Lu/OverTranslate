@@ -111,6 +111,22 @@ public class OpenAiCompatibleProviderTests
     }
 
     /// <summary>
+    /// 自動 has neither a name nor a tag to give: both source placeholders empty out, and so does the
+    /// old spelling of the name.
+    /// </summary>
+    [Theory]
+    [InlineData(LocalizationService.TraditionalChinese)]
+    [InlineData(LocalizationService.English)]
+    public void BuildPrompt_AnAutomaticSourceLeavesItsPlaceholdersEmpty(string uiLanguage)
+    {
+        WithInterfaceLanguage(uiLanguage, () =>
+        {
+            var own = OpenAiCompatibleProvider.BuildPrompt("AUTO", "EN-US", "[{source_name}][{source_code}][{source}]");
+            Assert.Equal("[][][]", own.Template);
+        });
+    }
+
+    /// <summary>
     /// An empty template is the application's, in the interface's language, filled in, and is the
     /// one checked; anything else is the user's, filled in the same way.
     /// </summary>

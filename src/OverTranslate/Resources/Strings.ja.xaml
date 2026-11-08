@@ -568,7 +568,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">翻訳先の言語コード</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英語</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日本語</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">翻訳元が「自動」のときは、翻訳元の言語名は any language、コードは空になります。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">翻訳元が「自動」のときは、{source_name} と {source_code} は空になります。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">プロンプト</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻訳のたびにモデルへ送る内容です。波かっこで示したパラメーターは実際の文字列に置き換わります。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">既定に戻す</sys:String>

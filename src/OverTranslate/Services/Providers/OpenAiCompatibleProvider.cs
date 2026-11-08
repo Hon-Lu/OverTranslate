@@ -528,20 +528,18 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// cannot collide, because <c>{source}</c> is not a prefix of <c>{source_code}</c> once the
     /// closing brace is counted.
     ///
-    /// 自動 has no tag to give, so <see cref="SourceCodePlaceholder"/> empties out there. A template
-    /// that wrote its own brackets around it is left with an empty pair, which is the cost of letting
-    /// templates place the tag themselves.
+    /// 自動 has neither a name nor a tag to give, so <see cref="SourcePlaceholder"/> and
+    /// <see cref="SourceCodePlaceholder"/> both empty out there. A template that wrote its own brackets
+    /// around one is left with an empty pair, which is the cost of letting templates place them
+    /// themselves.
     /// </remarks>
     private static string Fill(string template, string sourceLang, string targetLang, bool automatic, bool english)
     {
-        // Nothing to name when the source is 自動. Only text the user wrote a source into reaches
-        // this.
-        //
-        // Left in English while the names beside it follow the interface, because it is not a
-        // language name: no built-in wording reaches it, and the template that does is one someone
-        // wrote in a language this application cannot know. Changing it is a separate decision.
+        // Nothing to name when the source is 自動, the same as the tag below: a word standing in for
+        // a language would be one the template's author never wrote, in a language this application
+        // cannot know.
         var source = automatic
-            ? "any language"
+            ? ""
             : LanguageData.GetSourceDisplayName(sourceLang, english);
 
         var target = LanguageData.GetTargetDisplayName(targetLang, english);

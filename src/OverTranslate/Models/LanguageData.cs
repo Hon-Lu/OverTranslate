@@ -356,7 +356,7 @@ public static class LanguageData
     /// <see cref="Services.Providers.OpenAiCompatibleProvider.SourceCodePlaceholder"/>.
     ///
     /// Returns empty for 自動, which has no language to name: a template that names the source while
-    /// the source is 自動 gets "any language" there, and a tag would be inventing one.
+    /// the source is 自動 gets nothing there, its name or its tag, and a tag would be inventing one.
     /// </remarks>
     public static string GetModelLanguageTag(string? code)
     {
