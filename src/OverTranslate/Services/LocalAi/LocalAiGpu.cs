@@ -4,7 +4,7 @@ using NLog;
 namespace OverTranslate.Services.LocalAi;
 
 /// <summary>A dedicated graphics card as Vulkan names it.</summary>
-/// <param name="MemoryMiB">Its largest device-local heap: the figure a model's VRAM estimate is held against.</param>
+/// <param name="MemoryMiB">Its device-local heaps added up, as <c>llama-server --list-devices</c> reports it: the figure a model's VRAM estimate is held against.</param>
 internal sealed record LocalAiGpuDevice(string Name, long MemoryMiB);
 
 /// <summary>Which dedicated graphics cards this machine has.</summary>
@@ -97,15 +97,15 @@ internal static class LocalAiGpu
                 var memory = stackalloc byte[1024];
                 vkGetPhysicalDeviceMemoryProperties(handle, memory);
                 var heapCount = *(uint*)(memory + 260);
-                ulong largest = 0;
+                ulong total = 0;
                 for (var heap = 0; heap < Math.Min(heapCount, 16u); heap++)
                 {
                     var entry = memory + 264 + heap * 16;
-                    if ((*(uint*)(entry + 8) & DeviceLocal) != 0 && *(ulong*)entry > largest)
-                        largest = *(ulong*)entry;
+                    if ((*(uint*)(entry + 8) & DeviceLocal) != 0)
+                        total += *(ulong*)entry;
                 }
 
-                found.Add(new LocalAiGpuDevice(name, (long)(largest / (1024 * 1024))));
+                found.Add(new LocalAiGpuDevice(name, (long)(total / (1024 * 1024))));
             }
 
             return found;
