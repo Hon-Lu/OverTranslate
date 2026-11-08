@@ -30,5 +30,8 @@ internal static class AppServices
     /// <summary>Recognition. Construction is cheap — the model itself is loaded on first use.</summary>
     public static OcrService Ocr { get; } = new(MangaModels);
 
+    /// <summary>本機 AI 翻譯: its models, and the server that runs them. Nothing starts until it is used.</summary>
+    public static LocalAi.LocalAiService LocalAi { get; } = new(Services.LocalAi.LocalAiModelStore.CreateDefault());
+
     public static TranslationService Translation { get; } = new();
 }

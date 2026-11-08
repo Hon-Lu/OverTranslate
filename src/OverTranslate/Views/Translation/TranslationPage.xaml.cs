@@ -124,7 +124,7 @@ public partial class TranslationPage : UserControl
         // never asked, and cannot be — the prompt it is sent belongs to the user, so the reply
         // cannot be made to carry a second field. Waiting is not going to help there.
         var openAiAutomatic =
-            SettingsService.Instance.Current.Provider == TranslationProvider.OpenAI &&
+            SettingsService.Instance.Current.Provider is TranslationProvider.OpenAI or TranslationProvider.LocalAI &&
             LanguageData.IsAutomaticSource(SrcLangBox.SelectedValue as string);
 
         var available = !openAiAutomatic && EffectiveSourceLanguage().Length > 0;

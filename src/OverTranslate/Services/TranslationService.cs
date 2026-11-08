@@ -86,6 +86,7 @@ public class TranslationService
 
     private readonly DeepLProvider      _deepL     = new(DeepLHttp);
     private readonly OpenAiCompatibleProvider _openAi = new();
+    private readonly LocalAiProvider _localAi = new();
 
     // Only when asked for, one word at a time; the names are what the dictionary card credits.
     private readonly DictionaryLookupProvider _googleDictionary    = new(new GoogleDictionary(Http), "Google Web");
@@ -187,6 +188,7 @@ public class TranslationService
         TranslationProvider.Yandex    => _yandexR,
         TranslationProvider.DeepL     => _deepL,
         TranslationProvider.OpenAI    => _openAi,
+        TranslationProvider.LocalAI   => _localAi,
         _                             => _googleR,
     };
 
@@ -202,6 +204,7 @@ public class TranslationService
         TranslationProvider.Yandex       => _yandexS,
         TranslationProvider.DeepL        => _deepL,
         TranslationProvider.OpenAI       => _openAi,
+        TranslationProvider.LocalAI      => _localAi,
         _                                => _googleS,
     };
 
@@ -254,9 +257,12 @@ public class TranslationService
     /// </summary>
     public Task WarmUpAsync(
         TranslationProvider engine, string sourceLang, string targetLang, CancellationToken cancellationToken = default) =>
-        engine == TranslationProvider.OpenAI
-            ? _openAi.WarmUpAsync(sourceLang, targetLang, cancellationToken)
-            : Task.CompletedTask;
+        engine switch
+        {
+            TranslationProvider.OpenAI => _openAi.WarmUpAsync(sourceLang, targetLang, cancellationToken),
+            TranslationProvider.LocalAI => _localAi.WarmUpAsync(cancellationToken),
+            _ => Task.CompletedTask,
+        };
 
     /// <summary>
     /// Looks up rich dictionary data only when the caller explicitly asks for it. Normal translation,

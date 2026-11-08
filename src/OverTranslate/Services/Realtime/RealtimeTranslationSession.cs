@@ -1123,7 +1123,7 @@ public sealed class RealtimeTranslationSession
         // The service is part of the key: it cannot change mid-session today, but a cache that
         // silently outlived a change of engine would serve the old engine's wording forever.
         var cacheKeyPrefix = $"{_provider}|{sourceLanguage}|{targetLanguage}|";
-        var withContext = _provider == Models.TranslationProvider.OpenAI;
+        var withContext = _provider is Models.TranslationProvider.OpenAI or Models.TranslationProvider.LocalAI;
 
         // Every line this pass is waiting for, by key: the ones it sends and the ones another pass
         // already has on their way. One per key, so a line read twice in one region goes once.

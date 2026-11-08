@@ -103,6 +103,12 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI Compatible API 回應格式無法解析。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI Compatible API 未回傳譯文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI Compatible API 在 {0} 秒內沒有回應。可在「翻譯服務設定」調整逾時秒數。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">尚未下載模型，請至「翻譯服務設定」下載。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiDownloading">模型下載中（{0}%），請等待下載完成後再試。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiStartFailed">本機模型啟動失敗，請嘗試使用較小的模型。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoGpu">未偵測到獨立顯示卡，無法使用此翻譯功能。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiTimeout">本機模型在 {0} 秒內沒有回應。可在「翻譯服務設定」調整逾時秒數。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoTranslation">本機模型未回傳譯文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">OpenAI Compatible API 位址必須是有效的 HTTP 或 HTTPS 網址。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">尚未指定模型名稱。請在「翻譯服務設定」中填入要使用的模型。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">未知錯誤</sys:String>

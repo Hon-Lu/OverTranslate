@@ -186,6 +186,7 @@ public static class LanguageData
         new(TranslationProvider.TranSmart, "S.Provider.TranSmart", false),
         new(TranslationProvider.Yandex,    "S.Provider.Yandex",    false),
         new(TranslationProvider.DeepL,     "S.Provider.DeepL",     true,  "S.Provider.DeepLHint"),
+        new(TranslationProvider.LocalAI,   "S.Provider.LocalAI",   false, "S.Provider.LocalAIHint"),
         new(TranslationProvider.OpenAI,    "S.Provider.OpenAI",    false, "S.Provider.OpenAIHint"),
     ];
 
