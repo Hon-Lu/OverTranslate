@@ -120,7 +120,7 @@
     <sys:String x:Key="S.Translation.SwapTip">言語と内容を入れ替える</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">原文を消去</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">原文を読み上げる</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">OpenAI の翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">この翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">原文の言語がまだ分かりません。翻訳が終わると読み上げられます。</sys:String>
     <!-- The note at the foot of the page and the greyed speaker's tooltip are the same sentence:
          the note is what is read, the tooltip is for whoever hovers the button instead. -->
@@ -173,7 +173,7 @@
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
          gap is before the first result. -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">OpenAI の翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">この翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">原文の言語がまだ分かりません。翻訳が終わると読み上げられます。</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">翻訳サービス</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">キャプチャ翻訳・テキスト翻訳と共通のサービスです</sys:String>

@@ -231,7 +231,22 @@
                                 Click="CancelButton_Click"/>
                         <ProgressBar x:Name="ProgressBar" Height="6" Minimum="0" Maximum="1"
                                      VerticalAlignment="Center"
-                                     AutomationProperties.Name="{DynamicResource S.LocalAi.ModelFile}"/>
+                                     Foreground="{DynamicResource AppAccent}"
+                                     AutomationProperties.Name="{DynamicResource S.LocalAi.ModelFile}">
+                            <ProgressBar.Template>
+                                <ControlTemplate TargetType="ProgressBar">
+                                    <Border Background="{DynamicResource AppSubtleBorder}" CornerRadius="3" ClipToBounds="True">
+                                        <Grid>
+                                            <Border x:Name="PART_Track"/>
+                                            <Border x:Name="PART_Indicator"
+                                                    HorizontalAlignment="Left"
+                                                    CornerRadius="3"
+                                                    Background="{TemplateBinding Foreground}"/>
+                                        </Grid>
+                                    </Border>
+                                </ControlTemplate>
+                            </ProgressBar.Template>
+                        </ProgressBar>
                     </DockPanel>
                     <TextBlock x:Name="ProgressText" Margin="0,8,0,0" Style="{StaticResource Note}"/>
                     <TextBlock x:Name="BackgroundNote" Style="{StaticResource Note}"
@@ -394,7 +409,6 @@
                       Style="{StaticResource ModernComboBox}"
                       Width="200"
                       VerticalAlignment="Top"
-                      DisplayMemberPath="Label"
                       SelectedValuePath="Minutes"
                       AutomationProperties.Name="{DynamicResource S.LocalAi.Idle}"
                       SelectionChanged="IdleBox_SelectionChanged"/>

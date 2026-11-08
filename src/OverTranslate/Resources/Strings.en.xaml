@@ -119,7 +119,7 @@
     <sys:String x:Key="S.Translation.SwapTip">Swap languages and text</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">Clear the source text</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">Read the source aloud</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">With the OpenAI service, choose a source language to read the source aloud.</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">With this translation service, choose a source language to read the source aloud.</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">The language of the source is not known yet. It can be read aloud once the translation is back.</sys:String>
     <!-- The note at the foot of the page and the greyed speaker's tooltip are the same sentence:
          the note is what is read, the tooltip is for whoever hovers the button instead. -->
@@ -172,7 +172,7 @@ Translation failed: {1}</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
          gap is before the first result. -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">With the OpenAI service, choose a source language to read the original aloud.</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">With this translation service, choose a source language to read the source aloud.</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">The language of the original is not known yet. It can be read aloud once the translation is back.</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">Translation service</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">Shared with screen translation and text translation</sys:String>

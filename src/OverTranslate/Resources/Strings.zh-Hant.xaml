@@ -127,7 +127,7 @@
     <sys:String x:Key="S.Translation.SpeakSource">朗讀原文</sys:String>
     <!-- 來源語言為「自動」時，朗讀原文靠的是引擎回報的偵測結果；OpenAI 相容服務不會回報，所以那個
          組合是唯一永遠等不到答案、必須直接停用的狀態，這句就是使用者唯一能得知原因的地方。 -->
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用 OpenAI 翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用目前的翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
     <!-- 另一種還沒有語言可用的狀態：引擎只是還沒回答，等翻譯回來就會好，所以只給 tooltip 不給短註記。 -->
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">還不知道原文是什麼語言，翻譯完成後就可以朗讀。</sys:String>
     <sys:String x:Key="S.Translation.Source">原文</sys:String>
@@ -179,7 +179,7 @@
          只有還沒翻譯、或引擎沒講的時候才無語可讀。 -->
     <!-- OpenAI 相容服務不會回報偵測到的原文語言，所以「自動」在這個服務下是永遠等不到的狀態，
          訊息必須指向真正能解決的動作（指定來源語言），而不是叫使用者再等。 -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用 OpenAI 翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用目前的翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">還不知道原文是什麼語言，翻譯完成後就可以朗讀。</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">翻譯服務</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">與螢幕翻譯及文字翻譯共用此服務</sys:String>

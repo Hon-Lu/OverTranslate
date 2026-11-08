@@ -122,7 +122,7 @@
     <sys:String x:Key="S.Translation.SwapTip">Поменять местами языки и текст</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">Очистить исходный текст</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">Прочитать исходный текст вслух</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">Со службой OpenAI выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">С этой службой перевода выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">Язык исходного текста пока не определен. Его можно будет прочитать вслух, когда придет перевод.</sys:String>
     <sys:String x:Key="S.Translation.Source">Оригинал</sys:String>
     <sys:String x:Key="S.Translation.SpeakResult">Прочитать перевод вслух</sys:String>
@@ -169,7 +169,7 @@
     <sys:String x:Key="S.QuickLookup.SpeakSource">Прочитать оригинал</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakResult">Прочитать перевод</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">Прочитать оригинал вслух</sys:String>
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">Со службой OpenAI выберите язык оригинала, чтобы прочитать его вслух.</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">С этой службой перевода выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">Язык оригинала пока не определен. Его можно будет прочитать вслух, когда придет перевод.</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">Служба перевода</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">Общая с переводом снимка экрана и переводом текста</sys:String>

@@ -83,10 +83,11 @@ public partial class LocalAiSettingsPanel : UserControl
             TimeoutBox.Text = settings.TimeoutSeconds?.ToString(CultureInfo.InvariantCulture) ?? "";
             UpdateTextChrome();
 
-            IdleBox.ItemsSource = LocalAiSettings.IdleChoices
+            var idle = LocalAiSettings.IdleChoices
                 .Select(minutes => new IdleChoice(minutes, LocalizationService.Format("S.LocalAi.Minutes", minutes)))
                 .ToList();
-            IdleBox.SelectedValue = settings.EffectiveIdleMinutes;
+            IdleBox.ItemsSource = idle;
+            IdleBox.SelectedItem = idle.First(choice => choice.Minutes == settings.EffectiveIdleMinutes);
         }
         finally
         {
@@ -270,8 +271,8 @@ public partial class LocalAiSettingsPanel : UserControl
         var downloading = state == LocalAiFileState.Downloading;
         CancelButton.Visibility = Show(downloading);
         BackgroundNote.Visibility = Show(downloading);
-        ProgressBar.IsIndeterminate = !downloading;
-        if (downloading) ProgressBar.Value = store.Fraction;
+        ProgressBar.Value = downloading ? store.Fraction : 1;
+        ProgressBar.Opacity = downloading ? 1 : 0.55;
 
         if (state == LocalAiFileState.Verifying)
             ProgressText.Text = LocalizationService.Get("S.LocalAi.Verifying");
@@ -467,7 +468,8 @@ public partial class LocalAiSettingsPanel : UserControl
 
     public sealed record DownloadedRow(object Model, string Name, string Size, bool CanDelete, Visibility InUseVisibility);
 
-    public sealed record IdleChoice(int Minutes, string Label);
+    /// <param name="Display">Read by name: it is what the shared combo box template shows.</param>
+    public sealed record IdleChoice(int Minutes, string Display);
 
     private void RenderDownloadedList()
     {

@@ -119,7 +119,7 @@
     <sys:String x:Key="S.Translation.SwapTip">互换语言与内容</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">清除原文</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">朗读原文</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用 OpenAI 翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用当前的翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">还不知道原文是什么语言，翻译完成后就可以朗读。</sys:String>
     <!-- The note at the foot of the page and the greyed speaker's tooltip are the same sentence:
          the note is what is read, the tooltip is for whoever hovers the button instead. -->
@@ -172,7 +172,7 @@
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
          gap is before the first result. -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用 OpenAI 翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用当前的翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">还不知道原文是什么语言，翻译完成后就可以朗读。</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">翻译服务</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">与屏幕翻译及文字翻译共用此服务</sys:String>
