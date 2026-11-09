@@ -532,7 +532,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">Less than 1 min left</sys:String>
     <sys:String x:Key="S.LocalAi.Background">You can close this window. The download continues in the background.</sys:String>
     <sys:String x:Key="S.LocalAi.Verifying">Verifying the file…</sys:String>
-    <sys:String x:Key="S.LocalAi.Initializing">Initializing the model…</sys:String>
     <sys:String x:Key="S.LocalAi.NetworkError">Could not reach the download server. Check your connection and try again.</sys:String>
     <sys:String x:Key="S.LocalAi.Retry">Retry</sys:String>
     <sys:String x:Key="S.LocalAi.RetryNote">What has been downloaded is kept, and the retry picks up from there.</sys:String>

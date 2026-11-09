@@ -536,7 +536,6 @@
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">残り 1 分未満</sys:String>
     <sys:String x:Key="S.LocalAi.Background">このウィンドウを閉じても、ダウンロードはバックグラウンドで続行されます。</sys:String>
     <sys:String x:Key="S.LocalAi.Verifying">ファイルの整合性を確認しています…</sys:String>
-    <sys:String x:Key="S.LocalAi.Initializing">モデルを初期化しています…</sys:String>
     <sys:String x:Key="S.LocalAi.NetworkError">ダウンロードサーバーに接続できません。ネットワーク接続を確認して再試行してください。</sys:String>
     <sys:String x:Key="S.LocalAi.Retry">再試行</sys:String>
     <sys:String x:Key="S.LocalAi.RetryNote">ダウンロード済みの部分は保持され、再試行時に続きからダウンロードされます。</sys:String>

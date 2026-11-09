@@ -556,7 +556,6 @@
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">剩餘不到 1 分鐘</sys:String>
     <sys:String x:Key="S.LocalAi.Background">可關閉此視窗，下載會在背景繼續進行。</sys:String>
     <sys:String x:Key="S.LocalAi.Verifying">正在確認檔案完整性…</sys:String>
-    <sys:String x:Key="S.LocalAi.Initializing">正在初始化模型…</sys:String>
     <sys:String x:Key="S.LocalAi.NetworkError">無法連線至下載伺服器，請確認網路連線後重試。</sys:String>
     <sys:String x:Key="S.LocalAi.Retry">重試</sys:String>
     <sys:String x:Key="S.LocalAi.RetryNote">已下載的部分會保留，重試時會接續下載。</sys:String>

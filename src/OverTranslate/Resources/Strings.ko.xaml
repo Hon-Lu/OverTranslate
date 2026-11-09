@@ -536,7 +536,6 @@
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">1분 미만 남음</sys:String>
     <sys:String x:Key="S.LocalAi.Background">이 창을 닫아도 다운로드는 백그라운드에서 계속됩니다.</sys:String>
     <sys:String x:Key="S.LocalAi.Verifying">파일 무결성을 확인하는 중…</sys:String>
-    <sys:String x:Key="S.LocalAi.Initializing">모델을 초기화하는 중…</sys:String>
     <sys:String x:Key="S.LocalAi.NetworkError">다운로드 서버에 연결할 수 없습니다. 네트워크 연결을 확인하고 다시 시도하세요.</sys:String>
     <sys:String x:Key="S.LocalAi.Retry">다시 시도</sys:String>
     <sys:String x:Key="S.LocalAi.RetryNote">다운로드한 부분은 유지되며, 다시 시도하면 이어서 다운로드합니다.</sys:String>

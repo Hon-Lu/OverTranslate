@@ -527,7 +527,6 @@
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">Осталось меньше минуты</sys:String>
     <sys:String x:Key="S.LocalAi.Background">Окно можно закрыть: загрузка продолжится в фоновом режиме.</sys:String>
     <sys:String x:Key="S.LocalAi.Verifying">Проверка целостности файла…</sys:String>
-    <sys:String x:Key="S.LocalAi.Initializing">Инициализация модели…</sys:String>
     <sys:String x:Key="S.LocalAi.NetworkError">Не удалось подключиться к серверу загрузки. Проверьте подключение и повторите попытку.</sys:String>
     <sys:String x:Key="S.LocalAi.Retry">Повторить</sys:String>
     <sys:String x:Key="S.LocalAi.RetryNote">Загруженная часть сохраняется, при повторной попытке загрузка продолжится.</sys:String>

@@ -25,7 +25,6 @@ internal enum LocalAiFileState
     NoSpace,
     Downloading,
     Verifying,
-    Initializing,
     Failed,
     Ready,
 }
@@ -137,10 +136,9 @@ public partial class LocalAiSettingsPanel : UserControl
     /// <param name="gpuChecked">Whether the check for a card has finished.</param>
     internal static LocalAiFileState StateOf(
         bool hasModel, bool gpuChecked, bool hasGpu, bool downloaded, bool downloading, bool verifying,
-        bool initializing, bool failed, bool enoughSpace) =>
+        bool failed, bool enoughSpace) =>
         !hasModel ? LocalAiFileState.NoModelChosen
         : gpuChecked && !hasGpu ? LocalAiFileState.NoGpu
-        : initializing ? LocalAiFileState.Initializing
         : verifying ? LocalAiFileState.Verifying
         : downloading ? LocalAiFileState.Downloading
         : downloaded ? LocalAiFileState.Ready
@@ -161,7 +159,6 @@ public partial class LocalAiSettingsPanel : UserControl
             model is not null && store.IsDownloaded(model),
             thisOne && store.Phase == LocalAiDownloadPhase.Downloading,
             thisOne && store.Phase == LocalAiDownloadPhase.Verifying,
-            model is not null && Service.Initializing && Service.ActiveModel?.Id == model.Id,
             model is not null && Service.LastDownloadFailure?.Model.Id == model.Id,
             model is null || free is null || free.Value.FreeBytes >= store.SpaceNeeded(model));
     }
@@ -179,7 +176,7 @@ public partial class LocalAiSettingsPanel : UserControl
             LocalAiFileState.NoModelChosen => ("", ""),
             LocalAiFileState.NoGpu => ("S.LocalAi.ChipUnavailable", "Error"),
             LocalAiFileState.Downloading => ("S.LocalAi.ChipDownloading", "Accent"),
-            LocalAiFileState.Verifying or LocalAiFileState.Initializing => ("S.LocalAi.ChipPreparing", "Accent"),
+            LocalAiFileState.Verifying => ("S.LocalAi.ChipPreparing", "Accent"),
             LocalAiFileState.Failed => ("S.LocalAi.ChipFailed", "Error"),
             LocalAiFileState.Ready => ("S.LocalAi.ChipReady", "Success"),
             _ => ("S.LocalAi.ChipNotDownloaded", "Warning"),
@@ -201,7 +198,7 @@ public partial class LocalAiSettingsPanel : UserControl
 
         ChooseHint.Visibility = Show(state == LocalAiFileState.NoModelChosen);
         DownloadPanel.Visibility = Show(state is LocalAiFileState.NotDownloaded or LocalAiFileState.NoSpace or LocalAiFileState.NoGpu);
-        ProgressPanel.Visibility = Show(state is LocalAiFileState.Downloading or LocalAiFileState.Verifying or LocalAiFileState.Initializing);
+        ProgressPanel.Visibility = Show(state is LocalAiFileState.Downloading or LocalAiFileState.Verifying);
         FailedPanel.Visibility = Show(state == LocalAiFileState.Failed);
         ReadyPanel.Visibility = Show(state == LocalAiFileState.Ready);
 
@@ -211,7 +208,7 @@ public partial class LocalAiSettingsPanel : UserControl
             case LocalAiFileState.NotDownloaded or LocalAiFileState.NoSpace or LocalAiFileState.NoGpu:
                 RenderDownload(state, model!);
                 break;
-            case LocalAiFileState.Downloading or LocalAiFileState.Verifying or LocalAiFileState.Initializing:
+            case LocalAiFileState.Downloading or LocalAiFileState.Verifying:
                 RenderProgress(state);
                 break;
             case LocalAiFileState.Failed:
@@ -222,8 +219,7 @@ public partial class LocalAiSettingsPanel : UserControl
                 break;
         }
 
-        DeleteModelLink.Visibility = Show(
-            model is not null && state != LocalAiFileState.Initializing && Service.Store.IsDownloaded(model));
+        DeleteModelLink.Visibility = Show(model is not null && Service.Store.IsDownloaded(model));
     }
 
     private static Visibility Show(bool show) => show ? Visibility.Visible : Visibility.Collapsed;
@@ -273,8 +269,6 @@ public partial class LocalAiSettingsPanel : UserControl
 
         if (state == LocalAiFileState.Verifying)
             ProgressText.Text = LocalizationService.Get("S.LocalAi.Verifying");
-        else if (state == LocalAiFileState.Initializing)
-            ProgressText.Text = LocalizationService.Get("S.LocalAi.Initializing");
         else
         {
             var text = LocalizationService.Format(
