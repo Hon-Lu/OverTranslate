@@ -530,7 +530,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.LocalAi.RuntimeNote">Includes a {0} MB runtime, downloaded on first use.</sys:String>
     <sys:String x:Key="S.LocalAi.FreeSpace">Free space on {0}: {1} GB</sys:String>
     <sys:String x:Key="S.LocalAi.NoSpace">Not enough space on {0}: {1} GB needed, {2} GB free.</sys:String>
-    <sys:String x:Key="S.LocalAi.KeepUsing">{0} stays in use until the download finishes.</sys:String>
     <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB ({2}%)</sys:String>
     <sys:String x:Key="S.LocalAi.Remaining">About {0} min left</sys:String>
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">Less than 1 min left</sys:String>

@@ -534,7 +534,6 @@
     <sys:String x:Key="S.LocalAi.RuntimeNote">{0} MB の実行コンポーネントを含みます。初回使用時にダウンロードされます。</sys:String>
     <sys:String x:Key="S.LocalAi.FreeSpace">{0} ドライブの空き容量：{1} GB</sys:String>
     <sys:String x:Key="S.LocalAi.NoSpace">{0} ドライブの空き容量が不足しています：必要 {1} GB、空き {2} GB。</sys:String>
-    <sys:String x:Key="S.LocalAi.KeepUsing">ダウンロードが完了するまで {0} で翻訳を続けます。</sys:String>
     <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB（{2}%）</sys:String>
     <sys:String x:Key="S.LocalAi.Remaining">残り約 {0} 分</sys:String>
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">残り 1 分未満</sys:String>

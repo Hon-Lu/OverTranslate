@@ -74,7 +74,7 @@ public partial class LocalAiSettingsPanel : UserControl
         try
         {
             var settings = Settings;
-            _chosen = Service.Store.Downloading ?? Service.ActiveModel;
+            _chosen = Service.Store.Downloading ?? Service.ChosenModel;
             _detailsOpen = false;
 
             SegmentRadio.IsChecked = !settings.Batch;
@@ -240,17 +240,12 @@ public partial class LocalAiSettingsPanel : UserControl
         DownloadButton.IsEnabled = state == LocalAiFileState.NotDownloaded && _gpus is { Count: > 0 } && store.Downloading is null;
 
         var free = store.FreeSpace();
-        var active = Service.ActiveModel;
-        var changing = active is not null && active.Id != model.Id;
 
         RuntimeNote.Text = LocalizationService.Format("S.LocalAi.RuntimeNote", (int)Math.Round((store.Runtime?.Runtime.Size ?? 0) / 1e6));
-        RuntimeNote.Visibility = Show(state == LocalAiFileState.NotDownloaded && store.RuntimeDownloadSize > 0 && !changing);
+        RuntimeNote.Visibility = Show(state == LocalAiFileState.NotDownloaded && store.RuntimeDownloadSize > 0);
 
         SpaceNote.Text = free is { } space ? LocalizationService.Format("S.LocalAi.FreeSpace", space.Drive, Whole(space.FreeBytes)) : "";
-        SpaceNote.Visibility = Show(state == LocalAiFileState.NotDownloaded && free is not null && !changing);
-
-        KeepUsingNote.Text = active is null ? "" : LocalizationService.Format("S.LocalAi.KeepUsing", active.ShortName);
-        KeepUsingNote.Visibility = Show(state == LocalAiFileState.NotDownloaded && changing);
+        SpaceNote.Visibility = Show(state == LocalAiFileState.NotDownloaded && free is not null);
 
         BlockedNote.Visibility = Show(state != LocalAiFileState.NotDownloaded);
         if (state == LocalAiFileState.NoGpu)
@@ -287,8 +282,6 @@ public partial class LocalAiSettingsPanel : UserControl
                 text += " · " + (left.TotalMinutes < 1
                     ? LocalizationService.Get("S.LocalAi.RemainingUnderMinute")
                     : LocalizationService.Format("S.LocalAi.Remaining", (int)Math.Ceiling(left.TotalMinutes)));
-            if (Service.ActiveModel is { } active && active.Id != _chosen?.Id)
-                text += "\n" + LocalizationService.Format("S.LocalAi.KeepUsing", active.ShortName);
             ProgressText.Text = text;
         }
     }
@@ -416,7 +409,7 @@ public partial class LocalAiSettingsPanel : UserControl
         ModelPickerButton.IsChecked = false;
         _chosen = model;
         _detailsOpen = false;
-        if (Service.Store.IsDownloaded(model)) Service.Use(model);
+        Service.Use(model);
         Render();
     }
 

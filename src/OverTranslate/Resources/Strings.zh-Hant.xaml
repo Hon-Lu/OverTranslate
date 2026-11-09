@@ -554,7 +554,6 @@
     <sys:String x:Key="S.LocalAi.RuntimeNote">另含 {0} MB 執行元件，首次使用時下載。</sys:String>
     <sys:String x:Key="S.LocalAi.FreeSpace">{0} 槽剩餘空間：{1} GB</sys:String>
     <sys:String x:Key="S.LocalAi.NoSpace">{0} 槽空間不足：需要 {1} GB，剩餘 {2} GB。</sys:String>
-    <sys:String x:Key="S.LocalAi.KeepUsing">下載完成前，將繼續使用 {0} 翻譯。</sys:String>
     <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB（{2}%）</sys:String>
     <sys:String x:Key="S.LocalAi.Remaining">剩餘約 {0} 分鐘</sys:String>
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">剩餘不到 1 分鐘</sys:String>

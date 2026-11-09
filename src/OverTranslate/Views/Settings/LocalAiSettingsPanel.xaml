@@ -217,7 +217,6 @@
                     <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
                         <TextBlock x:Name="RuntimeNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
                         <TextBlock x:Name="SpaceNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
-                        <TextBlock x:Name="KeepUsingNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
                         <TextBlock x:Name="BlockedNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
                     </StackPanel>
                 </DockPanel>

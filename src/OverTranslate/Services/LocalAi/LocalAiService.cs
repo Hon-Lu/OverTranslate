@@ -54,6 +54,9 @@ internal sealed class LocalAiService : ILocalAiBackend
 
     private static LocalAiSettings Settings => SettingsService.Instance.Current.LocalAi;
 
+    /// <summary>The model picked in settings, downloaded or not.</summary>
+    internal LocalAiModel? ChosenModel => Store.Catalog?.Find(Settings.ModelId);
+
     /// <summary>The model in use, when it is here to use.</summary>
     internal LocalAiModel? ActiveModel =>
         Store.Catalog?.Find(Settings.ModelId) is { } model && Store.IsDownloaded(model) ? model : null;
@@ -80,8 +83,7 @@ internal sealed class LocalAiService : ILocalAiBackend
     internal Task<IReadOnlyList<LocalAiGpuDevice>> GpusAsync() => LocalAiGpu.DetectAsync();
 
     /// <summary>
-    /// Downloads a model and makes it the one in use, closing whatever was running. What was in use
-    /// stays in use until then.
+    /// Downloads a model and makes it the one in use, closing whatever was running.
     /// </summary>
     internal async Task DownloadAsync(LocalAiModel model)
     {
@@ -116,7 +118,10 @@ internal sealed class LocalAiService : ILocalAiBackend
         await InitializeAsync(model).ConfigureAwait(false);
     }
 
-    /// <summary>Makes a model that is already here the one in use.</summary>
+    /// <summary>
+    /// Makes a model the one in use and closes whatever was running. One that is not downloaded yet
+    /// simply cannot translate until it is.
+    /// </summary>
     internal void Use(LocalAiModel model)
     {
         var settings = SettingsService.Instance;

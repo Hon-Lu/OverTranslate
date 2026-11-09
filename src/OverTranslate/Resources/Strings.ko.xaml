@@ -534,7 +534,6 @@
     <sys:String x:Key="S.LocalAi.RuntimeNote">{0} MB 실행 구성 요소가 포함되며, 처음 사용할 때 다운로드됩니다.</sys:String>
     <sys:String x:Key="S.LocalAi.FreeSpace">{0} 드라이브 남은 공간: {1} GB</sys:String>
     <sys:String x:Key="S.LocalAi.NoSpace">{0} 드라이브 공간이 부족합니다. 필요 {1} GB, 남은 공간 {2} GB.</sys:String>
-    <sys:String x:Key="S.LocalAi.KeepUsing">다운로드가 끝날 때까지 {0}(으)로 계속 번역합니다.</sys:String>
     <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB({2}%)</sys:String>
     <sys:String x:Key="S.LocalAi.Remaining">약 {0}분 남음</sys:String>
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">1분 미만 남음</sys:String>

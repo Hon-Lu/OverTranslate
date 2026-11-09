@@ -525,7 +525,6 @@
     <sys:String x:Key="S.LocalAi.RuntimeNote">Включает среду выполнения {0} МБ, загружается при первом использовании.</sys:String>
     <sys:String x:Key="S.LocalAi.FreeSpace">Свободно на диске {0}: {1} ГБ</sys:String>
     <sys:String x:Key="S.LocalAi.NoSpace">Недостаточно места на диске {0}: нужно {1} ГБ, свободно {2} ГБ.</sys:String>
-    <sys:String x:Key="S.LocalAi.KeepUsing">До завершения загрузки перевод продолжится через {0}.</sys:String>
     <sys:String x:Key="S.LocalAi.Progress">{0} / {1} ГБ ({2}%)</sys:String>
     <sys:String x:Key="S.LocalAi.Remaining">Осталось около {0} мин</sys:String>
     <sys:String x:Key="S.LocalAi.RemainingUnderMinute">Осталось меньше минуты</sys:String>
