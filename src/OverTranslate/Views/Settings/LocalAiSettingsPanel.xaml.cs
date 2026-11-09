@@ -424,6 +424,14 @@ public partial class LocalAiSettingsPanel : UserControl
         Render();
     }
 
+    // Picking the row already selected changes nothing, so SelectionChanged does not close the list.
+    private void ModelList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source
+            && ItemsControl.ContainerFromElement(ModelList, source) is ListBoxItem { IsSelected: true })
+            ModelPickerButton.IsChecked = false;
+    }
+
     // ── Actions ──────────────────────────────────────────────────────────────
 
     private void DownloadButton_Click(object sender, RoutedEventArgs e)

@@ -157,6 +157,7 @@
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ItemContainerStyle="{StaticResource ModelRowContainer}"
+                         PreviewMouseLeftButtonUp="ModelList_PreviewMouseLeftButtonUp"
                          SelectionChanged="ModelList_SelectionChanged">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -458,6 +459,11 @@
                                VerticalAlignment="Center"
                                Cursor="Help"
                                AutomationProperties.Name="{DynamicResource S.LocalAi.IdleNote}">
+                        <!-- Drawn lower rather than laid out lower: a margin would make this row taller
+                             than the timeout label beside it, and the two boxes under them uneven. -->
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="1"/>
+                        </TextBlock.RenderTransform>
                         <controls:HoverToolTip.Content>
                             <TextBlock Text="{DynamicResource S.LocalAi.IdleNote}"
                                        MaxWidth="420"

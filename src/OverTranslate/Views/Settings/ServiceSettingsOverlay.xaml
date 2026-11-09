@@ -150,7 +150,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="0,0,0,14">
@@ -522,13 +521,9 @@
                     </Grid>
                 </ScrollViewer>
 
-                <!-- Where the local AI panel's scrolling stops, as the prompt editor marks its own. -->
-                <Rectangle x:Name="FooterSeparator" Grid.Row="3" Height="1" Margin="0,8,0,0"
-                           Fill="{DynamicResource AppSeparator}" Visibility="Collapsed"/>
-
                 <!-- The page's own auto-save line is behind the scrim, so the same contract is
                      restated here rather than leaving this card looking like it needs an OK. -->
-                <StackPanel x:Name="AutoSaveLine" Grid.Row="4" Orientation="Horizontal" Margin="0,16,0,0">
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
                     <TextBlock Text="&#xE945;"
                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                FontSize="13"
