@@ -1447,7 +1447,7 @@
                                 <!-- 設定 before the switch rather than after it, so every switch on the
                                      card ends on the same edge: these rows' trailing edge is the right
                                      column's above. The state badge sits beside the name. -->
-                                <UniformGrid x:Name="ProviderKeyedList" Columns="2" Margin="-4">
+                                <StackPanel x:Name="ProviderKeyedList" Margin="-4">
                                     <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
                                               AutomationProperties.Name="{DynamicResource S.Provider.LocalAI}"
                                               Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
@@ -1516,7 +1516,7 @@
                                             </WrapPanel>
                                         </DockPanel>
                                     </CheckBox>
-                                </UniformGrid>
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
 

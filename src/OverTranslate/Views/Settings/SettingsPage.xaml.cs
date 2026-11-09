@@ -343,7 +343,7 @@ public partial class SettingsPage : UserControl
     private void ProviderGrid_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         const double MinRowWidth = 360;
-        ProviderGrid.Columns = ProviderKeyedList.Columns = e.NewSize.Width >= 2 * MinRowWidth ? 2 : 1;
+        ProviderGrid.Columns = e.NewSize.Width >= 2 * MinRowWidth ? 2 : 1;
     }
 
     private void Persist(Action<AppSettings> apply)
