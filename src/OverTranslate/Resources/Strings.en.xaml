@@ -448,7 +448,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Requires an official API key</sys:String>
-    <sys:String x:Key="S.Provider.LocalAI">Local AI</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">AI (Local)</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">Built-in models. Works without installing anything else.</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">Any OpenAI-compatible API (Ollama, LM Studio, OpenRouter…). A local LLM is recommended.</sys:String>
@@ -513,6 +513,7 @@ Actually used this time: {2}</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">Service setup</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Keep at least one service</sys:String>
+    <sys:String x:Key="S.LocalAi.DialogTitle">AI translation settings</sys:String>
     <sys:String x:Key="S.LocalAi.Model">Model</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">Select a model</sys:String>
     <sys:String x:Key="S.LocalAi.ModelFile">Model status</sys:String>

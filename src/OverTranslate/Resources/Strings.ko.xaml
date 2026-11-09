@@ -452,7 +452,7 @@
     <sys:String x:Key="S.Provider.Yandex">Yandex 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">공식 API 키 필요</sys:String>
-    <sys:String x:Key="S.Provider.LocalAI">로컬 AI 번역</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">AI 번역 (로컬)</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">내장 모델을 사용하며 별도 앱을 설치할 필요가 없습니다</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 호환 API를 지원합니다(Ollama, LM Studio, OpenRouter 등). 로컬 LLM 사용을 권장합니다.</sys:String>
@@ -517,6 +517,7 @@
 
     <sys:String x:Key="S.Settings.ServiceSetup">번역 서비스 설정</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">서비스를 하나 이상 남겨 두세요</sys:String>
+    <sys:String x:Key="S.LocalAi.DialogTitle">AI 번역 설정</sys:String>
     <sys:String x:Key="S.LocalAi.Model">모델</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">모델 선택</sys:String>
     <sys:String x:Key="S.LocalAi.ModelFile">모델 상태</sys:String>
