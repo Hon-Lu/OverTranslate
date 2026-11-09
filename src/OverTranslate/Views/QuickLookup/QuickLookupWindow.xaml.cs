@@ -1125,7 +1125,7 @@ public partial class QuickLookupWindow : Window
             ShowStatus(
                 LocalizationService.Format(
                     "S.Translation.ProviderUnavailable",
-                    LanguageData.GetProviderDisplay(settings.Provider), ex.Message),
+                    ex.Message),
                 isError: true);
         }
     }
@@ -1379,7 +1379,7 @@ public partial class QuickLookupWindow : Window
         // written in two scripts, so only a pair that shares one can still be waiting on an engine
         // that is never going to say.
         var openAiAutomatic =
-            SettingsService.Instance.Current.Provider == TranslationProvider.OpenAI &&
+            SettingsService.Instance.Current.Provider is TranslationProvider.OpenAI or TranslationProvider.LocalAI &&
             (BilingualToggle.IsChecked == true
                 ? _bilingualSource is null
                 : LanguageData.IsAutomaticSource(SrcLangBox.SelectedValue as string));

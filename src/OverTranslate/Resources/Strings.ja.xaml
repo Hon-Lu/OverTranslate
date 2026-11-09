@@ -98,6 +98,12 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI 互換 API の応答を解析できませんでした。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI 互換 API から訳文が返りませんでした。</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI 互換 API から {0} 秒以内に応答がありませんでした。翻訳サービス設定でタイムアウトの秒数を変更できます。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">モデルがダウンロードされていません。設定ページの「翻訳サービスの設定」でダウンロードしてください。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiDownloading">モデルをダウンロード中です（{0}%）。完了してからもう一度お試しください。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiStartFailed">ローカルモデルを起動できませんでした。より小さいモデルをお試しください。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoGpu">専用グラフィックカードが検出されないため、この翻訳機能は使用できません。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiTimeout">ローカルモデルから {0} 秒以内に応答がありませんでした。翻訳サービス設定でタイムアウトの秒数を変更できます。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoTranslation">ローカルモデルから訳文が返されませんでした。</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">OpenAI 互換 API のアドレスは有効な HTTP または HTTPS の URL である必要があります。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">モデル名が設定されていません。翻訳サービス設定で使用するモデルを入力してください。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">不明なエラー</sys:String>
@@ -114,7 +120,7 @@
     <sys:String x:Key="S.Translation.SwapTip">言語と内容を入れ替える</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">原文を消去</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">原文を読み上げる</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">OpenAI の翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">この翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">原文の言語がまだ分かりません。翻訳が終わると読み上げられます。</sys:String>
     <!-- The note at the foot of the page and the greyed speaker's tooltip are the same sentence:
          the note is what is read, the tooltip is for whoever hovers the button instead. -->
@@ -123,8 +129,7 @@
     <sys:String x:Key="S.Translation.Result">訳文</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ 再試行</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">API キーがありません — 設定で入力してください</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} は現在利用できません。別の翻訳サービスをお試しください。
-翻訳に失敗しました：{1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">翻訳に失敗しました：{0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">翻訳中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">読み上げに失敗しました：{0}</sys:String>
 
@@ -167,7 +172,7 @@
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
          gap is before the first result. -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">OpenAI の翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">この翻訳サービスでは、翻訳元の言語を指定すると原文を読み上げられます。</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">原文の言語がまだ分かりません。翻訳が終わると読み上げられます。</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">翻訳サービス</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">キャプチャ翻訳・テキスト翻訳と共通のサービスです</sys:String>
@@ -283,9 +288,6 @@
     <sys:String x:Key="S.Main.NoTextBody">選択した範囲に認識できるテキストがありませんでした。</sys:String>
     <sys:String x:Key="S.Main.Translating">翻訳中</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">翻訳に失敗しました</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">現在の翻訳サービスが一時的に利用できない可能性があります。
-別のサービスに切り替えてもう一度お試しください。
-詳細：{0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">コピーしました</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">選択範囲のスクリーンショットをクリップボードにコピーしました。</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">認識したテキストをクリップボードにコピーしました。</sys:String>
@@ -449,9 +451,12 @@
     <sys:String x:Key="S.Provider.TranSmart">Tencent 翻訳</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻訳</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">DeepL の公式サイトで登録して API キーを取得する必要があります</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">公式の API キーが必要</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">ローカル AI 翻訳</sys:String>
+    <sys:String x:Key="S.Provider.LocalAIHint">内蔵モデルを使用。追加のアプリをインストールせずに使えます</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 互換 API に対応（Ollama・LM Studio・OpenRouter など）。ローカル LLM の利用がおすすめです。</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">OpenAI 互換 API に対応（Ollama・LM Studio・OpenRouter など）</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">設定</sys:String>
@@ -511,10 +516,62 @@
     <sys:String x:Key="S.Settings.StartupCheck">Windows の起動時に自動で開始する</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻訳サービスの設定</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">オフにしてもメニューの項目が非表示になるだけで、使用中のサービスは変わりません。バックアップ翻訳や辞書の検索に使われることもあります。</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">少なくとも 1 つは残してください</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupFree">一般のサービス</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupKeyed">カスタマイズできるサービス</sys:String>
+    <sys:String x:Key="S.LocalAi.Model">モデル</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseModel">モデルを選択</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">モデルの状態</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseHint">モデルを選択すると、ファイルサイズとダウンロードボタンが表示されます。</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipNotDownloaded">未ダウンロード</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipDownloading">ダウンロード中</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipPreparing">準備中</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipFailed">ダウンロード失敗</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipUnavailable">利用不可</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipReady">準備完了</sys:String>
+    <sys:String x:Key="S.LocalAi.Download">ダウンロード（{0} GB）</sys:String>
+    <sys:String x:Key="S.LocalAi.RuntimeNote">{0} MB の実行コンポーネントを含みます。初回使用時にダウンロードされます。</sys:String>
+    <sys:String x:Key="S.LocalAi.FreeSpace">{0} ドライブの空き容量：{1} GB</sys:String>
+    <sys:String x:Key="S.LocalAi.NoSpace">{0} ドライブの空き容量が不足しています：必要 {1} GB、空き {2} GB。</sys:String>
+    <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB（{2}%）</sys:String>
+    <sys:String x:Key="S.LocalAi.Remaining">残り約 {0} 分</sys:String>
+    <sys:String x:Key="S.LocalAi.RemainingUnderMinute">残り 1 分未満</sys:String>
+    <sys:String x:Key="S.LocalAi.Background">このウィンドウを閉じても、ダウンロードはバックグラウンドで続行されます。</sys:String>
+    <sys:String x:Key="S.LocalAi.Verifying">ファイルの整合性を確認しています…</sys:String>
+    <sys:String x:Key="S.LocalAi.NetworkError">ダウンロードサーバーに接続できません。ネットワーク接続を確認して再試行してください。</sys:String>
+    <sys:String x:Key="S.LocalAi.Retry">再試行</sys:String>
+    <sys:String x:Key="S.LocalAi.RetryNote">ダウンロード済みの部分は保持され、再試行時に続きからダウンロードされます。</sys:String>
+    <sys:String x:Key="S.LocalAi.Running">実行中</sys:String>
+    <sys:String x:Key="S.LocalAi.Stopped">未起動</sys:String>
+    <sys:String x:Key="S.LocalAi.Starting">起動中…</sys:String>
+    <sys:String x:Key="S.LocalAi.Restarting">モデルが異常終了しました。再起動しています…</sys:String>
+    <sys:String x:Key="S.LocalAi.StartFailed">モデルを起動できませんでした。</sys:String>
+    <sys:String x:Key="S.LocalAi.Details">詳細を表示</sys:String>
+    <sys:String x:Key="S.LocalAi.Release">今すぐ解放</sys:String>
+    <sys:String x:Key="S.LocalAi.ReleaseNote">モデルを閉じてメモリを解放します。次回の翻訳時に自動で再起動します。</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">このサービスで翻訳すると、モデルが自動で起動します。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteModel">モデルを削除</sys:String>
+    <sys:String x:Key="S.LocalAi.DownloadedTag">ダウンロード済み</sys:String>
+    <sys:String x:Key="S.LocalAi.Delete">削除</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">「{0}」を削除しますか？もう一度使うにはダウンロードが必要です。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">モデルファイルを削除できませんでした。しばらくしてからもう一度お試しください。</sys:String>
+    <sys:String x:Key="S.LocalAi.Style">翻訳のスタイル</sys:String>
+    <sys:String x:Key="S.LocalAi.Optional">（任意）</sys:String>
+    <sys:String x:Key="S.LocalAi.StylePlaceholder">例：くだけた口調で</sys:String>
+    <sys:String x:Key="S.LocalAi.Idle">アイドル時に自動解放</sys:String>
+    <sys:String x:Key="S.LocalAi.IdleNote">設定した時間翻訳がないと、モデルを閉じてメモリを解放します。次回の翻訳時に自動で再起動します（モデルの初期化に数秒かかります）。</sys:String>
+    <sys:String x:Key="S.LocalAi.Minutes">{0} 分</sys:String>
+    <sys:String x:Key="S.LocalAi.Recommended">おすすめ</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">その他のバージョン</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnFile">ファイル</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.NotEnoughVram">VRAM 不足</sys:String>
+    <sys:String x:Key="S.LocalAi.CardNoModel">モデル未ダウンロード</sys:String>
+    <sys:String x:Key="S.LocalAi.CardDownloading">ダウンロード中 {0}%</sys:String>
+    <sys:String x:Key="S.LocalAi.CardReady">{0} · 準備完了</sys:String>
+    <sys:String x:Key="S.LocalAi.CardRunning">{0} · 実行中</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescHy7B">翻訳専用モデル · 中国語翻訳に最適化</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">汎用言語モデル · 140 以上の言語に対応</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻訳</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻訳</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">要設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">設定済み</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">既定値を使用</sys:String>
@@ -527,7 +584,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">画面上のテキストブロックを順番に1つずつ翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">画面上のテキストブロックをひとまとめにして翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">ローカルモデルでは高速</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">訳し漏れが起きにくい</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">画面全体を参照するため、文意がつながりやすい</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">リクエスト数が少なく、クラウドサービスに向いている</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">向いている用途</sys:String>
@@ -568,7 +624,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">翻訳先の言語コード</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英語</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日本語</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">翻訳元が「自動」のときは、翻訳元の言語名は any language、コードは空になります。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">翻訳元が「自動」のときは、{source_name} と {source_code} は空になります。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">プロンプト</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻訳のたびにモデルへ送る内容です。波かっこで示したパラメーターは実際の文字列に置き換わります。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">既定に戻す</sys:String>

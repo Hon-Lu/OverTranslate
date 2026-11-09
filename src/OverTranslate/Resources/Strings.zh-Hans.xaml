@@ -97,6 +97,12 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI Compatible API 响应格式无法解析。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI Compatible API 未返回译文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI Compatible API 在 {0} 秒内没有响应。可在「翻译服务设置」中调整超时秒数。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">尚未下载模型，请至设置页的「翻译服务设置」进行下载。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiDownloading">模型下载中（{0}%），请等待下载完成后再试。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiStartFailed">本地模型启动失败，请尝试使用较小的模型。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoGpu">未检测到独立显卡，无法使用此翻译功能。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiTimeout">本地模型在 {0} 秒内没有响应。可在「翻译服务设置」中调整超时秒数。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoTranslation">本地模型未返回译文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">OpenAI Compatible API 地址必须是有效的 HTTP 或 HTTPS 网址。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">尚未指定模型名称。请在「翻译服务设置」中填入要使用的模型。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">未知错误</sys:String>
@@ -113,7 +119,7 @@
     <sys:String x:Key="S.Translation.SwapTip">互换语言与内容</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">清除原文</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">朗读原文</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用 OpenAI 翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用当前的翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">还不知道原文是什么语言，翻译完成后就可以朗读。</sys:String>
     <!-- The note at the foot of the page and the greyed speaker's tooltip are the same sentence:
          the note is what is read, the tooltip is for whoever hovers the button instead. -->
@@ -122,8 +128,7 @@
     <sys:String x:Key="S.Translation.Result">译文</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ 重试</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">缺少 API Key — 请先在设置中输入</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} 目前无法使用，请改用其他翻译源。
-翻译失败：{1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">翻译失败：{0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">翻译中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">朗读失败：{0}</sys:String>
 
@@ -166,7 +171,7 @@
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
          gap is before the first result. -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用 OpenAI 翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用当前的翻译服务时，请先指定源语言，才能朗读原文。</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">还不知道原文是什么语言，翻译完成后就可以朗读。</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">翻译服务</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">与屏幕翻译及文字翻译共用此服务</sys:String>
@@ -279,9 +284,6 @@
     <sys:String x:Key="S.Main.NoTextBody">所选区域中未找到可识别的文字。</sys:String>
     <sys:String x:Key="S.Main.Translating">翻译中</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">翻译失败</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">目前使用的翻译源可能暂时无法使用。
-请切换其他翻译源后再试一次。
-详细信息：{0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">已复制</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">已将框选截图复制到剪贴板。</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">已将识别文字复制到剪贴板。</sys:String>
@@ -445,9 +447,12 @@
     <sys:String x:Key="S.Provider.TranSmart">腾讯翻译</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex 翻译</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻译</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">需到 DeepL 官方注册并获取 API Key</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">需申请官方 API Key</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">本地 AI 翻译</sys:String>
+    <sys:String x:Key="S.Provider.LocalAIHint">内置模型，无需安装额外应用工具，可直接使用</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">支持 OpenAI 兼容 API（如 Ollama、LM Studio、OpenRouter），建议使用本地 LLM。</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">支持 OpenAI 兼容 API（如 Ollama、LM Studio、OpenRouter）</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">设置</sys:String>
@@ -507,10 +512,62 @@
     <sys:String x:Key="S.Settings.StartupCheck">开机时自动启动</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻译服务设置</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">关闭开关仅隐藏菜单项，不影响当前使用的服务，仍可能用于备用翻译或词典查询。</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">至少要保留一个服务</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupFree">一般服务</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupKeyed">可自定义服务</sys:String>
+    <sys:String x:Key="S.LocalAi.Model">模型</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseModel">请选择模型</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">模型状态</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseHint">选择模型后，这里会显示文件大小和下载按钮。</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipNotDownloaded">尚未下载</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipDownloading">下载中</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipPreparing">准备中</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipFailed">下载失败</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipUnavailable">无法使用</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipReady">已就绪</sys:String>
+    <sys:String x:Key="S.LocalAi.Download">下载（{0} GB）</sys:String>
+    <sys:String x:Key="S.LocalAi.RuntimeNote">另含 {0} MB 运行组件，首次使用时下载。</sys:String>
+    <sys:String x:Key="S.LocalAi.FreeSpace">{0} 盘剩余空间：{1} GB</sys:String>
+    <sys:String x:Key="S.LocalAi.NoSpace">{0} 盘空间不足：需要 {1} GB，剩余 {2} GB。</sys:String>
+    <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB（{2}%）</sys:String>
+    <sys:String x:Key="S.LocalAi.Remaining">剩余约 {0} 分钟</sys:String>
+    <sys:String x:Key="S.LocalAi.RemainingUnderMinute">剩余不到 1 分钟</sys:String>
+    <sys:String x:Key="S.LocalAi.Background">可关闭此窗口，下载会在后台继续进行。</sys:String>
+    <sys:String x:Key="S.LocalAi.Verifying">正在确认文件完整性…</sys:String>
+    <sys:String x:Key="S.LocalAi.NetworkError">无法连接下载服务器，请确认网络连接后重试。</sys:String>
+    <sys:String x:Key="S.LocalAi.Retry">重试</sys:String>
+    <sys:String x:Key="S.LocalAi.RetryNote">已下载的部分会保留，重试时会继续下载。</sys:String>
+    <sys:String x:Key="S.LocalAi.Running">运行中</sys:String>
+    <sys:String x:Key="S.LocalAi.Stopped">未启动</sys:String>
+    <sys:String x:Key="S.LocalAi.Starting">启动中…</sys:String>
+    <sys:String x:Key="S.LocalAi.Restarting">模型异常退出，正在重新启动…</sys:String>
+    <sys:String x:Key="S.LocalAi.StartFailed">模型启动失败。</sys:String>
+    <sys:String x:Key="S.LocalAi.Details">查看详细信息</sys:String>
+    <sys:String x:Key="S.LocalAi.Release">立即释放</sys:String>
+    <sys:String x:Key="S.LocalAi.ReleaseNote">立即关闭模型以释放内存，下次翻译时会自动重新启动。</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">使用此翻译服务翻译时会自动启动模型。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteModel">删除模型</sys:String>
+    <sys:String x:Key="S.LocalAi.DownloadedTag">已下载</sys:String>
+    <sys:String x:Key="S.LocalAi.Delete">删除</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">确定要删除“{0}”吗？删除后需重新下载。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">无法删除模型文件，请稍后再试。</sys:String>
+    <sys:String x:Key="S.LocalAi.Style">翻译风格</sys:String>
+    <sys:String x:Key="S.LocalAi.Optional">（选填）</sys:String>
+    <sys:String x:Key="S.LocalAi.StylePlaceholder">例如：语气口语、轻松</sys:String>
+    <sys:String x:Key="S.LocalAi.Idle">闲置后自动释放</sys:String>
+    <sys:String x:Key="S.LocalAi.IdleNote">超过设定时间没有翻译，将自动关闭模型以释放内存。下次翻译时会自动重新启动（模型初始化需等待数秒）。</sys:String>
+    <sys:String x:Key="S.LocalAi.Minutes">{0} 分钟</sys:String>
+    <sys:String x:Key="S.LocalAi.Recommended">推荐</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">其他版本</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnFile">文件</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.NotEnoughVram">显卡 VRAM 不足</sys:String>
+    <sys:String x:Key="S.LocalAi.CardNoModel">尚未下载模型</sys:String>
+    <sys:String x:Key="S.LocalAi.CardDownloading">下载中 {0}%</sys:String>
+    <sys:String x:Key="S.LocalAi.CardReady">{0} · 已就绪</sys:String>
+    <sys:String x:Key="S.LocalAi.CardRunning">{0} · 运行中</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescHy7B">专用翻译模型 · 针对中文翻译优化</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">通用语言模型 · 涵盖 140 多种语言</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻译</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻译</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">需设置</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">已设置</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">使用默认</sys:String>
@@ -523,7 +580,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">依次逐一翻译画面上的文字区块。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">将画面上的文字区块组合后一起翻译。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">本地模型上速度较快</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">不易漏翻</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">参考整个画面，语意更连贯</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">请求次数较少，更适合云端服务</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">适合</sys:String>
@@ -564,7 +620,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">目标语言代码</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英语</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日语</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">源语言为“自动”时，源语言名称为 any language，代码为空。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">当源语言为“自动”时，{source_name} 和 {source_code} 会留空。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">提示词</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻译时发送给模型的内容。花括号标示的参数会替换成实际的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">恢复默认</sys:String>

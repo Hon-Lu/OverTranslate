@@ -1395,27 +1395,7 @@
                                             <TextBlock Text="{DynamicResource S.Provider.Yandex}" Style="{StaticResource ProviderCardName}"/>
                                         </StackPanel>
                                     </CheckBox>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Grid>
 
-                        <!-- 可自訂服務. Named for what can be set rather than "needs setting up":
-                             OpenAI works on its defaults, and a heading that said otherwise would be
-                             wrong for one of its two rows. -->
-                        <Grid Margin="0,18,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Style="{StaticResource ProviderGroupRule}"/>
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="{DynamicResource S.Settings.ProviderGroupKeyed}"
-                                           Style="{StaticResource ProviderGroupTitle}"/>
-
-                                <!-- 設定 before the switch rather than after it, so every switch on the
-                                     card ends on the same edge: these rows' trailing edge is the right
-                                     column's above. The state badge sits beside the name. -->
-                                <StackPanel x:Name="ProviderKeyedList" Margin="-4">
                                     <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
                                               AutomationProperties.Name="{DynamicResource S.Provider.DeepL}"
                                               Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
@@ -1438,15 +1418,67 @@
                                                       Stretch="Uniform"
                                                       Width="22"/>
                                             </Grid>
-                                            <WrapPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{DynamicResource S.Provider.DeepL}"
-                                                           Style="{StaticResource ProviderCardName}"
-                                                           Margin="0,0,10,0"/>
-                                                <Border x:Name="DeepLBadge"
-                                                        Style="{StaticResource ServiceBadgeBorder}">
-                                                    <TextBlock x:Name="DeepLBadgeText" Style="{StaticResource ServiceBadgeText}"/>
-                                                </Border>
-                                            </WrapPanel>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Provider.DeepL}"
+                                                               Style="{StaticResource ProviderCardName}"
+                                                               Margin="0,0,10,0"/>
+                                                    <Border x:Name="DeepLBadge"
+                                                            Style="{StaticResource ServiceBadgeBorder}">
+                                                        <TextBlock x:Name="DeepLBadgeText" Style="{StaticResource ServiceBadgeText}"/>
+                                                    </Border>
+                                                </WrapPanel>
+                                                <TextBlock Text="{DynamicResource S.Provider.DeepLHint}"
+                                                           Style="{StaticResource ProviderCardNote}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </CheckBox>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- AI 翻譯: the two services that are a language model. -->
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource ProviderGroupRule}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{DynamicResource S.Settings.ProviderGroupKeyed}"
+                                           Style="{StaticResource ProviderGroupTitle}"/>
+
+                                <!-- 設定 before the switch rather than after it, so every switch on the
+                                     card ends on the same edge: these rows' trailing edge is the right
+                                     column's above. The state badge sits beside the name. -->
+                                <StackPanel x:Name="ProviderKeyedList" Margin="-4">
+                                    <CheckBox Style="{StaticResource ProviderCard}" IsChecked="True"
+                                              AutomationProperties.Name="{DynamicResource S.Provider.LocalAI}"
+                                              Checked="ProviderCard_Toggled" Unchecked="ProviderCard_Toggled">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right"
+                                                    x:Name="LocalAiConfigureBtn"
+                                                    Content="{DynamicResource S.Common.Configure}"
+                                                    Style="{StaticResource FlatButton}"
+                                                    Height="30"
+                                                    MinWidth="96"
+                                                    Margin="14,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Cursor="Hand"
+                                                    Click="ConfigureService_Click"/>
+                                            <Grid DockPanel.Dock="Left" Style="{StaticResource ProviderCardMark}">
+                                                <Image Source="{StaticResource LocalAiMarkImage}" Width="28" Height="28"/>
+                                            </Grid>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Provider.LocalAI}"
+                                                           Style="{StaticResource ProviderCardName}"/>
+                                                <TextBlock Text="{DynamicResource S.Provider.LocalAIHint}"
+                                                           Style="{StaticResource ProviderCardNote}"
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="LocalAiStatus"
+                                                           Style="{StaticResource ProviderCardNote}"/>
+                                            </StackPanel>
                                         </DockPanel>
                                     </CheckBox>
 
@@ -1473,41 +1505,24 @@
                                                       Stretch="Uniform"
                                                       Width="25"/>
                                             </Grid>
-                                            <WrapPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{DynamicResource S.Provider.OpenAI}"
-                                                           Style="{StaticResource ProviderCardName}"
-                                                           Margin="0,0,10,0"/>
-                                                <Border x:Name="OpenAiBadge"
-                                                        Style="{StaticResource ServiceBadgeBorder}">
-                                                    <TextBlock x:Name="OpenAiBadgeText" Style="{StaticResource ServiceBadgeText}"/>
-                                                </Border>
-                                            </WrapPanel>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Provider.OpenAI}"
+                                                               Style="{StaticResource ProviderCardName}"
+                                                               Margin="0,0,10,0"/>
+                                                    <Border x:Name="OpenAiBadge"
+                                                            Style="{StaticResource ServiceBadgeBorder}">
+                                                        <TextBlock x:Name="OpenAiBadgeText" Style="{StaticResource ServiceBadgeText}"/>
+                                                    </Border>
+                                                </WrapPanel>
+                                                <TextBlock Text="{DynamicResource S.Provider.OpenAICardHint}"
+                                                           Style="{StaticResource ProviderCardNote}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
                                         </DockPanel>
                                     </CheckBox>
                                 </StackPanel>
                             </StackPanel>
-                        </Grid>
-
-                        <!-- Under the rows rather than in a tooltip, because it is the one thing about
-                             the switches a user would get wrong without being told: a service that is
-                             off is not switched off, only out of the menus. -->
-                        <Grid Margin="2,16,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="&#xE946;"
-                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource AppTextSecondary}"
-                                       VerticalAlignment="Top"
-                                       Margin="0,2,8,0"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{DynamicResource S.Settings.ProviderMenuHint}"
-                                       Style="{StaticResource FieldHint}"
-                                       FontSize="12"
-                                       Margin="0"/>
                         </Grid>
                     </StackPanel>
                 </Border>

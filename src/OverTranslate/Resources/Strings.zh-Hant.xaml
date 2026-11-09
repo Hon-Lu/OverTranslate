@@ -103,6 +103,12 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI Compatible API 回應格式無法解析。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI Compatible API 未回傳譯文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI Compatible API 在 {0} 秒內沒有回應。可在「翻譯服務設定」調整逾時秒數。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">尚未下載模型，請至設定頁的「翻譯服務設定」進行下載。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiDownloading">模型下載中（{0}%），請等待下載完成後再試。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiStartFailed">本機模型啟動失敗，請嘗試使用較小的模型。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoGpu">未偵測到獨立顯示卡，無法使用此翻譯功能。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiTimeout">本機模型在 {0} 秒內沒有回應。可在「翻譯服務設定」調整逾時秒數。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoTranslation">本機模型未回傳譯文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">OpenAI Compatible API 位址必須是有效的 HTTP 或 HTTPS 網址。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">尚未指定模型名稱。請在「翻譯服務設定」中填入要使用的模型。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">未知錯誤</sys:String>
@@ -121,7 +127,7 @@
     <sys:String x:Key="S.Translation.SpeakSource">朗讀原文</sys:String>
     <!-- 來源語言為「自動」時，朗讀原文靠的是引擎回報的偵測結果；OpenAI 相容服務不會回報，所以那個
          組合是唯一永遠等不到答案、必須直接停用的狀態，這句就是使用者唯一能得知原因的地方。 -->
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用 OpenAI 翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">使用目前的翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
     <!-- 另一種還沒有語言可用的狀態：引擎只是還沒回答，等翻譯回來就會好，所以只給 tooltip 不給短註記。 -->
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">還不知道原文是什麼語言，翻譯完成後就可以朗讀。</sys:String>
     <sys:String x:Key="S.Translation.Source">原文</sys:String>
@@ -129,8 +135,7 @@
     <sys:String x:Key="S.Translation.Result">譯文</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ 重試</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">缺少 API Key — 請先在設定中輸入</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} 目前無法使用，請改用其他翻譯來源。
-翻譯失敗：{1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">翻譯失敗：{0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">翻譯中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">朗讀失敗：{0}</sys:String>
 
@@ -173,7 +178,7 @@
          只有還沒翻譯、或引擎沒講的時候才無語可讀。 -->
     <!-- OpenAI 相容服務不會回報偵測到的原文語言，所以「自動」在這個服務下是永遠等不到的狀態，
          訊息必須指向真正能解決的動作（指定來源語言），而不是叫使用者再等。 -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用 OpenAI 翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">使用目前的翻譯服務時，請先指定來源語言，才能朗讀原文。</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">還不知道原文是什麼語言，翻譯完成後就可以朗讀。</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">翻譯服務</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">與螢幕翻譯及文字翻譯共用此服務</sys:String>
@@ -289,9 +294,6 @@
     <sys:String x:Key="S.Main.NoTextBody">所選區域中未找到可辨識的文字。</sys:String>
     <sys:String x:Key="S.Main.Translating">翻譯中</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">翻譯失敗</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">目前使用的翻譯來源可能暫時無法使用。
-請切換其他翻譯來源後再試一次。
-詳細資訊：{0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">已複製</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">已將框選截圖複製到剪貼簿。</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">已將辨識文字複製到剪貼簿。</sys:String>
@@ -467,9 +469,12 @@
     <sys:String x:Key="S.Provider.TranSmart">騰訊翻譯</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">需至 DeepL 官方註冊並取得 API Key</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">需申請官方 API Key</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">本機 AI 翻譯</sys:String>
+    <sys:String x:Key="S.Provider.LocalAIHint">內建模型，無需安裝額外應用工具，可直接使用</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">支援 OpenAI 相容 API（如 Ollama、LM Studio、OpenRouter），建議使用本地 LLM。</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">支援 OpenAI 相容 API（如 Ollama、LM Studio、OpenRouter）</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">設定</sys:String>
@@ -531,10 +536,62 @@
     <sys:String x:Key="S.Settings.StartupCheck">開機時自動啟動</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻譯服務設定</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">關閉開關僅隱藏選單項目，不影響目前使用的服務，仍可能用於備援翻譯或字典查詢。</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">至少要保留一個服務</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupFree">一般服務</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupKeyed">可自訂服務</sys:String>
+    <sys:String x:Key="S.LocalAi.Model">模型</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseModel">請選擇模型</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">模型狀態</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseHint">選擇模型後，這裡會顯示檔案大小與下載按鈕。</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipNotDownloaded">尚未下載</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipDownloading">下載中</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipPreparing">準備中</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipFailed">下載失敗</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipUnavailable">無法使用</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipReady">已就緒</sys:String>
+    <sys:String x:Key="S.LocalAi.Download">下載（{0} GB）</sys:String>
+    <sys:String x:Key="S.LocalAi.RuntimeNote">另含 {0} MB 執行元件，首次使用時下載。</sys:String>
+    <sys:String x:Key="S.LocalAi.FreeSpace">{0} 槽剩餘空間：{1} GB</sys:String>
+    <sys:String x:Key="S.LocalAi.NoSpace">{0} 槽空間不足：需要 {1} GB，剩餘 {2} GB。</sys:String>
+    <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB（{2}%）</sys:String>
+    <sys:String x:Key="S.LocalAi.Remaining">剩餘約 {0} 分鐘</sys:String>
+    <sys:String x:Key="S.LocalAi.RemainingUnderMinute">剩餘不到 1 分鐘</sys:String>
+    <sys:String x:Key="S.LocalAi.Background">可關閉此視窗，下載會在背景繼續進行。</sys:String>
+    <sys:String x:Key="S.LocalAi.Verifying">正在確認檔案完整性…</sys:String>
+    <sys:String x:Key="S.LocalAi.NetworkError">無法連線至下載伺服器，請確認網路連線後重試。</sys:String>
+    <sys:String x:Key="S.LocalAi.Retry">重試</sys:String>
+    <sys:String x:Key="S.LocalAi.RetryNote">已下載的部分會保留，重試時會接續下載。</sys:String>
+    <sys:String x:Key="S.LocalAi.Running">執行中</sys:String>
+    <sys:String x:Key="S.LocalAi.Stopped">未啟動</sys:String>
+    <sys:String x:Key="S.LocalAi.Starting">啟動中…</sys:String>
+    <sys:String x:Key="S.LocalAi.Restarting">模型異常結束，正在重新啟動…</sys:String>
+    <sys:String x:Key="S.LocalAi.StartFailed">模型啟動失敗。</sys:String>
+    <sys:String x:Key="S.LocalAi.Details">查看詳細資訊</sys:String>
+    <sys:String x:Key="S.LocalAi.Release">立即釋放</sys:String>
+    <sys:String x:Key="S.LocalAi.ReleaseNote">立即關閉模型以釋放記憶體，下次翻譯時會自動重新啟動。</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">使用此翻譯服務翻譯時會自動啟動模型。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteModel">刪除模型</sys:String>
+    <sys:String x:Key="S.LocalAi.DownloadedTag">已下載</sys:String>
+    <sys:String x:Key="S.LocalAi.Delete">刪除</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">確定要刪除「{0}」嗎？刪除後需重新下載。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">無法刪除模型檔案，請稍後再試。</sys:String>
+    <sys:String x:Key="S.LocalAi.Style">翻譯風格</sys:String>
+    <sys:String x:Key="S.LocalAi.Optional">（選填）</sys:String>
+    <sys:String x:Key="S.LocalAi.StylePlaceholder">例如：語氣口語、輕鬆</sys:String>
+    <sys:String x:Key="S.LocalAi.Idle">閒置後自動釋放</sys:String>
+    <sys:String x:Key="S.LocalAi.IdleNote">超過設定時間沒有翻譯，將自動關閉模型以釋放記憶體。下次翻譯時會自動重新啟動（模型初始化需等待數秒）。</sys:String>
+    <sys:String x:Key="S.LocalAi.Minutes">{0} 分鐘</sys:String>
+    <sys:String x:Key="S.LocalAi.Recommended">推薦</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">其他版本</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnFile">檔案</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.NotEnoughVram">顯示卡 VRAM 不足</sys:String>
+    <sys:String x:Key="S.LocalAi.CardNoModel">尚未下載模型</sys:String>
+    <sys:String x:Key="S.LocalAi.CardDownloading">下載中 {0}%</sys:String>
+    <sys:String x:Key="S.LocalAi.CardReady">{0} · 已就緒</sys:String>
+    <sys:String x:Key="S.LocalAi.CardRunning">{0} · 執行中</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescHy7B">專用翻譯模型 · 針對中文翻譯最佳化</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">通用語言模型 · 涵蓋 140 多種語言</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻譯</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻譯</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">需設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">已設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">使用預設</sys:String>
@@ -547,7 +604,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">依序逐一翻譯畫面上的文字區塊。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">將畫面上的文字區塊組合後一起翻譯。</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">本機模型上速度較快</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">較不易漏翻</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">參考整個畫面，語意更連貫</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">請求次數較少，更適合雲端服務</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">適合</sys:String>
@@ -589,7 +645,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">目標語言代碼</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">英文</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">日文</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">來源語言為「自動」時，來源語言名稱為 any language，代碼為空白。</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">當來源語言為「自動」時，{source_name} 與 {source_code} 會留空。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">提示詞</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">翻譯時送給模型的內容。大括號標示的參數會換成實際的文字。</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">還原預設</sys:String>

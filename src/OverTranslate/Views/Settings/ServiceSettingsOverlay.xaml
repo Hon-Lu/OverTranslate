@@ -202,6 +202,8 @@
                                        Style="{StaticResource FieldHint}"/>
                         </Grid>
 
+                        <settings:LocalAiSettingsPanel x:Name="LocalAiPanel" Visibility="Collapsed"/>
+
                         <!-- ══════════ OpenAI ══════════ -->
                         <Grid x:Name="OpenAiPanel">
                             <Grid.ColumnDefinitions>
@@ -542,5 +544,6 @@
          click that reached the one above would close the panel out from under the prompt being
          written. -->
     <settings:PromptEditOverlay x:Name="PromptEditor"/>
+    <settings:LocalAiDeleteOverlay x:Name="LocalAiDelete"/>
     </Grid>
 </UserControl>

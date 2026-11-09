@@ -100,6 +100,12 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">Не удалось разобрать ответ API, совместимого с OpenAI.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">API, совместимый с OpenAI, не вернул перевод.</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">API, совместимый с OpenAI, не ответил за {0} с. Время ожидания можно изменить в настройках службы перевода.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">Модель не загружена. Загрузите её на странице настроек в разделе «Службы перевода».</sys:String>
+    <sys:String x:Key="S.Error.LocalAiDownloading">Модель загружается ({0}%). Повторите попытку после завершения.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiStartFailed">Не удалось запустить локальную модель. Попробуйте модель поменьше.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoGpu">Дискретная видеокарта не обнаружена, эта функция перевода недоступна.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiTimeout">Локальная модель не ответила за {0} с. Время ожидания можно изменить в настройках служб перевода.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoTranslation">Локальная модель не вернула перевод.</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">Адрес API, совместимого с OpenAI, должен быть корректным URL-адресом HTTP или HTTPS.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">Не указано имя модели. Введите модель в настройках службы перевода.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Неизвестная ошибка</sys:String>
@@ -116,15 +122,14 @@
     <sys:String x:Key="S.Translation.SwapTip">Поменять местами языки и текст</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">Очистить исходный текст</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">Прочитать исходный текст вслух</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">Со службой OpenAI выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">С этой службой перевода выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">Язык исходного текста пока не определен. Его можно будет прочитать вслух, когда придет перевод.</sys:String>
     <sys:String x:Key="S.Translation.Source">Оригинал</sys:String>
     <sys:String x:Key="S.Translation.SpeakResult">Прочитать перевод вслух</sys:String>
     <sys:String x:Key="S.Translation.Result">Перевод</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ Повторить</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">Нет ключа API — сначала введите его в настройках</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} сейчас недоступен. Попробуйте другую службу перевода.
-Ошибка перевода: {1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">Ошибка перевода: {0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">Перевод...</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">Не удалось прочитать вслух: {0}</sys:String>
 
@@ -163,7 +168,7 @@
     <sys:String x:Key="S.QuickLookup.SpeakSource">Прочитать оригинал</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakResult">Прочитать перевод</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceTip">Прочитать оригинал вслух</sys:String>
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">Со службой OpenAI выберите язык оригинала, чтобы прочитать его вслух.</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">С этой службой перевода выберите язык оригинала, чтобы прочитать исходный текст вслух.</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">Язык оригинала пока не определен. Его можно будет прочитать вслух, когда придет перевод.</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">Служба перевода</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">Общая с переводом снимка экрана и переводом текста</sys:String>
@@ -276,9 +281,6 @@
     <sys:String x:Key="S.Main.NoTextBody">В выделенной области нет распознаваемого текста.</sys:String>
     <sys:String x:Key="S.Main.Translating">Перевод</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">Ошибка перевода</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">Текущая служба перевода может быть временно недоступна.
-Выберите другую службу и повторите попытку.
-Подробности: {0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">Скопировано</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">Выделенная область скопирована в буфер обмена.</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">Распознанный текст скопирован в буфер обмена.</sys:String>
@@ -442,9 +444,12 @@
     <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Яндекс</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">Нужен ключ API от DeepL</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">Нужен официальный ключ API</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">Локальный ИИ</sys:String>
+    <sys:String x:Key="S.Provider.LocalAIHint">Встроенные модели. Не требует установки дополнительных приложений</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">Любой API, совместимый с OpenAI (Ollama, LM Studio, OpenRouter…). Рекомендуется локальная LLM.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">Любой API, совместимый с OpenAI (Ollama, LM Studio, OpenRouter…)</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">Настройки</sys:String>
@@ -502,10 +507,62 @@
     <sys:String x:Key="S.Settings.StartupCheck">Запускать вместе с Windows</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">Службы перевода</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">Отключение службы только скрывает ее из меню. Текущая служба не меняется, а скрытая служба по-прежнему может использоваться как резервная или для поиска в словаре.</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Оставьте хотя бы одну службу</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupFree">Общие службы</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupKeyed">Настраиваемые службы</sys:String>
+    <sys:String x:Key="S.LocalAi.Model">Модель</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseModel">Выберите модель</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">Состояние модели</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseHint">Выберите модель, чтобы увидеть размер файла и кнопку загрузки.</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipNotDownloaded">Не загружена</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipDownloading">Загрузка</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipPreparing">Подготовка</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipFailed">Сбой загрузки</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipUnavailable">Недоступно</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipReady">Готово</sys:String>
+    <sys:String x:Key="S.LocalAi.Download">Загрузить ({0} ГБ)</sys:String>
+    <sys:String x:Key="S.LocalAi.RuntimeNote">Включает среду выполнения {0} МБ, загружается при первом использовании.</sys:String>
+    <sys:String x:Key="S.LocalAi.FreeSpace">Свободно на диске {0}: {1} ГБ</sys:String>
+    <sys:String x:Key="S.LocalAi.NoSpace">Недостаточно места на диске {0}: нужно {1} ГБ, свободно {2} ГБ.</sys:String>
+    <sys:String x:Key="S.LocalAi.Progress">{0} / {1} ГБ ({2}%)</sys:String>
+    <sys:String x:Key="S.LocalAi.Remaining">Осталось около {0} мин</sys:String>
+    <sys:String x:Key="S.LocalAi.RemainingUnderMinute">Осталось меньше минуты</sys:String>
+    <sys:String x:Key="S.LocalAi.Background">Окно можно закрыть: загрузка продолжится в фоновом режиме.</sys:String>
+    <sys:String x:Key="S.LocalAi.Verifying">Проверка целостности файла…</sys:String>
+    <sys:String x:Key="S.LocalAi.NetworkError">Не удалось подключиться к серверу загрузки. Проверьте подключение и повторите попытку.</sys:String>
+    <sys:String x:Key="S.LocalAi.Retry">Повторить</sys:String>
+    <sys:String x:Key="S.LocalAi.RetryNote">Загруженная часть сохраняется, при повторной попытке загрузка продолжится.</sys:String>
+    <sys:String x:Key="S.LocalAi.Running">Запущена</sys:String>
+    <sys:String x:Key="S.LocalAi.Stopped">Не запущена</sys:String>
+    <sys:String x:Key="S.LocalAi.Starting">Запуск…</sys:String>
+    <sys:String x:Key="S.LocalAi.Restarting">Модель неожиданно завершила работу. Перезапуск…</sys:String>
+    <sys:String x:Key="S.LocalAi.StartFailed">Не удалось запустить модель.</sys:String>
+    <sys:String x:Key="S.LocalAi.Details">Подробнее</sys:String>
+    <sys:String x:Key="S.LocalAi.Release">Освободить сейчас</sys:String>
+    <sys:String x:Key="S.LocalAi.ReleaseNote">Закрывает модель и освобождает память. При следующем переводе она запустится автоматически.</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">Модель запускается автоматически при переводе через эту службу.</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteModel">Удалить модель</sys:String>
+    <sys:String x:Key="S.LocalAi.DownloadedTag">Загружена</sys:String>
+    <sys:String x:Key="S.LocalAi.Delete">Удалить</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">Удалить «{0}»? Для повторного использования её придётся загрузить заново.</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">Не удалось удалить файл модели. Повторите попытку позже.</sys:String>
+    <sys:String x:Key="S.LocalAi.Style">Стиль перевода</sys:String>
+    <sys:String x:Key="S.LocalAi.Optional" xml:space="preserve"> (необязательно)</sys:String>
+    <sys:String x:Key="S.LocalAi.StylePlaceholder">Например: разговорный, непринуждённый тон</sys:String>
+    <sys:String x:Key="S.LocalAi.Idle">Автоматическое освобождение</sys:String>
+    <sys:String x:Key="S.LocalAi.IdleNote">Если в течение заданного времени нет переводов, модель закрывается и память освобождается. При следующем переводе она запустится автоматически (инициализация займёт несколько секунд).</sys:String>
+    <sys:String x:Key="S.LocalAi.Minutes">{0} мин</sys:String>
+    <sys:String x:Key="S.LocalAi.Recommended">Рекомендуемые</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">Другие версии</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnFile">Файл</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.NotEnoughVram">Недостаточно VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.CardNoModel">Модель не загружена</sys:String>
+    <sys:String x:Key="S.LocalAi.CardDownloading">Загрузка {0}%</sys:String>
+    <sys:String x:Key="S.LocalAi.CardReady">{0} · Готово</sys:String>
+    <sys:String x:Key="S.LocalAi.CardRunning">{0} · Запущена</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescHy7B">Специальная модель перевода · Оптимизирована для китайского</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">Универсальная модель · Более 140 языков</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">Обычный перевод</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">ИИ-перевод</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Требует настройки</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Настроено</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">По умолчанию</sys:String>
@@ -518,7 +575,6 @@
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">Переводит текстовые блоки на экране по одному, по порядку.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">Объединяет текстовые блоки на экране и переводит их вместе.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">Быстрее на локальных моделях</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">Реже пропускает блоки</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">Учитывает весь экран, смысл передаётся связнее</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">Меньше запросов, лучше подходит для облачных сервисов</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">Подходит для</sys:String>
@@ -559,7 +615,7 @@
     <sys:String x:Key="S.Settings.PromptParamTargetCode">Код языка перевода</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">Английский</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Японский</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">Если язык оригинала определяется автоматически, название языка оригинала — any language, а код пустой.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">Если язык оригинала определяется автоматически, {source_name} и {source_code} остаются пустыми.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">Промпт</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">Текст, который отправляется модели при каждом переводе. Параметры в фигурных скобках заменяются настоящим текстом.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Вернуть по умолчанию</sys:String>

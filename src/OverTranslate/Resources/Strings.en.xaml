@@ -97,6 +97,12 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">Could not parse the OpenAI-compatible API response.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">The OpenAI-compatible API returned no translation.</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">The OpenAI-compatible API did not respond within {0} seconds. You can change the timeout in the translation service settings.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">No model downloaded. Go to Service setup on the Settings page to download one.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiDownloading">The model is downloading ({0}%). Try again once it finishes.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiStartFailed">The local model failed to start. Try a smaller model.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoGpu">No dedicated graphics card detected. This translation feature cannot be used.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiTimeout">The local model did not respond within {0} seconds. You can change the timeout in the translation service settings.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoTranslation">The local model returned no translation.</sys:String>
     <sys:String x:Key="S.Error.OpenAiBadUrl">The OpenAI-compatible API address must be a valid HTTP or HTTPS URL.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoModel">No model name is set. Enter the model to use in the translation service settings.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Unknown error</sys:String>
@@ -113,7 +119,7 @@
     <sys:String x:Key="S.Translation.SwapTip">Swap languages and text</sys:String>
     <sys:String x:Key="S.Translation.ClearSource">Clear the source text</sys:String>
     <sys:String x:Key="S.Translation.SpeakSource">Read the source aloud</sys:String>
-    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">With the OpenAI service, choose a source language to read the source aloud.</sys:String>
+    <sys:String x:Key="S.Translation.SpeakSourceOpenAi">With this translation service, choose a source language to read the source aloud.</sys:String>
     <sys:String x:Key="S.Translation.SpeakSourceUnknown">The language of the source is not known yet. It can be read aloud once the translation is back.</sys:String>
     <!-- The note at the foot of the page and the greyed speaker's tooltip are the same sentence:
          the note is what is read, the tooltip is for whoever hovers the button instead. -->
@@ -122,8 +128,7 @@
     <sys:String x:Key="S.Translation.Result">Translation</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ Retry</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">No API key — enter one in Settings first</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} is unavailable right now. Try a different translation source.
-Translation failed: {1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">Translation failed: {0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">Translating...</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">Could not read it aloud: {0}</sys:String>
 
@@ -166,7 +171,7 @@ Translation failed: {1}</sys:String>
     <!-- Automatic is not switched off here the way it is on the text translation page: once the
          translation is back the engine has said which language the original was in, so the only
          gap is before the first result. -->
-    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">With the OpenAI service, choose a source language to read the original aloud.</sys:String>
+    <sys:String x:Key="S.QuickLookup.SpeakSourceOpenAi">With this translation service, choose a source language to read the source aloud.</sys:String>
     <sys:String x:Key="S.QuickLookup.SpeakSourceUnknown">The language of the original is not known yet. It can be read aloud once the translation is back.</sys:String>
     <sys:String x:Key="S.QuickLookup.Provider">Translation service</sys:String>
     <sys:String x:Key="S.QuickLookup.ProviderHint">Shared with screen translation and text translation</sys:String>
@@ -279,9 +284,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Main.NoTextBody">No readable text in the selected area.</sys:String>
     <sys:String x:Key="S.Main.Translating">Translating</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">Translation failed</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">The current translation source may be temporarily unavailable.
-Switch to a different source and try again.
-Details: {0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">Copied</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">The selected area was copied to the clipboard.</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">The recognized text was copied to the clipboard.</sys:String>
@@ -445,9 +447,12 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">Requires an API key from DeepL</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">Requires an official API key</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">Local AI</sys:String>
+    <sys:String x:Key="S.Provider.LocalAIHint">Built-in models. Works without installing anything else.</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">Any OpenAI-compatible API (Ollama, LM Studio, OpenRouter…). A local LLM is recommended.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">Any OpenAI-compatible API (Ollama, LM Studio, OpenRouter…)</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">Settings</sys:String>
@@ -507,10 +512,62 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Launch when Windows starts</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">Service setup</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">Turning a service off only hides its menu entry. It doesn't change the service you're using, and the service may still be used as a backup or for dictionary lookups.</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Keep at least one service</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupFree">General services</sys:String>
-    <sys:String x:Key="S.Settings.ProviderGroupKeyed">Customizable services</sys:String>
+    <sys:String x:Key="S.LocalAi.Model">Model</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseModel">Select a model</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">Model status</sys:String>
+    <sys:String x:Key="S.LocalAi.ChooseHint">Select a model to see its file size and download button.</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipNotDownloaded">Not downloaded</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipDownloading">Downloading</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipPreparing">Preparing</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipFailed">Download failed</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipUnavailable">Unavailable</sys:String>
+    <sys:String x:Key="S.LocalAi.ChipReady">Ready</sys:String>
+    <sys:String x:Key="S.LocalAi.Download">Download ({0} GB)</sys:String>
+    <sys:String x:Key="S.LocalAi.RuntimeNote">Includes a {0} MB runtime, downloaded on first use.</sys:String>
+    <sys:String x:Key="S.LocalAi.FreeSpace">Free space on {0}: {1} GB</sys:String>
+    <sys:String x:Key="S.LocalAi.NoSpace">Not enough space on {0}: {1} GB needed, {2} GB free.</sys:String>
+    <sys:String x:Key="S.LocalAi.Progress">{0} / {1} GB ({2}%)</sys:String>
+    <sys:String x:Key="S.LocalAi.Remaining">About {0} min left</sys:String>
+    <sys:String x:Key="S.LocalAi.RemainingUnderMinute">Less than 1 min left</sys:String>
+    <sys:String x:Key="S.LocalAi.Background">You can close this window. The download continues in the background.</sys:String>
+    <sys:String x:Key="S.LocalAi.Verifying">Verifying the file…</sys:String>
+    <sys:String x:Key="S.LocalAi.NetworkError">Could not reach the download server. Check your connection and try again.</sys:String>
+    <sys:String x:Key="S.LocalAi.Retry">Retry</sys:String>
+    <sys:String x:Key="S.LocalAi.RetryNote">What has been downloaded is kept, and the retry picks up from there.</sys:String>
+    <sys:String x:Key="S.LocalAi.Running">Running</sys:String>
+    <sys:String x:Key="S.LocalAi.Stopped">Not started</sys:String>
+    <sys:String x:Key="S.LocalAi.Starting">Starting…</sys:String>
+    <sys:String x:Key="S.LocalAi.Restarting">The model stopped unexpectedly. Restarting…</sys:String>
+    <sys:String x:Key="S.LocalAi.StartFailed">The model failed to start.</sys:String>
+    <sys:String x:Key="S.LocalAi.Details">Details</sys:String>
+    <sys:String x:Key="S.LocalAi.Release">Release now</sys:String>
+    <sys:String x:Key="S.LocalAi.ReleaseNote">Closes the model to free up memory. It restarts automatically on the next translation.</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">The model starts automatically when you translate with this service.</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteModel">Delete model</sys:String>
+    <sys:String x:Key="S.LocalAi.DownloadedTag">Downloaded</sys:String>
+    <sys:String x:Key="S.LocalAi.Delete">Delete</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">Delete “{0}”? It will have to be downloaded again.</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">The model file could not be deleted. Try again later.</sys:String>
+    <sys:String x:Key="S.LocalAi.Style">Translation style</sys:String>
+    <sys:String x:Key="S.LocalAi.Optional" xml:space="preserve"> (optional)</sys:String>
+    <sys:String x:Key="S.LocalAi.StylePlaceholder">For example: casual, relaxed tone</sys:String>
+    <sys:String x:Key="S.LocalAi.Idle">Release when idle</sys:String>
+    <sys:String x:Key="S.LocalAi.IdleNote">Closes the model to free up memory when nothing has been translated for this long. It restarts automatically on the next translation (initialization takes a few seconds).</sys:String>
+    <sys:String x:Key="S.LocalAi.Minutes">{0} min</sys:String>
+    <sys:String x:Key="S.LocalAi.Recommended">Recommended</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">Other versions</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnFile">File</sys:String>
+    <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.NotEnoughVram">Not enough VRAM</sys:String>
+    <sys:String x:Key="S.LocalAi.CardNoModel">No model downloaded</sys:String>
+    <sys:String x:Key="S.LocalAi.CardDownloading">Downloading {0}%</sys:String>
+    <sys:String x:Key="S.LocalAi.CardReady">{0} · Ready</sys:String>
+    <sys:String x:Key="S.LocalAi.CardRunning">{0} · Running</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescHy7B">Dedicated translation model · Optimized for Chinese</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">General-purpose model · Covers 140+ languages</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupFree">General translation</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI translation</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Setup needed</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Configured</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">Using defaults</sys:String>
@@ -523,7 +580,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentHint">Translates the text blocks on screen one at a time, in order.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchHint">Combines the text blocks on screen and translates them together.</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSegmentPro1">Faster with local models</sys:String>
-    <sys:String x:Key="S.Settings.OpenAiModeSegmentPro2">Less likely to skip a block</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro1">Sees the whole screen, so meaning flows better</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeBatchPro2">Fewer requests, better suited to cloud services</sys:String>
     <sys:String x:Key="S.Settings.OpenAiModeSuits">Best for</sys:String>
@@ -564,7 +620,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetCode">Target language code</sys:String>
     <sys:String x:Key="S.Settings.PromptParamSourceNameExample">English</sys:String>
     <sys:String x:Key="S.Settings.PromptParamTargetNameExample">Japanese</sys:String>
-    <sys:String x:Key="S.Settings.PromptParamsTipAuto">When the source language is Automatic, the source language name is "any language" and the code is empty.</sys:String>
+    <sys:String x:Key="S.Settings.PromptParamsTipAuto">When the source language is Automatic, {source_name} and {source_code} are left empty.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplate">Prompt</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateHint">What is sent to the model for each translation. Parameters in curly braces are replaced with the actual text.</sys:String>
     <sys:String x:Key="S.Settings.PromptTemplateReset">Restore default</sys:String>

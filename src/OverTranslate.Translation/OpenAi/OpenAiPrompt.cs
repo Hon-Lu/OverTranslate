@@ -112,12 +112,41 @@ public sealed record OpenAiPrompt(
     /// on one seed or both, where the bracketed line after a blank line lost none. Half-width
     /// brackets measured no worse than full-width ones.
     /// </param>
-    public static string DefaultTemplate(OpenAiPromptLanguage language, bool batch = false)
+    /// <param name="language">The language the instruction is written in.</param>
+    /// <param name="style">
+    /// A short request about how the translation should read, or null. It goes inside the
+    /// instruction, between saying what to translate into and saying to output only the translation.
+    /// On a line of its own the translation-only models take it for more text to translate: measured,
+    /// one of them wrote such a line into every answer.
+    /// </param>
+    public static string DefaultTemplate(OpenAiPromptLanguage language, bool batch = false, string? style = null)
     {
         var words = Wording.For(language);
-        var instruction = batch ? words.BatchInstruction : words.Instruction;
+        var instruction = WithStyle(batch ? words.BatchInstruction : words.Instruction, words, style);
         var template = ContextPlaceholder + "\n\n" + instruction + "\n" + TextPlaceholder;
         return batch ? template + "\n\n" + words.Batch : template;
+    }
+
+    /// <summary>The longest a style is kept; it is a phrase, not a second prompt.</summary>
+    public const int MaxStyleLength = 200;
+
+    private static string WithStyle(string instruction, Wording words, string? style)
+    {
+        var clean = CleanStyle(style);
+        if (clean.Length == 0) return instruction;
+        var at = instruction.IndexOf(words.BeforeOutputOnly, StringComparison.Ordinal);
+        return instruction[..at] + string.Format(words.StyleSentence, clean) + instruction[(at + words.BeforeOutputOnly.Length)..];
+    }
+
+    /// <summary>
+    /// <paramref name="style"/> as it goes into a sentence: on one line, without the punctuation the
+    /// sentence supplies, and without braces, which a template reads as placeholders.
+    /// </summary>
+    internal static string CleanStyle(string? style)
+    {
+        var line = OneLine((style ?? "").Replace("{", "").Replace("}", ""));
+        if (line.Length > MaxStyleLength) line = line[..MaxStyleLength];
+        return line.TrimEnd('。', '.', '！', '!', '，', ',', '；', ';', '、', ' ');
     }
 
     /// <summary>The user message for <paramref name="text"/>.</summary>
@@ -216,9 +245,11 @@ public sealed record OpenAiPrompt(
     /// <param name="Batch">The line saying how to answer a batch, after its texts.</param>
     /// <param name="AutomaticSource">What a source line is labelled with when its language is detected.</param>
     /// <param name="Colon">What follows a label: the full-width colon in Chinese, a colon and a space in English.</param>
+    /// <param name="BeforeOutputOnly">Where in an instruction a style goes: the punctuation before "output only".</param>
+    /// <param name="StyleSentence">What replaces that punctuation, with the style at <c>{0}</c>.</param>
     private sealed record Wording(
         string Instruction, string History, string BatchInstruction, string Batch,
-        string AutomaticSource, string Colon)
+        string AutomaticSource, string Colon, string BeforeOutputOnly, string StyleSentence)
     {
         public static Wording For(OpenAiPromptLanguage language) => language switch
         {
@@ -233,7 +264,9 @@ public sealed record OpenAiPrompt(
             $"將以下文本翻譯為{TargetNamePlaceholder}，英文單字與短語也要翻譯，只輸出譯文，不加標籤，不要解釋：",
             "(依編號輸出譯文，例如 <1>譯文</1>，一段一行)",
             "原文",
-            "：");
+            "：",
+            "，只輸出",
+            "。{0}。只輸出");
 
         private static readonly Wording SimplifiedChinese = new(
             $"将以下文本翻译为{TargetNamePlaceholder}，只输出译文，不加标签，不要解释：",
@@ -241,7 +274,9 @@ public sealed record OpenAiPrompt(
             $"将以下文本翻译为{TargetNamePlaceholder}，英文单词与短语也要翻译，只输出译文，不加标签，不要解释：",
             "(按编号输出译文，例如 <1>译文</1>，一段一行)",
             "原文",
-            "：");
+            "：",
+            "，只输出",
+            "。{0}。只输出");
 
         private static readonly Wording English = new(
             $"Translate the following text into {TargetNamePlaceholder}. Output only the translation, with no tags and no explanation:",
@@ -249,6 +284,8 @@ public sealed record OpenAiPrompt(
             $"Translate the following text into {TargetNamePlaceholder}, English words and phrases included. Output only the translation, with no tags and no explanation:",
             "(Output each translation by its number, for example <1>translation</1>, one per line.)",
             "Source",
-            ": ");
+            ": ",
+            ". Output only",
+            ". {0}. Output only");
     }
 }

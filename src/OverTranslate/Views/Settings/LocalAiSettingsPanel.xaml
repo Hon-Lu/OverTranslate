@@ -1,0 +1,487 @@
+<UserControl x:Class="OverTranslate.Views.Settings.LocalAiSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:OverTranslate.Views.Controls">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ModeCardStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="SectionLabel" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+                <Setter Property="FontSize"   Value="14"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                <Setter Property="Margin"     Value="0,0,0,8"/>
+            </Style>
+
+            <Style x:Key="Note" TargetType="TextBlock">
+                <Setter Property="FontFamily"   Value="{DynamicResource AppFont}"/>
+                <Setter Property="FontSize"     Value="12"/>
+                <Setter Property="LineHeight"   Value="19"/>
+                <Setter Property="Foreground"   Value="{DynamicResource AppTextSecondary}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+
+            <Style x:Key="Chip" TargetType="Border">
+                <Setter Property="CornerRadius"      Value="10"/>
+                <Setter Property="Padding"           Value="10,2"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+
+            <Style x:Key="LinkButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+                <Setter Property="FontSize"   Value="12"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                <Setter Property="Cursor"     Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <ContentPresenter/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- One row of the model list. A header row is a row too, so the list is one list; it
+                 is disabled, as a row that does not fit the card is, and only the second of those
+                 is drawn grey. -->
+            <Style x:Key="ModelRowContainer" TargetType="ListBoxItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="IsEnabled" Value="{Binding CanChoose}"/>
+                <Setter Property="Padding" Value="{Binding RowPadding}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Root" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsMouseOver" Value="True"/>
+                                        <Condition Property="IsEnabled" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                                </MultiTrigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtle}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- ══════════ Model ══════════ -->
+        <TextBlock Text="{DynamicResource S.LocalAi.Model}" Style="{StaticResource SectionLabel}"/>
+        <ToggleButton x:Name="ModelPickerButton"
+                      Height="40"
+                      Cursor="Hand"
+                      AutomationProperties.Name="{DynamicResource S.LocalAi.Model}"
+                      HorizontalContentAlignment="Stretch">
+            <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Root"
+                            Background="{DynamicResource AppInputBg}"
+                            BorderBrush="{DynamicResource AppInputBorder}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,0">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                            <Setter TargetName="Root" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </ToggleButton.Template>
+            <DockPanel>
+                <Path DockPanel.Dock="Right"
+                      Data="M0,0 L4,4 L8,0"
+                      Stroke="{DynamicResource AppTextSecondary}"
+                      StrokeThickness="1.5"
+                      Width="8" Height="4"
+                      Margin="0,0,-2,0"
+                      Stretch="None"
+                      VerticalAlignment="Center"/>
+                <!-- As wide as the list's star column plus the list's own insets, so the name here
+                     and the same name in the list start at one x. -->
+                <TextBlock x:Name="ModelPickerStar"
+                           Text="★" Foreground="#FFD27A"
+                           Width="25"
+                           VerticalAlignment="Center"
+                           Visibility="Collapsed"/>
+                <TextBlock x:Name="ModelPickerText"
+                           FontFamily="{DynamicResource AppFont}"
+                           FontSize="14"
+                           VerticalAlignment="Center"/>
+            </DockPanel>
+        </ToggleButton>
+
+        <Popup x:Name="ModelPopup"
+               PlacementTarget="{Binding ElementName=ModelPickerButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               VerticalOffset="4"
+               AllowsTransparency="True"
+               PopupAnimation="Slide"
+               IsOpen="{Binding IsChecked, ElementName=ModelPickerButton, Mode=TwoWay}">
+            <!-- The margins are the shadow's room: a popup is a window as large as its content, and
+                 a shadow past that edge is not drawn. Popup already lines the card up with the button
+                 inside its margin, so the gap under the button has to be VerticalOffset. -->
+            <Border Width="{Binding ActualWidth, ElementName=ModelPickerButton}"
+                    Margin="12,0,12,16"
+                    Background="{DynamicResource AppCardBg}"
+                    BorderBrush="{DynamicResource AppBorder}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="4">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="5" Direction="270"
+                                      Opacity="0.45" Color="#000000"/>
+                </Border.Effect>
+                <ListBox x:Name="ModelList"
+                         MaxHeight="440"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ItemContainerStyle="{StaticResource ModelRowContainer}"
+                         PreviewMouseLeftButtonUp="ModelList_PreviewMouseLeftButtonUp"
+                         SelectionChanged="ModelList_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="72"/>
+                                    <ColumnDefinition Width="72"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="★" Foreground="#FFD27A"
+                                           Visibility="{Binding StarVisibility}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="{Binding NameColumn}"
+                                            Grid.ColumnSpan="{Binding NameColumnSpan}"
+                                            VerticalAlignment="Center">
+                                    <WrapPanel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="{Binding NameSize}"
+                                                   Foreground="{Binding NameBrush}"/>
+                                        <Border Margin="6,0,0,0" CornerRadius="4" Padding="6,0,6,1"
+                                                Visibility="{Binding BadgeVisibility}"
+                                                Background="{Binding BadgeBackground}" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Badge}" FontSize="11"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       Foreground="{Binding BadgeForeground}"/>
+                                        </Border>
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding Description}" FontSize="12"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               Foreground="{DynamicResource AppTextSecondary}"
+                                               Visibility="{Binding DescriptionVisibility}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding File}" TextAlignment="Right"
+                                           FontFamily="{DynamicResource AppFont}" FontSize="12.5"
+                                           Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Vram}" TextAlignment="Right"
+                                           FontFamily="{DynamicResource AppFont}" FontSize="12.5"
+                                           Foreground="{Binding NameBrush}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </Popup>
+
+        <!-- ══════════ Model file ══════════ -->
+        <Border Margin="0,16,0,0"
+                Background="{DynamicResource AppHeaderBg}"
+                BorderBrush="{DynamicResource AppSubtleBorder}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12">
+            <StackPanel>
+                <DockPanel>
+                    <Border x:Name="FileChip" DockPanel.Dock="Right" Style="{StaticResource Chip}" Visibility="Collapsed">
+                        <TextBlock x:Name="FileChipText" FontSize="12" FontFamily="{DynamicResource AppFont}"/>
+                    </Border>
+                    <TextBlock Text="{DynamicResource S.LocalAi.ModelFile}"
+                               FontFamily="{DynamicResource AppFont}" FontSize="14"
+                               Foreground="{DynamicResource AppTextPrimary}"/>
+                </DockPanel>
+
+                <!-- No model chosen -->
+                <TextBlock x:Name="ChooseHint" Margin="0,10,0,0"
+                           Style="{StaticResource Note}"
+                           Text="{DynamicResource S.LocalAi.ChooseHint}"/>
+
+                <!-- Not downloaded, and the two ways of not being able to -->
+                <DockPanel x:Name="DownloadPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                    <Button x:Name="DownloadButton" DockPanel.Dock="Left"
+                            Style="{StaticResource AccentButton}"
+                            Height="32" Padding="16,0"
+                            VerticalAlignment="Top"
+                            Click="DownloadButton_Click">
+                        <TextBlock x:Name="DownloadButtonText"/>
+                    </Button>
+                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="RuntimeNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
+                        <TextBlock x:Name="SpaceNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
+                        <TextBlock x:Name="BlockedNote" Style="{StaticResource Note}" Visibility="Collapsed"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Downloading, and getting ready -->
+                <StackPanel x:Name="ProgressPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                    <DockPanel>
+                        <Button x:Name="CancelButton" DockPanel.Dock="Right"
+                                Style="{StaticResource FlatButton}"
+                                Content="{DynamicResource S.Common.Cancel}"
+                                Height="30" MinWidth="72" Margin="14,0,0,0"
+                                Click="CancelButton_Click"/>
+                        <ProgressBar x:Name="ProgressBar" Height="6" Minimum="0" Maximum="1"
+                                     VerticalAlignment="Center"
+                                     Foreground="{DynamicResource AppAccent}"
+                                     AutomationProperties.Name="{DynamicResource S.LocalAi.ModelFile}">
+                            <ProgressBar.Template>
+                                <ControlTemplate TargetType="ProgressBar">
+                                    <Border Background="{DynamicResource AppSubtleBorder}" CornerRadius="3" ClipToBounds="True">
+                                        <Grid>
+                                            <Border x:Name="PART_Track"/>
+                                            <Border x:Name="PART_Indicator"
+                                                    HorizontalAlignment="Left"
+                                                    CornerRadius="3"
+                                                    Background="{TemplateBinding Foreground}"/>
+                                        </Grid>
+                                    </Border>
+                                </ControlTemplate>
+                            </ProgressBar.Template>
+                        </ProgressBar>
+                    </DockPanel>
+                    <TextBlock x:Name="ProgressText" Margin="0,8,0,0" Style="{StaticResource Note}"/>
+                    <TextBlock x:Name="BackgroundNote" Style="{StaticResource Note}"
+                               Text="{DynamicResource S.LocalAi.Background}"/>
+                </StackPanel>
+
+                <!-- Failed -->
+                <StackPanel x:Name="FailedPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                    <TextBlock x:Name="FailedText" Style="{StaticResource Note}" Foreground="{DynamicResource AppError}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Style="{StaticResource AccentButton}" Height="32" Padding="16,0"
+                                Content="{DynamicResource S.LocalAi.Retry}"
+                                Click="DownloadButton_Click"/>
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Style="{StaticResource Note}"
+                                   Text="{DynamicResource S.LocalAi.RetryNote}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Ready -->
+                <StackPanel x:Name="ReadyPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                    <DockPanel>
+                        <Button x:Name="ReleaseButton" DockPanel.Dock="Right"
+                                Style="{StaticResource FlatButton}"
+                                Content="{DynamicResource S.LocalAi.Release}"
+                                Height="30" MinWidth="88" Margin="14,0,0,0"
+                                Click="ReleaseButton_Click"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="RunDot" Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="RunText" FontFamily="{DynamicResource AppFont}" FontSize="13"
+                                       Foreground="{DynamicResource AppTextPrimary}" TextWrapping="Wrap"/>
+                            <Button x:Name="DetailsButton" Style="{StaticResource LinkButton}" Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Content="{DynamicResource S.LocalAi.Details}"
+                                    Click="DetailsButton_Click"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock x:Name="ReleaseNote" Margin="0,8,0,0" Style="{StaticResource Note}"
+                               Text="{DynamicResource S.LocalAi.ReleaseNote}"/>
+                    <TextBlock x:Name="StoppedNote" Margin="0,8,0,0" Style="{StaticResource Note}"
+                               Text="{DynamicResource S.LocalAi.StoppedNote}"/>
+                    <TextBox x:Name="DetailsBox" Margin="0,8,0,0"
+                             Visibility="Collapsed"
+                             IsReadOnly="True"
+                             TextWrapping="Wrap"
+                             MaxHeight="160"
+                             VerticalScrollBarVisibility="Auto"
+                             FontFamily="Consolas"
+                             FontSize="11"
+                             Style="{StaticResource ModernTextBox}"/>
+                </StackPanel>
+
+                <!-- Outside the states above: a model that is here can be deleted from more than
+                     Ready, a machine with no card to run it on being the other. -->
+                <Button x:Name="DeleteModelLink" Margin="0,10,0,0" HorizontalAlignment="Left"
+                        Visibility="Collapsed"
+                        Style="{StaticResource LinkButton}"
+                        Content="{DynamicResource S.LocalAi.DeleteModel}"
+                        Click="DeleteModelLink_Click"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ══════════ Mode ══════════ -->
+        <TextBlock Margin="0,14,0,8" Text="{DynamicResource S.Settings.OpenAiMode}" Style="{StaticResource SectionLabel}"/>
+        <UniformGrid Columns="2">
+            <RadioButton x:Name="SegmentRadio"
+                         GroupName="LocalAiMode"
+                         Style="{StaticResource ModeCard}"
+                         Margin="0,0,5,0"
+                         Tag="{DynamicResource S.Settings.OpenAiModeSegment}"
+                         AutomationProperties.Name="{DynamicResource S.Settings.OpenAiModeSegment}"
+                         Checked="Mode_Changed">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <TextBlock Text="{DynamicResource S.Settings.OpenAiModeSuits}"
+                                   Style="{StaticResource ModeBodyText}" Opacity="0.75" VerticalAlignment="Center"/>
+                        <ContentControl Style="{StaticResource ModeTag}" Content="{DynamicResource S.Settings.OpenAiModeSegmentTag1}"/>
+                        <ContentControl Style="{StaticResource ModeTag}" Content="{DynamicResource S.Settings.OpenAiModeSegmentTag2}"/>
+                    </WrapPanel>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource S.Settings.OpenAiModeSegmentHint}" Style="{StaticResource ModeBodyText}"/>
+                        <ContentControl Style="{StaticResource ModePro}" Margin="0,6,0,0"
+                                        Content="{DynamicResource S.Settings.OpenAiModeSegmentPro1}"/>
+                    </StackPanel>
+                </DockPanel>
+            </RadioButton>
+            <RadioButton x:Name="BatchRadio"
+                         GroupName="LocalAiMode"
+                         Style="{StaticResource ModeCard}"
+                         Margin="5,0,0,0"
+                         Tag="{DynamicResource S.Settings.OpenAiModeBatch}"
+                         AutomationProperties.Name="{DynamicResource S.Settings.OpenAiModeBatch}"
+                         Checked="Mode_Changed">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <TextBlock Text="{DynamicResource S.Settings.OpenAiModeSuits}"
+                                   Style="{StaticResource ModeBodyText}" Opacity="0.75" VerticalAlignment="Center"/>
+                        <ContentControl Style="{StaticResource ModeTag}" Content="{DynamicResource S.Settings.OpenAiModeBatchTag1}"/>
+                        <ContentControl Style="{StaticResource ModeTag}" Content="{DynamicResource S.Settings.OpenAiModeBatchTag2}"/>
+                    </WrapPanel>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource S.Settings.OpenAiModeBatchHint}" Style="{StaticResource ModeBodyText}"/>
+                        <ContentControl Style="{StaticResource ModePro}" Margin="0,6,0,0"
+                                        Content="{DynamicResource S.Settings.OpenAiModeBatchPro1}"/>
+                    </StackPanel>
+                </DockPanel>
+            </RadioButton>
+        </UniformGrid>
+
+        <!-- ══════════ Style ══════════ -->
+        <TextBlock Margin="0,14,0,8" Style="{StaticResource SectionLabel}">
+            <Run Text="{DynamicResource S.LocalAi.Style}"/><Run Text="{DynamicResource S.LocalAi.Optional}" FontWeight="Normal" FontSize="13" Foreground="{DynamicResource AppTextSecondary}"/>
+        </TextBlock>
+        <Grid>
+            <TextBox x:Name="StyleBox"
+                     Style="{StaticResource ModernTextBox}"
+                     MaxLength="200"
+                     AutomationProperties.Name="{DynamicResource S.LocalAi.Style}"
+                     TextChanged="StyleBox_TextChanged"/>
+            <TextBlock x:Name="StylePlaceholder"
+                       IsHitTestVisible="False"
+                       Text="{DynamicResource S.LocalAi.StylePlaceholder}"
+                       FontFamily="{DynamicResource AppFont}"
+                       FontSize="{StaticResource AppFontSize}"
+                       Foreground="{DynamicResource AppTextSecondary}"
+                       Opacity="0.7"
+                       Margin="10,0,10,0"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- ══════════ Timeout and idle release ══════════
+             Side by side: both are one small control, and alone on a row each left the rest of
+             it empty. -->
+        <Grid Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="{DynamicResource S.Settings.OpenAiTimeout}" Style="{StaticResource SectionLabel}"/>
+                <StackPanel Orientation="Horizontal">
+                    <Grid Width="120">
+                        <TextBox x:Name="TimeoutBox"
+                                 Style="{StaticResource ModernTextBox}"
+                                 MaxLength="4"
+                                 InputMethod.IsInputMethodEnabled="False"
+                                 AutomationProperties.Name="{DynamicResource S.Settings.OpenAiTimeout}"
+                                 PreviewTextInput="TimeoutBox_PreviewTextInput"
+                                 PreviewKeyDown="TimeoutBox_PreviewKeyDown"
+                                 DataObject.Pasting="TimeoutBox_Pasting"
+                                 TextChanged="TimeoutBox_TextChanged"
+                                 LostKeyboardFocus="TimeoutBox_LostKeyboardFocus"/>
+                        <TextBlock x:Name="TimeoutPlaceholder"
+                                   IsHitTestVisible="False"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="{StaticResource AppFontSize}"
+                                   Foreground="{DynamicResource AppTextSecondary}"
+                                   Opacity="0.7"
+                                   Margin="10,0,10,0"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Text="{DynamicResource S.Settings.OpenAiTimeoutUnit}"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource Note}"/>
+                </StackPanel>
+                <TextBlock x:Name="TimeoutError" Margin="0,4,0,0"
+                           Visibility="Collapsed"
+                           Style="{StaticResource Note}"
+                           Foreground="{DynamicResource AppError}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="{DynamicResource S.LocalAi.Idle}"
+                               Style="{StaticResource SectionLabel}"
+                               Margin="0"
+                               VerticalAlignment="Center"/>
+                    <!-- Background and Padding: a bare TextBlock is only hit-testable across the
+                         glyph's own strokes. -->
+                    <TextBlock Text="&#xE946;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="14"
+                               Foreground="{DynamicResource AppTextSecondary}"
+                               Background="Transparent"
+                               Padding="4,2"
+                               Margin="3,0,0,0"
+                               VerticalAlignment="Center"
+                               Cursor="Help"
+                               AutomationProperties.Name="{DynamicResource S.LocalAi.IdleNote}">
+                        <!-- Drawn lower rather than laid out lower: a margin would make this row taller
+                             than the timeout label beside it, and the two boxes under them uneven. -->
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="1"/>
+                        </TextBlock.RenderTransform>
+                        <controls:HoverToolTip.Content>
+                            <TextBlock Text="{DynamicResource S.LocalAi.IdleNote}"
+                                       MaxWidth="420"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="{StaticResource AppFontSize}"
+                                       TextWrapping="Wrap"
+                                       LineHeight="18"/>
+                        </controls:HoverToolTip.Content>
+                    </TextBlock>
+                </StackPanel>
+                <ComboBox x:Name="IdleBox"
+                          Style="{StaticResource ModernComboBox}"
+                          Width="200"
+                          HorizontalAlignment="Left"
+                          SelectedValuePath="Minutes"
+                          AutomationProperties.Name="{DynamicResource S.LocalAi.Idle}"
+                          SelectionChanged="IdleBox_SelectionChanged"/>
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</UserControl>

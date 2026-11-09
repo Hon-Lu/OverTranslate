@@ -100,6 +100,9 @@ public record ProviderItem(
     /// </remarks>
     public string ShortName => Display;
 
+    /// <summary>The small print beside the name in an open menu: which model 本機 AI 翻譯 is using.</summary>
+    public string? Detail => Provider == TranslationProvider.LocalAI ? Services.AppServices.LocalAi.ActiveModel?.ShortName : null;
+
     /// <summary>
     /// True for the one entry a menu holds only because it is that menu's selection while hidden.
     /// </summary>
@@ -186,6 +189,7 @@ public static class LanguageData
         new(TranslationProvider.TranSmart, "S.Provider.TranSmart", false),
         new(TranslationProvider.Yandex,    "S.Provider.Yandex",    false),
         new(TranslationProvider.DeepL,     "S.Provider.DeepL",     true,  "S.Provider.DeepLHint"),
+        new(TranslationProvider.LocalAI,   "S.Provider.LocalAI",   false, "S.Provider.LocalAIHint"),
         new(TranslationProvider.OpenAI,    "S.Provider.OpenAI",    false, "S.Provider.OpenAIHint"),
     ];
 
@@ -356,7 +360,7 @@ public static class LanguageData
     /// <see cref="Services.Providers.OpenAiCompatibleProvider.SourceCodePlaceholder"/>.
     ///
     /// Returns empty for 自動, which has no language to name: a template that names the source while
-    /// the source is 自動 gets "any language" there, and a tag would be inventing one.
+    /// the source is 自動 gets nothing there, its name or its tag, and a tag would be inventing one.
     /// </remarks>
     public static string GetModelLanguageTag(string? code)
     {

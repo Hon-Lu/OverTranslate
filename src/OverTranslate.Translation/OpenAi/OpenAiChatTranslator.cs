@@ -45,6 +45,10 @@ public sealed record OpenAiChatRequest(
     int ContextTokens = OpenAiChatTranslator.DefaultContextTokens,
     bool Batch = false);
 
+/// <summary>Puts one message to a model and returns what it answered — see <see cref="OpenAiChatTranslator"/>.</summary>
+public delegate Task<string> OpenAiChatSender(
+    string message, OpenAiChatRequest request, int? maxTokens, CancellationToken cancellationToken);
+
 /// <summary>What one call knows beyond its texts.</summary>
 /// <param name="History">Earlier lines of the same session, oldest first — see <see cref="OpenAiPrompt.Build"/>.</param>
 /// <param name="Screen">
@@ -92,9 +96,25 @@ public sealed record OpenAiChatOutcome(string? Translation, Exception? Error)
 /// refused connection, cancellation — goes up as the <see cref="HttpClient"/> threw it: which of
 /// those it was is what the user needs to hear, and the application already words them.</para>
 /// </remarks>
-public sealed class OpenAiChatTranslator(HttpClient http)
+public sealed class OpenAiChatTranslator
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
+    private readonly HttpClient? _http;
+    private readonly OpenAiChatSender _send;
+
+    public OpenAiChatTranslator(HttpClient http)
+    {
+        _http = http;
+        _send = SendChatAsync;
+    }
+
+    /// <param name="send">
+    /// Puts one message to a model in place of the Chat Completions request, for a model that is not
+    /// reached through that route. Everything else — what is sent when, how answers are read — stays
+    /// the same. It enforces <see cref="OpenAiChatRequest.Timeout"/> itself.
+    /// </param>
+    public OpenAiChatTranslator(OpenAiChatSender send) => _send = send;
 
     /// <summary>How many requests are in flight at once under a template with no context.</summary>
     public const int MaxConcurrentRequests = 8;
@@ -222,7 +242,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     /// <see cref="OpenAiChatFailure.NoTranslation"/> — and the caller decides what that means.</para>
     /// </remarks>
     public async Task WarmUpAsync(OpenAiChatRequest request, CancellationToken cancellationToken = default) =>
-        await SendAsync(BuildMessages(request.Prompt.Build(WarmUpText)), request, cancellationToken, maxTokens: 1);
+        await SendAsync(request.Prompt.Build(WarmUpText), request, cancellationToken, maxTokens: 1);
 
     /// <summary>The one word <see cref="WarmUpAsync"/> asks for.</summary>
     internal const string WarmUpText = "Hello";
@@ -411,7 +431,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
             {
                 batches++;
                 var texts = batch.Select(i => job.Texts[i]).ToList();
-                var answer = await SendAsync(BuildMessages(prompt.BuildBatch(texts, carried)), job.Request, job.Token);
+                var answer = await SendAsync(prompt.BuildBatch(texts, carried), job.Request, job.Token);
                 var read = OpenAiAnswer.ReadNumbered(answer, count);
                 for (var k = 0; k < count; k++)
                 {
@@ -627,7 +647,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     private async Task<string> SegmentAsync(
         string message, string text, OpenAiChatRequest request, CancellationToken token, bool ofOne = false)
     {
-        var answer = await SendAsync(BuildMessages(message), request, token);
+        var answer = await SendAsync(message, request, token);
         var translation = ofOne
             ? OpenAiAnswer.ReadOfOne(answer, text, request.Prompt.IsDefault)
             : request.Prompt.IsDefault ? OpenAiAnswer.Read(answer, text) : StripThinking(answer);
@@ -666,16 +686,26 @@ public sealed class OpenAiChatTranslator(HttpClient http)
             });
     }
 
-    /// <summary>Sends one request and returns the answer's content, thinking and all.</summary>
+    /// <summary>Sends one message and returns the answer's content, thinking and all.</summary>
     /// <param name="maxTokens">The longest answer to allow, or null to leave it to the server.</param>
     private async Task<string> SendAsync(
-        object[] messages, OpenAiChatRequest request, CancellationToken cancellationToken, int? maxTokens = null)
+        string message, OpenAiChatRequest request, CancellationToken cancellationToken, int? maxTokens = null)
+    {
+        var content = await _send(message, request, maxTokens, cancellationToken);
+        if (StripThinking(content).Length == 0)
+            throw new OpenAiChatException(OpenAiChatFailure.NoTranslation);
+        return content;
+    }
+
+    /// <summary>One Chat Completions request.</summary>
+    private async Task<string> SendChatAsync(
+        string message, OpenAiChatRequest request, int? maxTokens, CancellationToken cancellationToken)
     {
         // A dictionary rather than an anonymous type because the sampling fields are conditional.
         var payload = new Dictionary<string, object>
         {
             ["model"] = request.Model,
-            ["messages"] = messages,
+            ["messages"] = BuildMessages(message),
         };
         if (request.Temperature is { } temperature) payload["temperature"] = temperature;
         if (request.TopP is { } topP) payload["top_p"] = topP;
@@ -698,7 +728,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
 
         try
         {
-            using var response = await http.SendAsync(
+            using var response = await _http!.SendAsync(
                 httpRequest, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
 
             if (!response.IsSuccessStatusCode)
@@ -707,11 +737,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
                 throw new OpenAiChatException(OpenAiChatFailure.Rejected, response.StatusCode, ReadError(error));
             }
 
-            var content = ReadCompletion(await response.Content.ReadAsStringAsync(timeout.Token));
-
-            if (StripThinking(content).Length == 0)
-                throw new OpenAiChatException(OpenAiChatFailure.NoTranslation);
-            return content;
+            return ReadCompletion(await response.Content.ReadAsStringAsync(timeout.Token));
         }
         catch (OperationCanceledException ex) when (
             timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
@@ -781,7 +807,7 @@ public sealed class OpenAiChatTranslator(HttpClient http)
     }
 
     /// <summary>What the server said was wrong — see <see cref="OpenAiChatException.ServerMessage"/>.</summary>
-    internal static string? ReadError(string json)
+    public static string? ReadError(string json)
     {
         try
         {

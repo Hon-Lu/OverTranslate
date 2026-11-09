@@ -150,7 +150,8 @@ public partial class App
                 Dispatcher.Invoke(ShowOrActivateShell);
             }
         }
-        catch { /* event disposed on exit — normal shutdown */ }
+        catch (ObjectDisposedException) { /* event disposed on exit — normal shutdown */ }
+        catch (Exception ex) { Log.Error(ex, "Showing the main window on request failed"); }
     }
 
     internal static void ShowOrActivateShell() => ShellWindow.ShowOrActivate();

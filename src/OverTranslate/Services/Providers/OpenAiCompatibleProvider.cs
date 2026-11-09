@@ -249,27 +249,25 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
 
         var results = new List<TranslatedBlock>(blocks.Count);
         for (int i = 0; i < blocks.Count; i++)
-        {
-            // A block whose request failed: the original stands in, and says so — as for the engines
-            // behind ResilientProvider, so the overlay and the realtime cache treat both the same.
-            var block = blocks[i];
-            results.Add(new TranslatedBlock(
-                block.Text,
-                outcomes[i].Translation ?? block.Text,
-                block.Bounds,
-                block.Lines,
-                block.RenderGlyphHeight)
-                {
-                    RunsAcross = block.RunsAcross,
-                    FontGlyphHeight = block.FontGlyphHeight,
-                    Tilt = block.Tilt,
-                    Untranslated = !outcomes[i].Translated,
-                });
-        }
+            results.Add(ResultFor(blocks[i], outcomes[i].Translation));
 
         var detected = LanguageData.IsAutomaticSource(sourceLang) ? "" : sourceLang.ToUpperInvariant();
         return (results, detected);
     }
+
+    /// <summary>
+    /// The result for one block, or with a null <paramref name="translation"/> the original standing
+    /// in and saying so — as for the engines behind ResilientProvider, so the overlay and the realtime
+    /// cache treat both the same.
+    /// </summary>
+    internal static TranslatedBlock ResultFor(OcrTextBlock block, string? translation) =>
+        new(block.Text, translation ?? block.Text, block.Bounds, block.Lines, block.RenderGlyphHeight)
+        {
+            RunsAcross = block.RunsAcross,
+            FontGlyphHeight = block.FontGlyphHeight,
+            Tilt = block.Tilt,
+            Untranslated = translation is null,
+        };
 
     /// <summary>
     /// Has the server load the model before the first translation needs it — see
@@ -422,7 +420,8 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// <paramref name="batch"/>. Normalised here as well as where it is saved, so a box saved before
     /// the editor did that reaches the model as the same string the settings panel shows.</para>
     /// </remarks>
-    internal static OpenAiPrompt BuildPrompt(string sourceLang, string targetLang, string template, bool batch = false)
+    internal static OpenAiPrompt BuildPrompt(
+        string sourceLang, string targetLang, string template, bool batch = false, string? style = null)
     {
         var language = PromptLanguage();
         var english = language == OpenAiPromptLanguage.English;
@@ -432,7 +431,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
 
         return new OpenAiPrompt(
             language,
-            Fill(isDefault ? OpenAiPrompt.DefaultTemplate(language, batch) : own, sourceLang, targetLang, automatic, english),
+            Fill(isDefault ? OpenAiPrompt.DefaultTemplate(language, batch, style) : own, sourceLang, targetLang, automatic, english),
             LanguageData.GetTargetDisplayName(targetLang, english),
             isDefault,
             automatic ? null : LanguageData.GetSourceDisplayName(sourceLang, english));
@@ -503,7 +502,7 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
         _ => OpenAiPromptLanguage.English,
     };
 
-    private static OpenAiTranslationPair Pair(TranslationPair pair) => new(pair.Source, pair.Translation);
+    internal static OpenAiTranslationPair Pair(TranslationPair pair) => new(pair.Source, pair.Translation);
 
     /// <summary>
     /// Substitutes the language placeholders, naming every language in the language the template's
@@ -528,20 +527,18 @@ public sealed class OpenAiCompatibleProvider : ITranslationProvider
     /// cannot collide, because <c>{source}</c> is not a prefix of <c>{source_code}</c> once the
     /// closing brace is counted.
     ///
-    /// 自動 has no tag to give, so <see cref="SourceCodePlaceholder"/> empties out there. A template
-    /// that wrote its own brackets around it is left with an empty pair, which is the cost of letting
-    /// templates place the tag themselves.
+    /// 自動 has neither a name nor a tag to give, so <see cref="SourcePlaceholder"/> and
+    /// <see cref="SourceCodePlaceholder"/> both empty out there. A template that wrote its own brackets
+    /// around one is left with an empty pair, which is the cost of letting templates place them
+    /// themselves.
     /// </remarks>
     private static string Fill(string template, string sourceLang, string targetLang, bool automatic, bool english)
     {
-        // Nothing to name when the source is 自動. Only text the user wrote a source into reaches
-        // this.
-        //
-        // Left in English while the names beside it follow the interface, because it is not a
-        // language name: no built-in wording reaches it, and the template that does is one someone
-        // wrote in a language this application cannot know. Changing it is a separate decision.
+        // Nothing to name when the source is 自動, the same as the tag below: a word standing in for
+        // a language would be one the template's author never wrote, in a language this application
+        // cannot know.
         var source = automatic
-            ? "any language"
+            ? ""
             : LanguageData.GetSourceDisplayName(sourceLang, english);
 
         var target = LanguageData.GetTargetDisplayName(targetLang, english);

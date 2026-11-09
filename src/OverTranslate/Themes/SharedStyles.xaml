@@ -243,6 +243,28 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
+    <!-- 本機 AI 翻譯: drawn as outlines rather than set in a font, and with A and I cut to the
+         same top and bottom, so the two letters read as one height at the size it is shown. -->
+    <DrawingImage x:Key="LocalAiMarkImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4FC3FF" Offset="0"/>
+                            <GradientStop Color="#7B61FF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,24,24" RadiusX="5.5" RadiusY="5.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="White"
+                                 Geometry="M8.325,6.6 H11.125 L14.825,17.4 H12.325 L11.505,15 H7.945 L7.125,17.4 H4.625 Z M9.725,9.81 L10.785,12.9 H8.665 Z M16.875,6.6 H19.375 V17.4 H16.875 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
     <DrawingImage x:Key="YoudaoMarkImage">
         <DrawingImage.Drawing>
             <DrawingGroup>
@@ -753,6 +775,47 @@
                                       VerticalScrollBarVisibility="Auto"
                                       Focusable="False"/>
                     </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  DANGER BUTTON                              -->
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- AccentButton names the accent brushes inside its own hover and pressed triggers, so a
+         red one cannot be derived from it. Only on the half of a confirmation that destroys
+         something; the colour is what stops its two buttons reading as a pair of equals. -->
+    <Style x:Key="DangerButton" TargetType="Button">
+        <Setter Property="FontFamily"      Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"        Value="{StaticResource AppFontSize}"/>
+        <Setter Property="Foreground"      Value="#FFFFFFFF"/>
+        <Setter Property="Background"      Value="{DynamicResource AppError}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding"         Value="16,0"/>
+        <Setter Property="Height"          Value="34"/>
+        <Setter Property="Cursor"          Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Lifted and dropped by opacity rather than by two more brushes:
+                             AppError is one colour per theme, and hover and pressed states
+                             defined here would be a third and a fourth to keep in step. -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.85"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.7"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

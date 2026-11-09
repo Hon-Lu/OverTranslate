@@ -80,6 +80,10 @@ public partial class ServiceSettingsOverlay : UserControl
 
         // Focus comes back so Escape closes this panel again: it was on the card, which has gone.
         PromptEditor.Closed += (_, _) => Focus();
+
+        LocalAiPanel.DeleteModelRequested += (_, model) => LocalAiDelete.Open(model);
+        LocalAiDelete.Deleted += (_, model) => LocalAiPanel.OnModelDeleted(model);
+        LocalAiDelete.Closed += (_, _) => Focus();
     }
 
     // ── Open / close ─────────────────────────────────────────────────────────
@@ -123,6 +127,8 @@ public partial class ServiceSettingsOverlay : UserControl
         // settings the moment it is told the panel closed, and a pending edit would be invisible
         // to it until the timer happened to fire.
         FlushPendingEdits();
+        LocalAiPanel.Close();
+        LocalAiDelete.Dismiss();
 
         LocalizationService.LanguageChanged -= OnLanguageChanged;
 
@@ -182,8 +188,11 @@ public partial class ServiceSettingsOverlay : UserControl
                 "S.Settings.ServiceDialogTitle", LanguageData.GetProviderDisplay(_provider));
 
             var deepL = _provider == TranslationProvider.DeepL;
+            var localAi = _provider == TranslationProvider.LocalAI;
             DeepLPanel.Visibility = deepL ? Visibility.Visible : Visibility.Collapsed;
-            OpenAiPanel.Visibility = deepL ? Visibility.Collapsed : Visibility.Visible;
+            OpenAiPanel.Visibility = deepL || localAi ? Visibility.Collapsed : Visibility.Visible;
+            LocalAiPanel.Visibility = localAi ? Visibility.Visible : Visibility.Collapsed;
+            if (localAi) LocalAiPanel.Open();
 
             // The card is sized for the wider of the two panels, and DeepL is one field. OpenAI's
             // width is set by the list rather than by the fields above it: a row is a name with its
