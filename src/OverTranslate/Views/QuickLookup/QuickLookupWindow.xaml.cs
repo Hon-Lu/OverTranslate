@@ -1125,7 +1125,7 @@ public partial class QuickLookupWindow : Window
             ShowStatus(
                 LocalizationService.Format(
                     "S.Translation.ProviderUnavailable",
-                    LanguageData.GetProviderDisplay(settings.Provider), ex.Message),
+                    ex.Message),
                 isError: true);
         }
     }

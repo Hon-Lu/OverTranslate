@@ -129,8 +129,7 @@
     <sys:String x:Key="S.Translation.Result">訳文</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ 再試行</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">API キーがありません — 設定で入力してください</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} は現在利用できません。別の翻訳サービスをお試しください。
-翻訳に失敗しました：{1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">翻訳に失敗しました：{0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">翻訳中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">読み上げに失敗しました：{0}</sys:String>
 

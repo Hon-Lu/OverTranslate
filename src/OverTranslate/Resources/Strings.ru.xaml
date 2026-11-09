@@ -129,8 +129,7 @@
     <sys:String x:Key="S.Translation.Result">Перевод</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ Повторить</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">Нет ключа API — сначала введите его в настройках</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} сейчас недоступен. Попробуйте другую службу перевода.
-Ошибка перевода: {1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">Ошибка перевода: {0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">Перевод...</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">Не удалось прочитать вслух: {0}</sys:String>
 

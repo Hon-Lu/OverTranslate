@@ -420,13 +420,12 @@ public partial class TranslationPage : UserControl
             // This page sends to the chosen engine only (resilient: false), so any failure lands
             // here verbatim — and the free endpoints fail in ways nobody documents (an answer that
             // is not JSON, a 429 that is really a length limit). OverTranslate.Translation names the
-            // engine and the kind of failure, never the text. Catch everything and lead with
-            // a line that says what the user can actually do; keep the original text underneath
-            // so the cause is still reportable.
+            // engine and the kind of failure, never the text. Catch everything and show that
+            // text, so the cause is still reportable.
             SetStatus(
                 LocalizationService.Format(
                     "S.Translation.ProviderUnavailable",
-                    LanguageData.GetProviderDisplay(provider), ex.Message),
+                    ex.Message),
                 isError: true);
             ShowRetry(true);
         }

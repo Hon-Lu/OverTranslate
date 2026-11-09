@@ -129,8 +129,7 @@
     <sys:String x:Key="S.Translation.Result">번역문</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ 다시 시도</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">API 키가 없습니다 — 설정에서 먼저 입력하세요</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0}을(를) 지금은 사용할 수 없습니다. 다른 번역 서비스를 이용해 보세요.
-번역 실패: {1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">번역 실패: {0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">번역 중…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">읽어 주지 못했습니다: {0}</sys:String>
 

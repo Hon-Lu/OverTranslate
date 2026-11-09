@@ -135,8 +135,7 @@
     <sys:String x:Key="S.Translation.Result">譯文</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ 重試</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">缺少 API Key — 請先在設定中輸入</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} 目前無法使用，請改用其他翻譯來源。
-翻譯失敗：{1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">翻譯失敗：{0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">翻譯中…</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">朗讀失敗：{0}</sys:String>
 

@@ -121,7 +121,6 @@ internal static class QuickTranslateFlow
             Log.Warn(ex, "替換翻譯 could not translate");
             hint.ReportFailure(LocalizationService.Format(
                 "S.Translation.ProviderUnavailable",
-                LanguageData.GetProviderDisplay(settings.Provider),
                 ex.Message));
         }
     }

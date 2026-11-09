@@ -128,8 +128,7 @@
     <sys:String x:Key="S.Translation.Result">Translation</sys:String>
     <sys:String x:Key="S.Translation.Retry">↻ Retry</sys:String>
     <sys:String x:Key="S.Translation.MissingApiKey">No API key — enter one in Settings first</sys:String>
-    <sys:String x:Key="S.Translation.ProviderUnavailable">{0} is unavailable right now. Try a different translation source.
-Translation failed: {1}</sys:String>
+    <sys:String x:Key="S.Translation.ProviderUnavailable">Translation failed: {0}</sys:String>
     <sys:String x:Key="S.Translation.Translating">Translating...</sys:String>
     <sys:String x:Key="S.Translation.SpeakFailed">Could not read it aloud: {0}</sys:String>
 
