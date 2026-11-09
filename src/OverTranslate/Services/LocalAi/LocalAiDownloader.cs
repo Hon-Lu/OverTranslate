@@ -125,6 +125,9 @@ internal sealed class LocalAiDownloader
             return true;
         }
 
+        // Before the request: a retry at 90% should not read 0% for as long as the connection takes.
+        if (have > 0) progress?.Invoke(have);
+
         using var stall = CancellationTokenSource.CreateLinkedTokenSource(token);
         stall.CancelAfter(StallTimeout);
         try

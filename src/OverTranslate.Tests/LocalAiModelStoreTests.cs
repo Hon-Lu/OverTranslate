@@ -79,6 +79,22 @@ public sealed class LocalAiModelStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ARetry_ShowsWhatIsAlreadyHere_BeforeTheServerHasAnswered()
+    {
+        var model = Model();
+        var failing = new Serve(Weights) { FailAlwaysAfter = 100_000 };
+        var store = Store(failing, model);
+        await Assert.ThrowsAnyAsync<Exception>(() => store.DownloadAsync(model));
+
+        failing.FailAlwaysAfter = 0;
+        long? shownWhenAsked = null;
+        failing.OnRequest = () => shownWhenAsked ??= store.DownloadedBytes;
+        await store.DownloadAsync(model);
+
+        Assert.Equal(100_000, shownWhenAsked);
+    }
+
+    [Fact]
     public async Task CancellingADownload_TakesItsBytesWithIt()
     {
         var model = Model();
@@ -144,9 +160,11 @@ public sealed class LocalAiModelStoreTests : IDisposable
     {
         public int FailAlwaysAfter { get; set; }
         public List<long?> Ranges { get; } = [];
+        public Action? OnRequest { get; set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            OnRequest?.Invoke();
             var from = request.Headers.Range?.Ranges.First().From;
             Ranges.Add(from);
             var start = (int)(from ?? 0);
