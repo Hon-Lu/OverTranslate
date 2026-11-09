@@ -1468,12 +1468,7 @@
                                                     Cursor="Hand"
                                                     Click="ConfigureService_Click"/>
                                             <Grid DockPanel.Dock="Left" Style="{StaticResource ProviderCardMark}">
-                                                <TextBlock Text="&#xE950;"
-                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                           FontSize="24"
-                                                           Foreground="{DynamicResource AppAccent}"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
+                                                <Image Source="{StaticResource LocalAiMarkImage}" Width="28" Height="28"/>
                                             </Grid>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{DynamicResource S.Provider.LocalAI}"

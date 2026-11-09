@@ -243,6 +243,28 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
+    <!-- 本機 AI 翻譯: drawn as outlines rather than set in a font, and with A and I cut to the
+         same top and bottom, so the two letters read as one height at the size it is shown. -->
+    <DrawingImage x:Key="LocalAiMarkImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4FC3FF" Offset="0"/>
+                            <GradientStop Color="#7B61FF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,24,24" RadiusX="5.5" RadiusY="5.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="White"
+                                 Geometry="M8.325,6.6 H11.125 L14.825,17.4 H12.325 L11.505,15 H7.945 L7.125,17.4 H4.625 Z M9.725,9.81 L10.785,12.9 H8.665 Z M16.875,6.6 H19.375 V17.4 H16.875 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
     <DrawingImage x:Key="YoudaoMarkImage">
         <DrawingImage.Drawing>
             <DrawingGroup>
