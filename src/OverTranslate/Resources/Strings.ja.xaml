@@ -566,7 +566,7 @@
     <sys:String x:Key="S.LocalAi.IdleNote">設定した時間翻訳がないと、モデルを閉じてメモリを解放します。次回の翻訳時に自動で再起動します（モデルの初期化に数秒かかります）。</sys:String>
     <sys:String x:Key="S.LocalAi.Minutes">{0} 分</sys:String>
     <sys:String x:Key="S.LocalAi.Recommended">おすすめ</sys:String>
-    <sys:String x:Key="S.LocalAi.OtherVersions">その他のバージョン（VRAM の少ない順）</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">その他のバージョン</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnFile">ファイル</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
     <sys:String x:Key="S.LocalAi.NotEnoughVram">VRAM 不足</sys:String>
@@ -576,11 +576,6 @@
     <sys:String x:Key="S.LocalAi.CardRunning">{0} · 実行中</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescHy7B">翻訳専用モデル · 中国語翻訳に最適化</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">汎用言語モデル · 140 以上の言語に対応</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemmaE2B">汎用言語モデル · 最も省リソース</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy18B">翻訳専用モデル · 小型版</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma12B">汎用言語モデル · 大きめ</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy7BQ8">翻訳専用モデル · 高精度版</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma26B">汎用言語モデル · 大型</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻訳</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻訳</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">要設定</sys:String>

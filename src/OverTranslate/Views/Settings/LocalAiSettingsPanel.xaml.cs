@@ -396,7 +396,7 @@ public partial class LocalAiSettingsPanel : UserControl
         {
             Source = model,
             Name = model.Name,
-            Description = LocalizationService.Get(model.DescriptionKey),
+            Description = model.DescriptionKey is { } key ? LocalizationService.Get(key) : "",
             File = $"{(model.Size / 1e9).ToString("F2", CultureInfo.InvariantCulture)} GB",
             Vram = $"{(model.VramMiB / 1024.0).ToString("F1", CultureInfo.InvariantCulture)} GB",
             CanChoose = fits,

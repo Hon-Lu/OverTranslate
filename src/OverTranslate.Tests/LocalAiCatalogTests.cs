@@ -51,6 +51,23 @@ public class LocalAiCatalogTests
         Assert.Contains(urls, url => url.Contains("OverTranslate-assets"));
     }
 
+    [Fact]
+    public void OnlyTheRecommendedModelsAreDescribed()
+    {
+        var catalog = Shipped();
+
+        Assert.All(catalog.Recommended, m => Assert.NotNull(m.DescriptionKey));
+        Assert.All(catalog.Others, m => Assert.Null(m.DescriptionKey));
+    }
+
+    [Fact]
+    public void AnEntryWithNoDescriptionParses() =>
+        Assert.Null(LocalAiCatalog.Parse(Json().Replace(",\"descriptionKey\":\"S.LocalAi.ModelDescHy7B\"", "")).Models[0].DescriptionKey);
+
+    [Fact]
+    public void AMistypedDescriptionIsRefused() =>
+        Assert.Throws<InvalidDataException>(() => LocalAiCatalog.Parse(Json().Replace("ModelDescHy7B", "ModelDescTypo")));
+
     private const string Hash = "0146743e816210d5a9f12fa9f219bc3926134253f4c5205a6403c18b128feaae";
 
     private static string Json(string file = "a.gguf", string format = "gemma-4", string url = "https://x.test/a.gguf", string sha = Hash) => $$"""

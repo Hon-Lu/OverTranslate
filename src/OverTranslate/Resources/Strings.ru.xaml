@@ -557,7 +557,7 @@
     <sys:String x:Key="S.LocalAi.IdleNote">Если в течение заданного времени нет переводов, модель закрывается и память освобождается. При следующем переводе она запустится автоматически (инициализация займёт несколько секунд).</sys:String>
     <sys:String x:Key="S.LocalAi.Minutes">{0} мин</sys:String>
     <sys:String x:Key="S.LocalAi.Recommended">Рекомендуемые</sys:String>
-    <sys:String x:Key="S.LocalAi.OtherVersions">Другие версии (по возрастанию VRAM)</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">Другие версии</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnFile">Файл</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
     <sys:String x:Key="S.LocalAi.NotEnoughVram">Недостаточно VRAM</sys:String>
@@ -567,11 +567,6 @@
     <sys:String x:Key="S.LocalAi.CardRunning">{0} · Запущена</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescHy7B">Специальная модель перевода · Оптимизирована для китайского</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">Универсальная модель · Более 140 языков</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemmaE2B">Универсальная модель · Минимум ресурсов</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy18B">Специальная модель перевода · Компактная</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma12B">Универсальная модель · Увеличенная</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy7BQ8">Специальная модель перевода · Высокая точность</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma26B">Универсальная модель · Большая</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">Обычный перевод</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">ИИ-перевод</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Требует настройки</sys:String>

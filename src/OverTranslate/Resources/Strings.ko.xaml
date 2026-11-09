@@ -566,7 +566,7 @@
     <sys:String x:Key="S.LocalAi.IdleNote">설정한 시간 동안 번역이 없으면 모델을 닫아 메모리를 해제합니다. 다음 번역 때 자동으로 다시 시작됩니다(모델 초기화에 몇 초 걸립니다).</sys:String>
     <sys:String x:Key="S.LocalAi.Minutes">{0}분</sys:String>
     <sys:String x:Key="S.LocalAi.Recommended">추천</sys:String>
-    <sys:String x:Key="S.LocalAi.OtherVersions">기타 버전(VRAM 적은 순)</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">기타 버전</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnFile">파일</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
     <sys:String x:Key="S.LocalAi.NotEnoughVram">VRAM 부족</sys:String>
@@ -576,11 +576,6 @@
     <sys:String x:Key="S.LocalAi.CardRunning">{0} · 실행 중</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescHy7B">번역 전용 모델 · 중국어 번역에 최적화</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">범용 언어 모델 · 140개 이상의 언어 지원</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemmaE2B">범용 언어 모델 · 리소스 절약형</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy18B">번역 전용 모델 · 소형</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma12B">범용 언어 모델 · 대형</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy7BQ8">번역 전용 모델 · 고정밀</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma26B">범용 언어 모델 · 초대형</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">일반 번역</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 번역</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">설정 필요</sys:String>

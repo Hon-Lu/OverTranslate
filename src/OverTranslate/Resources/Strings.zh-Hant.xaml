@@ -586,7 +586,7 @@
     <sys:String x:Key="S.LocalAi.IdleNote">超過設定時間沒有翻譯，將自動關閉模型以釋放記憶體。下次翻譯時會自動重新啟動（模型初始化需等待數秒）。</sys:String>
     <sys:String x:Key="S.LocalAi.Minutes">{0} 分鐘</sys:String>
     <sys:String x:Key="S.LocalAi.Recommended">推薦</sys:String>
-    <sys:String x:Key="S.LocalAi.OtherVersions">其他版本（依 VRAM 由小到大）</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">其他版本</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnFile">檔案</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
     <sys:String x:Key="S.LocalAi.NotEnoughVram">顯示卡 VRAM 不足</sys:String>
@@ -596,11 +596,6 @@
     <sys:String x:Key="S.LocalAi.CardRunning">{0} · 執行中</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescHy7B">專用翻譯模型 · 針對中文翻譯最佳化</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">通用語言模型 · 涵蓋 140 多種語言</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemmaE2B">通用語言模型 · 最省資源</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy18B">專用翻譯模型 · 小型版</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma12B">通用語言模型 · 較大型</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy7BQ8">專用翻譯模型 · 高精度版</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma26B">通用語言模型 · 大型</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻譯</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻譯</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">需設定</sys:String>

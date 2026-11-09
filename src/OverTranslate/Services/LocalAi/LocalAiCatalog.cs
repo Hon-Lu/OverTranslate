@@ -16,7 +16,7 @@ internal sealed record LocalAiRuntime(
 /// <param name="ShortName">What the service menus and the 設定 card call it.</param>
 /// <param name="VramMiB">What llama-fit-params projects at the app's launch parameters — see tools/LocalAiCatalog.</param>
 /// <param name="Format">Which outer prompt format it wants — see <see cref="LocalAiPromptFormat"/>.</param>
-/// <param name="DescriptionKey">The string the list describes it with.</param>
+/// <param name="DescriptionKey">The string the list describes it with; null for a model listed by name alone.</param>
 internal sealed record LocalAiModel(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("name")] string Name,
@@ -29,7 +29,7 @@ internal sealed record LocalAiModel(
     [property: JsonPropertyName("sha256")] string Sha256,
     [property: JsonPropertyName("vramMiB")] int VramMiB,
     [property: JsonPropertyName("format")] string Format,
-    [property: JsonPropertyName("descriptionKey")] string DescriptionKey);
+    [property: JsonPropertyName("descriptionKey")] string? DescriptionKey);
 
 /// <summary>
 /// The models 本機 AI 翻譯 offers and the llama.cpp build that runs them, as shipped beside the app.
@@ -48,11 +48,6 @@ internal sealed record LocalAiCatalog(
     [
         "S.LocalAi.ModelDescHy7B",
         "S.LocalAi.ModelDescGemmaE4B",
-        "S.LocalAi.ModelDescGemmaE2B",
-        "S.LocalAi.ModelDescHy18B",
-        "S.LocalAi.ModelDescGemma12B",
-        "S.LocalAi.ModelDescHy7BQ8",
-        "S.LocalAi.ModelDescGemma26B",
     ];
 
     internal static string ShippedPath => Path.Combine(AppContext.BaseDirectory, "localai", "models.json");
@@ -89,7 +84,7 @@ internal sealed record LocalAiCatalog(
             if (string.IsNullOrWhiteSpace(model.Id) || !IsSafeName(model.Id) || !IsSafeName(model.File) ||
                 string.IsNullOrWhiteSpace(model.Name) || string.IsNullOrWhiteSpace(model.ShortName) ||
                 model.Size <= 0 || model.VramMiB <= 0 || !IsHash(model.Sha256) || !IsHttps(model.Url) ||
-                !DescriptionKeys.Contains(model.DescriptionKey) || !LocalAiPromptFormat.IsKnown(model.Format))
+                (model.DescriptionKey is not null && !DescriptionKeys.Contains(model.DescriptionKey)) || !LocalAiPromptFormat.IsKnown(model.Format))
                 throw new InvalidDataException($"local AI model entry is malformed: {model.Id}");
         }
 

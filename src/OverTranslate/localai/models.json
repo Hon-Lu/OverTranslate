@@ -48,8 +48,7 @@
       "size": 3106738272,
       "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
       "vramMiB": 1993,
-      "format": "gemma-4",
-      "descriptionKey": "S.LocalAi.ModelDescGemmaE2B"
+      "format": "gemma-4"
     },
     {
       "id": "hy-mt2-1-8b-q8-0",
@@ -62,8 +61,7 @@
       "size": 1908528192,
       "sha256": "5c3fe0b1408a5ceb0143184ef247b11b579c525f4b02b060e6c851bb76fef1a4",
       "vramMiB": 2327,
-      "format": "hy-mt2-1.8b",
-      "descriptionKey": "S.LocalAi.ModelDescHy18B"
+      "format": "hy-mt2-1.8b"
     },
     {
       "id": "gemma-4-12b-qat-q4-0",
@@ -76,8 +74,7 @@
       "size": 6975879296,
       "sha256": "93567e57a8fe10b23569b9d9ec38cd005deedf71e29477c421a4b83f418a538b",
       "vramMiB": 7729,
-      "format": "gemma-4",
-      "descriptionKey": "S.LocalAi.ModelDescGemma12B"
+      "format": "gemma-4"
     },
     {
       "id": "hy-mt2-7b-q8-0",
@@ -90,8 +87,7 @@
       "size": 7981928896,
       "sha256": "58b3ad55dd6f6fa08c695cddc34fb5f8f708a844f78ae10508071914b0ed67c0",
       "vramMiB": 8403,
-      "format": "hy-mt2-7b",
-      "descriptionKey": "S.LocalAi.ModelDescHy7BQ8"
+      "format": "hy-mt2-7b"
     },
     {
       "id": "gemma-4-26b-a4b-q4-0",
@@ -104,8 +100,7 @@
       "size": 14618145824,
       "sha256": "d208665ab1cd3a69f7a9a4bc59430e8448c8093d9b06334f566ac59d6d504a03",
       "vramMiB": 14845,
-      "format": "gemma-4",
-      "descriptionKey": "S.LocalAi.ModelDescGemma26B"
+      "format": "gemma-4"
     }
   ]
 }

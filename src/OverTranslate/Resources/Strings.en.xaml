@@ -562,7 +562,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.LocalAi.IdleNote">Closes the model to free up memory when nothing has been translated for this long. It restarts automatically on the next translation (initialization takes a few seconds).</sys:String>
     <sys:String x:Key="S.LocalAi.Minutes">{0} min</sys:String>
     <sys:String x:Key="S.LocalAi.Recommended">Recommended</sys:String>
-    <sys:String x:Key="S.LocalAi.OtherVersions">Other versions (smallest VRAM first)</sys:String>
+    <sys:String x:Key="S.LocalAi.OtherVersions">Other versions</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnFile">File</sys:String>
     <sys:String x:Key="S.LocalAi.ColumnVram">VRAM</sys:String>
     <sys:String x:Key="S.LocalAi.NotEnoughVram">Not enough VRAM</sys:String>
@@ -572,11 +572,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.LocalAi.CardRunning">{0} · Running</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescHy7B">Dedicated translation model · Optimized for Chinese</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">General-purpose model · Covers 140+ languages</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemmaE2B">General-purpose model · Lightest on resources</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy18B">Dedicated translation model · Compact</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma12B">General-purpose model · Larger</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescHy7BQ8">Dedicated translation model · High precision</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelDescGemma26B">General-purpose model · Large</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">General translation</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI translation</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Setup needed</sys:String>

@@ -150,7 +150,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="★" Foreground="#FFD27A"
                                            Visibility="{Binding StarVisibility}" VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1">
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <WrapPanel>
                                         <TextBlock Text="{Binding Name}"
                                                    FontFamily="{DynamicResource AppFont}"
