@@ -472,11 +472,12 @@
     <sys:String x:Key="S.Provider.TranSmart">騰訊翻譯</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">需至 DeepL 官方註冊並取得 API Key</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">需申請官方 API Key</sys:String>
     <sys:String x:Key="S.Provider.LocalAI">本機 AI 翻譯</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">內建模型，無需安裝額外應用工具，可直接使用</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">支援 OpenAI 相容 API（如 Ollama、LM Studio、OpenRouter），建議使用本地 LLM。</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">支援 OpenAI 相容 API（如 Ollama、LM Studio、OpenRouter）</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">設定</sys:String>

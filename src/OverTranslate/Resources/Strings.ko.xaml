@@ -454,11 +454,12 @@
     <sys:String x:Key="S.Provider.TranSmart">Tencent 번역</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex 번역</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 번역</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">DeepL 공식 사이트에서 가입해 API 키를 받아야 합니다</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">공식 API 키 필요</sys:String>
     <sys:String x:Key="S.Provider.LocalAI">로컬 AI 번역</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">내장 모델을 사용하며 별도 앱을 설치할 필요가 없습니다</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 호환 API를 지원합니다(Ollama, LM Studio, OpenRouter 등). 로컬 LLM 사용을 권장합니다.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">OpenAI 호환 API를 지원합니다(Ollama, LM Studio, OpenRouter 등)</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">설정</sys:String>

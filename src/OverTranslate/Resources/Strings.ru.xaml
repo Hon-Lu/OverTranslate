@@ -447,11 +447,12 @@
     <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Яндекс</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">Нужен ключ API от DeepL</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">Нужен официальный ключ API</sys:String>
     <sys:String x:Key="S.Provider.LocalAI">Локальный ИИ</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">Встроенные модели. Не требует установки дополнительных приложений</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">Любой API, совместимый с OpenAI (Ollama, LM Studio, OpenRouter…). Рекомендуется локальная LLM.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">Любой API, совместимый с OpenAI (Ollama, LM Studio, OpenRouter…)</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">Настройки</sys:String>

@@ -1418,15 +1418,20 @@
                                                       Stretch="Uniform"
                                                       Width="22"/>
                                             </Grid>
-                                            <WrapPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{DynamicResource S.Provider.DeepL}"
-                                                           Style="{StaticResource ProviderCardName}"
-                                                           Margin="0,0,10,0"/>
-                                                <Border x:Name="DeepLBadge"
-                                                        Style="{StaticResource ServiceBadgeBorder}">
-                                                    <TextBlock x:Name="DeepLBadgeText" Style="{StaticResource ServiceBadgeText}"/>
-                                                </Border>
-                                            </WrapPanel>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Provider.DeepL}"
+                                                               Style="{StaticResource ProviderCardName}"
+                                                               Margin="0,0,10,0"/>
+                                                    <Border x:Name="DeepLBadge"
+                                                            Style="{StaticResource ServiceBadgeBorder}">
+                                                        <TextBlock x:Name="DeepLBadgeText" Style="{StaticResource ServiceBadgeText}"/>
+                                                    </Border>
+                                                </WrapPanel>
+                                                <TextBlock Text="{DynamicResource S.Provider.DeepLHint}"
+                                                           Style="{StaticResource ProviderCardNote}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
                                         </DockPanel>
                                     </CheckBox>
                                 </UniformGrid>
@@ -1505,15 +1510,20 @@
                                                       Stretch="Uniform"
                                                       Width="25"/>
                                             </Grid>
-                                            <WrapPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{DynamicResource S.Provider.OpenAI}"
-                                                           Style="{StaticResource ProviderCardName}"
-                                                           Margin="0,0,10,0"/>
-                                                <Border x:Name="OpenAiBadge"
-                                                        Style="{StaticResource ServiceBadgeBorder}">
-                                                    <TextBlock x:Name="OpenAiBadgeText" Style="{StaticResource ServiceBadgeText}"/>
-                                                </Border>
-                                            </WrapPanel>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <WrapPanel>
+                                                    <TextBlock Text="{DynamicResource S.Provider.OpenAI}"
+                                                               Style="{StaticResource ProviderCardName}"
+                                                               Margin="0,0,10,0"/>
+                                                    <Border x:Name="OpenAiBadge"
+                                                            Style="{StaticResource ServiceBadgeBorder}">
+                                                        <TextBlock x:Name="OpenAiBadgeText" Style="{StaticResource ServiceBadgeText}"/>
+                                                    </Border>
+                                                </WrapPanel>
+                                                <TextBlock Text="{DynamicResource S.Provider.OpenAICardHint}"
+                                                           Style="{StaticResource ProviderCardNote}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
                                         </DockPanel>
                                     </CheckBox>
                                 </StackPanel>

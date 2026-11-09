@@ -450,11 +450,12 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Provider.TranSmart">Tencent</sys:String>
     <sys:String x:Key="S.Provider.Yandex">Yandex</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
-    <sys:String x:Key="S.Provider.DeepLHint">Requires an API key from DeepL</sys:String>
+    <sys:String x:Key="S.Provider.DeepLHint">Requires an official API key</sys:String>
     <sys:String x:Key="S.Provider.LocalAI">Local AI</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">Built-in models. Works without installing anything else.</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">Any OpenAI-compatible API (Ollama, LM Studio, OpenRouter…). A local LLM is recommended.</sys:String>
+    <sys:String x:Key="S.Provider.OpenAICardHint">Any OpenAI-compatible API (Ollama, LM Studio, OpenRouter…)</sys:String>
 
     <!-- ── Settings page ── -->
     <sys:String x:Key="S.Settings.Title">Settings</sys:String>
