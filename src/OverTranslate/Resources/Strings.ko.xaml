@@ -522,7 +522,7 @@
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">서비스를 하나 이상 남겨 두세요</sys:String>
     <sys:String x:Key="S.LocalAi.Model">모델</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">모델 선택</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelFile">모델 파일</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">모델 상태</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseHint">모델을 선택하면 파일 크기와 다운로드 버튼이 표시됩니다.</sys:String>
     <sys:String x:Key="S.LocalAi.ChipNotDownloaded">다운로드 안 됨</sys:String>
     <sys:String x:Key="S.LocalAi.ChipDownloading">다운로드 중</sys:String>
@@ -552,6 +552,7 @@
     <sys:String x:Key="S.LocalAi.Details">자세히 보기</sys:String>
     <sys:String x:Key="S.LocalAi.Release">지금 해제</sys:String>
     <sys:String x:Key="S.LocalAi.ReleaseNote">모델을 닫아 메모리를 해제합니다. 다음 번역 때 자동으로 다시 시작됩니다.</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">이 서비스로 번역하면 모델이 자동으로 시작됩니다.</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">모델 삭제</sys:String>
     <sys:String x:Key="S.LocalAi.Downloaded">다운로드한 모델</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedSummary">총 {0} GB · 저장 위치: {1}</sys:String>

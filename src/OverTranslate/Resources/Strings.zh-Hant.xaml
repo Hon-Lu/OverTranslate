@@ -542,7 +542,7 @@
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">至少要保留一個服務</sys:String>
     <sys:String x:Key="S.LocalAi.Model">模型</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">請選擇模型</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelFile">模型檔案</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">模型狀態</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseHint">選擇模型後，這裡會顯示檔案大小與下載按鈕。</sys:String>
     <sys:String x:Key="S.LocalAi.ChipNotDownloaded">尚未下載</sys:String>
     <sys:String x:Key="S.LocalAi.ChipDownloading">下載中</sys:String>
@@ -572,6 +572,7 @@
     <sys:String x:Key="S.LocalAi.Details">查看詳細資訊</sys:String>
     <sys:String x:Key="S.LocalAi.Release">立即釋放</sys:String>
     <sys:String x:Key="S.LocalAi.ReleaseNote">立即關閉模型以釋放記憶體，下次翻譯時會自動重新啟動。</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">使用此翻譯服務翻譯時會自動啟動模型。</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">刪除模型</sys:String>
     <sys:String x:Key="S.LocalAi.Downloaded">已下載的模型</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedSummary">共 {0} GB · 存放位置：{1}</sys:String>

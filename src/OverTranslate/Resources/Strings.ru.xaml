@@ -513,7 +513,7 @@
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Оставьте хотя бы одну службу</sys:String>
     <sys:String x:Key="S.LocalAi.Model">Модель</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">Выберите модель</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelFile">Файл модели</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">Состояние модели</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseHint">Выберите модель, чтобы увидеть размер файла и кнопку загрузки.</sys:String>
     <sys:String x:Key="S.LocalAi.ChipNotDownloaded">Не загружена</sys:String>
     <sys:String x:Key="S.LocalAi.ChipDownloading">Загрузка</sys:String>
@@ -543,6 +543,7 @@
     <sys:String x:Key="S.LocalAi.Details">Подробнее</sys:String>
     <sys:String x:Key="S.LocalAi.Release">Освободить сейчас</sys:String>
     <sys:String x:Key="S.LocalAi.ReleaseNote">Закрывает модель и освобождает память. При следующем переводе она запустится автоматически.</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">Модель запускается автоматически при переводе через эту службу.</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">Удалить модель</sys:String>
     <sys:String x:Key="S.LocalAi.Downloaded">Загруженные модели</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedSummary">Всего {0} ГБ · Расположение: {1}</sys:String>

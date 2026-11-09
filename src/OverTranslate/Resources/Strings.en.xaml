@@ -518,7 +518,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Keep at least one service</sys:String>
     <sys:String x:Key="S.LocalAi.Model">Model</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">Select a model</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelFile">Model file</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">Model status</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseHint">Select a model to see its file size and download button.</sys:String>
     <sys:String x:Key="S.LocalAi.ChipNotDownloaded">Not downloaded</sys:String>
     <sys:String x:Key="S.LocalAi.ChipDownloading">Downloading</sys:String>
@@ -548,6 +548,7 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.LocalAi.Details">Details</sys:String>
     <sys:String x:Key="S.LocalAi.Release">Release now</sys:String>
     <sys:String x:Key="S.LocalAi.ReleaseNote">Closes the model to free up memory. It restarts automatically on the next translation.</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">The model starts automatically when you translate with this service.</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">Delete model</sys:String>
     <sys:String x:Key="S.LocalAi.Downloaded">Downloaded models</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedSummary">{0} GB in total · Location: {1}</sys:String>

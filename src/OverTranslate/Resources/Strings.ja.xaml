@@ -522,7 +522,7 @@
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">少なくとも 1 つは残してください</sys:String>
     <sys:String x:Key="S.LocalAi.Model">モデル</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">モデルを選択</sys:String>
-    <sys:String x:Key="S.LocalAi.ModelFile">モデルファイル</sys:String>
+    <sys:String x:Key="S.LocalAi.ModelFile">モデルの状態</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseHint">モデルを選択すると、ファイルサイズとダウンロードボタンが表示されます。</sys:String>
     <sys:String x:Key="S.LocalAi.ChipNotDownloaded">未ダウンロード</sys:String>
     <sys:String x:Key="S.LocalAi.ChipDownloading">ダウンロード中</sys:String>
@@ -552,6 +552,7 @@
     <sys:String x:Key="S.LocalAi.Details">詳細を表示</sys:String>
     <sys:String x:Key="S.LocalAi.Release">今すぐ解放</sys:String>
     <sys:String x:Key="S.LocalAi.ReleaseNote">モデルを閉じてメモリを解放します。次回の翻訳時に自動で再起動します。</sys:String>
+    <sys:String x:Key="S.LocalAi.StoppedNote">このサービスで翻訳すると、モデルが自動で起動します。</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">モデルを削除</sys:String>
     <sys:String x:Key="S.LocalAi.Downloaded">ダウンロード済みのモデル</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedSummary">合計 {0} GB · 保存先：{1}</sys:String>

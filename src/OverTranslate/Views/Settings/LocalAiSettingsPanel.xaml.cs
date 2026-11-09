@@ -312,6 +312,7 @@ public partial class LocalAiSettingsPanel : UserControl
         var isRunning = running == LocalAiServerState.Running;
         ReleaseButton.Visibility = Show(isRunning);
         ReleaseNote.Visibility = Show(isRunning);
+        StoppedNote.Visibility = Show(running == LocalAiServerState.Stopped);
         DetailsButton.Visibility = Show(running == LocalAiServerState.Failed);
         DetailsBox.Text = host.FailureDetail;
         DetailsBox.Visibility = Show(running == LocalAiServerState.Failed && _detailsOpen);
@@ -541,6 +542,7 @@ public partial class LocalAiSettingsPanel : UserControl
         TimeoutError.Text = TryReadTimeout(out _)
             ? ""
             : LocalizationService.Format("S.Settings.OpenAiTimeoutMin", OpenAiCompatibleProvider.MinTimeoutSeconds);
+        TimeoutError.Visibility = Show(TimeoutError.Text.Length > 0);
     }
 
     // The same rules as the OpenAI panel's box: see ServiceSettingsOverlay.
