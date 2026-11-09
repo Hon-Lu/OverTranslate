@@ -514,7 +514,6 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Launch when Windows starts</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">Service setup</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">Turning a service off only hides its menu entry. It doesn't change the service you're using, and the service may still be used as a backup or for dictionary lookups.</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Keep at least one service</sys:String>
     <sys:String x:Key="S.LocalAi.Model">Model</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">Select a model</sys:String>

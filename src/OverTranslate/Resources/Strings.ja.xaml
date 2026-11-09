@@ -518,7 +518,6 @@
     <sys:String x:Key="S.Settings.StartupCheck">Windows の起動時に自動で開始する</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻訳サービスの設定</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">オフにしてもメニューの項目が非表示になるだけで、使用中のサービスは変わりません。バックアップ翻訳や辞書の検索に使われることもあります。</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">少なくとも 1 つは残してください</sys:String>
     <sys:String x:Key="S.LocalAi.Model">モデル</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">モデルを選択</sys:String>

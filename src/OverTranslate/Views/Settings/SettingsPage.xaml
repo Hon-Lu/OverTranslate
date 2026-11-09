@@ -1519,28 +1519,6 @@
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
-
-                        <!-- Under the rows rather than in a tooltip, because it is the one thing about
-                             the switches a user would get wrong without being told: a service that is
-                             off is not switched off, only out of the menus. -->
-                        <Grid Margin="2,16,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="&#xE946;"
-                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource AppTextSecondary}"
-                                       VerticalAlignment="Top"
-                                       Margin="0,2,8,0"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{DynamicResource S.Settings.ProviderMenuHint}"
-                                       Style="{StaticResource FieldHint}"
-                                       FontSize="12"
-                                       Margin="0"/>
-                        </Grid>
                     </StackPanel>
                 </Border>
 

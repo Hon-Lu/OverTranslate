@@ -509,7 +509,6 @@
     <sys:String x:Key="S.Settings.StartupCheck">Запускать вместе с Windows</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">Службы перевода</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">Отключение службы только скрывает ее из меню. Текущая служба не меняется, а скрытая служба по-прежнему может использоваться как резервная или для поиска в словаре.</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Оставьте хотя бы одну службу</sys:String>
     <sys:String x:Key="S.LocalAi.Model">Модель</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">Выберите модель</sys:String>

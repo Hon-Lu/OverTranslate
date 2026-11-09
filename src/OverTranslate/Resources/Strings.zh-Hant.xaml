@@ -538,7 +538,6 @@
     <sys:String x:Key="S.Settings.StartupCheck">開機時自動啟動</sys:String>
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻譯服務設定</sys:String>
-    <sys:String x:Key="S.Settings.ProviderMenuHint">關閉開關僅隱藏選單項目，不影響目前使用的服務，仍可能用於備援翻譯或字典查詢。</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">至少要保留一個服務</sys:String>
     <sys:String x:Key="S.LocalAi.Model">模型</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">請選擇模型</sys:String>
