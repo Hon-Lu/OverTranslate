@@ -57,6 +57,37 @@ public sealed class LocalAiModelStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Deleting_WaitsForAFileThatIsStillHeld()
+    {
+        var model = Model();
+        var store = Store(new Serve(Weights), model);
+        await store.DownloadAsync(model);
+
+        var held = new FileStream(store.PathOf(model), FileMode.Open, FileAccess.Read, FileShare.None);
+        var deleting = store.DeleteAsync(model, TimeSpan.FromSeconds(10));
+        await Task.Delay(250);
+        Assert.False(deleting.IsCompleted);
+        held.Dispose();
+
+        await deleting;
+        Assert.False(File.Exists(store.PathOf(model)));
+        Assert.Empty(store.Downloaded);
+    }
+
+    [Fact]
+    public async Task Deleting_GivesUpOnAFileThatStaysHeld()
+    {
+        var model = Model();
+        var store = Store(new Serve(Weights), model);
+        await store.DownloadAsync(model);
+
+        using var held = new FileStream(store.PathOf(model), FileMode.Open, FileAccess.Read, FileShare.None);
+        var failure = await Record.ExceptionAsync(() => store.DeleteAsync(model, TimeSpan.FromMilliseconds(200)));
+
+        Assert.True(failure is IOException or UnauthorizedAccessException);
+    }
+
+    [Fact]
     public async Task AFailedDownload_KeepsItsBytes_AndTheRetryCarriesOn()
     {
         var model = Model();

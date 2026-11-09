@@ -30,10 +30,17 @@ public class LocalAiCatalogTests
     }
 
     [Fact]
-    public void TheOthersAreOrderedByVram()
+    public void TheOthersKeepOneFamilyTogetherSmallestFirst()
     {
-        var vram = Shipped().Others.Select(m => m.VramMiB).ToList();
-        Assert.Equal(vram.OrderBy(v => v), vram);
+        var others = Shipped().Others.ToList();
+        Assert.Equal(
+            ["hy-mt2-1-8b-q8-0", "hy-mt2-7b-q8-0", "gemma-4-e2b-q4-k-m", "gemma-4-12b-qat-q4-0", "gemma-4-26b-a4b-q4-0"],
+            others.Select(m => m.Id));
+        foreach (var family in others.GroupBy(m => m.Id.Split('-')[0]))
+        {
+            var vram = family.Select(m => m.VramMiB).ToList();
+            Assert.Equal(vram.OrderBy(v => v), vram);
+        }
     }
 
     [Fact]

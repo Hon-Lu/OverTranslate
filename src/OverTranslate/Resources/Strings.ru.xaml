@@ -100,7 +100,7 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">Не удалось разобрать ответ API, совместимого с OpenAI.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">API, совместимый с OpenAI, не вернул перевод.</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">API, совместимый с OpenAI, не ответил за {0} с. Время ожидания можно изменить в настройках службы перевода.</sys:String>
-    <sys:String x:Key="S.Error.LocalAiNoModel">Модель не загружена. Загрузите её в настройках служб перевода.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">Модель не загружена. Загрузите её на странице настроек в разделе «Службы перевода».</sys:String>
     <sys:String x:Key="S.Error.LocalAiDownloading">Модель загружается ({0}%). Повторите попытку после завершения.</sys:String>
     <sys:String x:Key="S.Error.LocalAiStartFailed">Не удалось запустить локальную модель. Попробуйте модель поменьше.</sys:String>
     <sys:String x:Key="S.Error.LocalAiNoGpu">Дискретная видеокарта не обнаружена, эта функция перевода недоступна.</sys:String>
@@ -281,9 +281,6 @@
     <sys:String x:Key="S.Main.NoTextBody">В выделенной области нет распознаваемого текста.</sys:String>
     <sys:String x:Key="S.Main.Translating">Перевод</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">Ошибка перевода</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">Текущая служба перевода может быть временно недоступна.
-Выберите другую службу и повторите попытку.
-Подробности: {0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">Скопировано</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">Выделенная область скопирована в буфер обмена.</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">Распознанный текст скопирован в буфер обмена.</sys:String>
@@ -544,11 +541,10 @@
     <sys:String x:Key="S.LocalAi.ReleaseNote">Закрывает модель и освобождает память. При следующем переводе она запустится автоматически.</sys:String>
     <sys:String x:Key="S.LocalAi.StoppedNote">Модель запускается автоматически при переводе через эту службу.</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">Удалить модель</sys:String>
-    <sys:String x:Key="S.LocalAi.Downloaded">Загруженные модели</sys:String>
-    <sys:String x:Key="S.LocalAi.DownloadedSummary">Всего {0} ГБ · Расположение: {1}</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedTag">Загружена</sys:String>
-    <sys:String x:Key="S.LocalAi.InUse">Используется</sys:String>
     <sys:String x:Key="S.LocalAi.Delete">Удалить</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">Удалить «{0}»? Для повторного использования её придётся загрузить заново.</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">Не удалось удалить файл модели. Повторите попытку позже.</sys:String>
     <sys:String x:Key="S.LocalAi.Style">Стиль перевода</sys:String>
     <sys:String x:Key="S.LocalAi.Optional" xml:space="preserve"> (необязательно)</sys:String>
     <sys:String x:Key="S.LocalAi.StylePlaceholder">Например: разговорный, непринуждённый тон</sys:String>

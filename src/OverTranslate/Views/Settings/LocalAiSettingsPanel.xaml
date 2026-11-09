@@ -51,10 +51,11 @@
             <Style x:Key="ModelRowContainer" TargetType="ListBoxItem">
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                 <Setter Property="IsEnabled" Value="{Binding CanChoose}"/>
+                <Setter Property="Padding" Value="{Binding RowPadding}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ListBoxItem">
-                            <Border x:Name="Root" Background="Transparent" CornerRadius="6" Padding="10,7">
+                            <Border x:Name="Root" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
                                 <ContentPresenter/>
                             </Border>
                             <ControlTemplate.Triggers>
@@ -95,22 +96,30 @@
                         <ContentPresenter VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                            <Setter TargetName="Root" Property="BorderThickness" Value="1.5"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </ToggleButton.Template>
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right"
-                           Text="&#xE70D;"
-                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                           FontSize="11"
-                           Foreground="{DynamicResource AppTextSecondary}"
-                           VerticalAlignment="Center"/>
+                <Path DockPanel.Dock="Right"
+                      Data="M0,0 L4,4 L8,0"
+                      Stroke="{DynamicResource AppTextSecondary}"
+                      StrokeThickness="1.5"
+                      Width="8" Height="4"
+                      Margin="0,0,-2,0"
+                      Stretch="None"
+                      VerticalAlignment="Center"/>
+                <!-- As wide as the list's star column plus the list's own insets, so the name here
+                     and the same name in the list start at one x. -->
                 <TextBlock x:Name="ModelPickerStar"
                            Text="★" Foreground="#FFD27A"
-                           Margin="0,0,8,0"
+                           Width="25"
                            VerticalAlignment="Center"
                            Visibility="Collapsed"/>
                 <TextBlock x:Name="ModelPickerText"
@@ -124,15 +133,24 @@
                PlacementTarget="{Binding ElementName=ModelPickerButton}"
                Placement="Bottom"
                StaysOpen="False"
+               VerticalOffset="4"
                AllowsTransparency="True"
+               PopupAnimation="Slide"
                IsOpen="{Binding IsChecked, ElementName=ModelPickerButton, Mode=TwoWay}">
+            <!-- The margins are the shadow's room: a popup is a window as large as its content, and
+                 a shadow past that edge is not drawn. Popup already lines the card up with the button
+                 inside its margin, so the gap under the button has to be VerticalOffset. -->
             <Border Width="{Binding ActualWidth, ElementName=ModelPickerButton}"
-                    Margin="0,4,0,0"
+                    Margin="12,0,12,16"
                     Background="{DynamicResource AppCardBg}"
                     BorderBrush="{DynamicResource AppBorder}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="4">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="5" Direction="270"
+                                      Opacity="0.45" Color="#000000"/>
+                </Border.Effect>
                 <ListBox x:Name="ModelList"
                          MaxHeight="440"
                          Background="Transparent"
@@ -151,11 +169,13 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="★" Foreground="#FFD27A"
                                            Visibility="{Binding StarVisibility}" VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Grid.Column="{Binding NameColumn}"
+                                            Grid.ColumnSpan="{Binding NameColumnSpan}"
+                                            VerticalAlignment="Center">
                                     <WrapPanel>
                                         <TextBlock Text="{Binding Name}"
                                                    FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="14" FontWeight="{Binding NameWeight}"
+                                                   FontSize="{Binding NameSize}"
                                                    Foreground="{Binding NameBrush}"/>
                                         <Border Margin="6,0,0,0" CornerRadius="4" Padding="6,0,6,1"
                                                 Visibility="{Binding BadgeVisibility}"
@@ -189,7 +209,7 @@
                 BorderBrush="{DynamicResource AppSubtleBorder}"
                 BorderThickness="1"
                 CornerRadius="8"
-                Padding="16,14">
+                Padding="16,12">
             <StackPanel>
                 <DockPanel>
                     <Border x:Name="FileChip" DockPanel.Dock="Right" Style="{StaticResource Chip}" Visibility="Collapsed">
@@ -296,16 +316,20 @@
                              FontFamily="Consolas"
                              FontSize="11"
                              Style="{StaticResource ModernTextBox}"/>
-                    <Button x:Name="DeleteOnlyLink" Margin="0,10,0,0" HorizontalAlignment="Left"
-                            Style="{StaticResource LinkButton}"
-                            Content="{DynamicResource S.LocalAi.DeleteModel}"
-                            Click="DeleteOnlyLink_Click"/>
                 </StackPanel>
+
+                <!-- Outside the states above: a model that is here can be deleted from more than
+                     Ready, a machine with no card to run it on being the other. -->
+                <Button x:Name="DeleteModelLink" Margin="0,10,0,0" HorizontalAlignment="Left"
+                        Visibility="Collapsed"
+                        Style="{StaticResource LinkButton}"
+                        Content="{DynamicResource S.LocalAi.DeleteModel}"
+                        Click="DeleteModelLink_Click"/>
             </StackPanel>
         </Border>
 
         <!-- ══════════ Mode ══════════ -->
-        <TextBlock Margin="0,18,0,8" Text="{DynamicResource S.Settings.OpenAiMode}" Style="{StaticResource SectionLabel}"/>
+        <TextBlock Margin="0,14,0,8" Text="{DynamicResource S.Settings.OpenAiMode}" Style="{StaticResource SectionLabel}"/>
         <UniformGrid Columns="2">
             <RadioButton x:Name="SegmentRadio"
                          GroupName="LocalAiMode"
@@ -352,7 +376,7 @@
         </UniformGrid>
 
         <!-- ══════════ Style ══════════ -->
-        <TextBlock Margin="0,18,0,8" Style="{StaticResource SectionLabel}">
+        <TextBlock Margin="0,14,0,8" Style="{StaticResource SectionLabel}">
             <Run Text="{DynamicResource S.LocalAi.Style}"/><Run Text="{DynamicResource S.LocalAi.Optional}" FontWeight="Normal" FontSize="13" Foreground="{DynamicResource AppTextSecondary}"/>
         </TextBlock>
         <Grid>
@@ -375,7 +399,7 @@
         <!-- ══════════ Timeout and idle release ══════════
              Side by side: both are one small control, and alone on a row each left the rest of
              it empty. -->
-        <Grid Margin="0,18,0,0">
+        <Grid Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="16"/>
@@ -453,51 +477,5 @@
                           SelectionChanged="IdleBox_SelectionChanged"/>
             </StackPanel>
         </Grid>
-
-        <!-- ══════════ Downloaded models ══════════ -->
-        <Border x:Name="DownloadedCard" Margin="0,18,0,0"
-                Background="{DynamicResource AppHeaderBg}"
-                BorderBrush="{DynamicResource AppSubtleBorder}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16,14"
-                Visibility="Collapsed">
-            <StackPanel>
-                <DockPanel>
-                    <TextBlock x:Name="DownloadedSummary" DockPanel.Dock="Right" Style="{StaticResource Note}"
-                               TextTrimming="CharacterEllipsis" MaxWidth="360" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource S.LocalAi.Downloaded}"
-                               FontFamily="{DynamicResource AppFont}" FontSize="14"
-                               Foreground="{DynamicResource AppTextPrimary}"/>
-                </DockPanel>
-                <ItemsControl x:Name="DownloadedList" Margin="0,8,0,0">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="0,6,0,0">
-                                <Button DockPanel.Dock="Right"
-                                        Style="{StaticResource FlatButton}"
-                                        Content="{DynamicResource S.LocalAi.Delete}"
-                                        Height="28" MinWidth="64" Margin="12,0,0,0"
-                                        IsEnabled="{Binding CanDelete}"
-                                        Tag="{Binding Model}"
-                                        Click="DeleteModel_Click"/>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding Size}" Style="{StaticResource Note}" VerticalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Name}"
-                                               FontFamily="{DynamicResource AppFont}" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center"/>
-                                    <Border Margin="8,0,0,0" Style="{StaticResource Chip}"
-                                            Background="{DynamicResource AppAccentSubtle}"
-                                            Visibility="{Binding InUseVisibility}">
-                                        <TextBlock Text="{DynamicResource S.LocalAi.InUse}" FontSize="12"
-                                                   Foreground="{DynamicResource AppAccent}"/>
-                                    </Border>
-                                </StackPanel>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
     </StackPanel>
 </UserControl>

@@ -136,7 +136,7 @@ internal sealed class LocalAiService : ILocalAiBackend
     }
 
     /// <summary>Removes a model, closing it first if it is the one in use.</summary>
-    internal void Delete(LocalAiModel model)
+    internal async Task DeleteAsync(LocalAiModel model)
     {
         if (Settings.ModelId == model.Id)
         {
@@ -146,7 +146,7 @@ internal sealed class LocalAiService : ILocalAiBackend
             settings.Save();
         }
 
-        Store.Delete(model);
+        await Store.DeleteAsync(model);
         RaiseChanged();
     }
 

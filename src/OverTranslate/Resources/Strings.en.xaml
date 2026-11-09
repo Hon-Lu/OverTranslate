@@ -97,7 +97,7 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">Could not parse the OpenAI-compatible API response.</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">The OpenAI-compatible API returned no translation.</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">The OpenAI-compatible API did not respond within {0} seconds. You can change the timeout in the translation service settings.</sys:String>
-    <sys:String x:Key="S.Error.LocalAiNoModel">No model downloaded. Download one in the translation service settings.</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">No model downloaded. Go to Service setup on the Settings page to download one.</sys:String>
     <sys:String x:Key="S.Error.LocalAiDownloading">The model is downloading ({0}%). Try again once it finishes.</sys:String>
     <sys:String x:Key="S.Error.LocalAiStartFailed">The local model failed to start. Try a smaller model.</sys:String>
     <sys:String x:Key="S.Error.LocalAiNoGpu">No dedicated graphics card detected. This translation feature cannot be used.</sys:String>
@@ -284,9 +284,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Main.NoTextBody">No readable text in the selected area.</sys:String>
     <sys:String x:Key="S.Main.Translating">Translating</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">Translation failed</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">The current translation source may be temporarily unavailable.
-Switch to a different source and try again.
-Details: {0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">Copied</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">The selected area was copied to the clipboard.</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">The recognized text was copied to the clipboard.</sys:String>
@@ -549,11 +546,10 @@ Details: {0}</sys:String>
     <sys:String x:Key="S.LocalAi.ReleaseNote">Closes the model to free up memory. It restarts automatically on the next translation.</sys:String>
     <sys:String x:Key="S.LocalAi.StoppedNote">The model starts automatically when you translate with this service.</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">Delete model</sys:String>
-    <sys:String x:Key="S.LocalAi.Downloaded">Downloaded models</sys:String>
-    <sys:String x:Key="S.LocalAi.DownloadedSummary">{0} GB in total · Location: {1}</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedTag">Downloaded</sys:String>
-    <sys:String x:Key="S.LocalAi.InUse">In use</sys:String>
     <sys:String x:Key="S.LocalAi.Delete">Delete</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">Delete “{0}”? It will have to be downloaded again.</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">The model file could not be deleted. Try again later.</sys:String>
     <sys:String x:Key="S.LocalAi.Style">Translation style</sys:String>
     <sys:String x:Key="S.LocalAi.Optional" xml:space="preserve"> (optional)</sys:String>
     <sys:String x:Key="S.LocalAi.StylePlaceholder">For example: casual, relaxed tone</sys:String>

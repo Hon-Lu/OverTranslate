@@ -36,6 +36,9 @@ internal sealed class LocalAiModelStore
 
     private readonly LocalAiDownloader _downloader;
     private readonly object _sync = new();
+    private static readonly TimeSpan DeleteLimit = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan DeleteRetryEvery = TimeSpan.FromMilliseconds(100);
+
     private CancellationTokenSource? _download;
     private Stopwatch? _clock;
     private long _resumedFrom;
@@ -215,6 +218,30 @@ internal sealed class LocalAiModelStore
         if (Directory.Exists(FolderOf(model)))
             Directory.Delete(FolderOf(model), recursive: true);
         RaiseChanged();
+    }
+
+    /// <summary>
+    /// <see cref="Delete"/>, waiting for the file to come free: a server that was just closed still
+    /// holds the model mapped for a moment after it has been told to go.
+    /// </summary>
+    /// <exception cref="IOException">Still held when <paramref name="limit"/> ran out.</exception>
+    /// <exception cref="UnauthorizedAccessException">Still held when <paramref name="limit"/> ran out.</exception>
+    internal async Task DeleteAsync(LocalAiModel model, TimeSpan? limit = null)
+    {
+        var started = Stopwatch.StartNew();
+        var patience = limit ?? DeleteLimit;
+        while (true)
+        {
+            try
+            {
+                Delete(model);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && started.Elapsed < patience)
+            {
+                await Task.Delay(DeleteRetryEvery);
+            }
+        }
     }
 
     private static void DeleteFolder(string folder)

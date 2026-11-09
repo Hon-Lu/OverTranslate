@@ -97,7 +97,7 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI Compatible API 响应格式无法解析。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI Compatible API 未返回译文。</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI Compatible API 在 {0} 秒内没有响应。可在「翻译服务设置」中调整超时秒数。</sys:String>
-    <sys:String x:Key="S.Error.LocalAiNoModel">尚未下载模型，请至「翻译服务设置」下载。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">尚未下载模型，请至设置页的「翻译服务设置」进行下载。</sys:String>
     <sys:String x:Key="S.Error.LocalAiDownloading">模型下载中（{0}%），请等待下载完成后再试。</sys:String>
     <sys:String x:Key="S.Error.LocalAiStartFailed">本地模型启动失败，请尝试使用较小的模型。</sys:String>
     <sys:String x:Key="S.Error.LocalAiNoGpu">未检测到独立显卡，无法使用此翻译功能。</sys:String>
@@ -284,9 +284,6 @@
     <sys:String x:Key="S.Main.NoTextBody">所选区域中未找到可识别的文字。</sys:String>
     <sys:String x:Key="S.Main.Translating">翻译中</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">翻译失败</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">目前使用的翻译源可能暂时无法使用。
-请切换其他翻译源后再试一次。
-详细信息：{0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">已复制</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">已将框选截图复制到剪贴板。</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">已将识别文字复制到剪贴板。</sys:String>
@@ -549,11 +546,10 @@
     <sys:String x:Key="S.LocalAi.ReleaseNote">立即关闭模型以释放内存，下次翻译时会自动重新启动。</sys:String>
     <sys:String x:Key="S.LocalAi.StoppedNote">使用此翻译服务翻译时会自动启动模型。</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">删除模型</sys:String>
-    <sys:String x:Key="S.LocalAi.Downloaded">已下载的模型</sys:String>
-    <sys:String x:Key="S.LocalAi.DownloadedSummary">共 {0} GB · 存储位置：{1}</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedTag">已下载</sys:String>
-    <sys:String x:Key="S.LocalAi.InUse">使用中</sys:String>
     <sys:String x:Key="S.LocalAi.Delete">删除</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">确定要删除“{0}”吗？删除后需重新下载。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">无法删除模型文件，请稍后再试。</sys:String>
     <sys:String x:Key="S.LocalAi.Style">翻译风格</sys:String>
     <sys:String x:Key="S.LocalAi.Optional">（选填）</sys:String>
     <sys:String x:Key="S.LocalAi.StylePlaceholder">例如：语气口语、轻松</sys:String>

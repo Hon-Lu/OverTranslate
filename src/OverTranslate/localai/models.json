@@ -38,19 +38,6 @@
       "descriptionKey": "S.LocalAi.ModelDescGemmaE4B"
     },
     {
-      "id": "gemma-4-e2b-q4-k-m",
-      "name": "Gemma 4 E2B · Q4_K_M",
-      "shortName": "Gemma 4 E2B",
-      "recommended": false,
-      "repo": "unsloth/gemma-4-E2B-it-GGUF",
-      "file": "gemma-4-E2B-it-Q4_K_M.gguf",
-      "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/0314792d7f1f7e229411f620751375812bb9faf2/gemma-4-E2B-it-Q4_K_M.gguf",
-      "size": 3106738272,
-      "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
-      "vramMiB": 1993,
-      "format": "gemma-4"
-    },
-    {
       "id": "hy-mt2-1-8b-q8-0",
       "name": "Hy-MT2 1.8B · Q8_0",
       "shortName": "Hy-MT2 1.8B",
@@ -64,19 +51,6 @@
       "format": "hy-mt2-1.8b"
     },
     {
-      "id": "gemma-4-12b-qat-q4-0",
-      "name": "Gemma 4 12B · QAT Q4_0",
-      "shortName": "Gemma 4 12B",
-      "recommended": false,
-      "repo": "google/gemma-4-12B-it-qat-q4_0-gguf",
-      "file": "gemma-4-12b-it-qat-q4_0.gguf",
-      "url": "https://huggingface.co/google/gemma-4-12B-it-qat-q4_0-gguf/resolve/29d097773436b69ff9feafd636ab4cf873786537/gemma-4-12b-it-qat-q4_0.gguf",
-      "size": 6975879296,
-      "sha256": "93567e57a8fe10b23569b9d9ec38cd005deedf71e29477c421a4b83f418a538b",
-      "vramMiB": 7729,
-      "format": "gemma-4"
-    },
-    {
       "id": "hy-mt2-7b-q8-0",
       "name": "Hy-MT2 7B · Q8_0",
       "shortName": "Hy-MT2 7B Q8",
@@ -88,6 +62,32 @@
       "sha256": "58b3ad55dd6f6fa08c695cddc34fb5f8f708a844f78ae10508071914b0ed67c0",
       "vramMiB": 8403,
       "format": "hy-mt2-7b"
+    },
+    {
+      "id": "gemma-4-e2b-q4-k-m",
+      "name": "Gemma 4 E2B · Q4_K_M",
+      "shortName": "Gemma 4 E2B",
+      "recommended": false,
+      "repo": "unsloth/gemma-4-E2B-it-GGUF",
+      "file": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/0314792d7f1f7e229411f620751375812bb9faf2/gemma-4-E2B-it-Q4_K_M.gguf",
+      "size": 3106738272,
+      "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+      "vramMiB": 1993,
+      "format": "gemma-4"
+    },
+    {
+      "id": "gemma-4-12b-qat-q4-0",
+      "name": "Gemma 4 12B · QAT Q4_0",
+      "shortName": "Gemma 4 12B",
+      "recommended": false,
+      "repo": "google/gemma-4-12B-it-qat-q4_0-gguf",
+      "file": "gemma-4-12b-it-qat-q4_0.gguf",
+      "url": "https://huggingface.co/google/gemma-4-12B-it-qat-q4_0-gguf/resolve/29d097773436b69ff9feafd636ab4cf873786537/gemma-4-12b-it-qat-q4_0.gguf",
+      "size": 6975879296,
+      "sha256": "93567e57a8fe10b23569b9d9ec38cd005deedf71e29477c421a4b83f418a538b",
+      "vramMiB": 7729,
+      "format": "gemma-4"
     },
     {
       "id": "gemma-4-26b-a4b-q4-0",

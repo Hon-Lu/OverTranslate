@@ -1166,7 +1166,7 @@ public partial class MainWindow : Window
             requestToolbar?.SetToggleEnabled(_lastColoredBlocks.Count > 0);
             ShowNotice(
                 LocalizationService.Get("S.Main.TranslateFailedTitle"),
-                LocalizationService.Format("S.Main.TranslateFailedBody", ex.Message));
+                ex.Message);
         }
         finally
         {

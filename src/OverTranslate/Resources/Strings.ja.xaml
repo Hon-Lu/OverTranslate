@@ -98,7 +98,7 @@
     <sys:String x:Key="S.Error.OpenAiUnparsable">OpenAI 互換 API の応答を解析できませんでした。</sys:String>
     <sys:String x:Key="S.Error.OpenAiNoTranslation">OpenAI 互換 API から訳文が返りませんでした。</sys:String>
     <sys:String x:Key="S.Error.OpenAiTimeout">OpenAI 互換 API から {0} 秒以内に応答がありませんでした。翻訳サービス設定でタイムアウトの秒数を変更できます。</sys:String>
-    <sys:String x:Key="S.Error.LocalAiNoModel">モデルがダウンロードされていません。「翻訳サービス設定」でダウンロードしてください。</sys:String>
+    <sys:String x:Key="S.Error.LocalAiNoModel">モデルがダウンロードされていません。設定ページの「翻訳サービスの設定」でダウンロードしてください。</sys:String>
     <sys:String x:Key="S.Error.LocalAiDownloading">モデルをダウンロード中です（{0}%）。完了してからもう一度お試しください。</sys:String>
     <sys:String x:Key="S.Error.LocalAiStartFailed">ローカルモデルを起動できませんでした。より小さいモデルをお試しください。</sys:String>
     <sys:String x:Key="S.Error.LocalAiNoGpu">専用グラフィックカードが検出されないため、この翻訳機能は使用できません。</sys:String>
@@ -288,9 +288,6 @@
     <sys:String x:Key="S.Main.NoTextBody">選択した範囲に認識できるテキストがありませんでした。</sys:String>
     <sys:String x:Key="S.Main.Translating">翻訳中</sys:String>
     <sys:String x:Key="S.Main.TranslateFailedTitle">翻訳に失敗しました</sys:String>
-    <sys:String x:Key="S.Main.TranslateFailedBody">現在の翻訳サービスが一時的に利用できない可能性があります。
-別のサービスに切り替えてもう一度お試しください。
-詳細：{0}</sys:String>
     <sys:String x:Key="S.Main.CopiedTitle">コピーしました</sys:String>
     <sys:String x:Key="S.Main.CopiedBody">選択範囲のスクリーンショットをクリップボードにコピーしました。</sys:String>
     <sys:String x:Key="S.Main.TextCopiedBody">認識したテキストをクリップボードにコピーしました。</sys:String>
@@ -553,11 +550,10 @@
     <sys:String x:Key="S.LocalAi.ReleaseNote">モデルを閉じてメモリを解放します。次回の翻訳時に自動で再起動します。</sys:String>
     <sys:String x:Key="S.LocalAi.StoppedNote">このサービスで翻訳すると、モデルが自動で起動します。</sys:String>
     <sys:String x:Key="S.LocalAi.DeleteModel">モデルを削除</sys:String>
-    <sys:String x:Key="S.LocalAi.Downloaded">ダウンロード済みのモデル</sys:String>
-    <sys:String x:Key="S.LocalAi.DownloadedSummary">合計 {0} GB · 保存先：{1}</sys:String>
     <sys:String x:Key="S.LocalAi.DownloadedTag">ダウンロード済み</sys:String>
-    <sys:String x:Key="S.LocalAi.InUse">使用中</sys:String>
     <sys:String x:Key="S.LocalAi.Delete">削除</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteConfirm">「{0}」を削除しますか？もう一度使うにはダウンロードが必要です。</sys:String>
+    <sys:String x:Key="S.LocalAi.DeleteFailed">モデルファイルを削除できませんでした。しばらくしてからもう一度お試しください。</sys:String>
     <sys:String x:Key="S.LocalAi.Style">翻訳のスタイル</sys:String>
     <sys:String x:Key="S.LocalAi.Optional">（任意）</sys:String>
     <sys:String x:Key="S.LocalAi.StylePlaceholder">例：くだけた口調で</sys:String>

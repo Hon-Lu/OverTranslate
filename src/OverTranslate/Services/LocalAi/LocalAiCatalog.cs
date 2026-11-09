@@ -54,8 +54,8 @@ internal sealed record LocalAiCatalog(
 
     internal IEnumerable<LocalAiModel> Recommended => Models.Where(model => model.Recommended);
 
-    /// <summary>The rest, smallest VRAM first.</summary>
-    internal IEnumerable<LocalAiModel> Others => Models.Where(model => !model.Recommended).OrderBy(model => model.VramMiB);
+    /// <summary>The rest, in the order the list gives them: one family together, smallest first.</summary>
+    internal IEnumerable<LocalAiModel> Others => Models.Where(model => !model.Recommended);
 
     internal LocalAiModel? Find(string? id) => Models.FirstOrDefault(model => model.Id == id);
 

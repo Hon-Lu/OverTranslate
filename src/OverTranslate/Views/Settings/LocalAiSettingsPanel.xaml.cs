@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,7 +12,6 @@ using OverTranslate.Services.Providers;
 // UseWindowsForms puts System.Windows.Forms in the implicit usings, so these names collide
 using UserControl = System.Windows.Controls.UserControl;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using Button = System.Windows.Controls.Button;
 using Brush = System.Windows.Media.Brush;
 
 namespace OverTranslate.Views.Settings;
@@ -50,6 +48,9 @@ public partial class LocalAiSettingsPanel : UserControl
     private DateTime _lastProgress;
     private LocalAiFileState? _shownState;
     private bool _detailsOpen;
+
+    /// <summary>Deleting a model was asked for; the question is drawn over the whole panel.</summary>
+    internal event EventHandler<LocalAiModel>? DeleteModelRequested;
 
     public LocalAiSettingsPanel()
     {
@@ -221,7 +222,8 @@ public partial class LocalAiSettingsPanel : UserControl
                 break;
         }
 
-        RenderDownloadedList();
+        DeleteModelLink.Visibility = Show(
+            model is not null && state != LocalAiFileState.Initializing && Service.Store.IsDownloaded(model));
     }
 
     private static Visibility Show(bool show) => show ? Visibility.Visible : Visibility.Collapsed;
@@ -309,8 +311,6 @@ public partial class LocalAiSettingsPanel : UserControl
         DetailsButton.Visibility = Show(running == LocalAiServerState.Failed);
         DetailsBox.Text = host.FailureDetail;
         DetailsBox.Visibility = Show(running == LocalAiServerState.Failed && _detailsOpen);
-
-        DeleteOnlyLink.Visibility = Show(Service.Store.Downloaded.Count <= 1);
     }
 
     private static string FailureText(Exception error) => MangaModelStore.Classify(error) switch
@@ -333,7 +333,10 @@ public partial class LocalAiSettingsPanel : UserControl
         public string Vram { get; init; } = "";
         public bool CanChoose { get; init; }
         public bool Star { get; init; }
-        public FontWeight NameWeight { get; init; } = FontWeights.SemiBold;
+        public double NameSize { get; init; } = 14;
+        public int NameColumn { get; init; } = 1;
+        public int NameColumnSpan { get; init; } = 1;
+        public Thickness RowPadding { get; init; } = new(10, 7, 10, 7);
         public Brush? NameBrush { get; init; }
         public string Badge { get; init; } = "";
         public Brush? BadgeBackground { get; init; }
@@ -347,6 +350,13 @@ public partial class LocalAiSettingsPanel : UserControl
     internal static bool Fits(LocalAiModel model, IReadOnlyList<LocalAiGpuDevice>? cards) =>
         cards is null or { Count: 0 } || model.VramMiB <= cards.Max(card => card.MemoryMiB);
 
+    /// <summary>
+    /// Whether a model can be picked. One already here can be even when it does not fit, or a change
+    /// of card would leave its files with no way to be deleted.
+    /// </summary>
+    internal static bool CanChoose(LocalAiModel model, IReadOnlyList<LocalAiGpuDevice>? cards, bool downloaded) =>
+        downloaded || Fits(model, cards);
+
     private Brush Resource(string key) => (Brush)FindResource(key);
 
     private void RenderPicker()
@@ -355,14 +365,16 @@ public partial class LocalAiSettingsPanel : UserControl
         ModelPickerText.Text = model?.Name ?? LocalizationService.Get("S.LocalAi.ChooseModel");
         ModelPickerText.SetResourceReference(TextBlock.ForegroundProperty, model is null ? "AppTextSecondary" : "AppTextPrimary");
         ModelPickerText.FontWeight = model is null ? FontWeights.Normal : FontWeights.SemiBold;
-        ModelPickerStar.Visibility = Show(model?.Recommended == true);
+        // A model without a star keeps the star's width, so its name starts where it does in the list.
+        ModelPickerStar.Visibility = model?.Recommended == true ? Visibility.Visible
+            : model is null ? Visibility.Collapsed : Visibility.Hidden;
 
         if (Service.Store.Catalog is not { } catalog) return;
 
         var downloaded = Service.Store.Downloaded;
-        var rows = new List<ModelRow> { Heading(LocalizationService.Get("S.LocalAi.Recommended")) };
+        var rows = new List<ModelRow> { Heading(LocalizationService.Get("S.LocalAi.Recommended"), first: true) };
         rows.AddRange(catalog.Recommended.Select(item => RowFor(item, downloaded)));
-        rows.Add(Heading(LocalizationService.Get("S.LocalAi.OtherVersions")));
+        rows.Add(Heading(LocalizationService.Get("S.LocalAi.OtherVersions"), first: false));
         rows.AddRange(catalog.Others.Select(item => RowFor(item, downloaded)));
 
         _loadingList = true;
@@ -373,12 +385,16 @@ public partial class LocalAiSettingsPanel : UserControl
 
     private bool _loadingList;
 
-    private ModelRow Heading(string text) => new()
+    /// <summary>A group's heading. The columns are named once, on the first.</summary>
+    private ModelRow Heading(string text, bool first) => new()
     {
         Name = text,
-        File = LocalizationService.Get("S.LocalAi.ColumnFile"),
-        Vram = LocalizationService.Get("S.LocalAi.ColumnVram"),
-        NameWeight = FontWeights.Normal,
+        File = first ? LocalizationService.Get("S.LocalAi.ColumnFile") : "",
+        Vram = first ? LocalizationService.Get("S.LocalAi.ColumnVram") : "",
+        NameSize = 12.5,
+        NameColumn = 0,
+        NameColumnSpan = 2,
+        RowPadding = new Thickness(10, first ? 4 : 12, 10, 2),
         NameBrush = Resource("AppTextSecondary"),
     };
 
@@ -386,6 +402,7 @@ public partial class LocalAiSettingsPanel : UserControl
     {
         var fits = Fits(model, _gpus);
         var isDownloaded = downloaded.Contains(model);
+        var canChoose = CanChoose(model, _gpus, isDownloaded);
         return new ModelRow
         {
             Source = model,
@@ -393,9 +410,9 @@ public partial class LocalAiSettingsPanel : UserControl
             Description = model.DescriptionKey is { } key ? LocalizationService.Get(key) : "",
             File = $"{(model.Size / 1e9).ToString("F2", CultureInfo.InvariantCulture)} GB",
             Vram = $"{(model.VramMiB / 1024.0).ToString("F1", CultureInfo.InvariantCulture)} GB",
-            CanChoose = fits,
+            CanChoose = canChoose,
             Star = model.Recommended,
-            NameBrush = Resource(fits ? "AppTextPrimary" : "AppTextSecondary"),
+            NameBrush = Resource(canChoose ? "AppTextPrimary" : "AppTextSecondary"),
             Badge = !fits ? LocalizationService.Get("S.LocalAi.NotEnoughVram")
                 : isDownloaded ? LocalizationService.Get("S.LocalAi.DownloadedTag") : "",
             BadgeBackground = Resource(fits ? "MangaCardReadyBg" : "AppWarningSubtle"),
@@ -431,56 +448,20 @@ public partial class LocalAiSettingsPanel : UserControl
         Render();
     }
 
-    private void DeleteOnlyLink_Click(object sender, RoutedEventArgs e)
+    private void DeleteModelLink_Click(object sender, RoutedEventArgs e)
     {
-        if (_chosen is not { } model) return;
-        DeleteAndRender(model);
-        _chosen = null;
+        if (_chosen is { } model) DeleteModelRequested?.Invoke(this, model);
+    }
+
+    /// <summary>A model is gone; the one that was chosen no longer is, if that was it.</summary>
+    internal void OnModelDeleted(LocalAiModel model)
+    {
+        if (_chosen?.Id == model.Id) _chosen = null;
         Render();
     }
-
-    private void DeleteModel_Click(object sender, RoutedEventArgs e)
-    {
-        if (((Button)sender).Tag is LocalAiModel model) DeleteAndRender(model);
-    }
-
-    private void DeleteAndRender(LocalAiModel model)
-    {
-        try
-        {
-            Service.Delete(model);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            DetailsBox.Text = ex.Message;
-        }
-
-        Render();
-    }
-
-    // ── Downloaded models ────────────────────────────────────────────────────
-
-    public sealed record DownloadedRow(object Model, string Name, string Size, bool CanDelete, Visibility InUseVisibility);
 
     /// <param name="Display">Read by name: it is what the shared combo box template shows.</param>
     public sealed record IdleChoice(int Minutes, string Display);
-
-    private void RenderDownloadedList()
-    {
-        var store = Service.Store;
-        var downloaded = store.Downloaded;
-        DownloadedCard.Visibility = Show(downloaded.Count >= 2);
-        if (downloaded.Count < 2) return;
-
-        var active = Service.ActiveModel;
-        DownloadedSummary.Text = LocalizationService.Format(
-            "S.LocalAi.DownloadedSummary", Gigabytes(downloaded.Sum(model => model.Size)), store.Root);
-        DownloadedSummary.ToolTip = store.Root;
-        DownloadedList.ItemsSource = downloaded.Select(model => new DownloadedRow(
-            model, model.Name, $"{Gigabytes(model.Size)} GB",
-            model.Id != active?.Id,
-            Show(model.Id == active?.Id))).ToList();
-    }
 
     // ── Settings ─────────────────────────────────────────────────────────────
 

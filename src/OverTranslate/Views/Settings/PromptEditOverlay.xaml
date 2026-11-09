@@ -158,46 +158,6 @@
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="Padding"         Value="12,8"/>
         </Style>
-
-        <!-- ══════════ Danger button ══════════ -->
-        <!-- AccentButton names the accent brushes inside its own hover and pressed triggers, so a
-             red one cannot be derived from it — it has to carry its own template. This is the only
-             destructive confirmation in the app; the colour is what stops the two buttons on that
-             card reading as a pair of equals. -->
-        <Style x:Key="DangerButton" TargetType="Button">
-            <Setter Property="FontFamily"      Value="{DynamicResource AppFont}"/>
-            <Setter Property="FontSize"        Value="{StaticResource AppFontSize}"/>
-            <Setter Property="Foreground"      Value="#FFFFFFFF"/>
-            <Setter Property="Background"      Value="{DynamicResource AppError}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding"         Value="16,0"/>
-            <Setter Property="Height"          Value="34"/>
-            <Setter Property="Cursor"          Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <!-- Lifted and dropped by opacity rather than by two more brushes:
-                                 AppError is one colour per theme, and hover and pressed states
-                                 defined here would be a third and a fourth to keep in step. -->
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Opacity" Value="0.7"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
