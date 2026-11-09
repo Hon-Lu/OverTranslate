@@ -426,10 +426,10 @@
                                                  Content="{DynamicResource S.Settings.General}" Click="SettingsSubNav_Click"/>
                                     <RadioButton x:Name="SettingsModelsNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
                                                  Content="{DynamicResource S.Settings.Models}" Click="SettingsSubNav_Click"/>
-                                    <RadioButton x:Name="SettingsHotkeysNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
-                                                 Content="{DynamicResource S.Settings.Hotkeys}" Click="SettingsSubNav_Click"/>
                                     <RadioButton x:Name="SettingsServicesNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
                                                  Content="{DynamicResource S.Settings.NavServices}" Click="SettingsSubNav_Click"/>
+                                    <RadioButton x:Name="SettingsHotkeysNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
+                                                 Content="{DynamicResource S.Settings.Hotkeys}" Click="SettingsSubNav_Click"/>
                                     <RadioButton x:Name="SettingsAdvancedNav" Style="{StaticResource NavSubItem}" GroupName="SettingsSections"
                                                  Content="{DynamicResource S.Settings.Advanced}" Click="SettingsSubNav_Click"/>
                                 </StackPanel>

@@ -16,8 +16,8 @@ public enum SettingsSection
 {
     General,
     Models,
-    Hotkeys,
     Services,
+    Hotkeys,
     Advanced,
 }
 
