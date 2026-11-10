@@ -470,7 +470,7 @@
     <sys:String x:Key="S.Provider.Yandex">Yandex 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻譯</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">需申請官方 API Key</sys:String>
-    <sys:String x:Key="S.Provider.LocalAI">本機 AI 翻譯</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">AI 翻譯 (本地)</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">內建模型，無需安裝額外應用工具，可直接使用</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">支援 OpenAI 相容 API（如 Ollama、LM Studio、OpenRouter），建議使用本地 LLM。</sys:String>
@@ -537,6 +537,7 @@
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻譯服務設定</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">至少要保留一個服務</sys:String>
+    <sys:String x:Key="S.LocalAi.DialogTitle">AI 翻譯設定</sys:String>
     <sys:String x:Key="S.LocalAi.Model">模型</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">請選擇模型</sys:String>
     <sys:String x:Key="S.LocalAi.ModelFile">模型狀態</sys:String>

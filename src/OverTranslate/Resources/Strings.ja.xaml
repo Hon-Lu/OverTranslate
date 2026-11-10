@@ -452,7 +452,7 @@
     <sys:String x:Key="S.Provider.Yandex">Yandex 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL 翻訳</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">公式の API キーが必要</sys:String>
-    <sys:String x:Key="S.Provider.LocalAI">ローカル AI 翻訳</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">AI 翻訳 (ローカル)</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">内蔵モデルを使用。追加のアプリをインストールせずに使えます</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">OpenAI 互換 API に対応（Ollama・LM Studio・OpenRouter など）。ローカル LLM の利用がおすすめです。</sys:String>
@@ -517,6 +517,7 @@
 
     <sys:String x:Key="S.Settings.ServiceSetup">翻訳サービスの設定</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">少なくとも 1 つは残してください</sys:String>
+    <sys:String x:Key="S.LocalAi.DialogTitle">AI 翻訳の設定</sys:String>
     <sys:String x:Key="S.LocalAi.Model">モデル</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">モデルを選択</sys:String>
     <sys:String x:Key="S.LocalAi.ModelFile">モデルの状態</sys:String>

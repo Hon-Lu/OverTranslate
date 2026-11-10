@@ -445,7 +445,7 @@
     <sys:String x:Key="S.Provider.Yandex">Яндекс</sys:String>
     <sys:String x:Key="S.Provider.DeepL">DeepL</sys:String>
     <sys:String x:Key="S.Provider.DeepLHint">Нужен официальный ключ API</sys:String>
-    <sys:String x:Key="S.Provider.LocalAI">Локальный ИИ</sys:String>
+    <sys:String x:Key="S.Provider.LocalAI">ИИ (локальный)</sys:String>
     <sys:String x:Key="S.Provider.LocalAIHint">Встроенные модели. Не требует установки дополнительных приложений</sys:String>
     <sys:String x:Key="S.Provider.OpenAI">OpenAI</sys:String>
     <sys:String x:Key="S.Provider.OpenAIHint">Любой API, совместимый с OpenAI (Ollama, LM Studio, OpenRouter…). Рекомендуется локальная LLM.</sys:String>
@@ -508,6 +508,7 @@
 
     <sys:String x:Key="S.Settings.ServiceSetup">Службы перевода</sys:String>
     <sys:String x:Key="S.Settings.ProviderMenuKeepOne">Оставьте хотя бы одну службу</sys:String>
+    <sys:String x:Key="S.LocalAi.DialogTitle">Настройки ИИ-перевода</sys:String>
     <sys:String x:Key="S.LocalAi.Model">Модель</sys:String>
     <sys:String x:Key="S.LocalAi.ChooseModel">Выберите модель</sys:String>
     <sys:String x:Key="S.LocalAi.ModelFile">Состояние модели</sys:String>

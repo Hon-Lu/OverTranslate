@@ -184,8 +184,11 @@ public partial class ServiceSettingsOverlay : UserControl
         {
             var s = SettingsService.Instance.Current;
 
-            TitleText.Text = LocalizationService.Format(
-                "S.Settings.ServiceDialogTitle", LanguageData.GetProviderDisplay(_provider));
+            // Not named after the provider: 「(本地)」 is there to tell it apart in the menus, and in
+            // this dialog's own title it would only be in the way.
+            TitleText.Text = _provider == TranslationProvider.LocalAI
+                ? LocalizationService.Get("S.LocalAi.DialogTitle")
+                : LocalizationService.Format("S.Settings.ServiceDialogTitle", LanguageData.GetProviderDisplay(_provider));
 
             var deepL = _provider == TranslationProvider.DeepL;
             var localAi = _provider == TranslationProvider.LocalAI;
