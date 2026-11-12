@@ -16,7 +16,7 @@ public class SettingsService
     // them and the app came back up on factory defaults. Roaming AppData sits outside the install.
     private static readonly string SettingsDirectory = AppDataPaths.Root;
 
-    private static readonly string SettingsPath = Path.Combine(SettingsDirectory, "appsettings.json");
+    private static readonly string SettingsPath = AppDataPaths.SettingsFile;
 
     /// <summary>
     /// Where the settings actually are, for the one caller that needs the file rather than the
@@ -308,22 +308,51 @@ public class SettingsService
         return true;
     }
 
+    /// <summary>
+    /// Stores where the models are (<see cref="AppSettings.AssetsLocation"/>, empty for the default)
+    /// and the old location still to be emptied. Unlike every other setting this one has to have
+    /// reached the disk before anything goes on — a move restarts the app straight after — so a
+    /// failed save throws, with the values put back as they were.
+    /// </summary>
+    public void UpdateAssetsLocation(string location, string pendingDelete)
+    {
+        var current = Current;
+        var (oldLocation, oldPending) = (current.AssetsLocation, current.AssetsPendingDelete);
+        current.AssetsLocation = location;
+        current.AssetsPendingDelete = pendingDelete;
+        try
+        {
+            Write();
+        }
+        catch
+        {
+            current.AssetsLocation = oldLocation;
+            current.AssetsPendingDelete = oldPending;
+            throw;
+        }
+    }
+
     public void Save()
     {
         try
         {
-            Directory.CreateDirectory(SettingsDirectory);
-
-            // Write-then-rename: losing power mid-write leaves the previous file intact instead of a
-            // truncated one, which the next launch would read as corrupt and replace with defaults.
-            var tempPath = SettingsPath + ".tmp";
-            File.WriteAllText(tempPath, Serialize(Current));
-            File.Move(tempPath, SettingsPath, overwrite: true);
+            Write();
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to save settings to {0}", SettingsPath);
         }
+    }
+
+    private void Write()
+    {
+        Directory.CreateDirectory(SettingsDirectory);
+
+        // Write-then-rename: losing power mid-write leaves the previous file intact instead of a
+        // truncated one, which the next launch would read as corrupt and replace with defaults.
+        var tempPath = SettingsPath + ".tmp";
+        File.WriteAllText(tempPath, Serialize(Current));
+        File.Move(tempPath, SettingsPath, overwrite: true);
     }
 
     /// <returns>The text of the first file that could be read, and which file that was.</returns>

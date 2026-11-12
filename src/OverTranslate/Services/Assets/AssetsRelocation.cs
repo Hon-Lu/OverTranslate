@@ -63,7 +63,7 @@ internal static class AssetsRelocation
     internal static void SwitchWithoutMoving(string target)
     {
         var full = Path.GetFullPath(target);
-        AssetsPointer.Write(AppDataPaths.AssetsPointerFile, new AssetsPointer(full), Default);
+        SettingsService.Instance.UpdateAssetsLocation(Stored(full), "");
         AppDataPaths.UseAssetsRoot(full);
         AppServices.MangaModels.Relocate(MangaModelStore.DefaultRoot, MangaModelStore.DefaultRuntimeRoot);
         AppServices.LocalAi.Store.Relocate(LocalAiModelStore.DefaultRoot, LocalAiRuntimeStore.DefaultRoot);
@@ -88,7 +88,7 @@ internal static class AssetsRelocation
         var to = Path.GetFullPath(target);
         Log.Info("Moving the assets from {From} to {To}", from, to);
         await Task.Run(() => AssetsMover.CopyAsync(from, to, progress, token), token);
-        AssetsPointer.Write(AppDataPaths.AssetsPointerFile, new AssetsPointer(to, from), Default);
+        SettingsService.Instance.UpdateAssetsLocation(Stored(to), from);
         Log.Info("Assets copied to {To}; {From} is emptied after the restart", to, from);
     }
 
@@ -142,16 +142,19 @@ internal static class AssetsRelocation
     /// </summary>
     internal static void CleanUpPending()
     {
-        if (AppDataPaths.IsAssetsOverridden) return;
-        var file = AppDataPaths.AssetsPointerFile;
-        if (AssetsPointer.Read(file) is not { PendingDelete: { } old } pointer) return;
-
-        // Never the location in use, whatever the file says.
-        if (AssetsPaths.IsWithin(AssetsPaths.Resolve(pointer.Path), AssetsPaths.Resolve(old)) ||
-            AssetsPaths.IsWithin(AssetsPaths.Resolve(old), AssetsPaths.Resolve(pointer.Path)))
+        var settings = SettingsService.Instance.Current;
+        if (SavedAssetsLocation.FullPathOrNull(settings.AssetsPendingDelete) is not { } old)
         {
-            Log.Warn("Not emptying {Old}: it holds the assets location {Path}", old, pointer.Path);
-            WriteQuietly(file, pointer with { PendingDelete = null });
+            if (settings.AssetsPendingDelete.Length > 0) ClearPendingQuietly();
+            return;
+        }
+
+        // Never the location in use, whatever the settings say.
+        if (AssetsPaths.IsWithin(AssetsPaths.Resolve(Current), AssetsPaths.Resolve(old)) ||
+            AssetsPaths.IsWithin(AssetsPaths.Resolve(old), AssetsPaths.Resolve(Current)))
+        {
+            Log.Warn("Not emptying {Old}: it holds the assets location {Path}", old, Current);
+            ClearPendingQuietly();
             return;
         }
 
@@ -160,18 +163,21 @@ internal static class AssetsRelocation
         int left = AssetsMover.RemoveAppFolders(old);
         Log.Info("Emptied the old assets location {Old}; {Left} entries left", old, left);
 
-        if (left <= 0) WriteQuietly(file, pointer with { PendingDelete = null });
+        if (left <= 0) ClearPendingQuietly();
     }
 
-    private static void WriteQuietly(string file, AssetsPointer pointer)
+    /// <summary>The setting for <paramref name="location"/>: empty for the default.</summary>
+    private static string Stored(string location) => AssetsPaths.Same(location, Default) ? "" : location;
+
+    private static void ClearPendingQuietly()
     {
         try
         {
-            AssetsPointer.Write(file, pointer, Default);
+            SettingsService.Instance.UpdateAssetsLocation(SettingsService.Instance.Current.AssetsLocation, "");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Log.Warn(ex, "The assets location file could not be written");
+            Log.Warn(ex, "The settings could not be saved after emptying the old assets location");
         }
     }
 }

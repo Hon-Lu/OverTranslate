@@ -597,8 +597,7 @@ public sealed class MangaModelStoreTests : IDisposable
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         // Wherever the person moved them, if they did (see AssetsLocationTests); the default otherwise.
         var assets = AppDataPaths.ResolveAssetsRoot(
-            Environment.GetEnvironmentVariable(AppDataPaths.AssetsOverride), AppDataPaths.AssetsPointerFile,
-            Path.Combine(local, "OverTranslate-assets"));
+            SettingsService.Instance.Current.AssetsLocation, Path.Combine(local, "OverTranslate-assets"));
 
         Assert.Equal(assets, AppDataPaths.AssetsRoot);
         Assert.Equal(Path.Combine(assets, "models", "manga-vertical"), MangaModelStore.DefaultRoot);

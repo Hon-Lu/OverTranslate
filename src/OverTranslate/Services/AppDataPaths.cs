@@ -29,42 +29,32 @@ namespace OverTranslate.Services;
 /// </remarks>
 internal static class AppDataPaths
 {
-    /// <summary>
-    /// Points <see cref="AssetsRoot"/> somewhere else, for trying a download without touching the
-    /// real one. Uninstalling ignores it and always removes <see cref="DefaultAssetsRoot"/>.
-    /// </summary>
-    internal const string AssetsOverride = "OVERTRANSLATE_ASSETS_DIR";
-
     internal const string AssetsFolderName = "OverTranslate-assets";
 
     internal static string Root { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OverTranslate");
 
+    /// <summary>
+    /// The settings file, named here rather than only in <see cref="SettingsService"/> for the
+    /// uninstall hook, which reads the assets location from it without loading the settings.
+    /// </summary>
+    internal static string SettingsFile => Path.Combine(Root, "appsettings.json");
+
     internal static string Logs => Path.Combine(Root, "logs");
 
     internal static string Diagnostics => Path.Combine(Root, "diagnostics");
 
-    /// <summary><c>%LocalAppData%\OverTranslate-assets</c>, whatever <see cref="AssetsOverride"/> says.</summary>
+    /// <summary><c>%LocalAppData%\OverTranslate-assets</c>, wherever the assets were moved to.</summary>
     internal static string DefaultAssetsRoot { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AssetsFolderName);
-
-    /// <summary>Whether <see cref="AssetsOverride"/> names the assets root; the location cannot be changed then.</summary>
-    internal static bool IsAssetsOverridden =>
-        Environment.GetEnvironmentVariable(AssetsOverride) is { Length: > 0 };
-
-    /// <summary>
-    /// The small file naming where the person moved the assets to (<see cref="Assets.AssetsPointer"/>).
-    /// A file of its own rather than a setting: uninstalling reads it before any setting is loaded,
-    /// and backing settings up or restoring them must not carry a path to another machine's disk.
-    /// </summary>
-    internal static string AssetsPointerFile => Path.Combine(Root, "assets-location.json");
 
     private static string? _assetsRoot;
 
     /// <summary>
-    /// Where the assets are: <see cref="AssetsOverride"/> when set, else what the person chose
-    /// (<see cref="AssetsPointerFile"/>), else <see cref="DefaultAssetsRoot"/>. Changes only through
-    /// <see cref="UseAssetsRoot"/>, when the location is changed with nothing in it to move.
+    /// Where the assets are: what the person chose (<see cref="Models.AppSettings.AssetsLocation"/>),
+    /// else <see cref="DefaultAssetsRoot"/>. Read from the settings the first time anything asks,
+    /// which is before any model loads; changes only through <see cref="UseAssetsRoot"/>, when the
+    /// location is changed with nothing in it to move.
     /// </summary>
     internal static string AssetsRoot
     {
@@ -72,17 +62,15 @@ internal static class AppDataPaths
         {
             var root = Volatile.Read(ref _assetsRoot);
             if (root is not null) return root;
-            root = ResolveAssetsRoot(Environment.GetEnvironmentVariable(AssetsOverride), AssetsPointerFile, DefaultAssetsRoot);
+            root = ResolveAssetsRoot(SettingsService.Instance.Current.AssetsLocation, DefaultAssetsRoot);
             Interlocked.CompareExchange(ref _assetsRoot, root, null);
             return Volatile.Read(ref _assetsRoot)!;
         }
     }
 
-    /// <summary>The override when there is one, else the pointer's location, else the default.</summary>
-    internal static string ResolveAssetsRoot(string? overridden, string pointerFile, string defaultRoot) =>
-        overridden is { Length: > 0 }
-            ? Path.GetFullPath(overridden)
-            : Assets.AssetsPointer.Read(pointerFile)?.Path is { } chosen ? Path.GetFullPath(chosen) : defaultRoot;
+    /// <summary>The chosen location when it is a full path, else the default.</summary>
+    internal static string ResolveAssetsRoot(string? chosen, string defaultRoot) =>
+        Assets.SavedAssetsLocation.FullPathOrNull(chosen) ?? defaultRoot;
 
     /// <summary>Whether <see cref="AssetsRoot"/> is the default location.</summary>
     internal static bool IsDefaultAssetsRoot => Assets.AssetsPaths.Same(AssetsRoot, DefaultAssetsRoot);

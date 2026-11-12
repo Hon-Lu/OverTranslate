@@ -7,49 +7,50 @@ using Microsoft.Win32.SafeHandles;
 namespace OverTranslate.Services.Assets;
 
 /// <summary>
-/// What <see cref="AppDataPaths.AssetsPointerFile"/> holds: where the assets were moved to, and the
-/// old location still to be emptied after the restart that follows a move.
+/// The two settings that say where the assets are, read straight from the settings file: for the
+/// uninstall hook, which runs before anything else and must not go through
+/// <see cref="SettingsService"/> (see <see cref="UninstallCleanup"/>).
 /// </summary>
-internal sealed record AssetsPointer(string Path, string? PendingDelete = null)
+internal sealed record SavedAssetsLocation(string? Path, string? PendingDelete)
 {
-    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
-
-    /// <summary>The pointer, or null when there is none or it cannot be read: the default location then.</summary>
-    internal static AssetsPointer? Read(string file)
+    /// <summary>
+    /// <see cref="Models.AppSettings.AssetsLocation"/> and <see cref="Models.AppSettings.AssetsPendingDelete"/>
+    /// from <paramref name="settingsFile"/>; null when the file cannot be read, and each null when it
+    /// is not a full path: the default location then, and nothing to empty.
+    /// </summary>
+    internal static SavedAssetsLocation? Read(string settingsFile)
     {
         try
         {
-            if (!File.Exists(file)) return null;
-            using var json = JsonDocument.Parse(File.ReadAllText(file));
-            var path = json.RootElement.TryGetProperty("path", out var p) ? p.GetString() : null;
-            if (string.IsNullOrWhiteSpace(path) || !System.IO.Path.IsPathFullyQualified(path)) return null;
-            var pending = json.RootElement.TryGetProperty("pendingDelete", out var d) ? d.GetString() : null;
-            return new AssetsPointer(path, string.IsNullOrWhiteSpace(pending) ? null : pending);
+            if (!File.Exists(settingsFile)) return null;
+            using var json = JsonDocument.Parse(File.ReadAllText(settingsFile));
+            if (json.RootElement.ValueKind != JsonValueKind.Object) return null;
+            return new SavedAssetsLocation(
+                FullPathOrNull(Text(json.RootElement, nameof(Models.AppSettings.AssetsLocation))),
+                FullPathOrNull(Text(json.RootElement, nameof(Models.AppSettings.AssetsPendingDelete))));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
             return null;
         }
     }
 
-    /// <summary>
-    /// Writes the pointer, or removes the file when it would only say the default location with
-    /// nothing left to clean: the default needs no pointer.
-    /// </summary>
-    internal static void Write(string file, AssetsPointer pointer, string defaultRoot)
+    /// <summary>The path in full, or null when it is empty or not a full path.</summary>
+    internal static string? FullPathOrNull(string? path)
     {
-        if (AssetsPaths.Same(pointer.Path, defaultRoot) && pointer.PendingDelete is null)
+        if (string.IsNullOrWhiteSpace(path) || !System.IO.Path.IsPathFullyQualified(path)) return null;
+        try
         {
-            if (File.Exists(file)) File.Delete(file);
-            return;
+            return System.IO.Path.GetFullPath(path);
         }
-
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file)!);
-        var temp = file + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(
-            new { path = pointer.Path, pendingDelete = pointer.PendingDelete }, Json));
-        File.Move(temp, file, overwrite: true);
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
     }
+
+    private static string? Text(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }
 
 /// <summary>Path arithmetic for the assets location: the folder name, comparing, resolving.</summary>

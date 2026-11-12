@@ -72,11 +72,9 @@ public partial class SettingsPage
                     AssetsLocationOverlay.OneDecimal(used), v.Drive, AssetsLocationOverlay.Whole(v.FreeBytes))
                 : LocalizationService.Format("S.Assets.Free", v.Drive, AssetsLocationOverlay.Whole(v.FreeBytes));
 
-        var overridden = AppDataPaths.IsAssetsOverridden;
         var downloading = AssetsRelocation.AnyDownloading;
         var (status, brush) =
             !reachable ? ("S.Assets.Unreachable", "AppError")
-            : overridden ? ("S.Assets.Overridden", "AppTextSecondary")
             : downloading ? ("S.Assets.WaitDownload", "AppTextSecondary")
             : _assetsFlashKey is { } flash ? (flash, "AppSuccess")
             : ((string?)null, "AppTextSecondary");
@@ -88,8 +86,8 @@ public partial class SettingsPage
         }
 
         AssetsOpenBtn.Visibility = reachable ? Visibility.Visible : Visibility.Collapsed;
-        AssetsResetBtn.Visibility = !reachable && !overridden ? Visibility.Visible : Visibility.Collapsed;
-        AssetsChangeBtn.IsEnabled = !overridden && !downloading;
+        AssetsResetBtn.Visibility = !reachable ? Visibility.Visible : Visibility.Collapsed;
+        AssetsChangeBtn.IsEnabled = !downloading;
     }
 
     private void AssetsOpenBtn_Click(object sender, RoutedEventArgs e)

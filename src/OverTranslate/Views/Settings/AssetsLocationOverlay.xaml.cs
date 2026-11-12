@@ -44,7 +44,7 @@ public partial class AssetsLocationOverlay : UserControl
 
     internal void Open()
     {
-        if (_open || AppDataPaths.IsAssetsOverridden || AssetsRelocation.AnyDownloading) return;
+        if (_open || AssetsRelocation.AnyDownloading) return;
         _open = true;
         _context = AssetsRelocation.Context();
         var current = _context.Current;

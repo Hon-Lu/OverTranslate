@@ -2,13 +2,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Assets;
 using Xunit;
 
 namespace OverTranslate.Tests;
 
-/// <summary>Changing where the models are kept: the folder name, path checks, the pointer file.</summary>
+/// <summary>Changing where the models are kept: the folder name, path checks, the setting.</summary>
 public sealed class AssetsLocationTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "ot-assets-" + Guid.NewGuid().ToString("N"));
@@ -273,54 +274,63 @@ public sealed class AssetsLocationTests : IDisposable
         Assert.True(Check(@"F:\Small", Context(used: 0), machine).Ok);
     }
 
-    // ══════════ The pointer file ══════════
+    // ══════════ The setting ══════════
 
-    [Fact]
-    public void ThePointer_IsWrittenAndReadBack()
+    private string SettingsFile(string location, string pending)
     {
-        var file = Path.Combine(_root, "assets-location.json");
-        AssetsPointer.Write(file, new AssetsPointer(@"E:\Models\OverTranslate-assets", @"C:\old\OverTranslate-assets"), Current);
-
-        var read = AssetsPointer.Read(file);
-        Assert.Equal(@"E:\Models\OverTranslate-assets", read!.Path);
-        Assert.Equal(@"C:\old\OverTranslate-assets", read.PendingDelete);
-        Assert.False(File.Exists(file + ".tmp"));
+        var file = Path.Combine(_root, "appsettings.json");
+        var settings = new AppSettings { AssetsLocation = location, AssetsPendingDelete = pending, TargetLanguage = "ja" };
+        File.WriteAllText(file, SettingsService.Serialize(settings));
+        return file;
     }
 
     [Fact]
-    public void ThePointer_ToTheDefault_WithNothingPending_IsNoFileAtAll()
+    public void TheLocation_IsReadBackStraightFromTheSettingsFile()
     {
-        var file = Path.Combine(_root, "assets-location.json");
-        AssetsPointer.Write(file, new AssetsPointer(@"E:\x\OverTranslate-assets"), Current);
-        AssetsPointer.Write(file, new AssetsPointer(Current.ToUpperInvariant() + @"\"), Current);
-        Assert.False(File.Exists(file));
+        var file = SettingsFile(@"E:\Models\OverTranslate-assets", @"C:\old\OverTranslate-assets");
+
+        var read = SavedAssetsLocation.Read(file);
+        Assert.Equal(@"E:\Models\OverTranslate-assets", read!.Path);
+        Assert.Equal(@"C:\old\OverTranslate-assets", read.PendingDelete);
+
+        // And through the settings, beside everything else in the file.
+        var parsed = SettingsService.Parse(File.ReadAllText(file));
+        Assert.Equal(@"E:\Models\OverTranslate-assets", parsed.AssetsLocation);
+        Assert.Equal(@"C:\old\OverTranslate-assets", parsed.AssetsPendingDelete);
+        Assert.Equal("ja", parsed.TargetLanguage);
+    }
+
+    [Fact]
+    public void TheDefault_IsAnEmptySetting()
+    {
+        var read = SavedAssetsLocation.Read(SettingsFile("", ""));
+        Assert.Null(read!.Path);
+        Assert.Null(read.PendingDelete);
+        Assert.Equal(Current, AppDataPaths.ResolveAssetsRoot("", Current));
+        Assert.Equal(Current, AppDataPaths.ResolveAssetsRoot(null, Current));
     }
 
     [Theory]
     [InlineData("not json")]
+    [InlineData("[]")]
     [InlineData("{}")]
-    [InlineData("{\"path\": \"\"}")]
-    [InlineData("{\"path\": \"relative\\\\path\"}")]
-    [InlineData("{\"path\": 3}")]
-    public void ABrokenPointer_IsIgnored(string text)
+    [InlineData("{\"AssetsLocation\": \"\"}")]
+    [InlineData("{\"AssetsLocation\": \"relative\\\\path\"}")]
+    [InlineData("{\"AssetsLocation\": 3}")]
+    public void ASettingThatIsNotAFullPath_MeansTheDefault(string text)
     {
-        var file = Path.Combine(_root, "assets-location.json");
+        var file = Path.Combine(_root, "appsettings.json");
         File.WriteAllText(file, text);
 
-        Assert.Null(AssetsPointer.Read(file));
-        Assert.Equal(Current, AppDataPaths.ResolveAssetsRoot(null, file, Current));
+        Assert.Null(SavedAssetsLocation.Read(file)?.Path);
+        Assert.Null(SavedAssetsLocation.Read(Path.Combine(_root, "missing.json")));
     }
 
     [Fact]
-    public void TheOverride_ComesFirst_ThenThePointer_ThenTheDefault()
+    public void AChosenLocation_ComesBeforeTheDefault()
     {
-        var file = Path.Combine(_root, "assets-location.json");
-        Assert.Equal(Current, AppDataPaths.ResolveAssetsRoot(null, file, Current));
-        Assert.Equal(Current, AppDataPaths.ResolveAssetsRoot("", file, Current));
-
-        AssetsPointer.Write(file, new AssetsPointer(@"E:\M\OverTranslate-assets"), Current);
-        Assert.Equal(@"E:\M\OverTranslate-assets", AppDataPaths.ResolveAssetsRoot(null, file, Current));
-        Assert.Equal(@"F:\Test", AppDataPaths.ResolveAssetsRoot(@"F:\Test", file, Current));
+        Assert.Equal(@"E:\M\OverTranslate-assets", AppDataPaths.ResolveAssetsRoot(@"E:\M\OverTranslate-assets", Current));
+        Assert.Equal(Current, AppDataPaths.ResolveAssetsRoot(@"relative\path", Current));
     }
 
     // ══════════ Helpers ══════════

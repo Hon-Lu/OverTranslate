@@ -861,7 +861,6 @@
     <sys:String x:Key="S.Assets.Free">{0} 槽剩餘空間：{1} GB</sys:String>
     <sys:String x:Key="S.Assets.Unreachable">無法存取此位置。重新連接磁碟後，請重新啟動 OverTranslate。</sys:String>
     <sys:String x:Key="S.Assets.WaitDownload">下載完成後可變更位置。</sys:String>
-    <sys:String x:Key="S.Assets.Overridden">已由環境變數指定位置。</sys:String>
     <sys:String x:Key="S.Assets.Changed">已變更位置</sys:String>
     <sys:String x:Key="S.Assets.Moved">已移至新位置</sys:String>
     <sys:String x:Key="S.Assets.StoreUnreachable">模型存放位置無法存取。</sys:String>

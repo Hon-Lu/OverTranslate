@@ -172,10 +172,9 @@ public sealed class AssetsMoverTests : IDisposable
         var defaultRoot = Path.Combine(_root, "local", "OverTranslate-assets");
         Write(defaultRoot, @"models\x.bin", "x");
         Write(defaultRoot, @"stray.txt", "x");
-        var pointer = Path.Combine(_root, "assets-location.json");
-        AssetsPointer.Write(pointer, new AssetsPointer(From), defaultRoot);
+        var settings = Settings(From, "");
 
-        UninstallCleanup.RemoveAssets(defaultRoot, pointer);
+        UninstallCleanup.RemoveAssets(defaultRoot, settings);
 
         Assert.False(Directory.Exists(defaultRoot));
         Assert.Equal(new[] { "user-notes.txt" }, Listing(From));
@@ -185,26 +184,45 @@ public sealed class AssetsMoverTests : IDisposable
     public void Uninstalling_AlsoEmptiesAnOldPlaceStillWaitingToBe()
     {
         var defaultRoot = Path.Combine(_root, "local", "OverTranslate-assets");
-        var pointer = Path.Combine(_root, "assets-location.json");
-        AssetsPointer.Write(pointer, new AssetsPointer(To, From), defaultRoot);
+        var settings = Settings(To, From);
         Write(To, @"models\y.bin", "y");
 
-        UninstallCleanup.RemoveAssets(defaultRoot, pointer);
+        UninstallCleanup.RemoveAssets(defaultRoot, settings);
 
         Assert.Equal(new[] { "user-notes.txt" }, Listing(From));
         Assert.False(Directory.Exists(To));
     }
 
     [Fact]
-    public void Uninstalling_WithAPointerNamingAnotherFolder_LeavesIt()
+    public void Uninstalling_WithASettingNamingAnotherFolder_LeavesIt()
     {
         var defaultRoot = Path.Combine(_root, "local", "OverTranslate-assets");
-        var pointer = Path.Combine(_root, "assets-location.json");
-        var wrong = Path.Combine(_root, "from");
-        File.WriteAllText(pointer, $"{{\"path\": \"{wrong.Replace(@"\", @"\\")}\"}}");
+        var settings = Settings(Path.Combine(_root, "from"), "");
 
-        UninstallCleanup.RemoveAssets(defaultRoot, pointer);
+        UninstallCleanup.RemoveAssets(defaultRoot, settings);
 
         Assert.Equal(5, Listing(From).Length);
+    }
+
+    [Fact]
+    public void Uninstalling_WithSettingsItCannotRead_TakesOnlyTheDefault()
+    {
+        var defaultRoot = Path.Combine(_root, "local", "OverTranslate-assets");
+        Write(defaultRoot, @"models\x.bin", "x");
+        var settings = Path.Combine(_root, "appsettings.json");
+        File.WriteAllText(settings, "{ not json");
+
+        UninstallCleanup.RemoveAssets(defaultRoot, settings);
+
+        Assert.False(Directory.Exists(defaultRoot));
+        Assert.Equal(5, Listing(From).Length);
+    }
+
+    private string Settings(string location, string pending)
+    {
+        var file = Path.Combine(_root, "appsettings.json");
+        File.WriteAllText(file, SettingsService.Serialize(
+            new OverTranslate.Models.AppSettings { AssetsLocation = location, AssetsPendingDelete = pending }));
+        return file;
     }
 }
