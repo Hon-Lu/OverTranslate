@@ -1557,18 +1557,26 @@
                                        Style="{StaticResource CardTitle}"/>
                         </StackPanel>
 
-                        <!-- Where the models and runtimes are kept. First in the card: it is the one
-                             row here someone with a small C drive comes looking for. -->
+                        <!-- Two rows of one build: an icon tile, the name and what it says, the
+                             controls on the right, a rule between them. The card reads as two
+                             settings rather than three layouts. The tile is the shortcut rows'.
+
+                             Where the models and runtimes are kept comes first: it is the one row
+                             here someone with a small C drive comes looking for. -->
                         <Border BorderBrush="{DynamicResource AppSubtleBorder}"
                                 BorderThickness="0,0,0,1"
                                 Padding="0,0,0,16"
                                 Margin="0,0,0,16">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource HotkeyRowGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{DynamicResource S.Assets.Title}"
                                                    Style="{StaticResource OptionTitle}"/>
@@ -1603,7 +1611,7 @@
                                                Style="{StaticResource OptionDescription}"
                                                Visibility="Collapsed"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="AssetsResetBtn"
                                             Style="{StaticResource FlatButton}"
                                             Height="32" Padding="14,0"
@@ -1624,24 +1632,27 @@
                             </Grid>
                         </Border>
 
+                        <!-- 應用程式記錄: how much the log says, and what to do with what it said.
+
+                             一般／詳細 rather than a checkbox: an unticked box reads as "off", and a
+                             normal log is not a log that is off. Two states side by side, both
+                             normal, the export working in either. The setting is still the one bool,
+                             詳細 being true.
+
+                             The two buttons sit under the prose, in its column, and are plain: an
+                             accent here was the loudest thing on the page. -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <CheckBox  Grid.Column="0" x:Name="VerboseLoggingCheckBox"
-                                       Style="{StaticResource ModernCheckBox}"
-                                       VerticalAlignment="Top"
-                                       ToolTip="{DynamicResource S.Settings.Logging}"
-                                       Checked="VerboseLogging_Toggled"
-                                       Unchecked="VerboseLogging_Toggled"/>
-                            <TextBlock Grid.Column="1" Text="&#xE9D9;" Style="{StaticResource OptionGlyph}"/>
-                            <StackPanel Grid.Column="2">
-                                <!-- What the export collects, beside the box that decides how much of it
-                                     there is. -->
+                            <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}" VerticalAlignment="Top">
+                                <TextBlock Text="&#xE9D9;" Style="{StaticResource HotkeyRowGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="0,0,16,0">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{DynamicResource S.Settings.LoggingCheck}"
+                                    <TextBlock Text="{DynamicResource S.Settings.AppLog}"
                                                Style="{StaticResource OptionTitle}"/>
                                     <TextBlock Text="&#xE946;"
                                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -1664,68 +1675,49 @@
                                     </TextBlock>
                                 </StackPanel>
                                 <TextBlock x:Name="VerboseLoggingHint"
-                                           Text="{DynamicResource S.Settings.LoggingHint}"
+                                           Text="{DynamicResource S.Settings.AppLogHint}"
                                            Style="{StaticResource OptionDescription}"/>
+                                <WrapPanel Margin="0,10,0,0">
+                                    <Button x:Name="ExportDiagnosticsBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Margin="0,0,8,0"
+                                            Click="ExportDiagnosticsBtn_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <!-- Save, because that is all this press does: it writes
+                                                 a file and stops. The upload arrow is on the button
+                                                 that actually uploads, in the panel below. -->
+                                            <TextBlock Text="&#xE74E;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="ExportDiagnosticsLabel"
+                                                       Text="{DynamicResource S.Settings.ExportDiagnostics}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="OpenDiagnosticsFolderBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Click="OpenDiagnosticsFolderBtn_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE838;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.OpenDiagnosticsFolder}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
                             </StackPanel>
-                        </Grid>
-
-                        <!-- Below the checkbox rather than beside it: the box decides what gets
-                             written, these two decide what happens to what was written, and the
-                             usual order of that conversation is tick, reproduce, then hand over.
-
-                             Two equal columns filling the card rather than two buttons sized to
-                             their own labels. The labels are different lengths in both languages,
-                             so left-packed buttons leave a ragged edge against a card whose every
-                             other row runs the full width.
-
-                             Accent on the export and not on the folder: one of these is what the
-                             card is for and the other is the way out for someone who wants to look
-                             before they hand anything over. -->
-                        <Grid Margin="0,16,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Button Grid.Column="0" x:Name="ExportDiagnosticsBtn"
-                                    Style="{StaticResource AccentButton}"
-                                    Height="34"
-                                    Margin="0,0,4,0"
-                                    Click="ExportDiagnosticsBtn_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <!-- Save, because that is now all this press does: it writes
-                                         a file and stops. The upload arrow it used to carry has
-                                         moved to the button that actually uploads, in the panel
-                                         below, where the two now read as the two steps they are.
-                                         No Foreground on either block: both inherit the button's,
-                                         which is the one thing that differs between these two
-                                         styles and the one thing that must keep differing. -->
-                                    <TextBlock Text="&#xE74E;"
-                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,6,0"/>
-                                    <TextBlock x:Name="ExportDiagnosticsLabel"
-                                               Text="{DynamicResource S.Settings.ExportDiagnostics}"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Grid.Column="1" x:Name="OpenDiagnosticsFolderBtn"
-                                    Style="{StaticResource FlatButton}"
-                                    Height="34"
-                                    Margin="4,0,0,0"
-                                    Click="OpenDiagnosticsFolderBtn_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE838;"
-                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,6,0"/>
-                                    <TextBlock Text="{DynamicResource S.Settings.OpenDiagnosticsFolder}"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
+                            <!-- The halves share one width (see SegmentedSwitch), within this switch alone. -->
+                            <Border Grid.Column="2" VerticalAlignment="Top" Grid.IsSharedSizeScope="True">
+                                <ctl:SegmentedSwitch x:Name="VerboseLoggingSwitch"
+                                                     SelectionChanged="VerboseLoggingSwitch_SelectionChanged"/>
+                            </Border>
                         </Grid>
 
                         <!-- The one thing the user has to leave with. It appears only after an

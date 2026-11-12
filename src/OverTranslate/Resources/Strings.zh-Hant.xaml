@@ -719,9 +719,10 @@
     <sys:String x:Key="S.Settings.UiLanguage">介面語言</sys:String>
 
     <sys:String x:Key="S.Settings.Advanced">進階設定</sys:String>
-    <sys:String x:Key="S.Settings.Logging">應用紀錄</sys:String>
-    <sys:String x:Key="S.Settings.LoggingCheck">記錄詳細資訊</sys:String>
-    <sys:String x:Key="S.Settings.LoggingHint">啟用後會記錄更多應用程式資訊，僅建議於問題排查時開啟。</sys:String>
+    <sys:String x:Key="S.Settings.AppLog">應用程式記錄</sys:String>
+    <sys:String x:Key="S.Settings.AppLogHint">詳細記錄會包含更多應用程式資訊，僅建議於問題排查時使用。</sys:String>
+    <sys:String x:Key="S.Settings.AppLogNormal">一般</sys:String>
+    <sys:String x:Key="S.Settings.AppLogDetailed">詳細</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR 辨識框</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">顯示 OCR 偵測到的原文文字範圍。</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">文字組合框</sys:String>

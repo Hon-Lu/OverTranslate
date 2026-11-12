@@ -101,6 +101,7 @@ public partial class SettingsPage : UserControl
     public SettingsPage()
     {
         InitializeComponent();
+        VerboseLoggingSwitch.SetLabels("S.Settings.AppLogNormal", "S.Settings.AppLogDetailed");
 
         // While shown only, like the other static events a page listens to.
         Loaded += (_, _) =>
@@ -250,7 +251,7 @@ public partial class SettingsPage : UserControl
             SaveScreenshotCheckBox.IsChecked = s.SaveScreenshotToDisk;
             ScreenshotPathBox.Text = ScreenshotSaveService.ResolveDirectory(s.ScreenshotSavePath);
 
-            VerboseLoggingCheckBox.IsChecked = s.VerboseLogging;
+            VerboseLoggingSwitch.IsSecondSelected = s.VerboseLogging;
 
             OcrLineBoxesCheckBox.IsChecked = s.OcrDebug.ShowLineBoxes;
             TextGroupBoxesCheckBox.IsChecked = s.OcrDebug.ShowGroupBoxes;
@@ -537,12 +538,11 @@ public partial class SettingsPage : UserControl
     }
 
     // Takes effect on the next line written, not on the next launch — the level is applied before it
-    // is stored, so a user who is mid-reproduction can tick the box and keep going.
-    private void VerboseLogging_Toggled(object sender, RoutedEventArgs e)
+    // is stored, so a user who is mid-reproduction can switch to 詳細 and keep going.
+    private void VerboseLoggingSwitch_SelectionChanged(object? sender, bool verbose)
     {
         if (_loading) return;
 
-        bool verbose = VerboseLoggingCheckBox.IsChecked == true;
         LogLevelService.Apply(verbose);
         Persist(s => s.VerboseLogging = verbose);
     }
@@ -776,14 +776,14 @@ public partial class SettingsPage : UserControl
         MoveDebugScopeThumb(animate: false);
 
     /// <summary>
-    /// An environment variable outranks this setting, so when one is set the checkbox says so rather
+    /// An environment variable outranks this setting, so when one is set the switch says so rather
     /// than accepting clicks that change nothing.
     /// </summary>
     private void UpdateVerboseLoggingAvailability()
     {
         if (!LogLevelService.IsOverriddenByEnvironment) return;
 
-        VerboseLoggingCheckBox.IsEnabled = false;
+        VerboseLoggingSwitch.IsEnabled = false;
         VerboseLoggingHint.Text = LocalizationService.Get("S.Settings.LoggingEnvOverride");
     }
 

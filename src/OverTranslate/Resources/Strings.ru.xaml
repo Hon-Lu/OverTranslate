@@ -688,9 +688,6 @@
     <sys:String x:Key="S.Settings.UiLanguage">Язык интерфейса</sys:String>
 
     <sys:String x:Key="S.Settings.Advanced">Дополнительно</sys:String>
-    <sys:String x:Key="S.Settings.Logging">Журнал</sys:String>
-    <sys:String x:Key="S.Settings.LoggingCheck">Записывать подробную информацию</sys:String>
-    <sys:String x:Key="S.Settings.LoggingHint">Записывает больше сведений о работе программы; рекомендуется только при поиске неполадок.</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">Рамки OCR</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">Показывать области исходного текста, найденные OCR.</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">Рамки групп текста</sys:String>
