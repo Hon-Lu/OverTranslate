@@ -166,27 +166,12 @@
                     </Border>
                 </WrapPanel>
 
-                <!-- The requirement, as the page's notes are written: an i and grey text. It is a
-                     condition for using the models, not one of the things they do. -->
-                <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Path Data="{StaticResource InfoMarkGeometry}"
-                          Stroke="{DynamicResource AppTextSecondary}"
-                          StrokeThickness="1.1"
-                          StrokeStartLineCap="Round"
-                          StrokeEndLineCap="Round"
-                          Stretch="None"
-                          Width="12" Height="12"
-                          VerticalAlignment="Top"
-                          Margin="0,2.5,8,0"/>
-                    <TextBlock Grid.Column="1" FontSize="12" TextWrapping="Wrap"
-                               Foreground="{DynamicResource AppTextSecondary}">
-                        <Run x:Name="MangaCardDesc2" Text="{DynamicResource S.Settings.MangaModelsDesc2}"/>
-                    </TextBlock>
-                </Grid>
+                <!-- The requirement, as a note in grey text. It is a condition for using the
+                     models, not one of the things they do. -->
+                <TextBlock Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap"
+                           Foreground="{DynamicResource AppTextSecondary}">
+                    <Run Text="{DynamicResource S.Settings.NotePrefix}"/><Run x:Name="MangaCardDesc2" Text="{DynamicResource S.Settings.MangaModelsDesc2}"/>
+                </TextBlock>
             </StackPanel>
 
             <!-- The foot: one of these three at a time, cross-faded. Under the text, or on its right

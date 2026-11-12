@@ -681,6 +681,8 @@
     <sys:String x:Key="S.Settings.OpenFolderTip">開啟資料夾</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">漫畫直排模型</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc1">日文漫畫直排專用，辨識更完整、速度更快。</sys:String>
+    <sys:String x:Key="S.Settings.NotePrefix">註：</sys:String>
+    <sys:String x:Key="S.Settings.ModelsLocationHint">模型存放位置可至設定頁的「進階設定」進行修改。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc2">需 1 GB 以上 VRAM，建議 2 GB。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">顯示卡不支援 DirectX 12，將改用一般辨識。</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">日文直排</sys:String>
@@ -853,6 +855,7 @@
     <sys:String x:Key="S.Settings.ModelsUsed">已下載 {0}</sys:String>
     <sys:String x:Key="S.Settings.ModelsOpenFolder">開啟資料夾</sys:String>
     <sys:String x:Key="S.Settings.NavServices">翻譯服務</sys:String>
+    <sys:String x:Key="S.Assets.Hint">此資料夾用於存放軟體使用的模型資源，包含 OCR 文字辨識模型與 AI 翻譯模型（LLM）。</sys:String>
     <sys:String x:Key="S.Assets.Title">模型存放位置</sys:String>
     <sys:String x:Key="S.Assets.OpenFolder">開啟資料夾</sys:String>
     <sys:String x:Key="S.Assets.Change">變更位置</sys:String>

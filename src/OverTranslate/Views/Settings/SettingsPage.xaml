@@ -633,6 +633,25 @@
                                 <TextBlock Text="&#xE896;" Style="{StaticResource CardHeaderIcon}"/>
                                 <TextBlock Text="{DynamicResource S.Settings.Models}"
                                            Style="{StaticResource CardTitle}"/>
+                                <!-- Where the models are kept is changed under 進階設定, not here. -->
+                                <TextBlock Text="&#xE946;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource AppTextSecondary}"
+                                           Background="Transparent"
+                                           Padding="4,2"
+                                           Margin="7,1,0,0"
+                                           VerticalAlignment="Center"
+                                           Cursor="Help">
+                                    <controls:HoverToolTip.Content>
+                                        <TextBlock Text="{DynamicResource S.Settings.ModelsLocationHint}"
+                                                   MaxWidth="420"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="{StaticResource AppFontSize}"
+                                                   TextWrapping="Wrap"
+                                                   LineHeight="18"/>
+                                    </controls:HoverToolTip.Content>
+                                </TextBlock>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock x:Name="ModelsUsedText"
@@ -1533,35 +1552,9 @@
                 <Border x:Name="AdvancedSection" Style="{StaticResource CardBorder}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource CardHeaderRow}">
-                            <TextBlock Text="&#xE7BA;" Style="{StaticResource CardHeaderIcon}"/>
+                            <TextBlock Text="&#xE90F;" Style="{StaticResource CardHeaderIcon}"/>
                             <TextBlock Text="{DynamicResource S.Settings.Advanced}"
                                        Style="{StaticResource CardTitle}"/>
-
-                            <!-- What the export actually collects, on the heading for the same
-                                 reason the shortcut card's does: it is read once, before the first
-                                 export, and never again — while a paragraph spelling it out sits
-                                 above the buttons for good, taking more room than the two controls
-                                 it describes. Background and Padding as there: a bare TextBlock is
-                                 only hit-testable across the glyph's own strokes. -->
-                            <TextBlock Text="&#xE946;"
-                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource AppTextSecondary}"
-                                       Background="Transparent"
-                                       Padding="4,2"
-                                       Margin="7,1,0,0"
-                                       VerticalAlignment="Center"
-                                       Cursor="Help">
-                                <controls:HoverToolTip.Content>
-                                    <TextBlock x:Name="DiagnosticsHintText"
-                                               Text="{DynamicResource S.Settings.DiagnosticsHint}"
-                                               MaxWidth="420"
-                                               FontFamily="{DynamicResource AppFont}"
-                                               FontSize="{StaticResource AppFontSize}"
-                                               TextWrapping="Wrap"
-                                               LineHeight="18"/>
-                                </controls:HoverToolTip.Content>
-                            </TextBlock>
                         </StackPanel>
 
                         <!-- Where the models and runtimes are kept. First in the card: it is the one
@@ -1576,8 +1569,28 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                                    <TextBlock Text="{DynamicResource S.Assets.Title}"
-                                               Style="{StaticResource OptionTitle}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource S.Assets.Title}"
+                                                   Style="{StaticResource OptionTitle}"/>
+                                        <TextBlock Text="&#xE946;"
+                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource AppTextSecondary}"
+                                                   Background="Transparent"
+                                                   Padding="4,2"
+                                                   Margin="4,-2,0,-2"
+                                                   VerticalAlignment="Center"
+                                                   Cursor="Help">
+                                            <controls:HoverToolTip.Content>
+                                                <TextBlock Text="{DynamicResource S.Assets.Hint}"
+                                                           MaxWidth="420"
+                                                           FontFamily="{DynamicResource AppFont}"
+                                                           FontSize="{StaticResource AppFontSize}"
+                                                           TextWrapping="Wrap"
+                                                           LineHeight="18"/>
+                                            </controls:HoverToolTip.Content>
+                                        </TextBlock>
+                                    </StackPanel>
                                     <TextBlock x:Name="AssetsPathText"
                                                Margin="0,4,0,0"
                                                FontFamily="{DynamicResource AppFont}"
@@ -1625,8 +1638,31 @@
                                        Unchecked="VerboseLogging_Toggled"/>
                             <TextBlock Grid.Column="1" Text="&#xE9D9;" Style="{StaticResource OptionGlyph}"/>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="{DynamicResource S.Settings.LoggingCheck}"
-                                           Style="{StaticResource OptionTitle}"/>
+                                <!-- What the export collects, beside the box that decides how much of it
+                                     there is. -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{DynamicResource S.Settings.LoggingCheck}"
+                                               Style="{StaticResource OptionTitle}"/>
+                                    <TextBlock Text="&#xE946;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="14"
+                                               Foreground="{DynamicResource AppTextSecondary}"
+                                               Background="Transparent"
+                                               Padding="4,2"
+                                               Margin="4,-2,0,-2"
+                                               VerticalAlignment="Center"
+                                               Cursor="Help">
+                                        <controls:HoverToolTip.Content>
+                                            <TextBlock x:Name="DiagnosticsHintText"
+                                                       Text="{DynamicResource S.Settings.DiagnosticsHint}"
+                                                       MaxWidth="420"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       FontSize="{StaticResource AppFontSize}"
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="18"/>
+                                        </controls:HoverToolTip.Content>
+                                    </TextBlock>
+                                </StackPanel>
                                 <TextBlock x:Name="VerboseLoggingHint"
                                            Text="{DynamicResource S.Settings.LoggingHint}"
                                            Style="{StaticResource OptionDescription}"/>
