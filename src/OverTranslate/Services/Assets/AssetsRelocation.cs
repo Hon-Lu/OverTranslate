@@ -155,12 +155,10 @@ internal static class AssetsRelocation
             return;
         }
 
-        int left = 0;
-        if (SystemAssetsMachine.Instance.Volume(old) is not null)
-        {
-            left = AssetsMover.RemoveAppFolders(old);
-            Log.Info("Emptied the old assets location {Old}; {Left} entries left", old, left);
-        }
+        // A drive that is not connected keeps the old location waiting, to be emptied when it is back.
+        if (SystemAssetsMachine.Instance.Volume(old) is null) return;
+        int left = AssetsMover.RemoveAppFolders(old);
+        Log.Info("Emptied the old assets location {Old}; {Left} entries left", old, left);
 
         if (left <= 0) WriteQuietly(file, pointer with { PendingDelete = null });
     }
