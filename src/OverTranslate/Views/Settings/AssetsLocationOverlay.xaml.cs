@@ -165,8 +165,14 @@ public partial class AssetsLocationOverlay : UserControl
         AssetsProblem.Fat => LocalizationService.Format("S.Assets.Problem.Fat", check.Volume?.Drive ?? "", check.Volume?.Format ?? ""),
         AssetsProblem.NoSpace => LocalizationService.Format("S.Assets.Problem.NoSpace",
             check.Volume?.Drive ?? "", OneDecimal(check.NeededBytes), OneDecimal(check.Volume?.FreeBytes ?? 0)),
-        AssetsProblem.None => "",
-        _ => LocalizationService.Get("S.Assets.Problem." + check.Problem),
+        AssetsProblem.Invalid => LocalizationService.Get("S.Assets.Problem.Invalid"),
+        AssetsProblem.Network => LocalizationService.Get("S.Assets.Problem.Network"),
+        AssetsProblem.Cloud => LocalizationService.Get("S.Assets.Problem.Cloud"),
+        AssetsProblem.NotWritable => LocalizationService.Get("S.Assets.Problem.NotWritable"),
+        AssetsProblem.InsideCurrent => LocalizationService.Get("S.Assets.Problem.InsideCurrent"),
+        AssetsProblem.InsideInstall => LocalizationService.Get("S.Assets.Problem.InsideInstall"),
+        AssetsProblem.InsideProgram => LocalizationService.Get("S.Assets.Problem.InsideProgram"),
+        _ => "",
     };
 
     private void Option_Checked(object sender, RoutedEventArgs e)
