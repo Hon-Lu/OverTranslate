@@ -660,6 +660,8 @@
     <sys:String x:Key="S.Settings.OpenFolderTip">폴더 열기</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">만화 세로쓰기 모델</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc1">일본어 만화 세로쓰기 전용, 더 정확하고 빠르게.</sys:String>
+    <sys:String x:Key="S.Settings.NotePrefix" xml:space="preserve">참고: </sys:String>
+    <sys:String x:Key="S.Settings.ModelsLocationHint">모델 저장 위치는 설정 페이지의 고급 설정에서 변경할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc2">VRAM 1 GB 이상 필요, 2 GB 권장.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">DirectX 12 미지원, 일반 인식을 사용합니다.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">세로쓰기</sys:String>
@@ -696,6 +698,10 @@
     <sys:String x:Key="S.Settings.UiLanguage">인터페이스 언어</sys:String>
 
     <sys:String x:Key="S.Settings.Advanced">고급 설정</sys:String>
+    <sys:String x:Key="S.Settings.AppLog">앱 로그</sys:String>
+    <sys:String x:Key="S.Settings.AppLogHint">자세한 로그에는 앱 정보가 더 많이 기록됩니다. 문제를 해결할 때만 사용하는 것이 좋습니다.</sys:String>
+    <sys:String x:Key="S.Settings.AppLogNormal">기본</sys:String>
+    <sys:String x:Key="S.Settings.AppLogDetailed">자세히</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">OCR 인식 상자</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">OCR이 감지한 원문 텍스트 영역을 표시합니다.</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">텍스트 그룹 상자</sys:String>
@@ -831,4 +837,46 @@
     <sys:String x:Key="S.Settings.ModelsUsed">{0} 다운로드됨</sys:String>
     <sys:String x:Key="S.Settings.ModelsOpenFolder">폴더 열기</sys:String>
     <sys:String x:Key="S.Settings.NavServices">번역 서비스</sys:String>
+    <sys:String x:Key="S.Assets.Hint">이 폴더에는 OCR 문자 인식 모델과 AI 번역 모델(LLM) 등 앱이 사용하는 모델이 저장됩니다.</sys:String>
+    <sys:String x:Key="S.Assets.Title">모델 저장 위치</sys:String>
+    <sys:String x:Key="S.Assets.OpenFolder">폴더 열기</sys:String>
+    <sys:String x:Key="S.Assets.Change">위치 변경</sys:String>
+    <sys:String x:Key="S.Assets.ResetDefault">기본 위치로 되돌리기</sys:String>
+    <sys:String x:Key="S.Assets.Used">사용 중 {0} GB ・ {1} 드라이브 남은 공간: {2} GB</sys:String>
+    <sys:String x:Key="S.Assets.Free">{0} 드라이브 남은 공간: {1} GB</sys:String>
+    <sys:String x:Key="S.Assets.Unreachable">이 위치에 액세스할 수 없습니다. 드라이브를 다시 연결한 후 OverTranslate를 다시 시작하세요.</sys:String>
+    <sys:String x:Key="S.Assets.WaitDownload">다운로드가 끝나면 위치를 변경할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Changed">위치를 변경했습니다</sys:String>
+    <sys:String x:Key="S.Assets.Moved">모델을 지정한 위치로 옮겼습니다</sys:String>
+    <sys:String x:Key="S.Assets.StoreUnreachable">모델 저장 위치에 액세스할 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Assets.ChooseTitle">모델 저장 위치 변경</sys:String>
+    <sys:String x:Key="S.Assets.DefaultOption">기본 위치</sys:String>
+    <sys:String x:Key="S.Assets.OtherOption">다른 위치</sys:String>
+    <sys:String x:Key="S.Assets.CurrentTag">현재</sys:String>
+    <sys:String x:Key="S.Assets.Browse">찾아보기</sys:String>
+    <sys:String x:Key="S.Assets.PickFolder">폴더 선택</sys:String>
+    <sys:String x:Key="S.Assets.Continue">계속</sys:String>
+    <sys:String x:Key="S.Assets.WillCreate">생성 위치: {0}</sys:String>
+    <sys:String x:Key="S.Assets.Reuse">이 폴더에 이미 모델이 있어 기존 파일을 그대로 사용합니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Invalid">잘못된 경로입니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Network">네트워크 위치는 지원되지 않습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Cloud">클라우드 동기화 폴더는 지원되지 않습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Fat">{0} 드라이브는 {1} 형식이라 4 GB가 넘는 파일을 저장할 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.NoSpace">{0} 드라이브 공간 부족: {1} GB 필요, {2} GB 남음.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.NotWritable">이 폴더에 쓸 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.InsideCurrent">현재 저장 위치 안은 지정할 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.InsideInstall">설치 폴더 안은 지정할 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.InsideProgram">프로그램 폴더 안은 지정할 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmTitle">저장 위치 변경</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmFrom">현재 위치</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmTo">새 위치</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmMove">{0} GB의 파일을 옮기는 동안 일부 기능을 사용할 수 없습니다. 완료되면 OverTranslate가 자동으로 다시 시작됩니다.</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmEmpty">아직 다운로드한 모델이 없어 파일을 옮길 필요 없이 바로 저장 위치를 변경할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmButton">위치 변경</sys:String>
+    <sys:String x:Key="S.Assets.MovingTitle">모델을 옮기는 중</sys:String>
+    <sys:String x:Key="S.Assets.MovingTo">이동 위치: {0}</sys:String>
+    <sys:String x:Key="S.Assets.MovingProgress">{0} GB / {1} GB</sys:String>
+    <sys:String x:Key="S.Assets.FailedTitle">모델을 옮기지 못했습니다</sys:String>
+    <sys:String x:Key="S.Assets.FailedBody">{0}에 쓰는 중 오류가 발생했습니다. 저장 위치는 변경되지 않았습니다.</sys:String>
+    <sys:String x:Key="S.Assets.Ok">확인</sys:String>
 </ResourceDictionary>

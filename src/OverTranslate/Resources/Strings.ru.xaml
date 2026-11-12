@@ -652,6 +652,8 @@
     <sys:String x:Key="S.Settings.OpenFolderTip">Открыть папку</sys:String>
     <sys:String x:Key="S.Settings.MangaModels">Модели для манги</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc1">Созданы для японской манги с вертикальным текстом: полнее и быстрее.</sys:String>
+    <sys:String x:Key="S.Settings.NotePrefix" xml:space="preserve">Примечание: </sys:String>
+    <sys:String x:Key="S.Settings.ModelsLocationHint">Расположение моделей можно изменить на странице настроек в разделе «Дополнительно».</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc2">Требуется 1 ГБ видеопамяти, рекомендуется 2 ГБ.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsDesc2Unsupported">Нет видеокарты с DirectX 12; используется стандартное распознавание.</sys:String>
     <sys:String x:Key="S.Settings.MangaModelsFeatureVertical">Вертикальный японский</sys:String>
@@ -688,6 +690,10 @@
     <sys:String x:Key="S.Settings.UiLanguage">Язык интерфейса</sys:String>
 
     <sys:String x:Key="S.Settings.Advanced">Дополнительно</sys:String>
+    <sys:String x:Key="S.Settings.AppLog">Журнал приложения</sys:String>
+    <sys:String x:Key="S.Settings.AppLogHint">Подробный журнал содержит больше сведений о приложении. Используйте его только для поиска неполадок.</sys:String>
+    <sys:String x:Key="S.Settings.AppLogNormal">Обычный</sys:String>
+    <sys:String x:Key="S.Settings.AppLogDetailed">Подробный</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxes">Рамки OCR</sys:String>
     <sys:String x:Key="S.Settings.OcrLineBoxesHint">Показывать области исходного текста, найденные OCR.</sys:String>
     <sys:String x:Key="S.Settings.TextGroupBoxes">Рамки групп текста</sys:String>
@@ -820,4 +826,46 @@
     <sys:String x:Key="S.Settings.ModelsUsed">Скачано {0}</sys:String>
     <sys:String x:Key="S.Settings.ModelsOpenFolder">Открыть папку</sys:String>
     <sys:String x:Key="S.Settings.NavServices">Сервисы перевода</sys:String>
+    <sys:String x:Key="S.Assets.Hint">В этой папке хранятся модели, которые использует приложение: модели распознавания текста (OCR) и модели ИИ-перевода (LLM).</sys:String>
+    <sys:String x:Key="S.Assets.Title">Расположение моделей</sys:String>
+    <sys:String x:Key="S.Assets.OpenFolder">Открыть папку</sys:String>
+    <sys:String x:Key="S.Assets.Change">Изменить</sys:String>
+    <sys:String x:Key="S.Assets.ResetDefault">Вернуть по умолчанию</sys:String>
+    <sys:String x:Key="S.Assets.Used">Занято {0} ГБ ・ Свободно на диске {1}: {2} ГБ</sys:String>
+    <sys:String x:Key="S.Assets.Free">Свободно на диске {0}: {1} ГБ</sys:String>
+    <sys:String x:Key="S.Assets.Unreachable">Нет доступа к этому расположению. Подключите диск снова и перезапустите OverTranslate.</sys:String>
+    <sys:String x:Key="S.Assets.WaitDownload">Расположение можно изменить после завершения загрузки.</sys:String>
+    <sys:String x:Key="S.Assets.Changed">Расположение изменено</sys:String>
+    <sys:String x:Key="S.Assets.Moved">Модели перемещены в новое расположение</sys:String>
+    <sys:String x:Key="S.Assets.StoreUnreachable">Нет доступа к расположению моделей.</sys:String>
+    <sys:String x:Key="S.Assets.ChooseTitle">Изменение расположения моделей</sys:String>
+    <sys:String x:Key="S.Assets.DefaultOption">По умолчанию</sys:String>
+    <sys:String x:Key="S.Assets.OtherOption">Другое расположение</sys:String>
+    <sys:String x:Key="S.Assets.CurrentTag">Текущее</sys:String>
+    <sys:String x:Key="S.Assets.Browse">Обзор</sys:String>
+    <sys:String x:Key="S.Assets.PickFolder">Выберите папку</sys:String>
+    <sys:String x:Key="S.Assets.Continue">Продолжить</sys:String>
+    <sys:String x:Key="S.Assets.WillCreate">Будет создано: {0}</sys:String>
+    <sys:String x:Key="S.Assets.Reuse">В этой папке уже есть модели — будут использованы существующие файлы.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Invalid">Недопустимый путь.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Network">Сетевые расположения не поддерживаются.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Cloud">Папки с облачной синхронизацией не поддерживаются.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.Fat">Диск {0} в формате {1} не поддерживает файлы больше 4 ГБ.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.NoSpace">Недостаточно места на диске {0}: нужно {1} ГБ, свободно {2} ГБ.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.NotWritable">Нет доступа на запись в эту папку.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.InsideCurrent">Нельзя выбрать папку внутри текущего расположения.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.InsideInstall">Нельзя выбрать папку внутри папки установки.</sys:String>
+    <sys:String x:Key="S.Assets.Problem.InsideProgram">Нельзя выбрать папку внутри папки программы.</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmTitle">Изменение расположения</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmFrom">Текущее расположение</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmTo">Новое расположение</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmMove">Пока перемещаются файлы ({0} ГБ), некоторые функции недоступны. По завершении OverTranslate перезапустится.</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmEmpty">Загруженных моделей пока нет, поэтому перемещать нечего — расположение можно изменить сразу.</sys:String>
+    <sys:String x:Key="S.Assets.ConfirmButton">Изменить</sys:String>
+    <sys:String x:Key="S.Assets.MovingTitle">Перемещение моделей</sys:String>
+    <sys:String x:Key="S.Assets.MovingTo">В {0}</sys:String>
+    <sys:String x:Key="S.Assets.MovingProgress">{0} ГБ / {1} ГБ</sys:String>
+    <sys:String x:Key="S.Assets.FailedTitle">Не удалось переместить модели</sys:String>
+    <sys:String x:Key="S.Assets.FailedBody">При записи {0} произошла ошибка. Расположение не изменено.</sys:String>
+    <sys:String x:Key="S.Assets.Ok">ОК</sys:String>
 </ResourceDictionary>
