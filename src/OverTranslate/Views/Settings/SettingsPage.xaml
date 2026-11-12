@@ -1564,6 +1564,53 @@
                             </TextBlock>
                         </StackPanel>
 
+                        <!-- Where the models and runtimes are kept. First in the card: it is the one
+                             row here someone with a small C drive comes looking for. -->
+                        <Border BorderBrush="{DynamicResource AppSubtleBorder}"
+                                BorderThickness="0,0,0,1"
+                                Padding="0,0,0,16"
+                                Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                    <TextBlock Text="{DynamicResource S.Assets.Title}"
+                                               Style="{StaticResource OptionTitle}"/>
+                                    <TextBlock x:Name="AssetsPathText"
+                                               Margin="0,4,0,0"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="12.5"
+                                               Foreground="{DynamicResource AppTextPrimary}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="AssetsUsageText"
+                                               Style="{StaticResource OptionDescription}"/>
+                                    <TextBlock x:Name="AssetsStatusText"
+                                               Style="{StaticResource OptionDescription}"
+                                               Visibility="Collapsed"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <Button x:Name="AssetsResetBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Visibility="Collapsed"
+                                            Content="{DynamicResource S.Assets.ResetDefault}"
+                                            Click="AssetsResetBtn_Click"/>
+                                    <Button x:Name="AssetsOpenBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Content="{DynamicResource S.Assets.OpenFolder}"
+                                            Click="AssetsOpenBtn_Click"/>
+                                    <Button x:Name="AssetsChangeBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0" Margin="8,0,0,0"
+                                            Content="{DynamicResource S.Assets.Change}"
+                                            Click="AssetsChangeBtn_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>

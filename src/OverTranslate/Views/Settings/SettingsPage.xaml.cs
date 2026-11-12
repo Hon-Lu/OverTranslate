@@ -194,6 +194,7 @@ public partial class SettingsPage : UserControl
             OnOcrDebugChanged(this, EventArgs.Empty);
             OnCaptureOptionsChanged(this, EventArgs.Empty);
             SubscribeModels();
+            SubscribeAssets();
         };
         Unloaded += (_, _) =>
         {
@@ -201,6 +202,7 @@ public partial class SettingsPage : UserControl
             SettingsService.Instance.OcrDebugChanged -= OnOcrDebugChanged;
             SettingsService.Instance.CaptureOptionsChanged -= OnCaptureOptionsChanged;
             UnsubscribeModels();
+            UnsubscribeAssets();
             StopRecording();
         };
 
@@ -821,6 +823,7 @@ public partial class SettingsPage : UserControl
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         LoadSettings();
+        RefreshAssets();
     }
 
     private void SaveScreenshotCheckBox_Toggled(object sender, RoutedEventArgs e)

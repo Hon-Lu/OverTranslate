@@ -203,6 +203,13 @@
                                FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource AppWarning}"
                                Text="{DynamicResource S.Settings.MangaModelsUpdated}"/>
+                    <!-- The assets location is on a drive that is not connected. -->
+                    <TextBlock x:Name="MangaModelsUnreachableNote"
+                               Margin="0,0,0,8"
+                               Visibility="Collapsed"
+                               FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource AppError}"
+                               Text="{DynamicResource S.Assets.StoreUnreachable}"/>
                     <Button x:Name="MangaModelsDownloadBtn"
                             Style="{StaticResource AccentButton}"
                             HorizontalAlignment="Right"
