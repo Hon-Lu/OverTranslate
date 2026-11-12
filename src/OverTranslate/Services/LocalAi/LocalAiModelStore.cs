@@ -76,7 +76,23 @@ internal sealed class LocalAiModelStore
     /// <summary>Null when the shipped list could not be read, and then nothing can be offered.</summary>
     internal LocalAiCatalog? Catalog { get; }
 
-    internal string Root { get; }
+    internal string Root { get; private set; }
+
+    /// <summary>
+    /// Points the store, and the runtime with it, at another assets location, when the location is
+    /// changed with nothing in it to move (<see cref="Assets.AssetsRelocation"/>). Refused while downloading.
+    /// </summary>
+    internal void Relocate(string root, string runtimeRoot)
+    {
+        lock (_sync)
+        {
+            if (_download is not null) throw new InvalidOperationException("downloading");
+            Root = root;
+            Runtime?.Relocate(runtimeRoot);
+        }
+
+        RaiseChanged();
+    }
 
     internal LocalAiRuntimeStore? Runtime { get; }
 

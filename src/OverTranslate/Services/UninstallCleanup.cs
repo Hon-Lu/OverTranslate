@@ -30,7 +30,7 @@ internal static class UninstallCleanup
     {
         try
         {
-            RemoveAssets(AppDataPaths.DefaultAssetsRoot);
+            RemoveAssets(AppDataPaths.DefaultAssetsRoot, AppDataPaths.AssetsPointerFile);
         }
         catch
         {
@@ -59,6 +59,21 @@ internal static class UninstallCleanup
         {
             // As above.
         }
+    }
+
+    /// <summary>
+    /// Removes the default assets folder whole, as always, and at a location the person chose
+    /// (<see cref="Assets.AssetsPointer"/>) only the folders the app created there — whatever else
+    /// they keep beside them is theirs. The pointer is read here, before anything else is deleted.
+    /// </summary>
+    internal static void RemoveAssets(string defaultRoot, string pointerFile)
+    {
+        var pointer = Assets.AssetsPointer.Read(pointerFile);
+        RemoveAssets(defaultRoot);
+        if (pointer is null) return;
+        foreach (var chosen in new[] { pointer.Path, pointer.PendingDelete })
+            if (chosen is not null && !Assets.AssetsPaths.Same(chosen, defaultRoot))
+                Assets.AssetsMover.RemoveAppFolders(chosen);
     }
 
     /// <summary>
