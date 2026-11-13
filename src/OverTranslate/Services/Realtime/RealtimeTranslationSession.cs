@@ -543,9 +543,14 @@ public sealed class RealtimeTranslationSession
             var scrolledPast = 0;
             // Whether the next reading is drawn even if it reads what the last one did.
             var redraw = false;
+            // Whether a poll came due while a reading was in progress. Those polls only followed
+            // the picture; the one that reads it is taken as soon as the reading is over, as it
+            // was when the timer was left to hold it, rather than up to a poll later.
+            var overdue = false;
 
-            while (asked || await WaitFollowingAsync(null) == true)
+            while (asked || overdue || await WaitFollowingAsync(null) == true)
             {
+                overdue = false;
                 // Only the first pass can have been asked for; everything after it is a poll again.
                 var demanded = asked;
                 asked = false;
@@ -700,6 +705,7 @@ public sealed class RealtimeTranslationSession
                         region, frame, state, Capture, sourceLanguage, pump, follow.BeginRead(), redraw, token);
                     while (await WaitFollowingAsync(read) == true)
                     {
+                        overdue = true;
                         using var meanwhile = _capture?.GrabRegion(region.Bounds);
                         if (meanwhile is not null) follow.Observe(meanwhile, Stopwatch.GetTimestamp());
                         step.Set("read (ocr)");
