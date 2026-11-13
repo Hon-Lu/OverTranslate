@@ -63,6 +63,11 @@ public sealed class RealtimeTranslationSession
     // provider starts rate-limiting, and a rate-limited pass fails, retries, and adds more load.
     private const int MaxConcurrentTranslations = 4;
 
+    // How long a picture that is being scrolled is left unread, in polls: under a second. Long
+    // enough to cover a scroll, which is over in less; short enough that text on content that
+    // never stops moving is still found while it is there to be read.
+    private const int MaxPollsScrolledPast = 6;
+
     private readonly OcrService _ocr;
     private readonly TranslationService _translation;
 
@@ -472,7 +477,10 @@ public sealed class RealtimeTranslationSession
         CancellationToken token)
     {
         var state = new RealtimeRegionState(region.Orientation);
-        var pump = new RegionTranslationPump(this, region, sourceLanguage, targetLanguage, token);
+        // Everything this region draws goes to the screen through here — see RealtimeScrollFollow.
+        var follow = new RealtimeScrollFollow(
+            region.Id, (lines, generation) => RaiseRegionUpdated(new RealtimeRegionUpdate(region.Id, lines, generation)));
+        var pump = new RegionTranslationPump(this, region, follow, sourceLanguage, targetLanguage, token);
 
         try
         {
@@ -488,6 +496,8 @@ public sealed class RealtimeTranslationSession
             // have had their turn before the frame counts as answered: see the turn-away below.
             var gateTurnedAway = 0;
             var frameLoss = new RealtimeFrameLoss();
+            // Polls in a row left unread because the picture was being scrolled.
+            var scrolledPast = 0;
 
             while (asked || await NextPollAsync(timer, step, token))
             {
@@ -521,6 +531,22 @@ public sealed class RealtimeTranslationSession
                     continue;
                 }
                 frameLoss.Seen();
+
+                // Before anything is asked about the words: text that has only moved is followed
+                // from the pixels, at every poll, and needs no reading. And while the whole picture
+                // is going past, a reading would be of a frame that is gone before it is finished —
+                // it would be wrong when it arrived, and the poll it held up is one the page was
+                // not followed in. So the picture is left to stop, but not for ever: content that
+                // never stops is still read, a little less often, as it always was.
+                step.Set("follow");
+                var pace = follow.Observe(frame, Stopwatch.GetTimestamp());
+                if (pace == ScrollPace.Scrolling && !demanded && scrolledPast < MaxPollsScrolledPast)
+                {
+                    scrolledPast++;
+                    skippedPolls++;
+                    continue;
+                }
+                scrolledPast = 0;
 
                 // Closes over this poll's frame, so the policy can summarise the text strips or the
                 // whole region without ever seeing the bitmap.
@@ -955,7 +981,7 @@ public sealed class RealtimeTranslationSession
         // wording already on screen, which the session has translated once and cached, so carrying
         // it along with a corrected neighbour costs nothing on the network.
         state.MarkRendered(textBounds, capture, merged.Lines);
-        pump.Post(pass, merged.Blocks, ocrMs);
+        pump.Post(pass, merged.Blocks, ocrMs, frame);
 
         Log.Debug(
             "Realtime region {Region} redrew {Improved} improved, {Added} new, {Dropped} gone, " +
@@ -1257,6 +1283,7 @@ public sealed class RealtimeTranslationSession
     private sealed class RegionTranslationPump(
         RealtimeTranslationSession session,
         RealtimeRegion region,
+        RealtimeScrollFollow follow,
         string sourceLanguage,
         string targetLanguage,
         CancellationToken token)
@@ -1269,7 +1296,8 @@ public sealed class RealtimeTranslationSession
         public long NextPass() => _order.NextPass();
 
         /// <summary>Translates a pass's lines and draws them, both without holding up the caller.</summary>
-        public void Post(long pass, List<OcrTextBlock> blocks, int ocrMs)
+        /// <param name="frame">The frame the lines were read from; not kept.</param>
+        public void Post(long pass, List<OcrTextBlock> blocks, int ocrMs, Bitmap frame)
         {
             if (!session._translationSlots.Wait(0))
             {
@@ -1292,6 +1320,9 @@ public sealed class RealtimeTranslationSession
                 RequestRetry();
                 return;
             }
+
+            // From the frame it was read in, so the answer is drawn where the text is by then.
+            follow.Track(pass, blocks, frame);
 
             // Captured after OCR. If a pause arrives from here onward, this pass is stale and both
             // TranslateAsync and the pre-publish check below refuse to let it repopulate the cache or
@@ -1379,10 +1410,7 @@ public sealed class RealtimeTranslationSession
         {
             if (!_order.TryClaim(pass)) return false;
 
-            session.RaiseRegionUpdated(new RealtimeRegionUpdate(
-                region.Id,
-                lines,
-                generation ?? session._translationCache.Generation));
+            follow.Publish(pass, lines, generation ?? session._translationCache.Generation);
             // The region shows what it should again, so a translation that failed before is over.
             Recovered(RealtimeFailureStage.Translate);
             return true;
