@@ -192,6 +192,55 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void ATranslationWhoseTextIsNeitherWhereItWasNorWhereThePageWentIsTakenOffTheScreen()
+    {
+        using var page = new Page();
+        var screen = new Screen();
+        using (var still = page.View(0))
+        {
+            screen.Poll(still);
+            screen.Read(1, still, page.Read(0));
+        }
+        var before = screen.Shown;
+        var lost = before[^1];
+
+        // The page moves 40px and one line cannot be found where that put it — here it is painted
+        // out; on a real page it was followed a pixel short the frame before, or redrawn by the
+        // page as it went. It is not where it was either. Left alone, its translation would sit
+        // over whatever the page brought there until the next reading.
+        using (var moving = page.View(40))
+        {
+            using (var g = Graphics.FromImage(moving))
+                g.FillRectangle(Brushes.White, (int)lost.Bounds.X - 6, (int)lost.Bounds.Y - 40 - 6, (int)lost.Bounds.Width + 12, (int)lost.Bounds.Height + 12);
+            screen.Poll(moving);
+        }
+
+        Assert.DoesNotContain(screen.Shown, line => line.TranslatedText == lost.TranslatedText);
+        Assert.Equal(before.Count(line => line.Bounds.Top >= 40) - 1, screen.Shown.Count);
+        Assert.True(screen.Follow.TakeReadAfresh());
+    }
+
+    [Fact]
+    public void HowFastTextMovesIsNotJudgedByHowOftenItIsLookedAt()
+    {
+        using var page = new Page();
+        var screen = new Screen();
+        using (var still = page.View(0))
+        {
+            screen.Poll(still);
+            screen.Read(1, still, page.Read(0));
+        }
+
+        // 6px a frame, the frames 60ms apart: 15px in the time of a poll, half a line of this
+        // text and too fast to be read on the way. Looked at once a poll it would be hidden at the
+        // second move, and so it is looked at every frame — where 6px on its own is a creep.
+        using (var moving = page.View(6)) screen.Poll(moving, 0.4);
+        Assert.NotEmpty(screen.Shown);
+        using (var moving = page.View(12)) screen.Poll(moving, 0.4);
+        Assert.Empty(screen.Shown);
+    }
+
+    [Fact]
     public void TextCreepingAlongIsFollowedOnTheScreen()
     {
         using var page = new Page();

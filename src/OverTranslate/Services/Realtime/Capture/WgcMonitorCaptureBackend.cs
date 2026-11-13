@@ -49,7 +49,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
     // Internal rather than private so the realtime poll interval can be checked against it:
     // polling faster than frames are read back means two polls in a row see the same pixels,
     // which reads as "the picture has settled" and disables the settle wait without saying so.
-    internal static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(120);
+    internal static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(60);
     private static readonly TimeSpan IdleAfter = TimeSpan.FromSeconds(1);
     private const int FrameBuffers = 2;
     private static readonly TimeSpan ThreadCallTimeout = TimeSpan.FromSeconds(5);

@@ -56,15 +56,19 @@ internal sealed class RealtimeScrollFollow
     /// have stopped.
     /// </summary>
     /// <remarks>
-    /// Longer than the capture backend's limit on reading frames back (120ms), because two polls
+    /// Longer than the capture backend's limit on reading frames back (60ms), because two looks
     /// closer together than that are handed the same frame — which would read as a scroll having
-    /// stopped in the middle of it, and draw every translation for one poll at a place the page is
-    /// only passing through.
+    /// stopped in the middle of it, and draw every translation for a moment at a place the page is
+    /// only passing through. The margin over that limit is for a frame that comes late.
     /// </remarks>
-    internal static readonly TimeSpan RestAfter = TimeSpan.FromMilliseconds(140);
+    internal static readonly TimeSpan RestAfter = TimeSpan.FromMilliseconds(100);
 
     // The share of a text's edges that have to be found for it to be there.
     private const double Present = 0.75;
+
+    // The share below which it is plainly not there. Measured: text that has gone leaves under
+    // 0.1, and a caption standing over a picture that moves behind it keeps over 0.7.
+    private const double Absent = 0.4;
 
     // How much better the text has to be found at the new place than at the old one. Lines of
     // text look alike, and a scroll of one line pitch leaves the next line where this one was.
@@ -81,6 +85,10 @@ internal sealed class RealtimeScrollFollow
     /// often as its own, which is the thing this exists to stop.
     /// </remarks>
     private const double FollowedStep = 0.35;
+
+    // The least of a poll interval a move is taken to have happened in: the 60ms the capture
+    // backends keep between the frames they read back, out of the 150ms between polls.
+    private const double ShortestStep = 0.4;
 
     // How close to the edge of the frame counts as touching it.
     private const int EdgeMargin = 3;
@@ -209,8 +217,11 @@ internal sealed class RealtimeScrollFollow
             }
 
             // How many poll intervals the picture had to move in: a poll that waited on a reading
-            // sees several intervals' worth of movement, and that is not the text going faster.
-            var polls = Math.Max(1, elapsed / RealtimeRegionState.PollInterval);
+            // sees several intervals' worth of movement, and that is not the text going faster —
+            // and a frame looked at as it arrives sees part of one, which is not it going slower.
+            // Not less than the frames can be apart, though: two looks closer than that are a look
+            // that came late, not text that covered the distance in the time between them.
+            var polls = Math.Max(ShortestStep, elapsed / RealtimeRegionState.PollInterval);
             bool redraw = false, carried = false;
             int hidden = 0, followed = 0, lost = 0;
             foreach (var pass in Passes())
@@ -324,7 +335,21 @@ internal sealed class RealtimeScrollFollow
 
         // It was moving and did not move with the picture this time. Either it has stopped, or
         // the picture moved in a way that could not be followed and there is no saying where it is.
-        if (text.Moving) Stop(text, pixels, here);
+        if (text.Moving)
+        {
+            Stop(text, pixels, here);
+            return;
+        }
+
+        // On the screen, and its text is neither where it was nor where the picture under it
+        // went: followed a pixel short at the frame before — a move of one pixel can be found as
+        // well at either end — or redrawn by the page as it moved. Measured in a browser, one run
+        // in thirteen: a translation at the edge of the block stayed where it was through a whole
+        // scroll and for 0.4s after it. There is no place left to draw it, so the next reading
+        // puts it back. Only when it is plainly not there: a caption that stays put over a page
+        // scrolling behind it loses some of its edges to what passes under them, and is left alone.
+        if (here < Absent && _lastShifts.Count > 0 && before.CarriedBy(_lastShifts[0], text.Now))
+            text.Gone = true;
     }
 
     // A text that was moving is taken to have arrived: kept if it is where it was followed to, or
