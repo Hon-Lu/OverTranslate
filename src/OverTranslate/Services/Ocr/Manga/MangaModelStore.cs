@@ -134,9 +134,25 @@ internal sealed class MangaModelStore
 
     internal MangaModelManifest? Manifest { get; }
 
-    internal string Root { get; }
+    internal string Root { get; private set; }
 
-    internal string? RuntimeRoot { get; }
+    internal string? RuntimeRoot { get; private set; }
+
+    /// <summary>
+    /// Points the store at another assets location, when the location is changed with nothing in
+    /// it to move (<see cref="Assets.AssetsRelocation"/>). Refused while downloading.
+    /// </summary>
+    internal void Relocate(string root, string? runtimeRoot)
+    {
+        lock (_sync)
+        {
+            if (_download is not null) throw new InvalidOperationException("downloading");
+            Root = root;
+            if (RuntimeRoot is not null) RuntimeRoot = runtimeRoot ?? throw new ArgumentNullException(nameof(runtimeRoot));
+        }
+
+        RaiseChanged();
+    }
 
     internal string? Folder => Manifest is null ? null : Path.Combine(Root, "v" + Manifest.Version);
 

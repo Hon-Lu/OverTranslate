@@ -16,6 +16,8 @@ namespace OverTranslate.Services.LocalAi;
 /// </remarks>
 internal sealed class LocalAiRuntimeStore(LocalAiRuntime runtime, string root, LocalAiDownloader downloader)
 {
+    private string _root = root;
+
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
     private const string ReadyMarker = "verified.json";
     private const string ServerExe = "llama-server.exe";
@@ -24,7 +26,10 @@ internal sealed class LocalAiRuntimeStore(LocalAiRuntime runtime, string root, L
 
     internal LocalAiRuntime Runtime { get; } = runtime;
 
-    internal string Folder => Path.Combine(root, Runtime.Version);
+    internal string Folder => Path.Combine(_root, Runtime.Version);
+
+    /// <summary>See <see cref="LocalAiModelStore.Relocate"/>.</summary>
+    internal void Relocate(string root) => _root = root;
 
     internal string ServerPath => Path.Combine(Folder, ServerExe);
 
@@ -117,7 +122,7 @@ internal sealed class LocalAiRuntimeStore(LocalAiRuntime runtime, string root, L
     {
         try
         {
-            foreach (var folder in Directory.EnumerateDirectories(root))
+            foreach (var folder in Directory.EnumerateDirectories(_root))
             {
                 if (string.Equals(Path.GetFullPath(folder), Path.GetFullPath(Folder), StringComparison.OrdinalIgnoreCase))
                     continue;

@@ -69,7 +69,14 @@ public partial class OcrLanguagePacksCard : UserControl
         var size = $"{pack.Megabytes} MB";
         string meta;
         string dot;
-        if (pack.IsDownloading)
+        // The assets location is on a drive that is not connected: nothing can be downloaded there.
+        var unreachable = !pack.IsReady && !pack.IsDownloading && !Services.Assets.AssetsRelocation.IsAccessible;
+        if (unreachable)
+        {
+            meta = LocalizationService.Get("S.Assets.StoreUnreachable");
+            dot = "AppError";
+        }
+        else if (pack.IsDownloading)
         {
             meta = LocalizationService.Format("S.Settings.MangaModelsProgress",
                 Math.Round(pack.Megabytes * pack.Percent / 100.0, 1), pack.Megabytes, pack.Percent);
@@ -107,6 +114,7 @@ public partial class OcrLanguagePacksCard : UserControl
             action = Action("S.OcrPack.Download", "AccentButton");
             action.Click += (_, _) => pack.StartDownload();
         }
+        action.IsEnabled = !unreachable;
         System.Windows.Automation.AutomationProperties.SetName(action,
             $"{action.Content} {pack.LanguagesText}");
 
@@ -114,7 +122,7 @@ public partial class OcrLanguagePacksCard : UserControl
         var mark = new Ellipse { Width = 7, Height = 7, Margin = new Thickness(0, 1, 6, 0), VerticalAlignment = VerticalAlignment.Center };
         mark.SetResourceReference(Shape.FillProperty, dot);
         metaLine.Children.Add(mark);
-        var metaText = Label(meta, pack.Failure is null || pack.IsDownloading ? "AppTextSecondary" : "AppError", 12);
+        var metaText = Label(meta, !unreachable && (pack.Failure is null || pack.IsDownloading) ? "AppTextSecondary" : "AppError", 12);
         metaLine.Children.Add(metaText);
 
         return Row(Label(Names(pack.Codes), "AppTextPrimary", 13), metaLine, action,

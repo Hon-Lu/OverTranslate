@@ -152,7 +152,10 @@ public partial class MangaModelCard : UserControl
         var unsupported = state == MangaCardState.Unsupported;
         MangaCardDesc2.SetResourceReference(System.Windows.Documents.Run.TextProperty,
             unsupported ? "S.Settings.MangaModelsDesc2Unsupported" : "S.Settings.MangaModelsDesc2");
-        MangaModelsDownloadBtn.IsEnabled = !unsupported;
+        var unreachable = !unsupported && storeState == Services.Ocr.Manga.MangaModelState.NotDownloaded &&
+                          !Services.Assets.AssetsRelocation.IsAccessible;
+        MangaModelsDownloadBtn.IsEnabled = !unsupported && !unreachable;
+        MangaModelsUnreachableNote.Visibility = unreachable ? Visibility.Visible : Visibility.Collapsed;
         MangaModelsDownloadIcon.Visibility = unsupported ? Visibility.Collapsed : Visibility.Visible;
         MangaModelsDownloadText.Margin = new Thickness(unsupported ? 0 : 8, 0, 0, 0);
         MangaModelsDownloadText.Text = unsupported

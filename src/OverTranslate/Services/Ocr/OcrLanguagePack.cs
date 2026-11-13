@@ -207,6 +207,9 @@ internal static class OcrLanguagePacks
     /// <summary>Whether this language can be read right now: it needs no pack, or its pack is here.</summary>
     internal static bool IsUsable(string? code) => ForCode(code) is not { IsReady: false };
 
+    /// <summary>Where a pack's files go under the assets root.</summary>
+    internal static string RootOf(string key) => Path.Combine(AppDataPaths.Models, "ocr-" + key);
+
     /// <summary>A download the app was closed in the middle of is not kept; see <see cref="MangaModelStore.DiscardIncomplete"/>.</summary>
     internal static void DiscardIncomplete()
     {
@@ -227,6 +230,6 @@ internal static class OcrLanguagePacks
         }
 
         return new OcrLanguagePack(key, languagesKey, codes,
-            new MangaModelStore(manifest, Path.Combine(AppDataPaths.Models, "ocr-" + key)));
+            new MangaModelStore(manifest, RootOf(key)));
     }
 }

@@ -715,6 +715,22 @@ public partial class ShellWindow : Window
     /// <summary>Opens 替換翻譯's languages over the shell, for the same reason as the service panel.</summary>
     public void OpenQuickTranslateSettings() => QuickTranslateSettings.Open();
 
+    /// <summary>
+    /// Opens 變更模型存放位置 over everything: from the settings page, and from the AI translation
+    /// panel, which is itself one of these overlays.
+    /// </summary>
+    internal void OpenAssetsLocation() => AssetsLocation.Open();
+
+    /// <summary>
+    /// After the restart that follows moving the models: the settings page, at 進階設定, saying so.
+    /// </summary>
+    internal void ShowAssetsMoved()
+    {
+        Navigate(ShellPage.Settings);
+        _settingsPage.ScrollToSection(Settings.SettingsSection.Advanced);
+        _settingsPage.FlashAssets("S.Assets.Moved");
+    }
+
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         // RestoreBounds rather than the live size: a maximised window's actual size is the screen's,

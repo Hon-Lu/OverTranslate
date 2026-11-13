@@ -59,6 +59,12 @@ public partial class App
             Log.Error(ex.Exception, "Unobserved Task exception");
             ex.SetObserved();
         };
+        // Started by the app itself after moving the models: the old process must be gone before
+        // the single-instance check, or this one would only wake it and exit.
+        var restartedFrom = Services.Assets.AssetsRelocation.RestartedFrom(e.Args);
+        if (restartedFrom is { } previous)
+            Services.Assets.AssetsRelocation.WaitForExit(previous);
+
         _activateEvent = new EventWaitHandle(
             false, EventResetMode.AutoReset, ActivateEventName, out bool createdNew);
 
@@ -102,6 +108,10 @@ public partial class App
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        // The old location after a move: emptied before anything could load a model or the
+        // DirectML runtime from it, and past the single-instance check for the same reason as below.
+        Services.Assets.AssetsRelocation.CleanUpPending();
+
         // Past the single-instance check for the reason given below, and before any window: the
         // card and the hints read the switch this puts in step.
         MangaModelOptions.Attach();
@@ -112,6 +122,10 @@ public partial class App
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
         mainWindow.InitializeApp();
+
+        // Back where the move was asked for: the app otherwise starts in the tray.
+        if (restartedFrom is not null)
+            ShellWindow.ShowOrActivate(ShellPage.Settings).ShowAssetsMoved();
 
         UpdateNotifier.StartPolling();
         _ = PromptForUpdateAsync();

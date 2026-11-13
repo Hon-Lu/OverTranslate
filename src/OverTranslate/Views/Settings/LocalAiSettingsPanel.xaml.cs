@@ -235,7 +235,10 @@ public partial class LocalAiSettingsPanel : UserControl
     {
         var store = Service.Store;
         DownloadButtonText.Text = LocalizationService.Format("S.LocalAi.Download", Gigabytes(store.DownloadSize(model)));
-        DownloadButton.IsEnabled = state == LocalAiFileState.NotDownloaded && _gpus is { Count: > 0 } && store.Downloading is null;
+        // A location on a drive that is not connected: said instead of the free space, and nothing
+        // is downloaded until it is back or the location is changed.
+        var unreachable = state == LocalAiFileState.NotDownloaded && !Services.Assets.AssetsRelocation.IsAccessible;
+        DownloadButton.IsEnabled = state == LocalAiFileState.NotDownloaded && !unreachable && _gpus is { Count: > 0 } && store.Downloading is null;
 
         var free = store.FreeSpace();
 
@@ -244,9 +247,16 @@ public partial class LocalAiSettingsPanel : UserControl
 
         SpaceNote.Text = free is { } space ? LocalizationService.Format("S.LocalAi.FreeSpace", space.Drive, Whole(space.FreeBytes)) : "";
         SpaceNote.Visibility = Show(state == LocalAiFileState.NotDownloaded && free is not null);
+        SpaceChangeLink.Visibility = SpaceNote.Visibility;
+        BlockedChangeLink.Visibility = Show(state == LocalAiFileState.NoSpace && !unreachable);
 
-        BlockedNote.Visibility = Show(state != LocalAiFileState.NotDownloaded);
-        if (state == LocalAiFileState.NoGpu)
+        BlockedNote.Visibility = Show(state != LocalAiFileState.NotDownloaded || unreachable);
+        if (unreachable)
+        {
+            BlockedNote.Text = LocalizationService.Get("S.Assets.StoreUnreachable");
+            BlockedNote.SetResourceReference(TextBlock.ForegroundProperty, "AppError");
+        }
+        else if (state == LocalAiFileState.NoGpu)
         {
             BlockedNote.Text = LocalizationService.Get("S.Error.LocalAiNoGpu");
             BlockedNote.SetResourceReference(TextBlock.ForegroundProperty, "AppError");
@@ -257,6 +267,9 @@ public partial class LocalAiSettingsPanel : UserControl
             BlockedNote.SetResourceReference(TextBlock.ForegroundProperty, "AppWarning");
         }
     }
+
+    private void ChangeLocation_Click(object sender, RoutedEventArgs e) =>
+        Shell.ShellWindow.Current?.OpenAssetsLocation();
 
     private void RenderProgress(LocalAiFileState state)
     {

@@ -1854,7 +1854,7 @@ public partial class MainWindow : Window
     /// </remarks>
     private static void OpenShell() => ShellWindow.ShowOrActivate();
 
-    private void ExitApp()
+    internal void ExitApp()
     {
         // Its overlays are Topmost and click-through; left behind by a shutdown they would be
         // painted onto the desktop with no process left to close them.

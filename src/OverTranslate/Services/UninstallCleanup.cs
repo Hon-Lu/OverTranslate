@@ -30,7 +30,7 @@ internal static class UninstallCleanup
     {
         try
         {
-            RemoveAssets(AppDataPaths.DefaultAssetsRoot);
+            RemoveAssets(AppDataPaths.DefaultAssetsRoot, AppDataPaths.SettingsFile);
         }
         catch
         {
@@ -59,6 +59,22 @@ internal static class UninstallCleanup
         {
             // As above.
         }
+    }
+
+    /// <summary>
+    /// Removes the default assets folder whole, as always, and at a location the person chose only
+    /// the folders the app created there — whatever else they keep beside them is theirs. Where that
+    /// is comes straight from the settings file (<see cref="Assets.SavedAssetsLocation"/>), read here
+    /// before anything else is deleted; when it cannot be read, only the default goes.
+    /// </summary>
+    internal static void RemoveAssets(string defaultRoot, string settingsFile)
+    {
+        var saved = Assets.SavedAssetsLocation.Read(settingsFile);
+        RemoveAssets(defaultRoot);
+        if (saved is null) return;
+        foreach (var chosen in new[] { saved.Path, saved.PendingDelete })
+            if (chosen is not null && !Assets.AssetsPaths.Same(chosen, defaultRoot))
+                Assets.AssetsMover.RemoveAppFolders(chosen);
     }
 
     /// <summary>

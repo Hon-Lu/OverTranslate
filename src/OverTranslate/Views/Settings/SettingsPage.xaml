@@ -633,6 +633,25 @@
                                 <TextBlock Text="&#xE896;" Style="{StaticResource CardHeaderIcon}"/>
                                 <TextBlock Text="{DynamicResource S.Settings.Models}"
                                            Style="{StaticResource CardTitle}"/>
+                                <!-- Where the models are kept is changed under 進階設定, not here. -->
+                                <TextBlock Text="&#xE946;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource AppTextSecondary}"
+                                           Background="Transparent"
+                                           Padding="4,2"
+                                           Margin="7,1,0,0"
+                                           VerticalAlignment="Center"
+                                           Cursor="Help">
+                                    <controls:HoverToolTip.Content>
+                                        <TextBlock Text="{DynamicResource S.Settings.ModelsLocationHint}"
+                                                   MaxWidth="420"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="{StaticResource AppFontSize}"
+                                                   TextWrapping="Wrap"
+                                                   LineHeight="18"/>
+                                    </controls:HoverToolTip.Content>
+                                </TextBlock>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock x:Name="ModelsUsedText"
@@ -1533,116 +1552,172 @@
                 <Border x:Name="AdvancedSection" Style="{StaticResource CardBorder}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource CardHeaderRow}">
-                            <TextBlock Text="&#xE7BA;" Style="{StaticResource CardHeaderIcon}"/>
+                            <TextBlock Text="&#xE90F;" Style="{StaticResource CardHeaderIcon}"/>
                             <TextBlock Text="{DynamicResource S.Settings.Advanced}"
                                        Style="{StaticResource CardTitle}"/>
-
-                            <!-- What the export actually collects, on the heading for the same
-                                 reason the shortcut card's does: it is read once, before the first
-                                 export, and never again — while a paragraph spelling it out sits
-                                 above the buttons for good, taking more room than the two controls
-                                 it describes. Background and Padding as there: a bare TextBlock is
-                                 only hit-testable across the glyph's own strokes. -->
-                            <TextBlock Text="&#xE946;"
-                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource AppTextSecondary}"
-                                       Background="Transparent"
-                                       Padding="4,2"
-                                       Margin="7,1,0,0"
-                                       VerticalAlignment="Center"
-                                       Cursor="Help">
-                                <controls:HoverToolTip.Content>
-                                    <TextBlock x:Name="DiagnosticsHintText"
-                                               Text="{DynamicResource S.Settings.DiagnosticsHint}"
-                                               MaxWidth="420"
-                                               FontFamily="{DynamicResource AppFont}"
-                                               FontSize="{StaticResource AppFontSize}"
-                                               TextWrapping="Wrap"
-                                               LineHeight="18"/>
-                                </controls:HoverToolTip.Content>
-                            </TextBlock>
                         </StackPanel>
 
+                        <!-- Two rows of one build: an icon tile, the name and what it says, the
+                             controls on the right, a rule between them. The card reads as two
+                             settings rather than three layouts. The tile is the shortcut rows'.
+
+                             Where the models and runtimes are kept comes first: it is the one row
+                             here someone with a small C drive comes looking for. -->
+                        <Border BorderBrush="{DynamicResource AppSubtleBorder}"
+                                BorderThickness="0,0,0,1"
+                                Padding="0,0,0,16"
+                                Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource HotkeyRowGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource S.Assets.Title}"
+                                                   Style="{StaticResource OptionTitle}"/>
+                                        <TextBlock Text="&#xE946;"
+                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource AppTextSecondary}"
+                                                   Background="Transparent"
+                                                   Padding="4,2"
+                                                   Margin="4,-2,0,-2"
+                                                   VerticalAlignment="Center"
+                                                   Cursor="Help">
+                                            <controls:HoverToolTip.Content>
+                                                <TextBlock Text="{DynamicResource S.Assets.Hint}"
+                                                           MaxWidth="420"
+                                                           FontFamily="{DynamicResource AppFont}"
+                                                           FontSize="{StaticResource AppFontSize}"
+                                                           TextWrapping="Wrap"
+                                                           LineHeight="18"/>
+                                            </controls:HoverToolTip.Content>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <TextBlock x:Name="AssetsPathText"
+                                               Margin="0,4,0,0"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="12.5"
+                                               Foreground="{DynamicResource AppTextPrimary}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="AssetsUsageText"
+                                               Style="{StaticResource OptionDescription}"/>
+                                    <TextBlock x:Name="AssetsStatusText"
+                                               Style="{StaticResource OptionDescription}"
+                                               Visibility="Collapsed"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button x:Name="AssetsResetBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Visibility="Collapsed"
+                                            Content="{DynamicResource S.Assets.ResetDefault}"
+                                            Click="AssetsResetBtn_Click"/>
+                                    <Button x:Name="AssetsOpenBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Content="{DynamicResource S.Assets.OpenFolder}"
+                                            Click="AssetsOpenBtn_Click"/>
+                                    <Button x:Name="AssetsChangeBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0" Margin="8,0,0,0"
+                                            Content="{DynamicResource S.Assets.Change}"
+                                            Click="AssetsChangeBtn_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 應用程式記錄: how much the log says, and what to do with what it said.
+
+                             一般／詳細 rather than a checkbox: an unticked box reads as "off", and a
+                             normal log is not a log that is off. Two states side by side, both
+                             normal, the export working in either. The setting is still the one bool,
+                             詳細 being true.
+
+                             The two buttons sit under the prose, in its column, and are plain: an
+                             accent here was the loudest thing on the page. -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <CheckBox  Grid.Column="0" x:Name="VerboseLoggingCheckBox"
-                                       Style="{StaticResource ModernCheckBox}"
-                                       VerticalAlignment="Top"
-                                       ToolTip="{DynamicResource S.Settings.Logging}"
-                                       Checked="VerboseLogging_Toggled"
-                                       Unchecked="VerboseLogging_Toggled"/>
-                            <TextBlock Grid.Column="1" Text="&#xE9D9;" Style="{StaticResource OptionGlyph}"/>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="{DynamicResource S.Settings.LoggingCheck}"
-                                           Style="{StaticResource OptionTitle}"/>
+                            <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}" VerticalAlignment="Top">
+                                <TextBlock Text="&#xE9D9;" Style="{StaticResource HotkeyRowGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{DynamicResource S.Settings.AppLog}"
+                                               Style="{StaticResource OptionTitle}"/>
+                                    <TextBlock Text="&#xE946;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="14"
+                                               Foreground="{DynamicResource AppTextSecondary}"
+                                               Background="Transparent"
+                                               Padding="4,2"
+                                               Margin="4,-2,0,-2"
+                                               VerticalAlignment="Center"
+                                               Cursor="Help">
+                                        <controls:HoverToolTip.Content>
+                                            <TextBlock x:Name="DiagnosticsHintText"
+                                                       Text="{DynamicResource S.Settings.DiagnosticsHint}"
+                                                       MaxWidth="420"
+                                                       FontFamily="{DynamicResource AppFont}"
+                                                       FontSize="{StaticResource AppFontSize}"
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="18"/>
+                                        </controls:HoverToolTip.Content>
+                                    </TextBlock>
+                                </StackPanel>
                                 <TextBlock x:Name="VerboseLoggingHint"
-                                           Text="{DynamicResource S.Settings.LoggingHint}"
+                                           Text="{DynamicResource S.Settings.AppLogHint}"
                                            Style="{StaticResource OptionDescription}"/>
+                                <WrapPanel Margin="0,10,0,0">
+                                    <Button x:Name="ExportDiagnosticsBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Margin="0,0,8,0"
+                                            Click="ExportDiagnosticsBtn_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <!-- Save, because that is all this press does: it writes
+                                                 a file and stops. The upload arrow is on the button
+                                                 that actually uploads, in the panel below. -->
+                                            <TextBlock Text="&#xE74E;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="ExportDiagnosticsLabel"
+                                                       Text="{DynamicResource S.Settings.ExportDiagnostics}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="OpenDiagnosticsFolderBtn"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0"
+                                            Click="OpenDiagnosticsFolderBtn_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE838;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.OpenDiagnosticsFolder}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
                             </StackPanel>
-                        </Grid>
-
-                        <!-- Below the checkbox rather than beside it: the box decides what gets
-                             written, these two decide what happens to what was written, and the
-                             usual order of that conversation is tick, reproduce, then hand over.
-
-                             Two equal columns filling the card rather than two buttons sized to
-                             their own labels. The labels are different lengths in both languages,
-                             so left-packed buttons leave a ragged edge against a card whose every
-                             other row runs the full width.
-
-                             Accent on the export and not on the folder: one of these is what the
-                             card is for and the other is the way out for someone who wants to look
-                             before they hand anything over. -->
-                        <Grid Margin="0,16,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Button Grid.Column="0" x:Name="ExportDiagnosticsBtn"
-                                    Style="{StaticResource AccentButton}"
-                                    Height="34"
-                                    Margin="0,0,4,0"
-                                    Click="ExportDiagnosticsBtn_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <!-- Save, because that is now all this press does: it writes
-                                         a file and stops. The upload arrow it used to carry has
-                                         moved to the button that actually uploads, in the panel
-                                         below, where the two now read as the two steps they are.
-                                         No Foreground on either block: both inherit the button's,
-                                         which is the one thing that differs between these two
-                                         styles and the one thing that must keep differing. -->
-                                    <TextBlock Text="&#xE74E;"
-                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,6,0"/>
-                                    <TextBlock x:Name="ExportDiagnosticsLabel"
-                                               Text="{DynamicResource S.Settings.ExportDiagnostics}"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Grid.Column="1" x:Name="OpenDiagnosticsFolderBtn"
-                                    Style="{StaticResource FlatButton}"
-                                    Height="34"
-                                    Margin="4,0,0,0"
-                                    Click="OpenDiagnosticsFolderBtn_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE838;"
-                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,6,0"/>
-                                    <TextBlock Text="{DynamicResource S.Settings.OpenDiagnosticsFolder}"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
+                            <!-- The halves share one width (see SegmentedSwitch), within this switch alone. -->
+                            <Border Grid.Column="2" VerticalAlignment="Top" Grid.IsSharedSizeScope="True">
+                                <ctl:SegmentedSwitch x:Name="VerboseLoggingSwitch"
+                                                     SelectionChanged="VerboseLoggingSwitch_SelectionChanged"/>
+                            </Border>
                         </Grid>
 
                         <!-- The one thing the user has to leave with. It appears only after an

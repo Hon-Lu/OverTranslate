@@ -465,6 +465,8 @@
             <settings:ServiceSettingsOverlay Grid.ColumnSpan="2" x:Name="ServiceSettings"/>
             <settings:DiagnosticNoteOverlay Grid.ColumnSpan="2" x:Name="DiagnosticNote"/>
             <settings:QuickTranslateSettingsOverlay Grid.ColumnSpan="2" x:Name="QuickTranslateSettings"/>
+            <!-- Last: it is opened from the AI translation panel inside ServiceSettings too. -->
+            <settings:AssetsLocationOverlay Grid.ColumnSpan="2" x:Name="AssetsLocation"/>
         </Grid>
     </Grid>
 </Window>

@@ -260,6 +260,24 @@ public class AppSettings
     /// </remarks>
     public string SkippedUpdateVersion { get; set; } = "";
 
+    /// <summary>
+    /// Where the models and runtimes were moved to (模型存放位置); empty for the default,
+    /// <c>%LocalAppData%\OverTranslate-assets</c>.
+    /// </summary>
+    /// <remarks>
+    /// Read once, before anything loads a model — see <see cref="Services.AppDataPaths.AssetsRoot"/>.
+    /// The uninstall hook reads it, and <see cref="AssetsPendingDelete"/>, straight from the file:
+    /// see <see cref="Services.Assets.SavedAssetsLocation"/>. Written only through
+    /// <see cref="Services.SettingsService.UpdateAssetsLocation"/>.
+    /// </remarks>
+    public string AssetsLocation { get; set; } = "";
+
+    /// <summary>
+    /// The location the assets were just moved from, emptied at the start after the move; empty when
+    /// there is nothing left to empty.
+    /// </summary>
+    public string AssetsPendingDelete { get; set; } = "";
+
     /// <summary>What 截圖翻譯 keeps between capture sessions, grouped.</summary>
     /// <remarks>
     /// The first grouped section in declaration order because 截圖翻譯 appears before 即時翻譯 in the

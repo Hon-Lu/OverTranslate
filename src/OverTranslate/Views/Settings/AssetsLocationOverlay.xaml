@@ -1,0 +1,259 @@
+<UserControl x:Class="OverTranslate.Views.Settings.AssetsLocationOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed"
+             Focusable="True">
+
+    <UserControl.Resources>
+        <!-- One choice in the options box: the whole row is the radio button, its indicator at the
+             top left beside the name, path and free space. -->
+        <Style x:Key="LocationOption" TargetType="RadioButton">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{StaticResource AppFontSize}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Root" Background="Transparent" Padding="14,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid Width="15" Height="15" Margin="0,2,12,0" VerticalAlignment="Top">
+                                    <Ellipse x:Name="Ring" Stroke="{DynamicResource AppInputBorder}" StrokeThickness="1.5"/>
+                                    <Ellipse x:Name="Dot" Width="7" Height="7" Fill="{DynamicResource AppAccent}" Visibility="Collapsed"/>
+                                </Grid>
+                                <ContentPresenter Grid.Column="1"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AppAccent}"/>
+                                <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Ring" Property="StrokeThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DialogTitle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+        </Style>
+        <Style x:Key="DialogText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="20"/>
+        </Style>
+        <Style x:Key="SmallNote" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <!-- The old and new locations on the confirmation: read-only, framed like a field. -->
+        <Style x:Key="PathLabel" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppInputBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,8"/>
+        </Style>
+        <Style x:Key="DialogCard" TargetType="Border">
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Background" Value="{DynamicResource AppCardBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- The scrim swallows the click: dismissing on it would answer by accident, and nothing may
+         be clicked behind a move in progress. -->
+    <Grid x:Name="Scrim" Background="#8C000000" MouseLeftButtonDown="Scrim_MouseLeftButtonDown">
+
+        <!-- ══════════ Choose ══════════ -->
+        <Border x:Name="ChooseCard" Style="{StaticResource DialogCard}" Width="580">
+            <StackPanel Margin="22,18,22,18">
+                <TextBlock Text="{DynamicResource S.Assets.ChooseTitle}" Style="{StaticResource DialogTitle}" Margin="0,0,0,12"/>
+
+                <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="8"
+                        Background="{DynamicResource AppInputBg}" ClipToBounds="True">
+                    <StackPanel>
+                        <RadioButton x:Name="DefaultOption" GroupName="AssetsLocation"
+                                     Style="{StaticResource LocationOption}"
+                                     Checked="Option_Checked">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{DynamicResource S.Assets.DefaultOption}" FontWeight="SemiBold"/>
+                                    <Border x:Name="DefaultCurrentTag"
+                                            Margin="8,0,0,0" Padding="7,1" CornerRadius="4"
+                                            VerticalAlignment="Center"
+                                            Background="{DynamicResource AppAccentSubtle}">
+                                        <TextBlock Text="{DynamicResource S.Assets.CurrentTag}" FontSize="11"
+                                                   Foreground="{DynamicResource AppTextPrimary}"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock x:Name="DefaultPathText" Style="{StaticResource SmallNote}" Margin="0,3,0,0"/>
+                                <TextBlock x:Name="DefaultFreeText" Style="{StaticResource SmallNote}" Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </RadioButton>
+
+                        <Border Height="1" Background="{DynamicResource AppBorder}"/>
+
+                        <RadioButton x:Name="OtherOption" GroupName="AssetsLocation"
+                                     Style="{StaticResource LocationOption}"
+                                     Checked="Option_Checked">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{DynamicResource S.Assets.OtherOption}" FontWeight="SemiBold"/>
+                                    <Border x:Name="OtherCurrentTag"
+                                            Margin="8,0,0,0" Padding="7,1" CornerRadius="4"
+                                            VerticalAlignment="Center" Visibility="Collapsed"
+                                            Background="{DynamicResource AppAccentSubtle}">
+                                        <TextBlock Text="{DynamicResource S.Assets.CurrentTag}" FontSize="11"
+                                                   Foreground="{DynamicResource AppTextPrimary}"/>
+                                    </Border>
+                                </StackPanel>
+                                <DockPanel Margin="0,8,0,0">
+                                    <Button x:Name="BrowseButton" DockPanel.Dock="Right"
+                                            Style="{StaticResource FlatButton}"
+                                            Height="32" Padding="14,0" Margin="8,0,0,0"
+                                            Content="{DynamicResource S.Assets.Browse}"
+                                            Click="Browse_Click"/>
+                                    <Grid>
+                                        <TextBox x:Name="OtherPathBox"
+                                                 Style="{StaticResource ModernTextBox}"
+                                                 IsReadOnly="True"
+                                                 Cursor="Hand"
+                                                 AutomationProperties.Name="{DynamicResource S.Assets.PickFolder}"
+                                                 PreviewMouseLeftButtonUp="OtherPathBox_Click"/>
+                                        <TextBlock x:Name="OtherPathPlaceholder"
+                                                   Text="{DynamicResource S.Assets.PickFolder}"
+                                                   Style="{StaticResource SmallNote}"
+                                                   IsHitTestVisible="False"
+                                                   VerticalAlignment="Center"
+                                                   Margin="11,0,0,0"/>
+                                    </Grid>
+                                </DockPanel>
+                                <TextBlock x:Name="CheckText" Style="{StaticResource SmallNote}" Margin="0,8,0,0" Visibility="Collapsed"/>
+                                <TextBlock x:Name="CheckNote" Style="{StaticResource SmallNote}" Margin="0,2,0,0" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button x:Name="ChooseCancelButton"
+                            Style="{StaticResource FlatButton}"
+                            Height="34" Padding="18,0"
+                            Content="{DynamicResource S.Common.Cancel}"
+                            Click="ChooseCancel_Click"/>
+                    <Button x:Name="ContinueButton"
+                            Style="{StaticResource AccentButton}"
+                            Height="34" Padding="18,0" Margin="10,0,0,0"
+                            Content="{DynamicResource S.Assets.Continue}"
+                            Click="Continue_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ══════════ Confirm ══════════ -->
+        <Border x:Name="ConfirmCard" Style="{StaticResource DialogCard}" Width="480">
+            <StackPanel Margin="22,20,22,18">
+                <TextBlock Text="{DynamicResource S.Assets.ConfirmTitle}" Style="{StaticResource DialogTitle}" Margin="0,0,0,12"/>
+                <TextBlock Text="{DynamicResource S.Assets.ConfirmFrom}" Style="{StaticResource SmallNote}" Margin="0,0,0,6"/>
+                <Border Style="{StaticResource PathLabel}">
+                    <TextBlock x:Name="ConfirmFromText" Style="{StaticResource DialogText}" LineHeight="18"/>
+                </Border>
+                <TextBlock Text="{DynamicResource S.Assets.ConfirmTo}" Style="{StaticResource SmallNote}" Margin="0,10,0,6"/>
+                <Border Style="{StaticResource PathLabel}">
+                    <TextBlock x:Name="ConfirmToText" Style="{StaticResource DialogText}" LineHeight="18"
+                               Foreground="{DynamicResource AppTextPrimary}" FontWeight="SemiBold"/>
+                </Border>
+                <TextBlock x:Name="ConfirmBody" Style="{StaticResource DialogText}" Margin="0,12,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button x:Name="ConfirmCancelButton"
+                            Style="{StaticResource FlatButton}"
+                            Height="34" Padding="18,0"
+                            Content="{DynamicResource S.Common.Cancel}"
+                            Click="ConfirmCancel_Click"/>
+                    <Button x:Name="ConfirmButton"
+                            Style="{StaticResource AccentButton}"
+                            Height="34" Padding="18,0" Margin="10,0,0,0"
+                            Content="{DynamicResource S.Assets.ConfirmButton}"
+                            Click="Confirm_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ══════════ Moving ══════════ -->
+        <Border x:Name="MovingCard" Style="{StaticResource DialogCard}" Width="440">
+            <StackPanel Margin="22,20,22,20">
+                <TextBlock Text="{DynamicResource S.Assets.MovingTitle}" Style="{StaticResource DialogTitle}" FontSize="15"/>
+                <TextBlock x:Name="MovingToText" Style="{StaticResource SmallNote}" Margin="0,8,0,0"/>
+                <ProgressBar x:Name="MovingBar" Height="6" Minimum="0" Maximum="1" Margin="0,14,0,0"
+                             Foreground="{DynamicResource AppAccent}"
+                             AutomationProperties.Name="{DynamicResource S.Assets.MovingTitle}">
+                    <ProgressBar.Template>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Border Background="{DynamicResource AppSubtleBorder}" CornerRadius="3" ClipToBounds="True">
+                                <Grid>
+                                    <Border x:Name="PART_Track"/>
+                                    <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                            Background="{TemplateBinding Foreground}" CornerRadius="3"/>
+                                </Grid>
+                            </Border>
+                        </ControlTemplate>
+                    </ProgressBar.Template>
+                </ProgressBar>
+                <DockPanel Margin="0,10,0,0">
+                    <Button x:Name="MovingCancelButton" DockPanel.Dock="Right"
+                            Style="{StaticResource FlatButton}"
+                            Height="32" Padding="14,0"
+                            Content="{DynamicResource S.Common.Cancel}"
+                            Click="MovingCancel_Click"/>
+                    <TextBlock x:Name="MovingProgressText" Style="{StaticResource SmallNote}" VerticalAlignment="Center"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ══════════ Failed ══════════ -->
+        <Border x:Name="FailedCard" Style="{StaticResource DialogCard}" Width="440">
+            <StackPanel Margin="22,20,22,20">
+                <TextBlock Text="{DynamicResource S.Assets.FailedTitle}" Style="{StaticResource DialogTitle}" FontSize="15"/>
+                <TextBlock x:Name="FailedBody" Style="{StaticResource DialogText}" Margin="0,8,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <Button x:Name="FailedOkButton"
+                            Style="{StaticResource AccentButton}"
+                            Height="34" Padding="18,0"
+                            Content="{DynamicResource S.Assets.Ok}"
+                            Click="FailedOk_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
