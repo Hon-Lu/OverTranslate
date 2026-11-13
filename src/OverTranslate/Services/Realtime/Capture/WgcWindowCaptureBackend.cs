@@ -109,6 +109,12 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // Raised whenever a frame has been read back. Only the start-up wait listens: it turns waiting
     // for the first frame from a sleep into a wait the frame itself ends.
     private readonly ManualResetEventSlim _frameSignal = new(false);
+    private readonly FrameNotice _frameRead = new();
+
+    // Whether the system delivers frames no more often than MaxFrameAge on its own.
+    private bool _systemSpacesFrames;
+
+    public Task NextFrame => _frameRead.Next;
 
     private int _framesReceived;
     private int _framesRead;
@@ -488,7 +494,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         _pool.FrameArrived += OnFrameArrived;
 
         _session = _pool.CreateCaptureSession(item);
-        WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
+        Volatile.Write(ref _systemSpacesFrames, WgcFrameThread.LimitFrameRate(_session, MaxFrameAge));
         WgcCaptureBorder.Apply(_session);
         _session.StartCapture();
 
@@ -549,7 +555,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // one frame when the session starts and one whenever the content changes, so over a
             // paused video or a menu that is not animating those are the same frame. Letting it go
             // means the capture appears to produce nothing at all.
-            var sinceRead = Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
+            // Frames the system has already spaced are read as they come: holding them to this
+            // handler's limit as well only makes each one late — see WgcFrameThread.LimitFrameRate.
+            var sinceRead = Volatile.Read(ref _systemSpacesFrames)
+                ? MaxFrameAge
+                : Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
             var arrival = WgcFrameThrottle.OnArrival(
                 HasFrame(),
                 sinceRead,
@@ -622,6 +632,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         }
         previous?.Dispose();
         _frameSignal.Set();
+        _frameRead.Raise();
     }
 
     /// <summary>

@@ -10,7 +10,10 @@ internal enum ScrollPace
     /// <summary>Not being scrolled, or slowly enough to be read as it goes.</summary>
     Readable,
 
-    /// <summary>Most of it is moving, too fast for a reading to still be true when it arrives.</summary>
+    /// <summary>
+    /// Most of it is moving, or has only just stopped: a reading begun now would be of a frame
+    /// that is gone before the reading is finished.
+    /// </summary>
     Scrolling,
 }
 
@@ -28,10 +31,10 @@ internal enum ScrollPace
 /// <para>Moving is the one change that needs no reading to follow. <see cref="ScrollPrint"/> says
 /// the picture moved and by how much, at every poll and for next to nothing, and
 /// <see cref="TextAnchor"/> says of each translation whether its own text went with it. A
-/// translation whose text moved is taken off the screen at once, carried along while the text
+/// translation whose text moved is drawn where the text now is. One whose text goes on moving,
+/// faster than it could be read on the way, is taken off the screen, carried along while the text
 /// keeps moving, and drawn again where the text has come to rest — or dropped, if it has left the
-/// block or been lost sight of, for the next reading to bring back. One moving slowly enough to be
-/// read on the way is simply drawn where its text now is.</para>
+/// block or been lost sight of, for the next reading to bring back.</para>
 ///
 /// <para>Everything here acts on proof that a particular text moved, and does nothing without it.
 /// A translation whose text is still where it was stays, whatever the picture around it does. One
@@ -79,8 +82,8 @@ internal sealed class RealtimeScrollFollow
     /// </remarks>
     private const double FollowedStep = 0.35;
 
-    // The same bar when there is no text on screen to measure it against.
-    private const double FollowedStepWithoutText = 8;
+    // How close to the edge of the frame counts as touching it.
+    private const int EdgeMargin = 3;
 
     // How many passes may be waiting on their translation and still be followed. More than the
     // session lets be in flight at once; past it something is stuck, not slow.
@@ -92,11 +95,27 @@ internal sealed class RealtimeScrollFollow
     private readonly List<Pass> _waiting = [];
 
     private Pass? _shown;
+
+    // A pass whose translation has arrived while its text is still being looked for. What is on
+    // the screen stays there until it is found, rather than going blank for the poll in between.
+    private Pass? _arriving;
+
+    // Whether the last frame that differed from the one before it carried text with it, or was
+    // most of a picture going past with nothing in it standing still.
+    private bool _scrolling;
     private ScrollPrint? _before;
     private ScrollPrint? _latest;
     private IReadOnlyList<ScrollShift> _lastShifts = [];
     private long _observedAt;
     private long _changedAt;
+
+    // How far the picture has moved in all, so a reading can be told how far it moved meanwhile.
+    private int _travelX;
+    private int _travelY;
+
+    // Set when a translation was moved or dropped here: what the reading remembers of where its
+    // lines are is no longer where they are.
+    private bool _readAfresh;
 
     /// <param name="draw">
     /// Puts lines on the screen, with the cache generation they were translated under. Called
@@ -127,8 +146,20 @@ internal sealed class RealtimeScrollFollow
         /// <summary>Off the screen until its text stops.</summary>
         public bool Moving { get; set; }
 
+        /// <summary>Whether it moved in the last frame that differed from the one before.</summary>
+        public bool Pushed { get; set; }
+
         /// <summary>Out of the block, or lost: not drawn again until it is read again.</summary>
         public bool Gone { get; set; }
+
+        /// <summary>
+        /// Where else it may be, as an offset, when where it is has only been worked out: text read
+        /// while the picture moved is taken to have moved with it, and may be a caption that did not.
+        /// </summary>
+        public Point? Otherwise { get; set; }
+
+        /// <summary>Read from a moving picture while touching the edge of the frame.</summary>
+        public bool CutOff { get; set; }
 
         public Rectangle Now => new(Bounds.X + Dx, Bounds.Y + Dy, Bounds.Width, Bounds.Height);
     }
@@ -154,12 +185,16 @@ internal sealed class RealtimeScrollFollow
 
             if (print.SameAs(before))
             {
-                // Possibly the very frame the last poll was handed — see RestAfter.
-                if (Stopwatch.GetElapsedTime(_changedAt, now) < RestAfter) return ScrollPace.Readable;
+                // Possibly the very frame the last poll was handed — see RestAfter. Nothing is read
+                // either until that is known: a reading would hold up the poll that finds out.
+                if (Stopwatch.GetElapsedTime(_changedAt, now) < RestAfter)
+                    return _scrolling || AnyMoving() ? ScrollPace.Scrolling : ScrollPace.Readable;
 
                 _lastShifts = [];
                 _observedAt = now;
-                if (Settle(pixels)) Draw();
+                _scrolling = false;
+                var settled = Settle(pixels);
+                if (Arrive() || settled) Draw();
                 return ScrollPace.Readable;
             }
 
@@ -167,11 +202,16 @@ internal sealed class RealtimeScrollFollow
             (_before, _latest) = (before, print);
             _observedAt = _changedAt = now;
             _lastShifts = ScrollPrint.FindShifts(before, print);
+            if (_lastShifts.Count > 0)
+            {
+                _travelX += _lastShifts[0].Dx;
+                _travelY += _lastShifts[0].Dy;
+            }
 
             // How many poll intervals the picture had to move in: a poll that waited on a reading
             // sees several intervals' worth of movement, and that is not the text going faster.
             var polls = Math.Max(1, elapsed / RealtimeRegionState.PollInterval);
-            var redraw = false;
+            bool redraw = false, carried = false;
             int hidden = 0, followed = 0, lost = 0;
             foreach (var pass in Passes())
             foreach (var text in pass.Texts)
@@ -182,6 +222,9 @@ internal sealed class RealtimeScrollFollow
 
                 Follow(text, pixels, before, print, polls);
 
+                var moved = text.Gone || text.Dx != wasAtX || text.Dy != wasAtY;
+                carried |= moved;
+                _readAfresh |= moved;
                 if (!shown) continue;
                 if (text.Gone) lost++;
                 else if (text.Moving && !wasMoving) hidden++;
@@ -190,15 +233,56 @@ internal sealed class RealtimeScrollFollow
             }
 
             if (redraw)
-            {
                 Log.Debug(
                     "Realtime region {Region} moved by {Shifts}: {Hidden} hidden, {Followed} followed, {Lost} dropped",
                     _region, Describe(_lastShifts), hidden, followed, lost);
-                Draw();
-            }
+            if (Arrive() || redraw) Draw();
 
-            return Pace(polls);
+            // Not read while text is on the move, however slowly: it is kept where it belongs from
+            // the pixels, and a reading of it would be of where it no longer is. Nor while most of
+            // the picture is going past with no text standing still in it — a page being scrolled
+            // through, where a reading would be of lines cut off at the edge they are crossing. A
+            // picture that moves behind text which does not is read as it always was.
+            _scrolling = carried ||
+                (_lastShifts.Count > 0 && _lastShifts[0].Share >= 0.5 && !AnyStanding());
+            return _scrolling || AnyMoving() ? ScrollPace.Scrolling : ScrollPace.Readable;
         }
+    }
+
+    private bool AnyMoving() => Passes().Any(pass => pass.Texts.Any(text => text.Moving && !text.Gone));
+
+    private bool AnyStanding() => Passes().Any(pass => pass.Texts.Any(text => !text.Moving && !text.Gone));
+
+    // Puts the pass that was waiting for its text to be found in place of what is shown, once
+    // every text in it has been found or given up. Says whether it did.
+    private bool Arrive()
+    {
+        if (_arriving is not { } arriving || arriving.Texts.Any(text => text.Moving && !text.Gone)) return false;
+        (_shown, _arriving) = (arriving, null);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether translations were moved or dropped since this was last asked, so that the region
+    /// should be read as if for the first time rather than against where its lines used to be.
+    /// </summary>
+    public bool TakeReadAfresh()
+    {
+        lock (_sync)
+        {
+            var afresh = _readAfresh;
+            _readAfresh = false;
+            return afresh;
+        }
+    }
+
+    /// <summary>Where the picture had got to when a reading began — see <see cref="Track"/>.</summary>
+    internal readonly record struct ReadStart(int TravelX, int TravelY, bool Moving);
+
+    /// <summary>Marks the frame a reading is about to be made from.</summary>
+    public ReadStart BeginRead()
+    {
+        lock (_sync) return new ReadStart(_travelX, _travelY, _lastShifts.Count > 0);
     }
 
     // One followed text against this poll's frame.
@@ -225,17 +309,50 @@ internal sealed class RealtimeScrollFollow
                 return;
             }
 
-            // Once hidden it stays hidden until it stops, however slowly it finishes.
-            text.Moving |= shift.Distance / polls > FollowedStep * text.Thickness;
+            // Hidden once it is moving too fast to be read on the way — and was already moving a
+            // frame ago. The first move is followed whatever its size: a chat pushed up by a new
+            // line has moved once and stopped, and taking its translations away for the frame it
+            // takes to find that out would make every new line a blink. A page being scrolled is
+            // still moving at the next frame, and that is when they go. Once hidden it stays
+            // hidden until it stops, however slowly it finishes.
+            text.Moving |= text.Pushed && shift.Distance / polls > FollowedStep * text.Thickness;
+            text.Pushed = true;
             return;
         }
 
-        if (!text.Moving) return;
+        text.Pushed = false;
 
         // It was moving and did not move with the picture this time. Either it has stopped, or
         // the picture moved in a way that could not be followed and there is no saying where it is.
-        if (here >= Present) text.Moving = false;
-        else text.Gone = true;
+        if (text.Moving) Stop(text, pixels, here);
+    }
+
+    // A text that was moving is taken to have arrived: kept if it is where it was followed to, or
+    // where it may have stayed all along, and dropped if it is in neither place.
+    private void Stop(Followed text, FramePixels pixels, double? here)
+    {
+        text.Moving = false;
+
+        // Read off a picture that was moving, at the edge it was crossing: only part of the text
+        // was in view, and what was read is that part. The next reading has the whole of it.
+        if (text.CutOff)
+        {
+            text.Gone = true;
+            _readAfresh = true;
+            return;
+        }
+
+        if (here is null or >= Present)
+        {
+            text.Otherwise = null;
+            return;
+        }
+
+        if (text.Otherwise is { } other && text.Anchor.PresenceAt(pixels, other.X, other.Y) >= Present)
+            (text.Dx, text.Dy, text.Otherwise) = (other.X, other.Y, null);
+        else
+            text.Gone = true;
+        _readAfresh = true;
     }
 
     // The picture has stopped changing: what was moving has arrived, if it is where it should be.
@@ -245,30 +362,21 @@ internal sealed class RealtimeScrollFollow
         foreach (var pass in Passes())
         foreach (var text in pass.Texts)
         {
+            text.Pushed = false;
             if (!text.Moving || text.Gone) continue;
-            text.Moving = false;
-            if (text.Anchor.PresenceAt(pixels, text.Dx, text.Dy) is { } found && found < Present) text.Gone = true;
+            Stop(text, pixels, text.Anchor.PresenceAt(pixels, text.Dx, text.Dy));
             redraw |= ReferenceEquals(pass, _shown);
         }
         if (redraw) Log.Debug("Realtime region {Region} came to rest; translations drawn where their text is", _region);
         return redraw;
     }
 
-    private ScrollPace Pace(double polls)
-    {
-        if (_lastShifts.Count == 0 || _lastShifts[0].Share < 0.5) return ScrollPace.Readable;
-
-        var thinnest = Passes().SelectMany(pass => pass.Texts).Where(text => !text.Gone)
-            .Select(text => text.Thickness).DefaultIfEmpty(0).Min();
-        var bar = thinnest > 0 ? FollowedStep * thinnest : FollowedStepWithoutText;
-        return _lastShifts[0].Distance / polls > bar ? ScrollPace.Scrolling : ScrollPace.Readable;
-    }
-
     /// <summary>
     /// Starts following the text a pass has just read, in the frame it was read from, so that its
     /// translation can be drawn where the text is by the time it arrives.
     /// </summary>
-    public void Track(long pass, IReadOnlyList<OcrTextBlock> blocks, Bitmap frame)
+    /// <param name="start">What <see cref="BeginRead"/> gave when that frame was taken.</param>
+    public void Track(long pass, IReadOnlyList<OcrTextBlock> blocks, Bitmap frame, ReadStart start)
     {
         using var pixels = FramePixels.Lock(frame);
         var texts = new Followed[blocks.Count];
@@ -283,15 +391,17 @@ internal sealed class RealtimeScrollFollow
 
         lock (_sync)
         {
-            // Read from a frame the picture was moving in: the text was moving too, and its
-            // translation stays off the screen until it has stopped.
-            if (_before is { } before && _latest is { } latest)
-                foreach (var shift in _lastShifts)
+            // Read from a frame the picture was moving in, or one it has moved on from since: the
+            // text is taken to have gone with the picture, and its translation stays off the screen
+            // until the picture stops and the text is found — there, or where it was read.
+            int dx = _travelX - start.TravelX, dy = _travelY - start.TravelY;
+            if (start.Moving || dx != 0 || dy != 0)
                 foreach (var text in texts)
                 {
-                    var was = text.Bounds;
-                    was.Offset(-shift.Dx, -shift.Dy);
-                    if (ScrollPrint.Moved(before, latest, was, shift)) text.Moving = true;
+                    (text.Dx, text.Dy, text.Moving, text.Otherwise) = (dx, dy, true, new Point(0, 0));
+                    text.CutOff = start.Moving && !Rectangle.Inflate(text.Bounds, EdgeMargin, EdgeMargin)
+                        .Equals(Rectangle.Intersect(
+                            Rectangle.Inflate(text.Bounds, EdgeMargin, EdgeMargin), new Rectangle(0, 0, frame.Width, frame.Height)));
                 }
 
             _waiting.Add(new Pass(pass, texts));
@@ -311,14 +421,29 @@ internal sealed class RealtimeScrollFollow
             _waiting.RemoveAll(waiting => waiting.Number <= pass);
 
             // A pass that was never followed — the empty one that clears a region — is drawn as it is.
-            _shown = tracked is not null && tracked.Texts.Length == lines.Count ? tracked : new Pass(pass, []);
-            _shown.Lines = lines;
-            _shown.Generation = generation;
+            var arrived = tracked is not null && tracked.Texts.Length == lines.Count ? tracked : new Pass(pass, []);
+            arrived.Lines = lines;
+            arrived.Generation = generation;
+
+            // Its text is still being looked for, and something is on the screen: that stays until
+            // the next frame says where the text is, instead of the region blinking empty.
+            if (arrived.Texts.Any(text => text.Moving && !text.Gone) && _shown is not null)
+            {
+                _arriving = arrived;
+                return;
+            }
+
+            (_shown, _arriving) = (arrived, null);
             Draw();
         }
     }
 
-    private IEnumerable<Pass> Passes() => _shown is { } shown ? _waiting.Prepend(shown) : _waiting;
+    private IEnumerable<Pass> Passes()
+    {
+        if (_shown is { } shown) yield return shown;
+        if (_arriving is { } arriving) yield return arriving;
+        foreach (var waiting in _waiting) yield return waiting;
+    }
 
     private void Draw()
     {

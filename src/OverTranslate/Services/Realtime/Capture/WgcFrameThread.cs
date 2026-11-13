@@ -65,21 +65,31 @@ internal sealed class WgcFrameThread
     /// Measured on 26200: frames are coalesced, delivery is held to one per interval exactly, and
     /// the last frame of a burst still arrives within the interval — so nothing is lost by asking,
     /// and a 144Hz game stops costing a call into the frame handler every refresh. It does not
-    /// replace keeping a frame: the system counts from the last delivery, the handler from the last
-    /// readback.
+    /// replace keeping a frame where the system cannot be asked.
+    ///
+    /// Where it can, the handler's own limit is switched off — see the callers. The two do not
+    /// count from the same moment: the system from one delivery to the next, the handler from when
+    /// the last readback finished, a few milliseconds after its frame was delivered. So every frame
+    /// arrived a few milliseconds "too soon" and was kept for a timer, which made its readback
+    /// later still and the next frame sooner again. Measured on 26200 over a screen that never
+    /// stopped changing, the wait grew from 7ms to 120ms a frame at a time and then started over:
+    /// every frame the polls were handed was 60ms older on average than it needed to be.
     /// </remarks>
-    public static void LimitFrameRate(GraphicsCaptureSession session, TimeSpan interval)
+    /// <returns>Whether the system took the limit, and will space the frames itself.</returns>
+    public static bool LimitFrameRate(GraphicsCaptureSession session, TimeSpan interval)
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 26100) || !WgcCapability.SupportsMinUpdateInterval)
-            return;
+            return false;
 
         try
         {
             session.MinUpdateInterval = interval;
+            return true;
         }
         catch (Exception ex)
         {
             Log.Debug(ex, "Realtime capture could not set a minimum update interval");
+            return false;
         }
     }
 

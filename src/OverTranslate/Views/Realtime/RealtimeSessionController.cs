@@ -1363,8 +1363,13 @@ internal sealed class RealtimeSessionController
 
     // ── Session callbacks (raised on the polling thread) ─────────────────────────────────────────
 
+    // Ahead of the dispatcher's background work, unlike the other callbacks here. Background items
+    // wait for the interface to have nothing else to do, and while a session runs it is animating
+    // something at every frame. Measured over a page being scrolled, the update that takes a
+    // translation off the screen was handed over within a poll and then waited 0.5–1.5 seconds to
+    // run, which is the whole of the scroll it was for.
     private void OnRegionUpdated(object? sender, RealtimeRegionUpdate update) =>
-        OnDispatcher(() =>
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.Normal, () =>
         {
             if (update.Generation != Volatile.Read(ref _visibleGeneration)) return;
 

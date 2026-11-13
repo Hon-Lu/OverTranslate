@@ -90,6 +90,12 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
 
     // Raised whenever a frame has been read back; only the start-up wait listens.
     private readonly ManualResetEventSlim _frameSignal = new(false);
+    private readonly FrameNotice _frameRead = new();
+
+    // Whether the system delivers frames no more often than MaxFrameAge on its own.
+    private bool _systemSpacesFrames;
+
+    public Task NextFrame => _frameRead.Next;
 
     private int _framesReceived;
     private int _framesRead;
@@ -466,7 +472,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
             _session.IsCursorCaptureEnabled = false;
 
-        WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
+        Volatile.Write(ref _systemSpacesFrames, WgcFrameThread.LimitFrameRate(_session, MaxFrameAge));
         WgcCaptureBorder.Apply(_session);
         _session.StartCapture();
 
@@ -522,7 +528,11 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
                 return;
             }
 
-            var sinceRead = Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
+            // Frames the system has already spaced are read as they come: holding them to this
+            // handler's limit as well only makes each one late — see WgcFrameThread.LimitFrameRate.
+            var sinceRead = Volatile.Read(ref _systemSpacesFrames)
+                ? MaxFrameAge
+                : Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
             var arrival = WgcFrameThrottle.OnArrival(
                 HasFrame(),
                 sinceRead,
@@ -599,6 +609,7 @@ public sealed class WgcMonitorCaptureBackend : IRealtimeCaptureBackend
         }
         previous?.Dispose();
         _frameSignal.Set();
+        _frameRead.Raise();
     }
 
     /// <summary>

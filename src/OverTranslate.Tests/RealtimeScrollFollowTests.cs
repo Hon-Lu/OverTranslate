@@ -19,10 +19,19 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
 
     private static readonly long Poll = Stopwatch.Frequency * 150 / 1000;
 
+    // At 96 dpi whatever the screen is: a bitmap otherwise takes the screen's, and text drawn on
+    // it changes size with the machine the tests run on.
+    private static Bitmap Blank(int width, int height)
+    {
+        var bitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        bitmap.SetResolution(96, 96);
+        return bitmap;
+    }
+
     // A tall page of balloons, as a webtoon is: text on white, artwork between.
     private sealed class Page : IDisposable
     {
-        public Bitmap Image { get; } = new(Width, 4000);
+        public Bitmap Image { get; } = Blank(Width, 4000);
         public List<Rectangle> Texts { get; } = [];
 
         public Page(int seed = 7)
@@ -31,7 +40,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
             using var g = Graphics.FromImage(Image);
             g.Clear(Color.White);
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
-            using var font = new Font("Arial", 22, FontStyle.Bold);
+            using var font = new Font("Arial", 30, FontStyle.Bold, GraphicsUnit.Pixel);
             for (var y = 40; y < Image.Height - 200; y += 260)
             {
                 // Artwork: blocks of colour, never the same twice.
@@ -51,7 +60,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
 
         public Bitmap View(int top, int left = 0)
         {
-            var view = new Bitmap(Width, Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            var view = Blank(Width, Height);
             using var g = Graphics.FromImage(view);
             g.DrawImage(Image, new Rectangle(0, 0, Width, Height), new Rectangle(left, top, Width, Height), GraphicsUnit.Pixel);
             return view;
@@ -84,7 +93,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
 
         public void Read(long pass, Bitmap frame, List<OcrTextBlock> blocks)
         {
-            Follow.Track(pass, blocks, frame);
+            Follow.Track(pass, blocks, frame, Follow.BeginRead());
             Follow.Publish(pass, [.. blocks.Select(block => new TranslatedBlock(block.Text, "譯" + block.Text, block.Bounds))], 0);
         }
     }
@@ -102,8 +111,13 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         var before = screen.Shown;
         Assert.True(before.Count >= 2);
 
-        // Scrolling: 90px, then 130px more, each one poll apart.
-        using (var moving = page.View(90)) Assert.Equal(ScrollPace.Scrolling, screen.Poll(moving));
+        // Scrolling: 30px, then 90px more, then 100px more, each one poll apart. The first move is
+        // followed; a page still moving a frame later is being scrolled.
+        using (var moving = page.View(30)) Assert.Equal(ScrollPace.Scrolling, screen.Poll(moving));
+        Assert.All(
+            screen.Shown.Zip(before.Where(line => line.Bounds.Top >= 30)),
+            pair => Assert.Equal(pair.Second.Bounds.Top - 30, pair.First.Bounds.Top));
+        using (var moving = page.View(120)) screen.Poll(moving);
         Assert.Empty(screen.Shown);
         using (var moving = page.View(220)) screen.Poll(moving);
         Assert.Empty(screen.Shown);
@@ -130,7 +144,8 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         screen.Poll(still);
         screen.Read(1, still, page.Read(0));
 
-        using var moving = page.View(90);
+        using (var first = page.View(40)) screen.Poll(first);
+        using var moving = page.View(130);
         screen.Poll(moving);
         // A poll that came early gets the frame the last one got.
         screen.Poll(moving, polls: 0.5);
@@ -142,13 +157,19 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
     {
         using var page = new Page();
         var screen = new Screen();
-        using var wide = new Bitmap(Width + 400, Height);
+        using var wide = Blank(Width + 400, Height);
         using (var g = Graphics.FromImage(wide))
         {
             g.Clear(Color.White);
             g.DrawImage(page.Image, 200, 0, new Rectangle(0, 0, Width, Height), GraphicsUnit.Pixel);
         }
-        Bitmap View(int left) => wide.Clone(new Rectangle(left, 0, Width, Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        Bitmap View(int left)
+        {
+            var view = Blank(Width, Height);
+            using var g = Graphics.FromImage(view);
+            g.DrawImage(wide, new Rectangle(0, 0, Width, Height), new Rectangle(left, 0, Width, Height), GraphicsUnit.Pixel);
+            return view;
+        }
         List<OcrTextBlock> Read(int left) => [.. page.Read(0).Select(block =>
             block with { Bounds = new System.Windows.Rect(block.Bounds.X + 200 - left, block.Bounds.Y, block.Bounds.Width, block.Bounds.Height) })
             .Where(block => block.Bounds.Left >= 0 && block.Bounds.Right <= Width)];
@@ -161,6 +182,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         var before = screen.Shown;
         Assert.NotEmpty(before);
 
+        using (var moving = View(170)) screen.Poll(moving);
         using (var moving = View(140)) screen.Poll(moving);
         Assert.Empty(screen.Shown);
         using (var rest = View(140)) screen.Poll(rest);
@@ -185,7 +207,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         for (var top = 4; top <= 40; top += 4)
         {
             using var frame = page.View(top);
-            Assert.Equal(ScrollPace.Readable, screen.Poll(frame));
+            screen.Poll(frame);
             var first = screen.Shown.First(line => line.TranslatedText == before[^1].TranslatedText);
             Assert.Equal(before[^1].Bounds.Top - top, first.Bounds.Top);
         }
@@ -200,9 +222,10 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         using (var still = page.View(0))
         {
             screen.Poll(still);
-            screen.Follow.Track(1, blocks, still);
+            screen.Follow.Track(1, blocks, still, screen.Follow.BeginRead());
         }
 
+        using (var moving = page.View(60)) screen.Poll(moving);
         using (var moving = page.View(120)) screen.Poll(moving);
         using (var rest = page.View(120)) screen.Poll(rest);
         screen.Follow.Publish(1, [.. blocks.Select(block => new TranslatedBlock(block.Text, "譯", block.Bounds))], 0);
@@ -232,6 +255,74 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void ATranslationArrivingWhileItsTextIsLookedForDoesNotBlankWhatIsShown()
+    {
+        using var page = new Page();
+        var screen = new Screen();
+        using (var still = page.View(0))
+        {
+            screen.Poll(still);
+            screen.Read(1, still, page.Read(0));
+        }
+        var before = screen.Shown;
+
+        // A second reading begins, the page moves a little and stops, and then its translation arrives.
+        var start = screen.Follow.BeginRead();
+        using (var moved = page.View(6)) screen.Poll(moved);
+        using (var rest = page.View(6))
+        {
+            var blocks = page.Read(0);
+            using (var read = page.View(0)) screen.Follow.Track(2, blocks, read, start);
+            screen.Follow.Publish(2, [.. blocks.Select(block => new TranslatedBlock(block.Text, "新" + block.Text, block.Bounds))], 0);
+
+            // Not drawn yet — where its text went has to be seen first — and nothing taken away either.
+            Assert.NotEmpty(screen.Shown);
+            Assert.All(screen.Shown, line => Assert.StartsWith("譯", line.TranslatedText));
+
+            screen.Poll(rest);
+        }
+
+        Assert.Equal(before.Count(line => line.Bounds.Top >= 6), screen.Shown.Count);
+        Assert.All(screen.Shown, line => Assert.StartsWith("新", line.TranslatedText));
+        Assert.All(screen.Shown, line => Assert.Contains(before, was => was.Bounds.Top - 6 == line.Bounds.Top));
+    }
+
+    [Fact]
+    public void TextReadAtTheEdgeOfAMovingPageIsLeftForTheNextReading()
+    {
+        using var page = new Page();
+        var screen = new Screen();
+        using (var still = page.View(0)) screen.Poll(still);
+
+        // Read mid-scroll, one line cut by the top of the frame.
+        var first = page.Texts[0];
+        var top = first.Top + first.Height / 2;
+        using (var moving = page.View(top))
+        {
+            screen.Poll(moving);
+            var blocks = page.Read(top);
+            blocks.Insert(0, new OcrTextBlock("cut", new System.Windows.Rect(first.X, 0, first.Width, first.Bottom - top)));
+            screen.Read(1, moving, blocks);
+        }
+        using (var rest = page.View(top)) screen.Poll(rest);
+
+        Assert.NotEmpty(screen.Shown);
+        Assert.DoesNotContain(screen.Shown, line => line.OriginalText == "cut");
+        Assert.True(screen.Follow.TakeReadAfresh());
+    }
+
+    [Fact]
+    public void APageScrolledThroughWithNothingOnItIsNotReadUntilItStops()
+    {
+        using var page = new Page();
+        var screen = new Screen();
+        using (var still = page.View(0)) screen.Poll(still);
+        using (var moving = page.View(80)) Assert.Equal(ScrollPace.Scrolling, screen.Poll(moving));
+        using (var moving = page.View(200)) Assert.Equal(ScrollPace.Scrolling, screen.Poll(moving));
+        using (var rest = page.View(200)) Assert.Equal(ScrollPace.Readable, screen.Poll(rest));
+    }
+
+    [Fact]
     public void ALineThatStaysPutOverAPictureScrollingBehindItIsLeftAlone()
     {
         using var page = new Page();
@@ -242,7 +333,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
             var view = page.View(top);
             using var g = Graphics.FromImage(view);
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
-            using var font = new Font("Arial", 24, FontStyle.Bold);
+            using var font = new Font("Arial", 32, FontStyle.Bold, GraphicsUnit.Pixel);
             using var path = new System.Drawing.Drawing2D.GraphicsPath();
             path.AddString("A caption that stays put", font.FontFamily, (int)FontStyle.Bold, 30, caption.Location, StringFormat.GenericDefault);
             using var pen = new Pen(Color.Black, 4);
@@ -261,7 +352,8 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         foreach (var top in new[] { 1540, 1620, 1700, 1700, 1760 })
         {
             using var frame = View(top);
-            screen.Poll(frame);
+            // And still read at every poll: the next caption arrives while the picture is moving.
+            Assert.Equal(ScrollPace.Readable, screen.Poll(frame));
         }
         Assert.Equal(draws, screen.Draws.Count);
     }
@@ -274,7 +366,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         var line = new Rectangle(200, 560, 500, 44);
         Bitmap Frame(string words, int pan)
         {
-            var frame = new Bitmap(Width, Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            var frame = Blank(Width, Height);
             using var g = Graphics.FromImage(frame);
             g.Clear(Color.FromArgb(40, 60, 90));
             // A scene that pans, with the noise no two frames of a video are without.
@@ -286,7 +378,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
             for (var i = 0; i < 6000; i++)
                 frame.SetPixel(random.Next(Width), random.Next(Height), Color.FromArgb(random.Next(256), random.Next(256), random.Next(256)));
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
-            using var font = new Font("Arial", 26, FontStyle.Bold);
+            using var font = new Font("Arial", 34, FontStyle.Bold, GraphicsUnit.Pixel);
             g.DrawString(words, font, Brushes.White, line.X, line.Y);
             return frame;
         }
@@ -315,11 +407,11 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         const int pitch = 34;
         Bitmap View(int firstLine)
         {
-            var view = new Bitmap(Width, Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            var view = Blank(Width, Height);
             using var g = Graphics.FromImage(view);
             g.Clear(Color.FromArgb(24, 24, 27));
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
-            using var font = new Font("Arial", 16);
+            using var font = new Font("Arial", 21, FontStyle.Regular, GraphicsUnit.Pixel);
             for (var row = 0; row * pitch < Height - pitch; row++)
                 g.DrawString(lines[firstLine + row], font, Brushes.Gainsboro, 20, 10 + row * pitch);
             return view;
@@ -334,8 +426,10 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
         }
         var before = screen.Shown;
 
+        // No waiting for it to stop, and no going blank meanwhile: it moved once, and that is followed.
+        var draws = screen.Draws.Count;
         using (var pushed = View(1)) screen.Poll(pushed);
-        using (var rest = View(1)) screen.Poll(rest);
+        Assert.Equal(draws + 1, screen.Draws.Count);
 
         // Every line but the one pushed out, one pitch up, with its own words.
         Assert.Equal(before.Count - 1, screen.Shown.Count);
@@ -367,7 +461,7 @@ public class RealtimeScrollFollowTests(ITestOutputHelper output)
     public void LookingAtAFrameIsCheap()
     {
         using var page = new Page();
-        using var frame = new Bitmap(2560, 1440, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using var frame = Blank(2560, 1440);
         using (var g = Graphics.FromImage(frame))
             for (var y = 0; y < 1440; y += Height)
             for (var x = 0; x < 2560; x += Width)

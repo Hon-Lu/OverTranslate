@@ -66,6 +66,20 @@ public interface IRealtimeCaptureBackend : IDisposable
     CaptureMiss DescribeMiss(Rectangle screenBounds);
 
     /// <summary>
+    /// Completes when a frame newer than the one <see cref="GrabRegion"/> now hands out has been
+    /// read back; a new task each time.
+    /// </summary>
+    /// <remarks>
+    /// For what can be done with a frame the moment it exists rather than at the next poll — which
+    /// is following a picture that has just started to move, where the wait for a poll is most of
+    /// the time the translations spend in the wrong place. A backend that cannot say never
+    /// completes it, and the polls are then all there is, as they always were.
+    /// </remarks>
+    Task NextFrame => Never;
+
+    private static readonly Task Never = new TaskCompletionSource().Task;
+
+    /// <summary>
     /// What this backend did over its lifetime, for the one line logged when the session ends. Free
     /// text — each source counts different things.
     /// </summary>
