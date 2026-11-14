@@ -78,6 +78,29 @@ internal static class CpuTextMask
     /// </remarks>
     private const int FurthestHalo = 2;
 
+    /// <summary>How far past its box a line's ink is followed, as a share of glyph height.</summary>
+    /// <remarks>
+    /// <para>A recognition box is drawn around what the detector read, and what it reads is the
+    /// letter — the white of a line of dialogue, not the black edge drawn round it. The edge of a
+    /// game's or a video's subtitle is a fifth of the glyph thick and lies outside the box on every
+    /// side, while everything above is measured inside the box and a few pixels of
+    /// <see cref="BoxPadding"/>: so the mask stopped part-way through the edge, and the row of it
+    /// left standing was the first thing the fill read. Measured on white text edged in black over a
+    /// clean picture, an eight-pixel edge on a 40-pixel glyph left a dark smear the length of the
+    /// line where its lower edge had been, and the thicker the edge the worse — which is how it was
+    /// reported.</para>
+    ///
+    /// <para>Widening the box is not the answer, and has been tried: it is also what the two hats'
+    /// thresholds are measured over. So the box stays what it was, and only a body that runs along
+    /// the box's own rim — ink that is cut off there, by construction — is followed past it, through
+    /// pixels that clear the thresholds the box set, and no further than this. A line whose ink ends
+    /// inside its box is not touched by any of it — see <see cref="CutOff"/>.</para>
+    /// </remarks>
+    private const double Spill = .3;
+
+    /// <summary>The most a line's ink is followed past its box.</summary>
+    private const int FurthestSpill = 16;
+
     /// <summary>Both hats' bodies, followed outward along the text's own fade.</summary>
     /// <remarks>
     /// <para>Text is whatever stands out from its surroundings inside a recognition box, in either
@@ -156,9 +179,23 @@ internal static class CpuTextMask
                 Hats(roi, height, light, dark);
                 using var seed = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
                 using var darker = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
-                Body(light, seed);   // What stands out brighter than its surroundings,
-                Body(dark, darker);  // and what stands out darker. Either one can be the text.
+                double brighter = Body(light, seed);   // What stands out brighter than its surroundings,
+                double dimmer = Body(dark, darker);    // and what stands out darker. Either one can be the text.
                 Arithmetic.Or(seed, darker, seed);
+
+                // Ink the box cuts off is followed out of it — see Spill. The room is the clear
+                // space to the next line, not half of it: an edge drawn round this line is this
+                // line's, and following stops where the ink does.
+                int spill = Math.Min(FurthestSpill, Math.Min(
+                    Math.Max(3, (int)Math.Round(height * Spill)),
+                    Math.Max(2, Room(line, lines, whole: true))));
+                var reach = Clip(box.X - spill, box.Y - spill, box.Right + spill, box.Bottom + spill, source.Size);
+                if (reach != box && FollowPast(gray, reach, box, seed, height, brighter, dimmer, spill, one, growth) is { } past)
+                {
+                    using (past) Publish(mask, past, reach, halo, one, line, source.Size);
+                    continue;
+                }
+
                 using var strongest = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
                 Arithmetic.Max(light, dark, strongest);
                 if (growth > 0) GrowAlongTail(seed, strongest, one, growth);
@@ -171,18 +208,249 @@ internal static class CpuTextMask
                 // measures the same way — dropping it leaves more behind on every corpus, 32.6%
                 // against 28.9% on the panel corpus and 22.3% against 17.6% on the game corpus, to
                 // disturb between a tenth and a quarter of a point less of the picture.
-                var wide = Clip(box.X - halo, box.Y - halo, box.Right + halo, box.Bottom + halo, source.Size);
-                using var spread = new ImageBuffer(wide.Width, wide.Height, PixelType.U8C1);
-                using (var inner = new ImageBuffer(spread, new Rectangle(box.X - wide.X, box.Y - wide.Y, box.Width, box.Height)))
-                    seed.CopyTo(inner);
-                Morphology.Dilate(spread, spread, one, iterations: halo);
-                if (line.Within is { } within) KeepInside(spread, wide, within);
-                using var target = new ImageBuffer(mask, wide);
-                Arithmetic.Or(target, spread, target);
+                Publish(mask, seed, box, halo, one, line, source.Size);
             }
             return mask;
         }
         catch { mask.Dispose(); throw; }
+    }
+
+    /// <summary>Adds one line's mask, which covers <paramref name="box"/>, to the frame's with its blind margin.</summary>
+    private static void Publish(ImageBuffer mask, ImageBuffer seed, Rectangle box, int halo,
+        StructuringElement one, CpuTextRegion line, Size frame)
+    {
+        var wide = Clip(box.X - halo, box.Y - halo, box.Right + halo, box.Bottom + halo, frame);
+        using var spread = new ImageBuffer(wide.Width, wide.Height, PixelType.U8C1);
+        using (var inner = new ImageBuffer(spread, new Rectangle(box.X - wide.X, box.Y - wide.Y, box.Width, box.Height)))
+            seed.CopyTo(inner);
+        Morphology.Dilate(spread, spread, one, iterations: halo);
+        if (line.Within is { } within) KeepInside(spread, wide, within);
+        using var target = new ImageBuffer(mask, wide);
+        Arithmetic.Or(target, spread, target);
+    }
+
+    /// <summary>The share of a box's upper or lower rim that has to be ink for the line to count as cut off there.</summary>
+    /// <remarks>
+    /// <para>What separates an edge drawn round a line from the picture behind it. The edge runs the
+    /// length of the line, so where the box cuts through it the box's outermost row is ink for most
+    /// of its width; a picture with texture in it puts something on the rim too, but here and there.
+    /// Following from anything on the rim was the first version of this, and on plain text over a
+    /// drawn background it grew the mask by a quarter for no ink at all.</para>
+    ///
+    /// <para>It is read off hats taken over the wider picture, not off the box's own. Inside the
+    /// box a hat cannot tell: its element is not allowed outside the picture it is given, so at the
+    /// rim the closing behind the black hat has nowhere dark to stand and answers for the whole row
+    /// above a line of bright glyphs. Plain white text on a flat background measures two thirds of
+    /// its rim as dark body that way, more than an edged line does.</para>
+    /// </remarks>
+    private const double CutOff = .25;
+
+    /// <summary>The larger share of two rows of <paramref name="body"/> that is set, between two columns.</summary>
+    private static double AlongRim(ImageBuffer body, int top, int bottom, int left, int width)
+    {
+        int Count(int y)
+        {
+            int count = 0;
+            foreach (byte value in body.RowSpan(y).Slice(left, width)) if (value != 0) count++;
+            return count;
+        }
+        return Math.Max(Count(top), Count(bottom)) / (double)width;
+    }
+
+    /// <summary>How close in grey what the box cuts off has to be to the picture on either side of the line to count as that picture.</summary>
+    /// <remarks>
+    /// <para>A box can cut off something that is not the line's at all. A subtitle drawn on a dark
+    /// card leaves a strip of card between the tops of its glyphs and the card's edge, and to the
+    /// hats that strip is exactly what an edge is: darker than the picture, along the whole rim.
+    /// Followed, it carried the mask out over the card's edge, which came back wavy with dark dragged
+    /// into the picture beyond it — seven of the 52 captures of the card corpus, the mask growing from
+    /// 8.9% of the frame to 12.3% on the worst. A false box round hair does the same with the hair. An
+    /// edge is drawn round the line and stops; a backdrop carries on beside it. So what the rim cut
+    /// off is compared with the picture to the line's left and right, and taken for the backdrop when
+    /// either side matches it.</para>
+    ///
+    /// <para>The sides are read in both halves of the reach, the half next to the box and the half
+    /// further out. The further half alone was the first version, and missed every card: the card
+    /// stands as far past the text's ends as above it, so the further half was already the picture
+    /// while the near half was card. On the six cards measured the near half matched the rim within
+    /// 2 to 21 greys; the far half was 68 greys or more off on four of them. The near half does not
+    /// find an edge instead: on drawn white text with an edge of 4 to 8 pixels, both halves sat more
+    /// than 90 greys off the edge the rim measured on every lit picture. On the dark one the edge
+    /// matched the picture and is not followed, which is the trade below.</para>
+    ///
+    /// <para>Swept at 16, 24 and 32. All three leave the synthetic edges as they were followed, with
+    /// none of an eight-pixel edge uncovered; at 16 two of the five cards and the false box round
+    /// hair still followed, at 24 the hair still did, its rim 31 greys off the hair beside it, and at
+    /// 32 the card corpus and that box measure as they did before any following. What 32 gives up
+    /// is a dark scene's own dark edge, which is close to the scene to begin with.</para>
+    /// </remarks>
+    private const int Alike = 32;
+
+    /// <summary>
+    /// Whether what <paramref name="body"/> has on the box's upper and lower rows is the same grey as
+    /// the picture beside the line — the line's backdrop, not an edge drawn round it.
+    /// </summary>
+    private static bool Backdrop(ImageBuffer gray, ImageBuffer body, Rectangle inside, int spill)
+    {
+        var rim = new int[256];
+        int rimCount = 0;
+        foreach (int y in (ReadOnlySpan<int>)[inside.Y, inside.Bottom - 1])
+        {
+            var values = gray.RowSpan(y).Slice(inside.X, inside.Width);
+            var set = body.RowSpan(y).Slice(inside.X, inside.Width);
+            for (int x = 0; x < values.Length; x++)
+                if (set[x] != 0) { rim[values[x]]++; rimCount++; }
+        }
+        if (rimCount == 0) return false;
+        int edge = Median(rim, rimCount);
+
+        // Either half of the reach on either side, over the middle half of the box's height: the
+        // picture beside the line — see Alike. A side the frame cuts short is not read.
+        int band = Math.Max(1, spill / 2), top = inside.Y + inside.Height / 4, bottom = inside.Y + inside.Height * 3 / 4;
+        if (bottom <= top) return false;
+        if (inside.X >= spill && (Alongside(gray, 0, band, top, bottom, edge)
+            || Alongside(gray, inside.X - band, band, top, bottom, edge))) return true;
+        int right = gray.Width - inside.Right;
+        return right >= spill && (Alongside(gray, gray.Width - band, band, top, bottom, edge)
+            || Alongside(gray, inside.Right, band, top, bottom, edge));
+    }
+
+    private static bool Alongside(ImageBuffer gray, int left, int width, int top, int bottom, int edge)
+    {
+        var side = new int[256];
+        for (int y = top; y < bottom; y++)
+            foreach (byte value in gray.RowSpan(y).Slice(left, width)) side[value]++;
+        return Math.Abs(Median(side, width * (bottom - top)) - edge) < Alike;
+    }
+
+    private static int Median(int[] histogram, int count)
+    {
+        int half = (count + 1) / 2, seen = 0;
+        for (int value = 0; value < histogram.Length; value++)
+            if ((seen += histogram[value]) >= half) return value;
+        return histogram.Length - 1;
+    }
+
+    /// <summary>The share of a row, across the box's width, that has to be body for it to count as another line's.</summary>
+    /// <remarks>
+    /// <para>A line that is not being translated is not a region, so nothing keeps this line's mask
+    /// off it: in a game's chat log, where every line is edged and the edges of neighbouring lines
+    /// run together, following this line's edge upward rubbed out the bottoms of the glyphs above.
+    /// So when only one response is cut off — the edge — the other one, the glyphs' own, is looked
+    /// for past the box, and if another line's glyphs are found the edge between them is shared: it
+    /// is followed only half way.</para>
+    ///
+    /// <para>Only pixels within <see cref="Alike"/> of this line's own glyphs count. Without that,
+    /// the picture between two edged lines is itself a bright response — it stands narrower than the
+    /// hat's element between two dark bands — and the rule found a "line" one or two rows past every
+    /// box: on drawn edged text it left 0.6% to 1.5% of an eight-pixel edge uncovered where the
+    /// follow had left none.</para>
+    ///
+    /// <para>Swept at .05, .10 and .20 with the tone check. All three take the chat line back to
+    /// the mask it had before following (9.90% of the frame to 8.87%, against 8.86%). Lower shares
+    /// also find scenery: at .10 the video line whose edge the follow had cleaned fell from 9.76% of
+    /// the frame to 8.82%, most of the way back to the 8.48% it had before, and at .05 further. At .20 every edged line
+    /// on the drawn pictures and on the video, subtitle and game corpora keeps what following gave
+    /// it.</para>
+    /// </remarks>
+    private const double Neighbour = .20;
+
+    /// <summary>Whether <paramref name="body"/>, in the grey of this line's glyphs, covers at least <see cref="Neighbour"/> of row <paramref name="y"/> across <paramref name="inside"/>.</summary>
+    private static bool Covers(ImageBuffer gray, ImageBuffer body, int y, Rectangle inside, int tone)
+    {
+        int count = 0;
+        var values = gray.RowSpan(y).Slice(inside.X, inside.Width);
+        var set = body.RowSpan(y).Slice(inside.X, inside.Width);
+        for (int x = 0; x < values.Length; x++)
+            if (set[x] != 0 && Math.Abs(values[x] - tone) < Alike) count++;
+        return count >= Neighbour * inside.Width;
+    }
+
+    /// <summary>The median grey of what <paramref name="body"/> holds inside the box: the line's own glyphs.</summary>
+    private static int Tone(ImageBuffer gray, ImageBuffer body, Rectangle inside)
+    {
+        var histogram = new int[256];
+        int count = 0;
+        for (int y = inside.Y; y < inside.Bottom; y++)
+        {
+            var values = gray.RowSpan(y).Slice(inside.X, inside.Width);
+            var set = body.RowSpan(y).Slice(inside.X, inside.Width);
+            for (int x = 0; x < values.Length; x++)
+                if (set[x] != 0) { histogram[values[x]]++; count++; }
+        }
+        return count == 0 ? -1000 : Median(histogram, count);
+    }
+
+    /// <summary>
+    /// A line's mask over <paramref name="reach"/>, which is its box and the picture around it: the
+    /// body the box found, followed out through whatever clears the box's own thresholds. Null where
+    /// the box cuts no ink off.
+    /// </summary>
+    /// <remarks>
+    /// The hats are taken again over the wider picture — see <see cref="CutOff"/> — and the
+    /// thresholds are the ones the box set, because the wider picture is not what they were tuned
+    /// to be measured over — see <see cref="BoxPadding"/>. The following is a geodesic dilation, as
+    /// the fade's is: only what is joined to the box's body is taken, so a part of the scene that
+    /// clears the thresholds a few pixels off the line is left where it is.
+    /// </remarks>
+    private static ImageBuffer? FollowPast(ImageBuffer gray, Rectangle reach, Rectangle box, ImageBuffer seed,
+        double height, double brighter, double dimmer, int spill, StructuringElement one, int growth)
+    {
+        using var roi = new ImageBuffer(gray, reach);
+        using var light = ImageBuffer.Uninitialized(reach.Size, PixelType.U8C1);
+        using var dark = ImageBuffer.Uninitialized(reach.Size, PixelType.U8C1);
+        Hats(roi, height, light, dark);
+        using var allowed = ImageBuffer.Uninitialized(reach.Size, PixelType.U8C1);
+        using var other = ImageBuffer.Uninitialized(reach.Size, PixelType.U8C1);
+        Threshold.Binary(light, allowed, brighter, 255);
+        Threshold.Binary(dark, other, dimmer, 255);
+
+        // Only a response that is cut off is followed: an edge is darker than the picture or
+        // brighter than it, and the other response past the box is the picture's own.
+        var inside = new Rectangle(box.X - reach.X, box.Y - reach.Y, box.Width, box.Height);
+        double lightRim = AlongRim(allowed, inside.Y, inside.Bottom - 1, inside.X, inside.Width);
+        double darkRim = AlongRim(other, inside.Y, inside.Bottom - 1, inside.X, inside.Width);
+        bool lightCut = lightRim >= CutOff && !Backdrop(roi, allowed, inside, spill);
+        bool darkCut = darkRim >= CutOff && !Backdrop(roi, other, inside, spill);
+        if (!lightCut && !darkCut) return null;
+
+        // An edge cut off on one side only belongs to bodies on the other: if another line's body
+        // lies above or below, the edge between the two is shared, and this line takes half of it
+        // — see Neighbour.
+        int above = 0, below = reach.Height - 1;
+        if (lightCut != darkCut)
+        {
+            var body = darkCut ? allowed : other;
+            int tone = Tone(roi, body, inside);
+            for (int y = inside.Y - 1; y >= 0; y--)
+                if (Covers(roi, body, y, inside, tone)) { above = inside.Y - (inside.Y - y) / 2; break; }
+            for (int y = inside.Bottom; y < reach.Height; y++)
+                if (Covers(roi, body, y, inside, tone)) { below = inside.Bottom - 1 + (y - inside.Bottom + 1) / 2; break; }
+        }
+
+        if (!lightCut) other.CopyTo(allowed);
+        else if (darkCut) Arithmetic.Or(allowed, other, allowed);
+
+        var past = new ImageBuffer(reach.Width, reach.Height, PixelType.U8C1);
+        try
+        {
+            using (var inner = new ImageBuffer(past, inside))
+                seed.CopyTo(inner);
+            using var grown = ImageBuffer.Uninitialized(reach.Size, PixelType.U8C1);
+            for (int step = 0; step < spill; step++)
+            {
+                Morphology.Dilate(past, grown, one);
+                Arithmetic.And(grown, allowed, grown);
+                Arithmetic.Or(grown, past, past);
+            }
+            Arithmetic.Max(light, dark, light);
+            if (growth > 0) GrowAlongTail(past, light, one, growth);
+            Morphology.Dilate(past, past, one); // The antialiased end of whatever the growth stopped on.
+            for (int y = 0; y < above; y++) past.RowSpan(y).Clear();
+            for (int y = below + 1; y < reach.Height; y++) past.RowSpan(y).Clear();
+            return past;
+        }
+        catch { past.Dispose(); throw; }
     }
 
     /// <summary>The widest structuring element the hats are computed with, in pixels.</summary>
@@ -257,10 +525,11 @@ internal static class CpuTextMask
     /// that are real, and the trade belongs to a round that can weigh the residue it costs against
     /// the picture it saves rather than to this one.</para>
     /// </remarks>
-    private static void Body(ImageBuffer response, ImageBuffer into)
+    private static double Body(ImageBuffer response, ImageBuffer into)
     {
-        double otsu = Threshold.Otsu(response);
-        Threshold.Binary(response, into, Math.Max(18, otsu * .8), 255);
+        double threshold = Math.Max(18, Threshold.Otsu(response) * .8);
+        Threshold.Binary(response, into, threshold, 255);
+        return threshold;
     }
 
     /// <summary>Extends the seed along the text's own fade — see <see cref="Build"/>.</summary>
@@ -348,7 +617,7 @@ internal static class CpuTextMask
     /// alone. Only lines that stand over one another count: a caption at the other end of the frame
     /// is not what limits this one.
     /// </remarks>
-    private static int Room(CpuTextRegion line, IReadOnlyList<CpuTextRegion> lines)
+    private static int Room(CpuTextRegion line, IReadOnlyList<CpuTextRegion> lines, bool whole = false)
     {
         double nearest = double.MaxValue;
         foreach (var other in lines)
@@ -361,7 +630,7 @@ internal static class CpuTextMask
                 : 0;
             nearest = Math.Min(nearest, apart);
         }
-        return nearest == double.MaxValue ? int.MaxValue : (int)Math.Floor(nearest / 2);
+        return nearest == double.MaxValue ? int.MaxValue : (int)Math.Floor(whole ? nearest : nearest / 2);
     }
 
     private static Rectangle Clip(double left, double top, double right, double bottom, Size size)
