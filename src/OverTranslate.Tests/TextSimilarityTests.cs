@@ -157,4 +157,41 @@ public class TextSimilarityTests
         Assert.True(TextSimilarity.IsSameSentence(Line, Line));
         Assert.True(TextSimilarity.IsSameSentence(Line, Line.Replace("lighthouse", "Iighthouse")));
     }
+
+    [Fact]
+    public void AnEllipsisReadAtAnotherLengthDoesNotHideTheLineGrowing()
+    {
+        // Logged on the typing stage: the first line's "……" read as "." on one pass and as "..." on
+        // the next, while the second line grew by five characters. Cutting the new reading at the
+        // shown length misaligned everything after the ellipsis, and the line was held for five
+        // seconds on it.
+        Assert.True(TextSimilarity.IsContinuationOf(
+            "「そんなはずはない...\n「確かにこの目で見たんだ", "「そんなはずはない.\n「確かにこの目"));
+    }
+
+    [Fact]
+    public void GrowthIsCountedPastThePartThatMatched()
+    {
+        // Three characters longer, but two of them are the ellipsis read longer: the line itself
+        // grew by one, which is under MinGrowthChars.
+        Assert.False(TextSimilarity.IsContinuationOf(
+            "「そんなはずはない...「確かに。", "「そんなはずはない.「確かに"));
+    }
+
+    [Fact]
+    public void AShortLineStillHasToBeTheExactStartOfTheLongerOne()
+    {
+        Assert.True(TextSimilarity.IsContinuationOf("行くぞ、みんな急げ", "行くぞ"));
+        Assert.False(TextSimilarity.IsContinuationOf("行くそ、みんな急げ", "行くぞ"));
+        Assert.False(TextSimilarity.IsContinuationOf("...行くぞ、みんな", "..行くぞ"));
+    }
+
+    [Fact]
+    public void ADifferentSentenceIsNotAContinuation()
+    {
+        Assert.False(TextSimilarity.IsContinuationOf(
+            "明日はきっと雨が降るでしょうね、傘を持っていこう。", "今日はいい天気ですね、散歩しよう"));
+        Assert.False(TextSimilarity.IsContinuationOf(
+            "The ferry leaves at noon, so pack tonight.", "The train arrives at nine and then"));
+    }
 }

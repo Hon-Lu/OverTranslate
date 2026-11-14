@@ -144,14 +144,80 @@ internal static class TextSimilarity
 
         if (start.Length == 0) return false;
 
+        // The shown line has to still be there at the front of this one. Short lines are compared
+        // exactly, as everywhere else. Longer ones are compared with a tolerance, because the last
+        // glyph of a line mid-animation is a half-drawn one — read as something else, or not at all
+        // — and against SOME prefix of the new reading rather than the one of exactly the shown
+        // length: punctuation earlier in the line is routinely read at a different length from one
+        // pass to the next (an ellipsis read as "." and then as "..."), and cutting at the shown
+        // length then misaligns everything after it. Measured on the typing-animation stage: a
+        // two-line sentence whose first line ended in "……" grew by its whole second line (7
+        // characters) and was held for five seconds on that one ellipsis.
+        var matched = start.Length < MinLengthForTolerance
+            ? (longer.StartsWith(start, StringComparison.Ordinal) ? start.Length : -1)
+            : BestMatchingPrefix(start, longer,
+                Math.Max(MinPrefixDifference, (int)(start.Length * MaxPrefixDifferenceRatio)));
+        if (matched < 0) return false;
+
+        // Growth is what follows the part that matched, not the difference in length: two
+        // characters gained by the ellipsis earlier in the line are not the sentence growing.
         var required = Math.Clamp(
             (int)Math.Ceiling(start.Length * MinGrowthRatio), MinGrowthChars, MaxGrowthChars);
-        if (longer.Length - start.Length < required) return false;
+        return longer.Length - matched >= required;
+    }
 
-        // The shown line has to still be there at the front of this one. Compared with the ordinary
-        // tolerance rather than exactly, because the last glyph of a line mid-animation is a
-        // half-drawn one — read as something else, or not at all.
-        return IsSameContent(longer[..start.Length], start);
+    /// <summary>
+    /// How far the shown line may differ from the front of a longer reading and still be its
+    /// beginning, as a share of the shown line's length — see <see cref="IsContinuationOf"/>.
+    /// </summary>
+    /// <remarks>
+    /// Above <see cref="MaxDifferenceRatio"/> because the prefix is where both kinds of wobble meet:
+    /// the ordinary few percent of misreadings, plus a run of punctuation read at another length
+    /// (two characters for "." against "..."). Still far below <see cref="MaxRereadDifferenceRatio"/>,
+    /// and growth past the matched prefix has to clear <see cref="MinGrowthChars"/> on top of it.
+    /// </remarks>
+    public const double MaxPrefixDifferenceRatio = 0.15;
+
+    /// <summary>The floor under <see cref="MaxPrefixDifferenceRatio"/>: one ellipsis read two ways.</summary>
+    public const int MinPrefixDifference = 2;
+
+    /// <summary>
+    /// The length of the prefix of <paramref name="longer"/> closest to <paramref name="start"/> by
+    /// edit distance, if that distance is within <paramref name="allowed"/>; -1 otherwise. Ties go to
+    /// the longest such prefix, so growth past it is never overstated.
+    /// </summary>
+    private static int BestMatchingPrefix(string start, string longer, int allowed)
+    {
+        // Rows over the shown line, columns over prefixes of the longer reading; the last row is the
+        // distance from the whole shown line to every prefix, and its minimum is the answer.
+        var previous = new int[longer.Length + 1];
+        var current = new int[longer.Length + 1];
+        for (int j = 0; j <= longer.Length; j++) previous[j] = j;
+
+        for (int i = 1; i <= start.Length; i++)
+        {
+            current[0] = i;
+            for (int j = 1; j <= longer.Length; j++)
+            {
+                var substitution = previous[j - 1] + (start[i - 1] == longer[j - 1] ? 0 : 1);
+                current[j] = Math.Min(substitution, Math.Min(previous[j] + 1, current[j - 1] + 1));
+            }
+
+            (previous, current) = (current, previous);
+        }
+
+        int best = -1;
+        int bestDistance = allowed + 1;
+        for (int j = 0; j <= longer.Length; j++)
+        {
+            if (previous[j] <= bestDistance && previous[j] <= allowed)
+            {
+                bestDistance = previous[j];
+                best = j;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

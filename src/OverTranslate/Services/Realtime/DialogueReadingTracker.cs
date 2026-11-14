@@ -3,8 +3,9 @@ using System.Windows;
 namespace OverTranslate.Services.Realtime;
 
 /// <summary>
-/// Temporal evidence across passes. Both modes follow unchanged words to where they now are;
-/// only dialogue also gives a small ending one confirming OCR pass.
+/// Temporal evidence across passes. Both modes follow unchanged words to where they now are and
+/// take a short new ending once it has been read twice; only dialogue also settles every change
+/// with one more read.
 /// </summary>
 internal sealed class DialogueReadingTracker
 {
@@ -19,8 +20,8 @@ internal sealed class DialogueReadingTracker
         (_settleRead || _pending.Count > 0 || _pendingPlacement.Count > 0);
 
     /// <summary>
-    /// Whether a moved or resized box is waiting for a second reading. The only confirmation a
-    /// panel ever asks for: it has no sentence endings to settle.
+    /// Whether a moved or resized box is waiting for a second reading. One of the two
+    /// confirmations a panel asks for; the other is <see cref="HasPendingEnding"/>.
     /// </summary>
     public bool HasPendingPlacement => _pendingPlacement.Count > 0;
 
@@ -54,6 +55,54 @@ internal sealed class DialogueReadingTracker
     {
         _confirmationInFlight = false;
         var result = RealtimeReadingMerge.Merge(shown, read);
+        int confirmed = ConfirmEndings(result, read);
+        // One final read even if the last few appearing glyphs were too small to change the
+        // frame fingerprint. Once an unchanged reading confirms it, the idle path is free again.
+        _settleRead = result.Changed || confirmed > 0;
+        if (_settleRead) _confirmationReads = 0;
+        bool moved = FollowPlacement(result);
+        if (result.Changed || confirmed > 0 || moved)
+            _placed = result.Blocks.ToArray();
+        ExpireSpentConfirmations();
+        return result with { Improved = result.Improved + confirmed, Kept = result.Kept - confirmed, Repositioned = moved };
+    }
+
+    /// <summary>
+    /// The panel's merge: its own per-line reading policy, plus the same placement following and
+    /// the same sentence-ending confirmation as dialogue. What it does not take is dialogue's settle
+    /// read after every change — a panel line with nothing pending costs no extra read.
+    /// </summary>
+    /// <remarks>
+    /// The ending confirmation used to be dialogue's alone, on the theory that a panel line is not
+    /// typed out in front of the reader. It is: a panel drawn over a dialogue game's text box is how
+    /// this was reported, and measured on a typing-animation stage a panel kept 7 of 16 sentences a
+    /// few characters short for as long as they were up — an ending of 1–3 characters is under
+    /// <see cref="TextSimilarity.MinGrowthChars"/>, and without a second reading nothing could ever
+    /// take it.
+    /// </remarks>
+    public ReadingMerge MergePanel(IReadOnlyList<RenderedLine> shown, IReadOnlyList<OcrTextBlock> read)
+    {
+        _confirmationInFlight = false;
+        _settleRead = false;
+        var result = RealtimeReadingMerge.Merge(shown, read);
+        int confirmed = ConfirmEndings(result, read);
+        bool moved = FollowPlacement(result);
+        if (result.Changed || confirmed > 0 || moved)
+            _placed = result.Blocks.ToArray();
+        ExpireSpentConfirmations();
+        return result with { Improved = result.Improved + confirmed, Kept = result.Kept - confirmed, Repositioned = moved };
+    }
+
+    /// <summary>Whether a longer ending of a shown line is waiting for a second reading.</summary>
+    public bool HasPendingEnding => _pending.Count > 0;
+
+    /// <summary>
+    /// Takes a longer ending of a held line once the same ending has been read twice running, in
+    /// the same place, with confidence; remembers it as pending otherwise. Returns how many lines
+    /// were taken.
+    /// </summary>
+    private int ConfirmEndings(ReadingMerge result, IReadOnlyList<OcrTextBlock> read)
+    {
         var pending = new Dictionary<(int Index, string Text), (string Text, Rect Bounds)>();
         int confirmed = 0;
         for (int i = 0; i < read.Count; i++)
@@ -78,33 +127,7 @@ internal sealed class DialogueReadingTracker
             else pending[key] = (full, next.Bounds);
         }
         _pending = pending;
-        // One final read even if the last few appearing glyphs were too small to change the
-        // frame fingerprint. Once an unchanged reading confirms it, the idle path is free again.
-        _settleRead = result.Changed || confirmed > 0;
-        if (_settleRead) _confirmationReads = 0;
-        bool moved = FollowPlacement(result);
-        if (result.Changed || confirmed > 0 || moved)
-            _placed = result.Blocks.ToArray();
-        ExpireSpentConfirmations();
-        return result with { Improved = result.Improved + confirmed, Kept = result.Kept - confirmed, Repositioned = moved };
-    }
-
-    /// <summary>
-    /// The panel's merge: its own per-line reading policy, plus the same placement following as
-    /// dialogue. No sentence-ending confirmation — a panel line is not typed out in front of the
-    /// reader, and settling reads for it would change the panel's timing for nothing.
-    /// </summary>
-    public ReadingMerge MergePanel(IReadOnlyList<RenderedLine> shown, IReadOnlyList<OcrTextBlock> read)
-    {
-        _confirmationInFlight = false;
-        _pending.Clear();
-        _settleRead = false;
-        var result = RealtimeReadingMerge.Merge(shown, read);
-        bool moved = FollowPlacement(result);
-        if (result.Changed || moved)
-            _placed = result.Blocks.ToArray();
-        ExpireSpentConfirmations();
-        return result with { Repositioned = moved };
+        return confirmed;
     }
 
     /// <summary>
