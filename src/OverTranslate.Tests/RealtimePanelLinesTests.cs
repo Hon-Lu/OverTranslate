@@ -120,9 +120,12 @@ public class RealtimePanelLinesTests
                     var border = Assert.IsType<Border>(texts.Children[i]);
                     var row = block.SourceLineBounds![i];
                     Assert.Equal(row.X / dpi, Canvas.GetLeft(border), 6);
-                    Assert.Equal(row.Y / dpi, Canvas.GetTop(border), 6);
+                    // Round the row's own centre, and no shorter than the row: a line of text taller
+                    // than the box it replaces takes the leading either side, as far as the 30
+                    // between one row and the next.
+                    Assert.Equal((row.Y + row.Height / 2) / dpi, Canvas.GetTop(border) + border.Height / 2, 6);
                     Assert.Equal((block.Bounds.Right - row.X) / dpi, border.Width, 6);
-                    Assert.Equal(row.Height / dpi, border.Height, 6);
+                    Assert.InRange(border.Height, row.Height / dpi - 1e-6, 30 / dpi + 1e-6);
                     border.Measure(new Size(border.Width, border.Height));
                     border.Arrange(new Rect(0, 0, border.Width, border.Height));
                     var fitted = (Viewbox)border.Child;

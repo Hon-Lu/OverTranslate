@@ -1002,10 +1002,11 @@ public partial class RealtimeBlockWindow : Window
             }
             else if (_mode == RealtimeBlockMode.Panel)
             {
+                double fontGlyphHeight = GetFontGlyphHeight(block, block.Bounds.Height / _dpiY);
+                IReadOnlyList<Rect> sourceRows = block.SourceLineBounds ?? [block.Bounds];
                 double fontSize = _fixedFontSize ?? Math.Max(1, Math.Min(
-                    SourceFontScale.Calculate(GetFontGlyphHeight(block, block.Bounds.Height / _dpiY),
-                        _latinSourceToCjkTarget),
-                    (block.SourceLineBounds ?? [block.Bounds]).Min(r => r.Height) / _dpiY / LineHeightRatio));
+                    SourceFontScale.Calculate(fontGlyphHeight, _latinSourceToCjkTarget),
+                    sourceRows.Min(row => PanelRowRoom(row, block, sourceRows, fontGlyphHeight)) / LineHeightRatio));
                 var rows = RealtimePanelLines.Split(block,
                     text => new FormattedText(text, CultureInfo.CurrentCulture, TextDirection.Of(text, _targetLanguage),
                         typeface, fontSize, Brushes.Black, _dpiY).WidthIncludingTrailingWhitespace * _dpiX,
@@ -1033,7 +1034,7 @@ public partial class RealtimeBlockWindow : Window
                 if (_fixedFontSize is not null && rows.Any(row => row.SourceLineBounds is not { Count: > 1 }
                     && (Measure(row.TranslatedText, typeface, fontSize, null) is var measured)
                     && (measured.Width > row.Bounds.Width / _dpiX
-                        || measured.Height > NearestRowPitch(row.Bounds, block, rows) / _dpiY)))
+                        || measured.Height > NearestRowPitch(row.Bounds, block, rows.Select(other => other.Bounds)) / _dpiY)))
                 {
                     if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
                     continue;
@@ -1042,12 +1043,18 @@ public partial class RealtimeBlockWindow : Window
                 // nothing to do here: every row was just found to fit at the size it has.
                 if (_fixedFontSize is null)
                 {
+                    var rowBounds = rows.Select(row => row.Bounds).ToList();
                     foreach (var row in rows)
                     {
                         var measured = Measure(row.TranslatedText, typeface, fontSize, null);
                         double scale = Math.Min(1, Math.Min(
                             row.Bounds.Width / _dpiX / Math.Max(1, measured.Width),
-                            row.Bounds.Height / _dpiY / Math.Max(1, measured.Height)));
+                            // Its own box or as far as the next row, whichever is more: the size
+                            // was held to the row's room above, and what is left to keep is that
+                            // the line it makes — taller than LineHeightRatio in most typefaces —
+                            // stays clear of its neighbours. BuildPanelLine grows the box to it.
+                            Math.Max(row.Bounds.Height, NearestRowPitch(row.Bounds, block, rowBounds)) / _dpiY
+                                / Math.Max(1, measured.Height)));
                         fontSize *= scale;
                     }
                 }
@@ -1774,9 +1781,9 @@ public partial class RealtimeBlockWindow : Window
     /// is as often read as one block per item as one block for the lot. Only rows that share some
     /// of its width count — a column beside it is not in its way. Infinite with no such row.
     /// </summary>
-    private double NearestRowPitch(Rect row, TranslatedBlock block, IReadOnlyList<TranslatedBlock> rows)
+    private double NearestRowPitch(Rect row, TranslatedBlock block, IEnumerable<Rect> rows)
     {
-        var others = rows.Select(other => other.Bounds)
+        var others = rows
             .Concat(_layoutLines.Where(line => !ReferenceEquals(line, block))
                 .SelectMany(line => line.SourceLineBounds ?? [line.Bounds]));
 
@@ -1792,6 +1799,29 @@ public partial class RealtimeBlockWindow : Window
         return nearest;
     }
 
+    /// <summary>
+    /// How tall a line of translation set on this panel row may be, in this window's units: the
+    /// row's own box, or a little past it where the box is no taller than its letters.
+    /// </summary>
+    /// <remarks>
+    /// A CJK source arrives with each row's box already shrunk onto its glyphs, so a line of text
+    /// that had to fit inside that box — line height and all — came out at 0.82 of the glyphs it
+    /// replaced: 19 to 23px of translation over 27px of Japanese, Chinese or Korean, where the same
+    /// rows read as a subtitle were set at 0.94. A Latin source never met the limit, its box being
+    /// half again as tall as its letters.
+    ///
+    /// So the row is allowed what a subtitle line is — <see cref="MaxHeightOverSource"/> of the
+    /// line it replaces — and the two modes set the same source at the same size. Never further
+    /// than the next row's centre: the room being taken is the leading between the rows, and a
+    /// menu set solid has none to give.
+    /// </remarks>
+    private double PanelRowRoom(Rect row, TranslatedBlock block, IEnumerable<Rect> rows, double fontGlyphHeight)
+    {
+        double height = row.Height / _dpiY;
+        double grown = Math.Min(height, fontGlyphHeight * LineHeightRatio) * MaxHeightOverSource;
+        return Math.Max(height, Math.Min(grown, NearestRowPitch(row, block, rows) / _dpiY));
+    }
+
     private LineVisual? BuildPanelLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
         double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame)
@@ -1802,18 +1832,17 @@ public partial class RealtimeBlockWindow : Window
         double left = cell.X / _dpiX, top = cell.Y / _dpiY;
         double width = cell.Width / _dpiX, height = cell.Height / _dpiY;
 
-        // 固定 in a row shorter than the size's own line: the box grows round the row's centre
-        // rather than leaving the Viewbox below to shrink the text back down to fit it. The width
-        // was checked before the rows were kept — see BuildVisuals — so only the height can be short.
-        if (_fixedFontSize is not null)
+        // A row shorter than the size's own line: the box grows round the row's centre rather than
+        // leaving the Viewbox below to shrink the text back down to fit it. 固定 gets here with
+        // whatever size the reader picked, 自動 with one held to the room the row has — see
+        // PanelRowRoom. The width was settled before the rows were kept — see BuildVisuals — so
+        // only the height can be short.
+        var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
+        double needed = Measure(line.TranslatedText, typeface, fontSize, null).Height;
+        if (needed > height)
         {
-            var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
-            double needed = Measure(line.TranslatedText, typeface, fontSize, null).Height;
-            if (needed > height)
-            {
-                top -= (needed - height) / 2;
-                height = needed;
-            }
+            top -= (needed - height) / 2;
+            height = needed;
         }
 
         var (foreground, edge) = SampleForeground(frame, line);
