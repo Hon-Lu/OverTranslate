@@ -174,6 +174,16 @@ public partial class RealtimeBlockWindow : Window
 
     private IReadOnlyList<TranslatedBlock> _lines = [];
 
+    // 自動's sizes, for as long as this window lives — see RealtimeTextSizes. A window is one block,
+    // and what it has shown is what the next line's size is steadied against.
+    private readonly RealtimeTextSizes _textSizes = new();
+
+    // The lines as they are laid out: _lines, with each height 自動 sizes from replaced by its
+    // settled one. Set by Rebuild and read by everything that sets type. What is erased and
+    // repaired still reads _lines — the boxes as recognition drew them — because a line's size
+    // being steadied does not move the ink that has to be covered.
+    private IReadOnlyList<TranslatedBlock> _layoutLines = [];
+
     /// <param name="grabUnderlying">
     /// Asks the session's capture backend for a screen rectangle. Required rather than optional:
     /// 進階選項 cannot be drawn without it, and a window that quietly fell back to reading the
@@ -424,6 +434,12 @@ public partial class RealtimeBlockWindow : Window
             ? CaptureUnderlyingRegion()
             : null;
 
+        // 固定 has no use for it: the size is the reader's, and the boxes stay as they were read.
+        _layoutLines = _fixedFontSize is null
+            ? _textSizes.Settle(_lines, _orientation == RealtimeTextOrientation.Vertical)
+            : _lines;
+        LogSteadiedHeights();
+
         var boxes = new List<List<FrameworkElement>>();
         foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame))
         {
@@ -451,6 +467,30 @@ public partial class RealtimeBlockWindow : Window
 
         // A new set of patches has to be painted once before there is anything to compare against.
         Volatile.Write(ref _lastRefreshPrint, null);
+    }
+
+    /// <summary>
+    /// Which heights 自動 was handed and which it sized from, for the lines where the two differ.
+    /// </summary>
+    /// <remarks>
+    /// A report of text changing size cannot be read off a log that holds only the boxes: they say
+    /// what was measured, and the question is what was drawn. Heights and nothing else — the text
+    /// they belong to stays out of it — and Debug, which the shipped configuration drops.
+    /// </remarks>
+    private void LogSteadiedHeights()
+    {
+        if (!Log.IsDebugEnabled || ReferenceEquals(_layoutLines, _lines)) return;
+
+        static double Height(TranslatedBlock line) =>
+            line.FontGlyphHeight ?? line.RenderGlyphHeight
+            ?? (line.SourceLineBounds is { Count: > 0 } rows ? rows[0].Height : line.Bounds.Height);
+
+        var moved = _lines.Zip(_layoutLines)
+            .Where(pair => !ReferenceEquals(pair.First, pair.Second))
+            .Select(pair => FormattableString.Invariant($"{Height(pair.First):0.#}>{Height(pair.Second):0.#}"))
+            .ToList();
+        Log.Debug("Realtime block {Region} steadied {Moved} of {Lines} line heights: {Heights}",
+            RegionId, moved.Count, _lines.Count, string.Join(' ', moved));
     }
 
     /// <summary>
@@ -564,6 +604,17 @@ public partial class RealtimeBlockWindow : Window
             // Keep the group's own width and let the translation wrap inside it, shrinking only if
             // wrapping alone cannot make it fit the source's height.
             textWidth = Math.Min(maxWidth, Math.Max(sourceWidth, 20));
+
+            // Starting from the size one of its rows would be set at on its own — the same hold a
+            // single line is under below, measured against a row rather than the whole group. A
+            // group used to start from the font scale's own preference, which nothing held back, so
+            // a sentence that ran to two or three rows came out a size up from the one-row
+            // sentence before it: 26–27px against 22–24 over one 30px dialogue typeface, with the
+            // application itself. One row or three, it is the same type on screen.
+            var rowHeights = line.SourceLineBounds!.Select(row => row.Height / _dpiY).Order().ToList();
+            double rowLineHeight = Math.Min(rowHeights[rowHeights.Count / 2], fontGlyphHeight * LineHeightRatio);
+            fontSize = Math.Max(MinFontSize, Math.Min(fontSize, rowLineHeight * MaxHeightOverSource / LineHeightRatio));
+
             fontSize = FitWrapped(line.TranslatedText, typeface, fontSize, textWidth, sourceHeight);
             textHeight = Measure(line.TranslatedText, typeface, fontSize, textWidth).Height;
         }
@@ -918,8 +969,9 @@ public partial class RealtimeBlockWindow : Window
         var backdrop = new Lazy<CaptureBubbleBackdrop?>(() =>
             repairedFrame is null ? null : CaptureBubbleBackdrop.FromRepaired(repairedFrame));
         var typeface = new Typeface(_textFont, FontStyles.Normal, _textWeight, FontStretches.Normal);
-        foreach (var block in _lines)
+        for (int lineIndex = 0; lineIndex < _layoutLines.Count; lineIndex++)
         {
+            var block = _layoutLines[lineIndex];
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
 
             // RunsAcross is the reading stage saying this block is horizontal writing that happened
@@ -957,7 +1009,7 @@ public partial class RealtimeBlockWindow : Window
                 var rows = RealtimePanelLines.Split(block,
                     text => new FormattedText(text, CultureInfo.CurrentCulture, TextDirection.Of(text, _targetLanguage),
                         typeface, fontSize, Brushes.Black, _dpiY).WidthIncludingTrailingWhitespace * _dpiX,
-                    RealtimePanelLines.AvailableWidths(block, _lines));
+                    RealtimePanelLines.AvailableWidths(block, _layoutLines));
                 if (rows.Count == 1 && rows[0].SourceLineBounds is { Count: > 1 })
                 {
                     if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
@@ -1003,6 +1055,15 @@ public partial class RealtimeBlockWindow : Window
                 // per-row patches left the gaps between OCR boxes and their ragged widths showing,
                 // so a joined group no longer read as one unit.
                 var scrim = rows.Select(row => row.Bounds).Aggregate(Rect.Union);
+                // As tall as the paragraph was read, whatever its rows were steadied to: the patch
+                // is there to cover the source, and a first or last row drawn a little shorter than
+                // its box would leave a sliver of it showing.
+                var read = _lines[lineIndex].Bounds;
+                if (!ReferenceEquals(_lines[lineIndex], block) && !read.IsEmpty && read.Height > 0)
+                {
+                    double scrimTop = Math.Min(scrim.Top, read.Top);
+                    scrim = new Rect(scrim.X, scrimTop, scrim.Width, Math.Max(scrim.Bottom, read.Bottom) - scrimTop);
+                }
                 for (int index = 0; index < rows.Count; index++)
                 {
                     var row = rows[index];
@@ -1716,7 +1777,7 @@ public partial class RealtimeBlockWindow : Window
     private double NearestRowPitch(Rect row, TranslatedBlock block, IReadOnlyList<TranslatedBlock> rows)
     {
         var others = rows.Select(other => other.Bounds)
-            .Concat(_lines.Where(line => !ReferenceEquals(line, block))
+            .Concat(_layoutLines.Where(line => !ReferenceEquals(line, block))
                 .SelectMany(line => line.SourceLineBounds ?? [line.Bounds]));
 
         double centre = row.Y + row.Height / 2;
