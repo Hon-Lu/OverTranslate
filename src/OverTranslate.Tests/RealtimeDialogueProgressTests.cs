@@ -349,16 +349,73 @@ public class RealtimeDialogueProgressTests
     }
 
     [Fact]
-    public void PanelDoesNotTakeDialogueSentenceEndings()
+    public void PanelTakesASentenceEndingOnceItIsReadTwice()
     {
+        // Rewritten from PanelDoesNotTakeDialogueSentenceEndings, which pinned the opposite. A panel
+        // drawn over a dialogue game's text box is how the missing endings were reported, and on
+        // the typing stage a panel kept 7 of 16 sentences 1–3 characters short for as long as they
+        // were up: an ending that short is under MinGrowthChars, and without a second reading
+        // nothing could ever take it. So the panel now confirms an ending exactly as dialogue does.
         var tracker = new DialogueReadingTracker();
         var first = tracker.MergePanel([], [Read("We should leave this place right no", confidence: 0.99)]);
-        for (int read = 0; read < 3; read++)
-        {
-            var next = tracker.MergePanel(first.Lines, [Read("We should leave this place right now.")]);
-            Assert.False(next.Changed);
-            Assert.False(tracker.NeedsConfirmation);
-        }
+        Assert.False(tracker.NeedsConfirmation);
+
+        var pending = tracker.MergePanel(first.Lines, [Read("We should leave this place right now.")]);
+        Assert.False(pending.Changed);
+        Assert.True(tracker.HasPendingEnding);
+        Assert.True(tracker.TryTakeConfirmation());
+
+        var confirmed = tracker.MergePanel(pending.Lines, [Read("We should leave this place right now.")]);
+        Assert.True(confirmed.Changed);
+        Assert.Equal("We should leave this place right now.", confirmed.Lines[0].Text);
+        Assert.False(tracker.NeedsConfirmation);
+    }
+
+    [Fact]
+    public void PanelDoesNotTakeATransientEnding()
+    {
+        var tracker = new DialogueReadingTracker();
+        var first = tracker.MergePanel([], [Read("We should leave this place right now.")]);
+        var noise = tracker.MergePanel(first.Lines, [Read("We should leave this place right now.x")]);
+        Assert.False(noise.Changed);
+        Assert.True(tracker.HasPendingEnding);
+
+        var stable = tracker.MergePanel(noise.Lines, [Read("We should leave this place right now.")]);
+        Assert.False(stable.Changed);
+        Assert.Equal("We should leave this place right now.", stable.Lines[0].Text);
+        Assert.False(tracker.NeedsConfirmation);
+    }
+
+    [Fact]
+    public void PanelWithNothingPendingAsksForNoExtraRead()
+    {
+        var tracker = new DialogueReadingTracker();
+        var first = tracker.MergePanel([], [Read("A complete line.")]);
+        Assert.True(first.Changed);
+        Assert.False(tracker.NeedsConfirmation);
+        tracker.MergePanel(first.Lines, [Read("A complete line.")]);
+        Assert.False(tracker.NeedsConfirmation);
+    }
+
+    [Fact]
+    public void PanelTakesTheFullStopAnIdleReadFound()
+    {
+        // RESULT-1, panel cps40 h5000 #9: the idle read found the whole second line, two characters
+        // longer than what was up, and it was judged Unchanged for the rest of the sentence's life.
+        var tracker = new DialogueReadingTracker();
+        var shown = tracker.MergePanel([], [
+            Read("「今日はもう遅いから、早く休んだほうがいい。"),
+            Read("体が冷えたままだと、明日に響くから", x: 10)]).Lines;
+        var idle = new[] {
+            Read("「今日はもう遅いから、早く休んだほうがいい。"),
+            Read("体が冷えたままだと、明日に響くからね。", x: 10) };
+
+        var pending = tracker.MergePanel(shown, idle);
+        Assert.False(pending.Changed);
+        Assert.True(tracker.TryTakeConfirmation());
+        var confirmed = tracker.MergePanel(pending.Lines, idle);
+        Assert.True(confirmed.Changed);
+        Assert.Equal("体が冷えたままだと、明日に響くからね。", confirmed.Lines[1].Text);
     }
 
     [Fact]

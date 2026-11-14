@@ -107,6 +107,75 @@ internal sealed class FrameFingerprint
     }
 
     /// <summary>
+    /// Cells along and across a sentence-end zone — see <see cref="CaptureEnds"/>.
+    /// </summary>
+    /// <remarks>
+    /// The zones are three line heights long, so six cells along and two across make each cell about
+    /// half a line high: the size at which one full stop is a good share of the cell it lands in.
+    /// Measured offline on the typing stage's geometry (34px white Yu Gothic on its dark box, the
+    /// zone's start jittered ±4px to stand in for the detector's box), the largest cell change a
+    /// single added glyph produced was 27 for 。, 36 for 」, 20 for ！, 39 for ？ and 22 for a lone 。
+    /// wrapped onto the next line — every one over <see cref="CellTolerance"/>. The same glyphs
+    /// moved no cell of the whole region past it.
+    /// </remarks>
+    private const int EndCellsAlong = 6;
+
+    /// <inheritdoc cref="EndCellsAlong"/>
+    private const int EndCellsAcross = 2;
+
+    /// <summary>
+    /// Summarises the small zones just past where each line of text ends, finely enough that one
+    /// more glyph there is a change — the way to see the last character or full stop of a line that
+    /// was read a moment before it finished drawing.
+    /// </summary>
+    /// <remarks>
+    /// Every cell is sampled, not every second one: the zones are a few thousand pixels at most,
+    /// and a full stop is a thin ring. Each zone is gridded along its own long side, so the same
+    /// call serves a zone after a row and one beneath a column.
+    /// </remarks>
+    /// <param name="zones">Zones in bitmap coordinates; any part outside the bitmap is ignored.</param>
+    public static FrameFingerprint CaptureEnds(Bitmap bitmap, IReadOnlyList<Rectangle> zones)
+    {
+        var data = bitmap.LockBits(
+            new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+            ImageLockMode.ReadOnly,
+            PixelFormat.Format32bppArgb);
+
+        try
+        {
+            var frame = new Rectangle(0, 0, data.Width, data.Height);
+            var cells = new List<byte>(zones.Count * EndCellsAlong * EndCellsAcross);
+            foreach (var zone in zones)
+            {
+                var clipped = Rectangle.Intersect(zone, frame);
+                if (clipped.Width <= 0 || clipped.Height <= 0) continue;
+                var tall = clipped.Height > clipped.Width;
+                cells.AddRange(Summarise(
+                    data, clipped,
+                    tall ? EndCellsAcross : EndCellsAlong,
+                    tall ? EndCellsAlong : EndCellsAcross,
+                    step: 1));
+            }
+
+            return new FrameFingerprint([.. cells]);
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+    }
+
+    /// <summary>
+    /// Whether any single cell moved past <see cref="CellTolerance"/> — no share of the grid needed.
+    /// For the sentence-end zones of <see cref="CaptureEnds"/>, where one glyph is one or two cells
+    /// and a share would only dilute it. A null or differently shaped counterpart counts as changed.
+    /// </summary>
+    public bool DiffersInAnyCell(FrameFingerprint? other) =>
+        other is null ||
+        other._cells.Length != _cells.Length ||
+        (_cells.Length > 0 && ChangedShare(other, CellTolerance) > 0);
+
+    /// <summary>
     /// Whether <paramref name="other"/> shows something meaningfully different. A null or
     /// differently shaped counterpart counts as changed — there is nothing to compare against, and
     /// treating that as "unchanged" would strand the region.
@@ -285,19 +354,22 @@ internal sealed class FrameFingerprint
         return (double)changed / _cells.Length;
     }
 
-    private static byte[] Summarise(BitmapData data, Rectangle area, int cellsY)
-    {
-        var totals = new long[CellsX * cellsY];
-        var counts = new int[CellsX * cellsY];
+    private static byte[] Summarise(BitmapData data, Rectangle area, int cellsY) =>
+        Summarise(data, area, CellsX, cellsY, SampleStep);
 
-        for (int y = area.Top; y < area.Bottom; y += SampleStep)
+    private static byte[] Summarise(BitmapData data, Rectangle area, int cellsX, int cellsY, int step)
+    {
+        var totals = new long[cellsX * cellsY];
+        var counts = new int[cellsX * cellsY];
+
+        for (int y = area.Top; y < area.Bottom; y += step)
         {
             int cellY = (y - area.Top) * cellsY / area.Height;
             nint row = data.Scan0 + y * data.Stride;
 
-            for (int x = area.Left; x < area.Right; x += SampleStep)
+            for (int x = area.Left; x < area.Right; x += step)
             {
-                int cellX = (x - area.Left) * CellsX / area.Width;
+                int cellX = (x - area.Left) * cellsX / area.Width;
                 int value = Marshal.ReadInt32(row, x * 4);
 
                 // Perceived brightness rather than the raw channels: it is one number instead of
@@ -307,7 +379,7 @@ internal sealed class FrameFingerprint
                 int r = (value >> 16) & 0xFF;
                 int luminance = (r * 299 + g * 587 + b * 114) / 1000;
 
-                int cell = cellY * CellsX + cellX;
+                int cell = cellY * cellsX + cellX;
                 totals[cell] += luminance;
                 counts[cell]++;
             }

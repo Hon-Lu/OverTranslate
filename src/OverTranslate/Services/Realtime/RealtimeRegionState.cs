@@ -214,6 +214,27 @@ internal sealed class RealtimeRegionState
     private int _failures;
     private int _pollsSinceFailure;
 
+    // The sentence-end zones (see BuildEndZones): where they are, what they showed when the region
+    // was last recorded, what they showed at the previous poll, and how many reads they may still
+    // ask for before a reading is taken again.
+    private IReadOnlyList<Rectangle> _endZones = NoBands;
+    private FrameFingerprint? _endsRecorded;
+    private FrameFingerprint? _endsLastPoll;
+    private int _endReadsLeft;
+
+    /// <summary>
+    /// How many reads the sentence-end zones may ask for after a reading was taken.
+    /// </summary>
+    /// <remarks>
+    /// A change there that was read and not taken costs one; a reading that is taken gives them
+    /// back. Two: one for the ending, and one spare for an ending that settles twice before a reading
+    /// is taken (a closing quote, then its full stop a poll later). No more, because anything that
+    /// keeps the zones changing without being text — a blinking prompt, a video behind a subtitle —
+    /// must not buy a read on every poll it holds still for. Confirming a short ending once it is
+    /// read is <see cref="DialogueReadingTracker"/>'s, and is not counted here.
+    /// </remarks>
+    public const int EndReadsPerChange = 2;
+
     // Which way this region's text runs, for the one decision in this type that turns with it.
     private readonly RealtimeTextOrientation _orientation;
 
@@ -282,6 +303,12 @@ internal sealed class RealtimeRegionState
     public bool SamePictureAsRead { get; private set; }
 
     /// <summary>
+    /// Whether this poll asks for a read because a sentence-end zone changed and settled — see
+    /// <see cref="BuildEndZones"/>. For the log, so those reads can be counted apart.
+    /// </summary>
+    public bool ReadForEnding { get; private set; }
+
+    /// <summary>
     /// What the last pass read, for a second reading of the same picture to be weighed against.
     /// </summary>
     /// <remarks>
@@ -305,9 +332,16 @@ internal sealed class RealtimeRegionState
     /// null. Taken as a delegate so this class never touches a bitmap, and so a test can drive the
     /// policy with fingerprints it builds by hand.
     /// </param>
+    /// <param name="captureEnds">
+    /// Summarises the current frame over the sentence-end zones — see
+    /// <see cref="FrameFingerprint.CaptureEnds"/>. Null leaves the zones unwatched.
+    /// </param>
     /// <returns>Whether the frame should be recognised now.</returns>
-    public bool Observe(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false) =>
-        Examine(capture, dialogue) != RealtimeReadReason.Nothing;
+    public bool Observe(
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
+        bool dialogue = false,
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null) =>
+        Examine(capture, dialogue, captureEnds) != RealtimeReadReason.Nothing;
 
     /// <summary>The same decision, and what made it — see <see cref="RealtimeReadReason"/>.</summary>
     /// <remarks>
@@ -318,11 +352,13 @@ internal sealed class RealtimeRegionState
     /// </remarks>
     /// <inheritdoc cref="Observe" path="/param"/>
     public RealtimeReadReason Examine(
-        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue = false)
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
+        bool dialogue = false,
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null)
     {
         _pollsSinceLook++;
         if (WaitingAfterFailure(capture)) return RealtimeReadReason.Nothing;
-        var reason = Decide(capture, dialogue);
+        var reason = Decide(capture, dialogue, captureEnds);
         // Whatever the pass then makes of it, the region has been handed to the reader — which is
         // all the idle scan counts, so that the poll it forces cannot be forced again by the next.
         if (reason != RealtimeReadReason.Nothing) _pollsSinceLook = 0;
@@ -331,7 +367,9 @@ internal sealed class RealtimeRegionState
 
     /// <inheritdoc cref="Examine"/>
     private RealtimeReadReason Decide(
-        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture, bool dialogue)
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
+        bool dialogue,
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds)
     {
         var current = capture(IsWatchingText ? _watchBands : null);
 
@@ -342,12 +380,22 @@ internal sealed class RealtimeRegionState
         bool Changed(FrameFingerprint? previous) =>
             IsWatchingText ? current.Differs(previous) : current.DiffersLocally(previous);
 
+        // The sentence-end zones: whether anything was added after a line since it was recorded,
+        // and whether that has stopped changing since the previous poll — see BuildEndZones.
+        var ends = captureEnds is not null && _endZones.Count > 0 ? captureEnds(_endZones) : null;
+        var endsMoved = ends is not null && ends.DiffersInAnyCell(_endsRecorded);
+        var endsSettled = endsMoved && !ends!.DiffersInAnyCell(_endsLastPoll);
+        _endsLastPoll = ends;
+
         ReadingAgain = false;
         SamePictureAsRead = false;
-        // A panel only ever confirms where a box moved, and only over a still picture: while the
-        // pixels are changing its own settle-then-read rule already supplies the second reading,
-        // and jumping ahead of it would change the panel's timing for every scroll.
-        var confirms = dialogue || (Dialogue.HasPendingPlacement && !Changed(_rendered));
+        ReadForEnding = false;
+        // A panel only confirms over a still picture, and only where something is pending — a box
+        // that moved, or a longer ending read once: while the pixels are changing its own
+        // settle-then-read rule already supplies the second reading, and jumping ahead of it would
+        // change the panel's timing for every scroll.
+        var confirms = dialogue ||
+            ((Dialogue.HasPendingPlacement || Dialogue.HasPendingEnding) && !Changed(_rendered));
         if (confirms && Dialogue.TryTakeConfirmation())
         {
             // The confirmation pass is asked for without looking at the picture, so whether it IS
@@ -355,7 +403,10 @@ internal sealed class RealtimeRegionState
             // moment would have the previous page's reading merged into the new one's — and the
             // reader would be shown a sentence that is no longer on screen.
             ReadingAgain = LastRead.Count > 0 && !Changed(_rendered);
-            SamePictureAsRead = ReadingAgain && capture(null).IsIdenticalTo(_recognised);
+            // Not when a line has grown past its end since: that is a glyph too small for the whole
+            // region's print to see (measured: a 。 moves no cell of it past the tolerance), and
+            // reusing the last reading is how a sentence lost its full stop for good.
+            SamePictureAsRead = ReadingAgain && !endsMoved && capture(null).IsIdenticalTo(_recognised);
             return RealtimeReadReason.TextChanged;
         }
 
@@ -384,6 +435,20 @@ internal sealed class RealtimeRegionState
 
         _pending = current;
         _unsettledPolls = 0;
+
+        // Something was added after a line and has stopped changing: the last glyph or full stop of
+        // a sentence typed out after the read that caught it. Nothing else here can see it — it is
+        // outside the strips, a few cells of the whole region, and a single 。 does not move any of
+        // them past the tolerance — so without this the line keeps its short ending for as long as
+        // it is up. Only once settled, so a line still being typed or a video behind it is left to
+        // the paths above, and only while the budget lasts.
+        if (endsSettled && _endReadsLeft > 0)
+        {
+            _endReadsLeft--;
+            ReadForEnding = true;
+            Dialogue.ObservePixelChange();
+            return RealtimeReadReason.TextChanged;
+        }
 
         // Nothing known is being watched, and nothing changed — the idle path, and the one that has
         // to stay free: an untouched region costs a grab and a fingerprint, and nothing else. The
@@ -529,19 +594,29 @@ internal sealed class RealtimeRegionState
     /// The same, told what each line says and how well each was read — which is what the pass itself
     /// knows and what <see cref="RealtimeReadingMerge"/> needs back on the next pass.
     /// </summary>
+    /// <param name="endZones">
+    /// The sentence-end zones of this reading — see <see cref="BuildEndZones"/>. Null or empty with
+    /// text found leaves no zones to watch; with no text found the previous ones are kept, as the
+    /// strips are.
+    /// </param>
+    /// <param name="captureEnds">Summarises the frame over those zones; null leaves them unwatched.</param>
     public void MarkRendered(
         IReadOnlyList<Rectangle> textBounds,
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
-        IReadOnlyList<RenderedLine> lines)
+        IReadOnlyList<RenderedLine> lines,
+        IReadOnlyList<Rectangle>? endZones = null,
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null)
     {
         if (textBounds.Count > 0)
         {
             _emptyPasses = 0;
             _watchBands = BuildBands(textBounds);
+            _endZones = endZones ?? NoBands;
         }
         else if (++_emptyPasses >= EmptyPassesBeforeClearing)
         {
             _watchBands = NoBands;
+            _endZones = NoBands;
         }
 
         _renderedFull = capture(null);
@@ -550,10 +625,20 @@ internal sealed class RealtimeRegionState
         _pending = _rendered;
         _unsettledPolls = 0;
         _pollsSinceFullScan = 0;
+        RecordEnds(captureEnds);
+        var text = string.Join('\n', lines.Select(line => line.Text));
+        // A reading was taken, so the sentence-end zones may ask again — see EndReadsPerChange.
+        if (text != RenderedText) _endReadsLeft = EndReadsPerChange;
         RenderedLines = lines;
-        RenderedText = string.Join('\n', lines.Select(line => line.Text));
+        RenderedText = text;
         RenderedConfidence = WeightedConfidence(lines);
         ClearFailure();
+    }
+
+    private void RecordEnds(Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds)
+    {
+        _endsRecorded = captureEnds is not null && _endZones.Count > 0 ? captureEnds(_endZones) : null;
+        _endsLastPoll = _endsRecorded;
     }
 
     /// <summary>
@@ -572,13 +657,16 @@ internal sealed class RealtimeRegionState
     /// of the size, which is not the same claim, and the idle scan in <see cref="IdleScan"/> exists
     /// to come back and read it properly.
     /// </remarks>
-    public void MarkScanned(Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture)
+    public void MarkScanned(
+        Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null)
     {
         _renderedFull = capture(null);
         _rendered = IsWatchingText ? capture(_watchBands) : _renderedFull;
         _pending = _rendered;
         _unsettledPolls = 0;
         _pollsSinceFullScan = 0;
+        RecordEnds(captureEnds);
         ClearFailure();
     }
 
@@ -668,5 +756,82 @@ internal sealed class RealtimeRegionState
 
         // Every recognised line was degenerate — treat that as having found nothing to watch.
         return bands.Count > 0 ? bands : NoBands;
+    }
+
+    /// <summary>
+    /// How far the sentence-end zones reach, in line heights (column widths, written down the page).
+    /// </summary>
+    /// <remarks>
+    /// Three along: the last one to three characters of a sentence, which is what a read taken while
+    /// it was being typed out loses (measured on the typing stage: 1–3 characters in all but a
+    /// handful of the endings lost). Across, the zone after a line is the line itself; the zone for
+    /// an ending that wrapped is one and a half lines deep, because the next line's glyphs sit a
+    /// line pitch down — 49px for 34px text on the stage — and a lone 。 wrapped onto it lies in the
+    /// lower half of that line, which a zone one line deep did not reach (no cell moved at all).
+    /// </remarks>
+    private const double EndZoneLength = 3;
+
+    /// <inheritdoc cref="EndZoneLength"/>
+    private const double WrapZoneDepth = 1.5;
+
+    /// <summary>
+    /// The small zones where a line that was read too early would carry on: just past the end of
+    /// each block's last line, and at the start of the line after it.
+    /// </summary>
+    /// <remarks>
+    /// <para>The strips (<see cref="BuildBands"/>) reach only a few pixels past the end of a line,
+    /// and a whole-region print shares one full stop across a grid of hundreds of cells — measured
+    /// on the typing stage, 。, 」 and ！ added to a finished line moved no cell of the whole region
+    /// past the tolerance, so neither the rescan nor the idle scan ever came back for them. These
+    /// zones are compared cell by cell instead (<see cref="FrameFingerprint.DiffersInAnyCell"/>).</para>
+    ///
+    /// <para>Written across, the last line is the lowest one and it carries on to its right, or
+    /// wraps to below the block's left edge. Written down the page, the last column is the leftmost;
+    /// it carries on below itself, or wraps to the top of the column to its left. Anything outside
+    /// <paramref name="frame"/> is cut off, and a zone with nothing left is not watched.</para>
+    /// </remarks>
+    /// <param name="blocks">The blocks as read, in region coordinates.</param>
+    /// <param name="frame">The region's size.</param>
+    public static IReadOnlyList<Rectangle> BuildEndZones(
+        IReadOnlyList<OcrTextBlock> blocks, Size frame, RealtimeTextOrientation orientation)
+    {
+        var bounds = new Rectangle(Point.Empty, frame);
+        var zones = new List<Rectangle>(blocks.Count * 2);
+        foreach (var block in blocks)
+        {
+            var lines = block.Lines.Where(r => r.Width > 0 && r.Height > 0).ToList();
+            var box = block.Bounds;
+            // A block that came without its lines is one line: itself.
+            if (lines.Count == 0)
+            {
+                if (box.Width <= 0 || box.Height <= 0) continue;
+                lines.Add(box);
+            }
+
+            if (orientation == RealtimeTextOrientation.Vertical)
+            {
+                var last = lines.MinBy(r => r.Left);
+                var width = last.Width;
+                Add(last.Left, last.Bottom, width, width * EndZoneLength);
+                Add(last.Left - width * WrapZoneDepth, box.Top, width * WrapZoneDepth, width * EndZoneLength);
+            }
+            else
+            {
+                var last = lines.MaxBy(r => r.Bottom);
+                var height = last.Height;
+                Add(last.Right, last.Top, height * EndZoneLength, height);
+                Add(box.Left, last.Bottom, height * EndZoneLength, height * WrapZoneDepth);
+            }
+        }
+
+        return zones.Count > 0 ? zones : NoBands;
+
+        void Add(double x, double y, double width, double height)
+        {
+            var zone = Rectangle.Intersect(bounds, Rectangle.FromLTRB(
+                (int)Math.Floor(x), (int)Math.Floor(y),
+                (int)Math.Ceiling(x + width), (int)Math.Ceiling(y + height)));
+            if (zone.Width > 0 && zone.Height > 0) zones.Add(zone);
+        }
     }
 }

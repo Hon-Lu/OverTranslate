@@ -607,6 +607,8 @@ public sealed class RealtimeTranslationSession
                 // whole region without ever seeing the bitmap.
                 FrameFingerprint Capture(IReadOnlyList<Rectangle>? areas) =>
                     FrameFingerprint.Capture(frame, areas);
+                FrameFingerprint CaptureEnds(IReadOnlyList<Rectangle> zones) =>
+                    FrameFingerprint.CaptureEnds(frame, zones);
 
                 // Asked for, so not asked about: a demanded pass reads whatever is there rather than
                 // consulting a policy whose whole job is deciding which polls are worth paying for.
@@ -615,7 +617,7 @@ public sealed class RealtimeTranslationSession
                 step.Set("examine");
                 var reason = demanded
                     ? RealtimeReadReason.TextChanged
-                    : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle);
+                    : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle, CaptureEnds);
                 // Asked for by the screen rather than by the pixels: a page scrolled away and back
                 // is the picture that was read, and its translations are gone all the same.
                 if (redraw && reason == RealtimeReadReason.Nothing) reason = RealtimeReadReason.TextChanged;
@@ -624,6 +626,9 @@ public sealed class RealtimeTranslationSession
                     skippedPolls++;
                     continue;
                 }
+
+                if (!demanded && state.ReadForEnding)
+                    Log.Debug("Realtime region {Region} reads again: a line grew past its end", region.Id);
 
                 // The two timed reads are asking whether there is anything here, not following a
                 // change, and the answer is usually no — so they are asked the cheap way first. See
@@ -686,7 +691,7 @@ public sealed class RealtimeTranslationSession
                         // recorded, and the region stops asking until something changes or the idle
                         // scan comes back for a proper read — see RealtimeRegionState.IdleScan for
                         // the 1 frame in 23 that neither size can see.
-                        if (++gateTurnedAway >= 2) state.MarkScanned(Capture);
+                        if (++gateTurnedAway >= 2) state.MarkScanned(Capture, CaptureEnds);
                         skippedPolls++;
                         redraw = false;
                         continue;
@@ -987,6 +992,12 @@ public sealed class RealtimeTranslationSession
 
         var sourceText = string.Join('\n', recognized.Select(block => block.Text));
         var textBounds = ToTextBounds(recognized);
+        // Where each line would carry on if this read caught it before it finished drawing — see
+        // RealtimeRegionState.BuildEndZones.
+        var endZones = RealtimeRegionState.BuildEndZones(
+            recognized, new Size(frame.Width, frame.Height), region.Orientation);
+        FrameFingerprint CaptureEnds(IReadOnlyList<Rectangle> zones) =>
+            FrameFingerprint.CaptureEnds(frame, zones);
 
         // Claimed before anything can be drawn, so that a translation coming back out of order can
         // be told it has been overtaken. Every route to the screen goes through the pump holding it.
@@ -1003,7 +1014,7 @@ public sealed class RealtimeTranslationSession
             RealtimeFrameDump.SaveUnread(frame, region.Id);
 
             var shownWhenEmpty = state.RenderedText.Length;
-            state.MarkRendered(textBounds, capture, sourceText);
+            state.MarkRendered(textBounds, capture, [], endZones, CaptureEnds);
 
             var cleared = state.ShouldClearOverlay;
             if (cleared) pump.Publish(pass, []);
@@ -1044,7 +1055,7 @@ public sealed class RealtimeTranslationSession
                     "shown={Shown:0.00} \"{Old}\" against \"{Text}\"",
                     region.Id, merged.Kept, state.RenderedConfidence, state.RenderedText, sourceText);
 
-            state.MarkRendered(textBounds, capture, merged.Lines);
+            state.MarkRendered(textBounds, capture, merged.Lines, endZones, CaptureEnds);
 
             return new PassReading(
                 reread ? PassOutcome.WorseReading : PassOutcome.Unchanged,
@@ -1059,7 +1070,7 @@ public sealed class RealtimeTranslationSession
         // The merged lines rather than the raw reading: a sentence whose re-reading lost keeps the
         // wording already on screen, which the session has translated once and cached, so carrying
         // it along with a corrected neighbour costs nothing on the network.
-        state.MarkRendered(textBounds, capture, merged.Lines);
+        state.MarkRendered(textBounds, capture, merged.Lines, endZones, CaptureEnds);
         if (redraw) state.Dialogue.Place(merged.Blocks);
         pump.Post(pass, merged.Blocks, ocrMs, frame, readFrom);
 
