@@ -42,6 +42,9 @@ if (args.Length > 0 && args[0] == "--poll-cost")
 if (args.Length > 0 && args[0] == "--repair-cost")
     return RepairCostProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--erase-lab")
+    return EraseLabProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--realtime-repair")
     return RealtimeRepairProbe.Run(args.Skip(1).ToArray());
 
