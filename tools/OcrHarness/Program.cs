@@ -48,6 +48,12 @@ if (args.Length > 0 && args[0] == "--realtime-repair")
 if (args.Length > 0 && args[0] == "--realtime-row-gaps")
     return await RealtimeRowGapProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--size-measures")
+    return await SizeMeasureProbe.Run(args.Skip(1).ToArray());
+
+if (args.Length > 0 && args[0] == "--size-session")
+    return await SizeMeasureProbe.RunSession(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--dialogue-probe")
     return await DialogueProbe.Run(args.Skip(1).ToArray());
 
@@ -112,6 +118,10 @@ if (args.Length == 0)
     Console.Error.WriteLine("                  (realtime detector size, read with and without the screenshot flow's row repair)");
     Console.Error.WriteLine("       OcrHarness --realtime-row-gaps [--panel] <lang> <image.png> [...]");
     Console.Error.WriteLine("                  (realtime-sized rows: the pieces, the gaps, and what the whole row reads as)");
+    Console.Error.WriteLine("       OcrHarness --size-measures [--panel] <lang> <image.png> [...]");
+    Console.Error.WriteLine("                  (TSV: the heights realtime sizes its text from, each frame read at a few 1-3px shifts)");
+    Console.Error.WriteLine("       OcrHarness --size-session [--panel] <lang> <translations.json> <out.png> <image.png> [...]");
+    Console.Error.WriteLine("                  (the frames drawn in turn by one realtime block window, stacked into one picture)");
     Console.Error.WriteLine("       OcrHarness --box-repair-rows <lang> <image.png> [more.png ...]");
     Console.Error.WriteLine("                  (what ChromaticBoxRepair measures on each row, and what it repaired)");
     Console.Error.WriteLine("       OcrHarness --xlate-test   (network translation/resilience check, no OCR)");
