@@ -201,6 +201,183 @@ public class RealtimeCpuBackgroundTests
         Assert.InRange(middle[2], 0, 80);
     }
 
+    /// <summary>
+    /// White dialogue text with a thick black edge, which a game or a video draws a fifth of the
+    /// glyph thick. The recognition box is drawn round the white and the edge lies outside it, so the
+    /// row of edge the mask did not reach was the first thing the fill read, and it was spread into a
+    /// dark smear the length of the line.
+    /// </summary>
+    [Fact]
+    public void Repair_ErasesAThickEdgeThatLiesOutsideTheBox()
+    {
+        var background = Color.FromArgb(200, 190, 170);
+        const int left = 60, top = 50, stroke = 8, gap = 12, height = 40, strokes = 12, edge = 8;
+        int[] columns = [.. Enumerable.Range(0, strokes).Select(index => left + index * (stroke + gap))];
+        int right = columns[^1] + stroke;
+
+        using var frame = new Bitmap(left + right, top * 2 + height);
+        using (var graphics = Graphics.FromImage(frame))
+        {
+            graphics.Clear(background);
+            // The edges of neighbouring strokes run into one another, as they do along a line.
+            foreach (int x in columns)
+                graphics.FillRectangle(Brushes.Black, x - edge, top - edge, stroke + edge * 2, height + edge * 2);
+            foreach (int x in columns)
+                graphics.FillRectangle(Brushes.White, x, top, stroke, height);
+        }
+
+        // Tight to the white above and below, which is where the edge was left standing. Across, the
+        // box holds the edge at the line's ends, as the detector's boxes do on drawn edged text: on
+        // every lit picture of the erase lab the picture read just past a box's ends measured the
+        // same as the picture further out. A box that ended on the white there would put the line's
+        // own edge in the picture read beside it, the edge would be taken for the line's backdrop and
+        // nothing would be followed — the mask the line had before following, not a worse one.
+        using var result = RealtimeCpuBackground.Repair(frame,
+            [new TranslatedBlock("III", "字", new(left - edge, top, right - left + edge * 2, height), RenderGlyphHeight: height)]);
+
+        int floor = Luma(background) - 30;
+        for (int y = top - edge; y < top + height + edge; y++)
+            for (int x = left - edge; x < right + edge; x++)
+            {
+                var pixel = result.GetPixel(x, y);
+                Assert.True(Luma(pixel) >= floor, $"({x},{y}) is {pixel} against a background of {background}");
+            }
+    }
+
+    /// <summary>
+    /// White text on a dark band laid across the picture: between the glyphs' tops and the band's
+    /// edge is a strip of dark that looks to the hats like an edge the box cut off. It is the
+    /// line's backdrop, and following it out carried the mask over the band's edge, which came back
+    /// wavy with dark dragged out over the picture beyond it.
+    /// </summary>
+    [Fact]
+    public void Repair_LeavesTheEdgeOfADarkBandBehindTheTextAlone()
+    {
+        var scene = Color.FromArgb(150, 165, 180);
+        var bandColour = Color.FromArgb(28, 28, 34);
+        const int left = 60, top = 60, stroke = 6, gap = 14, height = 40, strokes = 12, margin = 10;
+        int[] columns = [.. Enumerable.Range(0, strokes).Select(index => left + index * (stroke + gap))];
+        int right = columns[^1] + stroke;
+        var band = new Rectangle(0, top - margin, left + right, height + margin * 2);
+
+        using var frame = new Bitmap(left + right, top * 2 + height);
+        using (var graphics = Graphics.FromImage(frame))
+        {
+            graphics.Clear(scene);
+            using var brush = new SolidBrush(bandColour);
+            graphics.FillRectangle(brush, band);
+            foreach (int x in columns) graphics.FillRectangle(Brushes.White, x, top, stroke, height);
+        }
+
+        using var result = RealtimeCpuBackground.Repair(frame,
+            [new TranslatedBlock("III", "字", new(left, top, right - left, height), RenderGlyphHeight: height)]);
+
+        for (int y = 0; y < frame.Height; y++)
+        {
+            if (y >= band.Top && y < band.Bottom) continue;
+            for (int x = 0; x < frame.Width; x++)
+                Assert.True(frame.GetPixel(x, y).ToArgb() == result.GetPixel(x, y).ToArgb(),
+                    $"({x},{y}) outside the band changed from {frame.GetPixel(x, y)} to {result.GetPixel(x, y)}");
+        }
+    }
+
+    /// <summary>
+    /// Two edged lines close enough that their edges run together, of which only the lower one is
+    /// being erased — a chat log, where the line above was not translated. The edge between them is
+    /// half the upper line's, and following the lower line's edge all the way up rubbed out the
+    /// bottoms of the upper line's glyphs.
+    /// </summary>
+    [Fact]
+    public void Repair_LeavesTheLineAboveAndItsHalfOfASharedEdgeAlone()
+    {
+        var background = Color.FromArgb(200, 190, 170);
+        const int left = 60, upper = 40, lower = 92, stroke = 8, gap = 12, height = 40, strokes = 12, edge = 8;
+        int[] columns = [.. Enumerable.Range(0, strokes).Select(index => left + index * (stroke + gap))];
+        int right = columns[^1] + stroke;
+
+        using var frame = new Bitmap(left + right, lower + height + 50);
+        using (var graphics = Graphics.FromImage(frame))
+        {
+            graphics.Clear(background);
+            foreach (int top in new[] { upper, lower })
+                foreach (int x in columns)
+                    graphics.FillRectangle(Brushes.Black, x - edge, top - edge, stroke + edge * 2, height + edge * 2);
+            foreach (int top in new[] { upper, lower })
+                foreach (int x in columns)
+                    graphics.FillRectangle(Brushes.White, x, top, stroke, height);
+        }
+
+        using var result = RealtimeCpuBackground.Repair(frame,
+            [new TranslatedBlock("III", "字", new(left - edge, lower, right - left + edge * 2, height), RenderGlyphHeight: height)]);
+
+        // The upper line's glyphs, and the row of its edge just under them.
+        for (int y = upper - edge; y <= upper + height; y++)
+            for (int x = left - edge; x < right + edge; x++)
+                Assert.True(frame.GetPixel(x, y).ToArgb() == result.GetPixel(x, y).ToArgb(),
+                    $"({x},{y}) of the line above changed from {frame.GetPixel(x, y)} to {result.GetPixel(x, y)}");
+    }
+
+    /// <summary>
+    /// A line with nothing drawn round it keeps the mask it always had: inside its box, its padding
+    /// and the blind margin, and nothing is followed past them.
+    /// </summary>
+    [Fact]
+    public void Build_KeepsTheMaskOfAnUnedgedLineInsideItsBox()
+    {
+        const int left = 60, top = 50, stroke = 8, gap = 12, height = 40, strokes = 12;
+        int right = left + (strokes - 1) * (stroke + gap) + stroke;
+        using var source = ImageBuffer.Solid(new Size(right + left, top * 2 + height), 120, 110, 100);
+        for (int index = 0; index < strokes; index++)
+            Paint(source, new Rectangle(left + index * (stroke + gap), top, stroke, height), 255, 255, 255);
+
+        using var mask = CpuTextMask.Build(source, [new CpuTextRegion(left, top, right - left, height, height)]);
+
+        const int padding = 4, halo = 2;
+        var allowed = Rectangle.FromLTRB(left - padding - halo, top - padding - halo,
+            right + padding + halo, top + height + padding + halo);
+        for (int y = 0; y < mask.Height; y++)
+        {
+            var row = mask.RowSpan(y);
+            for (int x = 0; x < mask.Width; x++)
+                Assert.True(row[x] == 0 || allowed.Contains(x, y), $"({x},{y}) is masked outside {allowed}");
+        }
+    }
+
+    /// <summary>
+    /// What the band is grown by: the reach of the mask the erase follows past the box, which holds
+    /// the whole edge of an edged line and is nothing at all for a plain one.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Overhang_HoldsTheEdgeOfAnEdgedLineAndIsNullForAPlainOne(bool edged)
+    {
+        const int left = 60, top = 50, stroke = 8, gap = 12, height = 40, strokes = 12, edge = 8;
+        int right = left + (strokes - 1) * (stroke + gap) + stroke;
+        using var source = ImageBuffer.Solid(new Size(right + left, top * 2 + height), 170, 190, 200);
+        for (int index = 0; index < strokes; index++)
+        {
+            int x = left + index * (stroke + gap);
+            if (edged) Paint(source, new Rectangle(x - edge, top - edge, stroke + edge * 2, height + edge * 2), 0, 0, 0);
+        }
+        for (int index = 0; index < strokes; index++)
+            Paint(source, new Rectangle(left + index * (stroke + gap), top, stroke, height), 255, 255, 255);
+
+        var reach = Assert.Single(CpuTextMask.Overhang(source,
+            [new CpuTextRegion(left - edge, top, right - left + edge * 2, height, height)]));
+
+        if (!edged)
+        {
+            Assert.Null(reach);
+            return;
+        }
+        var outline = Rectangle.FromLTRB(left - edge, top - edge, right + edge, top + height + edge);
+        Assert.NotNull(reach);
+        Assert.True(reach.Value.Contains(outline), $"{reach} leaves part of the edge {outline} out");
+    }
+
+    private static int Luma(Color colour) => (colour.R * 77 + colour.G * 150 + colour.B * 29) >> 8;
+
     private static void Paint(ImageBuffer image, Rectangle area, byte blue, byte green, byte red)
     {
         for (int y = area.Top; y < area.Bottom; y++)

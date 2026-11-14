@@ -125,11 +125,17 @@ public partial class RealtimeBlockWindow : Window
 
     // 顯示外觀 → 進階選項, both off unless the user asked for them. Changed with the colours.
     //
-    // With both off nothing here grabs the screen at all — see Rebuild. That is not merely a saving:
-    // the band is the predictable one of the two looks, and a window that does not photograph itself
-    // cannot bake its own translation into what it draws either.
+    // With both off the picture under the block is still read on every rebuild, but only to measure
+    // how far past their boxes the lines' edges reach so the band can cover them — see Rebuild and
+    // CoverOverhang. No colour is taken from it and nothing of it is drawn, so the band stays the
+    // predictable one of the two looks; and the read goes through the capture backend, which never
+    // holds this window (see CaptureUnderlyingRegion), so it cannot measure its own translation.
     private bool _naturalBackground;
     private bool _sampleTextColor;
+
+    // How far past their boxes the lines of the rebuild in progress run — see OverhangOf. Null
+    // outside a rebuild.
+    private Lazy<Dictionary<TranslatedBlock, System.Drawing.Rectangle>>? _overhangs;
     private readonly RealtimeBlockMode _mode;
 
     // Which way this block's source runs, as the user said in edit mode. It decides how the
@@ -428,17 +434,22 @@ public partial class RealtimeBlockWindow : Window
         double canvasWidth = _sourceBounds.Width / _dpiX;
         double canvasHeight = _sourceBounds.Height / _dpiY;
 
-        // Grabbed only if something is going to read it. With 進階選項 off this window draws from the
-        // two colours alone, exactly as it did before those switches existed.
-        using var frame = _naturalBackground || _sampleTextColor
-            ? CaptureUnderlyingRegion()
-            : null;
+        // Grabbed whatever 進階選項 says. With both switches off the band is still drawn in the two
+        // colours alone — no colour is read off this frame and none of it is pasted anywhere — but it
+        // is what the band is measured against: an edge drawn round a line lies outside the box the
+        // line was read in, and a band sized from the box left it showing (see CoverOverhang). Null
+        // is as ordinary here as anywhere else (see CaptureUnderlyingRegion), and the band is then
+        // sized from the boxes alone, as it always was.
+        using var frame = CaptureUnderlyingRegion();
 
         // 固定 has no use for it: the size is the reader's, and the boxes stay as they were read.
         _layoutLines = _fixedFontSize is null
             ? _textSizes.Settle(_lines, _orientation == RealtimeTextOrientation.Vertical)
             : _lines;
         LogSteadiedHeights();
+
+        // Measured once for every block, and only if a band asks — see OverhangOf.
+        _overhangs = new Lazy<Dictionary<TranslatedBlock, System.Drawing.Rectangle>>(() => MeasureOverhangs(frame));
 
         var boxes = new List<List<FrameworkElement>>();
         foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame))
@@ -458,6 +469,8 @@ public partial class RealtimeBlockWindow : Window
                 patches.Add(new NaturalPatchVisual(background, visual.PatchBounds, visual.Replate));
         }
 
+        // Holds this rebuild's frame, which is disposed on the way out.
+        _overhangs = null;
         Volatile.Write(ref _naturalPatches, [.. patches]);
 
         // Under the windows already known to be over the source, so a translation that arrives
@@ -721,6 +734,11 @@ public partial class RealtimeBlockWindow : Window
             }
         }
 
+        // Grown before the bounds are taken: a band that falls back from the repair is still
+        // repainted from those bounds by the refresh, and has to be the same rectangle as they are.
+        if (naturalBrush is null)
+            (patchLeft, patchTop, patchWidth, patchHeight) = CoverOverhang(
+                OverhangOf(line), patchLeft, patchTop, patchWidth, patchHeight, canvasWidth, canvasHeight);
         var patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
 
         var background = new Border
@@ -1077,7 +1095,9 @@ public partial class RealtimeBlockWindow : Window
                     // Invalid source geometry keeps the original whole-block fallback.
                     var visual = row.SourceLineBounds is { Count: > 1 }
                         ? BuildLine(row, canvasWidth, canvasHeight, frame, repairedFrame)
-                        : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null, repairedFrame);
+                        : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null, repairedFrame,
+                            // The group's patch is the first row's, so it is measured against the whole group.
+                            () => OverhangOf(block));
                     if (visual is { } drawn) yield return index == 0 ? drawn : drawn with { JoinsPrevious = true };
                 }
             }
@@ -1437,6 +1457,11 @@ public partial class RealtimeBlockWindow : Window
             }
         }
 
+        // Grown before the bounds are taken: a band that falls back from the repair is still
+        // repainted from those bounds by the refresh, and has to be the same rectangle as they are.
+        if (naturalBrush is null)
+            (patchLeft, patchTop, patchWidth, patchHeight) = CoverOverhang(
+                OverhangOf(line), patchLeft, patchTop, patchWidth, patchHeight, canvasWidth, canvasHeight);
         var patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
 
         var background = new Border
@@ -1824,7 +1849,7 @@ public partial class RealtimeBlockWindow : Window
 
     private LineVisual? BuildPanelLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
-        double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame)
+        double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame, Func<System.Drawing.Rectangle?> overhang)
     {
         var canvas = new Rect(0, 0, canvasWidth * _dpiX, canvasHeight * _dpiY);
         var cell = Rect.Intersect(line.Bounds, canvas);
@@ -1854,6 +1879,13 @@ public partial class RealtimeBlockWindow : Window
             double patchWidth = patch.Width / _dpiX, patchHeight = patch.Height / _dpiY;
             patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
             var naturalBrush = _naturalBackground ? BuildNaturalBrush(repairedFrame, patchBounds) : null;
+            if (naturalBrush is null)
+            {
+                // Grown with its bounds, for the reason BuildLine gives.
+                (patchLeft, patchTop, patchWidth, patchHeight) = CoverOverhang(
+                    overhang(), patchLeft, patchTop, patchWidth, patchHeight, canvasWidth, canvasHeight);
+                patchBounds = ToPhysicalPatchBounds(patchLeft, patchTop, patchWidth, patchHeight);
+            }
             background = new Border
             {
                 Width = patchWidth, Height = patchHeight,
@@ -2011,9 +2043,10 @@ public partial class RealtimeBlockWindow : Window
     /// </summary>
     /// <remarks>
     /// The block's rectangle and not this window's, which are different places under 對照顯示. The
-    /// controller turns both readers of this off in that mode, so nothing reaches here then; reading
-    /// the source rectangle anyway is what keeps a future caller from repairing the picture under the
-    /// copy and pasting it over the block's own lines.
+    /// controller turns both 進階選項 readers of this off in that mode, and what still reaches here
+    /// then is the band measuring its lines' edges, which belong to the source and are drawn round
+    /// it at the copy's same place; reading the source rectangle is also what keeps a future caller
+    /// from repairing the picture under the copy and pasting it over the block's own lines.
     ///
     /// This used to be a <c>CopyFromScreen</c> of the same rectangle, and it read whatever was on
     /// screen, this overlay included. What kept the overlay out of it was
@@ -2050,6 +2083,62 @@ public partial class RealtimeBlockWindow : Window
             Log.Debug(ex, "Realtime block {Region} could not read the picture under it", RegionId);
             return null;
         }
+    }
+
+    /// <summary>
+    /// How far past its boxes the erase would follow <paramref name="line"/>'s ink, in the frame's
+    /// pixels; null when it would follow none, when there is no frame to measure, or when the line is
+    /// not one of the blocks this rebuild drew from.
+    /// </summary>
+    /// <remarks>
+    /// A lookup into the one measurement this rebuild made of all its blocks, made the first time a
+    /// band asks — so a rebuild that draws no band, which is every rebuild with 自然背景 on and a
+    /// repair that worked, measures nothing.
+    /// </remarks>
+    private System.Drawing.Rectangle? OverhangOf(TranslatedBlock line) =>
+        _overhangs?.Value.TryGetValue(line, out var reach) == true ? reach : null;
+
+    private Dictionary<TranslatedBlock, System.Drawing.Rectangle> MeasureOverhangs(System.Drawing.Bitmap? frame)
+    {
+        var measured = new Dictionary<TranslatedBlock, System.Drawing.Rectangle>(ReferenceEqualityComparer.Instance);
+        if (frame is null) return measured;
+        try
+        {
+            var reach = RealtimeCpuBackground.Overhang(frame, _layoutLines);
+            for (int index = 0; index < reach.Length; index++)
+                if (reach[index] is { } overhang) measured[_layoutLines[index]] = overhang;
+        }
+        catch (Exception ex)
+        {
+            // A band sized from its boxes is what this window drew before it measured anything.
+            Log.Warn(ex, "Realtime block {Region} could not measure its lines' edges", RegionId);
+        }
+        return measured;
+    }
+
+    /// <summary>
+    /// A band grown to cover <paramref name="overhang"/>, kept inside the block; the band unchanged
+    /// when there is none.
+    /// </summary>
+    /// <remarks>
+    /// The band is sized from the boxes the lines were read in, and a box is drawn round the letters
+    /// — the white of a line of dialogue, not the black edge round it, which lies a fifth of a glyph
+    /// outside it on every side. So the band showed the edge as a dark rim round itself. The rim is
+    /// what the erase follows past the box (see CpuTextMask.Overhang), and the band grows to exactly
+    /// that, only round the lines that have one: a plain line's band is the one it always was. Only
+    /// the background grows. The translation keeps its own box, so neither where it sits nor its size
+    /// depends on how thick the source's edge was.
+    /// </remarks>
+    private (double Left, double Top, double Width, double Height) CoverOverhang(
+        System.Drawing.Rectangle? overhang, double left, double top, double width, double height,
+        double canvasWidth, double canvasHeight)
+    {
+        if (overhang is not { } reach) return (left, top, width, height);
+        double right = Math.Min(canvasWidth, Math.Max(left + width, reach.Right / _dpiX));
+        double bottom = Math.Min(canvasHeight, Math.Max(top + height, reach.Bottom / _dpiY));
+        left = Math.Max(0, Math.Min(left, reach.Left / _dpiX));
+        top = Math.Max(0, Math.Min(top, reach.Top / _dpiY));
+        return (left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
     }
 
     private System.Drawing.Rectangle ToPhysicalPatchBounds(
