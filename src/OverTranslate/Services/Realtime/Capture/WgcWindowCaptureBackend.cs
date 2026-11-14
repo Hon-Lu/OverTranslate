@@ -50,8 +50,8 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // rectangles being watched rather than the whole window — which needs a crop on the GPU, and so
     // the D3D interop this deliberately does without for now.
     //
-    // It used to be half the poll, which the poll dropping to 150ms gave up: a frame can now be up
-    // to 120ms old when a poll finds it, where it used to be 125ms at worst out of a 250ms poll.
+    // It used to be half the poll, which the poll dropping to 150ms gave up: a frame could then be
+    // up to 120ms old when a poll found it, where it used to be 125ms at worst out of a 250ms poll.
     // That is the same staleness in absolute terms and a bigger share of a shorter poll, and it is
     // deliberate — this is the expensive half of the path and the poll is the cheap half, so the
     // cheap half is what was spent. RealtimeRegionState.PollingIsNeverFasterThanFramesAreReadBack
@@ -59,7 +59,15 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // Internal rather than private so the realtime poll interval can be checked against it:
     // polling faster than frames are read back means two polls in a row see the same pixels,
     // which reads as "the picture has settled" and disables the settle wait without saying so.
-    internal static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(120);
+    //
+    // 60ms, down from 120ms, for translations that follow their text — see RealtimeScrollFollow.
+    // A page that starts to move is known to be moving at the second frame of it and to have
+    // stopped when a frame fails to come, so both waits are counted in frames. Measured over a
+    // scrolled comic page: translations were off the screen 80ms sooner and back in place 90ms
+    // sooner. What it costs is a readback twice as often while the picture is changing and none
+    // while it is still: a tenth of one core more over a video, with the video's own frame rate
+    // unchanged; recognition is not run any more often.
+    internal static readonly TimeSpan MaxFrameAge = TimeSpan.FromMilliseconds(60);
 
     // Reading stops this long after the last region asked for anything. Nothing in a running session
     // goes quiet for that long, so in practice this only covers a session being torn down: the
@@ -109,6 +117,12 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
     // Raised whenever a frame has been read back. Only the start-up wait listens: it turns waiting
     // for the first frame from a sleep into a wait the frame itself ends.
     private readonly ManualResetEventSlim _frameSignal = new(false);
+    private readonly FrameNotice _frameRead = new();
+
+    // Whether the system delivers frames no more often than MaxFrameAge on its own.
+    private bool _systemSpacesFrames;
+
+    public Task NextFrame => _frameRead.Next;
 
     private int _framesReceived;
     private int _framesRead;
@@ -488,7 +502,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         _pool.FrameArrived += OnFrameArrived;
 
         _session = _pool.CreateCaptureSession(item);
-        WgcFrameThread.LimitFrameRate(_session, MaxFrameAge);
+        Volatile.Write(ref _systemSpacesFrames, WgcFrameThread.LimitFrameRate(_session, MaxFrameAge));
         WgcCaptureBorder.Apply(_session);
         _session.StartCapture();
 
@@ -549,7 +563,11 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
             // one frame when the session starts and one whenever the content changes, so over a
             // paused video or a menu that is not animating those are the same frame. Letting it go
             // means the capture appears to produce nothing at all.
-            var sinceRead = Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
+            // Frames the system has already spaced are read as they come: holding them to this
+            // handler's limit as well only makes each one late — see WgcFrameThread.LimitFrameRate.
+            var sinceRead = Volatile.Read(ref _systemSpacesFrames)
+                ? MaxFrameAge
+                : Stopwatch.GetElapsedTime(Volatile.Read(ref _latestAt));
             var arrival = WgcFrameThrottle.OnArrival(
                 HasFrame(),
                 sinceRead,
@@ -622,6 +640,7 @@ public sealed class WgcWindowCaptureBackend : IRealtimeCaptureBackend
         }
         previous?.Dispose();
         _frameSignal.Set();
+        _frameRead.Raise();
     }
 
     /// <summary>

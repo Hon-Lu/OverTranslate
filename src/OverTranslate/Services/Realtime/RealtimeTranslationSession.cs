@@ -63,6 +63,11 @@ public sealed class RealtimeTranslationSession
     // provider starts rate-limiting, and a rate-limited pass fails, retries, and adds more load.
     private const int MaxConcurrentTranslations = 4;
 
+    // How long a picture that is being scrolled is left unread, in polls: under two seconds. Long
+    // enough to cover a scroll, which is over in less; short enough that text on content that
+    // never stops moving is still found while it is there to be read.
+    private const int MaxPollsScrolledPast = 12;
+
     private readonly OcrService _ocr;
     private readonly TranslationService _translation;
 
@@ -472,7 +477,10 @@ public sealed class RealtimeTranslationSession
         CancellationToken token)
     {
         var state = new RealtimeRegionState(region.Orientation);
-        var pump = new RegionTranslationPump(this, region, sourceLanguage, targetLanguage, token);
+        // Everything this region draws goes to the screen through here — see RealtimeScrollFollow.
+        var follow = new RealtimeScrollFollow(
+            region.Id, (lines, generation) => RaiseRegionUpdated(new RealtimeRegionUpdate(region.Id, lines, generation)));
+        var pump = new RegionTranslationPump(this, region, follow, sourceLanguage, targetLanguage, token);
 
         try
         {
@@ -489,8 +497,60 @@ public sealed class RealtimeTranslationSession
             var gateTurnedAway = 0;
             var frameLoss = new RealtimeFrameLoss();
 
-            while (asked || await NextPollAsync(timer, step, token))
+            // The wait for the next poll, kept across the things that are done while waiting for
+            // it: the timer allows one wait at a time.
+            Task<bool>? nextTick = null;
+
+            // Waits for the next poll, or for `unless` to finish, and follows the picture meanwhile:
+            // every frame the backend reads back is looked at as it arrives rather than at the
+            // poll after it. A picture that starts to move is then acted on a frame later, where a
+            // poll is up to 150ms behind it — and it goes on being followed while a reading is in
+            // progress, which takes several polls and used to see none of it. Following only looks
+            // at where the pixels went; what the region reads, and when, is still decided at polls.
+            // True on a tick, false once the timer has stopped, null when `unless` finished first.
+            async Task<bool?> WaitFollowingAsync(Task? unless)
             {
+                nextTick ??= NextPollAsync(timer, step, token).AsTask();
+                // One more look once a moving picture has had time to produce another frame and
+                // has not: that it stopped is known from no frame coming, which no frame announces.
+                Task? stopped = null;
+                while (true)
+                {
+                    var frame = _capture?.NextFrame;
+                    var first = await Task.WhenAny(
+                        new[] { nextTick, frame, stopped, unless }.Where(task => task is not null).Cast<Task>());
+                    if (first == unless) return null;
+                    if (first == nextTick)
+                    {
+                        var ticked = await nextTick;
+                        nextTick = null;
+                        return ticked;
+                    }
+
+                    using var arrived = _capture?.GrabRegion(region.Bounds);
+                    var pace = arrived is null
+                        ? ScrollPace.Readable
+                        : follow.Observe(arrived, Stopwatch.GetTimestamp());
+                    // Stopped, and nothing is waiting on a reading: the picture is read now rather
+                    // than at the next tick, which is what a tick is for and up to a poll sooner.
+                    if (first == stopped && pace == ScrollPace.Readable && unless is null) return true;
+                    stopped = first != stopped && pace == ScrollPace.Scrolling
+                        ? Task.Delay(RealtimeScrollFollow.RestAfter + TimeSpan.FromMilliseconds(10), token)
+                        : null;
+                }
+            }
+            // Polls in a row left unread because the picture was being scrolled.
+            var scrolledPast = 0;
+            // Whether the next reading is drawn even if it reads what the last one did.
+            var redraw = false;
+            // Whether a poll came due while a reading was in progress. Those polls only followed
+            // the picture; the one that reads it is taken as soon as the reading is over, as it
+            // was when the timer was left to hold it, rather than up to a poll later.
+            var overdue = false;
+
+            while (asked || overdue || await WaitFollowingAsync(null) == true)
+            {
+                overdue = false;
                 // Only the first pass can have been asked for; everything after it is a poll again.
                 var demanded = asked;
                 asked = false;
@@ -522,6 +582,27 @@ public sealed class RealtimeTranslationSession
                 }
                 frameLoss.Seen();
 
+                // Before anything is asked about the words: text that has only moved is followed
+                // from the pixels, at every poll, and needs no reading. And while the whole picture
+                // is going past, a reading would be of a frame that is gone before it is finished —
+                // it would be wrong when it arrived, and the poll it held up is one the page was
+                // not followed in. So the picture is left to stop, but not for ever: content that
+                // never stops is still read, a little less often, as it always was.
+                step.Set("follow");
+                var pace = follow.Observe(frame, Stopwatch.GetTimestamp());
+                if (pace == ScrollPace.Scrolling && !demanded && scrolledPast < MaxPollsScrolledPast)
+                {
+                    scrolledPast++;
+                    skippedPolls++;
+                    continue;
+                }
+                scrolledPast = 0;
+
+                // Translations were moved with their text, or dropped: what is on the screen is no
+                // longer what the last reading put there, so the next one is drawn whether or not
+                // it reads the same words — see ReadRegionAsync.
+                redraw |= follow.TakeReadAfresh();
+
                 // Closes over this poll's frame, so the policy can summarise the text strips or the
                 // whole region without ever seeing the bitmap.
                 FrameFingerprint Capture(IReadOnlyList<Rectangle>? areas) =>
@@ -535,6 +616,9 @@ public sealed class RealtimeTranslationSession
                 var reason = demanded
                     ? RealtimeReadReason.TextChanged
                     : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle);
+                // Asked for by the screen rather than by the pixels: a page scrolled away and back
+                // is the picture that was read, and its translations are gone all the same.
+                if (redraw && reason == RealtimeReadReason.Nothing) reason = RealtimeReadReason.TextChanged;
                 if (reason == RealtimeReadReason.Nothing)
                 {
                     skippedPolls++;
@@ -604,6 +688,7 @@ public sealed class RealtimeTranslationSession
                         // the 1 frame in 23 that neither size can see.
                         if (++gateTurnedAway >= 2) state.MarkScanned(Capture);
                         skippedPolls++;
+                        redraw = false;
                         continue;
                     }
                 }
@@ -615,8 +700,17 @@ public sealed class RealtimeTranslationSession
                 {
                     SetBusy(true);
                     step.Set("read (ocr)");
-                    var reading = await ReadRegionAsync(
-                        region, frame, state, Capture, sourceLanguage, pump, token);
+                    // The picture goes on being followed while it is read — see WaitFollowingAsync.
+                    var read = ReadRegionAsync(
+                        region, frame, state, Capture, sourceLanguage, pump, follow.BeginRead(), redraw, token);
+                    while (await WaitFollowingAsync(read) == true)
+                    {
+                        overdue = true;
+                        using var meanwhile = _capture?.GrabRegion(region.Bounds);
+                        if (meanwhile is not null) follow.Observe(meanwhile, Stopwatch.GetTimestamp());
+                        step.Set("read (ocr)");
+                    }
+                    var reading = await read;
 
                     // One line per look at the region, because every question about this feature
                     // being late or missing a line comes down to two things the outside cannot see:
@@ -650,7 +744,11 @@ public sealed class RealtimeTranslationSession
                     // Skipped for want of an inference slot. Nothing has been recorded as rendered,
                     // so the same change is still pending and the next poll tries again — which is
                     // the whole point of not queueing.
-                    if (reading.Outcome != PassOutcome.NoSlot) pump.Recovered(RealtimeFailureStage.Read);
+                    if (reading.Outcome != PassOutcome.NoSlot)
+                    {
+                        pump.Recovered(RealtimeFailureStage.Read);
+                        redraw = false;
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -753,6 +851,8 @@ public sealed class RealtimeTranslationSession
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
         string sourceLanguage,
         RegionTranslationPump pump,
+        RealtimeScrollFollow.ReadStart readFrom,
+        bool redraw,
         CancellationToken token)
     {
         // Split timings, because "the overlay feels slow" has three quite different causes —
@@ -916,6 +1016,11 @@ public sealed class RealtimeTranslationSession
         // readings, and a sentence nothing on screen answers to is simply new. Doing this per pass
         // instead — one weighted average against another — is what let a correctly read sentence be
         // thrown away because the line beside it had wobbled; see RealtimeReadingMerge.
+        // Translations were moved or dropped since the last pass: where that pass left its lines
+        // is not where anything is, so nothing read now is held to it. What each line says, and how
+        // well it was read, is still compared — the words did not change by being scrolled.
+        if (redraw) state.Dialogue.ForgetPlacement();
+
         var merged = region.Mode == RealtimeBlockMode.Subtitle
             ? state.Dialogue.Merge(state.RenderedLines, recognized)
             : state.Dialogue.MergePanel(state.RenderedLines, recognized);
@@ -929,7 +1034,7 @@ public sealed class RealtimeTranslationSession
         // was read no better than the version already up. The strips are still updated — they may
         // have shifted a pixel — but the words and the scores they are defended with deliberately
         // are not, which stops a line drifting away one tolerated character at a time.
-        if (!merged.Changed)
+        if (!merged.Changed && !redraw)
         {
             // Only worth a line when a reading was actually turned down; a pass that merely read the
             // same words again is the ordinary case and says nothing.
@@ -955,7 +1060,8 @@ public sealed class RealtimeTranslationSession
         // wording already on screen, which the session has translated once and cached, so carrying
         // it along with a corrected neighbour costs nothing on the network.
         state.MarkRendered(textBounds, capture, merged.Lines);
-        pump.Post(pass, merged.Blocks, ocrMs);
+        if (redraw) state.Dialogue.Place(merged.Blocks);
+        pump.Post(pass, merged.Blocks, ocrMs, frame, readFrom);
 
         Log.Debug(
             "Realtime region {Region} redrew {Improved} improved, {Added} new, {Dropped} gone, " +
@@ -1257,6 +1363,7 @@ public sealed class RealtimeTranslationSession
     private sealed class RegionTranslationPump(
         RealtimeTranslationSession session,
         RealtimeRegion region,
+        RealtimeScrollFollow follow,
         string sourceLanguage,
         string targetLanguage,
         CancellationToken token)
@@ -1269,7 +1376,9 @@ public sealed class RealtimeTranslationSession
         public long NextPass() => _order.NextPass();
 
         /// <summary>Translates a pass's lines and draws them, both without holding up the caller.</summary>
-        public void Post(long pass, List<OcrTextBlock> blocks, int ocrMs)
+        /// <param name="frame">The frame the lines were read from; not kept.</param>
+        public void Post(
+            long pass, List<OcrTextBlock> blocks, int ocrMs, Bitmap frame, RealtimeScrollFollow.ReadStart readFrom)
         {
             if (!session._translationSlots.Wait(0))
             {
@@ -1292,6 +1401,9 @@ public sealed class RealtimeTranslationSession
                 RequestRetry();
                 return;
             }
+
+            // From the frame it was read in, so the answer is drawn where the text is by then.
+            follow.Track(pass, blocks, frame, readFrom);
 
             // Captured after OCR. If a pause arrives from here onward, this pass is stale and both
             // TranslateAsync and the pre-publish check below refuse to let it repopulate the cache or
@@ -1379,10 +1491,7 @@ public sealed class RealtimeTranslationSession
         {
             if (!_order.TryClaim(pass)) return false;
 
-            session.RaiseRegionUpdated(new RealtimeRegionUpdate(
-                region.Id,
-                lines,
-                generation ?? session._translationCache.Generation));
+            follow.Publish(pass, lines, generation ?? session._translationCache.Generation);
             // The region shows what it should again, so a translation that failed before is over.
             Recovered(RealtimeFailureStage.Translate);
             return true;

@@ -229,6 +229,19 @@ internal sealed class DialogueReadingTracker
         }
     }
 
+    /// <summary>
+    /// Lets go of where the lines were last placed, keeping everything about what they say: the
+    /// next reading is taken at the geometry it has rather than held to the old one.
+    /// </summary>
+    public void ForgetPlacement()
+    {
+        _placed = [];
+        _pendingPlacement.Clear();
+    }
+
+    /// <summary>Records where a pass put its lines, for one drawn without the merge saying so.</summary>
+    public void Place(IReadOnlyList<OcrTextBlock> blocks) => _placed = [.. blocks];
+
     public void Reset()
     {
         _pending.Clear();

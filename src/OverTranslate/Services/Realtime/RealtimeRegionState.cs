@@ -46,7 +46,7 @@ internal sealed class RealtimeRegionState
     /// region was scanned at and the rate it was re-examined at.</para>
     ///
     /// <para>150ms, down from 250ms. The floor is the capture backend's own readback throttle
-    /// (<c>MaxFrameAge</c>, 120ms): polling faster than frames are read back means two polls in a
+    /// (<c>MaxFrameAge</c>, 60ms): polling faster than frames are read back means two polls in a
     /// row see the same pixels, which reads as "the picture has settled" and quietly disables the
     /// wait below. What the change buys is the one thing that was pure latency — a line that changes
     /// inside the watched strips is noticed up to 100ms sooner and confirmed 100ms sooner after
