@@ -343,6 +343,39 @@ public class RealtimeCpuBackgroundTests
         }
     }
 
+    /// <summary>
+    /// What the band is grown by: the reach of the mask the erase follows past the box, which holds
+    /// the whole edge of an edged line and is nothing at all for a plain one.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Overhang_HoldsTheEdgeOfAnEdgedLineAndIsNullForAPlainOne(bool edged)
+    {
+        const int left = 60, top = 50, stroke = 8, gap = 12, height = 40, strokes = 12, edge = 8;
+        int right = left + (strokes - 1) * (stroke + gap) + stroke;
+        using var source = ImageBuffer.Solid(new Size(right + left, top * 2 + height), 170, 190, 200);
+        for (int index = 0; index < strokes; index++)
+        {
+            int x = left + index * (stroke + gap);
+            if (edged) Paint(source, new Rectangle(x - edge, top - edge, stroke + edge * 2, height + edge * 2), 0, 0, 0);
+        }
+        for (int index = 0; index < strokes; index++)
+            Paint(source, new Rectangle(left + index * (stroke + gap), top, stroke, height), 255, 255, 255);
+
+        var reach = Assert.Single(CpuTextMask.Overhang(source,
+            [new CpuTextRegion(left - edge, top, right - left + edge * 2, height, height)]));
+
+        if (!edged)
+        {
+            Assert.Null(reach);
+            return;
+        }
+        var outline = Rectangle.FromLTRB(left - edge, top - edge, right + edge, top + height + edge);
+        Assert.NotNull(reach);
+        Assert.True(reach.Value.Contains(outline), $"{reach} leaves part of the edge {outline} out");
+    }
+
     private static int Luma(Color colour) => (colour.R * 77 + colour.G * 150 + colour.B * 29) >> 8;
 
     private static void Paint(ImageBuffer image, Rectangle area, byte blue, byte green, byte red)

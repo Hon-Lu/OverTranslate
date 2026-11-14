@@ -101,6 +101,9 @@ internal static class CpuTextMask
     /// <summary>The most a line's ink is followed past its box.</summary>
     private const int FurthestSpill = 16;
 
+    /// <summary>The furthest a line's mask can land from its recognition box, in pixels: padding, following and blind margin.</summary>
+    public const int FurthestReach = 4 + FurthestSpill + FurthestHalo;
+
     /// <summary>Both hats' bodies, followed outward along the text's own fade.</summary>
     /// <remarks>
     /// <para>Text is whatever stands out from its surroundings inside a recognition box, in either
@@ -153,15 +156,38 @@ internal static class CpuTextMask
     /// fade this follows. Both were judged the better trade against a picture the erase leaves
     /// alone.</para>
     /// </remarks>
-    public static ImageBuffer Build(ImageBuffer source, IReadOnlyList<CpuTextRegion> lines)
+    public static ImageBuffer Build(ImageBuffer source, IReadOnlyList<CpuTextRegion> lines) =>
+        Trace(source, lines, followed: null);
+
+    /// <summary>
+    /// Where each line's mask reaches when its ink runs past its box, in frame pixels, blind margin
+    /// included; null for a line whose ink was not followed past its box.
+    /// </summary>
+    /// <remarks>
+    /// For the band, which covers a line instead of erasing it and is sized from the same boxes: an
+    /// edge drawn round a line lies outside its box, and a band sized from the box leaves it showing.
+    /// Read off the very mask <see cref="Build"/> makes, so the band covers exactly what the erase
+    /// would have taken past the box, and a line with nothing past its box — every plain line —
+    /// leaves the band as it was.
+    /// </remarks>
+    public static Rectangle?[] Overhang(ImageBuffer source, IReadOnlyList<CpuTextRegion> lines)
+    {
+        var reach = new Rectangle?[lines.Count];
+        using var traced = Trace(source, lines, (index, followed) => reach[index] = followed);
+        return reach;
+    }
+
+    /// <summary>The mask <see cref="Build"/> returns, reporting where each line followed past its box reached.</summary>
+    private static ImageBuffer Trace(ImageBuffer source, IReadOnlyList<CpuTextRegion> lines, Action<int, Rectangle>? followed)
     {
         var mask = new ImageBuffer(source.Size, PixelType.U8C1);
         try
         {
             using var gray = ColorConversion.ToGray(source);
             var one = StructuringElement.Ellipse(3, 3);
-            foreach (var line in lines)
+            for (int index = 0; index < lines.Count; index++)
             {
+                var line = lines[index];
                 if (!double.IsFinite(line.X + line.Y + line.Width + line.Height) || line.Width <= 0 || line.Height <= 0) continue;
                 double height = Math.Max(1, Math.Min(line.GlyphHeight ?? line.Height, line.Height));
                 int padding = Math.Clamp((int)Math.Ceiling(height * BoxPadding), 2, 4);
@@ -192,9 +218,14 @@ internal static class CpuTextMask
                 var reach = Clip(box.X - spill, box.Y - spill, box.Right + spill, box.Bottom + spill, source.Size);
                 if (reach != box && FollowPast(gray, reach, box, seed, height, brighter, dimmer, spill, one, growth) is { } past)
                 {
-                    using (past) Publish(mask, past, reach, halo, one, line, source.Size);
+                    using (past) Publish(mask, past, reach, halo, one, line, source.Size,
+                        followed is null ? null : extent => followed(index, extent));
                     continue;
                 }
+
+                // Asked only where lines are followed: what a line with nothing past its box would
+                // add to the mask is nobody's question then, and growing it is most of what is left.
+                if (followed is not null) continue;
 
                 using var strongest = ImageBuffer.Uninitialized(box.Size, PixelType.U8C1);
                 Arithmetic.Max(light, dark, strongest);
@@ -216,8 +247,9 @@ internal static class CpuTextMask
     }
 
     /// <summary>Adds one line's mask, which covers <paramref name="box"/>, to the frame's with its blind margin.</summary>
+    /// <param name="reached">Told, when given, the frame rectangle the line's mask came to.</param>
     private static void Publish(ImageBuffer mask, ImageBuffer seed, Rectangle box, int halo,
-        StructuringElement one, CpuTextRegion line, Size frame)
+        StructuringElement one, CpuTextRegion line, Size frame, Action<Rectangle>? reached = null)
     {
         var wide = Clip(box.X - halo, box.Y - halo, box.Right + halo, box.Bottom + halo, frame);
         using var spread = new ImageBuffer(wide.Width, wide.Height, PixelType.U8C1);
@@ -227,6 +259,26 @@ internal static class CpuTextMask
         if (line.Within is { } within) KeepInside(spread, wide, within);
         using var target = new ImageBuffer(mask, wide);
         Arithmetic.Or(target, spread, target);
+        if (reached is not null && Extent(spread) is { } extent)
+            reached(new Rectangle(wide.X + extent.X, wide.Y + extent.Y, extent.Width, extent.Height));
+    }
+
+    /// <summary>The smallest rectangle holding every set pixel of <paramref name="body"/>; null when none is.</summary>
+    private static Rectangle? Extent(ImageBuffer body)
+    {
+        int left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
+        for (int y = 0; y < body.Height; y++)
+        {
+            var row = body.RowSpan(y)[..body.Width];
+            int first = row.IndexOfAnyExcept((byte)0);
+            if (first < 0) continue;
+            int last = row.LastIndexOfAnyExcept((byte)0);
+            left = Math.Min(left, first);
+            right = Math.Max(right, last);
+            top = Math.Min(top, y);
+            bottom = y;
+        }
+        return right < 0 ? null : Rectangle.FromLTRB(left, top, right + 1, bottom + 1);
     }
 
     /// <summary>The share of a box's upper or lower rim that has to be ink for the line to count as cut off there.</summary>
