@@ -66,7 +66,7 @@ def source_strings(html):
     out = {}
     for m in re.finditer(r'data-i18n="([^"]+)"[^>]*>([^<]*)', html):
         out.setdefault(m.group(1), m.group(2))
-    for tag in ('figcaption', 'span'):
+    for tag in ('figcaption', 'span', 'p'):
         pat = r'<%s[^>]*data-i18n-html="([^"]+)"[^>]*>(.*?)</%s>' % (tag, tag)
         for m in re.finditer(pat, html, re.S):
             out.setdefault(m.group(1), m.group(2))
@@ -94,8 +94,8 @@ def apply_text(html, strings):
         return m.group(1) + strings[key]
     html = re.sub(r'(data-i18n="([^"]+)"[^>]*>)[^<]*', repl_leaf, html)
 
-    # data-i18n-html：內容含連結，整段換掉
-    for tag in ('figcaption', 'span'):
+    # data-i18n-html：內容含連結或換行，整段換掉
+    for tag in ('figcaption', 'span', 'p'):
         pat = re.compile(r'(<%s[^>]*data-i18n-html="([^"]+)"[^>]*>).*?(</%s>)' % (tag, tag), re.S)
 
         def repl_html(m):

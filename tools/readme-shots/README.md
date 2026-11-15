@@ -5,6 +5,7 @@
 | 輸出 | 內容 |
 |------|------|
 | `設定頁{,_zh-Hans,_en,_jp,_ko}.png` | 設定頁，捲在最上面 |
+| `AI翻譯{,_zh-Hans,_en,_jp,_ko}.png` | 設定頁「AI 翻譯」分組（兩張服務卡片），從畫面裁下；卡片上的模型與「已設定」狀態是當下這台電腦的 |
 | `即時翻譯視窗預覽{,_zh-Hans,_en,_jp,_ko}.png` | 即時翻譯頁，捲到「顯示外觀」card 在最上面 |
 | `備援.png` | 截圖工具列的 ⚡備援 標籤與它的 ToolTip |
 
@@ -25,7 +26,7 @@ powershell -ExecutionPolicy Bypass -File tools\readme-shots\shoot.ps1 -Build
 | 參數 | 說明 |
 |------|------|
 | `-Build` | 重新建置拍照用的 app。第一次、或程式改過之後要加；沒建過也會自動建 |
-| `-Phase main` / `backup` | 只拍主視窗那十張，或只拍備援那張；預設 `all` |
+| `-Phase main` / `backup` | 只拍主視窗那十五張，或只拍備援那張；預設 `all` |
 | `-Langs zh-Hant,en` | 只拍這幾種介面語言；預設五種 |
 | `-CopyToOriginals` | 拍完直接覆蓋 `docs/images/originals/` 裡的同名檔 |
 

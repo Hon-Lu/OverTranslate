@@ -45,6 +45,7 @@ $Suffix = @{ 'zh-Hant' = ''; 'zh-Hans' = '_zh-Hans'; 'en' = '_en'; 'ja' = '_jp';
 $SettingsName = -join ([char[]](0x8A2D, 0x5B9A, 0x9801))                                   # 設定頁
 $RealtimeName = -join ([char[]](0x5373, 0x6642, 0x7FFB, 0x8B6F, 0x8996, 0x7A97, 0x9810, 0x89BD)) # 即時翻譯視窗預覽
 $BackupName = -join ([char[]](0x5099, 0x63F4))                                              # 備援
+$AiName = 'AI' + (-join ([char[]](0x7FFB, 0x8B6F)))                                          # AI翻譯
 
 function Mark([string]$t) { $l = "$(Get-Date -Format 'HH:mm:ss') $t"; Add-Content "$Out\run.log" $l -Encoding UTF8; Write-Host $l }
 # Off the primary monitor, so no hover state lands in a picture.
@@ -147,6 +148,36 @@ function Scroll-ToAppearance([IntPtr]$h, [string]$Lang) {
     Mark "  scroll pct=$([math]::Round($pct, 2))"
     $sp.SetScrollPercent(-1, $pct); Start-Sleep -Milliseconds 800
 }
+# The settings page's AI 翻譯 group, cut from the screen: its title down to the OpenAI card, with the
+# group's rule on the left and a margin of page background around it.
+function Shot-AiGroup([IntPtr]$h, [string]$Lang, [string]$Path) {
+    $win = $A::FromHandle($h)
+    $svs = $win.FindAll('Descendants', (New-Object System.Windows.Automation.PropertyCondition($A::IsScrollPatternAvailableProperty, $true)))
+    $sv = $null
+    foreach ($s in $svs) { $p = $s.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern); if ($p.Current.VerticallyScrollable -and $s.Current.BoundingRectangle.Height -gt 400) { $sv = $s; $sp = $p; break } }
+    if (-not $sv) { throw 'no scrollable viewer' }
+    $sp.SetScrollPercent(-1, 0); Start-Sleep -Milliseconds 500
+    $title = Str $Lang 'S.Settings.ProviderGroupKeyed'
+    $hdr = $sv.FindFirst('Descendants', (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $title)))
+    if (-not $hdr) { throw "no group title $title" }
+    # Title 48 DIPs under the viewport's top edge, so the whole group is in view.
+    $svr = $sv.Current.BoundingRectangle
+    $view = $svr.Height; $range = $view * 100 / $sp.Current.VerticalViewSize - $view
+    $scale = [RS.W]::GetDpiForWindow($h) / 96.0
+    $miss = $hdr.Current.BoundingRectangle.Top - ($svr.Top + 48 * $scale)
+    $pct = [math]::Max(0, [math]::Min(100, 100 * $miss / $range))
+    Mark "  ai scroll pct=$([math]::Round($pct, 2))"
+    $sp.SetScrollPercent(-1, $pct); Start-Sleep -Milliseconds 800
+    $card = $sv.FindFirst('Descendants', (New-Object System.Windows.Automation.AndCondition(
+        (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, (Str $Lang 'S.Provider.OpenAI'))),
+        (New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::CheckBox)))))
+    if (-not $card) { throw 'no OpenAI card' }
+    $t = $hdr.Current.BoundingRectangle; $c = $card.Current.BoundingRectangle
+    # 22 DIPs left of the title takes the rule and stops short of the section card's own border, and
+    # 10 under the last card stops short of that card's bottom edge: the group is the section's last.
+    $x = [int]($t.Left - 22 * $scale); $y = [int]($t.Top - 12 * $scale)
+    Shot $Path $x $y ([int]($c.Right + 12 * $scale) - $x) ([int]($c.Bottom + 10 * $scale) - $y)
+}
 
 # Only one OverTranslate can run: whatever is open is closed first, the user's own copy included.
 $running = Get-Process OverTranslate -ErrorAction SilentlyContinue
@@ -165,6 +196,7 @@ try {
             Center $h; [void][RS.W]::SetForegroundWindow($h); Park
             Select-Nav 'SettingsNav'
             $f = "$Out\$SettingsName$($Suffix[$lang]).png"; Shot-Window $h $f; $made += $f
+            $f = "$Out\$AiName$($Suffix[$lang]).png"; Shot-AiGroup $h $lang $f; Park; $made += $f
             Select-Nav 'RealtimeNav'
             Scroll-ToAppearance $h $lang; Park
             $f = "$Out\$RealtimeName$($Suffix[$lang]).png"; Shot-Window $h $f; $made += $f

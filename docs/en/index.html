@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
+<link rel="stylesheet" href="../site/styles.css?v=1de09f44a3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -528,7 +528,7 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">Translation services</p>
       <h2 class="h2" data-i18n="engines.title">Several translation services built in</h2>
-      <p class="sectionlede" data-i18n="engines.lede">The built-in services work as soon as the app is installed — no account or API key needed. You can also switch to DeepL or your own AI model.</p>
+      <p class="sectionlede" data-i18n="engines.lede">The built-in services work as soon as the app is installed — no account or API key needed. You can also switch to DeepL or AI translation when you need to.</p>
     </header>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.general">General services</h3>
@@ -564,23 +564,46 @@
         <span class="pill" data-i18n="engines.deepl.pill">API key required</span>
       </li>
       <li class="engine">
+        <h3 data-i18n="engines.localai.name">AI (Local)</h3>
+        <span class="pill" data-i18n="engines.localai.pill">Dedicated GPU required</span>
+      </li>
+      <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI-compatible API</span>
       </li>
     </ul>
 
     <div class="enginenotes reveal">
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.openai.title">AI translation with context</h3>
-        <p data-i18n="engines.openai.body">With an OpenAI-compatible service, translation refers to what has already been translated, so names, terms and tone stay consistent across subtitles and dialogue. With a local model it runs fully offline, and the prompt can be customized.</p>
-        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.localai.title">AI (Local)</h3>
+          <span class="pill pill--default" data-i18n="engines.localai.badge">Built-in models</span>
+        </div>
+        <p data-i18n-html="engines.localai.body">Translation built into OverTranslate — just download a model the first time you use it.<br>No other tools to install, no API key needed, and nothing goes over the network while translating.<br>Earlier translations are taken into account, so names, terms and tone stay consistent across subtitles and dialogue.</p>
+        <div class="enginenote__foot">
+          <ul class="chips">
+            <li data-i18n="engines.localai.chip1">Runs on a dedicated GPU</li>
+            <li data-i18n="engines.localai.chip2">Offline translation</li>
+            <li data-i18n="engines.localai.chip3">Uses context</li>
+          </ul>
+        </div>
       </div>
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.fallback.title">Automatic fallback</h3>
-        <p data-i18n="engines.fallback.body">When a translation service is unavailable or responds too slowly, the app tries it again first, and switches to another one that works only if it still cannot translate — no retrying or changing settings on your part. This does not apply to DeepL or OpenAI.</p>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.openai.title">OpenAI</h3>
+          <span class="pill pill--default" data-i18n="engines.openai.badge">Custom models and prompts</span>
+        </div>
+        <p data-i18n-html="engines.openai.body">Connects to any OpenAI-compatible API, whether a local tool such as Ollama or LM Studio or a cloud service such as OpenRouter.<br>Choose your own model and prompt; earlier translations are taken into account here too.</p>
+        <div class="enginenote__foot">
+          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.en.md" data-loc-href="ollama" target="_blank" rel="noopener">
+            <span data-i18n="engines.advanced.link">Setting up a local AI model</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+          <ul class="chips">
+            <li data-i18n="engines.openai.chip1">Local or cloud</li>
+            <li data-i18n="engines.openai.chip2">Custom models and prompts</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -696,7 +719,7 @@
       <ul class="ticks ticks--compact">
         <li><strong data-i18n="download.req.1.title">Operating system</strong><span data-i18n="download.req.1.body">Windows 10 / 11. In real-time translation, screen capture needs Windows 11 24H2 or later and window capture needs Windows 10 1903 or later.</span></li>
         <li><strong data-i18n="download.req.2.title">Runtime</strong><span data-i18n="download.req.2.body">The installer bundles everything needed; nothing else to install.</span></li>
-        <li><strong data-i18n="download.req.3.title">Advanced options</strong><span data-i18n="download.req.3.body">DeepL and a self-hosted AI model need your own key or endpoint; the built-in services need no setup.</span></li>
+        <li><strong data-i18n="download.req.3.title">Advanced options</strong><span data-i18n="download.req.3.body">DeepL and OpenAI need your own key or endpoint, and AI (Local) needs a dedicated graphics card; the built-in services need no setup.</span></li>
       </ul>
     </div>
   </div>

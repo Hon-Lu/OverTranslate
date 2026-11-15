@@ -215,6 +215,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 使用 AI 模型翻譯，會參考先前翻譯內容，讓連續字幕與對話中的人名、用詞及語氣更加一致。
 
+![AI翻譯.png](docs/images/AI翻譯.png)
+
 - **AI 翻譯 (本地)**：翻譯功能內建於 OverTranslate，在獨立顯示卡上執行，首次使用時下載模型即可，無須安裝其他工具或申請金鑰，翻譯過程不經過網路。可依需求選擇專用翻譯模型或通用語言模型，也能指定翻譯風格。
 - **OpenAI**：可連接 OpenAI 相容 API，使用 Ollama、LM Studio 等本機工具，或 OpenRouter 等雲端服務，並自行選擇模型與設定提示詞；本機架設方式可參考 [本地 LLM 架設教學](docs/guides/OLLAMA_GUIDE.md)。
 

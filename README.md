@@ -178,7 +178,8 @@ built-in text to speech (TTS) reads both the original text and the translation a
 - **Interface language**: Traditional Chinese / Simplified Chinese / English / Japanese / Korean / Russian; on first launch it follows your Windows display language
 - **Shortcuts**: every feature's shortcut can be changed — key combinations, single keys (F1 ~ F24, Pause, Scroll Lock), double presses (Ctrl + Ctrl, Ctrl + C + C), the middle or side mouse buttons, and gamepad buttons all work. There is also **Open window** (default `Ctrl + Alt + W`) to bring up the main window at any time
 - **Recognition models**: manage the [recognition languages](#recognition-languages-ocr) and manga vertical-text models that are downloaded separately
-- **Translation services**: choose which translation services are shown, and set the key, endpoint, and model for DeepL and OpenAI
+- **Translation services**: choose which translation services to use; DeepL, AI (Local) and OpenAI are also configured here
+- **Model location**: move the downloaded recognition models and AI models to another drive, under **Advanced**
 
 > Logs are stored on your machine only and are never uploaded automatically; what **Record detailed information** adds also stays on your machine. To report a problem, press **Export diagnostics** and **Upload** on the settings page.
 
@@ -196,54 +197,26 @@ built-in text to speech (TTS) reads both the original text and the translation a
 - Tencent Translate
 - Yandex
 
-**Customizable services**: bring your own API key or endpoint (see "System Requirements" below).
+**Customizable services**: bring your own API key or endpoint, or download a model (see "System Requirements" below).
 
 - DeepL
+- AI (Local)
 - OpenAI
   
 An "automatic fallback" mechanism is provided (it applies to **screenshot translation**, **real-time translation**, **Quick Lookup** and **In-place Translation**):
 when a translation fails or responds too slowly, the app first retries the same service, and switches to another available translation service only if it still cannot translate. The engine actually in use is shown in the toolbar.
 ![Fallback](docs/images/備援.png)
 
-> The fallback mechanism is not triggered when using **DeepL** or **OpenAI**.
+> The fallback mechanism is not triggered when using **DeepL** or the AI translation services.
 
-### OpenAI settings
+### AI translation
 
-| OpenAI settings | Edit settings |
-|------|----------|
-| ![OpenAI settings](docs/images/OpenAI-1_en.png) | ![Edit settings](docs/images/OpenAI-2_en.png) |
+Translates with an AI model that takes earlier translations into account, so names, terms and tone stay consistent across continuous subtitles and dialogue.
 
-| Setting | Description |
-|---------|-------------|
-| API URL | Empty uses `http://localhost:11434/v1` (Ollama's local default) |
-| API Key | Can be left empty for a local server |
-| Model settings | One setting = a model name, the advanced parameters, a translation mode and a prompt. Switching settings switches all of it |
-| Built-in | The read-only one, on the model the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md) recommends, with wording that follows the interface language |
-| Add | Up to five; the model name is required |
-| Advanced parameters | Under **Advanced** in the editor; each can be switched off on its own, and a parameter that is off is left out of the request |
-| Translation mode | **Standard** (default) translates text blocks one at a time and is faster with local models; best for video subtitles and story dialogue. **Batch** combines the text blocks on screen and translates them together, so it sees the whole screen; best for comics and chat windows, and with fewer requests it suits cloud services better |
+![AI translation](docs/images/AI翻譯_en.png)
 
-Advanced parameters:
-
-| Parameter | What it does | Range | Default |
-|-----------|--------------|-------|---------|
-| Temperature | How strongly the model favours the likeliest phrasing; the higher it is, the more chance other ways of saying something have | 0.0 ~ 2.0 | 0.7 |
-| Top P | How many candidates the model may choose between; the lower it is, the fewer of the likeliest are kept | 0.0 ~ 1.0 | 0.6 |
-| Seed | Makes a result easier to reproduce: with the same model, prompts and settings, the same seed usually gives the same output | Whole number | 42 |
-| Turn off thinking | Asks the model to answer directly without thinking first (sends `reasoning_effort: none`) | On / Off | Off |
-
-Prompt parameters (the **Available parameters** block on the settings page lists them with descriptions and examples too):
-
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `{source_name}` | Source language name | English |
-| `{source_code}` | Source language code | en |
-| `{target_name}` | Target language name | Japanese |
-| `{target_code}` | Target language code | ja |
-| `{context}` | Earlier source text and translations for the model to use as context; if the prompt doesn't use it, no context is sent | — |
-| `{text}` | The source text; if the prompt doesn't use it, it is added at the end | — |
-
-> Language names follow the interface language (an English interface fills in "Japanese", a 繁體中文 one fills in "日文"); the codes are always the tag the model uses.
+- **AI (Local)**: built into OverTranslate and runs on a dedicated graphics card. Just download a model the first time you use it — no other tools to install, no API key to apply for, and nothing goes over the network while translating. Pick a dedicated translation model or a general-purpose language model to suit your needs, and set a translation style if you like.
+- **OpenAI**: connects to any OpenAI-compatible API, whether a local tool such as Ollama or LM Studio or a cloud service such as OpenRouter, with your own choice of model and prompt; for a local setup, see the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md).
 
 ### Recognition languages (OCR)
 
@@ -268,6 +241,7 @@ All languages share the text detection (`PP-OCRv6_det_tiny`) and orientation cla
 The following translation services require some extra setup:
 
 - **DeepL**: apply for an API key on the [DeepL website](https://www.deepl.com/pro-api)
+- **AI (Local)**: requires a dedicated graphics card; the model (about 2 ~ 15 GB) and the runtime are downloaded from the settings page
 - **OpenAI**: requires your own OpenAI-compatible API service — a local LLM such as Ollama or LM Studio, or a cloud service such as OpenRouter; for setting up a local LLM, see the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md)
 
 ---
