@@ -528,7 +528,7 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">翻譯服務</p>
       <h2 class="h2" data-i18n="engines.title">內建多種翻譯服務</h2>
-      <p class="sectionlede" data-i18n="engines.lede">內建服務安裝後即可使用，無需註冊或申請金鑰；也能改用 DeepL 或自己的 AI 模型。</p>
+      <p class="sectionlede" data-i18n="engines.lede">內建服務安裝後即可使用，無需註冊或申請金鑰；也能改用 DeepL 或 AI 翻譯。</p>
     </header>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.general">一般服務</h3>
@@ -564,23 +564,46 @@
         <span class="pill" data-i18n="engines.deepl.pill">需 API 金鑰</span>
       </li>
       <li class="engine">
+        <h3 data-i18n="engines.localai.name">AI 翻譯 (本地)</h3>
+        <span class="pill" data-i18n="engines.localai.pill">需獨立顯示卡</span>
+      </li>
+      <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 相容 API</span>
       </li>
     </ul>
 
     <div class="enginenotes reveal">
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.openai.title">參考上下文的 AI 翻譯</h3>
-        <p data-i18n="engines.openai.body">使用 OpenAI 相容服務時，翻譯會參考前面已翻好的內容，連續的字幕與對話中，人名、用詞與語氣更一致；搭配本機模型可完全離線使用，也能自訂提示詞。</p>
-        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.localai.title">AI 翻譯 (本地)</h3>
+          <span class="pill pill--default" data-i18n="engines.localai.badge">內建模型</span>
+        </div>
+        <p data-i18n="engines.localai.body">翻譯功能內建於 OverTranslate，首次使用時下載模型即可。<br>無須安裝其他工具或申請金鑰，翻譯過程不經過網路。<br>參考先前翻譯內容，讓連續字幕與對話中的人名、用詞及語氣更加一致。</p>
+        <div class="enginenote__foot">
+          <ul class="chips">
+            <li data-i18n="engines.localai.chip1">獨立顯示卡執行</li>
+            <li data-i18n="engines.localai.chip2">離線翻譯</li>
+            <li data-i18n="engines.localai.chip3">上下文參考</li>
+          </ul>
+        </div>
       </div>
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.fallback.title">自動備援</h3>
-        <p data-i18n="engines.fallback.body">當某個翻譯服務無法使用或回應過慢時，會先重新嘗試，仍無法翻譯才自動切換到其他可用的服務，不需要自己重試或改設定。DeepL 與 OpenAI 不適用。</p>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.openai.title">OpenAI</h3>
+          <span class="pill pill--default" data-i18n="engines.openai.badge">自訂模型與提示詞</span>
+        </div>
+        <p data-i18n="engines.openai.body">可連接 OpenAI 相容 API，使用 Ollama、LM Studio 等本機工具，或 OpenRouter 等雲端服務。<br>可自行選擇模型與設定提示詞，同樣會參考先前翻譯內容。</p>
+        <div class="enginenote__foot">
+          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.md" data-loc-href="ollama" target="_blank" rel="noopener">
+            <span data-i18n="engines.advanced.link">本機 AI 模型架設教學</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+          <ul class="chips">
+            <li data-i18n="engines.openai.chip1">本機或雲端</li>
+            <li data-i18n="engines.openai.chip2">自訂模型與提示詞</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -696,7 +719,7 @@
       <ul class="ticks ticks--compact">
         <li><strong data-i18n="download.req.1.title">作業系統</strong><span data-i18n="download.req.1.body">Windows 10 / 11。即時翻譯的螢幕擷取需 Windows 11 24H2 以上，視窗擷取需 Windows 10 1903 以上。</span></li>
         <li><strong data-i18n="download.req.2.title">執行環境</strong><span data-i18n="download.req.2.body">安裝檔已內含所需環境，不需另外安裝其他元件。</span></li>
-        <li><strong data-i18n="download.req.3.title">進階選項</strong><span data-i18n="download.req.3.body">使用 DeepL 或自行架設的 AI 模型時需自備金鑰或服務位址，內建的翻譯服務則不需設定。</span></li>
+        <li><strong data-i18n="download.req.3.title">進階選項</strong><span data-i18n="download.req.3.body">使用 DeepL 或 OpenAI 時需自備金鑰或服務位址，AI 翻譯 (本地) 需要獨立顯示卡；內建的翻譯服務則不需設定。</span></li>
       </ul>
     </div>
   </div>
