@@ -1,11 +1,11 @@
 ---
 name: git-release-overtranslate
-description: "Write OverTranslate GitHub release notes from the commits between two tags, for end users rather than developers. Two modes: A drafts the Traditional Chinese body for review, B renders the agreed body into the five-language release template as a file. Examples: \"整理 2.2.1-beta.1 到 2.2.1-beta.2 的更新內容\", \"幫我寫這個版本的發布說明\", \"內容確定了，產出最終版\""
+description: "Write OverTranslate GitHub release notes from the commits between two tags, for end users rather than developers. Three modes: A drafts the Traditional Chinese body for review, B renders the agreed body into the five-language release template as a file, C condenses the agreed notes into a Bahamut forum post in BBCode. Examples: \"整理 2.2.1-beta.1 到 2.2.1-beta.2 的更新內容\", \"幫我寫這個版本的發布說明\", \"內容確定了，產出最終版\", \"產生巴哈版\""
 ---
 
 # OverTranslate 發布說明
 
-從兩個 tag 之間的 commit 產出 GitHub Release 的內文。分兩趟走：先只寫繁體中文正文給使用者過目，改到定案，再一次產出五語系完整版。
+從兩個 tag 之間的 commit 產出 GitHub Release 的內文。分兩趟走：先只寫繁體中文正文給使用者過目，改到定案，再一次產出五語系完整版；需要時再把定稿濃縮成巴哈姆特文章。
 
 **這份內文是給一般使用者看的，不是給開發者看的。** 讀的人只想知道「更新後多了什麼、哪裡變好了」，不在乎怎麼做到的、為什麼會壞、什麼條件下才生效。commit 是開發者的語言，照著它寫一定太長、太技術；下面所有規則都是從這一點推出來的，拿不準時就回來問這一句。
 
@@ -19,6 +19,7 @@ description: "Write OverTranslate GitHub release notes from the commits between 
 |---|---|
 | 「整理 X 到 Y 的內容」「幫我寫發布說明」——第一次提到這個版本 | **A** |
 | 「就這樣」「沒問題了」「產出最終版」——正文已經討論過 | **B** |
+| 「產生巴哈版」「巴哈文章」——發布說明已定案 | **C** |
 
 同一個版本的 B 一定發生在 A 之後。使用者若直接要求最終版而正文還沒定案，先跑 A 讓他們看過。
 
@@ -184,6 +185,41 @@ python .claude/skills/git-release-overtranslate/build.py \
 ### 3. 交出去
 
 **只回報檔案路徑與一句話摘要，不要把整份內容印在對話裡。** 那是一份要複製貼上的長文，印出來只是讓使用者滾過去兩次。
+
+## 模式 C：巴哈姆特文章
+
+GitHub 的發布說明定案（通常是 B 之後）、使用者說「產生巴哈版」時，把同一版的內容改寫成巴哈姆特哈啦區的文章，格式是巴哈的 BBCode。
+
+**巴哈文章是重點摘要，不是發布說明的翻版。** 完整內容放在 GitHub，文章開頭就附連結；文章只挑讀者最在意的幾件事。
+
+### 1. 底稿
+
+用這一版已定案的繁中正文，不要回頭重讀 commit。正文還沒定案就先跑 A。
+
+### 2. 怎麼濃縮
+
+`bahamut-example.md` 是使用者親手改過的定稿，格式與取捨都以它為準，**動筆前先讀它**。
+
+- **每個 `◆` 區塊縮成一個粗體標題加條列**：標題寫區塊名稱並以全形冒號結尾（例如 `即時翻譯 - 優化：`）；「其他」段標題不加冒號。
+- **新功能的重點條目用 `[b]名稱：[/b]說明`**，名稱取使用者記得住的短詞（`捲動跟隨：`、`自動文字大小：`），不用反引號。
+- **同一區塊的多條修正併成一句**：「改善 A、B，以及 C 的問題」。
+- **`◇ 其他改善` 只留使用者真的會注意到的**；錯誤訊息文案之類的小修正直接省略。
+- 句子沿用正文定稿的寫法，只做濃縮，不另寫新說法。
+
+### 3. 固定結構
+
+照範例的順序與標籤，不要自己換：
+
+1. `[h2]OverTranslate <版本> 更新` 標題、分隔線
+2. 「完整更新內容可至 GitHub 查看：」加上該版 release 的網址（`https://github.com/Hon-Lu/OverTranslate/releases/tag/<版本>`）
+3. `[h3]重點摘要` 加分隔線，底下是各區塊
+4. `[h3]畫面預覽` 加分隔線，**底下只留一個空的 `[div][/div]`**，實機截圖由使用者自己貼，不要放圖片或佔位文字
+
+標籤一定要成對關閉：`[div]`、`[ul]`、`[li]`、`[b]`、`[h2]`、`[h3]`。
+
+### 4. 交出去
+
+整篇放在一個程式碼區塊裡印在對話中，讓使用者直接複製；底下用一兩句交代刻意省略的條目。不寫檔案。
 
 ## Gotchas
 
