@@ -164,6 +164,38 @@ internal sealed class DetectorProbability
             .ToList();
     }
 
+    /// <summary>
+    /// The highest value of the map inside a rectangle of the detector bitmap: what the model made
+    /// of ink a box did or did not cover. See HorizontalLineEnds.
+    /// </summary>
+    internal float Max(int left, int top, int right, int bottom)
+    {
+        var x0 = Math.Max(0, (int)MathF.Floor(left * _scaleX));
+        var y0 = Math.Max(0, (int)MathF.Floor(top * _scaleY));
+        var x1 = Math.Min(_width, (int)MathF.Ceiling(right * _scaleX));
+        var y1 = Math.Min(_height, (int)MathF.Ceiling(bottom * _scaleY));
+        var max = 0f;
+        for (var y = y0; y < y1; y++)
+            for (var x = x0; x < x1; x++)
+                max = Math.Max(max, _values[y * _width + x]);
+        return max;
+    }
+
+    /// <summary>The mean value of the map inside a rectangle of the detector bitmap.</summary>
+    internal float Mean(int left, int top, int right, int bottom)
+    {
+        var x0 = Math.Max(0, (int)MathF.Floor(left * _scaleX));
+        var y0 = Math.Max(0, (int)MathF.Floor(top * _scaleY));
+        var x1 = Math.Min(_width, (int)MathF.Ceiling(right * _scaleX));
+        var y1 = Math.Min(_height, (int)MathF.Ceiling(bottom * _scaleY));
+        if (x1 <= x0 || y1 <= y0) return 0;
+        var sum = 0.0;
+        for (var y = y0; y < y1; y++)
+            for (var x = x0; x < x1; x++)
+                sum += _values[y * _width + x];
+        return (float)(sum / ((x1 - x0) * (y1 - y0)));
+    }
+
     // Eight-connected, as the library's contour search is, and scored the way it scores a box: the
     // mean probability over the blob. Specks are left out before anything is measured from them.
     private IEnumerable<Strip> Blobs(int x0, int y0, int w, int h)
