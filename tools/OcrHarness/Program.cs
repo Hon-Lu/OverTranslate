@@ -22,6 +22,32 @@ using OverTranslate.Services.Realtime;
 // the text it belongs to, which is the half that says whether a verdict was right.
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+// The line-end walk (HorizontalLineEnds) off, or retuned, for any mode: a before/after comparison is
+// the same run with and without this flag.
+if (args.Contains("--ends-nodash"))
+{
+    HorizontalLineEnds.AddDashes = false;
+    args = [.. args.Where(argument => argument != "--ends-nodash")];
+}
+if (args.Contains("--no-ends"))
+{
+    HorizontalLineEnds.Enabled = false;
+    args = [.. args.Where(argument => argument != "--no-ends")];
+}
+foreach (var (flag, set) in new (string, Action<double>)[]
+{
+    ("--ends-gap", v => HorizontalLineEnds.GapLimit = v),
+    ("--ends-reach", v => HorizontalLineEnds.Reach = v),
+    ("--ends-margin", v => HorizontalLineEnds.Margin = v),
+    ("--ends-solid", v => HorizontalLineEnds.Solid = v),
+})
+{
+    var at = Array.IndexOf(args, flag);
+    if (at < 0 || at + 1 >= args.Length) continue;
+    set(double.Parse(args[at + 1], System.Globalization.CultureInfo.InvariantCulture));
+    args = [.. args.Take(at), .. args.Skip(at + 2)];
+}
+
 if (args.Length > 0 && args[0] == "--panel-layout") return PanelLayoutProbe.Run(args[1..]);
 
 if (args.Length > 0 && args[0] == "--session-equivalence")
@@ -74,6 +100,9 @@ if (args.Length > 0 && args[0] == "--ocr-root-probe")
 
 if (args.Length > 0 && args[0] == "--detector-geometry")
     return DetectorGeometryProbe.Run(args.Skip(1).ToArray());
+
+if (args.Length > 0 && args[0] == "--edge-punct")
+    return EdgePunctuationProbe.Run(args.Skip(1).ToArray());
 
 if (args.Length > 0 && args[0] == "--group-prototype")
     return await GroupingPrototype.Run(args.Skip(1).ToArray());

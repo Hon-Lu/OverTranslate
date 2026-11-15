@@ -331,7 +331,8 @@ public class OcrService : IDisposable
         for (var index = 0; index < blocks.Count; index++)
         {
             if (!Realtime.ShortReadingDetection.IsUnconvincingShortText(
-                    blocks[index].Text, blocks[index].Confidence))
+                    blocks[index].Text, blocks[index].Confidence) ||
+                EndsALine(blocks, index))
             {
                 kept?.Add(blocks[index]);
                 continue;
@@ -341,6 +342,30 @@ public class OcrService : IDisposable
         }
 
         return kept ?? blocks;
+    }
+
+    // The one exception, and narrower than the one measured and declined above: a fragment that is
+    // nothing but the symbols a line starts or ends with — ……！？） — sitting against a line that
+    // was read with conviction. The recogniser is less sure of a run of punctuation than of words
+    // (0.70-0.74 for ……！？） and ！？） cut off the end of user-6's line, against 0.93-0.97 for the
+    // same symbols read inside the line), so the floor took exactly the part of the sentence the
+    // user saw left behind untranslated and unerased. Scenery read as text is letters, digits and
+    // stray glyphs (see ShortReadingDetection), and on its own row it still goes: the line beside
+    // it is what says these symbols belong to a sentence. See Ocr.HorizontalLineEnds.
+    private static bool EndsALine(List<OcrTextBlock> blocks, int index)
+    {
+        var fragment = blocks[index];
+        if (!Ocr.HorizontalLineEnds.Enabled ||
+            !Realtime.ShortReadingDetection.IsLineEdgeSymbols(fragment.Text)) return false;
+        for (var other = 0; other < blocks.Count; other++)
+        {
+            if (other == index ||
+                Realtime.ShortReadingDetection.IsUnconvincingShortText(blocks[other].Text, blocks[other].Confidence))
+                continue;
+            if (Realtime.ShortReadingDetection.ContinuesLine(fragment.Bounds, blocks[other].Bounds))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>

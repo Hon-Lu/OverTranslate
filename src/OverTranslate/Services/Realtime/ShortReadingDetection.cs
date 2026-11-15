@@ -84,4 +84,45 @@ internal static class ShortReadingDetection
         confidence is { } score
         && score < ShortTextConfidenceFloor
         && (text?.Trim().Length ?? 0) < ShortTextLength;
+
+    /// <summary>
+    /// Whether a reading is nothing but the symbols a line of Japanese or Chinese starts or ends
+    /// with — 「……」「——」「。」「！？」 and the brackets around them.
+    /// </summary>
+    /// <remarks>
+    /// No letters, digits or ideographs, which is everything the readings measured off scenery were
+    /// made of (605G0, DE, ①, M', NA, DM, 'N, 回, 米). The dash family includes ー, which is how the
+    /// recogniser reads a ―― that has been cut away from its line.
+    /// </remarks>
+    public static bool IsLineEdgeSymbols(string? text)
+    {
+        var trimmed = text?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return false;
+        foreach (var c in trimmed)
+            if (!char.IsWhiteSpace(c) && !LineEdgeSymbols.Contains(c))
+                return false;
+        return true;
+    }
+
+    private const string LineEdgeSymbols =
+        "…‥・･.。｡、，,！？!?）)」』】〕］]（(「『【〔［[—―－-ー～~";
+
+    /// <summary>
+    /// Whether a fragment sits on the same row as a line and against one of its ends: overlapping it
+    /// by at least half the shorter height, no taller than one and a half of the line's height, and
+    /// no further from it than one line height.
+    /// </summary>
+    /// <remarks>
+    /// One line height is the room 「……！？）」 leaves between its pieces in a full-width font, where
+    /// each symbol sits in the middle of a square of its own. Overlapping counts as against: the
+    /// detector that cut the fragment off overlapped it with the line on user-6 nudged 8px.
+    /// </remarks>
+    public static bool ContinuesLine(System.Windows.Rect fragment, System.Windows.Rect line)
+    {
+        var overlap = Math.Min(fragment.Bottom, line.Bottom) - Math.Max(fragment.Top, line.Top);
+        if (overlap < Math.Min(fragment.Height, line.Height) * 0.5) return false;
+        if (fragment.Height > line.Height * 1.5) return false;
+        var gap = Math.Max(fragment.Left - line.Right, line.Left - fragment.Right);
+        return gap <= line.Height;
+    }
 }

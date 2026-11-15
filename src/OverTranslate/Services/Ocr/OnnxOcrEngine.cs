@@ -487,15 +487,21 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     /// Off measures the repair against its own absence and is for OcrHarness only; every shipped
     /// caller leaves it on.
     /// </param>
+    /// <param name="keepProbability">
+    /// Keeps the detector's probability map on a horizontal session too, for OcrHarness to ask what
+    /// the model thought of ink no box covers. The boxes are the library's either way.
+    /// </param>
     internal DetectionSession BeginDetection(
-        Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null, bool repairRows = true)
+        Bitmap bitmap, string sourceLanguage, int? maxDetectSize = null, bool repairRows = true,
+        bool keepProbability = false)
     {
         var normalizedLanguage = OcrLanguageRouter.Normalize(sourceLanguage);
         var runtime = AcquireRuntime(normalizedLanguage);
         try
         {
             return new DetectionSession(
-                this, runtime, bitmap, normalizedLanguage, maxDetectSize, repairRows: repairRows);
+                this, runtime, bitmap, normalizedLanguage, maxDetectSize, repairRows: repairRows,
+                keepProbability: keepProbability);
         }
         catch
         {
@@ -569,6 +575,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         // False when the caller acquired the runtime itself and releases it in its own finally.
         private readonly bool _releasesRuntime;
         private readonly bool _verticalText;
+        // The boxes HorizontalLineEnds grew, and the detector's own box each one replaced.
+        private Dictionary<RapidOcrNet.TextBox, HorizontalLineEnds.Growth>? _grown;
 
         internal DetectionSession(
             OnnxOcrEngine owner,
@@ -579,7 +587,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             bool releasesRuntime = true,
             bool repairRows = true,
             bool verticalText = false,
-            bool splitOnProbability = true)
+            bool splitOnProbability = true,
+            bool keepProbability = false)
         {
             _owner = owner;
             _verticalText = verticalText;
@@ -601,8 +610,15 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             DetectorProbability? probability = null;
             _detectorSpaceBoxes = (_verticalText && splitOnProbability
                 ? DetectKeepingProbability(detector, _detectorBitmap, scale, _options, out probability)
-                : detector.GetTextBoxes(
-                    _detectorBitmap, scale, _options.BoxScoreThresh, _options.BoxThresh, _options.UnClipRatio)) ?? [];
+                : keepProbability && !_verticalText
+                    // Diagnostics only (OcrHarness): the same post-processing, no column carving.
+                    // MEASURED to give the library's boxes exactly: all 1229 corpus readings of the
+                    // edge-punctuation regression came back byte-identical with the map kept.
+                    ? DetectKeepingProbability(
+                        detector, _detectorBitmap, scale, _options, out probability, carveColumns: false)
+                    : detector.GetTextBoxes(
+                        _detectorBitmap, scale, _options.BoxScoreThresh, _options.BoxThresh, _options.UnClipRatio)) ?? [];
+            Probability = keepProbability ? probability : null;
 
             if (_verticalText)
                 _detectorSpaceBoxes = VerticalColumnDetection.Split(_detectorBitmap, _detectorSpaceBoxes, probability);
@@ -635,6 +651,32 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                     _detectorSpaceBoxes = repaired;
                     mapped = ToSourceSpace(repaired);
                 }
+
+                Dictionary<RapidOcrNet.TextBox, HorizontalLineEnds.Growth>? grown = null;
+                // After the repair, so a row it rejoined is walked as the one line it now is. Only
+                // where a line in Chinese, Japanese or Korean can be on the page — the only lines a
+                // grown reading is ever kept for (see HorizontalLineEnds.Accepts). MEASURED on the
+                // English video-subtitle stage: walking there grew boxes whose second reading was
+                // always thrown away, and cost 20ms at the 95th percentile of every read for nothing.
+                var extended = !OcrLanguageRouter.UsesCjkOnnx(normalizedLanguage) &&
+                    !OcrLanguageRouter.UsesAutomaticLayout(normalizedLanguage)
+                    ? _detectorSpaceBoxes
+                    : HorizontalLineEnds.Apply(
+                        _skBitmap,
+                        mapped.Select(box => box.Bounds).ToList(),
+                        _detectorSpaceBoxes,
+                        _frame.RatioX,
+                        _frame.RatioY,
+                        _options.Padding,
+                        out grown,
+                        Probability is null ? null : SourceProbability);
+
+                if (grown is not null)
+                {
+                    _grown = grown;
+                    _detectorSpaceBoxes = extended;
+                    mapped = ToSourceSpace(extended);
+                }
             }
 
             Boxes = mapped;
@@ -653,6 +695,35 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
         /// <summary>Every box the detector found, in the handed-in bitmap's own coordinates.</summary>
         internal IReadOnlyList<(System.Windows.Rect Bounds, float Score)> Boxes { get; }
+
+        /// <summary>The probability map, when the session was asked to keep it (OcrHarness only).</summary>
+        private DetectorProbability? Probability { get; }
+
+        // The map over a rectangle of the handed-in bitmap: its highest and its mean value.
+        private (float Max, float Mean) SourceProbability(SKRectI source)
+        {
+            var padding = _options.Padding;
+            var left = (int)Math.Floor(source.Left * _frame.RatioX + padding);
+            var top = (int)Math.Floor(source.Top * _frame.RatioY + padding);
+            var right = (int)Math.Ceiling(source.Right * _frame.RatioX + padding);
+            var bottom = (int)Math.Ceiling(source.Bottom * _frame.RatioY + padding);
+            return (Probability!.Max(left, top, right, bottom), Probability.Mean(left, top, right, bottom));
+        }
+
+        /// <summary>
+        /// The highest probability the detector gave anywhere in a rectangle of the handed-in
+        /// bitmap, or null when the map was not kept. Diagnostics only.
+        /// </summary>
+        internal float? MaxProbability(System.Windows.Rect source)
+        {
+            if (Probability is null || source.IsEmpty) return null;
+            var padding = _options.Padding;
+            return Probability.Max(
+                (int)Math.Floor(source.Left * _frame.RatioX + padding),
+                (int)Math.Floor(source.Top * _frame.RatioY + padding),
+                (int)Math.Ceiling(source.Right * _frame.RatioX + padding),
+                (int)Math.Ceiling(source.Bottom * _frame.RatioY + padding));
+        }
 
         /// <summary>
         /// Every box the detector found as the quadrilateral it drew, corner after corner, in the
@@ -697,6 +768,18 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                         VerticalColumnEnds.Extend(_detectorBitmap, box)))
                     .ToList()
                 : chosen;
+            // A line HorizontalLineEnds grew is read twice in the same batch, grown and as the
+            // detector drew it, and the grown reading is only kept when it adds nothing but the
+            // line's own ends to the other — see HorizontalLineEnds.Accepts.
+            var originals = new List<(int Chosen, HorizontalLineEnds.Growth Growth)>();
+            if (_grown is not null)
+            {
+                for (var i = 0; i < chosen.Count; i++)
+                    if (_grown.TryGetValue(chosen[i], out var growth))
+                        originals.Add((i, growth));
+                if (originals.Count > 0)
+                    cropBoxes = [.. cropBoxes, .. originals.Select(o => o.Growth.Original)];
+            }
             var partImages = (SKBitmap[])GetPartImagesMethod.Invoke(
                 null, new object[] { _detectorBitmap, cropBoxes })!;
             try
@@ -709,24 +792,83 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 var textBlocks = new List<TextBlock>(chosen.Count);
                 for (var i = 0; i < chosen.Count; i++)
                 {
+                    var line = lines[i];
+                    var box = chosen[i];
+                    var scores = line.CharScores;
+                    string[]? dashChars = null;
+                    var second = originals.FindIndex(o => o.Chosen == i);
+                    if (second >= 0)
+                    {
+                        var growth = originals[second].Growth;
+                        var original = lines[chosen.Count + second];
+                        // Growing a box adds the ends of a line that was read; it does not decide
+                        // whether there is a line. A box whose own reading fell under the floor stays
+                        // under it.
+                        var keep = original.CharScores is { Length: > 0 } own && own.Average() >= _options.TextScore &&
+                            HorizontalLineEnds.Accepts(
+                                string.Concat(original.Chars ?? []), string.Concat(line.Chars ?? []), growth);
+                        var judged = keep
+                            ? HorizontalLineEnds.JudgeOnTheWords(line.Chars, scores, growth.Left, growth.Right)
+                            : scores;
+                        // Nor may it sink a short line the detector's box read with conviction under
+                        // the realtime floor for short readings: the grown crop now and then reads the
+                        // words themselves less surely. MEASURED on the stage's ……誰？: 誰？ was kept
+                        // on 75 of 77 framings before, and the grown reading lost the whole line on 18
+                        // of them even with the symbols scored as the words.
+                        keep = keep && !HorizontalLineEnds.SinksAShortLine(line.Chars, judged, original.Chars, original.CharScores);
+                        HorizontalLineEnds.Trace?.Invoke(
+                            $"verdict keep={keep} original=\"{string.Concat(original.Chars ?? [])}\" grown=\"{string.Concat(line.Chars ?? [])}\"");
+                        if (keep)
+                        {
+                            scores = judged;
+                            // A ―― the recogniser read nothing of, put back by its shape — see
+                            // HorizontalLineEnds.IsDash.
+                            if (HorizontalLineEnds.WithDashes(line.Chars, scores, growth) is { } dashed)
+                            {
+                                dashChars = dashed.Chars;
+                                scores = dashed.Scores;
+                            }
+
+                            // A grown box has to buy a reading: a side that read nothing more goes
+                            // back to where the detector had it. See HorizontalLineEnds.ReadMore.
+                            var more = HorizontalLineEnds.ReadMore(
+                                string.Concat(original.Chars ?? []), string.Concat(dashChars ?? line.Chars ?? []));
+                            // Except the rest of a glyph the box cut through, when it is strokes: the
+                            // reading had that glyph already, from the half the box held.
+                            var left = growth.Left && (more.Left || growth.LeftCut && growth.LeftStrokes);
+                            var right = growth.Right && (more.Right || growth.RightCut && growth.RightStrokes);
+                            // Neither side read more: the reading stands (it says what the
+                            // detector's box said), the box goes back to the detector's.
+                            if (left != growth.Left || right != growth.Right)
+                                box = left || right ? HorizontalLineEnds.Keep(box, growth, left, right) : growth.Original;
+                        }
+
+                        if (!keep)
+                        {
+                            line = original;
+                            box = growth.Original;
+                            scores = line.CharScores;
+                            dashChars = null;
+                        }
+                    }
+
                     // The library's own floor, applied here for the same reason it applies it: what
                     // reaches ConvertBlocks on the shipped path has already been through it.
-                    var scores = lines[i].CharScores;
                     if (scores is not { Length: > 0 } || scores.Average() < _options.TextScore)
                         continue;
 
-                    var points = (SKPointI[])chosen[i].BoxPoints.Clone();
+                    var points = (SKPointI[])box.BoxPoints.Clone();
                     MapToOriginalMethod.Invoke(_detectorInput, new object[] { points });
                     _frame.MapToSource(points);
 
                     textBlocks.Add(new TextBlock
                     {
                         BoxPoints = points,
-                        BoxScore = chosen[i].Score,
+                        BoxScore = box.Score,
                         // Required by the type and ignored downstream: ConvertBlocks builds the text
                         // from Chars, the same as it does for the shipped path.
-                        Text = string.Concat(lines[i].Chars ?? Array.Empty<string>()),
-                        Chars = lines[i].Chars,
+                        Text = string.Concat(dashChars ?? line.Chars ?? Array.Empty<string>()),
+                        Chars = dashChars ?? line.Chars,
                         CharScores = scores,
                     });
                 }
@@ -827,7 +969,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     /// </remarks>
     private static IReadOnlyList<RapidOcrNet.TextBox>? DetectKeepingProbability(
         TextDetector detector, SKBitmap bitmap, ScaleParam scale, RapidOcrOptions options,
-        out DetectorProbability? probability)
+        out DetectorProbability? probability, bool carveColumns = true)
     {
         probability = null;
         try
@@ -856,7 +998,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             var map = dense is not null ? dense.Buffer.ToArray() : output.AsEnumerable<float>().ToArray();
             // Columns first: a row the model lit across the heads of columns is given back to them
             // before the library frames anything, and the library frames the map as rewritten.
-            if (dense is not null && ColumnsFirst.Carve(map, scale.DstWidth, scale.DstHeight, options.BoxThresh))
+            if (carveColumns && dense is not null && ColumnsFirst.Carve(map, scale.DstWidth, scale.DstHeight, options.BoxThresh))
                 map.CopyTo(dense.Buffer.Span);
             probability = new DetectorProbability(
                 map,
