@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
+<link rel="stylesheet" href="../site/styles.css?v=1de09f44a3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -528,7 +528,7 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">翻译服务</p>
       <h2 class="h2" data-i18n="engines.title">内置多种翻译服务</h2>
-      <p class="sectionlede" data-i18n="engines.lede">内置服务安装后即可使用，无需注册或申请密钥；也能改用 DeepL 或自己的 AI 模型。</p>
+      <p class="sectionlede" data-i18n="engines.lede">内置翻译服务安装后即可使用，无需注册或申请密钥；也可按需改用 DeepL 或 AI 翻译。</p>
     </header>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.general">一般服务</h3>
@@ -564,23 +564,46 @@
         <span class="pill" data-i18n="engines.deepl.pill">需 API 密钥</span>
       </li>
       <li class="engine">
+        <h3 data-i18n="engines.localai.name">AI 翻译 (本地)</h3>
+        <span class="pill" data-i18n="engines.localai.pill">需独立显卡</span>
+      </li>
+      <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 兼容 API</span>
       </li>
     </ul>
 
     <div class="enginenotes reveal">
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.openai.title">参考上下文的 AI 翻译</h3>
-        <p data-i18n="engines.openai.body">使用 OpenAI 兼容服务时，翻译会参考前面已翻译好的内容，连续的字幕与对话中，人名、用词与语气更一致；搭配本地模型可完全离线使用，也能自定义提示词。</p>
-        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.zh-Hans.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">本机 AI 模型搭建教程</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.localai.title">AI 翻译 (本地)</h3>
+          <span class="pill pill--default" data-i18n="engines.localai.badge">内置模型</span>
+        </div>
+        <p data-i18n-html="engines.localai.body">翻译功能内置于 OverTranslate，首次使用时下载模型即可。<br>无需安装其他工具或申请密钥，翻译过程不经过网络。<br>参考之前的翻译内容，让连续字幕与对话中的人名、用词及语气更加一致。</p>
+        <div class="enginenote__foot">
+          <ul class="chips">
+            <li data-i18n="engines.localai.chip1">独立显卡运行</li>
+            <li data-i18n="engines.localai.chip2">离线翻译</li>
+            <li data-i18n="engines.localai.chip3">上下文参考</li>
+          </ul>
+        </div>
       </div>
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.fallback.title">自动备援</h3>
-        <p data-i18n="engines.fallback.body">当某个翻译服务无法使用或响应过慢时，会先重新尝试，仍无法翻译才自动切换到其他可用的服务，不需要自己重试或改设置。DeepL 与 OpenAI 不适用。</p>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.openai.title">OpenAI</h3>
+          <span class="pill pill--default" data-i18n="engines.openai.badge">自定义模型与提示词</span>
+        </div>
+        <p data-i18n-html="engines.openai.body">可连接 OpenAI 兼容 API，使用 Ollama、LM Studio 等本地工具，或 OpenRouter 等云端服务。<br>可自行选择模型与设置提示词，同样会参考之前的翻译内容。</p>
+        <div class="enginenote__foot">
+          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.zh-Hans.md" data-loc-href="ollama" target="_blank" rel="noopener">
+            <span data-i18n="engines.advanced.link">本机 AI 模型搭建教程</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+          <ul class="chips">
+            <li data-i18n="engines.openai.chip1">本地或云端</li>
+            <li data-i18n="engines.openai.chip2">自定义模型与提示词</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -696,7 +719,7 @@
       <ul class="ticks ticks--compact">
         <li><strong data-i18n="download.req.1.title">操作系统</strong><span data-i18n="download.req.1.body">Windows 10 / 11。实时翻译的屏幕抓取需 Windows 11 24H2 以上，窗口抓取需 Windows 10 1903 以上。</span></li>
         <li><strong data-i18n="download.req.2.title">运行环境</strong><span data-i18n="download.req.2.body">安装包已内含所需环境，不需另外安装其他组件。</span></li>
-        <li><strong data-i18n="download.req.3.title">高级选项</strong><span data-i18n="download.req.3.body">使用 DeepL 或自行搭建的 AI 模型时需自备密钥或服务地址，内置的翻译服务则不需设置。</span></li>
+        <li><strong data-i18n="download.req.3.title">高级选项</strong><span data-i18n="download.req.3.body">使用 DeepL 或 OpenAI 时需自备密钥或服务地址，AI 翻译 (本地) 需要独立显卡；内置的翻译服务则不需设置。</span></li>
       </ul>
     </div>
   </div>

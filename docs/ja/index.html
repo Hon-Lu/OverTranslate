@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
+<link rel="stylesheet" href="../site/styles.css?v=1de09f44a3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -528,7 +528,7 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">翻訳サービス</p>
       <h2 class="h2" data-i18n="engines.title">複数の翻訳サービスを内蔵</h2>
-      <p class="sectionlede" data-i18n="engines.lede">内蔵のサービスはインストールするだけで使え、登録や API キーは不要です。DeepL や自分の AI モデルに切り替えることもできます。</p>
+      <p class="sectionlede" data-i18n="engines.lede">内蔵の翻訳サービスはインストールするだけで使え、登録や API キーは不要です。必要に応じて DeepL や AI 翻訳に切り替えることもできます。</p>
     </header>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.general">一般のサービス</h3>
@@ -564,23 +564,46 @@
         <span class="pill" data-i18n="engines.deepl.pill">API キーが必要</span>
       </li>
       <li class="engine">
+        <h3 data-i18n="engines.localai.name">AI 翻訳 (ローカル)</h3>
+        <span class="pill" data-i18n="engines.localai.pill">専用 GPU が必要</span>
+      </li>
+      <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 互換 API</span>
       </li>
     </ul>
 
     <div class="enginenotes reveal">
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.openai.title">文脈を踏まえた AI 翻訳</h3>
-        <p data-i18n="engines.openai.body">OpenAI 互換サービスでは、それまでに訳した内容を参考に翻訳するため、続く字幕や会話でも人名・用語・口調がそろいます。ローカルモデルなら完全にオフラインで使え、プロンプトもカスタマイズできます。</p>
-        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ja.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">ローカル AI モデルの導入ガイド</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.localai.title">AI 翻訳 (ローカル)</h3>
+          <span class="pill pill--default" data-i18n="engines.localai.badge">内蔵モデル</span>
+        </div>
+        <p data-i18n-html="engines.localai.body">OverTranslate に内蔵された翻訳機能で、初回使用時にモデルをダウンロードするだけで使えます。<br>ほかのツールのインストールや API キーは不要で、翻訳中にネットワークを経由することもありません。<br>それまでに訳した内容を参考にするため、続く字幕や会話でも人名・用語・口調がそろいます。</p>
+        <div class="enginenote__foot">
+          <ul class="chips">
+            <li data-i18n="engines.localai.chip1">専用 GPU で動作</li>
+            <li data-i18n="engines.localai.chip2">オフライン翻訳</li>
+            <li data-i18n="engines.localai.chip3">文脈を参照</li>
+          </ul>
+        </div>
       </div>
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.fallback.title">自動フォールバック</h3>
-        <p data-i18n="engines.fallback.body">ある翻訳サービスが使えない、または応答が遅いときは、まず同じサービスで再試行し、それでも翻訳できない場合に使える別のサービスへ自動で切り替わります。やり直したり設定を変えたりする必要はありません。DeepL と OpenAI には適用されません。</p>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.openai.title">OpenAI</h3>
+          <span class="pill pill--default" data-i18n="engines.openai.badge">モデル・プロンプトを自由に設定</span>
+        </div>
+        <p data-i18n-html="engines.openai.body">OpenAI 互換 API に接続し、Ollama・LM Studio などのローカルツールや、OpenRouter などのクラウドサービスを使えます。<br>モデルとプロンプトは自分で設定でき、こちらもそれまでに訳した内容を参考にします。</p>
+        <div class="enginenote__foot">
+          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ja.md" data-loc-href="ollama" target="_blank" rel="noopener">
+            <span data-i18n="engines.advanced.link">ローカル AI モデルの導入ガイド</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+          <ul class="chips">
+            <li data-i18n="engines.openai.chip1">ローカルまたはクラウド</li>
+            <li data-i18n="engines.openai.chip2">モデル・プロンプトを自由に設定</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -696,7 +719,7 @@
       <ul class="ticks ticks--compact">
         <li><strong data-i18n="download.req.1.title">OS</strong><span data-i18n="download.req.1.body">Windows 10 / 11。リアルタイム翻訳の画面全体の取り込みは Windows 11 24H2 以降、ウィンドウ指定は Windows 10 1903 以降が必要です。</span></li>
         <li><strong data-i18n="download.req.2.title">ランタイム</strong><span data-i18n="download.req.2.body">必要なものはインストーラーに含まれており、ほかに入れるものはありません。</span></li>
-        <li><strong data-i18n="download.req.3.title">詳細オプション</strong><span data-i18n="download.req.3.body">DeepL や自分で用意した AI モデルを使う場合は、キーまたはサーバーのアドレスをご自身で用意してください。内蔵の翻訳サービスに設定は要りません。</span></li>
+        <li><strong data-i18n="download.req.3.title">詳細オプション</strong><span data-i18n="download.req.3.body">DeepL や OpenAI を使う場合は、キーまたはサーバーのアドレスをご自身で用意してください。AI 翻訳 (ローカル) には専用のグラフィックスカードが必要です。内蔵の翻訳サービスに設定は要りません。</span></li>
       </ul>
     </div>
   </div>

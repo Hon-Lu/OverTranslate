@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=2314f0a5c0" />
+<link rel="stylesheet" href="../site/styles.css?v=1de09f44a3" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -528,7 +528,7 @@
     <header class="sectionhead reveal">
       <p class="kicker" data-i18n="engines.kicker">번역 서비스</p>
       <h2 class="h2" data-i18n="engines.title">여러 번역 서비스 기본 내장</h2>
-      <p class="sectionlede" data-i18n="engines.lede">내장 서비스는 설치하면 바로 쓸 수 있으며 가입이나 API 키가 필요 없습니다. DeepL이나 직접 준비한 AI 모델로 바꿔 쓸 수도 있습니다.</p>
+      <p class="sectionlede" data-i18n="engines.lede">내장 번역 서비스는 설치하면 바로 쓸 수 있으며 가입이나 API 키가 필요 없습니다. 필요에 따라 DeepL이나 AI 번역으로 바꿔 쓸 수도 있습니다.</p>
     </header>
 
     <h3 class="enginegroup reveal" data-i18n="engines.group.general">일반 서비스</h3>
@@ -564,23 +564,46 @@
         <span class="pill" data-i18n="engines.deepl.pill">API 키 필요</span>
       </li>
       <li class="engine">
+        <h3 data-i18n="engines.localai.name">AI 번역 (로컬)</h3>
+        <span class="pill" data-i18n="engines.localai.pill">외장 그래픽 카드 필요</span>
+      </li>
+      <li class="engine">
         <h3 data-i18n="engines.openai.name">OpenAI</h3>
         <span class="pill" data-i18n="engines.openai.pill">OpenAI 호환 API</span>
       </li>
     </ul>
 
     <div class="enginenotes reveal">
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.openai.title">문맥을 참고하는 AI 번역</h3>
-        <p data-i18n="engines.openai.body">OpenAI 호환 서비스를 사용하면 앞서 번역한 내용을 참고해 번역하므로, 이어지는 자막과 대화에서 인물 이름과 용어, 말투가 더 일관됩니다. 로컬 모델과 함께 쓰면 완전히 오프라인으로 사용할 수 있고, 프롬프트도 직접 설정할 수 있습니다.</p>
-        <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ko.md" data-loc-href="ollama" target="_blank" rel="noopener">
-          <span data-i18n="engines.advanced.link">로컬 AI 모델 설치 안내</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
-        </a>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.localai.title">AI 번역 (로컬)</h3>
+          <span class="pill pill--default" data-i18n="engines.localai.badge">내장 모델</span>
+        </div>
+        <p data-i18n-html="engines.localai.body">OverTranslate에 내장된 번역 기능으로, 처음 사용할 때 모델만 다운로드하면 됩니다.<br>다른 도구를 설치하거나 API 키를 발급받을 필요가 없으며, 번역 과정에서 네트워크를 거치지 않습니다.<br>앞서 번역한 내용을 참고하므로 이어지는 자막과 대화에서 인물 이름과 용어, 말투가 더 일관됩니다.</p>
+        <div class="enginenote__foot">
+          <ul class="chips">
+            <li data-i18n="engines.localai.chip1">외장 GPU에서 실행</li>
+            <li data-i18n="engines.localai.chip2">오프라인 번역</li>
+            <li data-i18n="engines.localai.chip3">문맥 참고</li>
+          </ul>
+        </div>
       </div>
-      <div class="enginenote">
-        <h3 class="h3" data-i18n="engines.fallback.title">자동 대체</h3>
-        <p data-i18n="engines.fallback.body">어떤 번역 서비스가 동작하지 않거나 응답이 너무 느리면 먼저 다시 시도하고, 그래도 번역할 수 없을 때 사용할 수 있는 다른 서비스로 자동으로 바뀝니다. 직접 다시 시도하거나 설정을 바꿀 필요가 없습니다. DeepL과 OpenAI에는 적용되지 않습니다.</p>
+      <div class="enginenote enginenote--card">
+        <div class="enginenote__head">
+          <h3 class="h3" data-i18n="engines.openai.title">OpenAI</h3>
+          <span class="pill pill--default" data-i18n="engines.openai.badge">모델·프롬프트 직접 설정</span>
+        </div>
+        <p data-i18n-html="engines.openai.body">OpenAI 호환 API에 연결해 Ollama, LM Studio 같은 로컬 도구나 OpenRouter 같은 클라우드 서비스를 사용할 수 있습니다.<br>모델과 프롬프트를 직접 설정할 수 있으며, 마찬가지로 앞서 번역한 내용을 참고합니다.</p>
+        <div class="enginenote__foot">
+          <a class="textlink" href="https://github.com/Hon-Lu/OverTranslate/blob/main/docs/guides/OLLAMA_GUIDE.ko.md" data-loc-href="ollama" target="_blank" rel="noopener">
+            <span data-i18n="engines.advanced.link">로컬 AI 모델 설치 안내</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M9 6h9v9"/></svg>
+          </a>
+          <ul class="chips">
+            <li data-i18n="engines.openai.chip1">로컬 또는 클라우드</li>
+            <li data-i18n="engines.openai.chip2">모델·프롬프트 직접 설정</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -696,7 +719,7 @@
       <ul class="ticks ticks--compact">
         <li><strong data-i18n="download.req.1.title">운영체제</strong><span data-i18n="download.req.1.body">Windows 10 / 11. 실시간 번역의 전체 화면 가져오기는 Windows 11 24H2 이상, 창 지정은 Windows 10 1903 이상이 필요합니다.</span></li>
         <li><strong data-i18n="download.req.2.title">실행 환경</strong><span data-i18n="download.req.2.body">필요한 구성 요소가 설치 파일에 모두 들어 있어 따로 설치할 것이 없습니다.</span></li>
-        <li><strong data-i18n="download.req.3.title">고급 옵션</strong><span data-i18n="download.req.3.body">DeepL이나 직접 구축한 AI 모델을 쓰려면 키나 서비스 주소를 준비해야 하며, 내장된 번역 서비스는 설정이 필요 없습니다.</span></li>
+        <li><strong data-i18n="download.req.3.title">고급 옵션</strong><span data-i18n="download.req.3.body">DeepL이나 OpenAI를 쓰려면 키나 서비스 주소를 준비해야 하고, AI 번역 (로컬)은 외장 그래픽 카드가 필요합니다. 내장된 번역 서비스는 설정이 필요 없습니다.</span></li>
       </ul>
     </div>
   </div>

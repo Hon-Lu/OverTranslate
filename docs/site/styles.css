@@ -1105,6 +1105,40 @@ p:last-child { margin-bottom: 0; }
 @media (min-width: 880px) { .enginenotes { grid-template-columns: 1fr 1fr; } }
 .enginenote p { color: var(--ink-2); line-height: 1.8; }
 .enginenote .textlink { margin-top: 4px; font-size: 0.9rem; }
+.enginenote--card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: var(--r-l);
+  background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%);
+  box-shadow: var(--shadow-m);
+}
+.enginenote--card p { margin: 0; }
+.enginenote__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.enginenote__head .h3 { margin: 0; }
+.enginenote__head .pill { font-size: 0.8rem; font-weight: 600; }
+.enginenote__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-top: auto;
+}
+.enginenote--card .textlink { margin-top: 0; }
+.enginenote__foot .chips:only-child { margin-right: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.chips li {
+  padding: 5px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0.82rem;
+}
 .pill {
   display: inline-block;
   padding: 3px 10px;
