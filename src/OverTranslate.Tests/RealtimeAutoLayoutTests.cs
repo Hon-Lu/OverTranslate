@@ -171,6 +171,46 @@ public class RealtimeAutoLayoutTests
         Assert.Equal(RealtimeBlockMode.Subtitle, group.ReadAs);
     }
 
+    /// <summary>
+    /// A dialogue box with a reading printed over its kanji. The groupers take the reading out on
+    /// the way, and the first build threw on the group that was left without members ("Sequence
+    /// contains no elements" on the bar). It is one passage, and the reading is not drawn at all.
+    /// </summary>
+    [Fact]
+    public void DialogueWithAReadingOverItsKanjiIsOnePassageWithoutTheReading()
+    {
+        var groups = Auto(
+        [
+            Block("桜羽エマ", 280, 950, 380, 110, OcrLayoutScript.Cjk),
+            Block("(ウソでしょ……", 450, 1140, 345, 46, OcrLayoutScript.Cjk),
+            Block("にかいどう", 492, 1196, 90, 18, OcrLayoutScript.Cjk),
+            Block("二階堂ヒロ……ちゃん？)", 470, 1214, 530, 46, OcrLayoutScript.Cjk),
+        ], 1352);
+
+        Assert.DoesNotContain(groups, group => group.Text.Contains("にかいどう"));
+        var dialogue = Assert.Single(groups, group => group.Text.Contains("ウソでしょ"));
+        Assert.Contains("二階堂ヒロ", dialogue.Text);
+        Assert.Equal(RealtimeBlockMode.Subtitle, dialogue.ReadAs);
+    }
+
+    /// <summary>Every group a grouper returns reaches the screen, whatever its trace could account for.</summary>
+    [Fact]
+    public void NoTextIsLostBetweenTheGroupersAndTheAnswer()
+    {
+        List<OcrTextBlock> Frame() =>
+        [
+            Block("(ウソでしょ……", 450, 1140, 345, 46, OcrLayoutScript.Cjk),
+            Block("にかいどう", 492, 1196, 90, 18, OcrLayoutScript.Cjk),
+            Block("二階堂ヒロ……ちゃん？)", 470, 1214, 530, 46, OcrLayoutScript.Cjk),
+            Block("Auto", 10, 1300, 60, 30),
+        ];
+
+        var auto = string.Concat(Auto(Frame(), 1352).Select(group => group.Text));
+        foreach (var group in OcrService.GroupRealtime(Frame(), 1352, RealtimeBlockMode.Subtitle))
+            foreach (var word in group.Text.Split([' ', '\n'], StringSplitOptions.RemoveEmptyEntries))
+                Assert.Contains(word, auto);
+    }
+
     /// <summary>A frame with no passage in it is the panel grouper's own answer, in its order.</summary>
     [Fact]
     public void AFrameWithoutAPassageIsThePanelGroupersAnswer()

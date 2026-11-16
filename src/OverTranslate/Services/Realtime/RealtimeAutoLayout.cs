@@ -92,9 +92,9 @@ internal static class RealtimeAutoLayout
         var dialogueTrace = new GroupingTrace();
         var panelTrace = new GroupingTrace();
         var dialogue = Members(
-            DialogueTextGrouper.Group(HorizontalRubyLines.Drop(input), dialogueTrace), dialogueTrace);
+            DialogueTextGrouper.Group(HorizontalRubyLines.Drop(input), dialogueTrace), dialogueTrace, input);
         var panel = Members(
-            OcrTextBlockGrouper.Group(input, GroupingProfile.Realtime, null, panelTrace), panelTrace);
+            OcrTextBlockGrouper.Group(input, GroupingProfile.Realtime, null, panelTrace), panelTrace, input);
 
         int zones = CountZones(input, dialogue, panel);
         bool sparse = zones <= SparseZones;
@@ -128,10 +128,16 @@ internal static class RealtimeAutoLayout
         {
             var claimed = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
             foreach (var passage in passages) claimed.UnionWith(passage.Members);
-            var rest = input.Where(block => !claimed.Contains(block)).ToList();
+            // And whatever else sits inside a passage: the readings printed over its kanji, which
+            // the dialogue grouper took out before it grouped. Left for the panel grouper they
+            // would come back as lines of their own, with the writing they belong to gone.
+            var rest = input
+                .Where(block => !claimed.Contains(block) &&
+                    !passages.Any(passage => passage.Output.LayoutBounds.Contains(Centre(block.LayoutBounds))))
+                .ToList();
             var restTrace = new GroupingTrace();
             kept = [.. passages, .. Members(
-                OcrTextBlockGrouper.Group(rest, GroupingProfile.Realtime, null, restTrace), restTrace)];
+                OcrTextBlockGrouper.Group(rest, GroupingProfile.Realtime, null, restTrace), restTrace, rest)];
             kept = [.. kept.OrderBy(group => First(group).Y).ThenBy(group => First(group).X)];
         }
 
@@ -267,24 +273,62 @@ internal static class RealtimeAutoLayout
         return zones;
     }
 
-    private static List<TextGroup> Members(List<OcrTextBlock> outputs, GroupingTrace trace)
+    /// <summary>Each group with the detected blocks it was built from.</summary>
+    /// <remarks>
+    /// <para>From the grouper's own trace, which is exact wherever it has an entry. It does not
+    /// always: a line the grouper rebuilt on the way — around the readings printed over kanji, for
+    /// one — is not the line it registered, and the group made of it traces back to nothing. Met on
+    /// a dialogue box with furigana, where a group with no members had no rows to measure and the
+    /// pass threw.</para>
+    ///
+    /// <para>So a group the trace cannot account for takes the blocks that lie inside it and
+    /// belong to no other group, and one that still has none stands for itself. Every group the
+    /// grouper returned is kept whatever the trace says: a group dropped here would be text read
+    /// off the screen and never shown.</para>
+    /// </remarks>
+    private static List<TextGroup> Members(
+        List<OcrTextBlock> outputs, GroupingTrace trace, IReadOnlyList<OcrTextBlock> input)
     {
         var blocks = trace.Blocks.ToDictionary(line => line.Id, line => line.Block);
         var sources = trace.Lines.ToDictionary(line => line.Id, line => line.SourceIds);
-        var groups = new List<TextGroup>(outputs.Count);
-        for (int i = 0; i < outputs.Count && i < trace.Groups.Count; i++)
+        var members = new List<List<OcrTextBlock>>(outputs.Count);
+        var traced = new bool[outputs.Count];
+        var taken = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
+        for (int i = 0; i < outputs.Count; i++)
         {
-            var members = new List<OcrTextBlock>();
-            foreach (var line in trace.Groups[i])
-            {
-                if (!sources.TryGetValue(line, out var ids)) continue;
-                foreach (var id in ids)
-                    if (blocks.TryGetValue(id, out var block)) members.Add(block);
-            }
-            groups.Add(new TextGroup(outputs[i], members));
+            var own = new List<OcrTextBlock>();
+            traced[i] = i < trace.Groups.Count && trace.Groups[i].Count > 0;
+            if (i < trace.Groups.Count)
+                foreach (var line in trace.Groups[i])
+                {
+                    if (!sources.TryGetValue(line, out var ids) || ids.Count == 0) { traced[i] = false; continue; }
+                    foreach (var id in ids)
+                    {
+                        if (blocks.TryGetValue(id, out var block)) own.Add(block);
+                        else traced[i] = false;
+                    }
+                }
+            taken.UnionWith(own);
+            members.Add(own);
+        }
+
+        var groups = new List<TextGroup>(outputs.Count);
+        for (int i = 0; i < outputs.Count; i++)
+        {
+            if (!traced[i])
+                foreach (var block in input)
+                    if (!taken.Contains(block) && outputs[i].LayoutBounds.Contains(Centre(block.LayoutBounds)))
+                    {
+                        members[i].Add(block);
+                        taken.Add(block);
+                    }
+            groups.Add(new TextGroup(outputs[i], members[i].Count > 0 ? members[i] : [outputs[i]]));
         }
         return groups;
     }
+
+    private static System.Windows.Point Centre(Rect bounds) =>
+        new(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
 
     private static bool Contains(TextGroup outer, TextGroup inner)
     {
