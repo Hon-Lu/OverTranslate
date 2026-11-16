@@ -758,7 +758,7 @@ internal sealed class RealtimeSessionController
         var edit = new RealtimeEditWindow(
             request.ScreenBounds, _blocks, Models.RealtimeSettings.MaxBlockCount,
             settings.Current.Realtime.GuidanceExpanded,
-            settings.Current.Realtime.NewBlockMode,
+            settings.Current.Realtime.NewBlockProfileOrStandard(),
             settings.Current.Realtime.TextOrientation,
             _compareDisplay);
         edit.BlocksChanged += (_, _) =>
@@ -779,9 +779,9 @@ internal sealed class RealtimeSessionController
         edit.BlockDefaultsChanged += (_, defaults) =>
         {
             var realtime = settings.Current.Realtime;
-            if (realtime.NewBlockMode == defaults.Mode &&
+            if (realtime.NewBlockProfile == defaults.Profile &&
                 realtime.TextOrientation == defaults.Orientation) return;
-            realtime.NewBlockMode = defaults.Mode;
+            realtime.NewBlockProfile = defaults.Profile;
             realtime.TextOrientation = defaults.Orientation;
             settings.Save();
         };
@@ -882,7 +882,8 @@ internal sealed class RealtimeSessionController
     // result arriving for region 1 is for whatever block is second in it.
     private List<RealtimeRegion> Regions() => _blocks
         .Select((block, index) => new RealtimeRegion(
-            index, block.Bounds, ResolvedProfile.ForLayout(block.Mode), block.Orientation))
+            index, block.Bounds, SettingsService.Instance.Current.Realtime.ResolveProfile(block.ProfileId),
+            block.Orientation))
         .ToList();
 
     /// <summary>

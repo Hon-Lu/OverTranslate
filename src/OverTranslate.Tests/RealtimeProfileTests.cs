@@ -67,6 +67,30 @@ public class RealtimeProfileTests
         }
     }
 
+    [Fact]
+    public void APresetFilledIsItself()
+    {
+        foreach (var preset in RealtimePresets.All)
+            Assert.Equal(
+                System.Text.Json.JsonSerializer.Serialize(preset),
+                System.Text.Json.JsonSerializer.Serialize(preset.Filled()));
+    }
+
+    [Fact]
+    public void ANewCustomModeFollowsItsPresetInEveryValue()
+    {
+        var mine = RealtimeProfile.CreateCustom(RealtimePresets.SubtitleId, "Mine");
+
+        Assert.Matches("^[0-9a-f]{32}$", mine.Id);
+        Assert.Equal("Mine", mine.Name);
+        Assert.Equal(ResolvedProfile.Subtitle with { Id = mine.Id }, ResolvedProfile.Resolve(mine));
+        Assert.All(
+            typeof(RealtimeProfile).GetProperties().Where(property =>
+                property.Name is not (nameof(RealtimeProfile.Id) or nameof(RealtimeProfile.Name) or nameof(RealtimeProfile.BasedOn))),
+            property => Assert.Null(property.GetValue(mine)));
+        Assert.Equal(RealtimePresets.StandardId, RealtimeProfile.CreateCustom("custom", "x").BasedOn);
+    }
+
     [Theory]
     [MemberData(nameof(Presets))]
     public void TheOldLayoutsNameThePresets(string id, RealtimeBlockMode layout) =>
@@ -187,7 +211,7 @@ public class RealtimeProfileTests
     [Fact]
     public void MergingTendsOneWayAlongItsScale()
     {
-        var steps = Enumerable.Range(ResolvedProfile.MinStep, ResolvedProfile.MaxStep)
+        var steps = Enumerable.Range(RealtimeProfile.MinStep, RealtimeProfile.MaxStep)
             .Select(step => ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeTendency = step }).Auto)
             .ToList();
 
@@ -197,13 +221,13 @@ public class RealtimeProfileTests
             Assert.True(steps[i].StandsOut <= steps[i - 1].StandsOut);
             Assert.True(steps[i].LetteringZones >= steps[i - 1].LetteringZones);
         }
-        Assert.Same(AutoRules.Default, steps[ResolvedProfile.MiddleStep - 1]);
+        Assert.Same(AutoRules.Default, steps[RealtimeProfile.MiddleStep - 1]);
     }
 
     [Fact]
     public void LineSpacingWidensEveryGrouperTheSameWay()
     {
-        var steps = Enumerable.Range(ResolvedProfile.MinStep, ResolvedProfile.MaxStep)
+        var steps = Enumerable.Range(RealtimeProfile.MinStep, RealtimeProfile.MaxStep)
             .Select(step => ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", LineSpacing = step }).Auto)
             .ToList();
 

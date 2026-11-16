@@ -163,7 +163,34 @@ public class SettingsService
             if (target is not null)
                 settings.QuickTranslate.TargetLanguage = target.Code;
         }
+
+        settings.Realtime.Profiles = RealtimeSettings.CleanProfiles(
+            settings.Realtime.Profiles.Count > 0 ? settings.Realtime.Profiles : ReadProfilesOneByOne(root));
         return settings;
+    }
+
+    /// <summary>
+    /// The custom 即時翻譯 modes one at a time, for a list that would not read in one piece: a
+    /// value of the wrong type in one mode costs that mode, not every mode the user made.
+    /// </summary>
+    private static List<RealtimeProfile?> ReadProfilesOneByOne(JsonObject root)
+    {
+        var read = new List<RealtimeProfile?>();
+        if (root[nameof(AppSettings.Realtime)] is not JsonObject realtime ||
+            realtime[nameof(RealtimeSettings.Profiles)] is not JsonArray entries) return read;
+
+        foreach (var entry in entries)
+        {
+            try
+            {
+                read.Add(entry?.Deserialize<RealtimeProfile>());
+            }
+            catch (JsonException ex)
+            {
+                Log.Warn(ex, "Ignoring an unreadable realtime mode; keeping the others");
+            }
+        }
+        return read;
     }
 
     /// <summary>

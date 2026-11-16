@@ -204,38 +204,89 @@ public class RealtimeSettings
     public const int MaxBlockCount = 3;
 
     /// <summary>
-    /// What a newly drawn block is set to read, and which way its text runs: whatever the user last
-    /// chose on a block, restored for the next one and for the next sitting.
+    /// The mode a newly drawn block is set to, by id, and which way its text runs: whatever the user
+    /// last chose on a block, restored for the next one and for the next sitting.
     /// </summary>
     /// <remarks>
-    /// <para>The pair the edit layer's two trays set. They are remembered for the same reason
-    /// <see cref="GuidanceExpanded"/> is, and stored the same way — the last tray pressed wins,
-    /// written on the press rather than at the end of a session — but they are worth more, because
-    /// the framing itself is not kept: every sitting begins by drawing the blocks again, and without
-    /// this every one of them begins on the same two answers however many times the user has
-    /// corrected them.</para>
+    /// <para>The pair the edit layer sets. They are remembered for the same reason
+    /// <see cref="GuidanceExpanded"/> is, and stored the same way — the last choice wins, written on
+    /// the press rather than at the end of a session — but they are worth more, because the framing
+    /// itself is not kept: every sitting begins by drawing the blocks again, and without this every
+    /// one of them begins on the same two answers however many times the user has corrected
+    /// them.</para>
     ///
-    /// <para>自動 for the mode: the block works out, group by group, which of the two its text is —
-    /// see <see cref="Services.Realtime.RealtimeAutoLayout"/> — and the two explicit modes are there
-    /// for the screen it gets wrong. 橫排 for the direction, because all but a handful of blocks are,
-    /// and a vertical block left on it reads as a stack of one-character lines, which is visibly
-    /// wrong rather than quietly wrong.</para>
+    /// <para>標準 for the mode: the block works out, group by group, which way its text reads — see
+    /// <see cref="Services.Realtime.RealtimeAutoLayout"/> — and the other modes are there for the
+    /// screen it gets wrong. An id that names no mode any more, a custom mode deleted since, is read
+    /// as 標準 — see <see cref="NewBlockProfileOrStandard"/>. 橫排 for the direction, because all but
+    /// a handful of blocks are, and a vertical block left on it reads as a stack of one-character
+    /// lines, which is visibly wrong rather than quietly wrong. The direction is not part of a mode:
+    /// either can be read with any mode.</para>
     ///
-    /// <para>The mode is written under a name of its own, not the <c>BlockMode</c> every file up to
-    /// 2.12.0 holds. That key was 字幕 in nearly all of them only because 字幕 was the default and
-    /// the one alternative, so reading it would leave everyone who never touched the tray on a mode
-    /// they did not choose, with 自動 one press away and unseen. An old file's answer is not read;
-    /// what is chosen from here on is kept as before.</para>
+    /// <para>Written under a name of its own, not the <c>BlockMode</c> every file up to 2.12.0 holds.
+    /// That key was 字幕 in nearly all of them only because 字幕 was the default and the one
+    /// alternative, so reading it would leave everyone who never touched the tray on a mode they did
+    /// not choose. An old file's answer is not read; what is chosen from here on is kept.</para>
     ///
     /// <para>Deliberately not on the settings page, like <see cref="GuidanceExpanded"/>: this is a
-    /// state the two trays set by being used, not a preference anyone would go looking for.</para>
+    /// state the edit layer sets by being used, not a preference anyone would go looking for.</para>
     /// </remarks>
-    public Services.Realtime.RealtimeBlockMode NewBlockMode { get; set; } =
-        Services.Realtime.RealtimeBlockMode.Auto;
+    public string NewBlockProfile { get; set; } = RealtimePresets.StandardId;
 
-    /// <inheritdoc cref="NewBlockMode"/>
+    /// <inheritdoc cref="NewBlockProfile"/>
     public Services.Realtime.RealtimeTextOrientation TextOrientation { get; set; } =
         Services.Realtime.RealtimeTextOrientation.Horizontal;
+
+    /// <summary>The most custom modes the list keeps.</summary>
+    public const int MaxCustomProfiles = 10;
+
+    /// <summary>
+    /// The user's own modes, in the order they were made. The presets are not here: they are built
+    /// in — see <see cref="RealtimePresets"/>.
+    /// </summary>
+    /// <remarks>
+    /// Read in one piece, then one entry at a time if the piece will not read, so one damaged entry
+    /// costs only itself; then tidied by <see cref="CleanProfiles"/>. Changed through
+    /// <c>SettingsService.UpdateRealtimeProfiles</c>, which tells a running session.
+    /// </remarks>
+    public List<RealtimeProfile> Profiles { get; set; } = [];
+
+    /// <summary><see cref="NewBlockProfile"/> if it still names a mode, otherwise 標準.</summary>
+    public string NewBlockProfileOrStandard() => KnownProfileId(NewBlockProfile);
+
+    /// <summary>The id itself if it names a preset or one of <see cref="Profiles"/>, otherwise 標準's.</summary>
+    public string KnownProfileId(string? id) =>
+        RealtimePresets.IsPreset(id) || Profiles.Any(profile => profile.Id == id) ? id! : RealtimePresets.StandardId;
+
+    /// <summary>The mode a block on this id reads with — 標準 for one that names no mode.</summary>
+    public Services.Realtime.ResolvedProfile ResolveProfile(string? id) =>
+        Services.Realtime.ResolvedProfile.Resolve(id, Profiles);
+
+    /// <summary>
+    /// The custom modes as the list can hold them: none missing an id or claiming a preset's, no id
+    /// twice (the first kept), every entry with a name and a preset to follow, and no more than
+    /// <see cref="MaxCustomProfiles"/>.
+    /// </summary>
+    /// <remarks>
+    /// Values are not touched: one out of range or unknown is held to its range, or follows the
+    /// preset, as the mode is resolved — see <see cref="RealtimeProfile.Filled"/> — and the file
+    /// keeps what was written, so a later version with a wider range reads it as meant.
+    /// </remarks>
+    public static List<RealtimeProfile> CleanProfiles(IEnumerable<RealtimeProfile?>? profiles)
+    {
+        var clean = new List<RealtimeProfile>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var profile in profiles ?? [])
+        {
+            if (profile is null || string.IsNullOrWhiteSpace(profile.Id) ||
+                RealtimePresets.IsPreset(profile.Id) || !seen.Add(profile.Id)) continue;
+            profile.Name ??= "";
+            if (!RealtimePresets.IsPreset(profile.BasedOn)) profile.BasedOn = RealtimePresets.StandardId;
+            clean.Add(profile);
+            if (clean.Count == MaxCustomProfiles) break;
+        }
+        return clean;
+    }
 
     /// <summary>
     /// Whether the per-block framing guidance on the edit layer is unfolded. Expanded on a first run,

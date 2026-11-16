@@ -169,35 +169,22 @@ public sealed record ResolvedProfile
 
     /// <summary>
     /// One stored mode: each value it sets, held to its range, and the preset's wherever it sets
-    /// none or one this build cannot read.
+    /// none or one this build cannot read — see <see cref="RealtimeProfile.Filled"/>.
     /// </summary>
     public static ResolvedProfile Resolve(RealtimeProfile stored)
     {
-        // A custom mode follows a preset, and only a preset: one naming anything else follows 標準.
-        var template = RealtimePresets.Create(stored.BasedOn);
-
-        var layout = LayoutOf(stored.Layout) ?? LayoutOf(template.Layout)!.Value;
-        var timing = TimingOf(stored.ReadTiming) ?? TimingOf(template.ReadTiming)!.Value;
-        bool lettering = stored.MergeUnpunctuated ?? template.MergeUnpunctuated!.Value;
-        int tendency = Step(stored.MergeTendency, template.MergeTendency!.Value);
-        int spacing = Step(stored.LineSpacing, template.LineSpacing!.Value);
-        int confidence = Step(stored.ConfidenceLevel, template.ConfidenceLevel!.Value);
-
+        var filled = stored.Filled();
         return new ResolvedProfile
         {
-            Id = stored.Id,
-            Layout = layout,
-            Timing = timing,
-            SettlePolls = SettlePollsOf(Number(stored.SettleSeconds, template.SettleSeconds!.Value)),
-            ClearAfterEmptyReads = Math.Clamp(
-                stored.ClearAfterEmptyReads ?? template.ClearAfterEmptyReads!.Value,
-                MinClearAfterEmptyReads, MaxClearAfterEmptyReads),
-            DetectorFraction = DetectorFractionOf(stored.DetectorPercent ?? template.DetectorPercent!.Value),
-            Auto = RulesFor(tendency, spacing, lettering),
-            IgnoreSmallFraction = Math.Clamp(
-                stored.IgnoreSmallPercent ?? template.IgnoreSmallPercent!.Value,
-                0, MaxIgnoreSmallPercent) / 100.0,
-            ConfidenceFloor = ConfidenceFloors[confidence - 1],
+            Id = filled.Id,
+            Layout = LayoutOf(filled.Layout),
+            Timing = TimingOf(filled.ReadTiming),
+            SettlePolls = SettlePollsOf(filled.SettleSeconds!.Value),
+            ClearAfterEmptyReads = filled.ClearAfterEmptyReads!.Value,
+            DetectorFraction = filled.DetectorPercent < 0 ? null : filled.DetectorPercent!.Value / 100.0,
+            Auto = RulesFor(filled.MergeTendency!.Value, filled.LineSpacing!.Value, filled.MergeUnpunctuated!.Value),
+            IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
+            ConfidenceFloor = ConfidenceFloors[filled.ConfidenceLevel!.Value - RealtimeProfile.MinStep],
         };
     }
 
@@ -225,70 +212,25 @@ public sealed record ResolvedProfile
             $"leading={Auto.PassageLeading:0.###} stackGap={Auto.MaxStackGap:0.###} wrapAdvance={Auto.PanelGrouping.SolidLineAdvanceWhenWrapped:0.###} " +
             $"ignoreSmall={IgnoreSmallFraction:0.##} confidence={ConfidenceFloor:0.##}");
 
-    // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>The steps of each 1–5 scale; 3 is what the presets use.</summary>
-    public const int MinStep = 1;
-
-    /// <inheritdoc cref="MinStep"/>
-    public const int MaxStep = 5;
-
-    /// <summary>The middle step, which every preset holds — see the type's remarks.</summary>
-    public const int MiddleStep = 3;
-
-    /// <summary>等文字停下's range, in seconds.</summary>
-    public const double MaxSettleSeconds = 1.5;
-
-    /// <summary>譯文保留's range, in readings.</summary>
-    public const int MinClearAfterEmptyReads = 1;
-
-    /// <inheritdoc cref="MinClearAfterEmptyReads"/>
-    public const int MaxClearAfterEmptyReads = 4;
-
-    /// <summary>辨識解析度's range, in percent.</summary>
-    /// <remarks>
-    /// 50 is a guess to be measured on a live stage: the strip fraction's own table has subtitles at
-    /// 78% correct at half size against 94% at 0.85 — see <see cref="RealtimeDetectorSize.StripFraction"/>.
-    /// </remarks>
-    public const int MinDetectorPercent = 50;
-
-    /// <inheritdoc cref="MinDetectorPercent"/>
-    public const int MaxDetectorPercent = 100;
-
-    /// <summary>忽略小字's range, in percent.</summary>
-    public const int MaxIgnoreSmallPercent = 80;
-
-    private static RealtimeBlockMode? LayoutOf(string? value) => value switch
+    // Filled values only: RealtimeProfile.Filled has already put every string among these.
+    private static RealtimeBlockMode LayoutOf(string? value) => value switch
     {
-        RealtimePresets.LayoutAuto => RealtimeBlockMode.Auto,
         RealtimePresets.LayoutPassage => RealtimeBlockMode.Subtitle,
         RealtimePresets.LayoutItems => RealtimeBlockMode.Panel,
-        _ => null,
+        _ => RealtimeBlockMode.Auto,
     };
 
-    private static RealtimeReadTiming? TimingOf(string? value) => value switch
+    private static RealtimeReadTiming TimingOf(string? value) => value switch
     {
-        RealtimePresets.TimingAuto => RealtimeReadTiming.Auto,
         RealtimePresets.TimingConfirm => RealtimeReadTiming.ReadThenConfirm,
         RealtimePresets.TimingSettle => RealtimeReadTiming.SettleThenRead,
-        _ => null,
+        _ => RealtimeReadTiming.Auto,
     };
-
-    private static int Step(int? value, int template) => Math.Clamp(value ?? template, MinStep, MaxStep);
-
-    private static double Number(double? value, double template) =>
-        value is { } v && double.IsFinite(v) ? v : template;
 
     // Seconds to polls by the poll interval itself rather than PollsIn, which never answers less than
     // one: 0 seconds is "do not wait", and must stay that.
     private static int? SettlePollsOf(double seconds) =>
-        seconds < 0
-            ? null
-            : (int)Math.Round(
-                Math.Min(seconds, MaxSettleSeconds) / RealtimeRegionState.PollInterval.TotalSeconds);
-
-    private static double? DetectorFractionOf(int percent) =>
-        percent < 0 ? null : Math.Clamp(percent, MinDetectorPercent, MaxDetectorPercent) / 100.0;
+        seconds < 0 ? null : (int)Math.Round(seconds / RealtimeRegionState.PollInterval.TotalSeconds);
 
     // 合併傾向 binds three of 自動's thresholds into one scale, and 行距容許 scales the space between
     // rows in all three groupers by one factor. The middle step of both is the measured rules
@@ -298,7 +240,7 @@ public sealed record ResolvedProfile
     // --profile; see .ai/realtime-profiles/tools.md. Until then they are the HANDOFF's figures.
     private static AutoRules RulesFor(int tendency, int spacing, bool lettering)
     {
-        if (tendency == MiddleStep && spacing == MiddleStep)
+        if (tendency == RealtimeProfile.MiddleStep && spacing == RealtimeProfile.MiddleStep)
             return lettering ? AutoRules.Default : AutoRules.Default with { Lettering = false };
 
         var rules = AutoRules.Default with { Lettering = lettering };
@@ -310,12 +252,12 @@ public sealed record ResolvedProfile
             5 => rules with { SparseZones = int.MaxValue, StandsOut = 1.0, LetteringZones = 8 },
             _ => rules,
         };
-        if (spacing == MiddleStep) return rules;
+        if (spacing == RealtimeProfile.MiddleStep) return rules;
 
         // Only the space between the rows is scaled. Two of the three figures are advances — a
         // line's own height plus the gap — and multiplying those whole would loosen them far more
         // than the gap the third one measures.
-        double k = LineSpacingFactors[spacing - 1];
+        double k = LineSpacingFactors[spacing - RealtimeProfile.MinStep];
         var wrapped = GroupingProfile.Realtime.SolidLineAdvanceWhenWrapped;
         return rules with
         {

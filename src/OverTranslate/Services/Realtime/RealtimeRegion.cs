@@ -47,6 +47,11 @@ public sealed record RealtimeRegion(
 /// back and what the controller keeps between edits, so re-entering edit mode restores the modes
 /// along with the rectangles.
 /// </summary>
+/// <param name="ProfileId">
+/// The mode the block is on, by id — a preset's or a custom mode's. An id, not the values, so a
+/// mode changed on the page reaches the block; one deleted since reads as 標準 — see
+/// <see cref="Models.RealtimeSettings.ResolveProfile"/>.
+/// </param>
 /// <remarks>
 /// Whether the framing guidance is folded away is deliberately not here. It is not a property of a
 /// block: it says whether this user still needs the instructions, which is the same answer for every
@@ -83,7 +88,7 @@ public sealed record RealtimeRegion(
 /// </param>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
-    RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
+    string ProfileId = Models.RealtimePresets.StandardId,
     RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal,
     Point? CompareOffset = null,
     double CompareScale = 1.0,

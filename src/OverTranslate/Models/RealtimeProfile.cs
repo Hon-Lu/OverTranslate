@@ -80,6 +80,96 @@ public sealed class RealtimeProfile
 
     /// <summary>A copy to edit without touching this one.</summary>
     public RealtimeProfile Clone() => (RealtimeProfile)MemberwiseClone();
+
+    /// <summary>
+    /// A new custom mode on <paramref name="basedOn"/>, every value following it until the user
+    /// moves one.
+    /// </summary>
+    public static RealtimeProfile CreateCustom(string? basedOn, string name) => new()
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        Name = name,
+        BasedOn = RealtimePresets.IsPreset(basedOn) ? basedOn! : RealtimePresets.StandardId,
+    };
+
+    /// <summary>
+    /// Every value as this mode runs it, in the units the user sees: its own where it sets one, the
+    /// preset's where it sets none or one this build cannot read, each held to its range.
+    /// </summary>
+    /// <remarks>
+    /// What the page shows on each control; whether a value is the mode's own is whether this
+    /// instance's property is null. A mode made from anything but a preset follows 標準.
+    /// </remarks>
+    public RealtimeProfile Filled()
+    {
+        var template = RealtimePresets.Create(RealtimePresets.IsPreset(BasedOn) ? BasedOn : RealtimePresets.StandardId);
+        int percent = DetectorPercent ?? template.DetectorPercent!.Value;
+        return new RealtimeProfile
+        {
+            Id = Id,
+            Name = Name ?? "",
+            BasedOn = template.Id,
+            Layout = Layout is RealtimePresets.LayoutAuto or RealtimePresets.LayoutPassage or RealtimePresets.LayoutItems
+                ? Layout
+                : template.Layout,
+            MergeUnpunctuated = MergeUnpunctuated ?? template.MergeUnpunctuated,
+            MergeTendency = Step(MergeTendency, template.MergeTendency!.Value),
+            LineSpacing = Step(LineSpacing, template.LineSpacing!.Value),
+            ReadTiming = ReadTiming is RealtimePresets.TimingAuto or RealtimePresets.TimingConfirm or RealtimePresets.TimingSettle
+                ? ReadTiming
+                : template.ReadTiming,
+            SettleSeconds = SettleSeconds is { } seconds && double.IsFinite(seconds)
+                ? seconds < 0 ? RealtimePresets.Automatic : Math.Min(seconds, MaxSettleSeconds)
+                : template.SettleSeconds,
+            ClearAfterEmptyReads = Math.Clamp(
+                ClearAfterEmptyReads ?? template.ClearAfterEmptyReads!.Value, MinClearAfterEmptyReads, MaxClearAfterEmptyReads),
+            DetectorPercent = percent < 0
+                ? RealtimePresets.Automatic
+                : Math.Clamp(percent, MinDetectorPercent, MaxDetectorPercent),
+            IgnoreSmallPercent = Math.Clamp(IgnoreSmallPercent ?? template.IgnoreSmallPercent!.Value, 0, MaxIgnoreSmallPercent),
+            ConfidenceLevel = Step(ConfidenceLevel, template.ConfidenceLevel!.Value),
+        };
+    }
+
+    private static int Step(int? value, int template) => Math.Clamp(value ?? template, MinStep, MaxStep);
+
+    // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>The steps of each 1–5 scale (合併傾向, 行距容許, 辨識信心下限).</summary>
+    public const int MinStep = 1;
+
+    /// <inheritdoc cref="MinStep"/>
+    public const int MaxStep = 5;
+
+    /// <summary>The middle step, which every preset holds and which is the measured rules themselves.</summary>
+    public const int MiddleStep = 3;
+
+    /// <summary>等文字停下's range, in seconds, from 0.</summary>
+    /// <remarks>
+    /// Counted in polls of <see cref="Services.Realtime.RealtimeRegionState.PollInterval"/>, 0.15 s,
+    /// so a slider steps by that much: 1.5 s is ten polls.
+    /// </remarks>
+    public const double MaxSettleSeconds = 1.5;
+
+    /// <summary>譯文保留's range, in readings.</summary>
+    public const int MinClearAfterEmptyReads = 1;
+
+    /// <inheritdoc cref="MinClearAfterEmptyReads"/>
+    public const int MaxClearAfterEmptyReads = 4;
+
+    /// <summary>辨識解析度's range, in percent.</summary>
+    /// <remarks>
+    /// 50 is a guess to be measured on a live stage: the strip fraction's own table has subtitles at
+    /// 78% correct at half size against 94% at 0.85 — see
+    /// <see cref="Services.Realtime.RealtimeDetectorSize.StripFraction"/>.
+    /// </remarks>
+    public const int MinDetectorPercent = 50;
+
+    /// <inheritdoc cref="MinDetectorPercent"/>
+    public const int MaxDetectorPercent = 100;
+
+    /// <summary>忽略小字's range, in percent, from 0 (off).</summary>
+    public const int MaxIgnoreSmallPercent = 80;
 }
 
 /// <summary>The three built-in modes, and the values every one of them is filled with.</summary>

@@ -318,83 +318,203 @@ public class SettingsParsingTests
         Assert.Equal("secret", settings.ApiKey);
     }
 
-    /// <summary>A settings file that has never said draws its blocks on 自動, written across.</summary>
+    /// <summary>A settings file that has never said draws its blocks on 標準, written across, and has no modes of its own.</summary>
     [Fact]
-    public void ASettingsFileWithoutBlockDefaults_DrawsBlocksOnAuto()
+    public void ASettingsFileWithoutBlockDefaults_DrawsBlocksOnStandard()
     {
         var settings = SettingsService.Parse("{}");
 
-        Assert.Equal(RealtimeBlockMode.Auto, settings.Realtime.NewBlockMode);
+        Assert.Equal(RealtimePresets.StandardId, settings.Realtime.NewBlockProfile);
         Assert.Equal(RealtimeTextOrientation.Horizontal, settings.Realtime.TextOrientation);
-        Assert.Equal(RealtimeBlockMode.Auto, new RealtimeSettings().NewBlockMode);
+        Assert.Empty(settings.Realtime.Profiles);
+        Assert.Equal(RealtimePresets.StandardId, new RealtimeSettings().NewBlockProfile);
         Assert.Equal(RealtimeTextOrientation.Horizontal, new RealtimeSettings().TextOrientation);
+        Assert.Empty(new RealtimeSettings().Profiles);
     }
 
     /// <summary>
-    /// The mode a file from 2.12.0 or earlier holds is not carried over: it opens on 自動.
+    /// The mode a file from 2.12.0 or earlier holds is not carried over, nor the one this branch
+    /// wrote before modes had ids: both open on 標準.
     /// </summary>
     /// <remarks>
-    /// That file says 字幕 for nearly everyone, and only because 字幕 was the default of the two
-    /// there were. Read as a choice, it would keep every one of them off the mode that is now the
-    /// one to start from — see <see cref="RealtimeSettings.NewBlockMode"/>. The direction beside it
-    /// was a choice, and is kept.
+    /// The 2.12.0 file says 字幕 for nearly everyone, and only because 字幕 was the default of the
+    /// two there were. Read as a choice, it would keep every one of them off the mode that is now the
+    /// one to start from — see <see cref="RealtimeSettings.NewBlockProfile"/>. NewBlockMode was never
+    /// released. The direction beside them was a choice, and is kept.
     /// </remarks>
     [Theory]
-    [InlineData("Subtitle")]
-    [InlineData("Panel")]
-    public void TheModeAnOlderFileHolds_IsNotReadAsAChoice(string mode)
+    [InlineData("BlockMode", "Subtitle")]
+    [InlineData("BlockMode", "Panel")]
+    [InlineData("NewBlockMode", "Subtitle")]
+    [InlineData("NewBlockMode", "Panel")]
+    public void TheModeAnOlderFileHolds_IsNotReadAsAChoice(string key, string mode)
     {
         var settings = SettingsService.Parse(
-            "{\"Realtime\":{\"BlockMode\":\"" + mode + "\",\"TextOrientation\":\"Vertical\"}}");
+            "{\"Realtime\":{\"" + key + "\":\"" + mode + "\",\"TextOrientation\":\"Vertical\"}}");
 
-        Assert.Equal(RealtimeBlockMode.Auto, settings.Realtime.NewBlockMode);
+        Assert.Equal(RealtimePresets.StandardId, settings.Realtime.NewBlockProfile);
         Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
+        Assert.DoesNotContain("NewBlockMode", SettingsService.Serialize(settings));
     }
 
-    /// <summary>
-    /// What the trays were last set to survives the file, as a name rather than an ordinal.
-    /// </summary>
-    /// <remarks>
-    /// An ordinal would be the wrong format for the same reason it is wrong for the capture layout
-    /// mode: 字幕 and 遊戲 are unlikely to be the last two answers, and the day a third arrives every
-    /// stored number means something else. The round trip is what proves the press actually keeps.
-    /// </remarks>
+    /// <summary>What a block was last set to survives the file: the mode by id, the direction by name.</summary>
     [Theory]
-    [InlineData(RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Horizontal)]
-    [InlineData(RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Vertical)]
-    [InlineData(RealtimeBlockMode.Panel, RealtimeTextOrientation.Horizontal)]
-    [InlineData(RealtimeBlockMode.Panel, RealtimeTextOrientation.Vertical)]
-    [InlineData(RealtimeBlockMode.Auto, RealtimeTextOrientation.Horizontal)]
-    public void BlockDefaults_RoundTripThroughTheFileByName(
-        RealtimeBlockMode mode, RealtimeTextOrientation orientation)
+    [InlineData(RealtimePresets.SubtitleId, RealtimeTextOrientation.Horizontal)]
+    [InlineData(RealtimePresets.SubtitleId, RealtimeTextOrientation.Vertical)]
+    [InlineData(RealtimePresets.InterfaceId, RealtimeTextOrientation.Horizontal)]
+    [InlineData(RealtimePresets.StandardId, RealtimeTextOrientation.Vertical)]
+    public void BlockDefaults_RoundTripThroughTheFile(string profile, RealtimeTextOrientation orientation)
     {
         var written = new AppSettings();
-        written.Realtime.NewBlockMode = mode;
+        written.Realtime.NewBlockProfile = profile;
         written.Realtime.TextOrientation = orientation;
 
         var json = SettingsService.Serialize(written);
-        Assert.Contains(mode.ToString(), json);
         Assert.Contains(orientation.ToString(), json);
 
         var reloaded = SettingsService.Parse(json);
-        Assert.Equal(mode, reloaded.Realtime.NewBlockMode);
+        Assert.Equal(profile, reloaded.Realtime.NewBlockProfile);
         Assert.Equal(orientation, reloaded.Realtime.TextOrientation);
     }
 
-    /// <summary>A name this build cannot read costs that field and nothing else.</summary>
+    /// <summary>A custom mode as the last one chosen survives the file with its own values.</summary>
     [Fact]
-    public void ABlockDefaultThisBuildCannotRead_OpensOnTheDefaultAndCostsNothingElse()
+    public void CustomModes_RoundTripThroughTheFile()
+    {
+        var written = new AppSettings();
+        var mine = RealtimeProfile.CreateCustom(RealtimePresets.SubtitleId, "Visual novels");
+        mine.SettleSeconds = 0.45;
+        mine.ReadTiming = RealtimePresets.TimingSettle;
+        mine.DetectorPercent = RealtimePresets.Automatic;
+        mine.MergeUnpunctuated = false;
+        written.Realtime.Profiles = [mine, RealtimeProfile.CreateCustom(RealtimePresets.InterfaceId, "Chat")];
+        written.Realtime.NewBlockProfile = mine.Id;
+
+        var reloaded = SettingsService.Parse(SettingsService.Serialize(written)).Realtime;
+
+        Assert.Equal(2, reloaded.Profiles.Count);
+        var read = reloaded.Profiles[0];
+        Assert.Equal(mine.Id, read.Id);
+        Assert.Equal("Visual novels", read.Name);
+        Assert.Equal(RealtimePresets.SubtitleId, read.BasedOn);
+        Assert.Equal(0.45, read.SettleSeconds);
+        Assert.Equal(RealtimePresets.TimingSettle, read.ReadTiming);
+        Assert.Equal(RealtimePresets.Automatic, read.DetectorPercent);
+        Assert.False(read.MergeUnpunctuated);
+        // Unset stays unset — it follows the preset rather than a copy of what the preset was.
+        Assert.Null(read.Layout);
+        Assert.Null(read.ConfidenceLevel);
+        Assert.Equal(mine.Id, reloaded.NewBlockProfileOrStandard());
+        Assert.Equal("Chat", reloaded.Profiles[1].Name);
+    }
+
+    /// <summary>
+    /// A block default naming a mode that has since been deleted opens on 標準, and so does every
+    /// block still on it.
+    /// </summary>
+    [Fact]
+    public void ADeletedMode_IsReadAsStandard()
+    {
+        var settings = SettingsService.Parse(
+            """{"Realtime":{"NewBlockProfile":"0123456789abcdef0123456789abcdef","Profiles":[]}}""");
+
+        Assert.Equal("0123456789abcdef0123456789abcdef", settings.Realtime.NewBlockProfile);
+        Assert.Equal(RealtimePresets.StandardId, settings.Realtime.NewBlockProfileOrStandard());
+        Assert.Same(ResolvedProfile.Standard, settings.Realtime.ResolveProfile(settings.Realtime.NewBlockProfile));
+    }
+
+    /// <summary>A choice this build cannot read costs that value only; the mode follows its preset there.</summary>
+    [Fact]
+    public void AModeValueThisBuildCannotRead_FollowsThePresetAndCostsNothingElse()
     {
         var settings = SettingsService.Parse(
             """
             {"ApiKey":"secret",
-             "Realtime":{"NewBlockMode":"Webtoon","TextOrientation":"Vertical","ScrimOpacity":12}}
+             "Realtime":{"TextOrientation":"Vertical","ScrimOpacity":12,
+               "Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","Layout":"webtoon","ReadTiming":"later","ClearAfterEmptyReads":3},
+                           {"Id":"b","Name":"B","BasedOn":"subtitle"}]}}
             """);
 
-        Assert.Equal(RealtimeBlockMode.Auto, settings.Realtime.NewBlockMode);
-        Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
-        Assert.Equal(12, settings.Realtime.ScrimOpacity);
+        var realtime = settings.Realtime;
+        Assert.Equal(2, realtime.Profiles.Count);
+        var resolved = realtime.ResolveProfile("a");
+        Assert.Equal(RealtimeBlockMode.Panel, resolved.Layout);
+        Assert.Equal(RealtimeReadTiming.Auto, resolved.Timing);
+        Assert.Equal(3, resolved.ClearAfterEmptyReads);
+        Assert.Equal(RealtimeTextOrientation.Vertical, realtime.TextOrientation);
+        Assert.Equal(12, realtime.ScrimOpacity);
         Assert.Equal("secret", settings.ApiKey);
+    }
+
+    /// <summary>A value of the wrong type costs the one mode it is in, not every mode the user made.</summary>
+    [Fact]
+    public void AModeThatCannotBeRead_CostsOnlyItself()
+    {
+        var settings = SettingsService.Parse(
+            """
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","MergeTendency":"lots"},
+                                     {"Id":"b","Name":"B","SettleSeconds":0.3},
+                                     42,
+                                     null]}}
+            """);
+
+        Assert.Equal(new[] { "b" }, settings.Realtime.Profiles.Select(profile => profile.Id));
+        Assert.Equal(0.3, settings.Realtime.Profiles[0].SettleSeconds);
+    }
+
+    /// <summary>
+    /// Out of range is kept as written and held to the range as the mode is read, so a later version
+    /// with a wider range reads the file as meant.
+    /// </summary>
+    [Fact]
+    public void AValueOutOfRange_IsKeptAndHeldToTheRangeWhenRead()
+    {
+        var settings = SettingsService.Parse(
+            """
+            {"Realtime":{"Profiles":[{"Id":"a","SettleSeconds":9,"ClearAfterEmptyReads":0,"DetectorPercent":20,
+                                      "IgnoreSmallPercent":300,"MergeTendency":-4,"LineSpacing":12,"ConfidenceLevel":7}]}}
+            """);
+
+        var stored = settings.Realtime.Profiles.Single();
+        Assert.Equal(9, stored.SettleSeconds);
+        Assert.Equal(0, stored.ClearAfterEmptyReads);
+
+        var filled = stored.Filled();
+        Assert.Equal(RealtimeProfile.MaxSettleSeconds, filled.SettleSeconds);
+        Assert.Equal(RealtimeProfile.MinClearAfterEmptyReads, filled.ClearAfterEmptyReads);
+        Assert.Equal(RealtimeProfile.MinDetectorPercent, filled.DetectorPercent);
+        Assert.Equal(RealtimeProfile.MaxIgnoreSmallPercent, filled.IgnoreSmallPercent);
+        Assert.Equal(RealtimeProfile.MinStep, filled.MergeTendency);
+        Assert.Equal(RealtimeProfile.MaxStep, filled.LineSpacing);
+        Assert.Equal(RealtimeProfile.MaxStep, filled.ConfidenceLevel);
+
+        var resolved = settings.Realtime.ResolveProfile("a");
+        Assert.Equal(10, resolved.SettlePolls);
+        Assert.Equal(1, resolved.ClearAfterEmptyReads);
+        Assert.Equal(0.5, resolved.DetectorFraction);
+        Assert.Equal(0.8, resolved.IgnoreSmallFraction, 6);
+    }
+
+    /// <summary>
+    /// The list keeps no mode twice, none without an id or wearing a preset's, and no more than ten;
+    /// a mode made from anything but a preset follows 標準.
+    /// </summary>
+    [Fact]
+    public void TheModeList_IsTidiedAsItIsRead()
+    {
+        var entries = string.Join(",", Enumerable.Range(0, 14).Select(i => $$"""{"Id":"m{{i}}","Name":"M{{i}}"}"""));
+        var settings = SettingsService.Parse(
+            """
+            {"Realtime":{"Profiles":[{"Id":"","Name":"no id"},{"Id":"standard","Name":"fake"},
+                                     {"Id":"x","Name":"first","BasedOn":"elsewhere"},{"Id":"x","Name":"second"},
+            """ + entries + "]}}");
+
+        var profiles = settings.Realtime.Profiles;
+        Assert.Equal(RealtimeSettings.MaxCustomProfiles, profiles.Count);
+        Assert.Equal("first", profiles[0].Name);
+        Assert.Equal(RealtimePresets.StandardId, profiles[0].BasedOn);
+        Assert.DoesNotContain(profiles, profile => RealtimePresets.IsPreset(profile.Id) || profile.Id == "");
+        Assert.Equal("m8", profiles[^1].Id);
     }
 
     /// <summary>

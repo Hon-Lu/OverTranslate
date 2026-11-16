@@ -209,12 +209,12 @@ public partial class RealtimeEditWindow : Window
     private bool _crosshairEnabled = true;
 
     /// <summary>
-    /// What the next block drawn is set to. The two trays move these as they are used — see
-    /// <see cref="BlockDefaultsChanged"/>.
+    /// What the next block drawn is set to: a mode, by id, and a direction. The two trays move these
+    /// as they are used — see <see cref="BlockDefaultsChanged"/>.
     /// </summary>
-    private RealtimeBlockMode _blockMode;
+    private string _blockProfile;
 
-    /// <inheritdoc cref="_blockMode"/>
+    /// <inheritdoc cref="_blockProfile"/>
     private RealtimeTextOrientation _textOrientation;
 
     /// <summary>
@@ -228,7 +228,7 @@ public partial class RealtimeEditWindow : Window
         IReadOnlyList<RealtimeBlockPlacement> initialBlocks,
         int maxBlocks,
         bool guidanceExpanded,
-        RealtimeBlockMode blockMode,
+        string blockProfile,
         RealtimeTextOrientation textOrientation,
         bool compareDisplay = false)
     {
@@ -238,7 +238,7 @@ public partial class RealtimeEditWindow : Window
         _initialBlocks = initialBlocks;
         _maxBlocks = maxBlocks;
         _guidanceExpanded = guidanceExpanded;
-        _blockMode = blockMode;
+        _blockProfile = blockProfile;
         _textOrientation = textOrientation;
         _compareDisplay = compareDisplay;
 
@@ -256,7 +256,7 @@ public partial class RealtimeEditWindow : Window
             // guidance answers "how do I frame this?", and that answer does not differ block by block.
             foreach (var block in _initialBlocks)
                 AddBlock(
-                    ToCanvas(block.Bounds), block.Mode, block.Orientation, _guidanceExpanded,
+                    ToCanvas(block.Bounds), block.ProfileId, block.Orientation, _guidanceExpanded,
                     notify: false,
                     block.CompareOffset is { } offset
                         ? new Vector(offset.X / _dpiX, offset.Y / _dpiY)
@@ -350,7 +350,7 @@ public partial class RealtimeEditWindow : Window
     /// same press should outlive the block, and the session records it. Both trays raise it, because
     /// the user answering one of the two questions is the same kind of event as answering the other.
     /// </remarks>
-    public event EventHandler<(RealtimeBlockMode Mode, RealtimeTextOrientation Orientation)>?
+    public event EventHandler<(string Profile, RealtimeTextOrientation Orientation)>?
         BlockDefaultsChanged;
 
     public int BlockCount => _blocks.Count;
@@ -358,7 +358,7 @@ public partial class RealtimeEditWindow : Window
     /// <summary>The current blocks in physical screen pixels, ready to be watched.</summary>
     public IReadOnlyList<RealtimeBlockPlacement> GetPhysicalBlocks() =>
         [.. _blocks.Select(block => new RealtimeBlockPlacement(
-            ToPhysical(block.Bounds), block.ModeControl.Value, block.ModeControl.TextOrientation,
+            ToPhysical(block.Bounds), block.ProfileId, block.ModeControl.TextOrientation,
             ToPhysical(block.CompareOffset), block.CompareScale, block.CompareHidden))];
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -463,8 +463,8 @@ public partial class RealtimeEditWindow : Window
         // Whatever the user last set a block to. The two answers they arrive at are about the thing
         // they are watching, and they are watching one thing — so the second block of a sitting, and
         // the first of the next one, should not make them say it again. What these start at when
-        // nobody has said anything yet is RealtimeSettings.NewBlockMode, which keeps the reasoning.
-        AddBlock(box, _blockMode, _textOrientation, _guidanceExpanded, notify: true);
+        // nobody has said anything yet is RealtimeSettings.NewBlockProfile, which keeps the reasoning.
+        AddBlock(box, _blockProfile, _textOrientation, _guidanceExpanded, notify: true);
     }
 
     // Capture lost to something else entirely (an Alt+Tab, another window taking it). The drag is
@@ -496,9 +496,26 @@ public partial class RealtimeEditWindow : Window
 
     // ── Blocks ───────────────────────────────────────────────────────────────────────────────────
 
+    // The three-segment tray stands in for a list of modes until the layer has one: each segment is
+    // a preset, shown by the layout it reads with. A custom mode shows on 自動 — its own layout is
+    // the page's to know, not this layer's — and the block keeps it until a segment is pressed.
+    private static RealtimeBlockMode SegmentFor(string profileId) => profileId switch
+    {
+        Models.RealtimePresets.SubtitleId => RealtimeBlockMode.Subtitle,
+        Models.RealtimePresets.InterfaceId => RealtimeBlockMode.Panel,
+        _ => RealtimeBlockMode.Auto,
+    };
+
+    private static string ProfileFor(RealtimeBlockMode segment) => segment switch
+    {
+        RealtimeBlockMode.Subtitle => Models.RealtimePresets.SubtitleId,
+        RealtimeBlockMode.Panel => Models.RealtimePresets.InterfaceId,
+        _ => Models.RealtimePresets.StandardId,
+    };
+
     private void AddBlock(
         Rect bounds,
-        RealtimeBlockMode mode,
+        string profileId,
         RealtimeTextOrientation orientation,
         bool guidanceExpanded,
         bool notify,
@@ -507,10 +524,11 @@ public partial class RealtimeEditWindow : Window
         bool compareHidden = false)
     {
         var visual = new BlockVisual(
-            bounds, mode, orientation, guidanceExpanded, _handleSize, _removeSize,
+            bounds, SegmentFor(profileId), orientation, guidanceExpanded, _handleSize, _removeSize,
             _modeSegmentWidth, _directionSegmentWidth, _modeHeight, _modeInset, _hintWidth,
             _removeGap, _uiScale)
         {
+            ProfileId = profileId,
             CompareOffset = compareOffset,
             CompareScale = compareScale,
             CompareHidden = compareHidden,
@@ -552,9 +570,10 @@ public partial class RealtimeEditWindow : Window
             // only that tray, so a block that is 遊戲 for its own reasons does not make 遊戲 the
             // answer for the next block just because its direction was corrected. The blocks already
             // drawn are left alone either way: correcting one says nothing about the rest.
-            if (tray == ModeSegments.BlockTray.Mode) _blockMode = visual.ModeControl.Value;
+            if (tray == ModeSegments.BlockTray.Mode)
+                _blockProfile = visual.ProfileId = ProfileFor(visual.ModeControl.Value);
             else _textOrientation = visual.ModeControl.TextOrientation;
-            BlockDefaultsChanged?.Invoke(this, (_blockMode, _textOrientation));
+            BlockDefaultsChanged?.Invoke(this, (_blockProfile, _textOrientation));
         };
         visual.ModeControl.ExpansionChanged += (_, expanded) =>
         {
@@ -1334,6 +1353,9 @@ public partial class RealtimeEditWindow : Window
 
         /// <summary>What the user says this block holds — see <see cref="RealtimeBlockMode"/>.</summary>
         public ModeSegments ModeControl { get; }
+
+        /// <summary>The mode this block is on, by id — see <see cref="RealtimeBlockPlacement.ProfileId"/>.</summary>
+        public string ProfileId { get; set; } = Models.RealtimePresets.StandardId;
 
         private static ControlTemplate BuildFrameTemplate(double uiScale)
         {
