@@ -215,20 +215,25 @@ public class RealtimeSettings
     /// this every one of them begins on the same two answers however many times the user has
     /// corrected them.</para>
     ///
-    /// <para>The defaults stay what the draw site used to hard-code, so a settings file written
-    /// before these existed reads as the behaviour it had. 字幕 because nearly every block is one,
-    /// and the other mode's fraction is the first fallback either way — a panel left on 字幕 costs
-    /// one extra inference rather than a block that reads nothing. 橫排 because all but a handful of
-    /// blocks are, and a vertical block left on it reads as a stack of one-character lines, which is
-    /// visibly wrong rather than quietly wrong.</para>
+    /// <para>自動 for the mode: the block works out, group by group, which of the two its text is —
+    /// see <see cref="Services.Realtime.RealtimeAutoLayout"/> — and the two explicit modes are there
+    /// for the screen it gets wrong. 橫排 for the direction, because all but a handful of blocks are,
+    /// and a vertical block left on it reads as a stack of one-character lines, which is visibly
+    /// wrong rather than quietly wrong.</para>
+    ///
+    /// <para>The mode is written under a name of its own, not the <c>BlockMode</c> every file up to
+    /// 2.12.0 holds. That key was 字幕 in nearly all of them only because 字幕 was the default and
+    /// the one alternative, so reading it would leave everyone who never touched the tray on a mode
+    /// they did not choose, with 自動 one press away and unseen. An old file's answer is not read;
+    /// what is chosen from here on is kept as before.</para>
     ///
     /// <para>Deliberately not on the settings page, like <see cref="GuidanceExpanded"/>: this is a
     /// state the two trays set by being used, not a preference anyone would go looking for.</para>
     /// </remarks>
-    public Services.Realtime.RealtimeBlockMode BlockMode { get; set; } =
-        Services.Realtime.RealtimeBlockMode.Subtitle;
+    public Services.Realtime.RealtimeBlockMode NewBlockMode { get; set; } =
+        Services.Realtime.RealtimeBlockMode.Auto;
 
-    /// <inheritdoc cref="BlockMode"/>
+    /// <inheritdoc cref="NewBlockMode"/>
     public Services.Realtime.RealtimeTextOrientation TextOrientation { get; set; } =
         Services.Realtime.RealtimeTextOrientation.Horizontal;
 

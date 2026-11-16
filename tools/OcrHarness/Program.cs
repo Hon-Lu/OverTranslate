@@ -86,6 +86,9 @@ if (args.Length > 0 && args[0] == "--size-session")
 if (args.Length > 0 && args[0] == "--dialogue-probe")
     return await DialogueProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--auto-probe")
+    return await AutoModeProbe.Run(args.Skip(1).ToArray());
+
 if (args.Length > 0 && args[0] == "--leading-edge-probe")
     return await LeadingEdgeProbe.Run(args.Skip(1).ToArray());
 

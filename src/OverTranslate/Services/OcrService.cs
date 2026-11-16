@@ -93,6 +93,16 @@ public record OcrTextBlock(
     /// "not a column" is the thing it means.</para>
     /// </remarks>
     public bool RunsAcross { get; init; }
+
+    /// <summary>
+    /// What a live block in 自動 took this group for: a passage read straight through, or one of a
+    /// set of separate items — see <see cref="Realtime.RealtimeAutoLayout"/>.
+    /// </summary>
+    /// <remarks>
+    /// Null everywhere else. A block the user set to one mode reads every group as that mode, and
+    /// the screenshot flow has no such question to answer.
+    /// </remarks>
+    public Realtime.RealtimeBlockMode? ReadAs { get; init; }
 }
 
 public class OcrService : IDisposable
@@ -284,6 +294,13 @@ public class OcrService : IDisposable
         Realtime.RealtimeBlockMode mode, GroupingTrace? trace,
         List<OcrTextBlockGrouper.NextLineDecision>? decisions)
     {
+        // 自動 runs both groupers and keeps, cluster by cluster, the one its text calls for. Both
+        // are given what the dialogue grouper is given below: a box thrown across the whole block
+        // is thrown out by the session whichever mode read it, and taking it out first is what
+        // keeps it from being joined to a real line on the way.
+        if (mode == Realtime.RealtimeBlockMode.Auto)
+            return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight));
+
         var filtered = RejectUnconvincingBlocks(blocks);
         if (mode != Realtime.RealtimeBlockMode.Subtitle)
             return OcrTextBlockGrouper.Group(filtered, GroupingProfile.Realtime, decisions, trace);
@@ -296,6 +313,14 @@ public class OcrService : IDisposable
         return Realtime.DialogueTextGrouper.Group(
             Ocr.HorizontalRubyLines.Drop(filtered), trace, decisions);
     }
+
+    /// <summary>
+    /// A live frame's detected lines with the two kinds of scenery taken out: readings the
+    /// recogniser was not sure of, and boxes thrown across the whole block.
+    /// </summary>
+    internal static List<OcrTextBlock> FilterForRealtime(List<OcrTextBlock> blocks, double frameHeight) =>
+        [.. RejectUnconvincingBlocks(blocks)
+            .Where(b => !Realtime.CollapsedDetection.IsCollapsed(b.Bounds.Height, frameHeight, b.Text))];
 
     // Scenery the recogniser was not sure about. Only on this path: it is the realtime one, where
     // the floor was measured, and where the next frame is a poll away so losing a doubtful reading

@@ -318,23 +318,37 @@ public class SettingsParsingTests
         Assert.Equal("secret", settings.ApiKey);
     }
 
-    /// <summary>
-    /// A settings file written before the edit layer remembered its trays opens the way it behaved.
-    /// </summary>
-    /// <remarks>
-    /// The two values were hard-coded at the draw site until they moved here, so the defaults are
-    /// not a fresh opinion — they are the behaviour every existing file already has, and a file that
-    /// has never said otherwise has to keep getting it.
-    /// </remarks>
+    /// <summary>A settings file that has never said draws its blocks on 自動, written across.</summary>
     [Fact]
-    public void ASettingsFileWithoutBlockDefaults_DrawsBlocksTheWayTheDrawSiteUsedTo()
+    public void ASettingsFileWithoutBlockDefaults_DrawsBlocksOnAuto()
     {
         var settings = SettingsService.Parse("{}");
 
-        Assert.Equal(RealtimeBlockMode.Subtitle, settings.Realtime.BlockMode);
+        Assert.Equal(RealtimeBlockMode.Auto, settings.Realtime.NewBlockMode);
         Assert.Equal(RealtimeTextOrientation.Horizontal, settings.Realtime.TextOrientation);
-        Assert.Equal(RealtimeBlockMode.Subtitle, new RealtimeSettings().BlockMode);
+        Assert.Equal(RealtimeBlockMode.Auto, new RealtimeSettings().NewBlockMode);
         Assert.Equal(RealtimeTextOrientation.Horizontal, new RealtimeSettings().TextOrientation);
+    }
+
+    /// <summary>
+    /// The mode a file from 2.12.0 or earlier holds is not carried over: it opens on 自動.
+    /// </summary>
+    /// <remarks>
+    /// That file says 字幕 for nearly everyone, and only because 字幕 was the default of the two
+    /// there were. Read as a choice, it would keep every one of them off the mode that is now the
+    /// one to start from — see <see cref="RealtimeSettings.NewBlockMode"/>. The direction beside it
+    /// was a choice, and is kept.
+    /// </remarks>
+    [Theory]
+    [InlineData("Subtitle")]
+    [InlineData("Panel")]
+    public void TheModeAnOlderFileHolds_IsNotReadAsAChoice(string mode)
+    {
+        var settings = SettingsService.Parse(
+            "{\"Realtime\":{\"BlockMode\":\"" + mode + "\",\"TextOrientation\":\"Vertical\"}}");
+
+        Assert.Equal(RealtimeBlockMode.Auto, settings.Realtime.NewBlockMode);
+        Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
     }
 
     /// <summary>
@@ -350,11 +364,12 @@ public class SettingsParsingTests
     [InlineData(RealtimeBlockMode.Subtitle, RealtimeTextOrientation.Vertical)]
     [InlineData(RealtimeBlockMode.Panel, RealtimeTextOrientation.Horizontal)]
     [InlineData(RealtimeBlockMode.Panel, RealtimeTextOrientation.Vertical)]
+    [InlineData(RealtimeBlockMode.Auto, RealtimeTextOrientation.Horizontal)]
     public void BlockDefaults_RoundTripThroughTheFileByName(
         RealtimeBlockMode mode, RealtimeTextOrientation orientation)
     {
         var written = new AppSettings();
-        written.Realtime.BlockMode = mode;
+        written.Realtime.NewBlockMode = mode;
         written.Realtime.TextOrientation = orientation;
 
         var json = SettingsService.Serialize(written);
@@ -362,7 +377,7 @@ public class SettingsParsingTests
         Assert.Contains(orientation.ToString(), json);
 
         var reloaded = SettingsService.Parse(json);
-        Assert.Equal(mode, reloaded.Realtime.BlockMode);
+        Assert.Equal(mode, reloaded.Realtime.NewBlockMode);
         Assert.Equal(orientation, reloaded.Realtime.TextOrientation);
     }
 
@@ -373,10 +388,10 @@ public class SettingsParsingTests
         var settings = SettingsService.Parse(
             """
             {"ApiKey":"secret",
-             "Realtime":{"BlockMode":"Webtoon","TextOrientation":"Vertical","ScrimOpacity":12}}
+             "Realtime":{"NewBlockMode":"Webtoon","TextOrientation":"Vertical","ScrimOpacity":12}}
             """);
 
-        Assert.Equal(RealtimeBlockMode.Subtitle, settings.Realtime.BlockMode);
+        Assert.Equal(RealtimeBlockMode.Auto, settings.Realtime.NewBlockMode);
         Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
         Assert.Equal(12, settings.Realtime.ScrimOpacity);
         Assert.Equal("secret", settings.ApiKey);

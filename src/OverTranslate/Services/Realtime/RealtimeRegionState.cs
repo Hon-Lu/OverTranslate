@@ -276,6 +276,28 @@ internal sealed class RealtimeRegionState
     public bool IsWatchingText => _watchBands.Count > 0;
 
     /// <summary>
+    /// What a block in 自動 last read as: 字幕 while its latest reading held a passage, 面板 once
+    /// one held none.
+    /// </summary>
+    /// <remarks>
+    /// <para>自動 answers group by group, but two things are decided for the block as a whole and
+    /// before the frame is read: what size the detector is handed, and whether a change is read at
+    /// once and then settled or left a poll to finish. Both follow what the block was last seen to
+    /// hold, which is the best statement there is about what it holds now — a dialogue box between
+    /// two lines is still a dialogue box.</para>
+    ///
+    /// <para>Kept through an empty reading, for that reason, and through <see cref="Invalidate"/>.
+    /// Starts on 字幕: its detector size is the more accurate of the two on either kind of text
+    /// (see <see cref="RealtimeDetectorSize.StripFraction"/>), so the first reading, which is the
+    /// one this is decided from, is the careful one.</para>
+    /// </remarks>
+    public RealtimeBlockMode AutoReadsAs { get; set; } = RealtimeBlockMode.Subtitle;
+
+    /// <summary>The mode a block is read as right now: its own, or what 自動 last made of it.</summary>
+    public RealtimeBlockMode ReadsAs(RealtimeBlockMode mode) =>
+        mode == RealtimeBlockMode.Auto ? AutoReadsAs : mode;
+
+    /// <summary>
     /// Whether this pass is reading a picture the last pass already read.
     /// </summary>
     /// <remarks>

@@ -38,6 +38,11 @@ public record TranslatedBlock(
     public bool RunsAcross { get; init; }
 
     /// <summary>
+    /// Carried over from the block this was read from — see <see cref="OcrTextBlock.ReadAs"/>.
+    /// </summary>
+    public Realtime.RealtimeBlockMode? ReadAs { get; init; }
+
+    /// <summary>
     /// Carried over from the block this was read from — see <see cref="OcrTextBlock.FontGlyphHeight"/>.
     /// </summary>
     public double? FontGlyphHeight { get; init; }

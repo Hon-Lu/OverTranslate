@@ -357,7 +357,10 @@ internal static class RealtimeDetectorSize
 
         // The mode decides where to start; the other mode's fraction is then the first thing to try
         // if that start read nothing.
-        var isStrip = mode == RealtimeBlockMode.Subtitle;
+        // 自動 is asked as whichever of the two the block last read as — see
+        // RealtimeRegionState.AutoReadsAs — and anything else that passes it gets the strip's
+        // fraction, which is the more accurate of the two on either kind of text.
+        var isStrip = mode != RealtimeBlockMode.Panel;
         var chosen = isStrip ? StripFraction : PanelFraction;
         var other = isStrip ? PanelFraction : StripFraction;
 

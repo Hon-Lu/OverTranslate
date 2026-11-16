@@ -758,7 +758,7 @@ internal sealed class RealtimeSessionController
         var edit = new RealtimeEditWindow(
             request.ScreenBounds, _blocks, Models.RealtimeSettings.MaxBlockCount,
             settings.Current.Realtime.GuidanceExpanded,
-            settings.Current.Realtime.BlockMode,
+            settings.Current.Realtime.NewBlockMode,
             settings.Current.Realtime.TextOrientation,
             _compareDisplay);
         edit.BlocksChanged += (_, _) =>
@@ -779,9 +779,9 @@ internal sealed class RealtimeSessionController
         edit.BlockDefaultsChanged += (_, defaults) =>
         {
             var realtime = settings.Current.Realtime;
-            if (realtime.BlockMode == defaults.Mode &&
+            if (realtime.NewBlockMode == defaults.Mode &&
                 realtime.TextOrientation == defaults.Orientation) return;
-            realtime.BlockMode = defaults.Mode;
+            realtime.NewBlockMode = defaults.Mode;
             realtime.TextOrientation = defaults.Orientation;
             settings.Save();
         };

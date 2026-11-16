@@ -617,7 +617,7 @@ public sealed class RealtimeTranslationSession
                 step.Set("examine");
                 var reason = demanded
                     ? RealtimeReadReason.TextChanged
-                    : state.Examine(Capture, region.Mode == RealtimeBlockMode.Subtitle, CaptureEnds);
+                    : state.Examine(Capture, state.ReadsAs(region.Mode) == RealtimeBlockMode.Subtitle, CaptureEnds);
                 // Asked for by the screen rather than by the pixels: a page scrolled away and back
                 // is the picture that was read, and its translations are gone all the same.
                 if (redraw && reason == RealtimeReadReason.Nothing) reason = RealtimeReadReason.TextChanged;
@@ -868,7 +868,7 @@ public sealed class RealtimeTranslationSession
         // Try, not wait: a queued pass would be reading a frame that has already been replaced, and
         // would hold this region's loop shut while it did. Skipping costs one poll.
         var (primarySize, fallbackSizes) =
-            RealtimeDetectorSize.For(frame.Width, frame.Height, region.Mode, region.Orientation);
+            RealtimeDetectorSize.For(frame.Width, frame.Height, state.ReadsAs(region.Mode), region.Orientation);
 
         // The confirmation pass over a still page of columns, spent on a DIFFERENT detector size
         // instead of on the same one. See Ocr.VerticalSecondLook: the detector's answer moves with
@@ -1032,7 +1032,14 @@ public sealed class RealtimeTranslationSession
         // well it was read, is still compared — the words did not change by being scrolled.
         if (redraw) state.Dialogue.ForgetPlacement();
 
-        var merged = region.Mode == RealtimeBlockMode.Subtitle
+        // What 自動 made of this frame, before anything is decided on it: the settle read a passage
+        // gets belongs to the frame that holds one, not to the one before it.
+        if (region.Mode == RealtimeBlockMode.Auto && region.Orientation == RealtimeTextOrientation.Horizontal)
+            state.AutoReadsAs = recognized.Any(block => block.ReadAs == RealtimeBlockMode.Subtitle)
+                ? RealtimeBlockMode.Subtitle
+                : RealtimeBlockMode.Panel;
+
+        var merged = state.ReadsAs(region.Mode) == RealtimeBlockMode.Subtitle
             ? state.Dialogue.Merge(state.RenderedLines, recognized)
             : state.Dialogue.MergePanel(state.RenderedLines, recognized);
         var shownBefore = state.RenderedText.Length;
@@ -1342,6 +1349,7 @@ public sealed class RealtimeTranslationSession
         new(block.Text, text, block.Bounds, block.SourceLineBounds, block.RenderGlyphHeight)
         {
             RunsAcross = block.RunsAcross,
+            ReadAs = block.ReadAs,
             FontGlyphHeight = block.FontGlyphHeight,
             Tilt = block.Tilt,
             Untranslated = untranslated,

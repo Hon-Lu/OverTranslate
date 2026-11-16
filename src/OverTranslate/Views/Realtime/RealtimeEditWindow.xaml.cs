@@ -463,7 +463,7 @@ public partial class RealtimeEditWindow : Window
         // Whatever the user last set a block to. The two answers they arrive at are about the thing
         // they are watching, and they are watching one thing — so the second block of a sitting, and
         // the first of the next one, should not make them say it again. What these start at when
-        // nobody has said anything yet is RealtimeSettings.BlockMode, which keeps the reasoning.
+        // nobody has said anything yet is RealtimeSettings.NewBlockMode, which keeps the reasoning.
         AddBlock(box, _blockMode, _textOrientation, _guidanceExpanded, notify: true);
     }
 
@@ -1591,8 +1591,18 @@ public partial class RealtimeEditWindow : Window
         /// recogniser then does with it: the reasons live in <see cref="RealtimeDetectorSize"/> and
         /// <see cref="CollapsedDetection"/>, and neither is something to explain over a paused game.
         /// </summary>
+        private static string AutoHint =>
+            LocalizationService.Get("S.Realtime.ModeAutoGuidance");
+
         private static string SubtitleHint =>
             LocalizationService.Get("S.Realtime.ModeSubtitleGuidance");
+
+        /// <summary>
+        /// The modes in the order the tray shows them: 自動 first, as the one to start from, and the
+        /// two it chooses between after it, for the screen it reads wrongly.
+        /// </summary>
+        private static readonly RealtimeBlockMode[] Modes =
+            [RealtimeBlockMode.Auto, RealtimeBlockMode.Subtitle, RealtimeBlockMode.Panel];
 
         private static string PanelHint =>
             LocalizationService.Get("S.Realtime.ModeGameUiGuidance");
@@ -1659,12 +1669,13 @@ public partial class RealtimeEditWindow : Window
 
             _labels =
             [
+                BuildLabel(LocalizationService.Get("S.Realtime.ModeAuto"), uiScale),
                 BuildLabel(LocalizationService.Get("S.Realtime.ModeSubtitle"), uiScale),
                 BuildLabel(LocalizationService.Get("S.Realtime.ModeGameUi"), uiScale),
             ];
 
             // The base width suits labels of a word or two; a locale that needs more room gets it,
-            // and both segments take the wider figure so the halves stay equal.
+            // and every segment takes the widest figure so they stay equal.
             foreach (var label in _labels)
                 label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
 
@@ -1673,7 +1684,7 @@ public partial class RealtimeEditWindow : Window
                 _labels.Max(label => label.DesiredSize.Width) + BaseModeLabelPadding * 2 * uiScale);
             _segmentWidth = segmentWidth;
 
-            var trackWidth = segmentWidth * 2 + inset * 2;
+            var trackWidth = segmentWidth * Modes.Length + inset * 2;
             var radius = height / 2;
 
             var pill = new Border
@@ -1688,18 +1699,21 @@ public partial class RealtimeEditWindow : Window
                 RenderTransform = _pillOffset,
             };
 
-            // Rounded on the outer end only, so a press on either half stays inside the capsule.
+            // Rounded on the outer ends only, so a press on any segment stays inside the capsule.
             _highlights =
             [
                 BuildHighlight(new CornerRadius(radius, 0, 0, radius), inset),
+                BuildHighlight(new CornerRadius(0), inset),
                 BuildHighlight(new CornerRadius(0, radius, radius, 0), inset),
             ];
 
             _segments =
             [
                 BuildSegment(_labels[0], _highlights[0], segmentWidth,
-                    LocalizationService.Get("S.Realtime.ModeSubtitleSummary")),
+                    LocalizationService.Get("S.Realtime.ModeAutoSummary")),
                 BuildSegment(_labels[1], _highlights[1], segmentWidth,
+                    LocalizationService.Get("S.Realtime.ModeSubtitleSummary")),
+                BuildSegment(_labels[2], _highlights[2], segmentWidth,
                     LocalizationService.Get("S.Realtime.ModeGameUiSummary")),
             ];
 
@@ -1868,10 +1882,10 @@ public partial class RealtimeEditWindow : Window
             header.Children.Add(Restore);
             _restoreWidth = height + gap;
 
-            _hints = [BuildHint(SubtitleHint, uiScale), BuildHint(PanelHint, uiScale)];
+            _hints = [BuildHint(AutoHint, uiScale), BuildHint(SubtitleHint, uiScale), BuildHint(PanelHint, uiScale)];
 
-            // Both sentences are laid out at once and only one is opaque, so the plate is as tall as
-            // the longer of them from the start and choosing a mode cannot change its size.
+            // Every sentence is laid out at once and only one is opaque, so the plate is as tall as
+            // the longest of them from the start and choosing a mode cannot change its size.
             var hintContent = new Grid
             {
                 Margin = new Thickness(14 * uiScale, 8 * uiScale, 14 * uiScale, 8 * uiScale),
@@ -1912,7 +1926,7 @@ public partial class RealtimeEditWindow : Window
                     _pressedSegment = -1;
                     segment.ReleaseMouseCapture();
                     SetPressed(picked, false);
-                    if (commit) Select(picked == 0 ? RealtimeBlockMode.Subtitle : RealtimeBlockMode.Panel);
+                    if (commit) Select(Modes[picked]);
                 };
 
                 // Dragged off and back on again while held: the press follows the pointer, so the
@@ -2085,7 +2099,7 @@ public partial class RealtimeEditWindow : Window
 
         private void ApplySelection(bool animate)
         {
-            var selected = Value == RealtimeBlockMode.Subtitle ? 0 : 1;
+            var selected = Math.Max(0, Array.IndexOf(Modes, Value));
 
             for (var index = 0; index < _labels.Length; index++)
                 _labels[index].Foreground = index == selected ? RemoveForeground : ModeIdleForeground;

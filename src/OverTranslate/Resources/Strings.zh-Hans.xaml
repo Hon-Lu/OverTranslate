@@ -423,6 +423,9 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">移除此区块</sys:String>
 
     <!-- Block mode picker -->
+    <sys:String x:Key="S.Realtime.ModeAuto">自动</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoSummary">依画面内容自动判断——对话整段翻译，菜单与界面逐项翻译</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoGuidance">适合大多数情境；依画面内容自动区分连续阅读的文字与零散的界面文字。若结果不如预期，建议改用右侧的模式。</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫画</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / 界面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段连续的话，整段换成下一段——视频字幕、剧情对话、漫画对白</sys:String>
