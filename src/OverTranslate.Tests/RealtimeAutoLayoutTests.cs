@@ -139,6 +139,38 @@ public class RealtimeAutoLayoutTests
         Assert.Equal(2, Auto(busy).Count(group => group.Text.Contains("AH-") || group.Text.Contains("NOTHINGI")));
     }
 
+    /// <summary>
+    /// A menu set as tightly as lettering, framed on its own, with nothing but its capitals to say
+    /// it is not a sentence: every row starts afresh.
+    /// </summary>
+    [Fact]
+    public void AMenuSetSolidIsStillItsEntries()
+    {
+        var groups = Auto(
+        [
+            Block("New Game", 420, 30, 140, 40),
+            Block("Continue", 420, 78, 130, 40),
+            Block("Game Options", 420, 126, 200, 40),
+            Block("Quit to Title", 420, 174, 190, 40),
+        ]);
+
+        Assert.Equal(4, groups.Count);
+        Assert.All(groups, group => Assert.Equal(RealtimeBlockMode.Panel, group.ReadAs));
+    }
+
+    /// <summary>A sentence wrapped without punctuation carries on in lower case, and is one passage.</summary>
+    [Fact]
+    public void AnUnpunctuatedSentenceAcrossTwoRowsIsOnePassage()
+    {
+        var group = Assert.Single(Auto(
+        [
+            Block("I heard a bunch of", 400, 60, 330, 40),
+            Block("experts are coming", 400, 104, 340, 40),
+        ]));
+
+        Assert.Equal(RealtimeBlockMode.Subtitle, group.ReadAs);
+    }
+
     /// <summary>A frame with no passage in it is the panel grouper's own answer, in its order.</summary>
     [Fact]
     public void AFrameWithoutAPassageIsThePanelGroupersAnswer()

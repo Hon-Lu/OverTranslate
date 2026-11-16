@@ -185,9 +185,14 @@ internal static class RealtimeAutoLayout
     // Rows with no punctuation that are a passage all the same — see IsPassage. Short rows only: a
     // long row that wrapped shows it, and the panel grouper joins it on that evidence; what it
     // cannot see is a balloon, whose lines end where the balloon does.
+    //
+    // And never rows that each open on a capital in text that has small letters too. A sentence
+    // wrapped across rows carries on in lower case; a menu set solid — New Game, Continue, Game
+    // Options — starts every row afresh. Lettering is capitals throughout and is not touched by
+    // this. Found on a live stage, where exactly that menu was drawn as one paragraph.
     private static bool Lettering(Shape shape, int zones) =>
         zones <= LetteringZones && shape.MaxAdvance <= PassageLeading && shape.Wordy &&
-        shape.WidestAspect <= LetteringAspect;
+        shape.WidestAspect <= LetteringAspect && !shape.TitledRows;
 
     // Against the rest of the frame, not the whole of it: two lines of dialogue are half the
     // text on a screen that holds a name plate and three buttons besides, and would set the
@@ -213,10 +218,12 @@ internal static class RealtimeAutoLayout
         bool sparse = zones <= SparseZones;
         bool standsOut = StandsOutOf(group, shape, frame);
 
-        // Rows both groupers joined, or the panel grouper alone: a paragraph that wrapped. Read as
-        // a passage on the terms any other is.
+        // Rows the panel grouper joined itself: a paragraph that showed it wrapped. Nothing is
+        // being joined on this answer, only drawn, so punctuation is enough wherever it is — on a
+        // live stage a dialogue box 1.2 times its interface's size was joined rightly and then set
+        // row by row, because it did not stand out by the figure a join is held to.
         if (shape.Rows > 1)
-            return shape.Marks > 0 && (sparse || standsOut) || Lettering(shape, zones)
+            return shape.Marks > 0 || Lettering(shape, zones)
                 ? RealtimeBlockMode.Subtitle
                 : RealtimeBlockMode.Panel;
 
@@ -306,9 +313,10 @@ internal static class RealtimeAutoLayout
     /// <param name="MaxAdvance">The widest step from one row's centre to the next, in line heights.</param>
     /// <param name="Marks">Sentence punctuation in it — see <see cref="CountMarks"/>.</param>
     /// <param name="Wordy">Whether each row holds more than a word: prose, where a label is a word or two.</param>
+    /// <param name="TitledRows">Whether every row opens on a capital although the text has small letters: a list of titles.</param>
     internal readonly record struct Shape(
         int Rows, int MaxPerRow, double MaxAdvance, double MinAdvance, double Height,
-        double CharactersPerRow, int LongestRow, int Marks, bool Wordy, double WidestAspect);
+        double CharactersPerRow, int LongestRow, int Marks, bool Wordy, double WidestAspect, bool TitledRows);
 
     internal static Shape Describe(IReadOnlyList<OcrTextBlock> members)
     {
@@ -338,16 +346,20 @@ internal static class RealtimeAutoLayout
             .ToList();
         int solid = texts.Sum(text => text.Count(c => !char.IsWhiteSpace(c)));
         int words = texts.Sum(text => text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Count(word => word.Any(char.IsLetter)));
-        int ideographs = texts.Sum(text => text.Count(IsCjk));
+        int ideographs = texts.Sum(text => text.Count(IsUnspaced));
+        // Six to a row for writing without spaces: a menu's entries run two to five characters.
+        // Korean is counted in words, like anything else written with spaces.
         bool wordy = ideographs * 2 >= solid
-            ? ideographs >= 8 && ideographs >= rows.Count * 4
+            ? ideographs >= 12 && ideographs >= rows.Count * 6
             : words >= 3 && words * 2 >= rows.Count * 3;
+        bool titled = rows.Count > 1 && texts.Any(text => text.Any(char.IsLower)) &&
+            texts.All(text => text.FirstOrDefault(char.IsLetter) is var first && char.IsUpper(first));
 
         return new Shape(
             rows.Count, rows.Max(row => row.Count), maxAdvance, minAdvance, height,
             solid / (double)rows.Count, texts.Max(text => text.Count(c => !char.IsWhiteSpace(c))),
             texts.Sum(CountMarks), wordy,
-            spans.Max(span => span.Width) / Math.Max(1, height));
+            spans.Max(span => span.Width) / Math.Max(1, height), titled);
     }
 
     /// <summary>
@@ -390,6 +402,9 @@ internal static class RealtimeAutoLayout
 
     private static bool IsCjk(char c) =>
         c is >= '぀' and <= 'ヿ' or >= '一' and <= '鿿' or >= '가' and <= '힣';
+
+    // Kana and Han: writing set without spaces, where a word count says nothing.
+    private static bool IsUnspaced(char c) => c is >= '぀' and <= 'ヿ' or >= '一' and <= '鿿';
 
     private static bool SameRow(Rect a, Rect b) =>
         Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top) >= Math.Min(a.Height, b.Height) * 0.6;
