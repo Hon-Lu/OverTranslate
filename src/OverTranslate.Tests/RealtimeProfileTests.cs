@@ -387,6 +387,51 @@ public class RealtimeProfileTests
                 OcrService.GroupRealtime([.. blocks], 400, ResolvedProfile.ForLayout(mode)).Select(b => (b.Text, b.Bounds)));
     }
 
+    /// <summary>
+    /// Every value at both ends of its range, alone and all together, groups every kind of frame
+    /// without throwing. The same sweep over the whole capture corpus is OcrHarness --auto-probe
+    /// extremes.
+    /// </summary>
+    [Fact]
+    public void EveryValueAtEitherEnd_GroupsAnyFrame()
+    {
+        var variants = new List<RealtimeProfile>();
+        foreach (var layout in new[] { RealtimePresets.LayoutAuto, RealtimePresets.LayoutPassage, RealtimePresets.LayoutItems })
+            foreach (var end in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
+            {
+                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, MergeTendency = end });
+                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, LineSpacing = end });
+                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, ConfidenceLevel = end });
+                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, MergeUnpunctuated = end == RealtimeProfile.MinStep });
+                variants.Add(new RealtimeProfile
+                {
+                    Id = "m", Layout = layout, IgnoreSmallPercent = end == RealtimeProfile.MinStep ? 0 : RealtimeProfile.MaxIgnoreSmallPercent,
+                });
+                variants.Add(new RealtimeProfile
+                {
+                    Id = "m", Layout = layout, MergeTendency = end, LineSpacing = end,
+                    ConfidenceLevel = RealtimeProfile.MaxStep + RealtimeProfile.MinStep - end,
+                    IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent, MergeUnpunctuated = false,
+                });
+            }
+
+        List<OcrTextBlock>[] frames =
+        [
+            [],
+            [Line("Hi", 0, 30)],
+            [Line("ふりがな", 0, 10), Line("今日はいい天気ですね。", 12, 40), Line("明日も", 56, 40), Line("NEW GAME", 140, 24),
+             Line("CONTINUE", 170, 24), Line("OPTIONS", 200, 24), Line("Lv.12 HP 300/300", 260, 18) with { Confidence = 0.6 },
+             Line("#", 300, 380)],
+        ];
+
+        foreach (var stored in variants)
+        {
+            var profile = ResolvedProfile.Resolve(stored);
+            foreach (var frame in frames)
+                OcrService.GroupRealtime([.. frame], 400, profile);
+        }
+    }
+
     // ── 譯文保留, 等文字停下 ──
 
     [Fact]

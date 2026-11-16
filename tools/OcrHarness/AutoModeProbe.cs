@@ -2,6 +2,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Realtime;
@@ -17,8 +18,17 @@ using OverTranslate.Services.Realtime;
 /// size the labelled mode would have used; an M image is read at both.
 /// <c>--auto-probe replay cache.json report.txt</c> — no OCR, so a rule can be changed and judged
 /// in seconds. Beside the report it writes <c>report.extras.tsv</c>, one line for every group the
-/// two groupers disagreed over, and <c>report.groups.txt</c>, 自動's own answer per image — the
-/// file to diff between two builds.
+/// two groupers disagreed over, <c>report.groups.txt</c>, 自動's own answer per image — the
+/// file to diff between two builds — and <c>report.modes.txt</c>, the 字幕 and 面板 groupers'
+/// answers with their boxes.
+/// <c>--auto-probe replay cache.json report.txt --profile mode.json</c> — the same, grouped with a
+/// mode's values instead of 標準's. The file is one mode as the settings file keeps a custom one
+/// (<see cref="RealtimeProfile"/>): only the values it sets differ from its BasedOn preset. 自動 reads
+/// with the mode's own values; the 字幕 and 面板 columns are the same values with 分行處理 set to
+/// 整段 and 逐項. Only the grouping values can be replayed: timing, 譯文保留 and 辨識解析度 act
+/// between frames or before recognition, which the cache does not hold.
+/// <c>--auto-probe extremes cache.json out-dir</c> — every value at both ends of its range, one
+/// replay each, into out-dir; fails if any of them throws.
 /// </remarks>
 internal static class AutoModeProbe
 {
@@ -28,7 +38,9 @@ internal static class AutoModeProbe
 
     internal static async Task<int> Run(string[] args)
     {
-        if (args.Length < 3) throw new ArgumentException("--auto-probe capture cache.json @list | replay cache.json report.txt");
+        if (args.Length < 3)
+            throw new ArgumentException(
+                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | extremes cache.json out-dir");
         if (args[0] == "capture")
         {
             using var engine = new OnnxOcrEngine();
@@ -58,16 +70,122 @@ internal static class AutoModeProbe
             return 0;
         }
 
+        var cache = JsonSerializer.Deserialize<Capture[]>(File.ReadAllText(args[1]))!;
+        if (args[0] == "extremes") return Extremes(cache, args[2]);
+
+        var profile = ResolvedProfile.Standard;
+        int at = Array.IndexOf(args, "--profile");
+        if (at > 0)
+        {
+            if (at + 1 >= args.Length) throw new ArgumentException("--profile needs a file");
+            profile = Load(args[at + 1]);
+        }
+        Console.WriteLine(profile.Describe());
+        Console.Write(Replay(cache, profile, args[2]));
+        return 0;
+    }
+
+    /// <summary>A mode as the settings file keeps a custom one, resolved the way a session would.</summary>
+    internal static ResolvedProfile Load(string path)
+    {
+        var stored = JsonSerializer.Deserialize<RealtimeProfile>(File.ReadAllText(path))
+            ?? throw new ArgumentException($"{path} holds no mode");
+        if (string.IsNullOrWhiteSpace(stored.Id)) stored.Id = Path.GetFileNameWithoutExtension(path);
+        return ResolvedProfile.Resolve(stored);
+    }
+
+    // Each value at both ends of its range, alone, then the combinations nobody has run: every
+    // grouping value at its loosest, and at its tightest. A throw anywhere fails the run.
+    private static int Extremes(Capture[] cache, string outDir)
+    {
+        Directory.CreateDirectory(outDir);
+        var cases = new List<(string Name, RealtimeProfile Stored)>();
+        void Add(string name, Action<RealtimeProfile> set)
+        {
+            var stored = new RealtimeProfile { Id = name };
+            set(stored);
+            cases.Add((name, stored));
+        }
+
+        foreach (var layout in new[] { RealtimePresets.LayoutAuto, RealtimePresets.LayoutPassage, RealtimePresets.LayoutItems })
+            Add($"layout-{layout}", p => p.Layout = layout);
+        Add("unpunctuated-off", p => p.MergeUnpunctuated = false);
+        foreach (var step in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
+        {
+            Add($"tendency-{step}", p => p.MergeTendency = step);
+            Add($"spacing-{step}", p => p.LineSpacing = step);
+            Add($"confidence-{step}", p => p.ConfidenceLevel = step);
+        }
+        Add("timing-confirm", p => p.ReadTiming = RealtimePresets.TimingConfirm);
+        Add("timing-settle", p => p.ReadTiming = RealtimePresets.TimingSettle);
+        Add("settle-0", p => p.SettleSeconds = 0);
+        Add($"settle-max", p => p.SettleSeconds = RealtimeProfile.MaxSettleSeconds);
+        Add("clear-min", p => p.ClearAfterEmptyReads = RealtimeProfile.MinClearAfterEmptyReads);
+        Add("clear-max", p => p.ClearAfterEmptyReads = RealtimeProfile.MaxClearAfterEmptyReads);
+        Add("detector-min", p => p.DetectorPercent = RealtimeProfile.MinDetectorPercent);
+        Add("detector-max", p => p.DetectorPercent = RealtimeProfile.MaxDetectorPercent);
+        Add("small-max", p => p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent);
+        foreach (var layout in new[] { RealtimePresets.LayoutAuto, RealtimePresets.LayoutPassage, RealtimePresets.LayoutItems })
+        {
+            Add($"loosest-{layout}", p =>
+            {
+                p.Layout = layout;
+                p.MergeTendency = RealtimeProfile.MaxStep;
+                p.LineSpacing = RealtimeProfile.MaxStep;
+                p.ConfidenceLevel = RealtimeProfile.MinStep;
+            });
+            Add($"tightest-{layout}", p =>
+            {
+                p.Layout = layout;
+                p.MergeTendency = RealtimeProfile.MinStep;
+                p.LineSpacing = RealtimeProfile.MinStep;
+                p.ConfidenceLevel = RealtimeProfile.MaxStep;
+                p.MergeUnpunctuated = false;
+                p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent;
+            });
+        }
+
+        int failed = 0;
+        var summary = new StringBuilder();
+        foreach (var (name, stored) in cases)
+        {
+            File.WriteAllText(Path.Combine(outDir, name + ".json"), JsonSerializer.Serialize(stored));
+            try
+            {
+                var profile = ResolvedProfile.Resolve(stored);
+                var totals = Replay(cache, profile, Path.Combine(outDir, name + ".txt"));
+                summary.AppendLine($"=== {name}: {profile.Describe()}").Append(totals);
+                Console.WriteLine($"ok   {name}");
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                summary.AppendLine($"=== {name}: THREW {ex}");
+                Console.WriteLine($"FAIL {name}: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+        File.WriteAllText(Path.Combine(outDir, "extremes.txt"), summary.ToString());
+        Console.WriteLine($"{cases.Count - failed}/{cases.Count} replayed the whole cache without throwing");
+        return failed == 0 ? 0 : 1;
+    }
+
+    /// <summary>Groups every cached frame with <paramref name="profile"/> and writes the reports.</summary>
+    /// <returns>The summary table.</returns>
+    private static string Replay(Capture[] cache, ResolvedProfile profile, string reportPath)
+    {
         var report = new StringBuilder();
         var extras = new StringBuilder();
         var answers = new StringBuilder();
+        var byMode = new StringBuilder();
         var totals = new SortedDictionary<string, int[]>(StringComparer.Ordinal);
-        foreach (var capture in JsonSerializer.Deserialize<Capture[]>(File.ReadAllText(args[1]))!)
+        var passage = profile with { Layout = RealtimeBlockMode.Subtitle };
+        var items = profile with { Layout = RealtimeBlockMode.Panel };
+        foreach (var capture in cache)
         {
             List<OcrTextBlock> Raw() => capture.Blocks.Select(b => b.Restore()).ToList();
-            var reading = RealtimeAutoLayout.Read(OcrService.FilterForRealtime(Raw(), capture.Height));
-            var asDialogue = OcrService.GroupRealtime(Raw(), capture.Height, RealtimeBlockMode.Subtitle);
-            var asPanel = OcrService.GroupRealtime(Raw(), capture.Height, RealtimeBlockMode.Panel);
+            var reading = RealtimeAutoLayout.Read(OcrService.FilterForRealtime(Raw(), capture.Height, profile), profile.Auto);
+            var asDialogue = OcrService.GroupRealtime(Raw(), capture.Height, passage);
+            var asPanel = OcrService.GroupRealtime(Raw(), capture.Height, items);
             bool sameAsDialogue = Same(reading.Groups, asDialogue);
             bool sameAsPanel = Same(reading.Groups, asPanel);
 
@@ -92,6 +210,9 @@ internal static class AutoModeProbe
                 report.AppendLine($"  {Letter(group.ReadAs)} {Flat(group.Text)}");
                 answers.AppendLine($"  {Letter(group.ReadAs)} {Flat(group.Text)}");
             }
+            byMode.AppendLine($"=== {name}");
+            foreach (var group in asDialogue) byMode.AppendLine($"  字幕 {group.Bounds} {Flat(group.Text)}");
+            foreach (var group in asPanel) byMode.AppendLine($"  面板 {group.Bounds} {Flat(group.Text)}");
             if (!sameAsDialogue)
                 foreach (var text in asDialogue.Select(g => g.Text).Except(reading.Groups.Select(g => g.Text)))
                     report.AppendLine($"      only 字幕: {Flat(text)}");
@@ -114,12 +235,15 @@ internal static class AutoModeProbe
         summary.AppendLine("label set                              images sparse cand  ->D groups  asD  =字幕  =面板");
         foreach (var (key, t) in totals)
             summary.AppendLine($"{key,-40} {t[0],5} {t[1],5} {t[2],5} {t[3],4} {t[4],6} {t[5],4} {t[6],5} {t[7],5}");
-        Console.Write(summary);
-        File.WriteAllText(args[2], summary.ToString() + Environment.NewLine + report);
-        File.WriteAllText(Path.ChangeExtension(args[2], ".groups.txt"), answers.ToString());
-        File.WriteAllText(Path.ChangeExtension(args[2], ".extras.tsv"),
+        // The mode's line only when it is not 標準, so a replay of 標準 writes the very bytes it did
+        // before modes existed and two builds can still be compared file for file.
+        var header = profile == ResolvedProfile.Standard ? "" : profile.Describe() + Environment.NewLine;
+        File.WriteAllText(reportPath, header + summary + Environment.NewLine + report);
+        File.WriteAllText(Path.ChangeExtension(reportPath, ".groups.txt"), answers.ToString());
+        File.WriteAllText(Path.ChangeExtension(reportPath, ".modes.txt"), byMode.ToString());
+        File.WriteAllText(Path.ChangeExtension(reportPath, ".extras.tsv"),
             "label\tset\tverdict\tzones\trows\tperRow\tmaxAdv\tminAdv\th\tcpr\tlongest\tmarks\twordy\taspect\timage\ttext\n" + extras);
-        return 0;
+        return summary.ToString();
     }
 
     private static bool Same(List<OcrTextBlock> a, List<OcrTextBlock> b) =>
