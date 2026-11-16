@@ -263,6 +263,31 @@ public class RealtimeSettings
         Services.Realtime.ResolvedProfile.Resolve(id, Profiles);
 
     /// <summary>
+    /// Replaces the custom modes with <paramref name="profiles"/>: copies of them, so the caller may
+    /// go on editing what it passed, tidied as a file's list is (see <see cref="CleanProfiles"/>).
+    /// </summary>
+    /// <remarks>
+    /// A mode deleted while it was the one new blocks start on takes that with it: they start on
+    /// 標準, and the file says so rather than naming a mode that is gone.
+    /// </remarks>
+    /// <returns>Whether anything changed.</returns>
+    internal bool SetProfiles(IEnumerable<RealtimeProfile> profiles)
+    {
+        var stored = CleanProfiles(profiles.Select(profile => profile?.Clone()));
+        var newBlock = RealtimePresets.IsPreset(NewBlockProfile) || stored.Any(profile => profile.Id == NewBlockProfile)
+            ? NewBlockProfile
+            : RealtimePresets.StandardId;
+
+        if (newBlock == NewBlockProfile &&
+            System.Text.Json.JsonSerializer.Serialize(stored) == System.Text.Json.JsonSerializer.Serialize(Profiles))
+            return false;
+
+        Profiles = stored;
+        NewBlockProfile = newBlock;
+        return true;
+    }
+
+    /// <summary>
     /// The custom modes as the list can hold them: none missing an id or claiming a preset's, no id
     /// twice (the first kept), every entry with a name and a preset to follow, and no more than
     /// <see cref="MaxCustomProfiles"/>.

@@ -336,6 +336,30 @@ public class SettingsService
     }
 
     /// <summary>
+    /// Raised when the custom 即時翻譯 modes change, once the change is in the file — for a running
+    /// session to put its blocks on the new values, and for anything else listing the modes.
+    /// </summary>
+    public event EventHandler? RealtimeProfilesChanged;
+
+    /// <summary>
+    /// Stores the custom 即時翻譯 modes: the whole list as it should now be, in order. Adding,
+    /// renaming, deleting, changing a value and putting one back are all this one call with a
+    /// changed list — see <see cref="RealtimeProfile"/> for how a value is put back (null).
+    /// </summary>
+    /// <remarks>
+    /// <para>Stored as <see cref="RealtimeSettings.SetProfiles"/> says: copies, tidied, and a
+    /// deleted mode taking <see cref="RealtimeSettings.NewBlockProfile"/> back to 標準 with it.</para>
+    /// </remarks>
+    /// <returns>Whether anything changed, and so was saved and announced.</returns>
+    public bool UpdateRealtimeProfiles(IEnumerable<RealtimeProfile> profiles)
+    {
+        if (!Current.Realtime.SetProfiles(profiles)) return false;
+        Save();
+        RealtimeProfilesChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
     /// Stores where the models are (<see cref="AppSettings.AssetsLocation"/>, empty for the default)
     /// and the old location still to be emptied. Unlike every other setting this one has to have
     /// reached the disk before anything goes on — a move restarts the app straight after — so a

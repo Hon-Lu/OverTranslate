@@ -136,7 +136,9 @@ public partial class RealtimeBlockWindow : Window
     // How far past their boxes the lines of the rebuild in progress run — see OverhangOf. Null
     // outside a rebuild.
     private Lazy<Dictionary<TranslatedBlock, System.Drawing.Rectangle>>? _overhangs;
-    private readonly RealtimeBlockMode _mode;
+    // 分行處理 of the block's mode: Auto draws each group as it was read, the other two every group
+    // their way. Changed under a running session by SetLayout.
+    private RealtimeBlockMode _mode;
 
     // Which way this block's source runs, as the user said in edit mode. It decides how the
     // translation is set here and how the frame was read upstream — see RealtimeTextOrientation.
@@ -329,6 +331,20 @@ public partial class RealtimeBlockWindow : Window
         // WDA_EXCLUDEFROMCAPTURE so the loop would not read its own translation back; keeping the
         // overlays out of the frame is now the capture backend's job and only the backend's, which is
         // why a session cannot start on a source that has not proved it (#105).
+    }
+
+    /// <summary>
+    /// Draws the groups the way the block's mode now says — after its mode was changed or deleted
+    /// on the page while the session runs. The lines on screen are drawn again at once; the session
+    /// reads the block again beside it.
+    /// </summary>
+    public void SetLayout(RealtimeBlockMode layout)
+    {
+        if (_mode == layout) return;
+        _mode = layout;
+
+        if (!_isLoaded) return;
+        Rebuild();
     }
 
     public void SetLines(IReadOnlyList<TranslatedBlock> lines)

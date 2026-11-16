@@ -220,6 +220,7 @@ public sealed class RealtimeTranslationSession
         Log.Info(
             "Realtime session started: {Count} region(s), {Src}->{Tgt}, capture={Capture}",
             regions.Count, sourceLanguage, targetLanguage, capture.Name);
+        LogProfiles(regions);
 
         // A watched region is idle between lines, and the recogniser cannot tell that from a tray
         // icon nobody has touched all afternoon. Told explicitly, it stops releasing the model that
@@ -399,6 +400,56 @@ public sealed class RealtimeTranslationSession
             Start(_regions, sourceLanguage, targetLanguage, _provider, _capture!, readAtOnce: true, warmUp: false);
 
         return generation;
+    }
+
+    /// <summary>
+    /// Puts the blocks on the modes the user has just changed, without ending the session — a mode
+    /// edited on the page, or one deleted, which leaves its blocks on 標準.
+    /// </summary>
+    /// <remarks>
+    /// <para>The same blocks: only <see cref="RealtimeRegion.Profile"/> is meant to differ. A block
+    /// whose mode resolves to the same values as before is no reason to do anything, so nothing is
+    /// done unless one of them really changed.</para>
+    ///
+    /// <para>A running session starts again on the new modes at once, every region read at once, as
+    /// <see cref="ChangeLanguages"/> does and for the same reason: everything a region loop took
+    /// from its mode when it started — the read timing, the empty reads it waits out, the detector
+    /// size — is taken again, and nothing is left running on an old value. A new detector size is a
+    /// new reading of the frame by construction. What is not done is fence the cache or clear the
+    /// history: the languages are the same and so is every translation already made, and a pass
+    /// still in flight was cancelled with its loop.</para>
+    ///
+    /// <para>Paused, or between sittings, the new modes are only remembered: 繼續 and 開始翻譯
+    /// start on them.</para>
+    /// </remarks>
+    /// <returns>Whether any block's mode changed.</returns>
+    public bool ChangeProfiles(IReadOnlyList<RealtimeRegion> regions)
+    {
+        if (regions.Count == _regions.Count && regions.Zip(_regions).All(pair => pair.First == pair.Second))
+            return false;
+
+        var running = !IsPaused && _capture is not null;
+        if (running) StopLoops();
+
+        Log.Info("Realtime session modes changed: {State}",
+            running ? "restarting at once" : IsPaused ? "still paused" : "not started");
+        _regions = regions;
+
+        if (running)
+            Start(_regions, _sourceLanguage, _targetLanguage, _provider, _capture!, readAtOnce: true, warmUp: false);
+        else
+            LogProfiles(regions);
+        return true;
+    }
+
+    // One line per block: the values it reads with, which a report of "it reads too late" or "it
+    // keeps merging my menu" needs before anything else. Numbers and ids only — never text — so
+    // at Info.
+    private static void LogProfiles(IReadOnlyList<RealtimeRegion> regions)
+    {
+        foreach (var region in regions)
+            Log.Info("Realtime region {Region} ({Orientation}): {Profile}",
+                region.Id, region.Orientation, region.Profile.Describe());
     }
 
     /// <param name="releaseRecogniser">

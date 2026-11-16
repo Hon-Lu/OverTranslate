@@ -462,6 +462,8 @@ internal sealed class RealtimeSessionController
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
         control.LanguagesChangeRequested += (_, pair) => ChangeLanguages(pair.Source, pair.Target);
         control.AppearanceChanged += (_, _) => ApplyAppearance();
+        // A static source again: unsubscribed in Stop, or it would keep this session alive.
+        SettingsService.Instance.RealtimeProfilesChanged += OnRealtimeProfilesChanged;
         _control = control;
         control.Show();
 
@@ -681,6 +683,7 @@ internal sealed class RealtimeSessionController
 
         // A static event: left subscribed, it would keep this session's handler alive and running.
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        SettingsService.Instance.RealtimeProfilesChanged -= OnRealtimeProfilesChanged;
         _displaySettle.Stop();
         _foregroundWatch?.Dispose();
         _foregroundWatch = null;
@@ -1079,6 +1082,39 @@ internal sealed class RealtimeSessionController
             request.SourceLanguage, request.TargetLanguage, source, target, rebuilt, paused);
 
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Raised by whoever saved the modes, on whatever thread that was; the work is the dispatcher's.
+    private void OnRealtimeProfilesChanged(object? sender, EventArgs e) =>
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(ApplyProfiles);
+
+    /// <summary>
+    /// Puts every block on what its mode says now, after the modes were changed on the page, without
+    /// ending anything.
+    /// </summary>
+    /// <remarks>
+    /// <para>A block whose mode was deleted goes back to 標準 — on the block itself, so the edit layer
+    /// and the next sitting show it there too. Each overlay is redrawn in its mode's layout at once,
+    /// and the session reads every block again on the new values — see
+    /// <see cref="RealtimeTranslationSession.ChangeProfiles"/>, which does nothing when no block's
+    /// values really changed.</para>
+    ///
+    /// <para>The direction is not touched: it is not part of a mode.</para>
+    /// </remarks>
+    private void ApplyProfiles()
+    {
+        if (_session is not { } session) return;
+
+        var realtime = SettingsService.Instance.Current.Realtime;
+        _blocks = [.. _blocks.Select(block => block with { ProfileId = realtime.KnownProfileId(block.ProfileId) })];
+
+        var regions = Regions();
+        foreach (var region in regions)
+            if (_blockWindows.TryGetValue(region.Id, out var window))
+                window.SetLayout(region.Profile.Layout);
+
+        if (session.ChangeProfiles(regions) && IsTranslating && !session.IsPaused)
+            _loadingHint?.Wait(session.ModelsLoading);
     }
 
     /// <summary>
