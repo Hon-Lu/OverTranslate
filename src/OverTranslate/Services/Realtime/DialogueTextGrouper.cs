@@ -37,10 +37,15 @@ internal static class DialogueTextGrouper
     /// fields have no dialogue meaning and are left at zero; the ones filled are named in the
     /// harness's own legend.
     /// </param>
+    /// <param name="maxStackGap">
+    /// The widest gap between stacked rows, in line heights — <see cref="MaxStackGap"/> unless the
+    /// block's mode widens or narrows it (行距容許, see <see cref="ResolvedProfile"/>).
+    /// </param>
     internal static List<OcrTextBlock> Group(
         IReadOnlyList<OcrTextBlock> input,
         GroupingTrace? trace = null,
-        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null)
+        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null,
+        double maxStackGap = MaxStackGap)
     {
         if (trace is not null && trace.Blocks.Count == 0) trace.RegisterBlocks(input);
         if (input.Count <= 1)
@@ -106,7 +111,7 @@ internal static class DialogueTextGrouper
                 lineRows[line] = row;
             }
         }
-        var chatNames = ChatNameLines(lines, joinedLines);
+        var chatNames = ChatNameLines(lines, joinedLines, maxStackGap);
         var groups = new List<List<OcrTextBlock>>();
         var open = new List<bool>();
         trace?.OrderLines(lines.OrderBy(l => l.Block.LayoutBounds.Y).ThenBy(l => l.Block.LayoutBounds.X).Select(l => l.Block).ToList());
@@ -119,7 +124,7 @@ internal static class DialogueTextGrouper
                 if (!open[i]) continue;
                 var previous = groups[i][^1].LayoutBounds;
                 var current = line.Block.LayoutBounds;
-                var joins = NextRow(previous, current, out var rule);
+                var joins = NextRow(previous, current, maxStackGap, out var rule);
                 // Only a group of that one line can be a name: the last line of a paragraph that
                 // happens to be short and unpunctuated is still that paragraph's.
                 if (joins && groups[i].Count == 1 && !joinedLines.Contains(groups[i][^1]) &&
@@ -188,7 +193,7 @@ internal static class DialogueTextGrouper
     /// little left of it.</para>
     /// </remarks>
     private static HashSet<OcrTextBlock> ChatNameLines(
-        List<(OcrTextBlock Block, bool Unresolved)> lines, HashSet<OcrTextBlock> joinedLines)
+        List<(OcrTextBlock Block, bool Unresolved)> lines, HashSet<OcrTextBlock> joinedLines, double maxStackGap)
     {
         var names = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
         var ordered = lines.Where(l => !l.Unresolved).Select(l => l.Block)
@@ -197,7 +202,7 @@ internal static class DialogueTextGrouper
         {
             var name = ordered[i];
             if (joinedLines.Contains(name)) continue;
-            var message = ordered.Skip(i + 1).FirstOrDefault(b => NextRow(name.LayoutBounds, b.LayoutBounds, out _));
+            var message = ordered.Skip(i + 1).FirstOrDefault(b => NextRow(name.LayoutBounds, b.LayoutBounds, maxStackGap, out _));
             if (message is not null && NameOverMessage(name, message)) names.Add(name);
         }
         int recurring = names.GroupBy(b => b.Text.Trim()).Where(g => g.Count() >= 2).Sum(g => g.Count());
@@ -367,7 +372,7 @@ internal static class DialogueTextGrouper
         return runs;
     }
 
-    private static bool NextRow(Rect a, Rect b, out string rule)
+    private static bool NextRow(Rect a, Rect b, double maxStackGap, out string rule)
     {
         rule = "stacked";
         double height = Math.Max(a.Height, b.Height);
@@ -381,7 +386,7 @@ internal static class DialogueTextGrouper
         if (SameRow(a, b)) { rule = "same-row"; return false; }
         if (!LineMeasure.HeightsWithin(a, b, substantialRows ? SubstantialStackHeightRatio : StackHeightRatio))
         { rule = "height-mismatch"; return false; }
-        if (b.Top - a.Bottom > height * MaxStackGap) { rule = "gap-too-wide"; return false; }
+        if (b.Top - a.Bottom > height * maxStackGap) { rule = "gap-too-wide"; return false; }
         if (b.Top - a.Bottom < -height * MaxStackOverlap) { rule = "overlaps-above"; return false; }
         var overlap = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
         if (overlap < Math.Min(a.Width, b.Width) * 0.5) { rule = "no-column-overlap"; return false; }
@@ -419,7 +424,7 @@ internal static class DialogueTextGrouper
     private const double SubstantialStackHeightRatio = 0.6;
 
     /// <summary>The widest gap, and the most overlap, between two stacked rows, in line heights.</summary>
-    private const double MaxStackGap = 0.65;
+    internal const double MaxStackGap = 0.65;
 
     /// <inheritdoc cref="MaxStackGap"/>
     private const double MaxStackOverlap = 0.25;

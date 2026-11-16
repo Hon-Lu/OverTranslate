@@ -881,7 +881,8 @@ internal sealed class RealtimeSessionController
     // Ids are positions in _blocks: the session and the overlays are both built from this list, so a
     // result arriving for region 1 is for whatever block is second in it.
     private List<RealtimeRegion> Regions() => _blocks
-        .Select((block, index) => new RealtimeRegion(index, block.Bounds, block.Mode, block.Orientation))
+        .Select((block, index) => new RealtimeRegion(
+            index, block.Bounds, ResolvedProfile.ForLayout(block.Mode), block.Orientation))
         .ToList();
 
     /// <summary>
@@ -912,7 +913,7 @@ internal sealed class RealtimeSessionController
                 look.TextColor, look.ScrimColor, look.ScrimOpacity,
                 look.NaturalBackground,
                 look.SampleTextColor,
-                region.Mode, look.Border, look.BorderColor, region.Orientation,
+                region.Profile.Layout, look.Border, look.BorderColor, region.Orientation,
                 compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
                 look.FixedFontSize);
             _blockWindows[region.Id] = window;

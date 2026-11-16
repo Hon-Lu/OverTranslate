@@ -170,12 +170,28 @@ public class OcrService : IDisposable
     /// vertical pipeline — see <see cref="TryRecognizeVerticalAsync"/>; the mode does not reach that
     /// path because horizontal row thresholds do not describe column geometry.
     /// </param>
-    public async Task<List<OcrTextBlock>?> TryRecognizeAsync(
+    public Task<List<OcrTextBlock>?> TryRecognizeAsync(
         Bitmap bitmap,
         string sourceLanguage,
         int? maxDetectSize = null,
         CancellationToken cancellationToken = default,
         Realtime.RealtimeBlockMode mode = Realtime.RealtimeBlockMode.Panel,
+        Realtime.RealtimeTextOrientation orientation = Realtime.RealtimeTextOrientation.Horizontal) =>
+        TryRecognizeAsync(
+            bitmap, sourceLanguage, maxDetectSize, cancellationToken,
+            Realtime.ResolvedProfile.ForLayout(mode), orientation);
+
+    /// <inheritdoc cref="TryRecognizeAsync(Bitmap, string, int?, CancellationToken, Realtime.RealtimeBlockMode, Realtime.RealtimeTextOrientation)"/>
+    /// <param name="profile">
+    /// The live region's mode, as the pipeline runs it. Read only by text written across: the
+    /// column path groups on its own figures whatever the mode says.
+    /// </param>
+    public async Task<List<OcrTextBlock>?> TryRecognizeAsync(
+        Bitmap bitmap,
+        string sourceLanguage,
+        int? maxDetectSize,
+        CancellationToken cancellationToken,
+        Realtime.ResolvedProfile profile,
         Realtime.RealtimeTextOrientation orientation = Realtime.RealtimeTextOrientation.Horizontal)
     {
         if (!OcrLanguageRouter.IsSupported(sourceLanguage))
@@ -206,7 +222,7 @@ public class OcrService : IDisposable
         // There is no toolbar in front of a running video, so there is no CaptureLayoutMode to
         // honour here; taking one would mean a mode the user chose for a still capture silently
         // steering frames it was never asked about.
-        return TiltedOverlap.Level(GroupRealtime(blocks, bitmap.Height, mode));
+        return TiltedOverlap.Level(GroupRealtime(blocks, bitmap.Height, profile));
     }
 
     /// <summary>
@@ -281,29 +297,37 @@ public class OcrService : IDisposable
     /// </param>
     internal static List<OcrTextBlock> GroupRealtime(List<OcrTextBlock> blocks, double frameHeight,
         Realtime.RealtimeBlockMode mode, GroupingTrace? trace = null,
+        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null) =>
+        GroupRealtime(blocks, frameHeight, Realtime.ResolvedProfile.ForLayout(mode), trace, decisions);
+
+    /// <inheritdoc cref="GroupRealtime(List{OcrTextBlock}, double, Realtime.RealtimeBlockMode, GroupingTrace?, List{OcrTextBlockGrouper.NextLineDecision}?)"/>
+    /// <param name="profile">The block's mode: its layout, and the figures each grouper runs on.</param>
+    internal static List<OcrTextBlock> GroupRealtime(List<OcrTextBlock> blocks, double frameHeight,
+        Realtime.ResolvedProfile profile, GroupingTrace? trace = null,
         List<OcrTextBlockGrouper.NextLineDecision>? decisions = null)
     {
         // Tilted cards are levelled for the grouping rules and given back upright afterwards — see
         // Ocr.TiltedLayout. Before the filters, which read only text, confidence and Bounds, so that
         // the harness trace below registers the same instances the groupers then see.
         blocks = TiltedLayout.Straighten(blocks);
-        return TiltedLayout.Restore(GroupStraightened(blocks, frameHeight, mode, trace, decisions));
+        return TiltedLayout.Restore(GroupStraightened(blocks, frameHeight, profile, trace, decisions));
     }
 
     private static List<OcrTextBlock> GroupStraightened(List<OcrTextBlock> blocks, double frameHeight,
-        Realtime.RealtimeBlockMode mode, GroupingTrace? trace,
+        Realtime.ResolvedProfile profile, GroupingTrace? trace,
         List<OcrTextBlockGrouper.NextLineDecision>? decisions)
     {
         // 自動 runs both groupers and keeps, cluster by cluster, the one its text calls for. Both
         // are given what the dialogue grouper is given below: a box thrown across the whole block
         // is thrown out by the session whichever mode read it, and taking it out first is what
         // keeps it from being joined to a real line on the way.
-        if (mode == Realtime.RealtimeBlockMode.Auto)
-            return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight));
+        if (profile.Layout == Realtime.RealtimeBlockMode.Auto)
+            return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight, profile), profile.Auto);
 
-        var filtered = RejectUnconvincingBlocks(blocks);
-        if (mode != Realtime.RealtimeBlockMode.Subtitle)
-            return OcrTextBlockGrouper.Group(filtered, GroupingProfile.Realtime, decisions, trace);
+        var filtered = IgnoreSmallText(
+            RejectUnconvincingBlocks(blocks, profile.ConfidenceFloor), profile.IgnoreSmallFraction);
+        if (profile.Layout != Realtime.RealtimeBlockMode.Subtitle)
+            return OcrTextBlockGrouper.Group(filtered, profile.PanelGrouping, decisions, trace);
         trace?.RegisterBlocks(blocks);
         // Remove scene-sized noise before it can contaminate a real dialogue row. Confident
         // single letters (such as a split "I") may still join; isolated ones are filtered later.
@@ -311,7 +335,7 @@ public class OcrService : IDisposable
         // The dialogue grouper has rules of its own and does not go through OcrTextBlockGrouper,
         // so the readings have to be taken out for it separately. See Ocr.HorizontalRubyLines.
         return Realtime.DialogueTextGrouper.Group(
-            Ocr.HorizontalRubyLines.Drop(filtered), trace, decisions);
+            Ocr.HorizontalRubyLines.Drop(filtered), trace, decisions, profile.MaxStackGap);
     }
 
     /// <summary>
@@ -319,8 +343,68 @@ public class OcrService : IDisposable
     /// recogniser was not sure of, and boxes thrown across the whole block.
     /// </summary>
     internal static List<OcrTextBlock> FilterForRealtime(List<OcrTextBlock> blocks, double frameHeight) =>
-        [.. RejectUnconvincingBlocks(blocks)
-            .Where(b => !Realtime.CollapsedDetection.IsCollapsed(b.Bounds.Height, frameHeight, b.Text))];
+        FilterForRealtime(blocks, frameHeight, Realtime.ResolvedProfile.Standard);
+
+    /// <inheritdoc cref="FilterForRealtime(List{OcrTextBlock}, double)"/>
+    /// <remarks>
+    /// With the block's mode's confidence floor, and without the lines it says are too small to
+    /// read (忽略小字) — measured after the boxes across the block are gone, which would otherwise
+    /// count towards the frame's main text.
+    /// </remarks>
+    internal static List<OcrTextBlock> FilterForRealtime(
+        List<OcrTextBlock> blocks, double frameHeight, Realtime.ResolvedProfile profile) =>
+        IgnoreSmallText(
+            [.. RejectUnconvincingBlocks(blocks, profile.ConfidenceFloor)
+                .Where(b => !Realtime.CollapsedDetection.IsCollapsed(b.Bounds.Height, frameHeight, b.Text))],
+            profile.IgnoreSmallFraction);
+
+    /// <summary>
+    /// 忽略小字: the lines set lower than <paramref name="fraction"/> of the frame's main text,
+    /// taken out before grouping. The same list when the fraction is zero, which is every preset.
+    /// </summary>
+    /// <remarks>
+    /// <para>The main text is the size most of the frame's characters are set in, not its tallest
+    /// line: one heading would otherwise make the dialogue under it "small". Heights within
+    /// <see cref="Layout.RealtimeTextSizes.SameSizeReach"/> of each other are one size, as the
+    /// overlay sorts them, because a line's measured height wanders by that much on its own.</para>
+    ///
+    /// <para>The readings printed over kanji go first, which is what it was asked for; on a subtitle
+    /// over an interface it is the interface that goes, once the subtitle is most of the
+    /// writing.</para>
+    ///
+    /// <para>TODO(A3): the rule for the main text is a first answer, not a measured one.</para>
+    /// </remarks>
+    internal static List<OcrTextBlock> IgnoreSmallText(List<OcrTextBlock> blocks, double fraction)
+    {
+        if (fraction <= 0 || blocks.Count < 2) return blocks;
+
+        double main = MainTextHeight(blocks);
+        if (main <= 0) return blocks;
+        double floor = main * fraction;
+        return blocks.All(b => b.LayoutBounds.Height >= floor)
+            ? blocks
+            : [.. blocks.Where(b => b.LayoutBounds.Height >= floor)];
+    }
+
+    // The middle height of the size that holds the most characters; a tie goes to the taller size.
+    private static double MainTextHeight(List<OcrTextBlock> blocks)
+    {
+        var sizes = new List<List<(double Height, int Characters)>>();
+        foreach (var block in blocks.OrderByDescending(b => b.LayoutBounds.Height))
+        {
+            double height = block.LayoutBounds.Height;
+            if (height <= 0) continue;
+            int characters = Math.Max(1, block.Text.Count(c => !char.IsWhiteSpace(c)));
+            if (sizes.Count > 0 && sizes[^1][0].Height <= height * Layout.RealtimeTextSizes.SameSizeReach)
+                sizes[^1].Add((height, characters));
+            else
+                sizes.Add([(height, characters)]);
+        }
+        if (sizes.Count == 0) return 0;
+
+        var main = sizes.MaxBy(size => size.Sum(line => line.Characters))!;
+        return main[main.Count / 2].Height;
+    }
 
     // Scenery the recogniser was not sure about. Only on this path: it is the realtime one, where
     // the floor was measured, and where the next frame is a poll away so losing a doubtful reading
@@ -349,15 +433,18 @@ public class OcrService : IDisposable
     // of the failure this ordering exists to prevent, so "no noise admitted" is an absence of the
     // test case, not a pass. Left alone deliberately. What would reopen it is a corpus with scenery
     // sitting on a subtitle's own row.
-    internal static List<OcrTextBlock> RejectUnconvincingBlocks(List<OcrTextBlock> blocks)
+    //
+    // The floor is the block's mode's (辨識信心下限), the measured one unless the user moved it.
+    internal static List<OcrTextBlock> RejectUnconvincingBlocks(
+        List<OcrTextBlock> blocks, double floor = Realtime.ShortReadingDetection.ShortTextConfidenceFloor)
     {
         List<OcrTextBlock>? kept = null;
 
         for (var index = 0; index < blocks.Count; index++)
         {
             if (!Realtime.ShortReadingDetection.IsUnconvincingShortText(
-                    blocks[index].Text, blocks[index].Confidence) ||
-                EndsALine(blocks, index))
+                    blocks[index].Text, blocks[index].Confidence, floor) ||
+                EndsALine(blocks, index, floor))
             {
                 kept?.Add(blocks[index]);
                 continue;
@@ -377,7 +464,7 @@ public class OcrService : IDisposable
     // user saw left behind untranslated and unerased. Scenery read as text is letters, digits and
     // stray glyphs (see ShortReadingDetection), and on its own row it still goes: the line beside
     // it is what says these symbols belong to a sentence. See Ocr.HorizontalLineEnds.
-    private static bool EndsALine(List<OcrTextBlock> blocks, int index)
+    private static bool EndsALine(List<OcrTextBlock> blocks, int index, double floor)
     {
         var fragment = blocks[index];
         if (!Ocr.HorizontalLineEnds.Enabled ||
@@ -385,7 +472,7 @@ public class OcrService : IDisposable
         for (var other = 0; other < blocks.Count; other++)
         {
             if (other == index ||
-                Realtime.ShortReadingDetection.IsUnconvincingShortText(blocks[other].Text, blocks[other].Confidence))
+                Realtime.ShortReadingDetection.IsUnconvincingShortText(blocks[other].Text, blocks[other].Confidence, floor))
                 continue;
             if (Realtime.ShortReadingDetection.ContinuesLine(fragment.Bounds, blocks[other].Bounds))
                 return true;

@@ -245,9 +245,20 @@ internal sealed class RealtimeRegionState
     /// bands are grown — see <see cref="BuildBands"/>. Horizontal by default so the many tests that
     /// exercise the timing rules do not each have to answer a question they are not about.
     /// </param>
+    /// <param name="clearAfterEmptyReads">
+    /// 譯文保留: how many passes in a row must find nothing before the overlay is cleared —
+    /// <see cref="EmptyPassesBeforeClearing"/> unless the block's mode says otherwise.
+    /// </param>
     public RealtimeRegionState(
-        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal) =>
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal,
+        int clearAfterEmptyReads = EmptyPassesBeforeClearing)
+    {
         _orientation = orientation;
+        _clearAfterEmptyReads = Math.Max(1, clearAfterEmptyReads);
+    }
+
+    // See EmptyPassesBeforeClearing; this block's own figure.
+    private readonly int _clearAfterEmptyReads;
 
     /// <summary>
     /// What the region shows, one entry per line, each with the score it was read at — so a later
@@ -347,7 +358,7 @@ internal sealed class RealtimeRegionState
     /// Whether enough passes have found nothing that the overlay really should be emptied — see
     /// <see cref="EmptyPassesBeforeClearing"/>.
     /// </summary>
-    public bool ShouldClearOverlay => _emptyPasses >= EmptyPassesBeforeClearing;
+    public bool ShouldClearOverlay => _emptyPasses >= _clearAfterEmptyReads;
 
     /// <param name="capture">
     /// Summarises the current frame over the given sub-rectangles, or the whole region when passed
@@ -359,11 +370,18 @@ internal sealed class RealtimeRegionState
     /// <see cref="FrameFingerprint.CaptureEnds"/>. Null leaves the zones unwatched.
     /// </param>
     /// <returns>Whether the frame should be recognised now.</returns>
+    /// <param name="textSettlePolls">
+    /// 等文字停下: the most polls a change inside the watched text is waited out before it is read.
+    /// Null is the rule each way of reading has — none for a passage, which is confirmed after
+    /// instead, and <see cref="MaxTextUnsettledPolls"/> otherwise. Whole-region changes, before any
+    /// text is watched, wait <see cref="MaxUnsettledPolls"/> either way.
+    /// </param>
     public bool Observe(
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
         bool dialogue = false,
-        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null) =>
-        Examine(capture, dialogue, captureEnds) != RealtimeReadReason.Nothing;
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null,
+        int? textSettlePolls = null) =>
+        Examine(capture, dialogue, captureEnds, textSettlePolls) != RealtimeReadReason.Nothing;
 
     /// <summary>The same decision, and what made it — see <see cref="RealtimeReadReason"/>.</summary>
     /// <remarks>
@@ -376,11 +394,12 @@ internal sealed class RealtimeRegionState
     public RealtimeReadReason Examine(
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
         bool dialogue = false,
-        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null)
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null,
+        int? textSettlePolls = null)
     {
         _pollsSinceLook++;
         if (WaitingAfterFailure(capture)) return RealtimeReadReason.Nothing;
-        var reason = Decide(capture, dialogue, captureEnds);
+        var reason = Decide(capture, dialogue, captureEnds, textSettlePolls);
         // Whatever the pass then makes of it, the region has been handed to the reader — which is
         // all the idle scan counts, so that the poll it forces cannot be forced again by the next.
         if (reason != RealtimeReadReason.Nothing) _pollsSinceLook = 0;
@@ -391,7 +410,8 @@ internal sealed class RealtimeRegionState
     private RealtimeReadReason Decide(
         Func<IReadOnlyList<Rectangle>?, FrameFingerprint> capture,
         bool dialogue,
-        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds)
+        Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds,
+        int? textSettlePolls)
     {
         var current = capture(IsWatchingText ? _watchBands : null);
 
@@ -439,7 +459,9 @@ internal sealed class RealtimeRegionState
             // Changed, and not yet the same twice running. Give it a poll to settle so a line that
             // is still fading in is read once it has arrived — but only up to the cap, or content
             // that never holds still would never be read at all.
-            var cap = IsWatchingText ? (dialogue ? 0 : MaxTextUnsettledPolls) : MaxUnsettledPolls;
+            var cap = IsWatchingText
+                ? textSettlePolls ?? (dialogue ? 0 : MaxTextUnsettledPolls)
+                : MaxUnsettledPolls;
             if (Changed(_pending) && _unsettledPolls < cap)
             {
                 _pending = current;
@@ -635,7 +657,7 @@ internal sealed class RealtimeRegionState
             _watchBands = BuildBands(textBounds);
             _endZones = endZones ?? NoBands;
         }
-        else if (++_emptyPasses >= EmptyPassesBeforeClearing)
+        else if (++_emptyPasses >= _clearAfterEmptyReads)
         {
             _watchBands = NoBands;
             _endZones = NoBands;

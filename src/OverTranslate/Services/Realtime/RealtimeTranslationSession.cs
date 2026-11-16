@@ -476,7 +476,7 @@ public sealed class RealtimeTranslationSession
         StepMarker step,
         CancellationToken token)
     {
-        var state = new RealtimeRegionState(region.Orientation);
+        var state = new RealtimeRegionState(region.Orientation, region.Profile.ClearAfterEmptyReads);
         // Everything this region draws goes to the screen through here — see RealtimeScrollFollow.
         var follow = new RealtimeScrollFollow(
             region.Id, (lines, generation) => RaiseRegionUpdated(new RealtimeRegionUpdate(region.Id, lines, generation)));
@@ -617,7 +617,9 @@ public sealed class RealtimeTranslationSession
                 step.Set("examine");
                 var reason = demanded
                     ? RealtimeReadReason.TextChanged
-                    : state.Examine(Capture, state.ReadsAs(region.Mode) == RealtimeBlockMode.Subtitle, CaptureEnds);
+                    : state.Examine(
+                        Capture, region.Profile.Dialogue(state.ReadsAs(region.Profile.Layout)), CaptureEnds,
+                        region.Profile.SettlePolls);
                 // Asked for by the screen rather than by the pixels: a page scrolled away and back
                 // is the picture that was read, and its translations are gone all the same.
                 if (redraw && reason == RealtimeReadReason.Nothing) reason = RealtimeReadReason.TextChanged;
@@ -884,7 +886,9 @@ public sealed class RealtimeTranslationSession
         // Try, not wait: a queued pass would be reading a frame that has already been replaced, and
         // would hold this region's loop shut while it did. Skipping costs one poll.
         var (primarySize, fallbackSizes) =
-            RealtimeDetectorSize.For(frame.Width, frame.Height, state.ReadsAs(region.Mode), region.Orientation);
+            RealtimeDetectorSize.For(
+                frame.Width, frame.Height, state.ReadsAs(region.Profile.Layout), region.Orientation,
+                region.Profile.DetectorFraction);
 
         // The confirmation pass over a still page of columns, spent on a DIFFERENT detector size
         // instead of on the same one. See Ocr.VerticalSecondLook: the detector's answer moves with
@@ -911,7 +915,7 @@ public sealed class RealtimeTranslationSession
         List<OcrTextBlock>? recognized = sameAsLastRead
             ? [.. state.LastRead]
             : await _ocr.TryRecognizeAsync(
-                frame, sourceLanguage, primarySize, token, region.Mode, region.Orientation);
+                frame, sourceLanguage, primarySize, token, region.Profile, region.Orientation);
         if (recognized is null)
         {
             state.Dialogue.RecognitionUnavailable();
@@ -945,10 +949,16 @@ public sealed class RealtimeTranslationSession
         // Repeating it here would measure a column's length down the block against the block's own
         // height, and a full-height column is what vertical writing looks like when it is working.
         var rejectsCollapsed = region.Orientation == RealtimeTextOrientation.Horizontal;
+        // The mode's confidence floor is for text written across only. Columns are judged a whole
+        // balloon at a time, where a floor raised past the measured one drops the balloon — see
+        // Ocr.VerticalColumnGrouping.
+        var confidenceFloor = rejectsCollapsed
+            ? region.Profile.ConfidenceFloor
+            : ShortReadingDetection.ShortTextConfidenceFloor;
 
         if (rejectsCollapsed)
             recognized = RejectCollapsedBlocks(recognized, frame.Height, region.Id);
-        recognized = RejectShortReadings(recognized, region.Id);
+        recognized = RejectShortReadings(recognized, region.Id, confidenceFloor);
 
         // Sampled here, before the fallbacks can run, because "the primary size was enough" is
         // exactly the condition this is the control group for.
@@ -974,12 +984,12 @@ public sealed class RealtimeTranslationSession
             if (recognized.Count > 0) break;
 
             var retried = await _ocr.TryRecognizeAsync(
-                frame, sourceLanguage, retrySize, token, region.Mode, region.Orientation);
+                frame, sourceLanguage, retrySize, token, region.Profile, region.Orientation);
             if (retried is null) break;   // no free slot; the next poll can try again
 
             if (rejectsCollapsed)
                 retried = RejectCollapsedBlocks(retried, frame.Height, region.Id);
-            retried = RejectShortReadings(retried, region.Id);
+            retried = RejectShortReadings(retried, region.Id, confidenceFloor);
             if (retried.Count == 0) continue;
 
             // Per pass, and content that needs the fallback size tends to need it every pass.
@@ -1050,12 +1060,12 @@ public sealed class RealtimeTranslationSession
 
         // What 自動 made of this frame, before anything is decided on it: the settle read a passage
         // gets belongs to the frame that holds one, not to the one before it.
-        if (region.Mode == RealtimeBlockMode.Auto && region.Orientation == RealtimeTextOrientation.Horizontal)
+        if (region.Profile.Layout == RealtimeBlockMode.Auto && region.Orientation == RealtimeTextOrientation.Horizontal)
             state.AutoReadsAs = recognized.Any(block => block.ReadAs == RealtimeBlockMode.Subtitle)
                 ? RealtimeBlockMode.Subtitle
                 : RealtimeBlockMode.Panel;
 
-        var merged = state.ReadsAs(region.Mode) == RealtimeBlockMode.Subtitle
+        var merged = region.Profile.Dialogue(state.ReadsAs(region.Profile.Layout))
             ? state.Dialogue.Merge(state.RenderedLines, recognized)
             : state.Dialogue.MergePanel(state.RenderedLines, recognized);
         var shownBefore = state.RenderedText.Length;
@@ -1149,7 +1159,9 @@ public sealed class RealtimeTranslationSession
     /// a subtitle was 158px tall in a 220px block — well clear of a real line at 86px, but short of
     /// the 90% that makes a collapse, so no measure of the box was ever going to reject it.
     /// </remarks>
-    internal static List<OcrTextBlock> RejectShortReadings(List<OcrTextBlock> blocks, int regionId)
+    /// <param name="floor">The score a short reading needs — see <see cref="ResolvedProfile.ConfidenceFloor"/>.</param>
+    internal static List<OcrTextBlock> RejectShortReadings(
+        List<OcrTextBlock> blocks, int regionId, double floor = ShortReadingDetection.ShortTextConfidenceFloor)
     {
         List<OcrTextBlock>? kept = null;
 
@@ -1158,7 +1170,7 @@ public sealed class RealtimeTranslationSession
             var block = blocks[index];
             var tooShort = ShortReadingDetection.IsTooShort(block.Text);
             var unconvincing =
-                ShortReadingDetection.IsUnconvincingShortText(block.Text, block.Confidence);
+                ShortReadingDetection.IsUnconvincingShortText(block.Text, block.Confidence, floor);
 
             if (!tooShort && !unconvincing)
             {
