@@ -708,12 +708,28 @@ public sealed class RealtimeTranslationSession
                     // The picture goes on being followed while it is read — see WaitFollowingAsync.
                     var read = ReadRegionAsync(
                         region, frame, state, Capture, sourceLanguage, pump, follow.BeginRead(), redraw, token);
-                    while (await WaitFollowingAsync(read) == true)
+                    try
                     {
-                        overdue = true;
-                        using var meanwhile = _capture?.GrabRegion(region.Bounds);
-                        if (meanwhile is not null) follow.Observe(meanwhile, Stopwatch.GetTimestamp());
-                        step.Set("read (ocr)");
+                        while (await WaitFollowingAsync(read) == true)
+                        {
+                            overdue = true;
+                            using var meanwhile = _capture?.GrabRegion(region.Bounds);
+                            if (meanwhile is not null) follow.Observe(meanwhile, Stopwatch.GetTimestamp());
+                            step.Set("read (ocr)");
+                        }
+                    }
+                    catch
+                    {
+                        // The wait is what a stop interrupts — 結束, a pause, the language changed on
+                        // the bar — and the reading it was waiting on is still on a worker thread
+                        // with this poll's frame in its hands. Leaving now disposes the frame under
+                        // it: the recogniser then throws "Parameter is not valid" from the middle of
+                        // a pass (met switching Korean to Japanese on a vertical block, whose second
+                        // look at the frame turned is where it happened to be). Inference cannot be
+                        // interrupted, so the frame is kept until it is over; the reading itself
+                        // stops at its own check of the token, before anything is drawn.
+                        try { await read; } catch { }
+                        throw;
                     }
                     var reading = await read;
 
