@@ -36,7 +36,7 @@ internal static class RealtimeBandPlacement
 
     /// <summary>
     /// The band's left edge set against the edge 譯文對齊 asks for — the text inside it starting at
-    /// the source's left edge, or ending at its right one — and kept inside the block. Centred, or
+    /// the source's left edge — and kept inside the block. Centred, or
     /// with no edge asked for, it is <see cref="Left(double, double, double, double)"/>.
     /// </summary>
     /// <remarks>
@@ -52,7 +52,6 @@ internal static class RealtimeBandPlacement
         double at = alignment switch
         {
             SourceAlignment.Left => sourceLeft - padding,
-            SourceAlignment.Right => sourceLeft + sourceWidth + padding - bandWidth,
             _ => sourceLeft + sourceWidth / 2 - bandWidth / 2,
         };
         return Math.Clamp(at, 0, Math.Max(0, blockWidth - bandWidth));

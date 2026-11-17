@@ -26,11 +26,17 @@ public class RealtimeTextAlignTests
     // ── Reading the source ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void RowsThatLineUpOnOneSide_AreReadAsThatSide()
+    public void RowsThatLineUpOnTheLeftOrCentre_AreReadAsThat()
     {
         Assert.Equal(SourceAlignment.Left, RealtimeSourceAlignment.Of(FlushLeft));
         Assert.Equal(SourceAlignment.Center, RealtimeSourceAlignment.Of(Centred));
-        Assert.Equal(SourceAlignment.Right, RealtimeSourceAlignment.Of(FlushRight));
+    }
+
+    [Fact]
+    public void RowsThatLineUpOnTheRight_SayNothing()
+    {
+        // No 靠右 to choose, so none to guess; and not taken for centred either.
+        Assert.Null(RealtimeSourceAlignment.Of(FlushRight));
     }
 
     [Fact]
@@ -81,7 +87,7 @@ public class RealtimeTextAlignTests
     {
         Assert.Equal(SourceAlignment.Left, RealtimeSourceAlignment.For(RealtimeTextAlign.Auto, drawnAs, FlushLeft));
         Assert.Equal(SourceAlignment.Center, RealtimeSourceAlignment.For(RealtimeTextAlign.Auto, drawnAs, Centred));
-        Assert.Equal(SourceAlignment.Right, RealtimeSourceAlignment.For(RealtimeTextAlign.Auto, drawnAs, FlushRight));
+        Assert.Null(RealtimeSourceAlignment.For(RealtimeTextAlign.Auto, drawnAs, FlushRight));
         Assert.Null(RealtimeSourceAlignment.For(RealtimeTextAlign.Auto, drawnAs, [new Rect(100, 0, 400, 30)]));
         Assert.Null(RealtimeSourceAlignment.For(RealtimeTextAlign.Auto, drawnAs, null));
     }
@@ -228,15 +234,11 @@ public class RealtimeTextAlignTests
         Assert.Equal(HorizontalAlignment.Left, Assert.IsType<TextBlock>(text.Child).HorizontalAlignment);
         Assert.Equal(TextAlignment.Left, ((TextBlock)text.Child).TextAlignment);
 
-        var right = Group("右の説明", "短譯文。", FlushRight) with { ReadAs = RealtimeBlockMode.Subtitle };
-        var set = Assert.Single(Texts(RealtimeBlockMode.Auto, RealtimeTextAlign.Auto, [right]));
-        Assert.Equal(500 + set.Padding.Right, Canvas.GetLeft(set) + set.Width, 6);
-        Assert.Equal(HorizontalAlignment.Right, Assert.IsType<TextBlock>(set.Child).HorizontalAlignment);
-
-        // Centred rows, one row, rows of one width: the band as it always was.
+        // Centred rows, rows set flush right, one row, rows of one width: the band as it always was.
         TranslatedBlock[] asBefore =
         [
             Group("中央の字幕", "置中的字幕。", Centred) with { ReadAs = RealtimeBlockMode.Subtitle },
+            Group("右の説明", "短譯文。", FlushRight) with { ReadAs = RealtimeBlockMode.Subtitle },
             new("一行", "單行", new Rect(200, 150, 300, 30)) { ReadAs = RealtimeBlockMode.Subtitle },
             Group("同じ幅", "同寬兩列。", [new Rect(100, 0, 400, 30), new Rect(102, 40, 398, 30)]) with { ReadAs = RealtimeBlockMode.Subtitle },
         ];

@@ -568,8 +568,8 @@ public partial class RealtimeBlockWindow : Window
 
     /// <param name="alignment">
     /// 譯文對齊 on this group — see <see cref="RealtimeSourceAlignment.For"/>. Null, or centred, is
-    /// the band as it has always been set: round the source's centre. Left or right, the band keeps
-    /// that edge of the source and grows away from it, and the text in it keeps to that side.
+    /// the band as it has always been set: round the source's centre. Left, the band keeps the
+    /// source's left edge and grows to the right, and the text in it keeps to that side.
     /// Ignored on a tilted card, which is set along its own margin.
     /// </param>
     private LineVisual? BuildLine(
@@ -825,16 +825,15 @@ public partial class RealtimeBlockWindow : Window
                 // Read right to left, the lines start at the same right edge instead: Left is the
                 // start of a line, and a TextBlock set right to left mirrors it (TextDirection).
                 //
-                // Set against the source's left or right edge (譯文對齊), the text keeps to that side
-                // of the box, one line or several, its lines starting at the same edge as ever.
-                TextAlignment = wrapped || alignment is SourceAlignment.Left or SourceAlignment.Right
+                // Set against the source's left edge (譯文對齊), the text keeps to that side of the
+                // box, one line or several, its lines starting at the same edge as ever.
+                TextAlignment = wrapped || alignment is SourceAlignment.Left
                     ? TextAlignment.Left
                     : TextAlignment.Center,
                 FlowDirection = TextDirection.Of(line.TranslatedText, _targetLanguage),
                 HorizontalAlignment = alignment switch
                 {
                     SourceAlignment.Left => System.Windows.HorizontalAlignment.Left,
-                    SourceAlignment.Right => System.Windows.HorizontalAlignment.Right,
                     _ => wrapped
                         ? System.Windows.HorizontalAlignment.Center
                         : System.Windows.HorizontalAlignment.Stretch,
@@ -1955,15 +1954,14 @@ public partial class RealtimeBlockWindow : Window
                 HorizontalAlignment = alignment switch
                 {
                     SourceAlignment.Center => System.Windows.HorizontalAlignment.Center,
-                    SourceAlignment.Right => System.Windows.HorizontalAlignment.Right,
                     _ => System.Windows.HorizontalAlignment.Left,
                 },
                 VerticalAlignment = VerticalAlignment.Center,
                 // On the source row's own start, the left one, whichever way the row reads: each row
                 // has a box of its own, as ragged at the right as the source's lines were, and only
                 // their left edges line up — a menu read down its margin stays read down it. A row
-                // whose source is centred or set flush right (譯文對齊) keeps to that instead, its box
-                // placed round the row's centre or against its right end — see RealtimePanelLines.Split.
+                // whose source is centred (譯文對齊) keeps to that instead, its box placed round the
+                // row's centre — see RealtimePanelLines.Split.
                 Child = Outlined(edge, fontSize, () => new TextBlock
                 {
                     Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,

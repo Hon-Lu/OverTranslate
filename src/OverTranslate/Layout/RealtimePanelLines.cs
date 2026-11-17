@@ -118,7 +118,6 @@ internal static class RealtimePanelLines
                 TranslatedText = text[from..to].Trim(),
                 Bounds = new Rect(alignment switch
                 {
-                    SourceAlignment.Right => rows[row].Right - widths[row],
                     SourceAlignment.Center => rows[row].X + rows[row].Width / 2 - widths[row] / 2,
                     _ => rows[row].X,
                 }, rows[row].Y, widths[row], rows[row].Height),
@@ -135,9 +134,9 @@ internal static class RealtimePanelLines
     /// </summary>
     /// <remarks>
     /// The room is on the side the rows are set from (譯文對齊, see <see cref="RealtimeSourceAlignment"/>):
-    /// past the right end of a row set flush left, as before; past the left end of one set flush
-    /// right; and for a centred row the same either way, as far as the nearer side allows. Where
-    /// <see cref="Split"/> then places a row is that side's too.
+    /// past the right end of a row set flush left, as before; for a centred row the same either way,
+    /// as far as the nearer side allows. Where <see cref="Split"/> then places a row is that side's
+    /// too.
     /// </remarks>
     public static double[] AvailableWidths(TranslatedBlock block, IReadOnlyList<TranslatedBlock> scene,
         SourceAlignment? alignment = null)
@@ -160,7 +159,6 @@ internal static class RealtimePanelLines
             double centre = row.Left + row.Width / 2;
             return alignment switch
             {
-                SourceAlignment.Right => Math.Max(row.Width, row.Right - left),
                 SourceAlignment.Center => Math.Max(row.Width, 2 * Math.Min(centre - left, right - centre)),
                 _ => Math.Max(row.Width, right - row.Left),
             };

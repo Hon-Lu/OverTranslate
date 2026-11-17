@@ -4,11 +4,14 @@ using OverTranslate.Services.Realtime;
 namespace OverTranslate.Layout;
 
 /// <summary>Which edge of its source a group's translation is set against.</summary>
+/// <remarks>
+/// No right: 譯文對齊 offers no 靠右, and 自動 setting a group flush right where the user can never
+/// ask for it would only puzzle — see <see cref="RealtimeSourceAlignment.Of"/>.
+/// </remarks>
 internal enum SourceAlignment
 {
     Left,
     Center,
-    Right,
 }
 
 /// <summary>
@@ -23,12 +26,13 @@ internal enum SourceAlignment
 /// side, is what read wrong.</para>
 ///
 /// <para>MEASURED (OcrHarness --auto-probe align, the 自動 corpus: 591 captures, 標準's own groups,
-/// 2026-11-18): of 5,375 groups, 416 have two rows or more, and 218 of those are now set otherwise
+/// 2026-11-18): of 5,375 groups, 416 have two rows or more, and 210 of those are now set otherwise
 /// than before — 209 passages from their left edge (dialogue boxes, event and item text, comments,
-/// chat), 7 from their right (a comic's reward lists, a page footer set flush right) and 2 panels
-/// (a centred button caption, a list). Ten of the 209 drawn at random were all flush left; of the
-/// other 9, 3 were wrong — two lists whose bullets or avatars put their left edges apart, and a
-/// centred line cut off by the edge of the capture. The rest of the 416 either line up as they were drawn
+/// chat) and a centred button caption. Ten of the 209 drawn at random were all flush left. Rows
+/// that line up on the right are read as saying nothing: of the 9 groups read so, 3 were wrong —
+/// two lists whose bullets or avatars put their left edges apart, and a centred line cut off by
+/// the edge of the capture — and 譯文對齊 offers no 靠右 to explain one that was right (a comic's
+/// reward list, a page footer). The rest of the 416 either line up as they were drawn
 /// already (a comic balloon, a centred subtitle) or say nothing: rows of one width, where left,
 /// centre and right all agree, and ragged ones (a name plate joined to its line, a timestamp to its
 /// message). Groups of one row are nine in ten of all groups and say nothing about alignment on
@@ -75,7 +79,8 @@ internal static class RealtimeSourceAlignment
 
     /// <summary>
     /// The alignment of a group's rows, or null where they do not show one: a single row, rows of one
-    /// width, or rows whose edges agree on no side.
+    /// width, rows whose edges agree on no side, or rows that agree on the right — see the class
+    /// remarks.
     /// </summary>
     /// <param name="lines">The group's source lines; pieces of one row are taken together.</param>
     public static SourceAlignment? Of(IReadOnlyList<Rect>? lines)
@@ -93,12 +98,13 @@ internal static class RealtimeSourceAlignment
 
         if (rows.Max(row => row.Width) - rows.Min(row => row.Width) < tolerance * 2) return null;
 
+        // The right edge is still weighed, so rows set flush right are not taken for centred ones.
         static double Spread(IEnumerable<double> values) => values.Max() - values.Min();
-        (SourceAlignment Alignment, double Spread)[] sides =
+        (SourceAlignment? Alignment, double Spread)[] sides =
         [
             (SourceAlignment.Left, Spread(rows.Select(row => row.Left))),
             (SourceAlignment.Center, Spread(rows.Select(row => row.Left + row.Width / 2))),
-            (SourceAlignment.Right, Spread(rows.Select(row => row.Right))),
+            (null, Spread(rows.Select(row => row.Right))),
         ];
         var best = sides[0];
         foreach (var side in sides)
