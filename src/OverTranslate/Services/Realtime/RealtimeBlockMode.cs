@@ -7,7 +7,7 @@ namespace OverTranslate.Services.Realtime;
 /// </summary>
 /// <remarks>
 /// <para>Since modes (<see cref="ResolvedProfile"/>) this is how a mode's 合併程度 draws and reads —
-/// Auto is 自動判斷, Subtitle 整段 and 整個區塊, Panel 逐項 and 不合併 (see
+/// Auto is 自動判斷, Subtitle 整段 and 合併, Panel 逐項 and 不合併 (see
 /// <see cref="ResolvedProfile.Layout"/>) — and what each group was read as
 /// (<see cref="OcrTextBlock.ReadAs"/>). The history below is why the question is asked at all.</para>
 ///

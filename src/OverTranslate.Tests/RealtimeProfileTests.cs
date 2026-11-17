@@ -479,7 +479,7 @@ public class RealtimeProfileTests
     [InlineData(4, (int)RealtimeMerge.Auto, RealtimeBlockMode.Auto)]
     [InlineData(6, (int)RealtimeMerge.Auto, RealtimeBlockMode.Auto)]
     [InlineData(7, (int)RealtimeMerge.Passage, RealtimeBlockMode.Subtitle)]
-    [InlineData(8, (int)RealtimeMerge.Whole, RealtimeBlockMode.Subtitle)]
+    [InlineData(8, (int)RealtimeMerge.Merged, RealtimeBlockMode.Subtitle)]
     public void EachStepGroupsItsOwnWay_AndTheEndsReadAsTheirNeighbours(int level, int merge, RealtimeBlockMode layout)
     {
         var profile = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level });
@@ -555,29 +555,62 @@ public class RealtimeProfileTests
         Assert.Equal(items[0].Text, string.Join(" ", lines.Select(line => line.Text)));
     }
 
+    // ja-aa-nameplate-region: a dialogue box's 》 sits on its second line's row, which 整段 takes
+    // for a row it cannot stack.
+    private static List<OcrTextBlock> DialogueWithAnArrow() =>
+    [
+        At("オレのシゴトは、あの暗い墓場を", 378, 61, 967, 73),
+        At("》", 1722, 115, 72, 79),
+        At("暗い目で見守るコトなのさ。", 376, 144, 804, 76),
+    ];
+
     [Fact]
-    public void TheWholeBlock_IsOneGroupInReadingOrder_WithoutTheScenery()
+    public void Merging_JoinsADialogueAcrossTheArrowBesideIt()
     {
-        List<OcrTextBlock> frame =
-        [
-            At("OPTIONS", 300, 200, 160, 24),
-            At("NEW GAME", 300, 140, 180, 24),
-            At("エマ", 10, 10, 80, 30),
-            At("#", 600, 10, 40, 380),                          // a box thrown across the block
-            At("そんなに気安く触れないで", 10, 60, 480, 40),
-        ];
+        var passage = OcrService.GroupRealtime(DialogueWithAnArrow(), 292, ProfileAt(RealtimeMergeLevels.Passage));
+        var merged = OcrService.GroupRealtime(DialogueWithAnArrow(), 292, ProfileAt(RealtimeMergeLevels.Max));
 
-        var whole = OcrService.GroupRealtime(frame, 400, ProfileAt(RealtimeMergeLevels.Max));
-
-        var group = Assert.Single(whole);
-        Assert.Equal("エマ そんなに気安く触れないで NEW GAME OPTIONS", group.Text);
-        Assert.Null(group.ReadAs);
-        Assert.Empty(OcrService.GroupRealtime([], 400, ProfileAt(RealtimeMergeLevels.Max)));
-        Assert.Equal("Hi", Assert.Single(OcrService.GroupRealtime([At("Hi", 10, 10, 60, 30)], 400, ProfileAt(RealtimeMergeLevels.Max))).Text);
+        Assert.Equal(3, passage.Count);
+        Assert.Equal(["オレのシゴトは、あの暗い墓場を 暗い目で見守るコトなのさ。", "》"], merged.Select(group => group.Text));
+        Assert.All(merged, group => Assert.Null(group.ReadAs));
     }
 
     [Fact]
-    public void TheStepsJoinMoreTowardsTheWholeBlock()
+    public void Merging_JoinsLinesOfDifferentSizes()
+    {
+        List<OcrTextBlock> Balloon() => [At("THEN WHY DON'T YOU", 10, 10, 600, 60), At("GET OFF ME", 60, 76, 400, 32)];
+
+        Assert.Equal(2, OcrService.GroupRealtime(Balloon(), 400, ProfileAt(RealtimeMergeLevels.Passage)).Count);
+        Assert.Equal("THEN WHY DON'T YOU GET OFF ME",
+            Assert.Single(OcrService.GroupRealtime(Balloon(), 400, ProfileAt(RealtimeMergeLevels.Max))).Text);
+    }
+
+    [Fact]
+    public void Merging_StillPartsWhatIsClearlyApart()
+    {
+        // A small name over the dialogue, not sticking out of it.
+        List<OcrTextBlock> named = [At("Lua", 10, 10, 60, 20), At("Hey, did you know Ms. Freya here is a writer?", 10, 36, 700, 30)];
+        // Labels with their values beside them: a table, not a sentence.
+        List<OcrTextBlock> table =
+        [
+            At("Amenities from Civics:", 10, 10, 400, 30), At("+2", 600, 10, 40, 30),
+            At("Amenities from Religion:", 10, 46, 420, 30), At("+1", 600, 46, 40, 30),
+        ];
+        // Too far apart, and side by side in two columns.
+        List<OcrTextBlock> apart =
+        [
+            At("The quick brown fox jumps.", 10, 10, 500, 30), At("Over the lazy dog.", 10, 100, 360, 30),
+            At("Another column of text", 800, 46, 400, 30),
+        ];
+
+        Assert.Equal(2, OcrService.GroupRealtime(named, 400, ProfileAt(RealtimeMergeLevels.Max)).Count);
+        Assert.Equal(4, OcrService.GroupRealtime(table, 400, ProfileAt(RealtimeMergeLevels.Max)).Count);
+        Assert.Equal(3, OcrService.GroupRealtime(apart, 400, ProfileAt(RealtimeMergeLevels.Max)).Count);
+        Assert.Empty(OcrService.GroupRealtime([], 400, ProfileAt(RealtimeMergeLevels.Max)));
+    }
+
+    [Fact]
+    public void TheStepsJoinMoreTowardsTheRight()
     {
         int Groups(int level) => OcrService.GroupRealtime(WrappedSentence(), 400, ProfileAt(level)).Count;
 

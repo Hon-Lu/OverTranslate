@@ -36,8 +36,8 @@ internal enum RealtimeMerge
     /// <summary>整段: the dialogue grouper.</summary>
     Passage,
 
-    /// <summary>整個區塊: every line one group — see <see cref="OcrTextBlockGrouper.GroupWhole"/>.</summary>
-    Whole,
+    /// <summary>合併: the dialogue grouper, joining more — see <see cref="DialogueTextGrouper.Group"/>'s merge.</summary>
+    Merged,
 }
 
 /// <summary>
@@ -139,7 +139,7 @@ public sealed record ResolvedProfile
 
     /// <summary>
     /// How the block is drawn and, with 自動 timing and detector size, read: Auto (自動判斷), Subtitle
-    /// (整段 and 整個區塊) or Panel (逐項 and 不合併).
+    /// (整段 and 合併) or Panel (逐項 and 不合併).
     /// </summary>
     /// <remarks>
     /// The two ends of 合併程度 read as their neighbours: lines left apart are drawn as items, the
@@ -148,7 +148,7 @@ public sealed record ResolvedProfile
     internal RealtimeBlockMode Layout => Merge switch
     {
         RealtimeMerge.Lines or RealtimeMerge.Items => RealtimeBlockMode.Panel,
-        RealtimeMerge.Passage or RealtimeMerge.Whole => RealtimeBlockMode.Subtitle,
+        RealtimeMerge.Passage or RealtimeMerge.Merged => RealtimeBlockMode.Subtitle,
         _ => RealtimeBlockMode.Auto,
     };
 
@@ -285,7 +285,7 @@ public sealed record ResolvedProfile
         RealtimeMergeLevels.Min => RealtimeMerge.Lines,
         RealtimeMergeLevels.Items => RealtimeMerge.Items,
         RealtimeMergeLevels.Passage => RealtimeMerge.Passage,
-        RealtimeMergeLevels.Max => RealtimeMerge.Whole,
+        RealtimeMergeLevels.Max => RealtimeMerge.Merged,
         _ => RealtimeMerge.Auto,
     };
 

@@ -503,7 +503,7 @@ public class SettingsParsingTests
         Assert.Equal(-4, stored.MergeLevel);
         Assert.Equal(12, settings.Realtime.Profiles[1].MergeLevel);
         Assert.Equal(RealtimeMergeLevels.Max, settings.Realtime.Profiles[1].Filled().MergeLevel);
-        Assert.Equal(RealtimeMerge.Whole, settings.Realtime.ResolveProfile("b").Merge);
+        Assert.Equal(RealtimeMerge.Merged, settings.Realtime.ResolveProfile("b").Merge);
         Assert.Equal(0, stored.ClearAfterEmptyReads);
 
         var filled = stored.Filled();

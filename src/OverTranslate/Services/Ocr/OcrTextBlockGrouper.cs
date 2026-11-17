@@ -103,30 +103,6 @@ internal static class OcrTextBlockGrouper
         return lines;
     }
 
-    /// <summary>
-    /// 整個區塊: every line one group, in reading order — top to bottom, left to right — with the
-    /// pieces of each line joined as <see cref="GroupLines"/> joins them.
-    /// </summary>
-    /// <remarks>
-    /// Asks nothing about how the lines relate. For a block drawn around one balloon or one
-    /// dialogue box that the other steps still part, at the price of joining whatever else was
-    /// drawn into it — a name plate, a button.
-    /// </remarks>
-    /// <inheritdoc cref="Group(IReadOnlyList{OcrTextBlock}, GroupingProfile, List{NextLineDecision}, GroupingTrace)"/>
-    internal static List<OcrTextBlock> GroupWhole(
-        IReadOnlyList<OcrTextBlock> blocks,
-        GroupingProfile profile,
-        List<NextLineDecision>? decisions = null,
-        GroupingTrace? trace = null)
-    {
-        AssertLayoutGeometryFilled(blocks);
-        trace?.RegisterBlocks(blocks);
-        var lines = blocks.Count <= 1 ? Alone(blocks, trace) : LinesInReadingOrder(blocks, profile, decisions, trace);
-        if (lines.Count == 0) return lines;
-        trace?.RegisterGroups([lines]);
-        return [BuildGroup(lines)];
-    }
-
     // A block of one line or none: nothing to join, and the line as the detector framed it.
     private static List<OcrTextBlock> Alone(IReadOnlyList<OcrTextBlock> blocks, GroupingTrace? trace)
     {

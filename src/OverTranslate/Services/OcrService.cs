@@ -324,7 +324,7 @@ public class OcrService : IDisposable
         if (profile.Merge == Realtime.RealtimeMerge.Auto)
             return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight, profile), profile.Auto);
 
-        // The two ends of 合併程度 are filtered as the step beside them is, being drawn and read as it.
+        // 不合併 is filtered as 逐項 is and 合併 as 整段 is, being drawn and read as them.
         var filtered = IgnoreSmallText(
             RejectUnconvincingBlocks(blocks, profile.ConfidenceFloor), profile.IgnoreSmallFraction);
         switch (profile.Merge)
@@ -337,13 +337,12 @@ public class OcrService : IDisposable
         // Remove scene-sized noise before it can contaminate a real dialogue row. Confident
         // single letters (such as a split "I") may still join; isolated ones are filtered later.
         filtered = filtered.Where(b => !Realtime.CollapsedDetection.IsCollapsed(b.Bounds.Height, frameHeight, b.Text)).ToList();
-        if (profile.Merge == Realtime.RealtimeMerge.Whole)
-            return OcrTextBlockGrouper.GroupWhole(filtered, profile.PanelGrouping, decisions, trace);
         trace?.RegisterBlocks(blocks);
         // The dialogue grouper has rules of its own and does not go through OcrTextBlockGrouper,
         // so the readings have to be taken out for it separately. See Ocr.HorizontalRubyLines.
         return Realtime.DialogueTextGrouper.Group(
-            Ocr.HorizontalRubyLines.Drop(filtered), trace, decisions, profile.MaxStackGap);
+            Ocr.HorizontalRubyLines.Drop(filtered), trace, decisions, profile.MaxStackGap,
+            merge: profile.Merge == Realtime.RealtimeMerge.Merged);
     }
 
     /// <summary>

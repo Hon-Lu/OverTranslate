@@ -239,12 +239,12 @@ public static class RealtimePresets
 }
 
 /// <summary>
-/// 合併程度: one scale from reading every line on its own to reading the whole block as one, which
+/// 合併程度: one scale from reading every line on its own to joining all but what is clearly apart, which
 /// is what the old 分行處理 and 合併傾向 became.
 /// </summary>
 /// <remarks>
 /// <para>Each step names how stacked lines are joined. Pieces side by side on one line are joined by
-/// the same rules on every step but the last, 不合併 included: a sentence the detector framed in two
+/// the same rules on every step, 不合併 included: a sentence the detector framed in two
 /// pieces is still one line.</para>
 ///
 /// <list type="table">
@@ -252,7 +252,7 @@ public static class RealtimePresets
 /// <item><term>1 逐項</term><description>The panel grouper — 遊戲介面・聊天室.</description></item>
 /// <item><term>2–6 自動判斷</term><description>Group by group, 1–5 of what was 合併傾向; 4 is 標準.</description></item>
 /// <item><term>7 整段</term><description>The dialogue grouper — 字幕・漫畫.</description></item>
-/// <item><term>8 整個區塊</term><description>Everything in the block as one group, in reading order; drawn as a passage.</description></item>
+/// <item><term>8 合併</term><description>整段 joining past size, alignment and a short item beside the dialogue; still parts what is clearly apart.</description></item>
 /// </list>
 ///
 /// <para>Steps 1–7 are exactly what the layouts and the tendency they replace read as. MEASURED
@@ -280,7 +280,7 @@ public static class RealtimeMergeLevels
     /// <summary>整段.</summary>
     public const int Passage = 7;
 
-    /// <summary>整個區塊: the whole block one group.</summary>
+    /// <summary>合併: more than 整段, short of joining what is clearly apart.</summary>
     public const int Max = 8;
 
     /// <summary>

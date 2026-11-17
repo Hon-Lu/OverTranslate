@@ -60,7 +60,7 @@ internal sealed record RealtimeActualValues(
 
     /// <summary>One mode, preset or custom, as stored.</summary>
     /// <remarks>
-    /// 自動 on 不合併 and 逐項 reads as 逐項 does, on 整段 and 整個區塊 as 整段 does — see
+    /// 自動 on 不合併 and 逐項 reads as 逐項 does, on 整段 and 合併 as 整段 does — see
     /// <see cref="ResolvedProfile.Layout"/>.
     /// </remarks>
     public static RealtimeActualValues Of(RealtimeProfile profile)
