@@ -124,11 +124,20 @@
                              and no dialog — the choice is three words long. -->
                         <StackPanel x:Name="TemplateChooser" Visibility="Collapsed" Margin="0,2,0,0"
                                     PreviewKeyDown="TemplateChooser_PreviewKeyDown">
-                            <TextBlock Text="{DynamicResource S.Realtime.ProfileChooseTemplate}"
-                                       Style="{StaticResource FieldHint}" Margin="10,2,0,4"/>
+                            <TextBlock Text="{DynamicResource S.Realtime.ProfileNewTitle}"
+                                       FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTextPrimary}" Margin="10,2,0,6"/>
+                            <TextBlock Text="{DynamicResource S.Realtime.ProfileTemplate}"
+                                       Style="{StaticResource FieldLabel}" Margin="10,0,0,2"/>
                             <StackPanel x:Name="TemplateButtons"/>
-                            <Button Style="{StaticResource ProfileAddRow}" Foreground="{DynamicResource AppTextSecondary}"
-                                    Content="{DynamicResource S.Common.Cancel}" Click="TemplateCancel_Click"/>
+                            <TextBlock Text="{DynamicResource S.Realtime.ProfileTemplateHint}" TextWrapping="Wrap"
+                                       Style="{StaticResource FieldHint}" Margin="10,2,4,4"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource ProfileAddRow}" Foreground="{DynamicResource AppTextSecondary}"
+                                        Content="{DynamicResource S.Common.Cancel}" Click="TemplateCancel_Click"/>
+                                <Button Style="{StaticResource ProfileAddRow}" Foreground="{DynamicResource AppAccent}"
+                                        Content="{DynamicResource S.Realtime.ProfileCreate}" Click="TemplateCreate_Click"/>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -208,9 +217,14 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14"
                                        Foreground="{DynamicResource AppWarning}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock x:Name="DeleteConfirmText" Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center"
-                                       FontFamily="{DynamicResource AppFont}" FontSize="{StaticResource AppFontSize}"
-                                       Foreground="{DynamicResource AppTextPrimary}"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource S.Realtime.ProfileDeleteTitle}" FontWeight="SemiBold"
+                                           FontFamily="{DynamicResource AppFont}" FontSize="{StaticResource AppFontSize}"
+                                           Foreground="{DynamicResource AppTextPrimary}"/>
+                                <TextBlock x:Name="DeleteConfirmText" TextWrapping="Wrap" Margin="0,2,0,0"
+                                           FontFamily="{DynamicResource AppFont}" FontSize="{StaticResource AppFontSize}"
+                                           Foreground="{DynamicResource AppTextPrimary}"/>
+                            </StackPanel>
                             <Button x:Name="DeleteCancelBtn" Grid.Column="2" Style="{StaticResource FlatButton}"
                                     Margin="12,0,0,0" Padding="14,0"
                                     Content="{DynamicResource S.Common.Cancel}" Click="DeleteCancelBtn_Click"/>
@@ -255,6 +269,8 @@
                             </Border>
                         </StackPanel>
                     </StackPanel>
+
+                    <TextBlock x:Name="StatusNote" Style="{StaticResource FieldHint}" Margin="2,10,0,0"/>
                 </StackPanel>
             </Grid>
         </StackPanel>

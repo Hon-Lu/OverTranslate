@@ -439,7 +439,9 @@
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">ゲーム画面、チャット、メニューや UI の文字など、続けて読む文章でない場面に向いています。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCustomTag">カスタム</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">「{0}」をテンプレートにしています。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOnModified">「{0}」をテンプレートにしています（{1} 項目を変更）。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">モードを管理…</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManageTip">現在のリアルタイム翻訳を終了して、モード設定を開きます</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">モードの説明を閉じる</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">モードの説明を開く</sys:String>
 
@@ -448,9 +450,14 @@
     <sys:String x:Key="S.Realtime.ProfilesHint">各ブロックのモードは、ブロックを選択するときにブロックの上で選びます。プリセットのモードは変更できません。調整するには、それをテンプレートにしてカスタムモードを作成します。</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">プリセット</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">テンプレート：{0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateModified">テンプレート：{0}・{1} 項目を変更</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdd">カスタムモードを追加（{0}/{1}）</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">カスタムモードは {0} 個までです</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileChooseTemplate">テンプレートを選択</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewTitle">カスタムモードを追加</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplate">テンプレート</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateHint">テンプレートにするプリセットを選んでください。作成後に各設定を調整できます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCreate">作成</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileLiveApply">変更は現在の翻訳にすぐ反映されます</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">カスタムモード {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCreateFrom">これをもとにカスタムモードを作成</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">プリセットのモードは変更できません。</sys:String>
@@ -458,6 +465,7 @@
     <sys:String x:Key="S.Realtime.ProfileNameTaken">同じ名前のモードがあります</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">テンプレートに戻す</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">削除</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteTitle">カスタムモードの削除</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">「{0}」モードを削除しますか？</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">変更あり</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">テンプレートの値に戻す：{0}</sys:String>
@@ -469,12 +477,28 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">横書きのみ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字の向きが縦書きのブロックでは使われません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayout">行の扱い</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutPassage">まとめて</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutItems">項目ごと</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutHint">ひとつの会話が分かれてしまうときは「まとめて」、メニューやリストがひとつにまとまってしまうときは「項目ごと」を選びます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePerGroup">文字に合わせて調整</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManual">手動</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMerge">文の結合</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">上下の文が分かれてしまうときは右へ動かすと結合しやすくなり、関係のない行がまとまってしまうときは左へ動かすと分かれやすくなります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNone">結合しない</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItems">項目ごと</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAuto">自動判定</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">自動判定・{0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean1">項目寄り</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean2">やや項目寄り</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean4">やや段落寄り</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean5">段落寄り</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassage">段落</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlock">結合</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">1 行ずつ翻訳し、上下の行は結合しません。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">1 行ずつ翻訳し、明らかに同じ文のときだけ上下を結合します。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">文字の配置と内容から結合するかを判断します。右へ動かすほど上下の行が結合しやすくなります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大きさと位置が近い上下の複数行を、優先して 1 つの段落にまとめます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">文字サイズや揃え方に関係なく、位置が近い上下の文をすべて 1 つの段落にまとめます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が止まるまで待つ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文が変わったあと、画面の変化が止まるまで読み取りを待つ最長時間。フェードイン中の文字が誤って読まれるときは長くし、訳文が出るのが遅いときは短くします。一文字ずつ表示される文字にはほとんど効果がありません。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">まとまった文章は待たず、ばらばらの文字は約 0.15 秒待ちます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">待たない</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">約 {0} 秒</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">原文が消えたらすぐに訳文を消す</sys:String>
@@ -488,11 +512,7 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">短い文字列の認識しきい値</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">10 文字未満の文字列にのみ適用されます。上げると誤認識が減りますが、短い文字列の一部が認識されないことがあります。下げるとより多くの文字を認識できますが、誤認識が増えることがあります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">オフ</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeLow">低</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeLower">やや低</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeHigher">やや高</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeHigh">高</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">リアルタイム翻訳を中止しました：{0}</sys:String>

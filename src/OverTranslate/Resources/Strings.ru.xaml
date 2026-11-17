@@ -432,7 +432,9 @@
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">Для игровых экранов, окон чата, меню и текста интерфейса — всего, что не является субтитрами, диалогами или мангой.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCustomTag">Свой</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">На основе «{0}».</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOnModified">На основе «{0}», изменено параметров: {1}.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">Управление режимами…</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManageTip">Завершает текущий перевод в реальном времени и открывает настройки режимов</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">Скрыть описание режимов</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">Показать описание режимов</sys:String>
 
@@ -441,9 +443,14 @@
     <sys:String x:Key="S.Realtime.ProfilesHint">Режим каждой области выбирается над ней при выборе областей. Готовые режимы изменить нельзя — чтобы настроить, создайте на их основе свой режим.</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">Готовый</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">Шаблон: {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateModified">Шаблон: {0} · изменено: {1}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdd">Новый свой режим ({0}/{1})</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">Не более {0} своих режимов</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileChooseTemplate">Выберите шаблон</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewTitle">Новый свой режим</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplate">Шаблон</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateHint">Выберите готовый режим в качестве шаблона. После создания можно настроить каждый параметр.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCreate">Создать</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileLiveApply">Изменения сразу применяются к текущему переводу</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">Свой режим {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCreateFrom">Создать свой режим на основе этого</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Готовые режимы изменить нельзя.</sys:String>
@@ -451,6 +458,7 @@
     <sys:String x:Key="S.Realtime.ProfileNameTaken">Режим с таким названием уже есть</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">Вернуть к шаблону</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">Удалить</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteTitle">Удаление своего режима</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">Удалить режим «{0}»?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">Изменено</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">Вернуть значение шаблона: {0}</sys:String>
@@ -462,12 +470,28 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">Только горизонтальный текст</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">Не используется в областях с вертикальным направлением текста.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">Авто</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayout">Разбивка строк</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutPassage">Целиком</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutItems">По пунктам</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutHint">Выберите «Целиком», если реплика разбивается на части; «По пунктам», если меню или список сливаются в один текст.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePerGroup">По содержимому</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManual">Вручную</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMerge">Объединение строк</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">Сдвиньте вправо, если строки одной фразы разбиваются, — они будут объединяться охотнее; влево, если объединяются несвязанные строки, — они будут чаще разделяться.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNone">Без объединения</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItems">По пунктам</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAuto">Авто</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">Авто · {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean1">к пунктам</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean2">слегка к пунктам</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean4">слегка к целому</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean5">к целому</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassage">Целиком</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlock">Объединять</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">Каждая строка переводится отдельно, строки не объединяются.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">Каждая строка переводится отдельно; объединяются только строки, которые явно составляют одну фразу.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Объединять ли строки, решается по расположению и содержанию текста; чем правее, тем охотнее строки объединяются.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">Соседние строки похожего размера и положения в первую очередь объединяются в один фрагмент.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">Без учёта размера и выравнивания: все близко расположенные строки объединяются в один фрагмент.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Ждать остановки текста</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Наибольшее время ожидания после изменения текста, пока изображение не перестанет меняться. Увеличьте, если плавно проявляющийся текст распознаётся с ошибками; уменьшите, если перевод появляется слишком поздно. На текст, появляющийся по буквам, почти не влияет.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">Для связного текста — без ожидания, для отдельных надписей — около 0.15 с.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">Без ожидания</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">Около {0} с</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">Сразу убирать перевод, когда текст исчезает</sys:String>
@@ -481,11 +505,7 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">Порог для коротких строк</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Действует только на текст короче 10 символов. Повысьте, чтобы было меньше ошибок распознавания, но часть коротких строк может не распознаться; понизьте, чтобы распознавалось больше текста, но ошибок может стать больше.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Выкл.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeLow">Низкий</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeLower">Ниже среднего</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">Средний</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeHigher">Выше среднего</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeHigh">Высокий</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Перевод в реальном времени остановлен: {0}</sys:String>

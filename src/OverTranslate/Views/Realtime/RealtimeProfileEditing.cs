@@ -32,7 +32,11 @@ internal enum ProfileParam
 /// <param name="Name">The preset's name in the interface language, or the custom mode's own.</param>
 /// <param name="IsPreset">One of the three built in.</param>
 /// <param name="BasedOn">The preset it follows; a preset follows itself.</param>
-public sealed record ProfileChoice(string Id, string Name, bool IsPreset, string BasedOn);
+/// <param name="Modified">
+/// How many values a custom mode sets differently from its preset — see
+/// <see cref="RealtimeProfileEditing.ModifiedCount(RealtimeProfile)"/>. Zero for a preset.
+/// </param>
+public sealed record ProfileChoice(string Id, string Name, bool IsPreset, string BasedOn, int Modified = 0);
 
 /// <summary>
 /// The rules of editing the modes, kept apart from the controls that apply them so they can be
@@ -234,7 +238,7 @@ internal static class RealtimeProfileEditing
                 names.Add(name);
             }
             var basedOn = RealtimePresets.IsPreset(profile.BasedOn) ? profile.BasedOn : RealtimePresets.StandardId;
-            choices.Add(new ProfileChoice(profile.Id, name, false, basedOn));
+            choices.Add(new ProfileChoice(profile.Id, name, false, basedOn, ModifiedCount(profile)));
         }
         return choices;
     }
@@ -266,6 +270,52 @@ internal static class RealtimeProfileEditing
         RealtimePresets.InterfaceId => LocalizationService.Get("S.Realtime.ProfileInterfaceGuidance"),
         _ => LocalizationService.Get("S.Realtime.ProfileStandardGuidance"),
     };
+
+    /// <summary>
+    /// What a custom mode's line under its name says: the preset it is made from, and how many
+    /// values it changed when it changed any.
+    /// </summary>
+    public static string TemplateLine(ProfileChoice choice) => choice.Modified > 0
+        ? LocalizationService.Format("S.Realtime.ProfileTemplateModified", PresetName(choice.BasedOn), choice.Modified)
+        : LocalizationService.Format("S.Realtime.ProfileTemplateOf", PresetName(choice.BasedOn));
+
+    /// <summary>
+    /// The sentence that opens a custom mode's guidance on the edit layer: the preset it is made
+    /// from, and how many values it changed when it changed any.
+    /// </summary>
+    public static string BasedOnSentence(ProfileChoice choice) => choice.Modified > 0
+        ? LocalizationService.Format("S.Realtime.ProfileBasedOnModified", PresetName(choice.BasedOn), choice.Modified)
+        : LocalizationService.Format("S.Realtime.ProfileBasedOn", PresetName(choice.BasedOn));
+
+    /// <summary>
+    /// A step of 語句合併 by name: 不合併, 逐項, 自動判斷・偏逐項 … 自動判斷・偏整段, 整段, 合併.
+    /// </summary>
+    public static string MergeLevelName(int level) => level switch
+    {
+        <= RealtimeMergeLevels.Min => LocalizationService.Get("S.Realtime.ProfileMergeNone"),
+        RealtimeMergeLevels.Items => LocalizationService.Get("S.Realtime.ProfileMergeItems"),
+        RealtimeMergeLevels.Passage => LocalizationService.Get("S.Realtime.ProfileMergePassage"),
+        >= RealtimeMergeLevels.Max => LocalizationService.Get("S.Realtime.ProfileMergeBlock"),
+        _ => LocalizationService.Format("S.Realtime.ProfileMergeAutoLevel", LocalizationService.Get(
+            RealtimeMergeLevels.Tendency(level) switch
+            {
+                1 => "S.Realtime.ProfileMergeLean1",
+                2 => "S.Realtime.ProfileMergeLean2",
+                4 => "S.Realtime.ProfileMergeLean4",
+                5 => "S.Realtime.ProfileMergeLean5",
+                _ => "S.Realtime.ProfileGradeMid",
+            })),
+    };
+
+    /// <summary>What a step of 語句合併 does, in a sentence; the five 自動判斷 steps share one.</summary>
+    public static string MergeLevelDescription(int level) => LocalizationService.Get(level switch
+    {
+        <= RealtimeMergeLevels.Min => "S.Realtime.ProfileMergeNoneDesc",
+        RealtimeMergeLevels.Items => "S.Realtime.ProfileMergeItemsDesc",
+        RealtimeMergeLevels.Passage => "S.Realtime.ProfileMergePassageDesc",
+        >= RealtimeMergeLevels.Max => "S.Realtime.ProfileMergeBlockDesc",
+        _ => "S.Realtime.ProfileMergeAutoDesc",
+    });
 
     /// <summary>自訂模式 N, in the interface language.</summary>
     public static string NewName(int number) =>

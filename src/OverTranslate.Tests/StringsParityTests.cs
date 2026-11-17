@@ -224,7 +224,7 @@ public class StringsParityTests
         var referenced = KeysReferencedInSource().Keys.ToHashSet();
 
         var orphans = Load(ChineseFile).Keys
-            .Where(key => !referenced.Contains(key))
+            .Where(key => !referenced.Contains(key) && !DefinedAheadOfUse.Contains(key))
             .Order()
             .ToList();
 
@@ -232,6 +232,30 @@ public class StringsParityTests
             orphans.Count == 0,
             $"Defined but never referenced:{Environment.NewLine}" +
             string.Join(Environment.NewLine, orphans));
+    }
+
+    /// <summary>
+    /// Keys whose final copy is in, translated, ahead of the control that shows them — so the
+    /// copy and the control can land separately. Each one comes off this list as soon as it is
+    /// used: <see cref="Keys_defined_ahead_of_use_are_not_used_yet"/> says when.
+    /// </summary>
+    private static readonly HashSet<string> DefinedAheadOfUse =
+    [
+        // 自動｜手動, the segmented switch on 畫面文字穩定後再讀取 and 辨識解析度.
+        "S.Realtime.ProfileManual",
+    ];
+
+    [Fact]
+    public void Keys_defined_ahead_of_use_are_not_used_yet()
+    {
+        var referenced = KeysReferencedInSource().Keys.ToHashSet();
+        var defined = Load(ChineseFile).Keys.ToHashSet();
+
+        Assert.All(DefinedAheadOfUse, key =>
+        {
+            Assert.True(defined.Contains(key), $"{key} is not defined any more; take it off DefinedAheadOfUse");
+            Assert.False(referenced.Contains(key), $"{key} is used now; take it off DefinedAheadOfUse");
+        });
     }
 
     /// <summary>

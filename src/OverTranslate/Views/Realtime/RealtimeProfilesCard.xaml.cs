@@ -256,7 +256,7 @@ public partial class RealtimeProfilesCard : UserControl
             stack.Children.Add(name);
             var template = new TextBlock
             {
-                Text = LocalizationService.Format("S.Realtime.ProfileTemplateOf", RealtimeProfileEditing.PresetName(choice.BasedOn)),
+                Text = RealtimeProfileEditing.TemplateLine(choice),
                 FontWeight = FontWeights.Normal,
                 Margin = new Thickness(0, 1, 0, 0),
             };
@@ -307,7 +307,7 @@ public partial class RealtimeProfilesCard : UserControl
             }
             _nameShown = choice.Id;
             ResetAllBtn.IsEnabled = RealtimeProfileEditing.ModifiedCount(SelectedStored(), RealtimeProfileEditing.All) > 0;
-            HeaderNote.Text = LocalizationService.Format("S.Realtime.ProfileBasedOn", RealtimeProfileEditing.PresetName(choice.BasedOn));
+            HeaderNote.Text = RealtimeProfileEditing.BasedOnSentence(choice);
         }
     }
 
@@ -340,6 +340,11 @@ public partial class RealtimeProfilesCard : UserControl
 
             ShowValue(row, filled);
         }
+
+        // Saved as it changes either way; while a session runs it also reaches the blocks at once.
+        StatusNote.Text = LocalizationService.Get(RealtimeSessionController.Instance.IsTranslating
+            ? "S.Realtime.ProfileLiveApply"
+            : "S.Settings.AutoSaveHint");
 
         int advancedModified = preset ? 0 : RealtimeProfileEditing.ModifiedCount(stored, RealtimeProfileEditing.Advanced);
         AdvancedText.Text = !_advancedExpanded && advancedModified > 0
@@ -379,6 +384,8 @@ public partial class RealtimeProfilesCard : UserControl
                 break;
         }
         row.Value.Text = Display(filled, row.Param);
+        if (row.Param == ProfileParam.MergeLevel)
+            row.Value.ToolTip = RealtimeProfileEditing.MergeLevelDescription(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle);
     }
 
     private static double PollSeconds => Services.Realtime.RealtimeRegionState.PollInterval.TotalSeconds;
@@ -390,10 +397,16 @@ public partial class RealtimeProfilesCard : UserControl
     /// <summary>How a value reads on its row and on the 還原 tooltip.</summary>
     private static string Display(RealtimeProfile filled, ProfileParam param) => param switch
     {
-        ProfileParam.MergeLevel => LevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
-        ProfileParam.SettleSeconds => SecondsText(filled.SettleSeconds ?? RealtimePresets.Automatic),
+        ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
+        ProfileParam.SettleSeconds => filled.SettleSeconds is < 0 or null
+            ? Services.Realtime.RealtimeActualValues.Of(filled).SettleSeconds is { } seconds
+                ? SecondsText(seconds)
+                : LocalizationService.Get("S.Realtime.ProfilePerGroup")
+            : SecondsText(filled.SettleSeconds.Value),
         ProfileParam.DetectorPercent => filled.DetectorPercent is < 0 or null
-            ? LocalizationService.Get("S.Realtime.ProfileAuto")
+            ? Services.Realtime.RealtimeActualValues.Of(filled).DetectorPercent is { } percent
+                ? LocalizationService.Format("S.Realtime.ProfilePercent", percent)
+                : LocalizationService.Get("S.Realtime.ProfilePerGroup")
             : LocalizationService.Format("S.Realtime.ProfilePercent", filled.DetectorPercent),
         ProfileParam.IgnoreSmallPercent => filled.IgnoreSmallPercent is 0 or null
             ? LocalizationService.Get("S.Realtime.ProfileOff")
@@ -402,32 +415,15 @@ public partial class RealtimeProfilesCard : UserControl
         _ => "",
     };
 
-    // Stand-in until the page is rebuilt around 合併程度: the ends read as the step beside them.
-    private static string LevelName(int level) => level switch
-    {
-        <= RealtimeMergeLevels.Items => LocalizationService.Get("S.Realtime.ProfileLayoutItems"),
-        >= RealtimeMergeLevels.Passage => LocalizationService.Get("S.Realtime.ProfileLayoutPassage"),
-        _ => Grade(RealtimeMergeLevels.Tendency(level)),
-    };
-
     private static string SecondsText(double seconds) =>
         seconds < 0 ? LocalizationService.Get("S.Realtime.ProfileAuto")
         : seconds < 0.005 ? LocalizationService.Get("S.Realtime.ProfileSettleNone")
         : LocalizationService.Format("S.Realtime.ProfileSeconds", RealtimeProfileEditing.Seconds(seconds));
 
-    private static string Grade(int step) => step switch
-    {
-        1 => LocalizationService.Get("S.Realtime.ProfileGradeLow"),
-        2 => LocalizationService.Get("S.Realtime.ProfileGradeLower"),
-        4 => LocalizationService.Get("S.Realtime.ProfileGradeHigher"),
-        5 => LocalizationService.Get("S.Realtime.ProfileGradeHigh"),
-        _ => LocalizationService.Get("S.Realtime.ProfileGradeMid"),
-    };
-
     /// <summary>What a slider's position reads as while it is being moved, before it is written.</summary>
     private static string SliderReading(ProfileParam param, double value) => param switch
     {
-        ProfileParam.MergeLevel => LevelName((int)Math.Round(value)),
+        ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName((int)Math.Round(value)),
         ProfileParam.SettleSeconds => SecondsText(Math.Round(value * PollSeconds, 2)),
         ProfileParam.DetectorPercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
         ProfileParam.IgnoreSmallPercent => value < 0.5
@@ -441,7 +437,7 @@ public partial class RealtimeProfilesCard : UserControl
 
     private void BuildRows()
     {
-        Add(LayoutGroup, BuildRow(ProfileParam.MergeLevel, "S.Realtime.ProfileLayout", "S.Realtime.ProfileLayoutHint"));
+        Add(LayoutGroup, BuildRow(ProfileParam.MergeLevel, "S.Realtime.ProfileMerge", "S.Realtime.ProfileMergeHint"));
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
@@ -524,10 +520,11 @@ public partial class RealtimeProfilesCard : UserControl
         switch (param)
         {
             case ProfileParam.MergeLevel:
-                BuildSlider(row, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1, nameKey);
+                BuildSlider(row, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1, nameKey,
+                    "S.Realtime.ProfileMergeNone", "S.Realtime.ProfileMergeBlock", "S.Realtime.ProfileMergeAuto");
                 break;
             case ProfileParam.SettleSeconds:
-                BuildAuto(row, null);
+                BuildAuto(row, "S.Realtime.ProfileSettleAutoTip");
                 BuildSlider(row, 0, Math.Round(RealtimeProfile.MaxSettleSeconds / PollSeconds), 1, nameKey);
                 break;
             case ProfileParam.ClearAfterEmptyReads:
@@ -609,7 +606,7 @@ public partial class RealtimeProfilesCard : UserControl
     }
 
     private void BuildSlider(ParamRow row, double min, double max, double tick, string nameKey,
-        string? lowKey = null, string? highKey = null)
+        string? lowKey = null, string? highKey = null, string? middleKey = null)
     {
         var slider = new Slider
         {
@@ -639,6 +636,8 @@ public partial class RealtimeProfilesCard : UserControl
         slider.ValueChanged += (_, _) =>
         {
             row.Value.Text = SliderReading(row.Param, slider.Value);
+            if (row.Param == ProfileParam.MergeLevel)
+                row.Value.ToolTip = RealtimeProfileEditing.MergeLevelDescription((int)Math.Round(slider.Value));
             if (_syncing || dragging) return;
             // From the keyboard or a click on the track: written once the keys rest.
             _pendingRow = row;
@@ -650,12 +649,15 @@ public partial class RealtimeProfilesCard : UserControl
         FrameworkElement control = slider;
         if (lowKey is not null && highKey is not null)
         {
-            // The two ends named under the track, for the one slider whose direction is not obvious
-            // from its name: 合併傾向 runs from reading items apart to reading one passage.
+            // The two ends named under the track, and what lies between them, for the one slider
+            // whose direction is not obvious from its name: 語句合併 runs from 不合併 to 合併.
             var ends = new Grid { Margin = new Thickness(12, 0, 0, 0) };
             var low = new TextBlock { HorizontalAlignment = HorizontalAlignment.Left };
             var high = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right };
-            foreach (var (end, key) in new[] { (low, lowKey), (high, highKey) })
+            var labels = new List<(TextBlock, string)> { (low, lowKey), (high, highKey) };
+            if (middleKey is not null)
+                labels.Add((new TextBlock { HorizontalAlignment = HorizontalAlignment.Center }, middleKey));
+            foreach (var (end, key) in labels)
             {
                 end.SetResourceReference(StyleProperty, "AnnotationSliderEnd");
                 end.SetResourceReference(TextBlock.TextProperty, key);
@@ -847,25 +849,30 @@ public partial class RealtimeProfilesCard : UserControl
 
     // ── Adding ──────────────────────────────────────────────────────────────────────────────────
 
+    // The preset the chooser has picked for the mode about to be made.
+    private string _templateId = RealtimePresets.StandardId;
+
     private void AddRow_Click(object sender, RoutedEventArgs e)
     {
         TemplateButtons.Children.Clear();
-        Button? focus = null;
-        string current = SelectedChoice().BasedOn;
+        RadioButton? focus = null;
+        _templateId = SelectedChoice().BasedOn;
         foreach (var preset in Choices().Where(choice => choice.IsPreset))
         {
-            var button = new Button
-            {
-                Content = preset.Name,
-                ToolTip = RealtimeProfileEditing.PresetSummary(preset.Id),
-                Padding = new Thickness(22, 0, 10, 0),
-            };
-            button.SetResourceReference(StyleProperty, "ProfileAddRow");
-            button.SetResourceReference(ForegroundProperty, "AppTextPrimary");
             var id = preset.Id;
-            button.Click += (_, _) => Create(id);
-            TemplateButtons.Children.Add(button);
-            if (preset.Id == current) focus = button;
+            var option = new RadioButton
+            {
+                GroupName = "RealtimeProfileTemplate",
+                Content = preset.Name,
+                ToolTip = RealtimeProfileEditing.PresetSummary(id),
+                IsChecked = id == _templateId,
+                Margin = new Thickness(0, 0, 0, 2),
+            };
+            option.SetResourceReference(StyleProperty, "ProfileListRow");
+            option.Checked += (_, _) => _templateId = id;
+            option.MouseDoubleClick += (_, _) => Create(id);
+            TemplateButtons.Children.Add(option);
+            if (id == _templateId) focus = option;
         }
 
         AddRow.Visibility = Visibility.Collapsed;
@@ -875,8 +882,16 @@ public partial class RealtimeProfilesCard : UserControl
 
     private void TemplateCancel_Click(object sender, RoutedEventArgs e) => CloseTemplateChooser(focusAdd: true);
 
+    private void TemplateCreate_Click(object sender, RoutedEventArgs e) => Create(_templateId);
+
     private void TemplateChooser_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            Create(_templateId);
+            return;
+        }
         if (e.Key != Key.Escape) return;
         e.Handled = true;
         CloseTemplateChooser(focusAdd: true);

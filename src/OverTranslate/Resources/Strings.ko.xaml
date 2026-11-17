@@ -439,7 +439,9 @@
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">게임 화면, 채팅창, 메뉴와 인터페이스 글자처럼 이어서 읽는 글이 아닌 것에 적합합니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCustomTag">사용자 지정</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">'{0}' 템플릿 기반입니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOnModified">'{0}' 템플릿 기반이며 {1}개 항목을 변경했습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">모드 관리…</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManageTip">현재 실시간 번역을 끝내고 모드 설정을 엽니다</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">모드 설명 접기</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">모드 설명 펼치기</sys:String>
 
@@ -448,9 +450,14 @@
     <sys:String x:Key="S.Realtime.ProfilesHint">각 블록의 모드는 블록을 선택할 때 블록 위에서 고릅니다. 기본 모드는 수정할 수 없으며, 조정하려면 이를 템플릿으로 사용자 지정 모드를 만드세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">기본</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">템플릿: {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateModified">템플릿: {0} · {1}개 변경됨</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdd">사용자 지정 모드 추가({0}/{1})</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">사용자 지정 모드는 최대 {0}개입니다</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileChooseTemplate">템플릿 선택</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewTitle">사용자 지정 모드 추가</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplate">템플릿</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateHint">템플릿으로 쓸 기본 모드를 선택하세요. 만든 뒤에 각 설정을 조정할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCreate">만들기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileLiveApply">변경 사항은 현재 번역에 바로 적용됩니다</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">사용자 지정 모드 {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCreateFrom">이 모드로 사용자 지정 모드 만들기</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">기본 모드는 수정할 수 없습니다.</sys:String>
@@ -458,6 +465,7 @@
     <sys:String x:Key="S.Realtime.ProfileNameTaken">같은 이름의 모드가 이미 있습니다</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">템플릿으로 되돌리기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">삭제</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteTitle">사용자 지정 모드 삭제</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">'{0}' 모드를 삭제할까요?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">변경됨</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">템플릿 값으로 되돌리기: {0}</sys:String>
@@ -469,12 +477,28 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">가로쓰기 전용</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">텍스트 방향이 세로쓰기인 블록에는 사용되지 않습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">자동</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayout">줄 처리</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutPassage">한 덩어리</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutItems">항목별</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutHint">한 대사가 여러 덩어리로 나뉘면 '한 덩어리', 메뉴나 목록이 한 덩어리로 합쳐지면 '항목별'을 선택하세요.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePerGroup">글자 내용에 맞춤</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManual">수동</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMerge">문장 합치기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">위아래 문장이 나뉘면 오른쪽으로 옮겨 더 쉽게 합치고, 관련 없는 줄이 합쳐지면 왼쪽으로 옮겨 더 쉽게 나누세요.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNone">합치지 않음</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItems">항목별</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAuto">자동 판단</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">자동 판단・{0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean1">항목 쪽</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean2">약간 항목 쪽</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean4">약간 문단 쪽</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean5">문단 쪽</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassage">문단</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlock">합치기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">줄마다 따로 번역하며 위아래 줄을 합치지 않습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">줄마다 따로 번역하고, 분명히 같은 문장일 때만 위아래를 합칩니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">글자 배치와 내용을 보고 합칠지 판단하며, 오른쪽으로 갈수록 위아래 줄을 더 쉽게 합칩니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">크기와 위치가 비슷한 위아래 여러 줄을 우선 하나의 문단으로 합칩니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">글자 크기와 정렬에 관계없이 위치가 가까운 위아래 문장을 모두 하나의 문단으로 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">글자가 멈출 때까지 대기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">원문이 바뀐 뒤 화면 변화가 멈출 때까지 읽기를 기다리는 최대 시간입니다. 페이드인 중인 글자가 잘못 읽히면 늘리고, 번역문이 너무 늦게 나오면 줄이세요. 한 글자씩 나타나는 글자에는 거의 효과가 없습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">이어진 글은 기다리지 않고, 흩어진 글자는 약 0.15초 기다립니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">대기 안 함</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">약 {0}초</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">원문이 사라지면 번역문 바로 지우기</sys:String>
@@ -488,11 +512,7 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">짧은 글 인식 임계값</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">10자 미만의 글자에만 적용됩니다. 높이면 잘못된 인식이 줄지만 일부 짧은 글은 인식되지 않을 수 있고, 낮추면 더 많은 글자를 인식하지만 잘못된 인식이 늘 수 있습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">끔</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeLow">낮음</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeLower">약간 낮음</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">중간</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeHigher">약간 높음</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeHigh">높음</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">실시간 번역을 중단했습니다: {0}</sys:String>

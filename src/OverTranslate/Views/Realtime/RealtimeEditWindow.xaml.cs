@@ -1817,7 +1817,9 @@ public partial class RealtimeEditWindow : Window
         /// button above.
         /// </summary>
         private static string HintKey(ProfileChoice choice) =>
-            choice.IsPreset ? choice.Id : "custom:" + choice.BasedOn;
+            choice.IsPreset ? choice.Id
+            : choice.Modified > 0 ? "custom:" + choice.Id
+            : "custom:" + choice.BasedOn;
 
         private readonly IReadOnlyList<ProfileChoice> _choices;
         private readonly TranslateTransform _directionPillOffset = new();
@@ -2097,9 +2099,12 @@ public partial class RealtimeEditWindow : Window
             // mode can be made from: the 自訂 tag, which preset, and that preset's sentence.
             foreach (var choice in choices.Where(choice => choice.IsPreset))
                 _hints[HintKey(choice)] = BuildHint(RealtimeProfileEditing.PresetGuidance(choice.Id), uiScale);
+            // A custom mode that changed values has one of its own: it says how many.
             if (choices.Any(choice => !choice.IsPreset))
                 foreach (var preset in choices.Where(choice => choice.IsPreset))
-                    _hints[HintKey(preset with { IsPreset = false })] = BuildCustomHint(preset, uiScale);
+                    _hints[HintKey(preset with { IsPreset = false })] = BuildCustomHint(preset with { IsPreset = false }, uiScale);
+            foreach (var custom in choices.Where(choice => !choice.IsPreset && choice.Modified > 0))
+                _hints[HintKey(custom)] = BuildCustomHint(custom, uiScale);
 
             // Every sentence is laid out at once and only one is opaque, so the plate is as tall as
             // the longest of them from the start and choosing a mode cannot change its size.
@@ -2576,8 +2581,9 @@ public partial class RealtimeEditWindow : Window
             });
 
         /// <summary>
-        /// The guidance for a custom mode made from <paramref name="preset"/>: a 自訂 tag, the
-        /// preset it follows, then that preset's own sentence, as one paragraph.
+        /// The guidance for a custom mode — <paramref name="custom"/>, or any made from a preset and
+        /// left as it is: a 自訂 tag, the preset it follows and how many values it changed, then
+        /// that preset's own sentence, as one paragraph.
         /// </summary>
         /// <remarks>
         /// The preset's sentence rather than anything about the custom mode itself, because what the
@@ -2585,7 +2591,7 @@ public partial class RealtimeEditWindow : Window
         /// its name is already on the button. The tag sits on the line like a word, centred on it, in
         /// the blue of the button at a third of its strength — a label, not a second button.
         /// </remarks>
-        private static TextBlock BuildCustomHint(ProfileChoice preset, double uiScale)
+        private static TextBlock BuildCustomHint(ProfileChoice custom, double uiScale)
         {
             var hint = BuildHint("", uiScale);
 
@@ -2604,14 +2610,14 @@ public partial class RealtimeEditWindow : Window
                 Child = tagText,
             };
 
-            var basedOn = LocalizationService.Format("S.Realtime.ProfileBasedOn", preset.Name);
+            var basedOn = RealtimeProfileEditing.BasedOnSentence(custom);
             hint.Inlines.Add(new System.Windows.Documents.InlineUIContainer(tag) { BaselineAlignment = BaselineAlignment.Center });
             hint.Inlines.Add(new System.Windows.Documents.Run(basedOn));
             // A space between the two sentences only where the language spaces its sentences: a
             // full stop of its own (。) closes a CJK sentence and the next one follows straight on.
             if (basedOn.Length > 0 && basedOn[^1] < 0x2000)
                 hint.Inlines.Add(new System.Windows.Documents.Run(" "));
-            hint.Inlines.Add(new System.Windows.Documents.Run(RealtimeProfileEditing.PresetGuidance(preset.Id)));
+            hint.Inlines.Add(new System.Windows.Documents.Run(RealtimeProfileEditing.PresetGuidance(custom.BasedOn)));
             return hint;
         }
 
@@ -2771,7 +2777,8 @@ public partial class RealtimeEditWindow : Window
             }
 
             rows.Children.Add(Separator());
-            rows.Children.Add(Row(LocalizationService.Get("S.Realtime.ProfileManage"), null,
+            rows.Children.Add(Row(LocalizationService.Get("S.Realtime.ProfileManage"),
+                LocalizationService.Get("S.Realtime.ProfileManageTip"),
                 selected: false, () => ManageRequested?.Invoke(this, EventArgs.Empty), labels));
 
             // As wide as the button at least, as its longest name at most up to the cap; past that
