@@ -11,6 +11,9 @@ internal enum ProfileParam
     /// <summary>語句合併.</summary>
     MergeLevel,
 
+    /// <summary>譯文對齊.</summary>
+    Align,
+
     /// <summary>畫面文字穩定後再讀取.</summary>
     SettleSeconds,
 
@@ -78,6 +81,7 @@ internal static class RealtimeProfileEditing
     public static bool IsSet(RealtimeProfile stored, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => stored.MergeLevel is not null,
+        ProfileParam.Align => stored.Align is not null,
         ProfileParam.SettleSeconds => stored.SettleSeconds is not null,
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
         ProfileParam.DetectorPercent => stored.DetectorPercent is not null,
@@ -92,6 +96,7 @@ internal static class RealtimeProfileEditing
         switch (param)
         {
             case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
+            case ProfileParam.Align: stored.Align = null; break;
             case ProfileParam.SettleSeconds: stored.SettleSeconds = null; break;
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
             case ProfileParam.DetectorPercent: stored.DetectorPercent = null; break;
@@ -148,6 +153,7 @@ internal static class RealtimeProfileEditing
     public static object? Value(RealtimeProfile filled, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => filled.MergeLevel,
+        ProfileParam.Align => filled.Align,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds
             ? seconds < 0 ? RealtimePresets.Automatic : Math.Round(seconds, 2)
             : null,

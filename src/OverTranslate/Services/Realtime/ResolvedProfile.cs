@@ -162,6 +162,13 @@ public sealed record ResolvedProfile
     };
 
     /// <summary>
+    /// 譯文對齊: where each group is set against its source. Drawing only — nothing upstream of the
+    /// overlay reads it, which is why <see cref="ReadsLike"/> leaves it out and <see cref="Describe"/>
+    /// does not write it.
+    /// </summary>
+    internal RealtimeTextAlign Align { get; init; } = RealtimeTextAlign.Auto;
+
+    /// <summary>
     /// How a change is read: Auto for 畫面文字穩定後再讀取 left on 自動, ReadThenConfirm for 不等待,
     /// SettleThenRead for any wait.
     /// </summary>
@@ -255,6 +262,12 @@ public sealed record ResolvedProfile
         {
             Id = filled.Id,
             Merge = MergeOf(level),
+            Align = filled.Align switch
+            {
+                RealtimeTextAligns.Center => RealtimeTextAlign.Center,
+                RealtimeTextAligns.Left => RealtimeTextAlign.Left,
+                _ => RealtimeTextAlign.Auto,
+            },
             // The one value decides both: no wait is read at once and confirmed, any wait is waited
             // out and read once, and 自動 leaves both to what the block is read as.
             Timing = settle switch
@@ -287,7 +300,17 @@ public sealed record ResolvedProfile
     internal int TextSettlePolls(bool dialogue) =>
         SettlePolls ?? (dialogue ? 0 : RealtimeRegionState.MaxTextUnsettledPolls);
 
+    /// <summary>
+    /// Whether a block on this mode is read exactly as on <paramref name="other"/> — every value but
+    /// 譯文對齊, which only the overlay draws with. A change of that alone is redrawn and nothing is read again.
+    /// </summary>
+    internal bool ReadsLike(ResolvedProfile other) => this with { Align = other.Align } == other;
+
     /// <summary>One line for the log: every value this block reads with, and nothing it read.</summary>
+    /// <remarks>
+    /// 譯文對齊 is not one of them — the session's log writes it beside this line — and leaving it out
+    /// keeps the harness's replay reports, which open with this line, byte for byte as before it.
+    /// </remarks>
     internal string Describe() =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"profile={Id} merge={Merge} timing={Timing} settle={(SettlePolls is { } polls ? polls.ToString() : "auto")} " +

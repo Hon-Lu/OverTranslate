@@ -427,6 +427,12 @@ public sealed class RealtimeTranslationSession
     {
         if (regions.Count == _regions.Count && regions.Zip(_regions).All(pair => pair.First == pair.Second))
             return false;
+        // 譯文對齊 alone: the overlays redraw themselves (see RealtimeBlockWindow.SetLayout), and
+        // nothing the loops read with has changed. The regions they hold are kept: what differs is
+        // not theirs to read.
+        if (regions.Count == _regions.Count && regions.Zip(_regions).All(pair =>
+                pair.First with { Profile = pair.Second.Profile } == pair.Second && pair.First.Profile.ReadsLike(pair.Second.Profile)))
+            return false;
 
         var running = !IsPaused && _capture is not null;
         if (running) StopLoops();
@@ -448,8 +454,8 @@ public sealed class RealtimeTranslationSession
     private static void LogProfiles(IReadOnlyList<RealtimeRegion> regions)
     {
         foreach (var region in regions)
-            Log.Info("Realtime region {Region} ({Orientation}): {Profile}",
-                region.Id, region.Orientation, region.Profile.Describe());
+            Log.Info("Realtime region {Region} ({Orientation}): {Profile} align={Align}",
+                region.Id, region.Orientation, region.Profile.Describe(), region.Profile.Align);
     }
 
     /// <param name="releaseRecogniser">

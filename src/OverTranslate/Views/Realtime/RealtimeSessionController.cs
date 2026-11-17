@@ -947,7 +947,7 @@ internal sealed class RealtimeSessionController
                 look.SampleTextColor,
                 region.Profile.Layout, look.Border, look.BorderColor, region.Orientation,
                 compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
-                look.FixedFontSize);
+                look.FixedFontSize, region.Profile.Align);
             _blockWindows[region.Id] = window;
             window.Show();
         }
@@ -1144,7 +1144,7 @@ internal sealed class RealtimeSessionController
         var regions = Regions();
         foreach (var region in regions)
             if (_blockWindows.TryGetValue(region.Id, out var window))
-                window.SetLayout(region.Profile.Layout);
+                window.SetLayout(region.Profile.Layout, region.Profile.Align);
 
         if (session.ChangeProfiles(regions) && IsTranslating && !session.IsPaused)
             _loadingHint?.Wait(session.ModelsLoading);

@@ -49,6 +49,15 @@ public sealed class RealtimeProfile
     /// <remarks>Horizontal text only.</remarks>
     public int? MergeLevel { get; set; }
 
+    /// <summary>譯文對齊: one of <see cref="RealtimeTextAligns"/>' values.</summary>
+    /// <remarks>
+    /// Horizontal text only, and drawing only: how a group is grouped and read does not change with
+    /// it. 自動 follows the source's own rows where a group has several and they line up one way,
+    /// and where it does not, draws the group as its reading would — a passage centred, separate
+    /// items from their left edge. 置中 and 靠左 draw every group so, whichever way it was read.
+    /// </remarks>
+    public string? Align { get; set; }
+
     /// <summary>
     /// 畫面文字穩定後再讀取, in seconds, 0–1.5; below zero is 自動.
     /// </summary>
@@ -128,6 +137,7 @@ public sealed class RealtimeProfile
             Name = Name ?? "",
             BasedOn = template.Id,
             MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
+            Align = RealtimeTextAligns.Normalize(Align) ?? template.Align,
             SettleSeconds = SettleSeconds is { } seconds && double.IsFinite(seconds)
                 ? seconds < 0 ? RealtimePresets.Automatic : Math.Min(seconds, MaxSettleSeconds)
                 : template.SettleSeconds,
@@ -269,6 +279,14 @@ public static class RealtimePresets
                 InterfaceId => RealtimeMergeLevels.Items,
                 _ => RealtimeMergeLevels.AutomaticMiddle,
             },
+            // What each preset's groups were drawn as before 譯文對齊 existed, on the two that read
+            // one way only, so they look exactly as they did; 標準 follows the source.
+            Align = id switch
+            {
+                SubtitleId => RealtimeTextAligns.Center,
+                InterfaceId => RealtimeTextAligns.Left,
+                _ => RealtimeTextAligns.Auto,
+            },
             SettleSeconds = id switch
             {
                 SubtitleId => 0,
@@ -286,6 +304,31 @@ public static class RealtimePresets
             ConfidencePercent = RealtimePresets.ConfidencePercent,
         };
     }
+}
+
+/// <summary>譯文對齊's values, as <see cref="RealtimeProfile.Align"/> stores them.</summary>
+public static class RealtimeTextAligns
+{
+    /// <summary>自動: the source's own alignment where its rows show one, else as the group was read.</summary>
+    public const string Auto = "Auto";
+
+    /// <summary>置中.</summary>
+    public const string Center = "Center";
+
+    /// <summary>靠左.</summary>
+    public const string Left = "Left";
+
+    /// <summary>
+    /// One of the three as this class spells it, whatever the case it was written in; null for
+    /// anything else, which then follows the preset.
+    /// </summary>
+    public static string? Normalize(string? value) => value?.Trim() switch
+    {
+        { } text when text.Equals(Auto, StringComparison.OrdinalIgnoreCase) => Auto,
+        { } text when text.Equals(Center, StringComparison.OrdinalIgnoreCase) => Center,
+        { } text when text.Equals(Left, StringComparison.OrdinalIgnoreCase) => Left,
+        _ => null,
+    };
 }
 
 /// <summary>

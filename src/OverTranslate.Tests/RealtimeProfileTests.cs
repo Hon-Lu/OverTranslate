@@ -568,7 +568,7 @@ public class RealtimeProfileTests
     public void ACustomModeOnAPresetsStepIsThatPreset(int level, string preset)
     {
         // The wait and the detector size are values of their own now, pinned in
-        // RealtimeTimingDetectorTests; here, everything else.
+        // RealtimeTimingDetectorTests, and so is 譯文對齊 (RealtimeTextAlignTests); here, everything else.
         var expected = ResolvedProfile.Resolve(preset, []) with { Id = "m" };
         foreach (var basedOn in RealtimePresets.All)
         {
@@ -576,6 +576,7 @@ public class RealtimeProfileTests
             Assert.Equal(expected, mine with
             {
                 Timing = expected.Timing, SettlePolls = expected.SettlePolls, DetectorFraction = expected.DetectorFraction,
+                Align = expected.Align,
             });
         }
     }
