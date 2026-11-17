@@ -43,9 +43,19 @@ public partial class RealtimeProfilesCard : UserControl
 
     /// <summary>
     /// Narrower than this, the list goes above the values instead of beside them: the values need
-    /// about 480 for a name, a slider and its reading on one line.
+    /// about 480 for a name, a slider and its reading on one line. A floor only — wider where the
+    /// controls need it, see <see cref="UpdateColumns"/>.
     /// </summary>
     private const double TwoColumnMinWidth = 700;
+
+    /// <summary>
+    /// The room a row keeps between its name and the controls on its right; less than this and the
+    /// names go above the controls — see <see cref="ApplyStacking"/>.
+    /// </summary>
+    private const double NameGap = 8;
+
+    /// <summary>The margin either way of the stacking threshold, as for the columns.</summary>
+    private const double StackingHysteresis = 24;
 
     private readonly Dictionary<ProfileParam, ParamRow> _rows = [];
     private readonly DispatcherTimer _settleTimer = new() { Interval = KeyboardSettle };
@@ -60,12 +70,19 @@ public partial class RealtimeProfilesCard : UserControl
     private bool _syncing;
     private bool _advancedExpanded;
     private bool _oneColumn;
+    private bool _stacked;
     private string _nameShown = "";
 
     public RealtimeProfilesCard()
     {
         InitializeComponent();
         BuildRows();
+        // The room the rows are given, which a row that does not fit is wider than.
+        Detail.SizeChanged += (_, _) =>
+        {
+            ApplyStacking();
+            UpdateColumns(Body.ActualWidth);
+        };
 
         _settleTimer.Tick += (_, _) =>
         {
@@ -110,7 +127,16 @@ public partial class RealtimeProfilesCard : UserControl
         LocalizationService.LanguageChanged -= OnLanguageChanged;
     }
 
-    private void OnLanguageChanged(object? sender, EventArgs e) => Render();
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        Render();
+        // The names are a different length now; the width they are measured against has not moved.
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            ApplyStacking();
+            UpdateColumns(Body.ActualWidth);
+        });
+    }
 
     // ── State ───────────────────────────────────────────────────────────────────────────────────
 
@@ -527,7 +553,7 @@ public partial class RealtimeProfilesCard : UserControl
         value.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
         value.FontSize = 13;
 
-        var row = new ParamRow(param, root, top, name, value, modified, revert);
+        var row = new ParamRow(param, root, top, name, value, modified, revert) { Heading = heading };
 
         switch (param)
         {
@@ -1046,8 +1072,56 @@ public partial class RealtimeProfilesCard : UserControl
 
     // With a margin either way, so a scroll bar coming and going across the threshold cannot flip
     // the layout back and forth.
-    private void Body_SizeChanged(object sender, SizeChangedEventArgs e) =>
-        ApplyColumns(_oneColumn ? e.NewSize.Width < TwoColumnMinWidth + 24 : e.NewSize.Width < TwoColumnMinWidth);
+    private void Body_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateColumns(e.NewSize.Width);
+
+    /// <summary>
+    /// One column below <see cref="TwoColumnMinWidth"/>, and also wherever the values beside the
+    /// list would be narrower than their controls.
+    /// </summary>
+    /// <remarks>
+    /// The second half is the one that bites: the three-way trays are as wide as their words, and in
+    /// Russian 分行處理's and 讀取方式's ran off the card's edge at a width the fixed threshold still
+    /// called wide enough (measured on Windows 10 at 125%, the main window 1152 wide). The controls'
+    /// columns are shared down the card, so their widths are the widest row's — the same figure for
+    /// every layout, which is what keeps this from feeding back into itself.
+    /// </remarks>
+    private void UpdateColumns(double width)
+    {
+        if (width <= 0) return;
+        double needed = TwoColumnMinWidth;
+        if (RowInset() is { } inset)
+            needed = Math.Max(needed, ListColumn.ActualWidth + GapColumn.ActualWidth + inset + ControlsWidth());
+        ApplyColumns(_oneColumn ? width < needed + 24 : width < needed);
+    }
+
+    /// <summary>
+    /// The group's padding either side of a row, from where the row starts — not from its width: a
+    /// row whose controls do not fit is laid out wider than the room it was given. Null before the
+    /// rows are laid out.
+    /// </summary>
+    private double? RowInset()
+    {
+        var top = _rows[ProfileParam.Layout].Top;
+        if (top.ActualWidth <= 0 || Detail.ActualWidth <= 0 || !top.IsDescendantOf(Detail)) return null;
+        return 2 * top.TranslatePoint(new System.Windows.Point(0, 0), Detail).X;
+    }
+
+    /// <summary>
+    /// The right-hand columns every row shares — 自動, the control and its reading — as wide as
+    /// their widest content, which they are measured at whatever room is left.
+    /// </summary>
+    private double ControlsWidth()
+    {
+        var widest = new double[_rows[ProfileParam.Layout].Top.ColumnDefinitions.Count];
+        foreach (var row in _rows.Values)
+            foreach (UIElement child in row.Top.Children)
+            {
+                int column = Grid.GetColumn(child);
+                if (column >= 1 && column < widest.Length && child.Visibility != Visibility.Collapsed)
+                    widest[column] = Math.Max(widest[column], child.DesiredSize.Width);
+            }
+        return widest.Sum();
+    }
 
     /// <summary>
     /// Beside each other while the card is wide enough for both, the list above the values when it
@@ -1065,6 +1139,59 @@ public partial class RealtimeProfilesCard : UserControl
         Detail.Margin = new Thickness(0, oneColumn ? 4 : 0, 0, 0);
     }
 
+    /// <summary>
+    /// Each value's name beside its controls while the longest name fits there, on a line of its own
+    /// above them when it does not.
+    /// </summary>
+    /// <remarks>
+    /// The name's column takes what the controls leave, and a name is one line that does not wrap,
+    /// so on a narrow window the names were cut to their first two or three characters (measured on
+    /// Windows 10 at 125%, the main window 1152 wide: two columns, 525 for the values, and the
+    /// controls of 讀取方式 alone taking 490 of it). How much the controls take depends on the
+    /// language and the font, so the threshold is measured rather than fixed: the widest name plus
+    /// the right-hand columns, which are shared down the card and so the same for every row.
+    ///
+    /// The name moves out of the row's grid rather than spanning its columns: a wrapping panel across
+    /// shared-size columns is what kept the page's layout from ever settling — see
+    /// <see cref="BuildRow"/>.
+    /// </remarks>
+    private void ApplyStacking()
+    {
+        if (RowInset() is not { } inset) return;
+        double width = Detail.ActualWidth - inset;
+        double controls = ControlsWidth();
+        double names = 0;
+        foreach (var row in _rows.Values)
+        {
+            var text = row.Name;
+            if (string.IsNullOrEmpty(text.Text)) continue;
+            var formatted = new FormattedText(text.Text, System.Globalization.CultureInfo.CurrentUICulture, text.FlowDirection,
+                new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, System.Windows.Media.Brushes.Black,
+                VisualTreeHelper.GetDpi(text).PixelsPerDip);
+            names = Math.Max(names, formatted.WidthIncludingTrailingWhitespace);
+        }
+        double needed = names + NameGap + controls;
+        bool stacked = _stacked ? width < needed + StackingHysteresis : width < needed;
+        if (stacked == _stacked) return;
+        _stacked = stacked;
+
+        foreach (var row in _rows.Values)
+        {
+            if (stacked)
+            {
+                row.Top.Children.Remove(row.Heading);
+                row.Root.Children.Insert(0, row.Heading);
+                row.Heading.Margin = new Thickness(0, 0, 0, 6);
+            }
+            else
+            {
+                row.Root.Children.Remove(row.Heading);
+                row.Top.Children.Insert(0, row.Heading);
+                row.Heading.Margin = new Thickness(0);
+            }
+        }
+    }
+
     /// <summary>One value's row and the parts of it that change.</summary>
     private sealed class ParamRow(
         ProfileParam param, StackPanel root, Grid top, TextBlock name, TextBlock value, StackPanel modified, Button revert)
@@ -1076,6 +1203,7 @@ public partial class RealtimeProfilesCard : UserControl
         public TextBlock Value { get; } = value;
         public StackPanel Modified { get; } = modified;
         public Button Revert { get; } = revert;
+        public FrameworkElement Heading { get; init; } = new WrapPanel();
         public StackPanel ReasonRow { get; set; } = new();
         public List<UIElement> Controls { get; } = [];
         public List<UIElement> Fades { get; } = [];
