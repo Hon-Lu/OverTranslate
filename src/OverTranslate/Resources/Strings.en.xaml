@@ -482,8 +482,8 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">Raise when small text is missed; lower when the CPU or GPU load is too high. Blocks under 800 pixels on their long side are not scaled.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">Follows how Line handling reads each group: 85% for a passage, 68% for items.</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePercent">{0}%</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">Ignore small text</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">Skips text smaller than the main text; the value is a relative size. Raise to translate dialogue only; lower when small text you need is skipped.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">Filter small text</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">Filters out text smaller than the set percentage of the main text on screen. The higher the percentage, the more text is filtered, and some small text you need translated may be filtered out too.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidence">Short text threshold</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Applies only to text under 10 characters. Raise it to reduce misreads, though some short text may go unrecognized; lower it to recognize more text, at the risk of more misreads.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Off</sys:String>

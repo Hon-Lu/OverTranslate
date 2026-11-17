@@ -190,7 +190,7 @@ public sealed record ResolvedProfile
     internal GroupingProfile PanelGrouping => Auto.PanelGrouping;
 
     /// <summary>
-    /// 忽略小字: lines lower than this fraction of the frame's main text height are dropped before
+    /// 過濾小字: lines lower than this fraction of the frame's main text height are dropped before
     /// grouping. Zero is off, and then nothing is measured at all — see
     /// <see cref="OcrService.IgnoreSmallText"/>.
     /// </summary>

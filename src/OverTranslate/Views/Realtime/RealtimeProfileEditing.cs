@@ -23,7 +23,7 @@ internal enum ProfileParam
     /// <summary>辨識解析度.</summary>
     DetectorPercent,
 
-    /// <summary>忽略小字 (進階).</summary>
+    /// <summary>過濾小字 (進階).</summary>
     IgnoreSmallPercent,
 
     /// <summary>短句辨識門檻 (進階).</summary>

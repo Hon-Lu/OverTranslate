@@ -502,8 +502,8 @@
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">小字讀不到時調高；處理器或顯示卡負擔過高時調低。區塊長邊不足 800 像素時不縮放。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">依分行處理的判讀結果：整段 85%，逐項 68%。</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePercent">{0}%</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">忽略小字</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">略過比主要文字小的字，數值為相對大小。只想翻譯對話時調高；需要的小字被略過時調低。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">過濾小字</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">以畫面上的主要文字為基準，過濾小於設定比例的文字。比例越高，過濾的文字越多，部分需要翻譯的小字也可能被濾掉。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidence">短句辨識門檻</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">僅適用於未滿 10 字的文字。調高可減少誤判，但部分較短的文字可能無法辨識；調低則能辨識更多文字，但也可能增加誤判。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">關閉</sys:String>

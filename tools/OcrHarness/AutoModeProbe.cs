@@ -30,7 +30,7 @@ using OverTranslate.Services.Realtime;
 /// can be replayed: timing, 譯文保留 and 辨識解析度 act between frames or before recognition, which
 /// the cache does not hold.
 /// <c>--auto-probe drops cache.json lines.tsv [--profile mode.json]</c> — every detected line and
-/// the filter that took it out (confidence floor, box across the block, 忽略小字), beside the
+/// the filter that took it out (confidence floor, box across the block, 過濾小字), beside the
 /// frame's main text height: what each step of those two values costs.
 /// <c>--auto-probe extremes cache.json out-dir</c> — every value at both ends of its range, one
 /// replay each, into out-dir; fails if any of them throws.
@@ -103,7 +103,7 @@ internal static class AutoModeProbe
 
     /// <summary>
     /// Every detected line of every cached frame and the filter that took it out, if one did: the
-    /// mode's confidence floor (短句辨識門檻), the box across the block, or 忽略小字 — with the frame's
+    /// mode's confidence floor (短句辨識門檻), the box across the block, or 過濾小字 — with the frame's
     /// main text height beside it, so each step of a filter can be judged by what it drops.
     /// </summary>
     /// <returns>Lines dropped by each filter, per label.</returns>

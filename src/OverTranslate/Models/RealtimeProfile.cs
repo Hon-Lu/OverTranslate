@@ -87,7 +87,7 @@ public sealed class RealtimeProfile
     /// <remarks>Horizontal text only.</remarks>
     public int? DetectorPercent { get; set; }
 
-    /// <summary>忽略小字, in percent of the frame's main text height, 0–80; 0 is off.</summary>
+    /// <summary>過濾小字, in percent of the frame's main text height, 0–80; 0 is off.</summary>
     /// <remarks>Horizontal text only.</remarks>
     public int? IgnoreSmallPercent { get; set; }
 
@@ -200,7 +200,7 @@ public sealed class RealtimeProfile
     /// <inheritdoc cref="MinConfidencePercent"/>
     public const int MaxConfidencePercent = 95;
 
-    /// <summary>忽略小字's range, in percent, from 0 (off).</summary>
+    /// <summary>過濾小字's range, in percent, from 0 (off).</summary>
     public const int MaxIgnoreSmallPercent = 80;
 }
 

@@ -355,7 +355,7 @@ public class OcrService : IDisposable
     /// <inheritdoc cref="FilterForRealtime(List{OcrTextBlock}, double)"/>
     /// <remarks>
     /// With the block's mode's confidence floor, and without the lines it says are too small to
-    /// read (忽略小字) — measured after the boxes across the block are gone, which would otherwise
+    /// read (過濾小字) — measured after the boxes across the block are gone, which would otherwise
     /// count towards the frame's main text.
     /// </remarks>
     internal static List<OcrTextBlock> FilterForRealtime(
@@ -366,7 +366,7 @@ public class OcrService : IDisposable
             profile.IgnoreSmallFraction);
 
     /// <summary>
-    /// 忽略小字: the lines set lower than <paramref name="fraction"/> of the frame's main text,
+    /// 過濾小字: the lines set lower than <paramref name="fraction"/> of the frame's main text,
     /// taken out before grouping. The same list when the fraction is zero, which is every preset.
     /// </summary>
     /// <remarks>
