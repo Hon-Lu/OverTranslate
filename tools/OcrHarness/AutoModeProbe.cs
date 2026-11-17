@@ -46,6 +46,7 @@ internal static class AutoModeProbe
         if (args.Length < 3)
             throw new ArgumentException(
                 "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | drops cache.json lines.tsv [--profile mode.json] | extremes cache.json out-dir | slider cache.json out-dir");
+        if (args[0] == "detector") return await DetectorFigureProbe.Run(args[1].TrimStart('@'), args[2]);
         if (args[0] == "capture")
         {
             using var engine = new OnnxOcrEngine();
@@ -174,8 +175,7 @@ internal static class AutoModeProbe
             Add($"spacing-{step}", p => p.LineSpacing = step);
             Add($"confidence-{step}", p => p.ConfidenceLevel = step);
         }
-        Add("timing-confirm", p => p.ReadTiming = RealtimePresets.TimingConfirm);
-        Add("timing-settle", p => p.ReadTiming = RealtimePresets.TimingSettle);
+        Add("settle-auto", p => p.SettleSeconds = RealtimePresets.Automatic);
         Add("settle-0", p => p.SettleSeconds = 0);
         Add($"settle-max", p => p.SettleSeconds = RealtimeProfile.MaxSettleSeconds);
         Add("clear-min", p => p.ClearAfterEmptyReads = RealtimeProfile.MinClearAfterEmptyReads);
