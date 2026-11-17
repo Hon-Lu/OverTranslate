@@ -325,7 +325,9 @@ public partial class RealtimeProfilesCard : UserControl
             bool enabled = !preset && !needsAuto;
             bool modified = !preset && RealtimeProfileEditing.IsSet(stored, param);
 
-            row.Modified.Visibility = modified ? Visibility.Visible : Visibility.Collapsed;
+            // Its line under the name is kept while hidden on a custom mode, so that setting a value
+            // does not push the rows below it down. A preset never shows it.
+            row.Modified.Visibility = modified ? Visibility.Visible : preset ? Visibility.Collapsed : Visibility.Hidden;
             row.Revert.ToolTip = LocalizationService.Format("S.Realtime.ProfileRevert", Display(template, param));
             row.ReasonRow.Visibility = needsAuto ? Visibility.Visible : Visibility.Collapsed;
 
@@ -516,14 +518,18 @@ public partial class RealtimeProfilesCard : UserControl
         name.SetResourceReference(TextBlock.TextProperty, nameKey);
         name.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
 
-        var heading = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        heading.Children.Add(name);
+        // The name and its tag on one line, 已修改 always on the line under them: beside the name it
+        // fitted in rows without a tag and wrapped under in rows with one, so it moved row to row.
+        var title = new WrapPanel { Orientation = Orientation.Horizontal };
+        title.Children.Add(name);
         if (RealtimeProfileEditing.IsHorizontalOnly(param))
         {
             var tag = TagChip("S.Realtime.ProfileHorizontalOnly");
             tag.SetResourceReference(ToolTipProperty, "S.Realtime.ProfileHorizontalOnlyTip");
-            heading.Children.Add(tag);
+            title.Children.Add(tag);
         }
+        var heading = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        heading.Children.Add(title);
 
         var revert = new Button { Width = 24, Height = 24, Margin = new Thickness(2, 0, 0, 0) };
         revert.SetResourceReference(StyleProperty, "IconButton");
@@ -536,13 +542,13 @@ public partial class RealtimeProfilesCard : UserControl
         System.Windows.Automation.AutomationProperties.SetName(revert, LocalizationService.Get("S.Realtime.ProfileResetAll"));
         revert.Click += (_, _) => Commit(profile => RealtimeProfileEditing.Clear(profile, param));
 
-        var dot = new System.Windows.Shapes.Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 1, 5, 0) };
+        var dot = new System.Windows.Shapes.Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 1, 5, 0) };
         dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "AppAccent");
         var modifiedText = new TextBlock { FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
         modifiedText.SetResourceReference(TextBlock.TextProperty, "S.Realtime.ProfileModified");
         modifiedText.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
         modifiedText.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
-        var modified = new StackPanel { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed };
+        var modified = new StackPanel { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed, Margin = new Thickness(0, 2, 0, 0) };
         modified.Children.Add(dot);
         modified.Children.Add(modifiedText);
         modified.Children.Add(revert);
@@ -1140,8 +1146,8 @@ public partial class RealtimeProfilesCard : UserControl
     }
 
     /// <summary>
-    /// Each value's name beside its controls while the widest heading fits there whole, on a line of
-    /// its own above them when it does not — see <see cref="HeadingWidth"/>.
+    /// Each value's name beside its controls while the longest name fits there, on a line of its own
+    /// above them when it does not — see <see cref="HeadingWidth"/>.
     /// </summary>
     /// <remarks>
     /// The name's column takes what the controls leave, and a name is one line that does not wrap,
@@ -1184,39 +1190,14 @@ public partial class RealtimeProfilesCard : UserControl
         }
     }
 
-    /// <summary>
-    /// A row's heading on one line: the name, 僅適用於橫排 where it has it, and 已修改 with its
-    /// revert button — counted whether or not it is showing.
-    /// </summary>
+    /// <summary>The name alone: 僅適用於橫排 may wrap under it, and 已修改 has its own line.</summary>
     /// <remarks>
-    /// Measured against the name alone, the heading fitted beside the controls only until a tag or
-    /// 已修改 joined it, and then wrapped: 已修改 sat on the name's line in rows without a tag and on
-    /// the line under it in rows with one. Counting the hidden 已修改 too keeps setting a value from
-    /// moving every row's name.
+    /// Measured: counting the tag in, or 已修改 too, put every name above its controls at the
+    /// default window width (1280) — 沒有標點也合併 and its tag do not fit beside the trays there —
+    /// and the card became far looser for it.
     /// </remarks>
-    private static double HeadingWidth(ParamRow row)
-    {
-        if (string.IsNullOrEmpty(row.Name.Text)) return 0;
-        double width = TextWidth(row.Name);
-        foreach (UIElement child in ((System.Windows.Controls.Panel)row.Heading).Children)
-        {
-            if (ReferenceEquals(child, row.Name)) continue;
-            if (ReferenceEquals(child, row.Modified))
-            {
-                foreach (FrameworkElement part in row.Modified.Children)
-                    width += part.Margin.Left + part.Margin.Right
-                        + (part is TextBlock text ? TextWidth(text) : part.Width);
-            }
-            else if (child is Border { Child: TextBlock tagText } tag)
-            {
-                // From its parts rather than its DesiredSize: the 進階 rows' tags are not measured
-                // while 進階 is collapsed.
-                width += tag.Margin.Left + tag.Margin.Right + tag.Padding.Left + tag.Padding.Right
-                    + tag.BorderThickness.Left + tag.BorderThickness.Right + TextWidth(tagText);
-            }
-        }
-        return width;
-    }
+    private static double HeadingWidth(ParamRow row) =>
+        string.IsNullOrEmpty(row.Name.Text) ? 0 : TextWidth(row.Name);
 
     private static double TextWidth(TextBlock text) =>
         new FormattedText(text.Text, System.Globalization.CultureInfo.CurrentUICulture, text.FlowDirection,
@@ -1234,7 +1215,7 @@ public partial class RealtimeProfilesCard : UserControl
         public TextBlock Value { get; } = value;
         public StackPanel Modified { get; } = modified;
         public Button Revert { get; } = revert;
-        public FrameworkElement Heading { get; init; } = new WrapPanel();
+        public FrameworkElement Heading { get; init; } = new StackPanel();
         public StackPanel ReasonRow { get; set; } = new();
         public List<UIElement> Controls { get; } = [];
         public List<UIElement> Fades { get; } = [];
