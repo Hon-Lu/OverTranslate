@@ -474,7 +474,7 @@
     <sys:String x:Key="S.Realtime.ProfileNameTaken">已有同名的模式</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">還原為範本</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">刪除</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">確定要刪除「{0}」嗎？使用此模式的區塊將改用「{1}」。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">確定刪除「{0}」模式嗎？</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">已修改</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">還原為範本的值：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">進階</sys:String>

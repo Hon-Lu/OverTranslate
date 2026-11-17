@@ -451,7 +451,7 @@
     <sys:String x:Key="S.Realtime.ProfileNameTaken">Режим с таким названием уже есть</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">Вернуть к шаблону</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">Удалить</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">Удалить «{0}»? Области с этим режимом перейдут на «{1}».</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">Удалить режим «{0}»?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">Изменено</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">Вернуть значение шаблона: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">Дополнительно</sys:String>

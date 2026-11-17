@@ -458,7 +458,7 @@
     <sys:String x:Key="S.Realtime.ProfileNameTaken">同じ名前のモードがあります</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">テンプレートに戻す</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">削除</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">「{0}」を削除しますか？このモードを使っているブロックは「{1}」に切り替わります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">「{0}」モードを削除しますか？</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">変更あり</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">テンプレートの値に戻す：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">詳細設定</sys:String>

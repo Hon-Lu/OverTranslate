@@ -454,7 +454,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">A mode with this name already exists</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">Reset to template</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDelete">Delete</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">Delete “{0}”? Blocks using this mode will switch to “{1}”.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">Delete the “{0}” mode?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileModified">Modified</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">Reset to the template's value: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">Advanced</sys:String>

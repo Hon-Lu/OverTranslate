@@ -853,9 +853,8 @@ public partial class RealtimeProfilesCard : UserControl
 
     private void DeleteBtn_Click(object sender, RoutedEventArgs e)
     {
-        DeleteConfirmText.Text = LocalizationService.Format(
-            "S.Realtime.ProfileDeleteConfirm", SelectedChoice().Name,
-            RealtimeProfileEditing.PresetName(RealtimePresets.StandardId));
+        // Blocks on it go back to 標準 as it goes, as a mode that names nothing always does.
+        DeleteConfirmText.Text = LocalizationService.Format("S.Realtime.ProfileDeleteConfirm", SelectedChoice().Name);
         DeleteConfirm.Visibility = Visibility.Visible;
         // On 取消, so an Enter that was meant for something else does not delete.
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () => DeleteCancelBtn.Focus());
