@@ -11,9 +11,10 @@ using OverTranslate.Services.Realtime;
 /// replayed over the cache, to see whether each step joins everything the one before it did.
 /// </summary>
 /// <remarks>
-/// <para><c>--auto-probe slider cache.json out-dir</c>. The two ends do not exist in the app and are
-/// simulated here: 不合併 is the panel grouper's own lines (its same-row joins, nothing stacked), and
-/// 整個區塊 is every line of the frame in one group.</para>
+/// <para><c>--auto-probe slider cache.json out-dir</c>. Each step is the app's own grouping at that
+/// 合併程度 (<see cref="RealtimeMergeLevels"/>). The two ends were first simulated here before the
+/// app had them: 不合併 as the panel grouper's lines, 整個區塊 as every line of the frame in one
+/// group.</para>
 ///
 /// <para>Steps are compared as join relations: for each frame, the set of detected-block pairs a
 /// step put in one group. Step i is monotone over step i−1 when its set holds the other's. Blocks
@@ -50,13 +51,11 @@ internal static class MergeSliderProbe
     {
         Directory.CreateDirectory(outDir);
         var profiles = new ResolvedProfile?[Names.Length];
-        profiles[0] = Profile(RealtimePresets.LayoutItems, null);
-        profiles[1] = Profile(RealtimePresets.LayoutItems, null);
-        for (int t = 1; t <= 5; t++) profiles[1 + t] = Profile(RealtimePresets.LayoutAuto, t);
-        profiles[7] = Profile(RealtimePresets.LayoutPassage, null);
+        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
+            profiles[level] = Profile(level);
         // 自動 with every limit on a passage let go: as near as its rules come to taking every group
         // the dialogue grouper joined for a passage, while keeping the panel grouper's own joins.
-        var loosest = Profile(RealtimePresets.LayoutAuto, 5);
+        var loosest = Profile(RealtimeMergeLevels.AutomaticHighest);
         profiles[11] = loosest with
         {
             Auto = loosest.Auto with
@@ -93,12 +92,7 @@ internal static class MergeSliderProbe
             var groupTexts = new List<string>[Names.Length];
             for (int s = 0; s < Names.Length; s++)
             {
-                if (s == 8)
-                {
-                    assigned[s] = inUniverse.Select(u => u ? 0 : -1).ToArray();
-                    groupTexts[s] = [Flat(string.Join(" ", raw.Where((_, i) => inUniverse[i]).Select(b => b.Text)))];
-                }
-                else if (s is 9 or 10)
+                if (s is 9 or 10)
                 {
                     assigned[s] = Union(assigned[s == 9 ? 6 : 1], assigned[7]);
                     groupTexts[s] = Enumerable.Range(0, raw.Count)
@@ -107,7 +101,7 @@ internal static class MergeSliderProbe
                 }
                 else
                 {
-                    var groups = s == 0 ? Lines(Raw(), profiles[0]!) : OcrService.GroupRealtime(Raw(), capture.Height, profiles[s]!);
+                    var groups = OcrService.GroupRealtime(Raw(), capture.Height, profiles[s]!);
                     assigned[s] = Assign(raw, inUniverse, groups);
                     groupTexts[s] = groups.Select(g => Flat(g.Text)).ToList();
                 }
@@ -168,20 +162,8 @@ internal static class MergeSliderProbe
         return 0;
     }
 
-    private static ResolvedProfile Profile(string layout, int? tendency) =>
-        ResolvedProfile.Resolve(new RealtimeProfile { Id = "slider", Layout = layout, MergeTendency = tendency });
-
-    // 不合併: the lines the panel grouper built out of same-row pieces, before it was asked whether
-    // any of them continue one another.
-    private static List<OcrTextBlock> Lines(List<OcrTextBlock> raw, ResolvedProfile profile)
-    {
-        var blocks = TiltedLayout.Straighten(raw);
-        var filtered = OcrService.IgnoreSmallText(
-            OcrService.RejectUnconvincingBlocks(blocks, profile.ConfidenceFloor), profile.IgnoreSmallFraction);
-        var trace = new GroupingTrace();
-        OcrTextBlockGrouper.Group(filtered, profile.PanelGrouping, null, trace);
-        return TiltedLayout.Restore(trace.Lines.Select(line => line.Block).ToList());
-    }
+    private static ResolvedProfile Profile(int level) =>
+        ResolvedProfile.Resolve(new RealtimeProfile { Id = "slider", MergeLevel = level });
 
     private static int[] Assign(List<OcrTextBlock> raw, bool[] inUniverse, List<OcrTextBlock> groups)
     {

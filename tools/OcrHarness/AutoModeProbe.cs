@@ -19,14 +19,16 @@ using OverTranslate.Services.Realtime;
 /// <c>--auto-probe replay cache.json report.txt</c> — no OCR, so a rule can be changed and judged
 /// in seconds. Beside the report it writes <c>report.extras.tsv</c>, one line for every group the
 /// two groupers disagreed over, <c>report.groups.txt</c>, 自動's own answer per image — the
-/// file to diff between two builds — and <c>report.modes.txt</c>, the 字幕 and 面板 groupers'
-/// answers with their boxes.
+/// file to diff between two builds — <c>report.modes.txt</c>, the 字幕 and 面板 groupers'
+/// answers with their boxes, and <c>report.own.txt</c>, the frame grouped as a session on the mode
+/// would group it.
 /// <c>--auto-probe replay cache.json report.txt --profile mode.json</c> — the same, grouped with a
 /// mode's values instead of 標準's. The file is one mode as the settings file keeps a custom one
 /// (<see cref="RealtimeProfile"/>): only the values it sets differ from its BasedOn preset. 自動 reads
-/// with the mode's own values; the 字幕 and 面板 columns are the same values with 分行處理 set to
-/// 整段 and 逐項. Only the grouping values can be replayed: timing, 譯文保留 and 辨識解析度 act
-/// between frames or before recognition, which the cache does not hold.
+/// with the mode's own values; the 字幕 and 面板 columns are the same values with 合併程度 set to
+/// 整段 and 逐項, whatever the mode's own is — report.own.txt is that one. Only the grouping values
+/// can be replayed: timing, 譯文保留 and 辨識解析度 act between frames or before recognition, which
+/// the cache does not hold.
 /// <c>--auto-probe drops cache.json lines.tsv [--profile mode.json]</c> — every detected line and
 /// the filter that took it out (confidence floor, box across the block, 忽略小字), beside the
 /// frame's main text height: what each step of those two values costs.
@@ -160,12 +162,14 @@ internal static class AutoModeProbe
             cases.Add((name, stored));
         }
 
-        foreach (var layout in new[] { RealtimePresets.LayoutAuto, RealtimePresets.LayoutPassage, RealtimePresets.LayoutItems })
-            Add($"layout-{layout}", p => p.Layout = layout);
+        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
+        {
+            int merge = level;
+            Add($"merge-{level}", p => p.MergeLevel = merge);
+        }
         Add("unpunctuated-off", p => p.MergeUnpunctuated = false);
         foreach (var step in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
         {
-            Add($"tendency-{step}", p => p.MergeTendency = step);
             Add($"spacing-{step}", p => p.LineSpacing = step);
             Add($"confidence-{step}", p => p.ConfidenceLevel = step);
         }
@@ -178,19 +182,26 @@ internal static class AutoModeProbe
         Add("detector-min", p => p.DetectorPercent = RealtimeProfile.MinDetectorPercent);
         Add("detector-max", p => p.DetectorPercent = RealtimeProfile.MaxDetectorPercent);
         Add("small-max", p => p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent);
-        foreach (var layout in new[] { RealtimePresets.LayoutAuto, RealtimePresets.LayoutPassage, RealtimePresets.LayoutItems })
+        // Each grouping at the loosest and the tightest of everything else; 自動判斷 at the end of its
+        // own steps that goes the same way.
+        foreach (var (name, loosest, tightest) in new[]
         {
-            Add($"loosest-{layout}", p =>
+            ("lines", RealtimeMergeLevels.Min, RealtimeMergeLevels.Min),
+            ("items", RealtimeMergeLevels.Items, RealtimeMergeLevels.Items),
+            ("auto", RealtimeMergeLevels.AutomaticHighest, RealtimeMergeLevels.AutomaticLowest),
+            ("passage", RealtimeMergeLevels.Passage, RealtimeMergeLevels.Passage),
+            ("whole", RealtimeMergeLevels.Max, RealtimeMergeLevels.Max),
+        })
+        {
+            Add($"loosest-{name}", p =>
             {
-                p.Layout = layout;
-                p.MergeTendency = RealtimeProfile.MaxStep;
+                p.MergeLevel = loosest;
                 p.LineSpacing = RealtimeProfile.MaxStep;
                 p.ConfidenceLevel = RealtimeProfile.MinStep;
             });
-            Add($"tightest-{layout}", p =>
+            Add($"tightest-{name}", p =>
             {
-                p.Layout = layout;
-                p.MergeTendency = RealtimeProfile.MinStep;
+                p.MergeLevel = tightest;
                 p.LineSpacing = RealtimeProfile.MinStep;
                 p.ConfidenceLevel = RealtimeProfile.MaxStep;
                 p.MergeUnpunctuated = false;
@@ -230,15 +241,19 @@ internal static class AutoModeProbe
         var extras = new StringBuilder();
         var answers = new StringBuilder();
         var byMode = new StringBuilder();
+        var own = new StringBuilder();
         var totals = new SortedDictionary<string, int[]>(StringComparer.Ordinal);
-        var passage = profile with { Layout = RealtimeBlockMode.Subtitle };
-        var items = profile with { Layout = RealtimeBlockMode.Panel };
+        var passage = profile with { Merge = RealtimeMerge.Passage };
+        var items = profile with { Merge = RealtimeMerge.Items };
         foreach (var capture in cache)
         {
             List<OcrTextBlock> Raw() => capture.Blocks.Select(b => b.Restore()).ToList();
             var reading = RealtimeAutoLayout.Read(OcrService.FilterForRealtime(Raw(), capture.Height, profile), profile.Auto);
             var asDialogue = OcrService.GroupRealtime(Raw(), capture.Height, passage);
             var asPanel = OcrService.GroupRealtime(Raw(), capture.Height, items);
+            // The mode's own grouping, as a session on it would group the frame: on 合併程度's two
+            // ends the only one of these that runs them.
+            var asProfile = OcrService.GroupRealtime(Raw(), capture.Height, profile);
             bool sameAsDialogue = Same(reading.Groups, asDialogue);
             bool sameAsPanel = Same(reading.Groups, asPanel);
 
@@ -266,6 +281,8 @@ internal static class AutoModeProbe
             byMode.AppendLine($"=== {name}");
             foreach (var group in asDialogue) byMode.AppendLine($"  字幕 {group.Bounds} {Flat(group.Text)}");
             foreach (var group in asPanel) byMode.AppendLine($"  面板 {group.Bounds} {Flat(group.Text)}");
+            own.AppendLine($"=== {name}");
+            foreach (var group in asProfile) own.AppendLine($"  {Letter(group.ReadAs ?? profile.Layout)} {group.Bounds} {Flat(group.Text)}");
             if (!sameAsDialogue)
                 foreach (var text in asDialogue.Select(g => g.Text).Except(reading.Groups.Select(g => g.Text)))
                     report.AppendLine($"      only 字幕: {Flat(text)}");
@@ -294,6 +311,7 @@ internal static class AutoModeProbe
         File.WriteAllText(reportPath, header + summary + Environment.NewLine + report);
         File.WriteAllText(Path.ChangeExtension(reportPath, ".groups.txt"), answers.ToString());
         File.WriteAllText(Path.ChangeExtension(reportPath, ".modes.txt"), byMode.ToString());
+        File.WriteAllText(Path.ChangeExtension(reportPath, ".own.txt"), own.ToString());
         File.WriteAllText(Path.ChangeExtension(reportPath, ".extras.tsv"),
             "label\tset\tverdict\tzones\trows\tperRow\tmaxAdv\tminAdv\th\tcpr\tlongest\tmarks\twordy\taspect\timage\ttext\n" + extras);
         return summary.ToString();
