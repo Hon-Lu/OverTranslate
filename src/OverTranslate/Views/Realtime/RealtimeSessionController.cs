@@ -841,7 +841,7 @@ internal sealed class RealtimeSessionController
     private void OpenProfiles(string profileId)
     {
         Stop();
-        Shell.ShellWindow.ShowOrActivate(Shell.ShellPage.Realtime);
+        Shell.ShellWindow.ShowOrActivate(Shell.ShellPage.Realtime).ShowRealtimeProfile(profileId);
     }
 
     /// <summary>

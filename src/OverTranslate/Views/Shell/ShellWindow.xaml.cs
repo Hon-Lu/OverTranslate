@@ -244,6 +244,9 @@ public partial class ShellWindow : Window
     /// <summary>Puts the 即時翻譯 shortcut's refusal on the realtime page — see MainWindow.</summary>
     public void ShowRealtimeShortcutRefusal(string key) => _realtimePage.ShowShortcutRefusal(key);
 
+    /// <summary>Opens the realtime page's 模式 card on one mode — the edit layer's 管理模式….</summary>
+    public void ShowRealtimeProfile(string profileId) => _realtimePage.ShowProfile(profileId);
+
     public void RefreshHotkeyHints()
     {
         var settings = SettingsService.Instance.Current;
