@@ -313,6 +313,14 @@ internal static class RealtimeProfileEditing
             })),
     };
 
+    /// <summary>A value of 譯文對齊 by name: 自動, 置中, 靠左.</summary>
+    public static string AlignName(string? align) => LocalizationService.Get(RealtimeTextAligns.Normalize(align) switch
+    {
+        RealtimeTextAligns.Center => "S.Realtime.ProfileAlignCenter",
+        RealtimeTextAligns.Left => "S.Realtime.ProfileAlignLeft",
+        _ => "S.Realtime.ProfileAuto",
+    });
+
     /// <summary>What a step of 語句合併 does, in a sentence; the five 自動判斷 steps share one.</summary>
     public static string MergeLevelDescription(int level) => LocalizationService.Get(level switch
     {

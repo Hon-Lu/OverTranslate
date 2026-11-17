@@ -396,6 +396,15 @@ public partial class RealtimeProfileOverlay : UserControl
             case ProfileParam.ClearAfterEmptyReads:
                 row.Check!.IsChecked = filled.ClearAfterEmptyReads == RealtimeProfile.MinClearAfterEmptyReads;
                 return;
+            case ProfileParam.Align:
+            {
+                int index = AlignIndex(filled.Align);
+                row.Switch!.SelectedIndex = index;
+                // Hidden rather than collapsed, as 已修改 is: choosing 置中 or 靠左 does not move the
+                // rows below.
+                row.AutoTip!.Visibility = index == 0 ? Visibility.Visible : Visibility.Hidden;
+                break;
+            }
             case ProfileParam.SettleSeconds:
             {
                 bool automatic = filled.SettleSeconds < 0;
@@ -445,6 +454,7 @@ public partial class RealtimeProfileOverlay : UserControl
     private static string Display(RealtimeProfile filled, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
+        ProfileParam.Align => RealtimeProfileEditing.AlignName(filled.Align),
         ProfileParam.SettleSeconds => filled.SettleSeconds is < 0 or null
             ? Services.Realtime.RealtimeActualValues.Of(filled).SettleSeconds is { } seconds
                 ? SecondsText(seconds)
@@ -495,7 +505,7 @@ public partial class RealtimeProfileOverlay : UserControl
     private void BuildRows()
     {
         Add(LayoutGroup, BuildMergeRow());
-        // 譯文對齊 goes here, under 語句合併, when it is added: the 版面 group keeps the room for it.
+        Add(LayoutGroup, BuildAlignRow());
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
@@ -615,6 +625,77 @@ public partial class RealtimeProfileOverlay : UserControl
         AddHint(row, "S.Realtime.ProfileMergeHint");
         return row;
     }
+
+    /// <summary>
+    /// 譯文對齊: the name, and 自動｜置中｜靠左 starting where every 自動｜手動 starts; under 自動, the
+    /// sentence saying what 自動 does on the line below. The value column is left empty: the switch
+    /// shows the value, and the other two choices have nothing more to say.
+    /// </summary>
+    /// <remarks>
+    /// Three parts are wider than 自動｜手動, so the switch runs on into the slider's slot rather than
+    /// widening the card's shared switch column, which would narrow every slider by the difference.
+    /// That leaves the slot no room for the sentence beside it, which goes under the row instead: in
+    /// Russian, with 自動 as wide as По центру, a sentence in what was left of the slot ran to five
+    /// lines and pressed the name's 僅適用於橫排 tag out of sight. The sentence spans no shared
+    /// column — see <see cref="BuildRow"/>.
+    /// </remarks>
+    private ParamRow BuildAlignRow()
+    {
+        var top = new Grid();
+        top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "ProfileSwitch" });
+        top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = SlotMinWidth, MaxWidth = SlotWidth });
+        top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = ValueWidth, SharedSizeGroup = "ProfileValue" });
+        var row = NewRow(ProfileParam.Align, "S.Realtime.ProfileAlign", top);
+
+        // As tall as the rows with a slider, so the row does not shrink when 自動 is left.
+        top.Children.Add(new Border { MinHeight = 40 });
+
+        var mode = new SegmentedSwitch
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0, 0, 12, 0),
+        };
+        // The three parts one width within this switch, as 自動｜手動's two are.
+        Grid.SetIsSharedSizeScope(mode, true);
+        mode.SetLabels("S.Realtime.ProfileAuto", "S.Realtime.ProfileAlignCenter", "S.Realtime.ProfileAlignLeft");
+        mode.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, "S.Realtime.ProfileAlign");
+        System.Windows.Automation.AutomationProperties.SetAutomationId(mode, "AlignMode");
+        mode.IndexChanged += (_, index) =>
+        {
+            if (_syncing) return;
+            _settleTimer.Stop();
+            _pendingRow = null;
+            Commit(profile => profile.Align = index switch
+            {
+                1 => RealtimeTextAligns.Center,
+                2 => RealtimeTextAligns.Left,
+                _ => RealtimeTextAligns.Auto,
+            });
+        };
+        Grid.SetColumn(mode, 1);
+        Grid.SetColumnSpan(mode, 2);
+        top.Children.Add(mode);
+        row.Switch = mode;
+
+        var tip = new TextBlock { FontSize = 11.5, LineHeight = 16, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
+        tip.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+        tip.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
+        tip.SetResourceReference(TextBlock.TextProperty, "S.Realtime.ProfileAlignAutoTip");
+        row.Root.Children.Add(tip);
+        row.AutoTip = tip;
+
+        _rows[row.Param] = row;
+        return row;
+    }
+
+    private static int AlignIndex(string? align) => RealtimeTextAligns.Normalize(align) switch
+    {
+        RealtimeTextAligns.Center => 1,
+        RealtimeTextAligns.Left => 2,
+        _ => 0,
+    };
 
     /// <summary>
     /// Every other value: name on the left; 自動｜手動 where the value can be left to 自動; a slot of

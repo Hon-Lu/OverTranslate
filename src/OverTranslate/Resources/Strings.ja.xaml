@@ -495,6 +495,10 @@
     <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">文字の配置と内容から結合するかを判断します。右へ動かすほど上下の行が結合しやすくなります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大きさと位置が近い上下の複数行を、優先して 1 つの段落にまとめます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">文字サイズや揃え方に関係なく、位置が近い上下の文をすべて 1 つの段落にまとめます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlign">訳文の配置</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignCenter">中央揃え</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignLeft">左揃え</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">原文の揃え方に合わせます。判断できない場合、まとまった文章は中央揃え、ばらばらの文字は左揃えにします。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が安定してから読み取る</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">文字がちらつきやすいときや不安定なときは右へ動かします。ただし、翻訳が出るのも遅くなります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">まとまった文章は待たず、ばらばらの文字は約 0.15 秒待ちます。</sys:String>

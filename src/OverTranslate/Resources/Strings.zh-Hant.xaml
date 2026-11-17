@@ -511,6 +511,10 @@
     <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">依文字排版與內容判斷是否合併，往右較容易合併上下行。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大小與位置相近的上下多行語句，會優先合併成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">不受字級與對齊限制，位置相近的上下語句都會合併成一段。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlign">譯文對齊</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignCenter">置中</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignLeft">靠左</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">依原文的對齊方式排列；無法判斷時，整段文字置中，零散文字靠左。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">畫面文字穩定後再讀取</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">文字容易閃爍或是不穩定時可往右調，但翻譯速度也會隨之變慢。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">整段文字不等待；零散文字約等 0.15 秒。</sys:String>

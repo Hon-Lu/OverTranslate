@@ -495,6 +495,10 @@
     <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">글자 배치와 내용을 보고 합칠지 판단하며, 오른쪽으로 갈수록 위아래 줄을 더 쉽게 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">크기와 위치가 비슷한 위아래 여러 줄을 우선 하나의 문단으로 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">글자 크기와 정렬에 관계없이 위치가 가까운 위아래 문장을 모두 하나의 문단으로 합칩니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlign">번역문 정렬</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignCenter">가운데</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignLeft">왼쪽</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">원문의 정렬 방식을 따릅니다. 판단할 수 없으면 이어진 글은 가운데, 흩어진 글자는 왼쪽에 맞춥니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">글자가 안정된 뒤 읽기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">글자가 자주 깜박이거나 불안정하면 오른쪽으로 옮기세요. 다만 번역 속도도 그만큼 느려집니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">이어진 글은 기다리지 않고, 흩어진 글자는 약 0.15초 기다립니다.</sys:String>

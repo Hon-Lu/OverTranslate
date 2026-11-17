@@ -488,6 +488,10 @@
     <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Объединять ли строки, решается по расположению и содержанию текста; чем правее, тем охотнее строки объединяются.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">Соседние строки похожего размера и положения в первую очередь объединяются в один фрагмент.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">Без учёта размера и выравнивания: все близко расположенные строки объединяются в один фрагмент.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlign">Выравнивание перевода</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignCenter">По центру</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignLeft">Слева</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">Как в оригинале; если определить нельзя, связный текст — по центру, отдельные надписи — слева.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Читать, когда текст замрёт</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Сдвиньте вправо, если текст мерцает или нестабилен, но перевод будет появляться медленнее.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">Для связного текста — без ожидания, для отдельных надписей — около 0.15 с.</sys:String>
