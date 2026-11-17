@@ -323,12 +323,12 @@ public class RealtimeProfileTests
         }
     }
 
+    // 沒有標點也合併 is not offered: every step keeps unpunctuated rows able to be a passage.
     [Fact]
-    public void TurningUnpunctuatedMergingOffChangesNothingElse()
+    public void UnpunctuatedRowsMayBeAPassageOnEveryStep()
     {
-        var profile = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeUnpunctuated = false });
-
-        Assert.Equal(AutoRules.Default with { Lettering = false }, profile.Auto);
+        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
+            Assert.True(ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level }).Auto.Lettering);
     }
 
     [Theory]
@@ -585,22 +585,8 @@ public class RealtimeProfileTests
     [InlineData(1)]
     [InlineData(7)]
     [InlineData(8)]
-    public void UnpunctuatedMergingOff_IsNotReadOffTheAutomaticSteps(int level)
-    {
-        var on = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level });
-        var off = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = false });
-
-        Assert.Equal(on, off);
-        Assert.Same(AutoRules.Default, off.Auto);
-    }
-
-    [Fact]
-    public void UnpunctuatedMergingOff_IsReadOnTheAutomaticSteps()
-    {
-        for (int level = RealtimeMergeLevels.AutomaticLowest; level <= RealtimeMergeLevels.AutomaticHighest; level++)
-            Assert.False(ResolvedProfile.Resolve(
-                new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = false }).Auto.Lettering);
-    }
+    public void TheStepsOffAutomatic_ReadWithTheMeasuredRules(int level) =>
+        Assert.Same(AutoRules.Default, ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level }).Auto);
 
     // A wrapped sentence the detector framed in two pieces on its first line: 逐項 joins the pieces
     // and the lines; 不合併 the pieces only.
@@ -712,7 +698,6 @@ public class RealtimeProfileTests
         var actual = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", MergeLevel = level });
 
         Assert.Equal(level, actual.MergeLevel);
-        Assert.Equal(RealtimeMergeLevels.IsAutomatic(level), actual.MergeUnpunctuatedApplies);
         Assert.True(actual.SettleIsAutomatic);
         Assert.Equal(settle, actual.SettleSeconds);
         Assert.True(actual.DetectorIsAutomatic);
@@ -722,11 +707,11 @@ public class RealtimeProfileTests
     [Fact]
     public void ThePresetsActualValues()
     {
-        Assert.Equal(new RealtimeActualValues(4, true, true, null, true, null),
+        Assert.Equal(new RealtimeActualValues(4, true, null, true, null),
             RealtimeActualValues.Of(RealtimePresets.StandardId, []));
-        Assert.Equal(new RealtimeActualValues(7, false, false, 0.0, false, 85),
+        Assert.Equal(new RealtimeActualValues(7, false, 0.0, false, 85),
             RealtimeActualValues.Of(RealtimePresets.SubtitleId, null));
-        Assert.Equal(new RealtimeActualValues(1, false, false, 0.15, false, 68),
+        Assert.Equal(new RealtimeActualValues(1, false, 0.15, false, 68),
             RealtimeActualValues.Of(RealtimePresets.InterfaceId, null));
     }
 
@@ -793,7 +778,6 @@ public class RealtimeProfileTests
                     Id = "m", MergeLevel = level,
                     ConfidencePercent = end == RealtimeProfile.MinStep ? RealtimeProfile.MinConfidencePercent : RealtimeProfile.MaxConfidencePercent,
                 });
-                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = end == RealtimeProfile.MinStep });
                 variants.Add(new RealtimeProfile
                 {
                     Id = "m", MergeLevel = level, IgnoreSmallPercent = end == RealtimeProfile.MinStep ? 0 : RealtimeProfile.MaxIgnoreSmallPercent,
@@ -802,7 +786,7 @@ public class RealtimeProfileTests
                 {
                     Id = "m", MergeLevel = level,
                     ConfidencePercent = end == RealtimeProfile.MinStep ? RealtimeProfile.MaxConfidencePercent : RealtimeProfile.MinConfidencePercent,
-                    IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent, MergeUnpunctuated = false,
+                    IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent,
                 });
             }
 

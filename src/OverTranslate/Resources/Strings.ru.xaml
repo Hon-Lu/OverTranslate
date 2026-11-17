@@ -462,13 +462,10 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">Только горизонтальный текст</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">Не используется в областях с вертикальным направлением текста.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">Авто</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">Действует, только когда «Разбивка строк» — «Автоопределение»</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">Разбивка строк</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">Целиком</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">По пунктам</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">Выберите «Целиком», если реплика разбивается на части; «По пунктам», если меню или список сливаются в один текст.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLettering">Объединять без знаков препинания</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLetteringHint">Включите, если строки без знаков препинания, например реплики в манге, разделяются; выключите, если объединяются несвязанные короткие строки.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Ждать остановки текста</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Наибольшее время ожидания после изменения текста, пока изображение не перестанет меняться. Увеличьте, если плавно проявляющийся текст распознаётся с ошибками; уменьшите, если перевод появляется слишком поздно. На текст, появляющийся по буквам, почти не влияет.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">Без ожидания</sys:String>
@@ -484,7 +481,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">Порог для коротких строк</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Действует только на текст короче 10 символов. Повысьте, чтобы было меньше ошибок распознавания, но часть коротких строк может не распознаться; понизьте, чтобы распознавалось больше текста, но ошибок может стать больше.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Выкл.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileOn">Вкл.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">Низкий</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLower">Ниже среднего</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">Средний</sys:String>

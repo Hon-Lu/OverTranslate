@@ -142,12 +142,11 @@ public class RealtimeProfileEditingTests
     {
         var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
         mode.MergeLevel = RealtimeMergeLevels.Passage;      // the preset's own: not a change
-        mode.MergeUnpunctuated = false;                     // no effect at 整段, but the mode's own
         mode.SettleSeconds = 0.6;
         mode.ConfidencePercent = 90;
         mode.IgnoreSmallPercent = 0;                        // the preset's own: not a change
 
-        Assert.Equal(3, RealtimeProfileEditing.ModifiedCount(mode));
+        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode));
         Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(Custom("b", "Untouched")));
         Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(RealtimePresets.Create(RealtimePresets.InterfaceId)));
     }
@@ -160,17 +159,8 @@ public class RealtimeProfileEditingTests
     [InlineData(6, true)]
     [InlineData(7, false)]
     [InlineData(8, false)]
-    public void UnpunctuatedMerging_IsOnlyInEffectOnTheAutomaticSteps(int level, bool inEffect)
-    {
-        var mode = Custom("a", "A");
-        mode.MergeLevel = level;
-        var filled = mode.Filled();
-
-        Assert.Equal(inEffect, RealtimeProfileEditing.InEffect(filled, ProfileParam.MergeUnpunctuated));
-        Assert.Equal(inEffect, RealtimeMergeLevels.MergeUnpunctuatedApplies(level));
-        Assert.All(RealtimeProfileEditing.All.Where(param => param != ProfileParam.MergeUnpunctuated),
-            param => Assert.True(RealtimeProfileEditing.InEffect(filled, param)));
-    }
+    public void OnlyTheMiddleStepsDecideGroupByGroup(int level, bool automatic) =>
+        Assert.Equal(automatic, RealtimeMergeLevels.IsAutomatic(level));
 
     [Fact]
     public void ResetAll_FollowsThePresetEverywhere_AndKeepsNameAndTemplate()

@@ -469,13 +469,10 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">横書きのみ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字の向きが縦書きのブロックでは使われません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">「行の扱い」が「自動判断」のときのみ有効</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">行の扱い</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">まとめて</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">項目ごと</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">ひとつの会話が分かれてしまうときは「まとめて」、メニューやリストがひとつにまとまってしまうときは「項目ごと」を選びます。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLettering">句読点がなくても結合</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLetteringHint">マンガのセリフなど句読点のない複数行が分かれてしまうときはオン、関係のない短い行がまとまってしまうときはオフにします。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が止まるまで待つ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文が変わったあと、画面の変化が止まるまで読み取りを待つ最長時間。フェードイン中の文字が誤って読まれるときは長くし、訳文が出るのが遅いときは短くします。一文字ずつ表示される文字にはほとんど効果がありません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">待たない</sys:String>
@@ -491,7 +488,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">短い文字列の認識しきい値</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">10 文字未満の文字列にのみ適用されます。上げると誤認識が減りますが、短い文字列の一部が認識されないことがあります。下げるとより多くの文字を認識できますが、誤認識が増えることがあります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">オフ</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileOn">オン</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">低</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLower">やや低</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>

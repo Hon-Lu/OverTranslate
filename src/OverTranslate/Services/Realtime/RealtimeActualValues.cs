@@ -8,10 +8,6 @@ namespace OverTranslate.Services.Realtime;
 /// <see cref="ResolvedProfile"/>, from which this is worked out by the same rules.
 /// </summary>
 /// <param name="MergeLevel">合併程度, held to its range.</param>
-/// <param name="MergeUnpunctuatedApplies">
-/// Whether 沒有標點也合併 has any effect at this 合併程度 — only on 自動判斷's steps (2–6); greyed
-/// out elsewhere.
-/// </param>
 /// <param name="SettleIsAutomatic">畫面文字穩定後再讀取 is left on 自動.</param>
 /// <param name="SettleSeconds">
 /// 畫面文字穩定後再讀取 in seconds, rounded to the hundredth: as set, or what 自動 comes to — 0
@@ -25,7 +21,6 @@ namespace OverTranslate.Services.Realtime;
 /// </param>
 internal sealed record RealtimeActualValues(
     int MergeLevel,
-    bool MergeUnpunctuatedApplies,
     bool SettleIsAutomatic,
     double? SettleSeconds,
     bool DetectorIsAutomatic,
@@ -66,7 +61,6 @@ internal sealed record RealtimeActualValues(
 
         return new RealtimeActualValues(
             filled.MergeLevel!.Value,
-            RealtimeMergeLevels.MergeUnpunctuatedApplies(filled.MergeLevel!.Value),
             resolved.SettlePolls is null,
             settle,
             resolved.DetectorFraction is null,

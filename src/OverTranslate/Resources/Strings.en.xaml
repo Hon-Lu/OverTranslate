@@ -465,13 +465,10 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">Horizontal text only</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">Not used by blocks whose text direction is vertical.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">Auto</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">Only applies when Line handling is Automatic</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">Line handling</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">Passage</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">Items</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">Choose Passage when one piece of dialogue is split into several; choose Items when a menu or list is merged into one.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLettering">Merge without punctuation</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLetteringHint">Turn on when unpunctuated lines such as comic lettering are split apart; turn off when unrelated short lines are merged.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Wait for text to settle</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">The longest wait, after the text changes, for the picture to stop changing before it is read. Lengthen when text that fades in is misread; shorten when translations appear too late. Has almost no effect on text that appears letter by letter.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">No wait</sys:String>
@@ -487,7 +484,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidence">Short text threshold</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Applies only to text under 10 characters. Raise it to reduce misreads, though some short text may go unrecognized; lower it to recognize more text, at the risk of more misreads.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Off</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileOn">On</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">Low</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLower">Fairly low</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">Medium</sys:String>

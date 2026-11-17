@@ -22,8 +22,9 @@ namespace OverTranslate.Models;
 /// one value falling back to the preset's.</para>
 ///
 /// <para>A value no longer offered is dropped from here rather than kept unread: 行距容許
-/// (LineSpacing) was, and a file that still holds it reads as if it did not, since a member this
-/// class does not have is skipped as the file is read.</para>
+/// (LineSpacing) and 沒有標點也合併 (MergeUnpunctuated) were, and a file that still holds them
+/// reads as if it did not, since a member this class does not have is skipped as the file is
+/// read.</para>
 /// </remarks>
 public sealed class RealtimeProfile
 {
@@ -47,12 +48,6 @@ public sealed class RealtimeProfile
     /// <summary>合併程度, 0–8 — see <see cref="RealtimeMergeLevels"/>.</summary>
     /// <remarks>Horizontal text only.</remarks>
     public int? MergeLevel { get; set; }
-
-    /// <summary>
-    /// 沒有標點也合併. Only read while <see cref="MergeLevel"/> is one of 自動判斷's — see
-    /// <see cref="RealtimeMergeLevels.IsAutomatic"/>.
-    /// </summary>
-    public bool? MergeUnpunctuated { get; set; }
 
     /// <summary>
     /// 畫面文字穩定後再讀取, in seconds, 0–1.5; below zero is 自動.
@@ -133,7 +128,6 @@ public sealed class RealtimeProfile
             Name = Name ?? "",
             BasedOn = template.Id,
             MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
-            MergeUnpunctuated = MergeUnpunctuated ?? template.MergeUnpunctuated,
             SettleSeconds = SettleSeconds is { } seconds && double.IsFinite(seconds)
                 ? seconds < 0 ? RealtimePresets.Automatic : Math.Min(seconds, MaxSettleSeconds)
                 : template.SettleSeconds,
@@ -275,7 +269,6 @@ public static class RealtimePresets
                 InterfaceId => RealtimeMergeLevels.Items,
                 _ => RealtimeMergeLevels.AutomaticMiddle,
             },
-            MergeUnpunctuated = true,
             SettleSeconds = id switch
             {
                 SubtitleId => 0,
@@ -340,13 +333,8 @@ public static class RealtimeMergeLevels
     /// <summary>合併: more than 整段, short of joining what is clearly apart.</summary>
     public const int Max = 8;
 
-    /// <summary>
-    /// Whether this step decides group by group — the only steps 沒有標點也合併 has any effect on.
-    /// </summary>
+    /// <summary>Whether this step decides group by group.</summary>
     public static bool IsAutomatic(int level) => level is >= AutomaticLowest and <= AutomaticHighest;
-
-    /// <summary>Whether 沒有標點也合併 does anything at this step; the page greys it out where not.</summary>
-    public static bool MergeUnpunctuatedApplies(int level) => IsAutomatic(level);
 
     /// <summary>
     /// The step's place on the old 1–5 合併傾向 scale; the middle one off 自動判斷, where the

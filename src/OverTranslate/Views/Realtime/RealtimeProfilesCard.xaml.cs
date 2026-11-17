@@ -321,8 +321,7 @@ public partial class RealtimeProfilesCard : UserControl
         foreach (var row in _rows.Values)
         {
             var param = row.Param;
-            bool needsAuto = !RealtimeProfileEditing.InEffect(filled, param);
-            bool enabled = !preset && !needsAuto;
+            bool enabled = !preset;
             bool modified = !preset && RealtimeProfileEditing.IsSet(stored, param);
 
             // Its line under the name is kept while hidden on a custom mode, so that setting a value
@@ -332,7 +331,6 @@ public partial class RealtimeProfilesCard : UserControl
             row.Revert.ToolTip = param == ProfileParam.ClearAfterEmptyReads
                 ? LocalizationService.Get("S.Realtime.ProfileResetAll")
                 : LocalizationService.Format("S.Realtime.ProfileRevert", Display(template, param));
-            row.ReasonRow.Visibility = needsAuto ? Visibility.Visible : Visibility.Collapsed;
 
             foreach (var control in row.Controls) control.IsEnabled = enabled;
             // The trays, the switch and the tick have no greyed look of their own; the slider has.
@@ -356,9 +354,6 @@ public partial class RealtimeProfilesCard : UserControl
     {
         switch (row.Param)
         {
-            case ProfileParam.MergeUnpunctuated:
-                row.Toggle!.IsChecked = filled.MergeUnpunctuated == true;
-                break;
             case ProfileParam.ClearAfterEmptyReads:
                 row.Toggle!.IsChecked = ClearsAtOnce(filled);
                 break;
@@ -396,7 +391,6 @@ public partial class RealtimeProfilesCard : UserControl
     private static string Display(RealtimeProfile filled, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => LevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
-        ProfileParam.MergeUnpunctuated => LocalizationService.Get(filled.MergeUnpunctuated == true ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff"),
         ProfileParam.SettleSeconds => SecondsText(filled.SettleSeconds ?? RealtimePresets.Automatic),
         ProfileParam.DetectorPercent => filled.DetectorPercent is < 0 or null
             ? LocalizationService.Get("S.Realtime.ProfileAuto")
@@ -448,7 +442,6 @@ public partial class RealtimeProfilesCard : UserControl
     private void BuildRows()
     {
         Add(LayoutGroup, BuildRow(ProfileParam.MergeLevel, "S.Realtime.ProfileLayout", "S.Realtime.ProfileLayoutHint"));
-        Add(LayoutGroup, BuildRow(ProfileParam.MergeUnpunctuated, "S.Realtime.ProfileLettering", "S.Realtime.ProfileLetteringHint"));
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
@@ -533,24 +526,6 @@ public partial class RealtimeProfilesCard : UserControl
             case ProfileParam.MergeLevel:
                 BuildSlider(row, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1, nameKey);
                 break;
-            case ProfileParam.MergeUnpunctuated:
-            {
-                var toggle = new CheckBox { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(12, 0, 2, 0) };
-                toggle.SetResourceReference(StyleProperty, "ToggleSwitch");
-                toggle.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, nameKey);
-                RoutedEventHandler changed = (_, _) =>
-                {
-                    if (!_syncing) Commit(profile => profile.MergeUnpunctuated = toggle.IsChecked == true);
-                };
-                toggle.Checked += changed;
-                toggle.Unchecked += changed;
-                Grid.SetColumn(toggle, 2);
-                top.Children.Add(toggle);
-                row.Toggle = toggle;
-                row.Controls.Add(toggle);
-                row.Fades.Add(toggle);
-                break;
-            }
             case ProfileParam.SettleSeconds:
                 BuildAuto(row, null);
                 BuildSlider(row, 0, Math.Round(RealtimeProfile.MaxSettleSeconds / PollSeconds), 1, nameKey);
@@ -597,24 +572,6 @@ public partial class RealtimeProfilesCard : UserControl
         hint.SetResourceReference(StyleProperty, "FieldHint");
         hint.SetResourceReference(TextBlock.TextProperty, hintKey);
         root.Children.Add(hint);
-
-        var reasonRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0), Visibility = Visibility.Collapsed };
-        var info = new TextBlock
-        {
-            Text = "",
-            FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-            FontSize = 12,
-            Margin = new Thickness(0, 2, 7, 0),
-            VerticalAlignment = VerticalAlignment.Top,
-        };
-        info.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
-        var reason = new TextBlock { Margin = new Thickness(0) };
-        reason.SetResourceReference(StyleProperty, "FieldHint");
-        reason.SetResourceReference(TextBlock.TextProperty, "S.Realtime.ProfileNeedsAutoLayout");
-        reasonRow.Children.Add(info);
-        reasonRow.Children.Add(reason);
-        root.Children.Add(reasonRow);
-        row.ReasonRow = reasonRow;
 
         _rows[param] = row;
         return row;
@@ -1111,7 +1068,6 @@ public partial class RealtimeProfilesCard : UserControl
         public StackPanel Modified { get; } = modified;
         public Button Revert { get; } = revert;
         public FrameworkElement Heading { get; init; } = new StackPanel();
-        public StackPanel ReasonRow { get; set; } = new();
         public List<UIElement> Controls { get; } = [];
         public List<UIElement> Fades { get; } = [];
         public Slider? Slider { get; set; }

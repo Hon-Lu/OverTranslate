@@ -385,7 +385,6 @@ public class SettingsParsingTests
         var mine = RealtimeProfile.CreateCustom(RealtimePresets.SubtitleId, "Visual novels");
         mine.SettleSeconds = 0.45;
         mine.DetectorPercent = RealtimePresets.Automatic;
-        mine.MergeUnpunctuated = false;
         var chat = RealtimeProfile.CreateCustom(RealtimePresets.InterfaceId, "Chat");
         chat.MergeLevel = RealtimeMergeLevels.Min;
         written.Realtime.Profiles = [mine, chat];
@@ -400,7 +399,6 @@ public class SettingsParsingTests
         Assert.Equal(RealtimePresets.SubtitleId, read.BasedOn);
         Assert.Equal(0.45, read.SettleSeconds);
         Assert.Equal(RealtimePresets.Automatic, read.DetectorPercent);
-        Assert.False(read.MergeUnpunctuated);
         // Unset stays unset — it follows the preset rather than a copy of what the preset was.
         Assert.Null(read.MergeLevel);
         Assert.Null(read.ConfidencePercent);
@@ -554,20 +552,21 @@ public class SettingsParsingTests
     }
 
     /// <summary>
-    /// 行距容許 is no longer a value of a mode: a file that still has it reads every other value of
-    /// the mode as written, and groups on the measured row spacing.
+    /// 行距容許 and 沒有標點也合併 are no longer values of a mode: a file that still has them reads
+    /// every other value of the mode as written, and groups on the measured rules.
     /// </summary>
     [Fact]
-    public void ARetiredLineSpacing_IsIgnored()
+    public void ARetiredLineSpacingOrUnpunctuatedMerging_IsIgnored()
     {
         var settings = SettingsService.Parse(
             """
-            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"subtitle","LineSpacing":5,"IgnoreSmallPercent":40}]}}
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"subtitle","LineSpacing":5,"MergeUnpunctuated":false,"IgnoreSmallPercent":40}]}}
             """);
 
         var stored = Assert.Single(settings.Realtime.Profiles);
         Assert.Equal(40, stored.IgnoreSmallPercent);
         Assert.DoesNotContain("LineSpacing", SettingsService.Serialize(settings));
+        Assert.DoesNotContain("MergeUnpunctuated", SettingsService.Serialize(settings));
         Assert.Equal(ResolvedProfile.Subtitle with { Id = "a", IgnoreSmallFraction = 0.4 }, settings.Realtime.ResolveProfile("a"));
     }
 

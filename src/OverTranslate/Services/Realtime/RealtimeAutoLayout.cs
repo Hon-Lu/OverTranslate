@@ -211,7 +211,8 @@ internal static class RealtimeAutoLayout
     // Options — starts every row afresh. Lettering is capitals throughout and is not touched by
     // this. Found on a live stage, where exactly that menu was drawn as one paragraph.
     //
-    // 沒有標點也合併 turned off is this rule turned off: unpunctuated rows are then never a passage.
+    // AutoRules.Lettering off turns this rule off, and unpunctuated rows are then never a passage;
+    // no mode does that any more (沒有標點也合併 was taken back), but the rules still say it.
     private static bool Lettering(Shape shape, int zones, AutoRules rules) =>
         rules.Lettering &&
         zones <= rules.LetteringZones && shape.MaxAdvance <= rules.PassageLeading && shape.Wordy &&

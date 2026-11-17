@@ -469,13 +469,10 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">가로쓰기 전용</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">텍스트 방향이 세로쓰기인 블록에는 사용되지 않습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">자동</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">'줄 처리'가 '자동 판단'일 때만 적용됩니다</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">줄 처리</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">한 덩어리</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">항목별</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">한 대사가 여러 덩어리로 나뉘면 '한 덩어리', 메뉴나 목록이 한 덩어리로 합쳐지면 '항목별'을 선택하세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLettering">문장 부호가 없어도 합치기</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLetteringHint">만화 대사처럼 문장 부호가 없는 여러 줄이 나뉘면 켜고, 관련 없는 짧은 줄이 합쳐지면 끄세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">글자가 멈출 때까지 대기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">원문이 바뀐 뒤 화면 변화가 멈출 때까지 읽기를 기다리는 최대 시간입니다. 페이드인 중인 글자가 잘못 읽히면 늘리고, 번역문이 너무 늦게 나오면 줄이세요. 한 글자씩 나타나는 글자에는 거의 효과가 없습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">대기 안 함</sys:String>
@@ -491,7 +488,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">짧은 글 인식 임계값</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">10자 미만의 글자에만 적용됩니다. 높이면 잘못된 인식이 줄지만 일부 짧은 글은 인식되지 않을 수 있고, 낮추면 더 많은 글자를 인식하지만 잘못된 인식이 늘 수 있습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">끔</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileOn">켬</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">낮음</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLower">약간 낮음</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">중간</sys:String>

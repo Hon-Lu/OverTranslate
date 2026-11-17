@@ -485,13 +485,10 @@
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">僅適用於橫排</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字方向為直排的區塊不使用此設定。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">僅在「分行處理」為「自動判斷」時有效</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">分行處理</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">逐項</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">一段對話被拆成多段時選「整段」；選單或清單被併成一段時選「逐項」。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLettering">沒有標點也合併</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLetteringHint">漫畫對白等沒有標點的多行文字被拆開時開啟；不相關的短行被併在一起時關閉。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">等文字停下</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文變動後，等畫面停止變化再讀取的最長時間。淡入中的文字被讀錯時拉長；譯文出現太慢時縮短。對逐字出現的文字幾乎沒有作用。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">不等待</sys:String>
@@ -507,7 +504,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">短句辨識門檻</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">僅適用於未滿 10 字的文字。調高可減少誤判，但部分較短的文字可能無法辨識；調低則能辨識更多文字，但也可能增加誤判。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">關閉</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileOn">開啟</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">低</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLower">偏低</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>

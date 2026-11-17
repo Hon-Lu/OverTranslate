@@ -50,7 +50,10 @@ internal enum RealtimeMerge
 /// <param name="LetteringZones">See <see cref="RealtimeAutoLayout.LetteringZones"/>.</param>
 /// <param name="LetteringAspect">See <see cref="RealtimeAutoLayout.LetteringAspect"/>. Not offered to the user.</param>
 /// <param name="PassageLeading">See <see cref="RealtimeAutoLayout.PassageLeading"/>.</param>
-/// <param name="Lettering">Whether unpunctuated rows may be a passage at all — 沒有標點也合併.</param>
+/// <param name="Lettering">
+/// Whether unpunctuated rows may be a passage at all. Always on: it was offered as 沒有標點也合併
+/// and taken back, since nobody could tell from its name when to turn it off.
+/// </param>
 /// <param name="MaxStackGap">See <see cref="DialogueTextGrouper.MaxStackGap"/>.</param>
 /// <param name="PanelGrouping">The panel grouper's profile: <see cref="GroupingProfile.Realtime"/> or a variant of it.</param>
 internal sealed record AutoRules(
@@ -263,10 +266,7 @@ public sealed record ResolvedProfile
             SettlePolls = settle,
             ClearAfterEmptyReads = filled.ClearAfterEmptyReads!.Value,
             DetectorFraction = filled.DetectorPercent < 0 ? null : filled.DetectorPercent!.Value / 100.0,
-            // Off 自動判斷 沒有標點也合併 is not read, and is held at the presets' value so that a
-            // mode differing from one in nothing that is read resolves equal to it.
-            Auto = RulesFor(RealtimeMergeLevels.Tendency(level),
-                !RealtimeMergeLevels.MergeUnpunctuatedApplies(level) || filled.MergeUnpunctuated!.Value),
+            Auto = RulesFor(RealtimeMergeLevels.Tendency(level)),
             IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
             ConfidenceFloor = filled.ConfidencePercent!.Value / 100.0,
         };
@@ -331,12 +331,9 @@ public sealed record ResolvedProfile
     // stops short of the draft's "every frame is sparse" and 1.0: with those, 3,993 of 4,279 groups
     // on the panel captures were drawn as subtitles, and forum threads were joined across their
     // comments. No dialogue capture held more than eleven clusters.
-    private static AutoRules RulesFor(int tendency, bool lettering)
+    private static AutoRules RulesFor(int tendency)
     {
-        if (tendency == RealtimeProfile.MiddleStep)
-            return lettering ? AutoRules.Default : AutoRules.Default with { Lettering = false };
-
-        var rules = AutoRules.Default with { Lettering = lettering };
+        var rules = AutoRules.Default;
         return tendency switch
         {
             1 => rules with { SparseZones = 2, StandsOut = 1.6, LetteringZones = 2 },

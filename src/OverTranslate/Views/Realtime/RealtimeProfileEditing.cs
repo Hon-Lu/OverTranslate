@@ -11,9 +11,6 @@ internal enum ProfileParam
     /// <summary>合併程度.</summary>
     MergeLevel,
 
-    /// <summary>沒有標點也合併.</summary>
-    MergeUnpunctuated,
-
     /// <summary>畫面文字穩定後再讀取.</summary>
     SettleSeconds,
 
@@ -73,20 +70,10 @@ internal static class RealtimeProfileEditing
     public static bool IsHorizontalOnly(ProfileParam param) =>
         param is not (ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads);
 
-    /// <summary>
-    /// Whether this value has any effect on the mode as it is filled: 沒有標點也合併 only while
-    /// 合併程度 is on one of 自動判斷's steps (<see cref="RealtimeMergeLevels.MergeUnpunctuatedApplies"/>);
-    /// everything else always.
-    /// </summary>
-    public static bool InEffect(RealtimeProfile filled, ProfileParam param) =>
-        param != ProfileParam.MergeUnpunctuated ||
-        RealtimeMergeLevels.MergeUnpunctuatedApplies(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle);
-
     /// <summary>Whether the stored mode sets this value of its own rather than following its preset.</summary>
     public static bool IsSet(RealtimeProfile stored, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => stored.MergeLevel is not null,
-        ProfileParam.MergeUnpunctuated => stored.MergeUnpunctuated is not null,
         ProfileParam.SettleSeconds => stored.SettleSeconds is not null,
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
         ProfileParam.DetectorPercent => stored.DetectorPercent is not null,
@@ -101,7 +88,6 @@ internal static class RealtimeProfileEditing
         switch (param)
         {
             case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
-            case ProfileParam.MergeUnpunctuated: stored.MergeUnpunctuated = null; break;
             case ProfileParam.SettleSeconds: stored.SettleSeconds = null; break;
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
             case ProfileParam.DetectorPercent: stored.DetectorPercent = null; break;
@@ -148,10 +134,6 @@ internal static class RealtimeProfileEditing
     /// How many of the values the page offers (<see cref="Shown"/>) the mode sets differently from
     /// its preset — the N of 以「範本」為範本，已修改 N 項. Zero for a preset.
     /// </summary>
-    /// <remarks>
-    /// A value with no effect at the mode's 合併程度 still counts: it is the mode's own, marked
-    /// 已修改 on its row, and takes effect again as soon as 合併程度 comes back to where it acts.
-    /// </remarks>
     public static int ModifiedCount(RealtimeProfile stored) =>
         RealtimePresets.IsPreset(stored.Id) ? 0 : ModifiedCount(stored, Shown);
 
@@ -162,7 +144,6 @@ internal static class RealtimeProfileEditing
     public static object? Value(RealtimeProfile filled, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => filled.MergeLevel,
-        ProfileParam.MergeUnpunctuated => filled.MergeUnpunctuated,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds
             ? seconds < 0 ? RealtimePresets.Automatic : Math.Round(seconds, 2)
             : null,

@@ -172,7 +172,6 @@ internal static class AutoModeProbe
             int merge = level;
             Add($"merge-{level}", p => p.MergeLevel = merge);
         }
-        Add("unpunctuated-off", p => p.MergeUnpunctuated = false);
         foreach (var percent in new[] { RealtimeProfile.MinConfidencePercent, RealtimeProfile.MaxConfidencePercent })
             Add($"confidence-{percent}", p => p.ConfidencePercent = percent);
         Add("settle-auto", p => p.SettleSeconds = RealtimePresets.Automatic);
@@ -203,7 +202,6 @@ internal static class AutoModeProbe
             {
                 p.MergeLevel = tightest;
                 p.ConfidencePercent = RealtimeProfile.MaxConfidencePercent;
-                p.MergeUnpunctuated = false;
                 p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent;
             });
         }
