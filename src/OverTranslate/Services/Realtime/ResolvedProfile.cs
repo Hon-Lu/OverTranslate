@@ -101,24 +101,25 @@ internal sealed record AutoRules(
 /// </remarks>
 public sealed record ResolvedProfile
 {
-    // First in the type: the presets below are resolved as it initialises, and static fields are
-    // set in the order they are written.
+    // 短句辨識門檻 (ConfidenceFloor) is the user's percent over a hundred. 80 divides to the very
+    // double ShortReadingDetection.ShortTextConfidenceFloor is, so the presets read as before.
     //
-    // 辨識信心下限, step by step. The middle one is the measured floor itself.
-    //
-    // NOT OFFERED: measured, and no step but the middle one did any good. Over the 自動 corpus the
-    // short readings each step lets back in or takes out (D+M+P, of 6,620 detected lines):
+    // MEASURED over the 自動 corpus, the short readings each band lets back in or takes out (D+M+P,
+    // of 6,620 detected lines):
     //
     //   0.60–0.65  105   scenery but for a label or two (設定, ムービー). The recogniser drops below 0.60
-    //                    (OnnxOcrEngine.MinRecognitionConfidence), so 0.50 is 0.60.
+    //                    (OnnxOcrEngine.MinRecognitionConfidence), which is why the scale starts there.
     //   0.65–0.80  279   nine in ten scenery — 回, ①, {0}2, 4344726 — with the odd YAWN or label
     //   0.80–0.88  234   about half real: あれ?, ここは...?, 決定, セーブ, Skill, a name plate
     //   0.88–0.95  450   mostly real: 何なんですか？, names, a webtoon balloon's lines, menu items
     //
-    // Lower only lets scenery back in, higher takes out short lines people read. Kept as a value so
-    // a mode can carry it, but the scale is left for a reason to move it to turn up.
-    private static readonly double[] ConfidenceFloors =
-        [0.50, 0.65, ShortReadingDetection.ShortTextConfidenceFloor, 0.88, 0.95];
+    // Lower lets scenery back in, higher takes out short lines people read; no figure but 80 did
+    // better on the corpus as a whole, and the value is offered for the screens it is not.
+    //
+    // MEASURED (OcrHarness --auto-probe confidence, 591 captures, every percent 60–95): no point
+    // keeps a line the point below it dropped; lines dropped D/P/M run 0/0/0 at 60, 20/278/86 at 80
+    // (the floor's own, frame for frame) and 55/842/171 at 95. Pinned by
+    // RealtimeProfileTests.TheConfidenceThresholdOnlyEverDropsMore.
 
     // 行距容許 — a factor on the space between rows in all three groupers — is NOT OFFERED, and the
     // groupers always run on their measured row spacing.
@@ -196,7 +197,7 @@ public sealed record ResolvedProfile
     internal double IgnoreSmallFraction { get; init; }
 
     /// <summary>
-    /// 辨識信心下限: the score a short reading of text written across needs to be believed — see
+    /// 短句辨識門檻: the score a short reading of text written across needs to be believed — see
     /// <see cref="ShortReadingDetection.ShortTextConfidenceFloor"/>. Columns keep the constant.
     /// </summary>
     internal double ConfidenceFloor { get; init; } = ShortReadingDetection.ShortTextConfidenceFloor;
@@ -267,7 +268,7 @@ public sealed record ResolvedProfile
             Auto = RulesFor(RealtimeMergeLevels.Tendency(level),
                 !RealtimeMergeLevels.MergeUnpunctuatedApplies(level) || filled.MergeUnpunctuated!.Value),
             IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
-            ConfidenceFloor = ConfidenceFloors[filled.ConfidenceLevel!.Value - RealtimeProfile.MinStep],
+            ConfidenceFloor = filled.ConfidencePercent!.Value / 100.0,
         };
     }
 

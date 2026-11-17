@@ -484,6 +484,8 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePercent">{0}%</sys:String>
     <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">Ignore small text</sys:String>
     <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">Skips text smaller than the main text; the value is a relative size. Raise to translate dialogue only; lower when small text you need is skipped.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidence">Short text threshold</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Applies only to text under 10 characters. Raise it to reduce misreads, though some short text may go unrecognized; lower it to recognize more text, at the risk of more misreads.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Off</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOn">On</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">Low</sys:String>

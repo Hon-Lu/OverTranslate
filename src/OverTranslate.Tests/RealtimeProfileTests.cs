@@ -198,14 +198,83 @@ public class RealtimeProfileTests
             new RealtimeProfile { Id = "mine", IgnoreSmallPercent = stored }).IgnoreSmallFraction, 6);
 
     [Theory]
-    [InlineData(0, 0.50)]
-    [InlineData(1, 0.50)]
-    [InlineData(3, ShortReadingDetection.ShortTextConfidenceFloor)]
-    [InlineData(5, 0.95)]
-    [InlineData(9, 0.95)]
-    public void TheConfidenceStepsAreHeldToTheScale(int stored, double floor) =>
+    [InlineData(0, 0.60)]
+    [InlineData(59, 0.60)]
+    [InlineData(60, 0.60)]
+    [InlineData(73, 0.73)]
+    [InlineData(80, ShortReadingDetection.ShortTextConfidenceFloor)]
+    [InlineData(95, 0.95)]
+    [InlineData(100, 0.95)]
+    public void TheShortTextThresholdIsHeldToItsRange(int stored, double floor) =>
         Assert.Equal(floor, ResolvedProfile.Resolve(
-            new RealtimeProfile { Id = "mine", ConfidenceLevel = stored }).ConfidenceFloor);
+            new RealtimeProfile { Id = "mine", ConfidencePercent = stored }).ConfidenceFloor);
+
+    /// <summary>
+    /// The presets' 80 is the measured floor itself, the very same double — so a mode set to 80, or a
+    /// preset, judges every short reading exactly as 即時翻譯 did before the value was offered.
+    /// </summary>
+    [Fact]
+    public void EightyPercentIsTheMeasuredFloorItself()
+    {
+        Assert.All(RealtimePresets.All, preset => Assert.Equal(RealtimePresets.ConfidencePercent, preset.ConfidencePercent));
+        var eighty = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", ConfidencePercent = 80 });
+        Assert.Equal(BitConverter.DoubleToInt64Bits(ShortReadingDetection.ShortTextConfidenceFloor),
+            BitConverter.DoubleToInt64Bits(eighty.ConfidenceFloor));
+        Assert.Equal(ResolvedProfile.Standard with { Id = "m" }, eighty);
+        foreach (var preset in RealtimePresets.All)
+            Assert.Equal(BitConverter.DoubleToInt64Bits(ShortReadingDetection.ShortTextConfidenceFloor),
+                BitConverter.DoubleToInt64Bits(ResolvedProfile.Resolve(preset.Id, []).ConfidenceFloor));
+    }
+
+    /// <summary>
+    /// Each percent up drops every short reading the one below it dropped, and perhaps more — never
+    /// keeps one back — on the lines before grouping and on the groups after it. The same check over
+    /// the capture corpus is OcrHarness --auto-probe confidence.
+    /// </summary>
+    [Fact]
+    public void TheConfidenceThresholdOnlyEverDropsMore()
+    {
+        // Short and long, across the whole scale, and a run of line-end symbols beside a line whose
+        // own score decides whether it may keep them.
+        List<OcrTextBlock> Frame() =>
+        [
+            At("決定", 0, 0, 40, 20) with { Confidence = 0.62 },
+            At("セーブ", 0, 30, 60, 20) with { Confidence = 0.79 },
+            At("Skill", 0, 60, 50, 20) with { Confidence = 0.80 },
+            At("あれ?", 0, 90, 40, 20) with { Confidence = 0.86 },
+            At("何なんですか", 100, 120, 120, 20) with { Confidence = 0.91 },
+            At("……！？", 222, 120, 40, 20) with { Confidence = 0.70 },
+            At("Lv 15", 0, 160, 50, 20) with { Confidence = 0.949 },
+            At("HP 300/300", 0, 190, 100, 20) with { Confidence = 0.61 },
+            At("This is a long line of text", 0, 220, 300, 20) with { Confidence = 0.65 },
+            At("ok", 0, 250, 20, 20) with { Confidence = 0.999 },
+        ];
+
+        HashSet<string>? droppedBefore = null;
+        HashSet<string>? groupsKeptBefore = null;
+        for (int percent = RealtimeProfile.MinConfidencePercent; percent <= RealtimeProfile.MaxConfidencePercent; percent++)
+        {
+            var profile = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", ConfidencePercent = percent, MergeLevel = RealtimeMergeLevels.Min });
+            var frame = Frame();
+            var kept = OcrService.RejectUnconvincingBlocks(frame, profile.ConfidenceFloor).Select(b => b.Text).ToHashSet();
+            var dropped = frame.Select(b => b.Text).Where(text => !kept.Contains(text)).ToHashSet();
+
+            var groups = OcrService.GroupRealtime(Frame(), 400, profile);
+            var shown = RealtimeTranslationSession.RejectShortReadings(groups, 0, profile.ConfidenceFloor).Select(g => g.Text).ToHashSet();
+            var groupsKept = groups.Select(g => g.Text).Where(shown.Contains).ToHashSet();
+
+            if (droppedBefore is not null)
+            {
+                Assert.Superset(droppedBefore, dropped);
+                Assert.Subset(groupsKeptBefore!, groupsKept);
+            }
+            droppedBefore = dropped;
+            groupsKeptBefore = groupsKept;
+        }
+        // The top of the scale takes a short line read at 0.949, never a long one.
+        Assert.Contains("Lv 15", droppedBefore!);
+        Assert.DoesNotContain("This is a long line of text", droppedBefore!);
+    }
 
     [Fact]
     public void MergingTendsOneWayAlongTheAutomaticSteps()
@@ -719,7 +788,11 @@ public class RealtimeProfileTests
             foreach (var end in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
             {
                 variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level });
-                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, ConfidenceLevel = end });
+                variants.Add(new RealtimeProfile
+                {
+                    Id = "m", MergeLevel = level,
+                    ConfidencePercent = end == RealtimeProfile.MinStep ? RealtimeProfile.MinConfidencePercent : RealtimeProfile.MaxConfidencePercent,
+                });
                 variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = end == RealtimeProfile.MinStep });
                 variants.Add(new RealtimeProfile
                 {
@@ -728,7 +801,7 @@ public class RealtimeProfileTests
                 variants.Add(new RealtimeProfile
                 {
                     Id = "m", MergeLevel = level,
-                    ConfidenceLevel = RealtimeProfile.MaxStep + RealtimeProfile.MinStep - end,
+                    ConfidencePercent = end == RealtimeProfile.MinStep ? RealtimeProfile.MaxConfidencePercent : RealtimeProfile.MinConfidencePercent,
                     IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent, MergeUnpunctuated = false,
                 });
             }

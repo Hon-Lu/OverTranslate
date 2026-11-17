@@ -130,11 +130,11 @@ public class RealtimeProfileEditingTests
     }
 
     [Fact]
-    public void ConfidenceIsNotOnThePage()
+    public void TheShortTextThresholdIsUnderAdvanced_AfterIgnoringSmallText()
     {
-        Assert.DoesNotContain(ProfileParam.ConfidenceLevel, RealtimeProfileEditing.Advanced);
-        Assert.DoesNotContain(ProfileParam.ConfidenceLevel, RealtimeProfileEditing.Shown);
-        Assert.Equal(RealtimeProfileEditing.All.Length - 1, RealtimeProfileEditing.Shown.Length);
+        Assert.Equal([ProfileParam.IgnoreSmallPercent, ProfileParam.ConfidencePercent], RealtimeProfileEditing.Advanced);
+        Assert.Equal(RealtimeProfileEditing.All, RealtimeProfileEditing.Shown);
+        Assert.True(RealtimeProfileEditing.IsHorizontalOnly(ProfileParam.ConfidencePercent));
     }
 
     [Fact]
@@ -144,9 +144,10 @@ public class RealtimeProfileEditingTests
         mode.MergeLevel = RealtimeMergeLevels.Passage;      // the preset's own: not a change
         mode.MergeUnpunctuated = false;                     // no effect at 整段, but the mode's own
         mode.SettleSeconds = 0.6;
-        mode.ConfidenceLevel = 5;                           // not on the page
+        mode.ConfidencePercent = 90;
+        mode.IgnoreSmallPercent = 0;                        // the preset's own: not a change
 
-        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode));
+        Assert.Equal(3, RealtimeProfileEditing.ModifiedCount(mode));
         Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(Custom("b", "Untouched")));
         Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(RealtimePresets.Create(RealtimePresets.InterfaceId)));
     }
@@ -177,7 +178,7 @@ public class RealtimeProfileEditingTests
         var mode = Custom("a", "Mine", RealtimePresets.InterfaceId);
         mode.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
         mode.SettleSeconds = 1.2;
-        mode.ConfidenceLevel = 5;
+        mode.ConfidencePercent = 95;
 
         var reset = RealtimeProfileEditing.ResetAll(mode);
 

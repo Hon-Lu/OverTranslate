@@ -403,7 +403,7 @@ public class SettingsParsingTests
         Assert.False(read.MergeUnpunctuated);
         // Unset stays unset — it follows the preset rather than a copy of what the preset was.
         Assert.Null(read.MergeLevel);
-        Assert.Null(read.ConfidenceLevel);
+        Assert.Null(read.ConfidencePercent);
         Assert.Equal(mine.Id, reloaded.NewBlockProfileOrStandard());
         Assert.Equal("Chat", reloaded.Profiles[1].Name);
         Assert.Equal(RealtimeMergeLevels.Min, reloaded.Profiles[1].MergeLevel);
@@ -493,7 +493,7 @@ public class SettingsParsingTests
         var settings = SettingsService.Parse(
             """
             {"Realtime":{"Profiles":[{"Id":"a","SettleSeconds":9,"ClearAfterEmptyReads":0,"DetectorPercent":20,
-                                      "IgnoreSmallPercent":300,"MergeLevel":-4,"LineSpacing":12,"ConfidenceLevel":7},
+                                      "IgnoreSmallPercent":300,"MergeLevel":-4,"LineSpacing":12,"ConfidencePercent":120},
                                      {"Id":"b","MergeLevel":12}]}}
             """);
 
@@ -511,7 +511,7 @@ public class SettingsParsingTests
         Assert.Equal(RealtimeProfile.MinDetectorPercent, filled.DetectorPercent);
         Assert.Equal(RealtimeProfile.MaxIgnoreSmallPercent, filled.IgnoreSmallPercent);
         Assert.Equal(RealtimeMergeLevels.Min, filled.MergeLevel);
-        Assert.Equal(RealtimeProfile.MaxStep, filled.ConfidenceLevel);
+        Assert.Equal(RealtimeProfile.MaxConfidencePercent, filled.ConfidencePercent);
 
         var resolved = settings.Realtime.ResolveProfile("a");
         Assert.Equal(10, resolved.SettlePolls);
@@ -519,6 +519,21 @@ public class SettingsParsingTests
         Assert.Equal(0.6, resolved.DetectorFraction);
         Assert.Equal(0.8, resolved.IgnoreSmallFraction, 6);
         Assert.Equal(RealtimeMerge.Lines, resolved.Merge);
+        Assert.Equal(0.95, resolved.ConfidenceFloor);
+    }
+
+    /// <summary>
+    /// 短句辨識門檻 replaced the 1–5 ConfidenceLevel it was drafted as, never released: a file that
+    /// still holds one reads the presets' 80, not step 5 held up to 60.
+    /// </summary>
+    [Fact]
+    public void ADraftConfidenceLevel_IsNotRead()
+    {
+        var settings = SettingsService.Parse(
+            """{"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"standard","ConfidenceLevel":5}]}}""");
+
+        Assert.Null(settings.Realtime.Profiles.Single().ConfidencePercent);
+        Assert.Equal(ResolvedProfile.Standard with { Id = "a" }, settings.Realtime.ResolveProfile("a"));
     }
 
     /// <summary>

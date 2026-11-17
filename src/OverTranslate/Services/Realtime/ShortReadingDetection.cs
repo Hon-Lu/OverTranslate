@@ -82,7 +82,7 @@ internal static class ShortReadingDetection
     /// </remarks>
     /// <param name="floor">
     /// The score to be believed by: <see cref="ShortTextConfidenceFloor"/> unless a block's mode
-    /// moved it (辨識信心下限, see <see cref="ResolvedProfile.ConfidenceFloor"/>).
+    /// moved it (短句辨識門檻, see <see cref="ResolvedProfile.ConfidenceFloor"/>).
     /// </param>
     public static bool IsUnconvincingShortText(
         string? text, double? confidence, double floor = ShortTextConfidenceFloor) =>

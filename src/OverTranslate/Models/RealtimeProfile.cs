@@ -91,9 +91,15 @@ public sealed class RealtimeProfile
     /// <remarks>Horizontal text only.</remarks>
     public int? IgnoreSmallPercent { get; set; }
 
-    /// <summary>辨識信心下限, 1–5; 3 is what the presets use.</summary>
-    /// <remarks>Horizontal text only.</remarks>
-    public int? ConfidenceLevel { get; set; }
+    /// <summary>
+    /// 短句辨識門檻, in percent, 60–95: the score a reading shorter than ten characters needs to be
+    /// believed. The presets hold <see cref="RealtimePresets.ConfidencePercent"/>, 80.
+    /// </summary>
+    /// <remarks>
+    /// Horizontal text only. In percent rather than the 1–5 steps it was drafted with, which were
+    /// never released: a ConfidenceLevel a file may still hold is not read.
+    /// </remarks>
+    public int? ConfidencePercent { get; set; }
 
     /// <summary>A copy to edit without touching this one.</summary>
     public RealtimeProfile Clone() => (RealtimeProfile)MemberwiseClone();
@@ -137,15 +143,14 @@ public sealed class RealtimeProfile
                 ? RealtimePresets.Automatic
                 : Math.Clamp(percent, MinDetectorPercent, MaxDetectorPercent),
             IgnoreSmallPercent = Math.Clamp(IgnoreSmallPercent ?? template.IgnoreSmallPercent!.Value, 0, MaxIgnoreSmallPercent),
-            ConfidenceLevel = Step(ConfidenceLevel, template.ConfidenceLevel!.Value),
+            ConfidencePercent = Math.Clamp(
+                ConfidencePercent ?? template.ConfidencePercent!.Value, MinConfidencePercent, MaxConfidencePercent),
         };
     }
 
-    private static int Step(int? value, int template) => Math.Clamp(value ?? template, MinStep, MaxStep);
-
     // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>The steps of each 1–5 scale (辨識信心下限, and 自動判斷's place on 合併程度).</summary>
+    /// <summary>The steps of 自動判斷's place on 合併程度, which was the 1–5 scale of 合併傾向.</summary>
     public const int MinStep = 1;
 
     /// <inheritdoc cref="MinStep"/>
@@ -181,6 +186,19 @@ public sealed class RealtimeProfile
 
     /// <inheritdoc cref="MinDetectorPercent"/>
     public const int MaxDetectorPercent = 100;
+
+    /// <summary>短句辨識門檻's range, in percent.</summary>
+    /// <remarks>
+    /// From 60 because the recogniser itself drops anything below 0.60
+    /// (<see cref="Services.Ocr.OnnxOcrEngine"/>'s floor), so a lower figure would do nothing 60 does
+    /// not; up to 95, past which hardly a short line of real text is left. Whole percents, so the
+    /// presets' 80 divides back to <see cref="Services.Realtime.ShortReadingDetection.ShortTextConfidenceFloor"/>
+    /// exactly.
+    /// </remarks>
+    public const int MinConfidencePercent = 60;
+
+    /// <inheritdoc cref="MinConfidencePercent"/>
+    public const int MaxConfidencePercent = 95;
 
     /// <summary>忽略小字's range, in percent, from 0 (off).</summary>
     public const int MaxIgnoreSmallPercent = 80;
@@ -227,6 +245,12 @@ public static class RealtimePresets
     /// </summary>
     public const double ItemsSettleSeconds = 0.15;
 
+    /// <summary>
+    /// 短句辨識門檻 on every preset, in percent:
+    /// <see cref="Services.Realtime.ShortReadingDetection.ShortTextConfidenceFloor"/>.
+    /// </summary>
+    public const int ConfidencePercent = 80;
+
     /// <summary>The value of a nullable number that means 自動 — see <see cref="RealtimeProfile.SettleSeconds"/>.</summary>
     public const int Automatic = -1;
 
@@ -266,7 +290,7 @@ public static class RealtimePresets
                 _ => Automatic,
             },
             IgnoreSmallPercent = 0,
-            ConfidenceLevel = 3,
+            ConfidencePercent = RealtimePresets.ConfidencePercent,
         };
     }
 }

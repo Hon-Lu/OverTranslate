@@ -26,8 +26,8 @@ internal enum ProfileParam
     /// <summary>忽略小字 (進階).</summary>
     IgnoreSmallPercent,
 
-    /// <summary>辨識信心下限 (進階).</summary>
-    ConfidenceLevel,
+    /// <summary>短句辨識門檻 (進階).</summary>
+    ConfidencePercent,
 }
 
 /// <summary>A mode as the edit layer's list and the page's list name it.</summary>
@@ -57,19 +57,14 @@ internal static class RealtimeProfileEditing
     public const int MaxNameLength = 32;
 
     /// <summary>The values under 進階, in the order they are listed there.</summary>
-    /// <remarks>
-    /// 辨識信心下限 is not among them, nor anywhere on the page: measured, its steps did not change
-    /// enough to be worth a control. The mode still carries the value, and 還原為範本 still clears
-    /// one written into the file by hand.
-    /// </remarks>
     public static readonly ProfileParam[] Advanced =
-        [ProfileParam.IgnoreSmallPercent];
+        [ProfileParam.IgnoreSmallPercent, ProfileParam.ConfidencePercent];
 
     /// <summary>Every value, in the order the page lists them.</summary>
     public static readonly ProfileParam[] All = Enum.GetValues<ProfileParam>();
 
-    /// <summary>Every value the page offers: all but 辨識信心下限 — see <see cref="Advanced"/>.</summary>
-    public static readonly ProfileParam[] Shown = [.. All.Where(param => param != ProfileParam.ConfidenceLevel)];
+    /// <summary>Every value the page offers.</summary>
+    public static readonly ProfileParam[] Shown = All;
 
     /// <summary>
     /// Whether a block whose text runs vertically ignores this value: everything but the two
@@ -96,7 +91,7 @@ internal static class RealtimeProfileEditing
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
         ProfileParam.DetectorPercent => stored.DetectorPercent is not null,
         ProfileParam.IgnoreSmallPercent => stored.IgnoreSmallPercent is not null,
-        ProfileParam.ConfidenceLevel => stored.ConfidenceLevel is not null,
+        ProfileParam.ConfidencePercent => stored.ConfidencePercent is not null,
         _ => false,
     };
 
@@ -111,7 +106,7 @@ internal static class RealtimeProfileEditing
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
             case ProfileParam.DetectorPercent: stored.DetectorPercent = null; break;
             case ProfileParam.IgnoreSmallPercent: stored.IgnoreSmallPercent = null; break;
-            case ProfileParam.ConfidenceLevel: stored.ConfidenceLevel = null; break;
+            case ProfileParam.ConfidencePercent: stored.ConfidencePercent = null; break;
         }
     }
 
@@ -174,7 +169,7 @@ internal static class RealtimeProfileEditing
         ProfileParam.ClearAfterEmptyReads => filled.ClearAfterEmptyReads,
         ProfileParam.DetectorPercent => filled.DetectorPercent,
         ProfileParam.IgnoreSmallPercent => filled.IgnoreSmallPercent,
-        ProfileParam.ConfidenceLevel => filled.ConfidenceLevel,
+        ProfileParam.ConfidencePercent => filled.ConfidencePercent,
         _ => null,
     };
 

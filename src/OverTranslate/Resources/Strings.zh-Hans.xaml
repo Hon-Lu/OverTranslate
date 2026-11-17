@@ -484,6 +484,8 @@
     <sys:String x:Key="S.Realtime.ProfilePercent">{0}%</sys:String>
     <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">忽略小字</sys:String>
     <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">略过比主要文字小的字，数值为相对大小。只想翻译对话时调高；需要的小字被略过时调低。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidence">短句识别阈值</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidenceHint">仅适用于不足 10 个字的文字。调高可减少误识别，但部分较短的文字可能无法识别；调低能识别更多文字，但也可能增加误识别。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">关闭</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOn">开启</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">低</sys:String>

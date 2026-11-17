@@ -404,6 +404,7 @@ public partial class RealtimeProfilesCard : UserControl
         ProfileParam.IgnoreSmallPercent => filled.IgnoreSmallPercent is 0 or null
             ? LocalizationService.Get("S.Realtime.ProfileOff")
             : LocalizationService.Format("S.Realtime.ProfilePercent", filled.IgnoreSmallPercent),
+        ProfileParam.ConfidencePercent => LocalizationService.Format("S.Realtime.ProfilePercent", filled.ConfidencePercent),
         _ => "",
     };
 
@@ -438,6 +439,7 @@ public partial class RealtimeProfilesCard : UserControl
         ProfileParam.IgnoreSmallPercent => value < 0.5
             ? LocalizationService.Get("S.Realtime.ProfileOff")
             : LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
+        ProfileParam.ConfidencePercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
         _ => "",
     };
 
@@ -451,8 +453,7 @@ public partial class RealtimeProfilesCard : UserControl
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
         Add(AdvancedRecognitionGroup, BuildRow(ProfileParam.IgnoreSmallPercent, "S.Realtime.ProfileIgnoreSmall", "S.Realtime.ProfileIgnoreSmallHint"));
-        // 辨識信心下限 is not offered: measured, its steps made no difference worth a control.
-        // The mode keeps the value (RealtimeProfile.ConfidenceLevel) and the page leaves it alone.
+        Add(AdvancedRecognitionGroup, BuildRow(ProfileParam.ConfidencePercent, "S.Realtime.ProfileConfidence", "S.Realtime.ProfileConfidenceHint"));
 
         // A rule between rows, never above the first: the group's header is the first row's top.
         static void Add(System.Windows.Controls.Panel group, ParamRow row)
@@ -580,6 +581,9 @@ public partial class RealtimeProfilesCard : UserControl
                 break;
             case ProfileParam.IgnoreSmallPercent:
                 BuildSlider(row, 0, RealtimeProfile.MaxIgnoreSmallPercent, 5, nameKey);
+                break;
+            case ProfileParam.ConfidencePercent:
+                BuildSlider(row, RealtimeProfile.MinConfidencePercent, RealtimeProfile.MaxConfidencePercent, 1, nameKey);
                 break;
         }
 
@@ -735,6 +739,7 @@ public partial class RealtimeProfilesCard : UserControl
         {
             case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
             case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
+            case ProfileParam.ConfidencePercent: profile.ConfidencePercent = whole; break;
             case ProfileParam.DetectorPercent:
                 profile.DetectorPercent = automatic ? RealtimePresets.Automatic : whole;
                 break;

@@ -472,7 +472,7 @@ public class OcrService : IDisposable
     // test case, not a pass. Left alone deliberately. What would reopen it is a corpus with scenery
     // sitting on a subtitle's own row.
     //
-    // The floor is the block's mode's (辨識信心下限), the measured one unless the user moved it.
+    // The floor is the block's mode's (短句辨識門檻), the measured one unless the user moved it.
     internal static List<OcrTextBlock> RejectUnconvincingBlocks(
         List<OcrTextBlock> blocks, double floor = Realtime.ShortReadingDetection.ShortTextConfidenceFloor)
     {

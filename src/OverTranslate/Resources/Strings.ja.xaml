@@ -488,6 +488,8 @@
     <sys:String x:Key="S.Realtime.ProfilePercent">{0}%</sys:String>
     <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">小さな文字を無視</sys:String>
     <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">主な文字より小さい文字を飛ばします。値は相対的な大きさです。会話だけを翻訳したいときは上げ、必要な小さい文字が飛ばされるときは下げます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidence">短い文字列の認識しきい値</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidenceHint">10 文字未満の文字列にのみ適用されます。上げると誤認識が減りますが、短い文字列の一部が認識されないことがあります。下げるとより多くの文字を認識できますが、誤認識が増えることがあります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">オフ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOn">オン</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeLow">低</sys:String>

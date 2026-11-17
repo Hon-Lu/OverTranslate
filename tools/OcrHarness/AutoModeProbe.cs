@@ -34,6 +34,8 @@ using OverTranslate.Services.Realtime;
 /// frame's main text height: what each step of those two values costs.
 /// <c>--auto-probe extremes cache.json out-dir</c> — every value at both ends of its range, one
 /// replay each, into out-dir; fails if any of them throws.
+/// <c>--auto-probe confidence cache.json out-dir</c> — 短句辨識門檻 at every percent it offers; see
+/// <see cref="ConfidenceSweepProbe"/>.
 /// </remarks>
 internal static class AutoModeProbe
 {
@@ -45,7 +47,7 @@ internal static class AutoModeProbe
     {
         if (args.Length < 3)
             throw new ArgumentException(
-                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | drops cache.json lines.tsv [--profile mode.json] | extremes cache.json out-dir | slider cache.json out-dir");
+                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | drops cache.json lines.tsv [--profile mode.json] | extremes cache.json out-dir | slider cache.json out-dir | confidence cache.json out-dir");
         if (args[0] == "detector") return await DetectorFigureProbe.Run(args[1].TrimStart('@'), args[2]);
         if (args[0] == "capture")
         {
@@ -80,6 +82,7 @@ internal static class AutoModeProbe
         if (args[0] == "extremes") return Extremes(cache, args[2]);
         if (args[0] == "slider") return MergeSliderProbe.Run(cache, args[2]);
         if (args[0] == "mergemax") return MergeMaxProbe.Run(cache, args[2]);
+        if (args[0] == "confidence") return ConfidenceSweepProbe.Run(cache, args[2]);
 
         var profile = ResolvedProfile.Standard;
         int at = Array.IndexOf(args, "--profile");
@@ -100,7 +103,7 @@ internal static class AutoModeProbe
 
     /// <summary>
     /// Every detected line of every cached frame and the filter that took it out, if one did: the
-    /// mode's confidence floor (辨識信心下限), the box across the block, or 忽略小字 — with the frame's
+    /// mode's confidence floor (短句辨識門檻), the box across the block, or 忽略小字 — with the frame's
     /// main text height beside it, so each step of a filter can be judged by what it drops.
     /// </summary>
     /// <returns>Lines dropped by each filter, per label.</returns>
@@ -170,8 +173,8 @@ internal static class AutoModeProbe
             Add($"merge-{level}", p => p.MergeLevel = merge);
         }
         Add("unpunctuated-off", p => p.MergeUnpunctuated = false);
-        foreach (var step in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
-            Add($"confidence-{step}", p => p.ConfidenceLevel = step);
+        foreach (var percent in new[] { RealtimeProfile.MinConfidencePercent, RealtimeProfile.MaxConfidencePercent })
+            Add($"confidence-{percent}", p => p.ConfidencePercent = percent);
         Add("settle-auto", p => p.SettleSeconds = RealtimePresets.Automatic);
         Add("settle-0", p => p.SettleSeconds = 0);
         Add($"settle-max", p => p.SettleSeconds = RealtimeProfile.MaxSettleSeconds);
@@ -194,12 +197,12 @@ internal static class AutoModeProbe
             Add($"loosest-{name}", p =>
             {
                 p.MergeLevel = loosest;
-                p.ConfidenceLevel = RealtimeProfile.MinStep;
+                p.ConfidencePercent = RealtimeProfile.MinConfidencePercent;
             });
             Add($"tightest-{name}", p =>
             {
                 p.MergeLevel = tightest;
-                p.ConfidenceLevel = RealtimeProfile.MaxStep;
+                p.ConfidencePercent = RealtimeProfile.MaxConfidencePercent;
                 p.MergeUnpunctuated = false;
                 p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent;
             });
