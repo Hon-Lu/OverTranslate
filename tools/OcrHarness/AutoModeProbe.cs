@@ -27,6 +27,9 @@ using OverTranslate.Services.Realtime;
 /// with the mode's own values; the 字幕 and 面板 columns are the same values with 分行處理 set to
 /// 整段 and 逐項. Only the grouping values can be replayed: timing, 譯文保留 and 辨識解析度 act
 /// between frames or before recognition, which the cache does not hold.
+/// <c>--auto-probe drops cache.json lines.tsv [--profile mode.json]</c> — every detected line and
+/// the filter that took it out (confidence floor, box across the block, 忽略小字), beside the
+/// frame's main text height: what each step of those two values costs.
 /// <c>--auto-probe extremes cache.json out-dir</c> — every value at both ends of its range, one
 /// replay each, into out-dir; fails if any of them throws.
 /// </remarks>
@@ -40,7 +43,7 @@ internal static class AutoModeProbe
     {
         if (args.Length < 3)
             throw new ArgumentException(
-                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | extremes cache.json out-dir");
+                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | drops cache.json lines.tsv [--profile mode.json] | extremes cache.json out-dir");
         if (args[0] == "capture")
         {
             using var engine = new OnnxOcrEngine();
@@ -81,8 +84,57 @@ internal static class AutoModeProbe
             profile = Load(args[at + 1]);
         }
         Console.WriteLine(profile.Describe());
+        if (args[0] == "drops")
+        {
+            Console.Write(Drops(cache, profile, args[2]));
+            return 0;
+        }
         Console.Write(Replay(cache, profile, args[2]));
         return 0;
+    }
+
+    /// <summary>
+    /// Every detected line of every cached frame and the filter that took it out, if one did: the
+    /// mode's confidence floor (辨識信心下限), the box across the block, or 忽略小字 — with the frame's
+    /// main text height beside it, so each step of a filter can be judged by what it drops.
+    /// </summary>
+    /// <returns>Lines dropped by each filter, per label.</returns>
+    private static string Drops(Capture[] cache, ResolvedProfile profile, string tsvPath)
+    {
+        var lines = new StringBuilder("label\tset\timage\tsize\tfate\tconfidence\theight\tmain\ttext\n");
+        var totals = new SortedDictionary<string, int[]>(StringComparer.Ordinal);
+        foreach (var capture in cache)
+        {
+            var raw = capture.Blocks.Select(b => b.Restore()).ToList();
+            var confident = OcrService.RejectUnconvincingBlocks(raw, profile.ConfidenceFloor);
+            var whole = confident
+                .Where(b => !CollapsedDetection.IsCollapsed(b.Bounds.Height, capture.Height, b.Text)).ToList();
+            var kept = OcrService.IgnoreSmallText(whole, profile.IgnoreSmallFraction);
+            double main = whole.Count > 0 ? OcrService.MainTextHeight(whole) : 0;
+            var afterConfidence = new HashSet<OcrTextBlock>(confident, ReferenceEqualityComparer.Instance);
+            var afterCollapse = new HashSet<OcrTextBlock>(whole, ReferenceEqualityComparer.Instance);
+            var afterSmall = new HashSet<OcrTextBlock>(kept, ReferenceEqualityComparer.Instance);
+
+            var set = Path.GetFileName(Path.GetDirectoryName(capture.Image))!;
+            if (!totals.TryGetValue(capture.Label, out var total)) totals[capture.Label] = total = new int[5];
+            total[0] += raw.Count;
+            foreach (var block in raw)
+            {
+                string fate =
+                    !afterConfidence.Contains(block) ? "conf" :
+                    !afterCollapse.Contains(block) ? "collapsed" :
+                    !afterSmall.Contains(block) ? "small" : "kept";
+                total[fate switch { "conf" => 1, "collapsed" => 2, "small" => 3, _ => 4 }]++;
+                lines.Append(string.Join('\t', capture.Label, set, Path.GetFileName(capture.Image), capture.Size, fate,
+                    block.Confidence?.ToString("0.000") ?? "", block.LayoutBounds.Height.ToString("0"),
+                    main.ToString("0"), Flat(block.Text))).Append('\n');
+            }
+        }
+        File.WriteAllText(tsvPath, lines.ToString());
+        var summary = new StringBuilder("label  lines   conf collapsed  small   kept\n");
+        foreach (var (label, t) in totals)
+            summary.AppendLine($"{label,-5} {t[0],6} {t[1],6} {t[2],9} {t[3],6} {t[4],6}");
+        return summary.ToString();
     }
 
     /// <summary>A mode as the settings file keeps a custom one, resolved the way a session would.</summary>

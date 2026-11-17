@@ -224,6 +224,21 @@ public class RealtimeProfileTests
         Assert.Same(AutoRules.Default, steps[RealtimeProfile.MiddleStep - 1]);
     }
 
+    // The measured scale (see ResolvedProfile.RulesFor). The loosest step still tells a busy screen
+    // from a sparse one: with every frame sparse, nearly every label of a panel was drawn as a subtitle.
+    [Theory]
+    [InlineData(1, 2, 1.6, 2)]
+    [InlineData(2, 3, 1.45, 3)]
+    [InlineData(4, 8, 1.2, 6)]
+    [InlineData(5, 12, 1.1, 8)]
+    public void MergingStepsAreTheMeasuredOnes(int step, int sparse, double standsOut, int lettering)
+    {
+        var rules = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeTendency = step }).Auto;
+
+        Assert.Equal((sparse, standsOut, lettering), (rules.SparseZones, rules.StandsOut, rules.LetteringZones));
+        Assert.Equal(AutoRules.Default with { SparseZones = sparse, StandsOut = standsOut, LetteringZones = lettering }, rules);
+    }
+
     [Fact]
     public void LineSpacingWidensEveryGrouperTheSameWay()
     {
@@ -369,6 +384,50 @@ public class RealtimeProfileTests
         };
 
         Assert.Equal(3, OcrService.IgnoreSmallText(blocks, 0.8).Count);
+    }
+
+    // screen-subtitle-ko: one subtitle line over a scoreboard whose labels and numbers outnumber
+    // it in characters. Counting every character made the scoreboard the main text.
+    [Fact]
+    public void ASubtitleOverAnInterfaceIsTheMainText()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Line("26/3/19", 0, 50), Line("27,003 841695", 60, 52), Line("TK / K / A", 120, 49),
+            Line("21:54", 180, 50), Line("대상지정 불가", 240, 46), Line("아이작", 300, 47),
+            Line("지금처럼 도파민은 없을 거야", 400, 110),
+        };
+
+        var kept = OcrService.IgnoreSmallText(blocks, 0.5);
+
+        Assert.Equal(new[] { "지금처럼 도파민은 없을 거야" }, kept.Select(b => b.Text));
+    }
+
+    // region-comic-en-2: a balloon of large shouting over a smaller one that says more.
+    [Fact]
+    public void TheBalloonThatSaysMoreIsTheMainText()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Line("THEN WHY", 0, 135), Line("DON'T YOU GET", 140, 135), Line("OFF ME!!!", 280, 138),
+            Line("BUT WHAT CAN", 500, 44), Line("I DO~ IT'S TOO HARD", 550, 43), Line("FOR ME TO WALK~!", 600, 44),
+        };
+
+        Assert.Equal(6, OcrService.IgnoreSmallText(blocks, 0.5).Count);
+    }
+
+    [Fact]
+    public void WithoutProseEveryCharacterCounts()
+    {
+        var blocks = new List<OcrTextBlock>
+        {
+            Line("Save", 0, 40), Line("Load", 50, 40), Line("Options", 100, 40), Line("Quit", 150, 40),
+            Line("MENU", 250, 90),
+            Line("v1.2", 400, 14),
+        };
+
+        Assert.Equal(new[] { "Save", "Load", "Options", "Quit", "MENU" },
+            OcrService.IgnoreSmallText(blocks, 0.5).Select(b => b.Text));
     }
 
     [Fact]

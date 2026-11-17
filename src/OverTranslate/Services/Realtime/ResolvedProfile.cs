@@ -74,13 +74,39 @@ public sealed record ResolvedProfile
     // First in the type: the presets below are resolved as it initialises, and static fields are
     // set in the order they are written.
     //
-    // 辨識信心下限, step by step. The middle one is the measured floor itself; the gap it sits in
-    // ran from 0.79 (scenery) to 0.92 (real lines), so the steps either side stay near it and the
-    // ends are the user's choice of direction rather than anything measured.
+    // 辨識信心下限, step by step. The middle one is the measured floor itself.
+    //
+    // NOT OFFERED: measured, and no step but the middle one did any good. Over the 自動 corpus the
+    // short readings each step lets back in or takes out (D+M+P, of 6,620 detected lines):
+    //
+    //   0.60–0.65  105   scenery but for a label or two (設定, ムービー). The recogniser drops below 0.60
+    //                    (OnnxOcrEngine.MinRecognitionConfidence), so 0.50 is 0.60.
+    //   0.65–0.80  279   nine in ten scenery — 回, ①, {0}2, 4344726 — with the odd YAWN or label
+    //   0.80–0.88  234   about half real: あれ?, ここは...?, 決定, セーブ, Skill, a name plate
+    //   0.88–0.95  450   mostly real: 何なんですか？, names, a webtoon balloon's lines, menu items
+    //
+    // Lower only lets scenery back in, higher takes out short lines people read. Kept as a value so
+    // a mode can carry it, but the scale is left for a reason to move it to turn up.
     private static readonly double[] ConfidenceFloors =
         [0.50, 0.65, ShortReadingDetection.ShortTextConfidenceFloor, 0.88, 0.95];
 
-    // 行距容許, step by step: the factor on the space between rows. TODO(A3): measure.
+    // 行距容許, step by step: the factor on the space between rows.
+    //
+    // MEASURED on the 自動 corpus, where every line of dialogue already sits well inside the middle
+    // step (rows step 0.74–1.18 line heights), so the corpus mostly shows what the ends cost: frames
+    // whose groups differ from 標準, 自動 D/P/M and 整段 on the panel captures —
+    //
+    //   step  factor   自動 D/P/M   整段 P
+    //    1     0.6     2 / 22 / 1     63     titles off their text, menus apart; a wrapped comment too
+    //    2     0.8     0 / 13 / 0     35
+    //    4     1.25    0 /  6 / 0     25
+    //    5     1.5     1 / 10 / 2     41     also a menu joined; 逐項 moves on 4–6 frames only
+    //
+    // What the high end is for is prose set with room for readings above it: in ja-ruby/novel.png a
+    // sentence wrapped across two lines with readings between them is one passage from step 4 in
+    // 自動 and 整段, two lines below that. 逐項 barely answers: its outer gap limit
+    // (OcrTextBlockGrouper.MaxLineGap, 0.8) caps a wrapped line's advance at 1.8, which a factor of
+    // 4 reaches and nothing on this scale does.
     private static readonly double[] LineSpacingFactors = [0.6, 0.8, 1.0, 1.25, 1.5];
 
     /// <summary>The mode this was resolved from — a preset's id or a custom mode's.</summary>
@@ -236,8 +262,22 @@ public sealed record ResolvedProfile
     // rows in all three groupers by one factor. The middle step of both is the measured rules
     // themselves — the instances, so a preset reads exactly as before.
     //
-    // TODO(A3): every other step is a draft to be measured with OcrHarness --auto-probe replay
-    // --profile; see .ai/realtime-profiles/tools.md. Until then they are the HANDOFF's figures.
+    // MEASURED with OcrHarness --auto-probe replay --profile over the 自動 corpus (591 captures:
+    // 270 of dialogue D, 179 of panels P, 142 of both M). Frames whose groups (not just how they are
+    // drawn) differ from 標準, and frames 自動 reads exactly as 字幕 on D / as 面板 on P:
+    //
+    //   step  sparse standsOut lettering   changed D/P/M   =字幕 on D   =面板 on P
+    //    1      2      1.6        2        13 / 21 / 10      247         176
+    //    2      3      1.45       3         4 / 15 /  4      256         170
+    //    3      5      1.3        4         — (標準) —        259         155
+    //    4      8      1.2        6         1 / 12 /  0      260         145
+    //    5     12      1.1        8         1 / 25 /  0      260         133
+    //
+    // The low end splits game dialogue from the name plate and buttons beside it, and titles from
+    // the text under them; the high end joins wrapped chat messages, reviews and item text. Step 5
+    // stops short of the draft's "every frame is sparse" and 1.0: with those, 3,993 of 4,279 groups
+    // on the panel captures were drawn as subtitles, and forum threads were joined across their
+    // comments. No dialogue capture held more than eleven clusters.
     private static AutoRules RulesFor(int tendency, int spacing, bool lettering)
     {
         if (tendency == RealtimeProfile.MiddleStep && spacing == RealtimeProfile.MiddleStep)
@@ -248,8 +288,8 @@ public sealed record ResolvedProfile
         {
             1 => rules with { SparseZones = 2, StandsOut = 1.6, LetteringZones = 2 },
             2 => rules with { SparseZones = 3, StandsOut = 1.45, LetteringZones = 3 },
-            4 => rules with { SparseZones = 8, StandsOut = 1.15, LetteringZones = 6 },
-            5 => rules with { SparseZones = int.MaxValue, StandsOut = 1.0, LetteringZones = 8 },
+            4 => rules with { SparseZones = 8, StandsOut = 1.2, LetteringZones = 6 },
+            5 => rules with { SparseZones = 12, StandsOut = 1.1, LetteringZones = 8 },
             _ => rules,
         };
         if (spacing == RealtimeProfile.MiddleStep) return rules;

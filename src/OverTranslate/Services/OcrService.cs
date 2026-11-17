@@ -363,16 +363,28 @@ public class OcrService : IDisposable
     /// taken out before grouping. The same list when the fraction is zero, which is every preset.
     /// </summary>
     /// <remarks>
-    /// <para>The main text is the size most of the frame's characters are set in, not its tallest
-    /// line: one heading would otherwise make the dialogue under it "small". Heights within
+    /// <para>The main text is the size most of the frame's prose is set in — the characters of the
+    /// lines that hold more than a word or two — not its tallest line: one heading would otherwise
+    /// make the dialogue under it "small". Heights within
     /// <see cref="Layout.RealtimeTextSizes.SameSizeReach"/> of each other are one size, as the
     /// overlay sorts them, because a line's measured height wanders by that much on its own.</para>
     ///
-    /// <para>The readings printed over kanji go first, which is what it was asked for; on a subtitle
-    /// over an interface it is the interface that goes, once the subtitle is most of the
-    /// writing.</para>
+    /// <para>Prose rather than every character because of a subtitle over a game's interface:
+    /// sixteen labels, scores and timers outnumber one subtitle line in characters, so counting
+    /// them all made the interface the main text and 50% kept every label. Counting prose, the
+    /// subtitle is the main text and the labels go. A frame with no prose at all counts everything.
+    /// MEASURED with OcrHarness --auto-probe drops over the 自動 corpus (6,620 lines): the dialogue
+    /// captures lose exactly the same lines either way at every percentage, the mixed ones lose
+    /// 147 lines at 50% rather than 83 — the labels around a subtitle — and the panel captures 10
+    /// rather than 9.</para>
     ///
-    /// <para>TODO(A3): the rule for the main text is a first answer, not a measured one.</para>
+    /// <para>What goes, by percentage, on the dialogue captures: nothing at 20%; an FPS counter, a
+    /// watermark, key hints and the odd name plate by 50%; the name plates and buttons (Auto,
+    /// Comment, SKIP) by 80%, the dialogue itself never. The readings printed over kanji (ja-ruby)
+    /// measure 0.3–0.75 of the line they
+    /// sit on, the detector's boxes being looser around small text than around large, so the
+    /// smallest go at 50% and all of them by 80%. On a page of prose under a large heading
+    /// (web-cjk-prose) the body is the main text and stays.</para>
     /// </remarks>
     internal static List<OcrTextBlock> IgnoreSmallText(List<OcrTextBlock> blocks, double fraction)
     {
@@ -386,24 +398,43 @@ public class OcrService : IDisposable
             : [.. blocks.Where(b => b.LayoutBounds.Height >= floor)];
     }
 
-    // The middle height of the size that holds the most characters; a tie goes to the taller size.
-    private static double MainTextHeight(List<OcrTextBlock> blocks)
+    // The middle height of the size that holds the most characters of prose, or of anything when
+    // no line reads as prose; a tie goes to the taller size.
+    internal static double MainTextHeight(List<OcrTextBlock> blocks)
     {
-        var sizes = new List<List<(double Height, int Characters)>>();
+        var sizes = new List<List<(double Height, int Characters, bool Prose)>>();
         foreach (var block in blocks.OrderByDescending(b => b.LayoutBounds.Height))
         {
             double height = block.LayoutBounds.Height;
             if (height <= 0) continue;
             int characters = Math.Max(1, block.Text.Count(c => !char.IsWhiteSpace(c)));
+            var line = (height, characters, ReadsAsProse(block.Text));
             if (sizes.Count > 0 && sizes[^1][0].Height <= height * Layout.RealtimeTextSizes.SameSizeReach)
-                sizes[^1].Add((height, characters));
+                sizes[^1].Add(line);
             else
-                sizes.Add([(height, characters)]);
+                sizes.Add([line]);
         }
         if (sizes.Count == 0) return 0;
 
-        var main = sizes.MaxBy(size => size.Sum(line => line.Characters))!;
+        bool anyProse = sizes.Any(size => size.Any(line => line.Prose));
+        var main = sizes.MaxBy(size => size.Sum(line => anyProse && !line.Prose ? 0 : line.Characters))!;
         return main[main.Count / 2].Height;
+    }
+
+    // More than a word or two on one line: three words, or six characters of writing set without
+    // spaces — RealtimeAutoLayout's "wordy", for a single line. Korean counts in words.
+    private static bool ReadsAsProse(string text)
+    {
+        int solid = 0, unspaced = 0;
+        foreach (char c in text)
+        {
+            if (char.IsWhiteSpace(c)) continue;
+            solid++;
+            if (c is >= '぀' and <= 'ヿ' or >= '一' and <= '鿿') unspaced++;
+        }
+        if (unspaced * 2 >= Math.Max(1, solid)) return unspaced >= 6;
+        return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Count(word => word.Any(char.IsLetter)) >= 3;
     }
 
     // Scenery the recogniser was not sure about. Only on this path: it is the realtime one, where
