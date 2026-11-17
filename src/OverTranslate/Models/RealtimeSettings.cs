@@ -252,21 +252,18 @@ public class RealtimeSettings
 
     /// <summary>
     /// The mode a new block starts on for a file written by 2.12.0 or earlier, from the layout it
-    /// kept for one (<c>BlockMode</c>): 字幕 is 字幕・漫畫, 面板 is 遊戲介面・聊天室, and no answer —
-    /// or one this build cannot read — is 標準.
+    /// kept for one (<c>BlockMode</c>): 面板 is 遊戲介面・聊天室, and everything else — 字幕, no
+    /// answer, or one this build cannot read — is 標準.
     /// </summary>
     /// <remarks>
-    /// Those files wrote 字幕 unless the user had picked 面板, since 字幕 was the default; so nearly
-    /// everyone updating starts on 字幕・漫畫, which reads exactly as their blocks did before.
+    /// Those files wrote 字幕 whether or not anyone chose it, since 字幕 was the default, so it says
+    /// nothing about the user and is read as no answer. 面板 was only ever written by someone who
+    /// picked it.
     /// </remarks>
     public static string ProfileForLegacyBlockMode(System.Text.Json.Nodes.JsonNode? blockMode) =>
-        blockMode is System.Text.Json.Nodes.JsonValue value && value.TryGetValue<string>(out var name)
-            ? name.Trim().ToLowerInvariant() switch
-            {
-                "subtitle" => RealtimePresets.SubtitleId,
-                "panel" => RealtimePresets.InterfaceId,
-                _ => RealtimePresets.StandardId,
-            }
+        blockMode is System.Text.Json.Nodes.JsonValue value && value.TryGetValue<string>(out var name) &&
+        name.Trim().Equals("Panel", StringComparison.OrdinalIgnoreCase)
+            ? RealtimePresets.InterfaceId
             : RealtimePresets.StandardId;
 
     /// <summary><see cref="NewBlockProfile"/> if it still names a mode, otherwise 標準.</summary>

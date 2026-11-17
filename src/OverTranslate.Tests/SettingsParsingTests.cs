@@ -334,11 +334,11 @@ public class SettingsParsingTests
 
     /// <summary>
     /// The layout a file from 2.12.0 or earlier kept for a new block (BlockMode) becomes the mode
-    /// a new block starts on: 字幕 → 字幕・漫畫, 面板 → 遊戲介面・聊天室, none or one this build cannot
-    /// read → 標準. The direction beside it was a choice, and is kept.
+    /// a new block starts on: 面板 → 遊戲介面・聊天室; 字幕 — which those files wrote whether or not it
+    /// was chosen — none, or one this build cannot read → 標準. The direction beside it was a choice, and is kept.
     /// </summary>
     [Theory]
-    [InlineData("\"BlockMode\":\"Subtitle\",", RealtimePresets.SubtitleId)]
+    [InlineData("\"BlockMode\":\"Subtitle\",", RealtimePresets.StandardId)]
     [InlineData("\"BlockMode\":\"Panel\",", RealtimePresets.InterfaceId)]
     [InlineData("\"BlockMode\":\"panel\",", RealtimePresets.InterfaceId)]
     [InlineData("\"BlockMode\":\"Auto\",", RealtimePresets.StandardId)]
