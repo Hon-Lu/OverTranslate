@@ -36,6 +36,7 @@ using OverTranslate.Services.Realtime;
 /// replay each, into out-dir; fails if any of them throws.
 /// <c>--auto-probe confidence cache.json out-dir</c> — 短句辨識門檻 at every percent it offers; see
 /// <see cref="ConfidenceSweepProbe"/>.
+/// <c>--auto-probe align cache.json out.txt</c> — 譯文對齊 on 標準's groups; see <see cref="AlignStatsProbe"/>.
 /// </remarks>
 internal static class AutoModeProbe
 {
@@ -83,6 +84,7 @@ internal static class AutoModeProbe
         if (args[0] == "slider") return MergeSliderProbe.Run(cache, args[2]);
         if (args[0] == "mergemax") return MergeMaxProbe.Run(cache, args[2]);
         if (args[0] == "confidence") return ConfidenceSweepProbe.Run(cache, args[2]);
+        if (args[0] == "align") return AlignStatsProbe.Run(cache, args[2]);
 
         var profile = ResolvedProfile.Standard;
         int at = Array.IndexOf(args, "--profile");
