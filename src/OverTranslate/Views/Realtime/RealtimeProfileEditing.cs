@@ -8,7 +8,7 @@ namespace OverTranslate.Views.Realtime;
 /// <summary>One value of a 即時翻譯 mode, as the page shows it: one row each.</summary>
 internal enum ProfileParam
 {
-    /// <summary>合併程度.</summary>
+    /// <summary>語句合併.</summary>
     MergeLevel,
 
     /// <summary>畫面文字穩定後再讀取.</summary>
@@ -324,9 +324,9 @@ internal static class RealtimeProfileEditing
     // ── What 自動 stands for ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Where 畫面文字穩定後再讀取's slider rests while 自動 is ticked: what the mode waits with — see
-    /// <see cref="RealtimeActualValues.SettleSeconds"/>. 依各組判斷 is shown at the settled
-    /// reading's wait.
+    /// Where 畫面文字穩定後再讀取's slider starts when the value is turned from 自動 to 手動: what the
+    /// mode waits with — see <see cref="RealtimeActualValues.SettleSeconds"/>. Where 自動 decides per
+    /// group of text, the settled reading's wait.
     /// </summary>
     public static double AutomaticSettleSeconds(RealtimeProfile filled)
     {
@@ -337,9 +337,9 @@ internal static class RealtimeProfileEditing
     }
 
     /// <summary>
-    /// Where 辨識解析度's slider rests while 自動 is ticked: the size the mode reads at — see
-    /// <see cref="RealtimeActualValues.DetectorPercent"/>. 依各組判斷 is shown at the strip size, the
-    /// one a block starts on.
+    /// Where 辨識解析度's slider starts when the value is turned from 自動 to 手動: the size the mode
+    /// reads at — see <see cref="RealtimeActualValues.DetectorPercent"/>. Where 自動 decides per
+    /// group of text, the strip size, the one a block starts on.
     /// </summary>
     public static int AutomaticDetectorPercent(RealtimeProfile filled)
     {

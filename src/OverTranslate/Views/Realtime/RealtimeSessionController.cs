@@ -835,8 +835,8 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// 管理模式… on the edit layer: ends the sitting and opens the 即時翻譯 page on the modes, with
-    /// <paramref name="profileId"/> — the block's mode — selected.
+    /// 模式設定… on the edit layer: ends the sitting and opens the 即時翻譯 page with
+    /// <paramref name="profileId"/> — the block's mode — open over it.
     /// </summary>
     private void OpenProfiles(string profileId)
     {
