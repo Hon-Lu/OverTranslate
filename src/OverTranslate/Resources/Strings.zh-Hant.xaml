@@ -441,19 +441,24 @@
     <sys:String x:Key="S.Realtime.SessionEndedTitle">即時翻譯已結束</sys:String>
     <sys:String x:Key="S.Realtime.RemoveBlock">移除此區塊</sys:String>
 
-    <!-- Block mode picker. The em dash in the summaries separates what the mode is for from what
-         it does to the text; en-dash-with-spaces reads better in English. -->
-    <sys:String x:Key="S.Realtime.ModeAuto">自動</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">依畫面內容自動判斷——對話整段翻譯，選單與介面逐項翻譯</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">適合大多數情境；依畫面內容自動區分連續閱讀的文字與零散的介面文字。若結果不如預期，建議改用右側的模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫畫</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / 介面</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段連續的話，整段換成下一段——影片字幕、劇情對話、漫畫對白</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">各自獨立的零散短文字——HUD、選單、物品說明、聊天室</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</sys:String>
+    <!-- Block mode picker on the edit layer. The em dash in the summaries separates what the mode
+         is for from what it does to the text; en-dash-with-spaces reads better in English. -->
+    <sys:String x:Key="S.Realtime.ProfileMenu">模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">標準</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">字幕・漫畫</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">遊戲介面・聊天室</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">依畫面內容自動判斷——對話整段翻譯，選單與介面逐項翻譯</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">一段連續的話，整段換成下一段——影片字幕、劇情對話、漫畫對白</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">各自獨立的零散短文字——HUD、選單、物品說明、聊天室</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">適合大多數情境；依畫面內容自動區分連續閱讀的文字與零散的介面文字。若結果不如預期，可改用其他模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCustomTag">自訂</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">以「{0}」為範本。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">管理模式…</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">收合模式說明</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">展開模式說明</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">自訂模式 {0}</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">即時翻譯已中止：{0}</sys:String>

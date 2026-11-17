@@ -423,17 +423,22 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">移除此区块</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeAuto">自动</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">依画面内容自动判断——对话整段翻译，菜单与界面逐项翻译</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">适合大多数情境；依画面内容自动区分连续阅读的文字与零散的界面文字。若结果不如预期，建议改用右侧的模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫画</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">游戏 / 界面</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段连续的话，整段换成下一段——视频字幕、剧情对话、漫画对白</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">各自独立的零散短文字——HUD、菜单、物品说明、聊天室</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">适合影音字幕、游戏剧情对话、漫画文字等情境；若内容以连续阅读的文字为主，建议使用此模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMenu">模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">标准</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">字幕・漫画</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">游戏界面・聊天室</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">依画面内容自动判断——对话整段翻译，菜单与界面逐项翻译</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">一段连续的话，整段换成下一段——视频字幕、剧情对话、漫画对白</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">各自独立的零散短文字——HUD、菜单、物品说明、聊天室</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">适合大多数情境；依画面内容自动区分连续阅读的文字与零散的界面文字。若结果不如预期，可改用其他模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">适合影音字幕、游戏剧情对话、漫画文字等情境；若内容以连续阅读的文字为主，建议使用此模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCustomTag">自定义</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">以“{0}”为模板。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">管理模式…</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">收起模式说明</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">展开模式说明</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">自定义模式 {0}</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">实时翻译已中止：{0}</sys:String>

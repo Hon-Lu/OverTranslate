@@ -427,17 +427,22 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">このブロックを削除</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeAuto">自動</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">画面の内容から自動で判断 — 続けて読む文章はまとめて、メニューや UI の文字は項目ごとに翻訳</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">ほとんどの場面に向いています。続けて読む文章と、ばらばらの UI の文字を自動で見分けます。結果が合わない場合は、右のモードに切り替えてください。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / マンガ</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">ゲーム / UI</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">ひとまとまりの文が次の文に入れ替わる場面 — 字幕、ストーリー会話、マンガのセリフ</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">画面に散らばる短い文字 — HUD、メニュー、アイテム説明、チャット</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">動画の字幕、ゲームのストーリー会話、マンガの文字など、続けて読む文章に向いています。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">ゲーム画面、チャット、メニューや UI の文字など、続けて読む文章でない場面に向いています。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMenu">モード</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">標準</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">字幕・マンガ</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">ゲーム UI・チャット</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">画面の内容から自動で判断 — 続けて読む文章はまとめて、メニューや UI の文字は項目ごとに翻訳</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">ひとまとまりの文が次の文に入れ替わる場面 — 字幕、ストーリー会話、マンガのセリフ</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">画面に散らばる短い文字 — HUD、メニュー、アイテム説明、チャット</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">ほとんどの場面に向いています。続けて読む文章と、ばらばらの UI の文字を自動で見分けます。結果が合わない場合は、ほかのモードに切り替えてください。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">動画の字幕、ゲームのストーリー会話、マンガの文字など、続けて読む文章に向いています。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">ゲーム画面、チャット、メニューや UI の文字など、続けて読む文章でない場面に向いています。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCustomTag">カスタム</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">「{0}」をテンプレートにしています。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">モードを管理…</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">モードの説明を閉じる</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">モードの説明を開く</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">カスタムモード {0}</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">リアルタイム翻訳を中止しました：{0}</sys:String>

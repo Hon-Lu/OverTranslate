@@ -420,17 +420,22 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">Удалить эту область</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeAuto">Авто</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">Определяется по содержимому экрана — связный текст переводится целиком, меню и интерфейс — по пунктам</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">Подходит для большинства случаев: сам отличает связный текст от отдельных надписей интерфейса. Если результат не тот, выберите один из режимов справа.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">Субтитры / манга</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">Игра / интерфейс</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">Один фрагмент, который сменяется следующим — субтитры, сюжетные диалоги, манга</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">Отдельные короткие надписи по всему экрану — HUD, меню, описания предметов, чат</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">Для субтитров видео, сюжетных диалогов в играх и реплик в манге — текста, который читается подряд.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">Для игровых экранов, окон чата, меню и текста интерфейса — всего, что не является субтитрами, диалогами или мангой.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMenu">Режим</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">Стандартный</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">Субтитры и манга</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">Интерфейс и чат</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">Определяется по содержимому экрана — связный текст переводится целиком, меню и интерфейс — по пунктам</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">Один фрагмент, который сменяется следующим — субтитры, сюжетные диалоги, манга</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">Отдельные короткие надписи по всему экрану — HUD, меню, описания предметов, чат</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">Подходит для большинства случаев: сам отличает связный текст от отдельных надписей интерфейса. Если результат не тот, выберите другой режим.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">Для субтитров видео, сюжетных диалогов в играх и реплик в манге — текста, который читается подряд.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">Для игровых экранов, окон чата, меню и текста интерфейса — всего, что не является субтитрами, диалогами или мангой.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCustomTag">Свой</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">На основе «{0}».</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">Управление режимами…</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">Скрыть описание режимов</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">Показать описание режимов</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">Свой режим {0}</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Перевод в реальном времени остановлен: {0}</sys:String>

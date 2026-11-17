@@ -427,17 +427,22 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">이 블록 삭제</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeAuto">자동</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">화면 내용에 따라 자동으로 판단 — 이어서 읽는 글은 한 덩어리로, 메뉴와 인터페이스 글자는 항목별로 번역</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">대부분의 상황에 적합합니다. 이어서 읽는 글과 흩어진 인터페이스 글자를 자동으로 구분합니다. 결과가 맞지 않으면 오른쪽 모드로 바꾸세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">자막 / 만화</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">게임 / UI</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">한 덩어리의 글이 다음 글로 바뀌는 화면 — 자막, 스토리 대사, 만화 대사</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">화면 곳곳에 흩어진 짧은 글 — HUD, 메뉴, 아이템 설명, 채팅</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">영상 자막, 게임 스토리 대사, 만화 글자처럼 이어서 읽는 글에 적합합니다.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">게임 화면, 채팅창, 메뉴와 인터페이스 글자처럼 이어서 읽는 글이 아닌 것에 적합합니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMenu">모드</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">표준</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">자막・만화</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">게임 UI・채팅</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">화면 내용에 따라 자동으로 판단 — 이어서 읽는 글은 한 덩어리로, 메뉴와 인터페이스 글자는 항목별로 번역</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">한 덩어리의 글이 다음 글로 바뀌는 화면 — 자막, 스토리 대사, 만화 대사</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">화면 곳곳에 흩어진 짧은 글 — HUD, 메뉴, 아이템 설명, 채팅</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">대부분의 상황에 적합합니다. 이어서 읽는 글과 흩어진 인터페이스 글자를 자동으로 구분합니다. 결과가 맞지 않으면 다른 모드로 바꾸세요.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">영상 자막, 게임 스토리 대사, 만화 글자처럼 이어서 읽는 글에 적합합니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">게임 화면, 채팅창, 메뉴와 인터페이스 글자처럼 이어서 읽는 글이 아닌 것에 적합합니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCustomTag">사용자 지정</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">'{0}' 템플릿 기반입니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">모드 관리…</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">모드 설명 접기</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">모드 설명 펼치기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">사용자 지정 모드 {0}</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">실시간 번역을 중단했습니다: {0}</sys:String>

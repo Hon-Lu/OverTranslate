@@ -763,6 +763,7 @@ internal sealed class RealtimeSessionController
             settings.Current.Realtime.GuidanceExpanded,
             settings.Current.Realtime.NewBlockProfileOrStandard(),
             settings.Current.Realtime.TextOrientation,
+            RealtimeProfileEditing.Choices(settings.Current.Realtime.Profiles),
             _compareDisplay);
         edit.BlocksChanged += (_, _) =>
         {
@@ -790,6 +791,13 @@ internal sealed class RealtimeSessionController
         };
         edit.LimitReached += (_, _) =>
             control.ShowMessage(LocalizationService.Format("S.Realtime.TooManyBlocks", Models.RealtimeSettings.MaxBlockCount));
+        // 管理模式… ends the sitting rather than opening the page over it: the layer covers the whole
+        // screen at the top of the topmost band, and the window would open underneath it looking as
+        // if nothing had happened. The blocks and their modes are kept (RememberedBlocks), so the
+        // way back is one press. Deferred, because the press arrives inside the layer's own input
+        // handling and this closes that layer.
+        edit.ManageProfilesRequested += (_, profileId) =>
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => OpenProfiles(profileId));
         _edit = edit;
         edit.Show();
         RefreshOverlayHandles();
@@ -813,7 +821,27 @@ internal sealed class RealtimeSessionController
         // Only while editing. The hook swallows Esc process-wide, and a translating session can run
         // for hours next to an application that needs its own Esc key.
         DisposeEscapeHook();
-        _escapeHook = GlobalEscapeHook.Install(Stop);
+        _escapeHook = GlobalEscapeHook.Install(OnEscapeWhileFraming);
+    }
+
+    /// <summary>
+    /// Esc while framing: puts away a block's open list of modes if there is one, and only
+    /// otherwise ends the sitting — a press meant for the list must not cost the user every block.
+    /// </summary>
+    private void OnEscapeWhileFraming()
+    {
+        if (_edit?.TryDismissMenu() == true) return;
+        Stop();
+    }
+
+    /// <summary>
+    /// 管理模式… on the edit layer: ends the sitting and opens the 即時翻譯 page on the modes, with
+    /// <paramref name="profileId"/> — the block's mode — selected.
+    /// </summary>
+    private void OpenProfiles(string profileId)
+    {
+        Stop();
+        Shell.ShellWindow.ShowOrActivate(Shell.ShellPage.Realtime);
     }
 
     /// <summary>
@@ -1107,6 +1135,11 @@ internal sealed class RealtimeSessionController
 
         var realtime = SettingsService.Instance.Current.Realtime;
         _blocks = [.. _blocks.Select(block => block with { ProfileId = realtime.KnownProfileId(block.ProfileId) })];
+
+        // While framing, the layer's lists and buttons follow — a mode added or renamed on the page
+        // is offered at once, one deleted takes its blocks to 標準 there too. It reports its blocks
+        // back through BlocksChanged, which brings _blocks into line with what it shows.
+        _edit?.SetProfileChoices(RealtimeProfileEditing.Choices(realtime.Profiles));
 
         var regions = Regions();
         foreach (var region in regions)

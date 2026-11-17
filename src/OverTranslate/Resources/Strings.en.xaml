@@ -423,17 +423,22 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.RemoveBlock">Remove this block</sys:String>
 
     <!-- Block mode picker -->
-    <sys:String x:Key="S.Realtime.ModeAuto">Auto</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">Decided from what is on screen — passages are translated whole, menus and UI text item by item</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">For most content: tells text that is read straight through from separate UI strings on its own. If the result is off, switch to one of the modes on the right.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">Subtitles / Comics</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">Game / UI</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">One passage, replaced by the next — subtitles, story dialogue, comics</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">Separate short strings around the screen — HUD, menus, item text, chat</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">For video subtitles, game story dialogue and comic lettering — text that is read straight through.</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">For game screens, chat windows, menus and UI text — anything that is not subtitles, dialogue or comics.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMenu">Mode</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">Standard</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">Subtitles &amp; Comics</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">Game UI &amp; Chat</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">Decided from what is on screen — passages are translated whole, menus and UI text item by item</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">One passage, replaced by the next — subtitles, story dialogue, comics</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">Separate short strings around the screen — HUD, menus, item text, chat</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">For most content: tells text that is read straight through from separate UI strings on its own. If the result is off, try another mode.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">For video subtitles, game story dialogue and comic lettering — text that is read straight through.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">For game screens, chat windows, menus and UI text — anything that is not subtitles, dialogue or comics.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCustomTag">Custom</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">Based on “{0}”.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">Manage modes…</sys:String>
     <sys:String x:Key="S.Realtime.CollapseGuidance">Hide mode details</sys:String>
     <sys:String x:Key="S.Realtime.ExpandGuidance">Show mode details</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">Custom mode {0}</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Realtime translation stopped: {0}</sys:String>
