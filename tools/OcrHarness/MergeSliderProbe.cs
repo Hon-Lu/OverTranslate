@@ -7,7 +7,7 @@ using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Realtime;
 
 /// <summary>
-/// The nine steps of a single "how much to join" slider — 不合併, 逐項, 自動 1–5, 整段, 整個區塊 —
+/// The nine steps of a single "how much to join" slider — 不合併, 逐項, 自動 1–5, 整段, 合併 —
 /// replayed over the cache, to see whether each step joins everything the one before it did.
 /// </summary>
 /// <remarks>
@@ -33,7 +33,7 @@ internal static class MergeSliderProbe
 {
     private static readonly string[] Names =
     [
-        "none", "items", "auto1", "auto2", "auto3", "auto4", "auto5", "passage", "block",
+        "none", "items", "auto1", "auto2", "auto3", "auto4", "auto5", "passage", "merged",
         // Candidate fixes for 整段, measured beside it.
         "passage+auto5", "passage+items", "auto-max",
     ];
@@ -165,7 +165,7 @@ internal static class MergeSliderProbe
     private static ResolvedProfile Profile(int level) =>
         ResolvedProfile.Resolve(new RealtimeProfile { Id = "slider", MergeLevel = level });
 
-    private static int[] Assign(List<OcrTextBlock> raw, bool[] inUniverse, List<OcrTextBlock> groups)
+    internal static int[] Assign(List<OcrTextBlock> raw, bool[] inUniverse, List<OcrTextBlock> groups)
     {
         var result = Enumerable.Repeat(-1, raw.Count).ToArray();
         var boxes = groups.Select(Box).ToList();
@@ -201,7 +201,7 @@ internal static class MergeSliderProbe
 
     // Groups of the left step whose blocks the right step parted, with the right step's groups they
     // went to and how many pairs that broke. Blocks either step left out are not counted.
-    private static List<(int Left, List<int> Right, int Pairs)> Broken(int[] left, int[] right)
+    internal static List<(int Left, List<int> Right, int Pairs)> Broken(int[] left, int[] right)
     {
         var result = new List<(int, List<int>, int)>();
         foreach (var group in Enumerable.Range(0, left.Length).Where(i => left[i] >= 0 && right[i] >= 0).GroupBy(i => left[i]))
@@ -230,7 +230,7 @@ internal static class MergeSliderProbe
         return Enumerable.Range(0, n).Select(i => a[i] >= 0 && b[i] >= 0 ? Find(i) : -1).ToArray();
     }
 
-    private static long CountPairs(int[] assigned) =>
+    internal static long CountPairs(int[] assigned) =>
         assigned.Where(a => a >= 0).GroupBy(a => a).Sum(g => (long)g.Count() * (g.Count() - 1) / 2);
 
     // Left–right decisions of 不合併 (which every step shares): pieces joined into one line, and
@@ -265,12 +265,12 @@ internal static class MergeSliderProbe
         }
     }
 
-    private static Rect Box(OcrTextBlock block) =>
+    internal static Rect Box(OcrTextBlock block) =>
         block.LayoutBounds.Width > 0 && block.LayoutBounds.Height > 0 ? block.LayoutBounds : block.Bounds;
 
     private static string Norm(string text) => new(text.Where(c => !char.IsWhiteSpace(c)).ToArray());
 
-    private static string Flat(string text) => text.Replace("\r", "").Replace("\n", " ⏎ ").Replace("\t", " ");
+    internal static string Flat(string text) => text.Replace("\r", "").Replace("\n", " ⏎ ").Replace("\t", " ");
 
     private static string Cell(Dictionary<string, int> byLabel) =>
         $"{byLabel.GetValueOrDefault("D"),5} {byLabel.GetValueOrDefault("P"),5} {byLabel.GetValueOrDefault("M"),5}";

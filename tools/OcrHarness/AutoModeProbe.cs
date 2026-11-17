@@ -78,6 +78,7 @@ internal static class AutoModeProbe
         var cache = JsonSerializer.Deserialize<Capture[]>(File.ReadAllText(args[1]))!;
         if (args[0] == "extremes") return Extremes(cache, args[2]);
         if (args[0] == "slider") return MergeSliderProbe.Run(cache, args[2]);
+        if (args[0] == "mergemax") return MergeMaxProbe.Run(cache, args[2]);
 
         var profile = ResolvedProfile.Standard;
         int at = Array.IndexOf(args, "--profile");
@@ -190,7 +191,7 @@ internal static class AutoModeProbe
             ("items", RealtimeMergeLevels.Items, RealtimeMergeLevels.Items),
             ("auto", RealtimeMergeLevels.AutomaticHighest, RealtimeMergeLevels.AutomaticLowest),
             ("passage", RealtimeMergeLevels.Passage, RealtimeMergeLevels.Passage),
-            ("whole", RealtimeMergeLevels.Max, RealtimeMergeLevels.Max),
+            ("merged", RealtimeMergeLevels.Max, RealtimeMergeLevels.Max),
         })
         {
             Add($"loosest-{name}", p =>
