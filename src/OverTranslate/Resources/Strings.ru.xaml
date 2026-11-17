@@ -473,9 +473,8 @@
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Наибольшее время ожидания после изменения текста, пока изображение не перестанет меняться. Увеличьте, если плавно проявляющийся текст распознаётся с ошибками; уменьшите, если перевод появляется слишком поздно. На текст, появляющийся по буквам, почти не влияет.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">Без ожидания</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">Около {0} с</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeep">Удержание перевода</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeepHint">Перевод убирается только после стольких чтений подряд без текста. Повысьте, если перевод мигает вместе с оригиналом; понизьте, если он задерживается слишком долго.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileTimes">{0} раз(а)</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeep">Сразу убирать перевод, когда текст исчезает</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeepHint">Перевод убирается сразу, как только исходный текст исчезает. Иногда перевод может ненадолго мигать.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetector">Разрешение распознавания</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">Повысьте, если мелкий текст не читается; понизьте, если нагрузка на процессор или видеокарту слишком высока. Области с длинной стороной меньше 800 пикселей не масштабируются.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">По результату разбивки строк: целиком — 85 %, по пунктам — 68 %.</sys:String>

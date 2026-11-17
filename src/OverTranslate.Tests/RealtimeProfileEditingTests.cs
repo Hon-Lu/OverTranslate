@@ -191,12 +191,12 @@ public class RealtimeProfileEditingTests
     {
         var mode = Custom("a", "Mine");
         mode.MergeLevel = RealtimeMergeLevels.Items;
-        mode.ClearAfterEmptyReads = 4;
+        mode.ClearAfterEmptyReads = 1;
 
         RealtimeProfileEditing.Clear(mode, ProfileParam.MergeLevel);
 
         Assert.Null(mode.MergeLevel);
-        Assert.Equal(4, mode.ClearAfterEmptyReads);
+        Assert.Equal(1, mode.ClearAfterEmptyReads);
     }
 
     // ── Deleting ──

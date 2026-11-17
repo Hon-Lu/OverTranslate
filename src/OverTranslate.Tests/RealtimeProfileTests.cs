@@ -104,13 +104,13 @@ public class RealtimeProfileTests
     [Fact]
     public void ACustomModeIsFoundByItsId()
     {
-        var custom = new RealtimeProfile { Id = "mine", BasedOn = RealtimePresets.InterfaceId, ClearAfterEmptyReads = 4 };
+        var custom = new RealtimeProfile { Id = "mine", BasedOn = RealtimePresets.InterfaceId, ClearAfterEmptyReads = 1 };
 
         var profile = ResolvedProfile.Resolve("mine", [new RealtimeProfile { Id = "other" }, custom]);
 
         Assert.Equal("mine", profile.Id);
         Assert.Equal(RealtimeBlockMode.Panel, profile.Layout);
-        Assert.Equal(4, profile.ClearAfterEmptyReads);
+        Assert.Equal(1, profile.ClearAfterEmptyReads);
     }
 
     [Fact]
@@ -165,11 +165,15 @@ public class RealtimeProfileTests
         Assert.Equal(polls, profile.SettlePolls);
     }
 
+    // 原文消失後立即清除譯文 is a tick: 1 ticked, 2 not. The 3 and 4 of the slider it replaced, never
+    // released, read as not ticked.
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 1)]
-    [InlineData(4, 4)]
-    [InlineData(9, 4)]
+    [InlineData(2, 2)]
+    [InlineData(3, 2)]
+    [InlineData(4, 2)]
+    [InlineData(9, 2)]
     public void EmptyReadsAreHeldToTheirRange(int stored, int resolved) =>
         Assert.Equal(resolved, ResolvedProfile.Resolve(
             new RealtimeProfile { Id = "mine", ClearAfterEmptyReads = stored }).ClearAfterEmptyReads);

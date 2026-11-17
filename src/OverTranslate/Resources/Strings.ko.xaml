@@ -480,9 +480,8 @@
     <sys:String x:Key="S.Realtime.ProfileSettleHint">원문이 바뀐 뒤 화면 변화가 멈출 때까지 읽기를 기다리는 최대 시간입니다. 페이드인 중인 글자가 잘못 읽히면 늘리고, 번역문이 너무 늦게 나오면 줄이세요. 한 글자씩 나타나는 글자에는 거의 효과가 없습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">대기 안 함</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">약 {0}초</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeep">번역문 유지</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeepHint">원문을 연속으로 이 횟수만큼 읽지 못하면 번역문을 지웁니다. 번역문이 원문과 함께 깜박이면 높이고, 너무 오래 남으면 낮추세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileTimes">{0}회</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeep">원문이 사라지면 번역문 바로 지우기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeepHint">원문이 사라지는 즉시 번역문을 지웁니다. 상황에 따라 번역문이 잠시 깜박일 수 있습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetector">인식 해상도</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">작은 글자를 읽지 못하면 높이고, CPU나 GPU 부담이 너무 크면 낮추세요. 긴 변이 800픽셀 미만인 블록은 축소하지 않습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">줄 처리 판단 결과에 따릅니다: 한 덩어리 85%, 항목별 68%.</sys:String>

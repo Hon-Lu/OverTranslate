@@ -170,7 +170,7 @@ public sealed record ResolvedProfile
     /// </summary>
     internal int? SettlePolls { get; init; }
 
-    /// <summary>譯文保留 — see <see cref="RealtimeRegionState.EmptyPassesBeforeClearing"/>.</summary>
+    /// <summary>原文消失後立即清除譯文 as a count — see <see cref="RealtimeRegionState.EmptyPassesBeforeClearing"/>.</summary>
     internal int ClearAfterEmptyReads { get; init; } = RealtimeRegionState.EmptyPassesBeforeClearing;
 
     /// <summary>

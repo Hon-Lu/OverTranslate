@@ -17,7 +17,7 @@ internal enum ProfileParam
     /// <summary>畫面文字穩定後再讀取.</summary>
     SettleSeconds,
 
-    /// <summary>譯文保留.</summary>
+    /// <summary>原文消失後立即清除譯文: a tick.</summary>
     ClearAfterEmptyReads,
 
     /// <summary>辨識解析度.</summary>

@@ -419,13 +419,13 @@ public class SettingsParsingTests
     {
         var settings = SettingsService.Parse(
             """
-            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"standard","Layout":"items","MergeTendency":5,"ClearAfterEmptyReads":3}]}}
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"standard","Layout":"items","MergeTendency":5,"ClearAfterEmptyReads":1}]}}
             """);
 
         var stored = settings.Realtime.Profiles.Single();
         Assert.Null(stored.MergeLevel);
-        Assert.Equal(3, stored.ClearAfterEmptyReads);
-        Assert.Equal(ResolvedProfile.Standard with { Id = "a", ClearAfterEmptyReads = 3 }, settings.Realtime.ResolveProfile("a"));
+        Assert.Equal(1, stored.ClearAfterEmptyReads);
+        Assert.Equal(ResolvedProfile.Standard with { Id = "a", ClearAfterEmptyReads = 1 }, settings.Realtime.ResolveProfile("a"));
     }
 
     /// <summary>
@@ -451,7 +451,7 @@ public class SettingsParsingTests
             """
             {"ApiKey":"secret",
              "Realtime":{"TextOrientation":"Vertical","ScrimOpacity":12,
-               "Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","ReadTiming":"later","ClearAfterEmptyReads":3},
+               "Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","ReadTiming":"later","ClearAfterEmptyReads":1},
                            {"Id":"b","Name":"B","BasedOn":"subtitle"}]}}
             """);
 
@@ -461,7 +461,7 @@ public class SettingsParsingTests
         Assert.Equal(RealtimeBlockMode.Panel, resolved.Layout);
         // ReadTiming is no longer a value: the mode waits as 遊戲介面・聊天室 does.
         Assert.Equal(RealtimeReadTiming.SettleThenRead, resolved.Timing);
-        Assert.Equal(3, resolved.ClearAfterEmptyReads);
+        Assert.Equal(1, resolved.ClearAfterEmptyReads);
         Assert.Equal(RealtimeTextOrientation.Vertical, realtime.TextOrientation);
         Assert.Equal(12, realtime.ScrimOpacity);
         Assert.Equal("secret", settings.ApiKey);
@@ -519,6 +519,23 @@ public class SettingsParsingTests
         Assert.Equal(0.6, resolved.DetectorFraction);
         Assert.Equal(0.8, resolved.IgnoreSmallFraction, 6);
         Assert.Equal(RealtimeMerge.Lines, resolved.Merge);
+    }
+
+    /// <summary>
+    /// 原文消失後立即清除譯文 replaced a 1–4 slider that was never released: a 3 or 4 written by it is
+    /// kept in the file and reads as not ticked, the presets' 2.
+    /// </summary>
+    [Theory]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void AnOldKeepCount_ReadsAsNotTicked(int stored)
+    {
+        var settings = SettingsService.Parse(
+            $$$"""{"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","ClearAfterEmptyReads":{{{stored}}}}]}}""");
+
+        Assert.Equal(stored, settings.Realtime.Profiles.Single().ClearAfterEmptyReads);
+        Assert.Equal(RealtimeProfile.MaxClearAfterEmptyReads, settings.Realtime.Profiles.Single().Filled().ClearAfterEmptyReads);
+        Assert.Equal(ResolvedProfile.Interface with { Id = "a" }, settings.Realtime.ResolveProfile("a"));
     }
 
     /// <summary>

@@ -328,7 +328,10 @@ public partial class RealtimeProfilesCard : UserControl
             // Its line under the name is kept while hidden on a custom mode, so that setting a value
             // does not push the rows below it down. A preset never shows it.
             row.Modified.Visibility = modified ? Visibility.Visible : preset ? Visibility.Collapsed : Visibility.Hidden;
-            row.Revert.ToolTip = LocalizationService.Format("S.Realtime.ProfileRevert", Display(template, param));
+            // A tick has no reading of its own to put back; 還原為範本 says it.
+            row.Revert.ToolTip = param == ProfileParam.ClearAfterEmptyReads
+                ? LocalizationService.Get("S.Realtime.ProfileResetAll")
+                : LocalizationService.Format("S.Realtime.ProfileRevert", Display(template, param));
             row.ReasonRow.Visibility = needsAuto ? Visibility.Visible : Visibility.Collapsed;
 
             foreach (var control in row.Controls) control.IsEnabled = enabled;
@@ -356,6 +359,9 @@ public partial class RealtimeProfilesCard : UserControl
             case ProfileParam.MergeUnpunctuated:
                 row.Toggle!.IsChecked = filled.MergeUnpunctuated == true;
                 break;
+            case ProfileParam.ClearAfterEmptyReads:
+                row.Toggle!.IsChecked = ClearsAtOnce(filled);
+                break;
             case ProfileParam.SettleSeconds:
             {
                 bool automatic = filled.SettleSeconds < 0;
@@ -382,13 +388,16 @@ public partial class RealtimeProfilesCard : UserControl
 
     private static double PollSeconds => Services.Realtime.RealtimeRegionState.PollInterval.TotalSeconds;
 
+    /// <summary>原文消失後立即清除譯文: ticked on a mode that clears on the first empty reading.</summary>
+    private static bool ClearsAtOnce(RealtimeProfile filled) =>
+        filled.ClearAfterEmptyReads == RealtimeProfile.MinClearAfterEmptyReads;
+
     /// <summary>How a value reads on its row and on the 還原 tooltip.</summary>
     private static string Display(RealtimeProfile filled, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => LevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
         ProfileParam.MergeUnpunctuated => LocalizationService.Get(filled.MergeUnpunctuated == true ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff"),
         ProfileParam.SettleSeconds => SecondsText(filled.SettleSeconds ?? RealtimePresets.Automatic),
-        ProfileParam.ClearAfterEmptyReads => LocalizationService.Format("S.Realtime.ProfileTimes", filled.ClearAfterEmptyReads),
         ProfileParam.DetectorPercent => filled.DetectorPercent is < 0 or null
             ? LocalizationService.Get("S.Realtime.ProfileAuto")
             : LocalizationService.Format("S.Realtime.ProfilePercent", filled.DetectorPercent),
@@ -425,7 +434,6 @@ public partial class RealtimeProfilesCard : UserControl
     {
         ProfileParam.MergeLevel => LevelName((int)Math.Round(value)),
         ProfileParam.SettleSeconds => SecondsText(Math.Round(value * PollSeconds, 2)),
-        ProfileParam.ClearAfterEmptyReads => LocalizationService.Format("S.Realtime.ProfileTimes", (int)value),
         ProfileParam.DetectorPercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
         ProfileParam.IgnoreSmallPercent => value < 0.5
             ? LocalizationService.Get("S.Realtime.ProfileOff")
@@ -547,8 +555,25 @@ public partial class RealtimeProfilesCard : UserControl
                 BuildSlider(row, 0, Math.Round(RealtimeProfile.MaxSettleSeconds / PollSeconds), 1, nameKey);
                 break;
             case ProfileParam.ClearAfterEmptyReads:
-                BuildSlider(row, RealtimeProfile.MinClearAfterEmptyReads, RealtimeProfile.MaxClearAfterEmptyReads, 1, nameKey);
+            {
+                var tick = new CheckBox { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 2, 0) };
+                tick.SetResourceReference(StyleProperty, "ModernCheckBox");
+                tick.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, nameKey);
+                RoutedEventHandler changed = (_, _) =>
+                {
+                    if (!_syncing) Commit(profile => profile.ClearAfterEmptyReads = tick.IsChecked == true
+                        ? RealtimeProfile.MinClearAfterEmptyReads
+                        : RealtimeProfile.MaxClearAfterEmptyReads);
+                };
+                tick.Checked += changed;
+                tick.Unchecked += changed;
+                Grid.SetColumn(tick, 2);
+                top.Children.Add(tick);
+                row.Toggle = tick;
+                row.Controls.Add(tick);
+                row.Fades.Add(tick);
                 break;
+            }
             case ProfileParam.DetectorPercent:
                 BuildAuto(row, "S.Realtime.ProfileDetectorAutoTip");
                 BuildSlider(row, RealtimeProfile.MinDetectorPercent, RealtimeProfile.MaxDetectorPercent, 1, nameKey);
@@ -709,7 +734,6 @@ public partial class RealtimeProfilesCard : UserControl
         switch (param)
         {
             case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
-            case ProfileParam.ClearAfterEmptyReads: profile.ClearAfterEmptyReads = whole; break;
             case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
             case ProfileParam.DetectorPercent:
                 profile.DetectorPercent = automatic ? RealtimePresets.Automatic : whole;

@@ -496,9 +496,8 @@
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文變動後，等畫面停止變化再讀取的最長時間。淡入中的文字被讀錯時拉長；譯文出現太慢時縮短。對逐字出現的文字幾乎沒有作用。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">不等待</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">約 {0} 秒</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeep">譯文保留</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeepHint">連續讀不到原文達此次數才清除譯文。譯文隨原文閃爍時調高，殘留過久時調低。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileTimes">{0} 次</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeep">原文消失後立即清除譯文</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeepHint">原文消失時會立即清除譯文；部分情境下譯文可能會發生短暫閃爍。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetector">辨識解析度</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">小字讀不到時調高；處理器或顯示卡負擔過高時調低。區塊長邊不足 800 像素時不縮放。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">依分行處理的判讀結果：整段 85%，逐項 68%。</sys:String>

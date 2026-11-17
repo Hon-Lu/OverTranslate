@@ -480,9 +480,8 @@
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文が変わったあと、画面の変化が止まるまで読み取りを待つ最長時間。フェードイン中の文字が誤って読まれるときは長くし、訳文が出るのが遅いときは短くします。一文字ずつ表示される文字にはほとんど効果がありません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">待たない</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">約 {0} 秒</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeep">訳文の保持</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeepHint">原文がこの回数続けて読み取れなかったときに訳文を消します。訳文が原文と一緒にちらつくときは上げ、残りすぎるときは下げます。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileTimes">{0} 回</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeep">原文が消えたらすぐに訳文を消す</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeepHint">原文が消えるとすぐに訳文を消します。状況によっては訳文が一瞬ちらつくことがあります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetector">認識解像度</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">小さな文字が読み取れないときは上げ、CPU や GPU の負荷が高すぎるときは下げます。長辺が 800 ピクセル未満のブロックは縮小しません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">行の扱いの判定結果に従います：まとめて 85%、項目ごと 68%。</sys:String>

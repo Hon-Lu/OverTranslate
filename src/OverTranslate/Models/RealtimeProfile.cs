@@ -70,7 +70,17 @@ public sealed class RealtimeProfile
     /// </remarks>
     public double? SettleSeconds { get; set; }
 
-    /// <summary>譯文保留: how many readings in a row must find nothing before a translation goes, 1–4.</summary>
+    /// <summary>
+    /// 原文消失後立即清除譯文: how many readings in a row must find nothing before a translation goes —
+    /// 1 when ticked, 2 (what every preset holds) when not.
+    /// </summary>
+    /// <remarks>
+    /// A count rather than a bool because that is what the pipeline runs on, and so that a later
+    /// version may offer more than the two. It was a 1–4 slider first, but on a still picture a count
+    /// above one is never reached (a frame that does not change is not read again), and nothing
+    /// measured made a case for 3 or 4 elsewhere, so what is left is the one choice that behaves
+    /// differently. A 3 or 4 an earlier build wrote reads as 2.
+    /// </remarks>
     public int? ClearAfterEmptyReads { get; set; }
 
     /// <summary>辨識解析度, in percent of the block's longer side, 50–100; below zero is 自動.</summary>
@@ -151,11 +161,11 @@ public sealed class RealtimeProfile
     /// </remarks>
     public const double MaxSettleSeconds = 1.5;
 
-    /// <summary>譯文保留's range, in readings.</summary>
+    /// <summary>原文消失後立即清除譯文 ticked: the first reading that finds nothing clears.</summary>
     public const int MinClearAfterEmptyReads = 1;
 
-    /// <inheritdoc cref="MinClearAfterEmptyReads"/>
-    public const int MaxClearAfterEmptyReads = 4;
+    /// <summary>原文消失後立即清除譯文 not ticked — the presets' value, and the most a mode can hold.</summary>
+    public const int MaxClearAfterEmptyReads = 2;
 
     /// <summary>辨識解析度's range, in percent.</summary>
     /// <remarks>
@@ -248,7 +258,7 @@ public static class RealtimePresets
                 InterfaceId => ItemsSettleSeconds,
                 _ => Automatic,
             },
-            ClearAfterEmptyReads = 2,
+            ClearAfterEmptyReads = RealtimeProfile.MaxClearAfterEmptyReads,
             DetectorPercent = id switch
             {
                 SubtitleId => StripPercent,

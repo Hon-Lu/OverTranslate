@@ -476,9 +476,8 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">The longest wait, after the text changes, for the picture to stop changing before it is read. Lengthen when text that fades in is misread; shorten when translations appear too late. Has almost no effect on text that appears letter by letter.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">No wait</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">About {0} s</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeep">Keep translation</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileKeepHint">The translation is cleared only after this many readings in a row find no text. Raise when translations flicker with the source; lower when they linger too long.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileTimes">{0} times</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeep">Clear translation as soon as source text disappears</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeepHint">The translation is cleared as soon as the source text disappears. In some situations it may briefly flicker.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetector">Recognition resolution</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorHint">Raise when small text is missed; lower when the CPU or GPU load is too high. Blocks under 800 pixels on their long side are not scaled.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">Follows how Line handling reads each group: 85% for a passage, 68% for items.</sys:String>

@@ -39,7 +39,7 @@ public class RealtimeProfileSwitchTests
         Assert.False(settings.SetProfiles([mine.Clone()]));
 
         var changed = mine.Clone();
-        changed.ClearAfterEmptyReads = 3;
+        changed.ClearAfterEmptyReads = 1;
         Assert.True(settings.SetProfiles([changed]));
 
         // Putting a value back is setting it to null again.
@@ -85,7 +85,7 @@ public class RealtimeProfileSwitchTests
         Id = "slow",
         BasedOn = RealtimePresets.SubtitleId,
         SettleSeconds = 0.6,
-        ClearAfterEmptyReads = 4,
+        ClearAfterEmptyReads = 1,
     });
 
     private sealed class NoPicture : IRealtimeCaptureBackend
@@ -146,7 +146,7 @@ public class RealtimeProfileSwitchTests
         });
 
         Assert.Contains(log, line => line.StartsWith("Info|Realtime region 0") && line.Contains("profile=slow") &&
-            line.Contains("settle=4") && line.Contains("clearAfter=4"));
+            line.Contains("settle=4") && line.Contains("clearAfter=1"));
     }
 
     [Fact]
