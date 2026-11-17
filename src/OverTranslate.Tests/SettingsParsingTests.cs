@@ -491,7 +491,7 @@ public class SettingsParsingTests
         var resolved = settings.Realtime.ResolveProfile("a");
         Assert.Equal(10, resolved.SettlePolls);
         Assert.Equal(1, resolved.ClearAfterEmptyReads);
-        Assert.Equal(0.5, resolved.DetectorFraction);
+        Assert.Equal(0.6, resolved.DetectorFraction);
         Assert.Equal(0.8, resolved.IgnoreSmallFraction, 6);
     }
 

@@ -181,7 +181,7 @@ public class RealtimeProfileTests
 
     [Theory]
     [InlineData(-1, null)]
-    [InlineData(20, 0.5)]
+    [InlineData(20, 0.6)]
     [InlineData(75, 0.75)]
     [InlineData(100, 1.0)]
     [InlineData(150, 1.0)]

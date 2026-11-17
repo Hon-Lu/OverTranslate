@@ -159,11 +159,15 @@ public sealed class RealtimeProfile
 
     /// <summary>辨識解析度's range, in percent.</summary>
     /// <remarks>
-    /// 50 is a guess to be measured on a live stage: the strip fraction's own table has subtitles at
-    /// 78% correct at half size against 94% at 0.85 — see
-    /// <see cref="Services.Realtime.RealtimeDetectorSize.StripFraction"/>.
+    /// <para>60, not the 50 first guessed. The strip fraction's own table has subtitles at 78% correct
+    /// at half size against 94% at 0.85 — see
+    /// <see cref="Services.Realtime.RealtimeDetectorSize.StripFraction"/> — and on the live stage
+    /// (a 1396x756 block: dialogue, a 22px HUD, an 18px quick bar) 50% read the dialogue but left
+    /// two of the ten HUD labels unread and ran the quick bar's buttons together, where 60% read
+    /// everything 自動 did. What the last ten points saved was little: 247ms a read at 50%, 284ms
+    /// at 60%, 338ms on 自動 and 474ms at 100%.</para>
     /// </remarks>
-    public const int MinDetectorPercent = 50;
+    public const int MinDetectorPercent = 60;
 
     /// <inheritdoc cref="MinDetectorPercent"/>
     public const int MaxDetectorPercent = 100;
