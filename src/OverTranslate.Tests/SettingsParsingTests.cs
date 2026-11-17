@@ -387,7 +387,9 @@ public class SettingsParsingTests
         mine.ReadTiming = RealtimePresets.TimingSettle;
         mine.DetectorPercent = RealtimePresets.Automatic;
         mine.MergeUnpunctuated = false;
-        written.Realtime.Profiles = [mine, RealtimeProfile.CreateCustom(RealtimePresets.InterfaceId, "Chat")];
+        var chat = RealtimeProfile.CreateCustom(RealtimePresets.InterfaceId, "Chat");
+        chat.MergeLevel = RealtimeMergeLevels.Min;
+        written.Realtime.Profiles = [mine, chat];
         written.Realtime.NewBlockProfile = mine.Id;
 
         var reloaded = SettingsService.Parse(SettingsService.Serialize(written)).Realtime;
@@ -402,10 +404,30 @@ public class SettingsParsingTests
         Assert.Equal(RealtimePresets.Automatic, read.DetectorPercent);
         Assert.False(read.MergeUnpunctuated);
         // Unset stays unset — it follows the preset rather than a copy of what the preset was.
-        Assert.Null(read.Layout);
+        Assert.Null(read.MergeLevel);
         Assert.Null(read.ConfidenceLevel);
         Assert.Equal(mine.Id, reloaded.NewBlockProfileOrStandard());
         Assert.Equal("Chat", reloaded.Profiles[1].Name);
+        Assert.Equal(RealtimeMergeLevels.Min, reloaded.Profiles[1].MergeLevel);
+        Assert.Equal(RealtimeMerge.Lines, reloaded.ResolveProfile(chat.Id).Merge);
+    }
+
+    /// <summary>
+    /// 分行處理 and 合併傾向, which 合併程度 replaced before any build with modes was released, are
+    /// not read: a mode written with them follows its preset's 合併程度.
+    /// </summary>
+    [Fact]
+    public void TheReplacedLayoutValues_AreNotRead()
+    {
+        var settings = SettingsService.Parse(
+            """
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"standard","Layout":"items","MergeTendency":5,"ClearAfterEmptyReads":3}]}}
+            """);
+
+        var stored = settings.Realtime.Profiles.Single();
+        Assert.Null(stored.MergeLevel);
+        Assert.Equal(3, stored.ClearAfterEmptyReads);
+        Assert.Equal(ResolvedProfile.Standard with { Id = "a", ClearAfterEmptyReads = 3 }, settings.Realtime.ResolveProfile("a"));
     }
 
     /// <summary>
@@ -431,7 +453,7 @@ public class SettingsParsingTests
             """
             {"ApiKey":"secret",
              "Realtime":{"TextOrientation":"Vertical","ScrimOpacity":12,
-               "Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","Layout":"webtoon","ReadTiming":"later","ClearAfterEmptyReads":3},
+               "Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","ReadTiming":"later","ClearAfterEmptyReads":3},
                            {"Id":"b","Name":"B","BasedOn":"subtitle"}]}}
             """);
 
@@ -452,7 +474,7 @@ public class SettingsParsingTests
     {
         var settings = SettingsService.Parse(
             """
-            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","MergeTendency":"lots"},
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","MergeLevel":"lots"},
                                      {"Id":"b","Name":"B","SettleSeconds":0.3},
                                      42,
                                      null]}}
@@ -472,11 +494,16 @@ public class SettingsParsingTests
         var settings = SettingsService.Parse(
             """
             {"Realtime":{"Profiles":[{"Id":"a","SettleSeconds":9,"ClearAfterEmptyReads":0,"DetectorPercent":20,
-                                      "IgnoreSmallPercent":300,"MergeTendency":-4,"LineSpacing":12,"ConfidenceLevel":7}]}}
+                                      "IgnoreSmallPercent":300,"MergeLevel":-4,"LineSpacing":12,"ConfidenceLevel":7},
+                                     {"Id":"b","MergeLevel":12}]}}
             """);
 
-        var stored = settings.Realtime.Profiles.Single();
+        var stored = settings.Realtime.Profiles[0];
         Assert.Equal(9, stored.SettleSeconds);
+        Assert.Equal(-4, stored.MergeLevel);
+        Assert.Equal(12, settings.Realtime.Profiles[1].MergeLevel);
+        Assert.Equal(RealtimeMergeLevels.Max, settings.Realtime.Profiles[1].Filled().MergeLevel);
+        Assert.Equal(RealtimeMerge.Whole, settings.Realtime.ResolveProfile("b").Merge);
         Assert.Equal(0, stored.ClearAfterEmptyReads);
 
         var filled = stored.Filled();
@@ -484,7 +511,7 @@ public class SettingsParsingTests
         Assert.Equal(RealtimeProfile.MinClearAfterEmptyReads, filled.ClearAfterEmptyReads);
         Assert.Equal(RealtimeProfile.MinDetectorPercent, filled.DetectorPercent);
         Assert.Equal(RealtimeProfile.MaxIgnoreSmallPercent, filled.IgnoreSmallPercent);
-        Assert.Equal(RealtimeProfile.MinStep, filled.MergeTendency);
+        Assert.Equal(RealtimeMergeLevels.Min, filled.MergeLevel);
         Assert.Equal(RealtimeProfile.MaxStep, filled.LineSpacing);
         Assert.Equal(RealtimeProfile.MaxStep, filled.ConfidenceLevel);
 
@@ -493,6 +520,7 @@ public class SettingsParsingTests
         Assert.Equal(1, resolved.ClearAfterEmptyReads);
         Assert.Equal(0.6, resolved.DetectorFraction);
         Assert.Equal(0.8, resolved.IgnoreSmallFraction, 6);
+        Assert.Equal(RealtimeMerge.Lines, resolved.Merge);
     }
 
     /// <summary>

@@ -321,7 +321,7 @@ public partial class RealtimeProfilesCard : UserControl
         foreach (var row in _rows.Values)
         {
             var param = row.Param;
-            bool needsAuto = RealtimeProfileEditing.NeedsAutoLayout(param) && filled.Layout != RealtimePresets.LayoutAuto;
+            bool needsAuto = !RealtimeProfileEditing.InEffect(filled, param);
             bool enabled = !preset && !needsAuto;
             bool modified = !preset && RealtimeProfileEditing.IsSet(stored, param);
 
@@ -353,14 +353,6 @@ public partial class RealtimeProfilesCard : UserControl
     {
         switch (row.Param)
         {
-            case ProfileParam.Layout:
-                CheckSegment(row, filled.Layout switch
-                {
-                    RealtimePresets.LayoutPassage => 1,
-                    RealtimePresets.LayoutItems => 2,
-                    _ => 0,
-                });
-                break;
             case ProfileParam.ReadTiming:
                 CheckSegment(row, filled.ReadTiming switch
                 {
@@ -407,9 +399,8 @@ public partial class RealtimeProfilesCard : UserControl
     /// <summary>How a value reads on its row and on the 還原 tooltip.</summary>
     private static string Display(RealtimeProfile filled, ProfileParam param) => param switch
     {
-        ProfileParam.Layout => LayoutName(filled.Layout),
+        ProfileParam.MergeLevel => LevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
         ProfileParam.MergeUnpunctuated => LocalizationService.Get(filled.MergeUnpunctuated == true ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff"),
-        ProfileParam.MergeTendency => Grade(filled.MergeTendency ?? RealtimeProfile.MiddleStep),
         ProfileParam.LineSpacing => Spacing(filled.LineSpacing ?? RealtimeProfile.MiddleStep),
         ProfileParam.ReadTiming => filled.ReadTiming switch
         {
@@ -428,11 +419,12 @@ public partial class RealtimeProfilesCard : UserControl
         _ => "",
     };
 
-    private static string LayoutName(string? layout) => layout switch
+    // Stand-in until the page is rebuilt around 合併程度: the ends read as the step beside them.
+    private static string LevelName(int level) => level switch
     {
-        RealtimePresets.LayoutPassage => LocalizationService.Get("S.Realtime.ProfileLayoutPassage"),
-        RealtimePresets.LayoutItems => LocalizationService.Get("S.Realtime.ProfileLayoutItems"),
-        _ => LocalizationService.Get("S.Realtime.ProfileLayoutAuto"),
+        <= RealtimeMergeLevels.Items => LocalizationService.Get("S.Realtime.ProfileLayoutItems"),
+        >= RealtimeMergeLevels.Passage => LocalizationService.Get("S.Realtime.ProfileLayoutPassage"),
+        _ => Grade(RealtimeMergeLevels.Tendency(level)),
     };
 
     private static string SecondsText(double seconds) =>
@@ -461,7 +453,7 @@ public partial class RealtimeProfilesCard : UserControl
     /// <summary>What a slider's position reads as while it is being moved, before it is written.</summary>
     private static string SliderReading(ProfileParam param, double value) => param switch
     {
-        ProfileParam.MergeTendency => Grade((int)value),
+        ProfileParam.MergeLevel => LevelName((int)Math.Round(value)),
         ProfileParam.LineSpacing => Spacing((int)value),
         ProfileParam.SettleSeconds => SecondsText(Math.Round(value * PollSeconds, 2)),
         ProfileParam.ClearAfterEmptyReads => LocalizationService.Format("S.Realtime.ProfileTimes", (int)value),
@@ -476,13 +468,12 @@ public partial class RealtimeProfilesCard : UserControl
 
     private void BuildRows()
     {
-        Add(LayoutGroup, BuildRow(ProfileParam.Layout, "S.Realtime.ProfileLayout", "S.Realtime.ProfileLayoutHint"));
+        Add(LayoutGroup, BuildRow(ProfileParam.MergeLevel, "S.Realtime.ProfileLayout", "S.Realtime.ProfileLayoutHint"));
         Add(LayoutGroup, BuildRow(ProfileParam.MergeUnpunctuated, "S.Realtime.ProfileLettering", "S.Realtime.ProfileLetteringHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ReadTiming, "S.Realtime.ProfileReadTiming", "S.Realtime.ProfileReadTimingHint"));
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
-        Add(AdvancedLayoutGroup, BuildRow(ProfileParam.MergeTendency, "S.Realtime.ProfileMergeTendency", "S.Realtime.ProfileMergeTendencyHint"));
         Add(AdvancedLayoutGroup, BuildRow(ProfileParam.LineSpacing, "S.Realtime.ProfileLineSpacing", "S.Realtime.ProfileLineSpacingHint"));
         Add(AdvancedRecognitionGroup, BuildRow(ProfileParam.IgnoreSmallPercent, "S.Realtime.ProfileIgnoreSmall", "S.Realtime.ProfileIgnoreSmallHint"));
         // 辨識信心下限 is not offered: measured, its steps made no difference worth a control.
@@ -563,14 +554,8 @@ public partial class RealtimeProfilesCard : UserControl
 
         switch (param)
         {
-            case ProfileParam.Layout:
-                BuildSegments(row, ["S.Realtime.ProfileLayoutAuto", "S.Realtime.ProfileLayoutPassage", "S.Realtime.ProfileLayoutItems"], null,
-                    index => Commit(profile => profile.Layout = index switch
-                    {
-                        1 => RealtimePresets.LayoutPassage,
-                        2 => RealtimePresets.LayoutItems,
-                        _ => RealtimePresets.LayoutAuto,
-                    }));
+            case ProfileParam.MergeLevel:
+                BuildSlider(row, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1, nameKey);
                 break;
             case ProfileParam.ReadTiming:
                 BuildSegments(row, ["S.Realtime.ProfileAuto", "S.Realtime.ProfileReadTimingConfirm", "S.Realtime.ProfileReadTimingSettle"],
@@ -600,10 +585,6 @@ public partial class RealtimeProfilesCard : UserControl
                 row.Fades.Add(toggle);
                 break;
             }
-            case ProfileParam.MergeTendency:
-                BuildSlider(row, RealtimeProfile.MinStep, RealtimeProfile.MaxStep, 1, nameKey,
-                    "S.Realtime.ProfileMergeTendencyLow", "S.Realtime.ProfileMergeTendencyHigh");
-                break;
             case ProfileParam.LineSpacing:
                 BuildSlider(row, RealtimeProfile.MinStep, RealtimeProfile.MaxStep, 1, nameKey);
                 break;
@@ -689,7 +670,7 @@ public partial class RealtimeProfilesCard : UserControl
         var tray = new Border { Child = grid, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(12, 0, 2, 0) };
         tray.SetResourceReference(StyleProperty, "SegmentedTray");
         tray.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty,
-            row.Param == ProfileParam.Layout ? "S.Realtime.ProfileLayout" : "S.Realtime.ProfileReadTiming");
+            "S.Realtime.ProfileReadTiming");
         // Its own scope for the three halves: shared with the other tray or across the rows, the
         // sizes fed back into the rows' shared columns and the page's layout never settled.
         Grid.SetIsSharedSizeScope(tray, true);
@@ -840,7 +821,7 @@ public partial class RealtimeProfilesCard : UserControl
         bool automatic = position < 0;
         switch (param)
         {
-            case ProfileParam.MergeTendency: profile.MergeTendency = whole; break;
+            case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
             case ProfileParam.LineSpacing: profile.LineSpacing = whole; break;
             case ProfileParam.ClearAfterEmptyReads: profile.ClearAfterEmptyReads = whole; break;
             case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
@@ -1107,7 +1088,7 @@ public partial class RealtimeProfilesCard : UserControl
     /// </summary>
     private double? RowInset()
     {
-        var top = _rows[ProfileParam.Layout].Top;
+        var top = _rows[ProfileParam.MergeLevel].Top;
         if (top.ActualWidth <= 0 || Detail.ActualWidth <= 0 || !top.IsDescendantOf(Detail)) return null;
         return 2 * top.TranslatePoint(new System.Windows.Point(0, 0), Detail).X;
     }
@@ -1118,7 +1099,7 @@ public partial class RealtimeProfilesCard : UserControl
     /// </summary>
     private double ControlsWidth()
     {
-        var widest = new double[_rows[ProfileParam.Layout].Top.ColumnDefinitions.Count];
+        var widest = new double[_rows[ProfileParam.MergeLevel].Top.ColumnDefinitions.Count];
         foreach (var row in _rows.Values)
             foreach (UIElement child in row.Top.Children)
             {

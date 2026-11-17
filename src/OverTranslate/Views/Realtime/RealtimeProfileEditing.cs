@@ -8,14 +8,11 @@ namespace OverTranslate.Views.Realtime;
 /// <summary>One value of a 即時翻譯 mode, as the page shows it: one row each.</summary>
 internal enum ProfileParam
 {
-    /// <summary>分行處理.</summary>
-    Layout,
+    /// <summary>合併程度.</summary>
+    MergeLevel,
 
     /// <summary>沒有標點也合併.</summary>
     MergeUnpunctuated,
-
-    /// <summary>合併傾向 (進階).</summary>
-    MergeTendency,
 
     /// <summary>行距容許 (進階).</summary>
     LineSpacing,
@@ -72,10 +69,13 @@ internal static class RealtimeProfileEditing
     /// one written into the file by hand.
     /// </remarks>
     public static readonly ProfileParam[] Advanced =
-        [ProfileParam.MergeTendency, ProfileParam.LineSpacing, ProfileParam.IgnoreSmallPercent];
+        [ProfileParam.LineSpacing, ProfileParam.IgnoreSmallPercent];
 
     /// <summary>Every value, in the order the page lists them.</summary>
     public static readonly ProfileParam[] All = Enum.GetValues<ProfileParam>();
+
+    /// <summary>Every value the page offers: all but 辨識信心下限 — see <see cref="Advanced"/>.</summary>
+    public static readonly ProfileParam[] Shown = [.. All.Where(param => param != ProfileParam.ConfidenceLevel)];
 
     /// <summary>
     /// Whether a block whose text runs vertically ignores this value: everything but the three
@@ -85,18 +85,19 @@ internal static class RealtimeProfileEditing
         param is not (ProfileParam.ReadTiming or ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads);
 
     /// <summary>
-    /// Whether this value only matters while 分行處理 is 自動判斷: the two that steer the automatic
-    /// judgement itself.
+    /// Whether this value has any effect on the mode as it is filled: 沒有標點也合併 only while
+    /// 合併程度 is on one of 自動判斷's steps (<see cref="RealtimeMergeLevels.MergeUnpunctuatedApplies"/>);
+    /// everything else always.
     /// </summary>
-    public static bool NeedsAutoLayout(ProfileParam param) =>
-        param is ProfileParam.MergeUnpunctuated or ProfileParam.MergeTendency;
+    public static bool InEffect(RealtimeProfile filled, ProfileParam param) =>
+        param != ProfileParam.MergeUnpunctuated ||
+        RealtimeMergeLevels.MergeUnpunctuatedApplies(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle);
 
     /// <summary>Whether the stored mode sets this value of its own rather than following its preset.</summary>
     public static bool IsSet(RealtimeProfile stored, ProfileParam param) => param switch
     {
-        ProfileParam.Layout => stored.Layout is not null,
+        ProfileParam.MergeLevel => stored.MergeLevel is not null,
         ProfileParam.MergeUnpunctuated => stored.MergeUnpunctuated is not null,
-        ProfileParam.MergeTendency => stored.MergeTendency is not null,
         ProfileParam.LineSpacing => stored.LineSpacing is not null,
         ProfileParam.ReadTiming => stored.ReadTiming is not null,
         ProfileParam.SettleSeconds => stored.SettleSeconds is not null,
@@ -112,9 +113,8 @@ internal static class RealtimeProfileEditing
     {
         switch (param)
         {
-            case ProfileParam.Layout: stored.Layout = null; break;
+            case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
             case ProfileParam.MergeUnpunctuated: stored.MergeUnpunctuated = null; break;
-            case ProfileParam.MergeTendency: stored.MergeTendency = null; break;
             case ProfileParam.LineSpacing: stored.LineSpacing = null; break;
             case ProfileParam.ReadTiming: stored.ReadTiming = null; break;
             case ProfileParam.SettleSeconds: stored.SettleSeconds = null; break;
@@ -160,14 +160,24 @@ internal static class RealtimeProfileEditing
     }
 
     /// <summary>
+    /// How many of the values the page offers (<see cref="Shown"/>) the mode sets differently from
+    /// its preset — the N of 以「範本」為範本，已修改 N 項. Zero for a preset.
+    /// </summary>
+    /// <remarks>
+    /// A value with no effect at the mode's 合併程度 still counts: it is the mode's own, marked
+    /// 已修改 on its row, and takes effect again as soon as 合併程度 comes back to where it acts.
+    /// </remarks>
+    public static int ModifiedCount(RealtimeProfile stored) =>
+        RealtimePresets.IsPreset(stored.Id) ? 0 : ModifiedCount(stored, Shown);
+
+    /// <summary>
     /// One value of a filled mode in a form two of them can be compared by: strings, a bool, whole
     /// numbers, and seconds rounded to the hundredth the page shows them at.
     /// </summary>
     public static object? Value(RealtimeProfile filled, ProfileParam param) => param switch
     {
-        ProfileParam.Layout => filled.Layout,
+        ProfileParam.MergeLevel => filled.MergeLevel,
         ProfileParam.MergeUnpunctuated => filled.MergeUnpunctuated,
-        ProfileParam.MergeTendency => filled.MergeTendency,
         ProfileParam.LineSpacing => filled.LineSpacing,
         ProfileParam.ReadTiming => filled.ReadTiming,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds
@@ -300,30 +310,29 @@ internal static class RealtimeProfileEditing
     // ── What 自動 stands for ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Where 等文字停下's slider rests while 自動 is ticked: what the mode waits with when the block
-    /// reads the way its 分行處理 most likely makes it — see <see cref="ResolvedProfile.Dialogue"/>.
-    /// 自動判斷 decides per reading, and is shown at the settled reading's wait.
+    /// Where 等文字停下's slider rests while 自動 is ticked: what the mode waits with — see
+    /// <see cref="RealtimeActualValues.SettleSeconds"/>. 依各組判斷 is shown at the settled
+    /// reading's wait.
     /// </summary>
     public static double AutomaticSettleSeconds(RealtimeProfile filled)
     {
-        bool dialogue = filled.ReadTiming switch
-        {
-            RealtimePresets.TimingConfirm => true,
-            RealtimePresets.TimingSettle => false,
-            _ => filled.Layout == RealtimePresets.LayoutPassage,
-        };
-        int polls = dialogue ? 0 : RealtimeRegionState.MaxTextUnsettledPolls;
-        return Math.Round(polls * RealtimeRegionState.PollInterval.TotalSeconds, 2);
+        var automatic = filled.Clone();
+        automatic.SettleSeconds = RealtimePresets.Automatic;
+        return RealtimeActualValues.Of(automatic).SettleSeconds
+            ?? Math.Round(RealtimeRegionState.MaxTextUnsettledPolls * RealtimeRegionState.PollInterval.TotalSeconds, 2);
     }
 
     /// <summary>
-    /// Where 辨識解析度's slider rests while 自動 is ticked: the strip size for 整段 and 自動判斷,
-    /// the panel size for 逐項 — see <see cref="RealtimeDetectorSize"/>.
+    /// Where 辨識解析度's slider rests while 自動 is ticked: the size the mode reads at — see
+    /// <see cref="RealtimeActualValues.DetectorPercent"/>. 依各組判斷 is shown at the strip size, the
+    /// one a block starts on.
     /// </summary>
-    public static int AutomaticDetectorPercent(RealtimeProfile filled) =>
-        (int)Math.Round(100 * (filled.Layout == RealtimePresets.LayoutItems
-            ? RealtimeDetectorSize.PanelFraction
-            : RealtimeDetectorSize.StripFraction));
+    public static int AutomaticDetectorPercent(RealtimeProfile filled)
+    {
+        var automatic = filled.Clone();
+        automatic.DetectorPercent = RealtimePresets.Automatic;
+        return RealtimeActualValues.Of(automatic).DetectorPercent ?? (int)Math.Round(100 * RealtimeDetectorSize.StripFraction);
+    }
 
     /// <summary>Seconds as the page writes them: invariant, up to two decimals, no trailing zeros.</summary>
     public static string Seconds(double seconds) =>

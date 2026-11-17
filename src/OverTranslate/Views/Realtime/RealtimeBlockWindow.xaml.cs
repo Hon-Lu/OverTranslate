@@ -136,7 +136,7 @@ public partial class RealtimeBlockWindow : Window
     // How far past their boxes the lines of the rebuild in progress run — see OverhangOf. Null
     // outside a rebuild.
     private Lazy<Dictionary<TranslatedBlock, System.Drawing.Rectangle>>? _overhangs;
-    // 分行處理 of the block's mode: Auto draws each group as it was read, the other two every group
+    // How the block's mode draws (ResolvedProfile.Layout): Auto draws each group as it was read, the other two every group
     // their way. Changed under a running session by SetLayout.
     private RealtimeBlockMode _mode;
 

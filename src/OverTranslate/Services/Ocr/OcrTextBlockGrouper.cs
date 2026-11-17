@@ -63,18 +63,7 @@ internal static class OcrTextBlockGrouper
             return blocks.ToList();
         }
 
-        // The readings printed above the writing, out before anything measures a leading against
-        // them: one sits in the gap between two lines of a paragraph, which is where
-        // NothingLiesBetween looks. After the same-line merge, so that the several readings of one
-        // line the detector framed separately are judged as the one box it hands on.
-        var sameLineMerged = HorizontalRubyLines.Drop(
-            MergeSameLineFragments(blocks, decisions, trace, profile));
-        var sorted = sameLineMerged
-            .OrderBy(block => block.LayoutBounds.Y)
-            .ThenBy(block => block.LayoutBounds.X)
-            .ToList();
-
-        trace?.OrderLines(sorted);
+        var sorted = LinesInReadingOrder(blocks, profile, decisions, trace);
 
         var groups = new List<List<OcrTextBlock>>();
         foreach (var block in sorted)
@@ -89,6 +78,82 @@ internal static class OcrTextBlockGrouper
         trace?.RegisterGroups(groups);
 
         return groups.Select(BuildGroup).ToList();
+    }
+
+    /// <summary>
+    /// 不合併: the lines <see cref="Group(IReadOnlyList{OcrTextBlock}, GroupingProfile, List{NextLineDecision}, GroupingTrace)"/>
+    /// would start from, each one a group of its own — top to bottom, left to right.
+    /// </summary>
+    /// <remarks>
+    /// Pieces of one line are still joined, by the same rules: a sentence the detector framed in two
+    /// is one line, and labels side by side on a row ("HP 100", "MP 50") stay apart exactly as they
+    /// do in 逐項. Only the question of whether a line continues the one above it is not asked.
+    /// </remarks>
+    /// <inheritdoc cref="Group(IReadOnlyList{OcrTextBlock}, GroupingProfile, List{NextLineDecision}, GroupingTrace)"/>
+    internal static List<OcrTextBlock> GroupLines(
+        IReadOnlyList<OcrTextBlock> blocks,
+        GroupingProfile profile,
+        List<NextLineDecision>? decisions = null,
+        GroupingTrace? trace = null)
+    {
+        AssertLayoutGeometryFilled(blocks);
+        trace?.RegisterBlocks(blocks);
+        var lines = blocks.Count <= 1 ? Alone(blocks, trace) : LinesInReadingOrder(blocks, profile, decisions, trace);
+        trace?.RegisterGroups(lines.Select(line => (IReadOnlyList<OcrTextBlock>)[line]).ToList());
+        return lines;
+    }
+
+    /// <summary>
+    /// 整個區塊: every line one group, in reading order — top to bottom, left to right — with the
+    /// pieces of each line joined as <see cref="GroupLines"/> joins them.
+    /// </summary>
+    /// <remarks>
+    /// Asks nothing about how the lines relate. For a block drawn around one balloon or one
+    /// dialogue box that the other steps still part, at the price of joining whatever else was
+    /// drawn into it — a name plate, a button.
+    /// </remarks>
+    /// <inheritdoc cref="Group(IReadOnlyList{OcrTextBlock}, GroupingProfile, List{NextLineDecision}, GroupingTrace)"/>
+    internal static List<OcrTextBlock> GroupWhole(
+        IReadOnlyList<OcrTextBlock> blocks,
+        GroupingProfile profile,
+        List<NextLineDecision>? decisions = null,
+        GroupingTrace? trace = null)
+    {
+        AssertLayoutGeometryFilled(blocks);
+        trace?.RegisterBlocks(blocks);
+        var lines = blocks.Count <= 1 ? Alone(blocks, trace) : LinesInReadingOrder(blocks, profile, decisions, trace);
+        if (lines.Count == 0) return lines;
+        trace?.RegisterGroups([lines]);
+        return [BuildGroup(lines)];
+    }
+
+    // A block of one line or none: nothing to join, and the line as the detector framed it.
+    private static List<OcrTextBlock> Alone(IReadOnlyList<OcrTextBlock> blocks, GroupingTrace? trace)
+    {
+        foreach (var block in blocks)
+            trace?.RegisterLine(block, [block]);
+        trace?.OrderLines(blocks);
+        return blocks.ToList();
+    }
+
+    // The block's lines, pieces on one row joined, top to bottom and then left to right.
+    private static List<OcrTextBlock> LinesInReadingOrder(
+        IReadOnlyList<OcrTextBlock> blocks, GroupingProfile profile,
+        List<NextLineDecision>? decisions, GroupingTrace? trace)
+    {
+        // The readings printed above the writing, out before anything measures a leading against
+        // them: one sits in the gap between two lines of a paragraph, which is where
+        // NothingLiesBetween looks. After the same-line merge, so that the several readings of one
+        // line the detector framed separately are judged as the one box it hands on.
+        var sameLineMerged = HorizontalRubyLines.Drop(
+            MergeSameLineFragments(blocks, decisions, trace, profile));
+        var sorted = sameLineMerged
+            .OrderBy(block => block.LayoutBounds.Y)
+            .ThenBy(block => block.LayoutBounds.X)
+            .ToList();
+
+        trace?.OrderLines(sorted);
+        return sorted;
     }
 
     /// <summary>

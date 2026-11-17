@@ -471,16 +471,11 @@
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">「行の扱い」が「自動判断」のときのみ有効</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">行の扱い</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutAuto">自動判断</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">まとめて</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">項目ごと</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">ひとつの会話が分かれてしまうときは「まとめて」、メニューやリストがひとつにまとまってしまうときは「項目ごと」を選びます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">句読点がなくても結合</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">マンガのセリフなど句読点のない複数行が分かれてしまうときはオン、関係のない短い行がまとまってしまうときはオフにします。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendency">結合の傾向</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHint">隣り合う文字がよく分かれてしまうときは上げ、関係のない文字がよくまとまってしまうときは下げます。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyLow">項目ごと</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHigh">まとめて</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">行間の許容</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">行間の広い会話が二つに分かれてしまうときは広げ、上下に並ぶ別の段落がまとまってしまうときは狭めます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTiming">読み取り方</sys:String>

@@ -464,16 +464,11 @@
     <sys:String x:Key="S.Realtime.ProfileAuto">Авто</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">Действует, только когда «Разбивка строк» — «Автоопределение»</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">Разбивка строк</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutAuto">Автоопределение</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">Целиком</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">По пунктам</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">Выберите «Целиком», если реплика разбивается на части; «По пунктам», если меню или список сливаются в один текст.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">Объединять без знаков препинания</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">Включите, если строки без знаков препинания, например реплики в манге, разделяются; выключите, если объединяются несвязанные короткие строки.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendency">Склонность к объединению</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHint">Повысьте, если соседний текст часто разделяется; понизьте, если несвязанный текст часто объединяется.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyLow">По пунктам</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHigh">Целиком</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">Допуск межстрочного интервала</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">Расширьте, если реплика с широким интервалом делится надвое; сузьте, если сливаются соседние абзацы.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTiming">Способ чтения</sys:String>

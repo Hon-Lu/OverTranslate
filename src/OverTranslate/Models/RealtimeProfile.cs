@@ -40,16 +40,15 @@ public sealed class RealtimeProfile
     /// <remarks>Always a preset: a custom mode is never made from another custom one.</remarks>
     public string BasedOn { get; set; } = RealtimePresets.StandardId;
 
-    /// <summary>分行處理: <c>auto</c> (自動判斷), <c>passage</c> (整段) or <c>items</c> (逐項).</summary>
+    /// <summary>合併程度, 0–8 — see <see cref="RealtimeMergeLevels"/>.</summary>
     /// <remarks>Horizontal text only.</remarks>
-    public string? Layout { get; set; }
+    public int? MergeLevel { get; set; }
 
-    /// <summary>沒有標點也合併. Only read while <see cref="Layout"/> is <c>auto</c>.</summary>
+    /// <summary>
+    /// 沒有標點也合併. Only read while <see cref="MergeLevel"/> is one of 自動判斷's — see
+    /// <see cref="RealtimeMergeLevels.IsAutomatic"/>.
+    /// </summary>
     public bool? MergeUnpunctuated { get; set; }
-
-    /// <summary>合併傾向, 1–5; 3 is what the presets use.</summary>
-    /// <remarks>Horizontal text, <see cref="Layout"/> <c>auto</c> only.</remarks>
-    public int? MergeTendency { get; set; }
 
     /// <summary>行距容許, 1–5; 3 is what the presets use.</summary>
     /// <remarks>Horizontal text only.</remarks>
@@ -109,11 +108,8 @@ public sealed class RealtimeProfile
             Id = Id,
             Name = Name ?? "",
             BasedOn = template.Id,
-            Layout = Layout is RealtimePresets.LayoutAuto or RealtimePresets.LayoutPassage or RealtimePresets.LayoutItems
-                ? Layout
-                : template.Layout,
+            MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
             MergeUnpunctuated = MergeUnpunctuated ?? template.MergeUnpunctuated,
-            MergeTendency = Step(MergeTendency, template.MergeTendency!.Value),
             LineSpacing = Step(LineSpacing, template.LineSpacing!.Value),
             ReadTiming = ReadTiming is RealtimePresets.TimingAuto or RealtimePresets.TimingConfirm or RealtimePresets.TimingSettle
                 ? ReadTiming
@@ -135,7 +131,7 @@ public sealed class RealtimeProfile
 
     // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>The steps of each 1–5 scale (合併傾向, 行距容許, 辨識信心下限).</summary>
+    /// <summary>The steps of each 1–5 scale (行距容許, 辨識信心下限).</summary>
     public const int MinStep = 1;
 
     /// <inheritdoc cref="MinStep"/>
@@ -183,8 +179,8 @@ public sealed class RealtimeProfile
 ///
 /// <para>Every preset holds 自動 for the timing and the detector size and the middle step for each
 /// scale, which is exactly what 即時翻譯 did before modes existed; the presets differ only in
-/// 分行處理. Pinned by tests, because "the presets read as before" is a promise the whole feature
-/// was built on.</para>
+/// 合併程度, and sit on the three places of it the layouts they replace stood for. Pinned by tests,
+/// because "the presets read as before" is a promise the whole feature was built on.</para>
 /// </remarks>
 public static class RealtimePresets
 {
@@ -196,15 +192,6 @@ public static class RealtimePresets
 
     /// <summary>遊戲介面・聊天室: every group read as separate items.</summary>
     public const string InterfaceId = "interface";
-
-    /// <summary>The choice strings — see <see cref="RealtimeProfile.Layout"/>.</summary>
-    public const string LayoutAuto = "auto";
-
-    /// <inheritdoc cref="LayoutAuto"/>
-    public const string LayoutPassage = "passage";
-
-    /// <inheritdoc cref="LayoutAuto"/>
-    public const string LayoutItems = "items";
 
     /// <summary>The choice strings — see <see cref="RealtimeProfile.ReadTiming"/>.</summary>
     public const string TimingAuto = "auto";
@@ -233,14 +220,13 @@ public static class RealtimePresets
         {
             Id = id,
             BasedOn = id,
-            Layout = id switch
+            MergeLevel = id switch
             {
-                SubtitleId => LayoutPassage,
-                InterfaceId => LayoutItems,
-                _ => LayoutAuto,
+                SubtitleId => RealtimeMergeLevels.Passage,
+                InterfaceId => RealtimeMergeLevels.Items,
+                _ => RealtimeMergeLevels.AutomaticMiddle,
             },
             MergeUnpunctuated = true,
-            MergeTendency = 3,
             LineSpacing = 3,
             ReadTiming = TimingAuto,
             SettleSeconds = Automatic,
@@ -250,4 +236,65 @@ public static class RealtimePresets
             ConfidenceLevel = 3,
         };
     }
+}
+
+/// <summary>
+/// 合併程度: one scale from reading every line on its own to reading the whole block as one, which
+/// is what the old 分行處理 and 合併傾向 became.
+/// </summary>
+/// <remarks>
+/// <para>Each step names how stacked lines are joined. Pieces side by side on one line are joined by
+/// the same rules on every step but the last, 不合併 included: a sentence the detector framed in two
+/// pieces is still one line.</para>
+///
+/// <list type="table">
+/// <item><term>0 不合併</term><description>Every line on its own; drawn as items.</description></item>
+/// <item><term>1 逐項</term><description>The panel grouper — 遊戲介面・聊天室.</description></item>
+/// <item><term>2–6 自動判斷</term><description>Group by group, 1–5 of what was 合併傾向; 4 is 標準.</description></item>
+/// <item><term>7 整段</term><description>The dialogue grouper — 字幕・漫畫.</description></item>
+/// <item><term>8 整個區塊</term><description>Everything in the block as one group, in reading order; drawn as a passage.</description></item>
+/// </list>
+///
+/// <para>Steps 1–7 are exactly what the layouts and the tendency they replace read as. MEASURED
+/// (OcrHarness --auto-probe slider, 591 captures): no step parts what the one before it joined,
+/// but for a few frames between 自動判斷 5 and 整段 — the two groupers break a paragraph at
+/// different places — so the scale only mostly joins more the further right it goes.</para>
+/// </remarks>
+public static class RealtimeMergeLevels
+{
+    /// <summary>不合併: no line joined to the one under it.</summary>
+    public const int Min = 0;
+
+    /// <summary>逐項.</summary>
+    public const int Items = 1;
+
+    /// <summary>The first of 自動判斷's steps, which was 合併傾向 1.</summary>
+    public const int AutomaticLowest = 2;
+
+    /// <summary>自動判斷 on the measured rules themselves — 標準, and what 合併傾向 3 was.</summary>
+    public const int AutomaticMiddle = 4;
+
+    /// <summary>The last of 自動判斷's steps, which was 合併傾向 5.</summary>
+    public const int AutomaticHighest = 6;
+
+    /// <summary>整段.</summary>
+    public const int Passage = 7;
+
+    /// <summary>整個區塊: the whole block one group.</summary>
+    public const int Max = 8;
+
+    /// <summary>
+    /// Whether this step decides group by group — the only steps 沒有標點也合併 has any effect on.
+    /// </summary>
+    public static bool IsAutomatic(int level) => level is >= AutomaticLowest and <= AutomaticHighest;
+
+    /// <summary>Whether 沒有標點也合併 does anything at this step; the page greys it out where not.</summary>
+    public static bool MergeUnpunctuatedApplies(int level) => IsAutomatic(level);
+
+    /// <summary>
+    /// The step's place on the old 1–5 合併傾向 scale; the middle one off 自動判斷, where the
+    /// thresholds are not read.
+    /// </summary>
+    public static int Tendency(int level) =>
+        IsAutomatic(level) ? level - AutomaticLowest + RealtimeProfile.MinStep : RealtimeProfile.MiddleStep;
 }

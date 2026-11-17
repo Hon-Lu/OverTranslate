@@ -80,14 +80,14 @@ public class RealtimeProfileEditingTests
     public void AValueEqualToThePreset_IsStoredAsFollowingIt()
     {
         var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
-        mode.Layout = RealtimePresets.LayoutPassage;   // what 字幕・漫畫 holds
+        mode.MergeLevel = RealtimeMergeLevels.Passage;  // what 字幕・漫畫 holds
         mode.ClearAfterEmptyReads = 2;                 // what every preset holds
         mode.SettleSeconds = -5;                        // 自動, written oddly
         mode.DetectorPercent = 70;                      // really different
 
         var tidy = RealtimeProfileEditing.WithoutTemplateValues(mode);
 
-        Assert.Null(tidy.Layout);
+        Assert.Null(tidy.MergeLevel);
         Assert.Null(tidy.ClearAfterEmptyReads);
         Assert.Null(tidy.SettleSeconds);
         Assert.Equal(70, tidy.DetectorPercent);
@@ -98,11 +98,11 @@ public class RealtimeProfileEditingTests
     public void WithoutTemplateValues_LeavesTheStoredModeAlone()
     {
         var mode = Custom("a", "Mine");
-        mode.Layout = RealtimePresets.LayoutAuto;
+        mode.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
 
         RealtimeProfileEditing.WithoutTemplateValues(mode);
 
-        Assert.Equal(RealtimePresets.LayoutAuto, mode.Layout);
+        Assert.Equal(RealtimeMergeLevels.AutomaticMiddle, mode.MergeLevel);
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public class RealtimeProfileEditingTests
     public void AdvancedCount_OnlyCountsTheAdvancedValues()
     {
         var mode = Custom("a", "Mine");
-        mode.Layout = RealtimePresets.LayoutItems;
-        mode.MergeTendency = 4;
+        mode.MergeLevel = RealtimeMergeLevels.Items;
+        mode.LineSpacing = 4;
         mode.IgnoreSmallPercent = 40;
 
         Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode, RealtimeProfileEditing.Advanced));
@@ -134,13 +134,49 @@ public class RealtimeProfileEditingTests
     public void ConfidenceIsNotOnThePage()
     {
         Assert.DoesNotContain(ProfileParam.ConfidenceLevel, RealtimeProfileEditing.Advanced);
+        Assert.DoesNotContain(ProfileParam.ConfidenceLevel, RealtimeProfileEditing.Shown);
+        Assert.Equal(RealtimeProfileEditing.All.Length - 1, RealtimeProfileEditing.Shown.Length);
+    }
+
+    [Fact]
+    public void TheModifiedCount_CountsTheValuesThePageShows_ThatReallyDiffer()
+    {
+        var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
+        mode.MergeLevel = RealtimeMergeLevels.Passage;      // the preset's own: not a change
+        mode.MergeUnpunctuated = false;                     // no effect at 整段, but the mode's own
+        mode.ReadTiming = RealtimePresets.TimingSettle;
+        mode.ConfidenceLevel = 5;                           // not on the page
+
+        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode));
+        Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(Custom("b", "Untouched")));
+        Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(RealtimePresets.Create(RealtimePresets.InterfaceId)));
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, true)]
+    [InlineData(4, true)]
+    [InlineData(6, true)]
+    [InlineData(7, false)]
+    [InlineData(8, false)]
+    public void UnpunctuatedMerging_IsOnlyInEffectOnTheAutomaticSteps(int level, bool inEffect)
+    {
+        var mode = Custom("a", "A");
+        mode.MergeLevel = level;
+        var filled = mode.Filled();
+
+        Assert.Equal(inEffect, RealtimeProfileEditing.InEffect(filled, ProfileParam.MergeUnpunctuated));
+        Assert.Equal(inEffect, RealtimeMergeLevels.MergeUnpunctuatedApplies(level));
+        Assert.All(RealtimeProfileEditing.All.Where(param => param != ProfileParam.MergeUnpunctuated),
+            param => Assert.True(RealtimeProfileEditing.InEffect(filled, param)));
     }
 
     [Fact]
     public void ResetAll_FollowsThePresetEverywhere_AndKeepsNameAndTemplate()
     {
         var mode = Custom("a", "Mine", RealtimePresets.InterfaceId);
-        mode.Layout = RealtimePresets.LayoutAuto;
+        mode.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
         mode.SettleSeconds = 1.2;
         mode.ConfidenceLevel = 5;
 
@@ -155,12 +191,12 @@ public class RealtimeProfileEditingTests
     public void ClearPutsBackOneValueOnly()
     {
         var mode = Custom("a", "Mine");
-        mode.Layout = RealtimePresets.LayoutItems;
+        mode.MergeLevel = RealtimeMergeLevels.Items;
         mode.ClearAfterEmptyReads = 4;
 
-        RealtimeProfileEditing.Clear(mode, ProfileParam.Layout);
+        RealtimeProfileEditing.Clear(mode, ProfileParam.MergeLevel);
 
-        Assert.Null(mode.Layout);
+        Assert.Null(mode.MergeLevel);
         Assert.Equal(4, mode.ClearAfterEmptyReads);
     }
 
@@ -231,27 +267,31 @@ public class RealtimeProfileEditingTests
     // ── What 自動 stands for ──
 
     [Theory]
-    [InlineData(RealtimePresets.LayoutAuto, RealtimePresets.TimingAuto, 0.15)]
-    [InlineData(RealtimePresets.LayoutPassage, RealtimePresets.TimingAuto, 0.0)]
-    [InlineData(RealtimePresets.LayoutItems, RealtimePresets.TimingAuto, 0.15)]
-    [InlineData(RealtimePresets.LayoutItems, RealtimePresets.TimingConfirm, 0.0)]
-    [InlineData(RealtimePresets.LayoutPassage, RealtimePresets.TimingSettle, 0.15)]
-    public void AutomaticSettle_RestsOnTheResolvedWait(string layout, string timing, double expected)
+    [InlineData(RealtimeMergeLevels.AutomaticMiddle, RealtimePresets.TimingAuto, 0.15)]
+    [InlineData(RealtimeMergeLevels.Passage, RealtimePresets.TimingAuto, 0.0)]
+    [InlineData(RealtimeMergeLevels.Max, RealtimePresets.TimingAuto, 0.0)]
+    [InlineData(RealtimeMergeLevels.Items, RealtimePresets.TimingAuto, 0.15)]
+    [InlineData(RealtimeMergeLevels.Min, RealtimePresets.TimingAuto, 0.15)]
+    [InlineData(RealtimeMergeLevels.Items, RealtimePresets.TimingConfirm, 0.0)]
+    [InlineData(RealtimeMergeLevels.Passage, RealtimePresets.TimingSettle, 0.15)]
+    public void AutomaticSettle_RestsOnTheResolvedWait(int level, string timing, double expected)
     {
         var mode = Custom("a", "A");
-        mode.Layout = layout;
+        mode.MergeLevel = level;
         mode.ReadTiming = timing;
         Assert.Equal(expected, RealtimeProfileEditing.AutomaticSettleSeconds(mode.Filled()));
     }
 
     [Theory]
-    [InlineData(RealtimePresets.LayoutAuto, 85)]
-    [InlineData(RealtimePresets.LayoutPassage, 85)]
-    [InlineData(RealtimePresets.LayoutItems, 68)]
-    public void AutomaticDetector_RestsOnTheMeasuredSize(string layout, int expected)
+    [InlineData(RealtimeMergeLevels.AutomaticMiddle, 85)]
+    [InlineData(RealtimeMergeLevels.Passage, 85)]
+    [InlineData(RealtimeMergeLevels.Max, 85)]
+    [InlineData(RealtimeMergeLevels.Items, 68)]
+    [InlineData(RealtimeMergeLevels.Min, 68)]
+    public void AutomaticDetector_RestsOnTheMeasuredSize(int level, int expected)
     {
         var mode = Custom("a", "A");
-        mode.Layout = layout;
+        mode.MergeLevel = level;
         Assert.Equal(expected, RealtimeProfileEditing.AutomaticDetectorPercent(mode.Filled()));
     }
 

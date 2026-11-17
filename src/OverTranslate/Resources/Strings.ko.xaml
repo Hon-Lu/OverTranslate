@@ -471,16 +471,11 @@
     <sys:String x:Key="S.Realtime.ProfileAuto">자동</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">'줄 처리'가 '자동 판단'일 때만 적용됩니다</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">줄 처리</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutAuto">자동 판단</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">한 덩어리</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">항목별</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">한 대사가 여러 덩어리로 나뉘면 '한 덩어리', 메뉴나 목록이 한 덩어리로 합쳐지면 '항목별'을 선택하세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">문장 부호가 없어도 합치기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">만화 대사처럼 문장 부호가 없는 여러 줄이 나뉘면 켜고, 관련 없는 짧은 줄이 합쳐지면 끄세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendency">합치는 정도</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHint">인접한 글이 자주 나뉘면 높이고, 관련 없는 글이 자주 합쳐지면 낮추세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyLow">항목별</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHigh">한 덩어리</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">줄 간격 허용</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">줄 간격이 넓은 대사가 둘로 나뉘면 넓히고, 위아래로 붙은 다른 단락이 합쳐지면 좁히세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTiming">읽기 방식</sys:String>

@@ -467,16 +467,11 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">Auto</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">Only applies when Line handling is Automatic</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">Line handling</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutAuto">Automatic</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">Passage</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">Items</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">Choose Passage when one piece of dialogue is split into several; choose Items when a menu or list is merged into one.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">Merge without punctuation</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">Turn on when unpunctuated lines such as comic lettering are split apart; turn off when unrelated short lines are merged.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendency">Merge tendency</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHint">Raise when neighbouring text is often split apart; lower when unrelated text is often merged.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyLow">Items</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHigh">Passage</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">Line spacing tolerance</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">Widen when widely spaced dialogue is split in two; narrow when separate paragraphs above and below are merged.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTiming">Reading</sys:String>

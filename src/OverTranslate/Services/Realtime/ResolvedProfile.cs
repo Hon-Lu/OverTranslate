@@ -19,6 +19,28 @@ internal enum RealtimeReadTiming
 }
 
 /// <summary>
+/// How a block's lines are put into groups — 合併程度 (<see cref="RealtimeMergeLevels"/>) as the
+/// pipeline runs it, the five 自動判斷 steps being one grouping with different rules.
+/// </summary>
+internal enum RealtimeMerge
+{
+    /// <summary>不合併: the panel grouper's lines, none joined to another — see <see cref="OcrTextBlockGrouper.GroupLines"/>.</summary>
+    Lines,
+
+    /// <summary>逐項: the panel grouper.</summary>
+    Items,
+
+    /// <summary>自動判斷: <see cref="RealtimeAutoLayout"/>, group by group.</summary>
+    Auto,
+
+    /// <summary>整段: the dialogue grouper.</summary>
+    Passage,
+
+    /// <summary>整個區塊: every line one group — see <see cref="OcrTextBlockGrouper.GroupWhole"/>.</summary>
+    Whole,
+}
+
+/// <summary>
 /// The thresholds 自動 decides with (<see cref="RealtimeAutoLayout"/>), and the two groupers' row
 /// spacing, which 自動 and the explicit layouts share.
 /// </summary>
@@ -112,8 +134,23 @@ public sealed record ResolvedProfile
     /// <summary>The mode this was resolved from — a preset's id or a custom mode's.</summary>
     internal string Id { get; init; } = RealtimePresets.StandardId;
 
-    /// <summary>分行處理: Auto (自動判斷), Subtitle (整段) or Panel (逐項).</summary>
-    internal RealtimeBlockMode Layout { get; init; } = RealtimeBlockMode.Auto;
+    /// <summary>合併程度: how the lines are grouped. The 自動判斷 steps differ in <see cref="Auto"/>.</summary>
+    internal RealtimeMerge Merge { get; init; } = RealtimeMerge.Auto;
+
+    /// <summary>
+    /// How the block is drawn and, with 自動 timing and detector size, read: Auto (自動判斷), Subtitle
+    /// (整段 and 整個區塊) or Panel (逐項 and 不合併).
+    /// </summary>
+    /// <remarks>
+    /// The two ends of 合併程度 read as their neighbours: lines left apart are drawn as items, the
+    /// whole block as one passage, and each is read the way its neighbour is.
+    /// </remarks>
+    internal RealtimeBlockMode Layout => Merge switch
+    {
+        RealtimeMerge.Lines or RealtimeMerge.Items => RealtimeBlockMode.Panel,
+        RealtimeMerge.Passage or RealtimeMerge.Whole => RealtimeBlockMode.Subtitle,
+        _ => RealtimeBlockMode.Auto,
+    };
 
     /// <summary>讀取方式.</summary>
     internal RealtimeReadTiming Timing { get; init; } = RealtimeReadTiming.Auto;
@@ -200,15 +237,19 @@ public sealed record ResolvedProfile
     public static ResolvedProfile Resolve(RealtimeProfile stored)
     {
         var filled = stored.Filled();
+        int level = filled.MergeLevel!.Value;
         return new ResolvedProfile
         {
             Id = filled.Id,
-            Layout = LayoutOf(filled.Layout),
+            Merge = MergeOf(level),
             Timing = TimingOf(filled.ReadTiming),
             SettlePolls = SettlePollsOf(filled.SettleSeconds!.Value),
             ClearAfterEmptyReads = filled.ClearAfterEmptyReads!.Value,
             DetectorFraction = filled.DetectorPercent < 0 ? null : filled.DetectorPercent!.Value / 100.0,
-            Auto = RulesFor(filled.MergeTendency!.Value, filled.LineSpacing!.Value, filled.MergeUnpunctuated!.Value),
+            // Off 自動判斷 沒有標點也合併 is not read, and is held at the presets' value so that a
+            // mode differing from one in nothing that is read resolves equal to it.
+            Auto = RulesFor(RealtimeMergeLevels.Tendency(level), filled.LineSpacing!.Value,
+                !RealtimeMergeLevels.MergeUnpunctuatedApplies(level) || filled.MergeUnpunctuated!.Value),
             IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
             ConfidenceFloor = ConfidenceFloors[filled.ConfidenceLevel!.Value - RealtimeProfile.MinStep],
         };
@@ -232,20 +273,23 @@ public sealed record ResolvedProfile
     /// <summary>One line for the log: every value this block reads with, and nothing it read.</summary>
     internal string Describe() =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture,
-            $"profile={Id} layout={Layout} timing={Timing} settle={(SettlePolls is { } polls ? polls.ToString() : "auto")} " +
+            $"profile={Id} merge={Merge} timing={Timing} settle={(SettlePolls is { } polls ? polls.ToString() : "auto")} " +
             $"clearAfter={ClearAfterEmptyReads} detector={(DetectorFraction is { } fraction ? fraction.ToString("0.00") : "auto")} " +
             $"sparse={Auto.SparseZones} standsOut={Auto.StandsOut:0.###} lettering={Auto.LetteringZones}/{(Auto.Lettering ? "on" : "off")} " +
             $"leading={Auto.PassageLeading:0.###} stackGap={Auto.MaxStackGap:0.###} wrapAdvance={Auto.PanelGrouping.SolidLineAdvanceWhenWrapped:0.###} " +
             $"ignoreSmall={IgnoreSmallFraction:0.##} confidence={ConfidenceFloor:0.##}");
 
-    // Filled values only: RealtimeProfile.Filled has already put every string among these.
-    private static RealtimeBlockMode LayoutOf(string? value) => value switch
+    // Filled values only: RealtimeProfile.Filled has already held the level to its range.
+    private static RealtimeMerge MergeOf(int level) => level switch
     {
-        RealtimePresets.LayoutPassage => RealtimeBlockMode.Subtitle,
-        RealtimePresets.LayoutItems => RealtimeBlockMode.Panel,
-        _ => RealtimeBlockMode.Auto,
+        RealtimeMergeLevels.Min => RealtimeMerge.Lines,
+        RealtimeMergeLevels.Items => RealtimeMerge.Items,
+        RealtimeMergeLevels.Passage => RealtimeMerge.Passage,
+        RealtimeMergeLevels.Max => RealtimeMerge.Whole,
+        _ => RealtimeMerge.Auto,
     };
 
+    // Filled values only: RealtimeProfile.Filled has already put every string among these.
     private static RealtimeReadTiming TimingOf(string? value) => value switch
     {
         RealtimePresets.TimingConfirm => RealtimeReadTiming.ReadThenConfirm,
@@ -258,9 +302,10 @@ public sealed record ResolvedProfile
     private static int? SettlePollsOf(double seconds) =>
         seconds < 0 ? null : (int)Math.Round(seconds / RealtimeRegionState.PollInterval.TotalSeconds);
 
-    // 合併傾向 binds three of 自動's thresholds into one scale, and 行距容許 scales the space between
-    // rows in all three groupers by one factor. The middle step of both is the measured rules
-    // themselves — the instances, so a preset reads exactly as before.
+    // 自動判斷's five steps of 合併程度 (2–6, once 合併傾向 1–5 — the table's "step") bind three of
+    // 自動's thresholds into one scale, and 行距容許 scales the space between rows in all three
+    // groupers by one factor. The middle step of both is the measured rules themselves — the
+    // instances, so a preset reads exactly as before.
     //
     // MEASURED with OcrHarness --auto-probe replay --profile over the 自動 corpus (591 captures:
     // 270 of dialogue D, 179 of panels P, 142 of both M). Frames whose groups (not just how they are

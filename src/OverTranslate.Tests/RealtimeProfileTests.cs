@@ -138,7 +138,6 @@ public class RealtimeProfileTests
         {
             Id = "mine",
             BasedOn = RealtimePresets.InterfaceId,
-            Layout = "columns",
             ReadTiming = "whenever",
             SettleSeconds = double.NaN,
         });
@@ -209,10 +208,10 @@ public class RealtimeProfileTests
             new RealtimeProfile { Id = "mine", ConfidenceLevel = stored }).ConfidenceFloor);
 
     [Fact]
-    public void MergingTendsOneWayAlongItsScale()
+    public void MergingTendsOneWayAlongTheAutomaticSteps()
     {
-        var steps = Enumerable.Range(RealtimeProfile.MinStep, RealtimeProfile.MaxStep)
-            .Select(step => ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeTendency = step }).Auto)
+        var steps = Enumerable.Range(RealtimeMergeLevels.AutomaticLowest, 5)
+            .Select(level => ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level }).Auto)
             .ToList();
 
         for (int i = 1; i < steps.Count; i++)
@@ -221,19 +220,20 @@ public class RealtimeProfileTests
             Assert.True(steps[i].StandsOut <= steps[i - 1].StandsOut);
             Assert.True(steps[i].LetteringZones >= steps[i - 1].LetteringZones);
         }
-        Assert.Same(AutoRules.Default, steps[RealtimeProfile.MiddleStep - 1]);
+        Assert.Same(AutoRules.Default, steps[RealtimeMergeLevels.AutomaticMiddle - RealtimeMergeLevels.AutomaticLowest]);
     }
 
-    // The measured scale (see ResolvedProfile.RulesFor). The loosest step still tells a busy screen
-    // from a sparse one: with every frame sparse, nearly every label of a panel was drawn as a subtitle.
+    // The measured scale (see ResolvedProfile.RulesFor), on the steps of 合併程度 that were 合併傾向
+    // 1, 2, 4 and 5. The loosest step still tells a busy screen from a sparse one: with every frame
+    // sparse, nearly every label of a panel was drawn as a subtitle.
     [Theory]
-    [InlineData(1, 2, 1.6, 2)]
-    [InlineData(2, 3, 1.45, 3)]
-    [InlineData(4, 8, 1.2, 6)]
-    [InlineData(5, 12, 1.1, 8)]
-    public void MergingStepsAreTheMeasuredOnes(int step, int sparse, double standsOut, int lettering)
+    [InlineData(2, 2, 1.6, 2)]
+    [InlineData(3, 3, 1.45, 3)]
+    [InlineData(5, 8, 1.2, 6)]
+    [InlineData(6, 12, 1.1, 8)]
+    public void MergingStepsAreTheMeasuredOnes(int level, int sparse, double standsOut, int lettering)
     {
-        var rules = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeTendency = step }).Auto;
+        var rules = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level }).Auto;
 
         Assert.Equal((sparse, standsOut, lettering), (rules.SparseZones, rules.StandsOut, rules.LetteringZones));
         Assert.Equal(AutoRules.Default with { SparseZones = sparse, StandsOut = standsOut, LetteringZones = lettering }, rules);
@@ -290,7 +290,7 @@ public class RealtimeProfileTests
         var line = ResolvedProfile.Interface.Describe();
 
         Assert.Contains("profile=interface", line);
-        Assert.Contains("layout=Panel", line);
+        Assert.Contains("merge=Items", line);
         Assert.Contains("confidence=0.8", line);
     }
 
@@ -446,6 +446,224 @@ public class RealtimeProfileTests
                 OcrService.GroupRealtime([.. blocks], 400, ResolvedProfile.ForLayout(mode)).Select(b => (b.Text, b.Bounds)));
     }
 
+    // ── 合併程度 ──
+
+    [Theory]
+    [InlineData(RealtimePresets.StandardId, RealtimeMergeLevels.AutomaticMiddle)]
+    [InlineData(RealtimePresets.SubtitleId, RealtimeMergeLevels.Passage)]
+    [InlineData(RealtimePresets.InterfaceId, RealtimeMergeLevels.Items)]
+    public void ThePresetsSitOnTheirStepsOfMerging(string id, int level) =>
+        Assert.Equal(level, RealtimePresets.Create(id).MergeLevel);
+
+    [Theory]
+    [InlineData(-3, 0)]
+    [InlineData(0, 0)]
+    [InlineData(5, 5)]
+    [InlineData(8, 8)]
+    [InlineData(12, 8)]
+    public void TheMergeLevelIsHeldToItsRange(int stored, int filled) =>
+        Assert.Equal(filled, new RealtimeProfile { Id = "m", MergeLevel = stored }.Filled().MergeLevel);
+
+    [Fact]
+    public void AnUnsetMergeLevelFollowsThePreset()
+    {
+        foreach (var preset in RealtimePresets.All)
+            Assert.Equal(preset.MergeLevel,
+                new RealtimeProfile { Id = "m", BasedOn = preset.Id }.Filled().MergeLevel);
+    }
+
+    [Theory]
+    [InlineData(0, (int)RealtimeMerge.Lines, RealtimeBlockMode.Panel)]
+    [InlineData(1, (int)RealtimeMerge.Items, RealtimeBlockMode.Panel)]
+    [InlineData(2, (int)RealtimeMerge.Auto, RealtimeBlockMode.Auto)]
+    [InlineData(4, (int)RealtimeMerge.Auto, RealtimeBlockMode.Auto)]
+    [InlineData(6, (int)RealtimeMerge.Auto, RealtimeBlockMode.Auto)]
+    [InlineData(7, (int)RealtimeMerge.Passage, RealtimeBlockMode.Subtitle)]
+    [InlineData(8, (int)RealtimeMerge.Whole, RealtimeBlockMode.Subtitle)]
+    public void EachStepGroupsItsOwnWay_AndTheEndsReadAsTheirNeighbours(int level, int merge, RealtimeBlockMode layout)
+    {
+        var profile = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level });
+
+        Assert.Equal((RealtimeMerge)merge, profile.Merge);
+        Assert.Equal(layout, profile.Layout);
+    }
+
+    [Theory]
+    [InlineData(RealtimeMergeLevels.Items, RealtimePresets.InterfaceId)]
+    [InlineData(RealtimeMergeLevels.AutomaticMiddle, RealtimePresets.StandardId)]
+    [InlineData(RealtimeMergeLevels.Passage, RealtimePresets.SubtitleId)]
+    public void ACustomModeOnAPresetsStepIsThatPreset(int level, string preset)
+    {
+        foreach (var basedOn in RealtimePresets.All)
+        {
+            var mine = new RealtimeProfile { Id = "m", BasedOn = basedOn.Id, MergeLevel = level };
+            Assert.Equal(ResolvedProfile.Resolve(preset, []) with { Id = "m" }, ResolvedProfile.Resolve(mine));
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void UnpunctuatedMergingOff_IsNotReadOffTheAutomaticSteps(int level)
+    {
+        var on = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level });
+        var off = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = false });
+
+        Assert.Equal(on, off);
+        Assert.Same(AutoRules.Default, off.Auto);
+    }
+
+    [Fact]
+    public void UnpunctuatedMergingOff_IsReadOnTheAutomaticSteps()
+    {
+        for (int level = RealtimeMergeLevels.AutomaticLowest; level <= RealtimeMergeLevels.AutomaticHighest; level++)
+            Assert.False(ResolvedProfile.Resolve(
+                new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = false }).Auto.Lettering);
+    }
+
+    // A wrapped sentence the detector framed in two pieces on its first line: 逐項 joins the pieces
+    // and the lines; 不合併 the pieces only.
+    private static List<OcrTextBlock> WrappedSentence() =>
+    [
+        At("The quick brown fox jumps", 10, 10, 500, 30),
+        At("over the lazy", 518, 10, 260, 30),
+        At("dog and runs far away into the woods.", 10, 46, 740, 30),
+    ];
+
+    [Fact]
+    public void NotMerging_KeepsEveryLineApart_ButJoinsThePiecesOfOne()
+    {
+        var items = OcrService.GroupRealtime(WrappedSentence(), 400, ProfileAt(RealtimeMergeLevels.Items));
+        var lines = OcrService.GroupRealtime(WrappedSentence(), 400, ProfileAt(RealtimeMergeLevels.Min));
+
+        // The frame is one 逐項 joins, so the test says something.
+        Assert.Single(items);
+        Assert.Equal(
+            ["The quick brown fox jumps over the lazy", "dog and runs far away into the woods."],
+            lines.Select(group => group.Text));
+        Assert.All(lines, group => Assert.True(group.Bounds.Height <= 30));
+    }
+
+    [Fact]
+    public void NotMerging_JoinsOnARowWhatItemsJoins()
+    {
+        var items = OcrTextBlockGrouper.Group(WrappedSentence(), GroupingProfile.Realtime);
+        var lines = OcrTextBlockGrouper.GroupLines(WrappedSentence(), GroupingProfile.Realtime);
+
+        Assert.Equal(items[0].Text, string.Join(" ", lines.Select(line => line.Text)));
+    }
+
+    [Fact]
+    public void TheWholeBlock_IsOneGroupInReadingOrder_WithoutTheScenery()
+    {
+        List<OcrTextBlock> frame =
+        [
+            At("OPTIONS", 300, 200, 160, 24),
+            At("NEW GAME", 300, 140, 180, 24),
+            At("エマ", 10, 10, 80, 30),
+            At("#", 600, 10, 40, 380),                          // a box thrown across the block
+            At("そんなに気安く触れないで", 10, 60, 480, 40),
+        ];
+
+        var whole = OcrService.GroupRealtime(frame, 400, ProfileAt(RealtimeMergeLevels.Max));
+
+        var group = Assert.Single(whole);
+        Assert.Equal("エマ そんなに気安く触れないで NEW GAME OPTIONS", group.Text);
+        Assert.Null(group.ReadAs);
+        Assert.Empty(OcrService.GroupRealtime([], 400, ProfileAt(RealtimeMergeLevels.Max)));
+        Assert.Equal("Hi", Assert.Single(OcrService.GroupRealtime([At("Hi", 10, 10, 60, 30)], 400, ProfileAt(RealtimeMergeLevels.Max))).Text);
+    }
+
+    [Fact]
+    public void TheStepsJoinMoreTowardsTheWholeBlock()
+    {
+        int Groups(int level) => OcrService.GroupRealtime(WrappedSentence(), 400, ProfileAt(level)).Count;
+
+        Assert.True(Groups(RealtimeMergeLevels.Min) > Groups(RealtimeMergeLevels.Items));
+        Assert.Equal(1, Groups(RealtimeMergeLevels.Max));
+    }
+
+    // ── What the page writes beside each value ──
+
+    [Theory]
+    [InlineData(RealtimeMergeLevels.Min, (int)ActualReadTiming.SettleThenRead, 0.15, 68)]
+    [InlineData(RealtimeMergeLevels.Items, (int)ActualReadTiming.SettleThenRead, 0.15, 68)]
+    [InlineData(RealtimeMergeLevels.AutomaticLowest, (int)ActualReadTiming.ByContent, null, null)]
+    [InlineData(RealtimeMergeLevels.AutomaticMiddle, (int)ActualReadTiming.ByContent, null, null)]
+    [InlineData(RealtimeMergeLevels.AutomaticHighest, (int)ActualReadTiming.ByContent, null, null)]
+    [InlineData(RealtimeMergeLevels.Passage, (int)ActualReadTiming.ReadThenConfirm, 0.0, 85)]
+    [InlineData(RealtimeMergeLevels.Max, (int)ActualReadTiming.ReadThenConfirm, 0.0, 85)]
+    public void AutomaticComesToWhatTheStepReadsAs(int level, int timing, double? settle, int? detector)
+    {
+        var actual = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", MergeLevel = level });
+
+        Assert.Equal(level, actual.MergeLevel);
+        Assert.Equal(RealtimeMergeLevels.IsAutomatic(level), actual.MergeUnpunctuatedApplies);
+        Assert.True(actual.ReadTimingIsAutomatic);
+        Assert.Equal((ActualReadTiming)timing, actual.ReadTiming);
+        Assert.True(actual.SettleIsAutomatic);
+        Assert.Equal(settle, actual.SettleSeconds);
+        Assert.True(actual.DetectorIsAutomatic);
+        Assert.Equal(detector, actual.DetectorPercent);
+    }
+
+    [Fact]
+    public void ThePresetsActualValues()
+    {
+        Assert.Equal(ActualReadTiming.ByContent, RealtimeActualValues.Of(RealtimePresets.StandardId, []).ReadTiming);
+        Assert.Equal(new RealtimeActualValues(7, false, true, ActualReadTiming.ReadThenConfirm, true, 0.0, true, 85),
+            RealtimeActualValues.Of(RealtimePresets.SubtitleId, null));
+        Assert.Equal(new RealtimeActualValues(1, false, true, ActualReadTiming.SettleThenRead, true, 0.15, true, 68),
+            RealtimeActualValues.Of(RealtimePresets.InterfaceId, null));
+    }
+
+    [Fact]
+    public void ASetTiming_DecidesTheWaitEvenOnTheAutomaticSteps()
+    {
+        var confirm = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", ReadTiming = RealtimePresets.TimingConfirm });
+        var settle = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", ReadTiming = RealtimePresets.TimingSettle });
+
+        Assert.Equal((false, ActualReadTiming.ReadThenConfirm, 0.0), (confirm.ReadTimingIsAutomatic, confirm.ReadTiming, confirm.SettleSeconds));
+        Assert.Equal((false, ActualReadTiming.SettleThenRead, 0.15), (settle.ReadTimingIsAutomatic, settle.ReadTiming, settle.SettleSeconds));
+        // The detector still follows what the block holds.
+        Assert.Null(confirm.DetectorPercent);
+    }
+
+    [Fact]
+    public void SetValuesAreShownAsSet_HeldToTheirRange()
+    {
+        var actual = RealtimeActualValues.Of(new RealtimeProfile
+        {
+            Id = "m", MergeLevel = 20, SettleSeconds = 0.45, DetectorPercent = 30,
+        });
+
+        Assert.Equal(RealtimeMergeLevels.Max, actual.MergeLevel);
+        Assert.False(actual.SettleIsAutomatic);
+        Assert.Equal(0.45, actual.SettleSeconds);
+        Assert.False(actual.DetectorIsAutomatic);
+        Assert.Equal(RealtimeProfile.MinDetectorPercent, actual.DetectorPercent);
+    }
+
+    [Fact]
+    public void TheActualValuesOfAModeFoundById()
+    {
+        var mine = new RealtimeProfile { Id = "mine", BasedOn = RealtimePresets.SubtitleId, MergeLevel = RealtimeMergeLevels.Min };
+
+        Assert.Equal(RealtimeMergeLevels.Min, RealtimeActualValues.Of("mine", [mine]).MergeLevel);
+        Assert.Equal(RealtimeActualValues.Of(RealtimePresets.StandardId, null), RealtimeActualValues.Of("deleted", [mine]));
+    }
+
+    private static ResolvedProfile ProfileAt(int level) =>
+        ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level });
+
+    private static OcrTextBlock At(string text, double x, double top, double width, double height)
+    {
+        var bounds = new System.Windows.Rect(x, top, width, height);
+        return new OcrTextBlock(text, bounds, Confidence: 0.99, LayoutBounds: bounds);
+    }
+
     /// <summary>
     /// Every value at both ends of its range, alone and all together, groups every kind of frame
     /// without throwing. The same sweep over the whole capture corpus is OcrHarness --auto-probe
@@ -455,20 +673,20 @@ public class RealtimeProfileTests
     public void EveryValueAtEitherEnd_GroupsAnyFrame()
     {
         var variants = new List<RealtimeProfile>();
-        foreach (var layout in new[] { RealtimePresets.LayoutAuto, RealtimePresets.LayoutPassage, RealtimePresets.LayoutItems })
+        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
             foreach (var end in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
             {
-                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, MergeTendency = end });
-                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, LineSpacing = end });
-                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, ConfidenceLevel = end });
-                variants.Add(new RealtimeProfile { Id = "m", Layout = layout, MergeUnpunctuated = end == RealtimeProfile.MinStep });
+                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level });
+                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, LineSpacing = end });
+                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, ConfidenceLevel = end });
+                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = end == RealtimeProfile.MinStep });
                 variants.Add(new RealtimeProfile
                 {
-                    Id = "m", Layout = layout, IgnoreSmallPercent = end == RealtimeProfile.MinStep ? 0 : RealtimeProfile.MaxIgnoreSmallPercent,
+                    Id = "m", MergeLevel = level, IgnoreSmallPercent = end == RealtimeProfile.MinStep ? 0 : RealtimeProfile.MaxIgnoreSmallPercent,
                 });
                 variants.Add(new RealtimeProfile
                 {
-                    Id = "m", Layout = layout, MergeTendency = end, LineSpacing = end,
+                    Id = "m", MergeLevel = level, LineSpacing = end,
                     ConfidenceLevel = RealtimeProfile.MaxStep + RealtimeProfile.MinStep - end,
                     IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent, MergeUnpunctuated = false,
                 });

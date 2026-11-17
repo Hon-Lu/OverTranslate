@@ -487,16 +487,11 @@
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNeedsAutoLayout">僅在「分行處理」為「自動判斷」時有效</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayout">分行處理</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLayoutAuto">自動判斷</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutPassage">整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutItems">逐項</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">一段對話被拆成多段時選「整段」；選單或清單被併成一段時選「逐項」。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">沒有標點也合併</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">漫畫對白等沒有標點的多行文字被拆開時開啟；不相關的短行被併在一起時關閉。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendency">合併傾向</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHint">相鄰文字常被拆開時調高；不相關的文字常被併在一起時調低。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyLow">逐項</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeTendencyHigh">整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">行距容許</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">行距較寬的對話被拆成兩段時調寬；上下相鄰的不同段落被併在一起時調窄。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTiming">讀取方式</sys:String>

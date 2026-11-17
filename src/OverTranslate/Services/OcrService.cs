@@ -321,17 +321,25 @@ public class OcrService : IDisposable
         // are given what the dialogue grouper is given below: a box thrown across the whole block
         // is thrown out by the session whichever mode read it, and taking it out first is what
         // keeps it from being joined to a real line on the way.
-        if (profile.Layout == Realtime.RealtimeBlockMode.Auto)
+        if (profile.Merge == Realtime.RealtimeMerge.Auto)
             return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight, profile), profile.Auto);
 
+        // The two ends of 合併程度 are filtered as the step beside them is, being drawn and read as it.
         var filtered = IgnoreSmallText(
             RejectUnconvincingBlocks(blocks, profile.ConfidenceFloor), profile.IgnoreSmallFraction);
-        if (profile.Layout != Realtime.RealtimeBlockMode.Subtitle)
-            return OcrTextBlockGrouper.Group(filtered, profile.PanelGrouping, decisions, trace);
-        trace?.RegisterBlocks(blocks);
+        switch (profile.Merge)
+        {
+            case Realtime.RealtimeMerge.Lines:
+                return OcrTextBlockGrouper.GroupLines(filtered, profile.PanelGrouping, decisions, trace);
+            case Realtime.RealtimeMerge.Items:
+                return OcrTextBlockGrouper.Group(filtered, profile.PanelGrouping, decisions, trace);
+        }
         // Remove scene-sized noise before it can contaminate a real dialogue row. Confident
         // single letters (such as a split "I") may still join; isolated ones are filtered later.
         filtered = filtered.Where(b => !Realtime.CollapsedDetection.IsCollapsed(b.Bounds.Height, frameHeight, b.Text)).ToList();
+        if (profile.Merge == Realtime.RealtimeMerge.Whole)
+            return OcrTextBlockGrouper.GroupWhole(filtered, profile.PanelGrouping, decisions, trace);
+        trace?.RegisterBlocks(blocks);
         // The dialogue grouper has rules of its own and does not go through OcrTextBlockGrouper,
         // so the readings have to be taken out for it separately. See Ocr.HorizontalRubyLines.
         return Realtime.DialogueTextGrouper.Group(
