@@ -452,7 +452,6 @@
     <sys:String x:Key="S.Realtime.ProfileCreate">Создать</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">Изменения сразу применяются к текущему переводу</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">Свой режим {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCreateFrom">Создать свой режим на основе этого</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Готовые режимы изменить нельзя. Чтобы настроить такой режим, добавьте в списке свой режим и выберите этот в качестве шаблона.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">Название</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">Такое название уже есть, выберите другое</sys:String>

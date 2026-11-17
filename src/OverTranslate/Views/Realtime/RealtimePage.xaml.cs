@@ -327,12 +327,6 @@ public partial class RealtimePage : UserControl
     }
 
     /// <summary>
-    /// Brings the 模式 card into view with <paramref name="profileId"/> selected — where the edit
-    /// layer's 管理模式… lands.
-    /// </summary>
-    public void ShowProfile(string profileId) => ProfilesCard.ShowProfile(profileId);
-
-    /// <summary>
     /// Names the capture shortcut in 運作方式, or drops the line when there is none to name.
     /// </summary>
     /// <remarks>

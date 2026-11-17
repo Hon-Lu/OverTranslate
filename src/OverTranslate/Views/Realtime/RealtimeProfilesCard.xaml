@@ -3,9 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <UserControl.Resources>
-        <!-- The small tag after a preset's name and after a value that only horizontal text reads.
-             A copy of the service panel's ProfileTag, not a reference to it: that one is scoped to
-             its own overlay, and the two may yet want to differ. -->
+        <!-- The small tag after a preset's name. A copy of the service panel's ProfileTag, not a
+             reference to it: that one is scoped to its own overlay. -->
         <Style x:Key="ProfileTag" TargetType="Border">
             <Setter Property="Background"        Value="{DynamicResource AppButtonBg}"/>
             <Setter Property="BorderBrush"       Value="{DynamicResource AppBorder}"/>
@@ -16,9 +15,9 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <!-- One mode in the list. Selected is "shown on the right", not "in use": each block has its
-             own mode, so there is no one mode in use to mark. The side rail's selection look. -->
-        <Style x:Key="ProfileListRow" TargetType="RadioButton">
+        <!-- One mode in the list: the whole row opens it. No selected look — the list says which
+             modes there are, not which one is in use; each block has its own. -->
+        <Style x:Key="ProfileListRow" TargetType="Button">
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
@@ -26,23 +25,21 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Root" Background="Transparent" CornerRadius="6" Padding="10,6"
-                                MinHeight="34">
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent"
+                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1"
+                                Padding="16,11,12,11">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtle}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
-                                <Setter TargetName="Root" Property="BorderThickness" Value="1"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -50,23 +47,19 @@
             </Setter>
         </Style>
 
-        <!-- The add row at the foot of the list, and the template choices it opens into: accent
-             text and a + glyph, the shape of 提示詞's add row. Disabled at the cap rather than hidden:
-             the count on it is what says why it stopped. -->
+        <!-- The last row of the list and the only way to add: the service panel's add row. Disabled
+             at the cap rather than hidden: the count on it is what says why it stopped. -->
         <Style x:Key="ProfileAddRow" TargetType="Button">
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
             <Setter Property="Cursor"     Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="10,0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root" Background="Transparent" CornerRadius="6"
-                                Padding="{TemplateBinding Padding}" MinHeight="34">
-                            <ContentPresenter VerticalAlignment="Center"
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        <Border x:Name="Root" Background="Transparent" Padding="16,0">
+                            <ContentPresenter Height="44" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -92,187 +85,23 @@
             <TextBlock Text="{DynamicResource S.Realtime.ProfilesHint}" Style="{StaticResource FieldHint}"
                        LineHeight="16" Margin="0,0,0,10"/>
 
-            <!-- Two columns — the list, then the selected mode's values — or one, list on top, when
-                 the card is too narrow for both: see RealtimeProfilesCard.ApplyColumns. -->
-            <Grid x:Name="Body" SizeChanged="Body_SizeChanged">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="ListColumn" Width="220"/>
-                    <ColumnDefinition x:Name="GapColumn" Width="14"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <Border x:Name="ListBorder" Grid.Column="0" Style="{StaticResource InnerGroupBorder}" Padding="6"
-                        VerticalAlignment="Top">
-                    <StackPanel>
-                        <StackPanel x:Name="ListHost"/>
-
-                        <Button x:Name="AddRow" Style="{StaticResource ProfileAddRow}"
-                                ToolTipService.ShowOnDisabled="True"
-                                Click="AddRow_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                           FontSize="12" VerticalAlignment="Center" Margin="0,1,8,0"/>
-                                <TextBlock x:Name="AddRowText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-                        </Button>
-
-                        <!-- The add row opened out in place: which preset the new mode follows. No popup
-                             and no dialog — the choice is three words long. -->
-                        <StackPanel x:Name="TemplateChooser" Visibility="Collapsed" Margin="0,2,0,0"
-                                    PreviewKeyDown="TemplateChooser_PreviewKeyDown">
-                            <TextBlock Text="{DynamicResource S.Realtime.ProfileNewTitle}"
-                                       FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource AppTextPrimary}" Margin="10,2,0,6"/>
-                            <TextBlock Text="{DynamicResource S.Realtime.ProfileTemplate}"
-                                       Style="{StaticResource FieldLabel}" Margin="10,0,0,2"/>
-                            <StackPanel x:Name="TemplateButtons"/>
-                            <TextBlock Text="{DynamicResource S.Realtime.ProfileTemplateHint}" TextWrapping="Wrap"
-                                       Style="{StaticResource FieldHint}" Margin="10,2,4,4"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Style="{StaticResource ProfileAddRow}" Foreground="{DynamicResource AppTextSecondary}"
-                                        Content="{DynamicResource S.Common.Cancel}" Click="TemplateCancel_Click"/>
-                                <Button Style="{StaticResource ProfileAddRow}" Foreground="{DynamicResource AppAccent}"
-                                        Content="{DynamicResource S.Realtime.ProfileCreate}" Click="TemplateCreate_Click"/>
-                            </StackPanel>
+            <!-- The list only: a mode is looked at and changed in RealtimeProfileOverlay, over the
+                 shell, opened from its row. -->
+            <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10">
+                <StackPanel x:Name="ListBody" SizeChanged="ListBody_SizeChanged">
+                    <StackPanel x:Name="ListHost"/>
+                    <Button x:Name="AddRow" Style="{StaticResource ProfileAddRow}"
+                            ToolTipService.ShowOnDisabled="True"
+                            AutomationProperties.AutomationId="ProfileAddRow"
+                            Click="AddRow_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="AddRowText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <StackPanel x:Name="Detail" Grid.Column="2" PreviewKeyDown="Detail_PreviewKeyDown">
-                    <!-- Header of a custom mode: its name, editable, and what can be done to it. -->
-                    <Grid x:Name="CustomHeader">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*" MaxWidth="320"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource S.Realtime.ProfileName}" Style="{StaticResource FieldLabel}"/>
-                        <TextBox x:Name="NameBox" Grid.Column="1" Style="{StaticResource ModernTextBox}"
-                                 MaxLength="32"
-                                 AutomationProperties.Name="{DynamicResource S.Realtime.ProfileName}"
-                                 PreviewKeyDown="NameBox_PreviewKeyDown"
-                                 TextChanged="NameBox_TextChanged"
-                                 LostKeyboardFocus="NameBox_LostKeyboardFocus"/>
-                        <Button x:Name="ResetAllBtn" Grid.Column="3" Style="{StaticResource IconTextButton}"
-                                Margin="12,0,0,0" Click="ResetAllBtn_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                           FontSize="13" VerticalAlignment="Center" Margin="0,1,6,0"/>
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileResetAll}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button x:Name="DeleteBtn" Grid.Column="4" Style="{StaticResource IconTextButton}"
-                                Margin="4,0,0,0" Click="DeleteBtn_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE74D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                           FontSize="13" VerticalAlignment="Center" Margin="0,1,6,0"/>
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileDelete}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    <TextBlock x:Name="NameError" Style="{StaticResource FieldHint}"
-                               Foreground="{DynamicResource AppError}"
-                               Text="" Margin="2,4,0,0"/>
-
-                    <!-- Header of a preset: its name as text, and the way to a mode that can be changed. -->
-                    <Grid x:Name="PresetHeader">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="PresetName" FontFamily="{DynamicResource AppFont}" FontSize="15"
-                                       FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimary}"
-                                       VerticalAlignment="Center"/>
-                            <Border Style="{StaticResource ProfileTag}">
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfilePresetTag}" FontSize="11"
-                                           Foreground="{DynamicResource AppTextSecondary}"/>
-                            </Border>
-                        </StackPanel>
-                        <Button x:Name="CreateFromBtn" Style="{StaticResource FlatButton}" HorizontalAlignment="Right"
-                                Padding="12,0" ToolTipService.ShowOnDisabled="True" Click="CreateFromBtn_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                           FontSize="12" VerticalAlignment="Center" Margin="0,1,8,0"/>
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileCreateFrom}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-
-                    <TextBlock x:Name="HeaderNote" Style="{StaticResource FieldHint}" Margin="2,6,0,10"/>
-
-                    <!-- Asked on the page rather than in a dialog, the way 提示詞 asks. -->
-                    <Border x:Name="DeleteConfirm" Visibility="Collapsed"
-                            Background="{DynamicResource AppWarningSubtle}"
-                            BorderBrush="{DynamicResource AppWarningBorder}" BorderThickness="1"
-                            CornerRadius="6" Padding="12,8" Margin="0,0,0,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14"
-                                       Foreground="{DynamicResource AppWarning}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileDeleteTitle}" FontWeight="SemiBold"
-                                           FontFamily="{DynamicResource AppFont}" FontSize="{StaticResource AppFontSize}"
-                                           Foreground="{DynamicResource AppTextPrimary}"/>
-                                <TextBlock x:Name="DeleteConfirmText" TextWrapping="Wrap" Margin="0,2,0,0"
-                                           FontFamily="{DynamicResource AppFont}" FontSize="{StaticResource AppFontSize}"
-                                           Foreground="{DynamicResource AppTextPrimary}"/>
-                            </StackPanel>
-                            <Button x:Name="DeleteCancelBtn" Grid.Column="2" Style="{StaticResource FlatButton}"
-                                    Margin="12,0,0,0" Padding="14,0"
-                                    Content="{DynamicResource S.Common.Cancel}" Click="DeleteCancelBtn_Click"/>
-                            <Button Grid.Column="3" Style="{StaticResource DangerButton}" Height="32"
-                                    Margin="8,0,0,0" Padding="14,0"
-                                    Content="{DynamicResource S.Realtime.ProfileDelete}" Click="DeleteConfirmBtn_Click"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Values, one group per question, filled in code: see RealtimeProfilesCard.BuildRows. -->
-                    <StackPanel x:Name="Params" Grid.IsSharedSizeScope="True">
-                        <Border Style="{StaticResource InnerGroupBorder}">
-                            <StackPanel x:Name="LayoutGroup">
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupLayout}" Style="{StaticResource SectionHeader}"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource InnerGroupBorder}">
-                            <StackPanel x:Name="TimingGroup">
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupTiming}" Style="{StaticResource SectionHeader}"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource InnerGroupBorder}">
-                            <StackPanel x:Name="RecognitionGroup">
-                                <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupRecognition}" Style="{StaticResource SectionHeader}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Button x:Name="AdvancedToggle" Style="{StaticResource AdvancedToggleRow}" Click="AdvancedToggle_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="AdvancedChevron" Text="&#xE70D;"
-                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"
-                                           VerticalAlignment="Center" Margin="0,1,8,0"/>
-                                <TextBlock x:Name="AdvancedText" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <StackPanel x:Name="AdvancedPanel" Visibility="Collapsed" Margin="0,6,0,0">
-                            <Border Style="{StaticResource InnerGroupBorder}" Margin="0">
-                                <StackPanel x:Name="AdvancedRecognitionGroup">
-                                    <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupRecognition}" Style="{StaticResource SectionHeader}"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <TextBlock x:Name="StatusNote" Style="{StaticResource FieldHint}" Margin="2,10,0,0"/>
+                    </Button>
                 </StackPanel>
-            </Grid>
+            </Border>
         </StackPanel>
     </Border>
 </UserControl>

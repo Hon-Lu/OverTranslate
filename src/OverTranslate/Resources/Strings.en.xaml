@@ -455,7 +455,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCreate">Create</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">Changes apply to the current translation right away</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">Custom mode {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCreateFrom">Create a custom mode from this</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Default modes cannot be changed. To adjust one, add a custom mode in the list and choose this mode as its template.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">Name</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">This name is already taken. Choose another.</sys:String>

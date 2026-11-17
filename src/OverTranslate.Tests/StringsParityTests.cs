@@ -239,11 +239,7 @@ public class StringsParityTests
     /// copy and the control can land separately. Each one comes off this list as soon as it is
     /// used: <see cref="Keys_defined_ahead_of_use_are_not_used_yet"/> says when.
     /// </summary>
-    private static readonly HashSet<string> DefinedAheadOfUse =
-    [
-        // 自動｜手動, the segmented switch on 畫面文字穩定後再讀取 and 辨識解析度.
-        "S.Realtime.ProfileManual",
-    ];
+    private static readonly HashSet<string> DefinedAheadOfUse = [];
 
     [Fact]
     public void Keys_defined_ahead_of_use_are_not_used_yet()
