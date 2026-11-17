@@ -469,8 +469,6 @@
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">Выберите «Целиком», если реплика разбивается на части; «По пунктам», если меню или список сливаются в один текст.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">Объединять без знаков препинания</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">Включите, если строки без знаков препинания, например реплики в манге, разделяются; выключите, если объединяются несвязанные короткие строки.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacing">Допуск межстрочного интервала</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">Расширьте, если реплика с широким интервалом делится надвое; сузьте, если сливаются соседние абзацы.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Ждать остановки текста</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Наибольшее время ожидания после изменения текста, пока изображение не перестанет меняться. Увеличьте, если плавно проявляющийся текст распознаётся с ошибками; уменьшите, если перевод появляется слишком поздно. На текст, появляющийся по буквам, почти не влияет.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">Без ожидания</sys:String>
@@ -491,10 +489,6 @@
     <sys:String x:Key="S.Realtime.ProfileGradeMid">Средний</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigher">Выше среднего</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigh">Высокий</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrow">Узкий</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrower">Уже среднего</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWider">Шире среднего</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWide">Широкий</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Перевод в реальном времени остановлен: {0}</sys:String>

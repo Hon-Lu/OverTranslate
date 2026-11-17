@@ -123,11 +123,10 @@ public class RealtimeProfileEditingTests
     {
         var mode = Custom("a", "Mine");
         mode.MergeLevel = RealtimeMergeLevels.Items;
-        mode.LineSpacing = 4;
         mode.IgnoreSmallPercent = 40;
 
-        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode, RealtimeProfileEditing.Advanced));
-        Assert.Equal(3, RealtimeProfileEditing.ModifiedCount(mode, RealtimeProfileEditing.All));
+        Assert.Equal(1, RealtimeProfileEditing.ModifiedCount(mode, RealtimeProfileEditing.Advanced));
+        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode, RealtimeProfileEditing.All));
     }
 
     [Fact]

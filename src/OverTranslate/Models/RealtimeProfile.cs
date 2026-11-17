@@ -20,6 +20,10 @@ namespace OverTranslate.Models;
 /// <para>The choices are strings, not enums. The settings file reads a list in one piece, and one
 /// enum name a build does not know would throw the whole list away; an unknown string is only that
 /// one value falling back to the preset's.</para>
+///
+/// <para>A value no longer offered is dropped from here rather than kept unread: 行距容許
+/// (LineSpacing) was, and a file that still holds it reads as if it did not, since a member this
+/// class does not have is skipped as the file is read.</para>
 /// </remarks>
 public sealed class RealtimeProfile
 {
@@ -49,10 +53,6 @@ public sealed class RealtimeProfile
     /// <see cref="RealtimeMergeLevels.IsAutomatic"/>.
     /// </summary>
     public bool? MergeUnpunctuated { get; set; }
-
-    /// <summary>行距容許, 1–5; 3 is what the presets use.</summary>
-    /// <remarks>Horizontal text only.</remarks>
-    public int? LineSpacing { get; set; }
 
     /// <summary>
     /// 畫面文字穩定後再讀取, in seconds, 0–1.5; below zero is 自動.
@@ -118,7 +118,6 @@ public sealed class RealtimeProfile
             BasedOn = template.Id,
             MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
             MergeUnpunctuated = MergeUnpunctuated ?? template.MergeUnpunctuated,
-            LineSpacing = Step(LineSpacing, template.LineSpacing!.Value),
             SettleSeconds = SettleSeconds is { } seconds && double.IsFinite(seconds)
                 ? seconds < 0 ? RealtimePresets.Automatic : Math.Min(seconds, MaxSettleSeconds)
                 : template.SettleSeconds,
@@ -136,7 +135,7 @@ public sealed class RealtimeProfile
 
     // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>The steps of each 1–5 scale (行距容許, 辨識信心下限).</summary>
+    /// <summary>The steps of each 1–5 scale (辨識信心下限, and 自動判斷's place on 合併程度).</summary>
     public const int MinStep = 1;
 
     /// <inheritdoc cref="MinStep"/>
@@ -243,7 +242,6 @@ public static class RealtimePresets
                 _ => RealtimeMergeLevels.AutomaticMiddle,
             },
             MergeUnpunctuated = true,
-            LineSpacing = 3,
             SettleSeconds = id switch
             {
                 SubtitleId => 0,

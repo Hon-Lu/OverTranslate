@@ -235,24 +235,18 @@ public class RealtimeProfileTests
         Assert.Equal(AutoRules.Default with { SparseZones = sparse, StandsOut = standsOut, LetteringZones = lettering }, rules);
     }
 
+    // 行距容許 is not offered: every step of 合併程度 groups on the measured row spacing, the
+    // groupers' own constants and instance.
     [Fact]
-    public void LineSpacingWidensEveryGrouperTheSameWay()
+    public void EveryMergeStepKeepsTheMeasuredRowSpacing()
     {
-        var steps = Enumerable.Range(RealtimeProfile.MinStep, RealtimeProfile.MaxStep)
-            .Select(step => ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", LineSpacing = step }).Auto)
-            .ToList();
-
-        for (int i = 1; i < steps.Count; i++)
+        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
         {
-            Assert.True(steps[i].MaxStackGap > steps[i - 1].MaxStackGap);
-            Assert.True(steps[i].PassageLeading > steps[i - 1].PassageLeading);
-            Assert.True(steps[i].PanelGrouping.SolidLineAdvanceWhenWrapped >
-                steps[i - 1].PanelGrouping.SolidLineAdvanceWhenWrapped);
-            // Only the leading moves: the panel grouper is still the live path's.
-            Assert.Equal(GroupingProfile.Realtime with
-            {
-                SolidLineAdvanceWhenWrapped = steps[i].PanelGrouping.SolidLineAdvanceWhenWrapped,
-            }, steps[i].PanelGrouping);
+            var rules = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = level }).Auto;
+
+            Assert.Equal(DialogueTextGrouper.MaxStackGap, rules.MaxStackGap);
+            Assert.Equal(RealtimeAutoLayout.PassageLeading, rules.PassageLeading);
+            Assert.Same(GroupingProfile.Realtime, rules.PanelGrouping);
         }
     }
 
@@ -721,7 +715,6 @@ public class RealtimeProfileTests
             foreach (var end in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
             {
                 variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level });
-                variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, LineSpacing = end });
                 variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, ConfidenceLevel = end });
                 variants.Add(new RealtimeProfile { Id = "m", MergeLevel = level, MergeUnpunctuated = end == RealtimeProfile.MinStep });
                 variants.Add(new RealtimeProfile
@@ -730,7 +723,7 @@ public class RealtimeProfileTests
                 });
                 variants.Add(new RealtimeProfile
                 {
-                    Id = "m", MergeLevel = level, LineSpacing = end,
+                    Id = "m", MergeLevel = level,
                     ConfidenceLevel = RealtimeProfile.MaxStep + RealtimeProfile.MinStep - end,
                     IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent, MergeUnpunctuated = false,
                 });

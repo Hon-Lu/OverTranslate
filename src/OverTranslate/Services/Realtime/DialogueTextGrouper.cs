@@ -38,8 +38,8 @@ internal static class DialogueTextGrouper
     /// harness's own legend.
     /// </param>
     /// <param name="maxStackGap">
-    /// The widest gap between stacked rows, in line heights — <see cref="MaxStackGap"/> unless the
-    /// block's mode widens or narrows it (行距容許, see <see cref="ResolvedProfile"/>).
+    /// The widest gap between stacked rows, in line heights — <see cref="MaxStackGap"/>, which every
+    /// mode reads with (see <see cref="ResolvedProfile"/>).
     /// </param>
     /// <param name="merge">
     /// 合併, 合併程度's last step: stacked lines join regardless of size and alignment, and across a

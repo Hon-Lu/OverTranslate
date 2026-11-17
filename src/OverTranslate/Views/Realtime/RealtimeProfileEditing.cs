@@ -14,9 +14,6 @@ internal enum ProfileParam
     /// <summary>沒有標點也合併.</summary>
     MergeUnpunctuated,
 
-    /// <summary>行距容許 (進階).</summary>
-    LineSpacing,
-
     /// <summary>畫面文字穩定後再讀取.</summary>
     SettleSeconds,
 
@@ -66,7 +63,7 @@ internal static class RealtimeProfileEditing
     /// one written into the file by hand.
     /// </remarks>
     public static readonly ProfileParam[] Advanced =
-        [ProfileParam.LineSpacing, ProfileParam.IgnoreSmallPercent];
+        [ProfileParam.IgnoreSmallPercent];
 
     /// <summary>Every value, in the order the page lists them.</summary>
     public static readonly ProfileParam[] All = Enum.GetValues<ProfileParam>();
@@ -95,7 +92,6 @@ internal static class RealtimeProfileEditing
     {
         ProfileParam.MergeLevel => stored.MergeLevel is not null,
         ProfileParam.MergeUnpunctuated => stored.MergeUnpunctuated is not null,
-        ProfileParam.LineSpacing => stored.LineSpacing is not null,
         ProfileParam.SettleSeconds => stored.SettleSeconds is not null,
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
         ProfileParam.DetectorPercent => stored.DetectorPercent is not null,
@@ -111,7 +107,6 @@ internal static class RealtimeProfileEditing
         {
             case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
             case ProfileParam.MergeUnpunctuated: stored.MergeUnpunctuated = null; break;
-            case ProfileParam.LineSpacing: stored.LineSpacing = null; break;
             case ProfileParam.SettleSeconds: stored.SettleSeconds = null; break;
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
             case ProfileParam.DetectorPercent: stored.DetectorPercent = null; break;
@@ -173,7 +168,6 @@ internal static class RealtimeProfileEditing
     {
         ProfileParam.MergeLevel => filled.MergeLevel,
         ProfileParam.MergeUnpunctuated => filled.MergeUnpunctuated,
-        ProfileParam.LineSpacing => filled.LineSpacing,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds
             ? seconds < 0 ? RealtimePresets.Automatic : Math.Round(seconds, 2)
             : null,

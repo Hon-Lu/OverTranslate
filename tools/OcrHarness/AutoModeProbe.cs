@@ -171,10 +171,7 @@ internal static class AutoModeProbe
         }
         Add("unpunctuated-off", p => p.MergeUnpunctuated = false);
         foreach (var step in new[] { RealtimeProfile.MinStep, RealtimeProfile.MaxStep })
-        {
-            Add($"spacing-{step}", p => p.LineSpacing = step);
             Add($"confidence-{step}", p => p.ConfidenceLevel = step);
-        }
         Add("settle-auto", p => p.SettleSeconds = RealtimePresets.Automatic);
         Add("settle-0", p => p.SettleSeconds = 0);
         Add($"settle-max", p => p.SettleSeconds = RealtimeProfile.MaxSettleSeconds);
@@ -197,13 +194,11 @@ internal static class AutoModeProbe
             Add($"loosest-{name}", p =>
             {
                 p.MergeLevel = loosest;
-                p.LineSpacing = RealtimeProfile.MaxStep;
                 p.ConfidenceLevel = RealtimeProfile.MinStep;
             });
             Add($"tightest-{name}", p =>
             {
                 p.MergeLevel = tightest;
-                p.LineSpacing = RealtimeProfile.MinStep;
                 p.ConfidenceLevel = RealtimeProfile.MaxStep;
                 p.MergeUnpunctuated = false;
                 p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent;

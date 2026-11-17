@@ -248,11 +248,6 @@
                         </Button>
 
                         <StackPanel x:Name="AdvancedPanel" Visibility="Collapsed" Margin="0,6,0,0">
-                            <Border Style="{StaticResource InnerGroupBorder}">
-                                <StackPanel x:Name="AdvancedLayoutGroup">
-                                    <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupLayout}" Style="{StaticResource SectionHeader}"/>
-                                </StackPanel>
-                            </Border>
                             <Border Style="{StaticResource InnerGroupBorder}" Margin="0">
                                 <StackPanel x:Name="AdvancedRecognitionGroup">
                                     <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupRecognition}" Style="{StaticResource SectionHeader}"/>

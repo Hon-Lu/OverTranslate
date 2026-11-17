@@ -492,8 +492,6 @@
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">一段對話被拆成多段時選「整段」；選單或清單被併成一段時選「逐項」。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">沒有標點也合併</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">漫畫對白等沒有標點的多行文字被拆開時開啟；不相關的短行被併在一起時關閉。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacing">行距容許</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">行距較寬的對話被拆成兩段時調寬；上下相鄰的不同段落被併在一起時調窄。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">等文字停下</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文變動後，等畫面停止變化再讀取的最長時間。淡入中的文字被讀錯時拉長；譯文出現太慢時縮短。對逐字出現的文字幾乎沒有作用。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">不等待</sys:String>
@@ -514,10 +512,6 @@
     <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigher">偏高</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigh">高</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrow">窄</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrower">偏窄</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWider">偏寬</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWide">寬</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">即時翻譯已中止：{0}</sys:String>

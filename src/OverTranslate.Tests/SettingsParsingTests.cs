@@ -511,7 +511,6 @@ public class SettingsParsingTests
         Assert.Equal(RealtimeProfile.MinDetectorPercent, filled.DetectorPercent);
         Assert.Equal(RealtimeProfile.MaxIgnoreSmallPercent, filled.IgnoreSmallPercent);
         Assert.Equal(RealtimeMergeLevels.Min, filled.MergeLevel);
-        Assert.Equal(RealtimeProfile.MaxStep, filled.LineSpacing);
         Assert.Equal(RealtimeProfile.MaxStep, filled.ConfidenceLevel);
 
         var resolved = settings.Realtime.ResolveProfile("a");
@@ -520,6 +519,24 @@ public class SettingsParsingTests
         Assert.Equal(0.6, resolved.DetectorFraction);
         Assert.Equal(0.8, resolved.IgnoreSmallFraction, 6);
         Assert.Equal(RealtimeMerge.Lines, resolved.Merge);
+    }
+
+    /// <summary>
+    /// 行距容許 is no longer a value of a mode: a file that still has it reads every other value of
+    /// the mode as written, and groups on the measured row spacing.
+    /// </summary>
+    [Fact]
+    public void ARetiredLineSpacing_IsIgnored()
+    {
+        var settings = SettingsService.Parse(
+            """
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"subtitle","LineSpacing":5,"IgnoreSmallPercent":40}]}}
+            """);
+
+        var stored = Assert.Single(settings.Realtime.Profiles);
+        Assert.Equal(40, stored.IgnoreSmallPercent);
+        Assert.DoesNotContain("LineSpacing", SettingsService.Serialize(settings));
+        Assert.Equal(ResolvedProfile.Subtitle with { Id = "a", IgnoreSmallFraction = 0.4 }, settings.Realtime.ResolveProfile("a"));
     }
 
     /// <summary>

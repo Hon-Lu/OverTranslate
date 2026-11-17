@@ -120,24 +120,21 @@ public sealed record ResolvedProfile
     private static readonly double[] ConfidenceFloors =
         [0.50, 0.65, ShortReadingDetection.ShortTextConfidenceFloor, 0.88, 0.95];
 
-    // 行距容許, step by step: the factor on the space between rows.
+    // 行距容許 — a factor on the space between rows in all three groupers — is NOT OFFERED, and the
+    // groupers always run on their measured row spacing.
     //
-    // MEASURED on the 自動 corpus, where every line of dialogue already sits well inside the middle
-    // step (rows step 0.74–1.18 line heights), so the corpus mostly shows what the ends cost: frames
-    // whose groups differ from 標準, 自動 D/P/M and 整段 on the panel captures —
+    // MEASURED on the 自動 corpus, where every line of dialogue already sits well inside the
+    // measured spacing (rows step 0.74–1.18 line heights), so the corpus mostly showed what moving
+    // it costs: frames whose groups differ from 標準, 自動 D/P/M and 整段 on the panel captures —
     //
-    //   step  factor   自動 D/P/M   整段 P
-    //    1     0.6     2 / 22 / 1     63     titles off their text, menus apart; a wrapped comment too
-    //    2     0.8     0 / 13 / 0     35
-    //    4     1.25    0 /  6 / 0     25
-    //    5     1.5     1 / 10 / 2     41     also a menu joined; 逐項 moves on 4–6 frames only
+    //   factor   自動 D/P/M   整段 P
+    //    0.6     2 / 22 / 1     63     titles off their text, menus apart; a wrapped comment too
+    //    0.8     0 / 13 / 0     35
+    //    1.25    0 /  6 / 0     25
+    //    1.5     1 / 10 / 2     41     also a menu joined; 逐項 moves on 4–6 frames only
     //
-    // What the high end is for is prose set with room for readings above it: in ja-ruby/novel.png a
-    // sentence wrapped across two lines with readings between them is one passage from step 4 in
-    // 自動 and 整段, two lines below that. 逐項 barely answers: its outer gap limit
-    // (OcrTextBlockGrouper.MaxLineGap, 0.8) caps a wrapped line's advance at 1.8, which a factor of
-    // 4 reaches and nothing on this scale does.
-    private static readonly double[] LineSpacingFactors = [0.6, 0.8, 1.0, 1.25, 1.5];
+    // All it was for was prose set with readings between its lines (ja-ruby/novel.png, one passage
+    // from 1.25 up): too rare to be worth a value nobody could tell from 合併程度.
 
     /// <summary>The mode this was resolved from — a preset's id or a custom mode's.</summary>
     internal string Id { get; init; } = RealtimePresets.StandardId;
@@ -267,7 +264,7 @@ public sealed record ResolvedProfile
             DetectorFraction = filled.DetectorPercent < 0 ? null : filled.DetectorPercent!.Value / 100.0,
             // Off 自動判斷 沒有標點也合併 is not read, and is held at the presets' value so that a
             // mode differing from one in nothing that is read resolves equal to it.
-            Auto = RulesFor(RealtimeMergeLevels.Tendency(level), filled.LineSpacing!.Value,
+            Auto = RulesFor(RealtimeMergeLevels.Tendency(level),
                 !RealtimeMergeLevels.MergeUnpunctuatedApplies(level) || filled.MergeUnpunctuated!.Value),
             IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
             ConfidenceFloor = ConfidenceFloors[filled.ConfidenceLevel!.Value - RealtimeProfile.MinStep],
@@ -314,9 +311,8 @@ public sealed record ResolvedProfile
         seconds < 0 ? null : (int)Math.Round(seconds / RealtimeRegionState.PollInterval.TotalSeconds);
 
     // 自動判斷's five steps of 合併程度 (2–6, once 合併傾向 1–5 — the table's "step") bind three of
-    // 自動's thresholds into one scale, and 行距容許 scales the space between rows in all three
-    // groupers by one factor. The middle step of both is the measured rules themselves — the
-    // instances, so a preset reads exactly as before.
+    // 自動's thresholds into one scale. The middle step is the measured rules themselves — the
+    // instance, so a preset reads exactly as before.
     //
     // MEASURED with OcrHarness --auto-probe replay --profile over the 自動 corpus (591 captures:
     // 270 of dialogue D, 179 of panels P, 142 of both M). Frames whose groups (not just how they are
@@ -334,32 +330,19 @@ public sealed record ResolvedProfile
     // stops short of the draft's "every frame is sparse" and 1.0: with those, 3,993 of 4,279 groups
     // on the panel captures were drawn as subtitles, and forum threads were joined across their
     // comments. No dialogue capture held more than eleven clusters.
-    private static AutoRules RulesFor(int tendency, int spacing, bool lettering)
+    private static AutoRules RulesFor(int tendency, bool lettering)
     {
-        if (tendency == RealtimeProfile.MiddleStep && spacing == RealtimeProfile.MiddleStep)
+        if (tendency == RealtimeProfile.MiddleStep)
             return lettering ? AutoRules.Default : AutoRules.Default with { Lettering = false };
 
         var rules = AutoRules.Default with { Lettering = lettering };
-        rules = tendency switch
+        return tendency switch
         {
             1 => rules with { SparseZones = 2, StandsOut = 1.6, LetteringZones = 2 },
             2 => rules with { SparseZones = 3, StandsOut = 1.45, LetteringZones = 3 },
             4 => rules with { SparseZones = 8, StandsOut = 1.2, LetteringZones = 6 },
             5 => rules with { SparseZones = 12, StandsOut = 1.1, LetteringZones = 8 },
             _ => rules,
-        };
-        if (spacing == RealtimeProfile.MiddleStep) return rules;
-
-        // Only the space between the rows is scaled. Two of the three figures are advances — a
-        // line's own height plus the gap — and multiplying those whole would loosen them far more
-        // than the gap the third one measures.
-        double k = LineSpacingFactors[spacing - RealtimeProfile.MinStep];
-        var wrapped = GroupingProfile.Realtime.SolidLineAdvanceWhenWrapped;
-        return rules with
-        {
-            MaxStackGap = DialogueTextGrouper.MaxStackGap * k,
-            PassageLeading = 1 + (RealtimeAutoLayout.PassageLeading - 1) * k,
-            PanelGrouping = GroupingProfile.Realtime with { SolidLineAdvanceWhenWrapped = 1 + (wrapped - 1) * k },
         };
     }
 }

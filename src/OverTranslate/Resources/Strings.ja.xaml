@@ -476,8 +476,6 @@
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">ひとつの会話が分かれてしまうときは「まとめて」、メニューやリストがひとつにまとまってしまうときは「項目ごと」を選びます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">句読点がなくても結合</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">マンガのセリフなど句読点のない複数行が分かれてしまうときはオン、関係のない短い行がまとまってしまうときはオフにします。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacing">行間の許容</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">行間の広い会話が二つに分かれてしまうときは広げ、上下に並ぶ別の段落がまとまってしまうときは狭めます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が止まるまで待つ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文が変わったあと、画面の変化が止まるまで読み取りを待つ最長時間。フェードイン中の文字が誤って読まれるときは長くし、訳文が出るのが遅いときは短くします。一文字ずつ表示される文字にはほとんど効果がありません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">待たない</sys:String>
@@ -498,10 +496,6 @@
     <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigher">やや高</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigh">高</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrow">狭い</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrower">やや狭い</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWider">やや広い</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWide">広い</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">リアルタイム翻訳を中止しました：{0}</sys:String>

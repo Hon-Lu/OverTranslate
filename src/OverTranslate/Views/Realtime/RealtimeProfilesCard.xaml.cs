@@ -387,7 +387,6 @@ public partial class RealtimeProfilesCard : UserControl
     {
         ProfileParam.MergeLevel => LevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
         ProfileParam.MergeUnpunctuated => LocalizationService.Get(filled.MergeUnpunctuated == true ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff"),
-        ProfileParam.LineSpacing => Spacing(filled.LineSpacing ?? RealtimeProfile.MiddleStep),
         ProfileParam.SettleSeconds => SecondsText(filled.SettleSeconds ?? RealtimePresets.Automatic),
         ProfileParam.ClearAfterEmptyReads => LocalizationService.Format("S.Realtime.ProfileTimes", filled.ClearAfterEmptyReads),
         ProfileParam.DetectorPercent => filled.DetectorPercent is < 0 or null
@@ -421,20 +420,10 @@ public partial class RealtimeProfilesCard : UserControl
         _ => LocalizationService.Get("S.Realtime.ProfileGradeMid"),
     };
 
-    private static string Spacing(int step) => step switch
-    {
-        1 => LocalizationService.Get("S.Realtime.ProfileSpacingNarrow"),
-        2 => LocalizationService.Get("S.Realtime.ProfileSpacingNarrower"),
-        4 => LocalizationService.Get("S.Realtime.ProfileSpacingWider"),
-        5 => LocalizationService.Get("S.Realtime.ProfileSpacingWide"),
-        _ => LocalizationService.Get("S.Realtime.ProfileGradeMid"),
-    };
-
     /// <summary>What a slider's position reads as while it is being moved, before it is written.</summary>
     private static string SliderReading(ProfileParam param, double value) => param switch
     {
         ProfileParam.MergeLevel => LevelName((int)Math.Round(value)),
-        ProfileParam.LineSpacing => Spacing((int)value),
         ProfileParam.SettleSeconds => SecondsText(Math.Round(value * PollSeconds, 2)),
         ProfileParam.ClearAfterEmptyReads => LocalizationService.Format("S.Realtime.ProfileTimes", (int)value),
         ProfileParam.DetectorPercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
@@ -453,7 +442,6 @@ public partial class RealtimeProfilesCard : UserControl
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
-        Add(AdvancedLayoutGroup, BuildRow(ProfileParam.LineSpacing, "S.Realtime.ProfileLineSpacing", "S.Realtime.ProfileLineSpacingHint"));
         Add(AdvancedRecognitionGroup, BuildRow(ProfileParam.IgnoreSmallPercent, "S.Realtime.ProfileIgnoreSmall", "S.Realtime.ProfileIgnoreSmallHint"));
         // 辨識信心下限 is not offered: measured, its steps made no difference worth a control.
         // The mode keeps the value (RealtimeProfile.ConfidenceLevel) and the page leaves it alone.
@@ -554,9 +542,6 @@ public partial class RealtimeProfilesCard : UserControl
                 row.Fades.Add(toggle);
                 break;
             }
-            case ProfileParam.LineSpacing:
-                BuildSlider(row, RealtimeProfile.MinStep, RealtimeProfile.MaxStep, 1, nameKey);
-                break;
             case ProfileParam.SettleSeconds:
                 BuildAuto(row, null);
                 BuildSlider(row, 0, Math.Round(RealtimeProfile.MaxSettleSeconds / PollSeconds), 1, nameKey);
@@ -724,7 +709,6 @@ public partial class RealtimeProfilesCard : UserControl
         switch (param)
         {
             case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
-            case ProfileParam.LineSpacing: profile.LineSpacing = whole; break;
             case ProfileParam.ClearAfterEmptyReads: profile.ClearAfterEmptyReads = whole; break;
             case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
             case ProfileParam.DetectorPercent:

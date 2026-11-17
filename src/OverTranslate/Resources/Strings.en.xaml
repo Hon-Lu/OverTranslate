@@ -472,8 +472,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">Choose Passage when one piece of dialogue is split into several; choose Items when a menu or list is merged into one.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">Merge without punctuation</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">Turn on when unpunctuated lines such as comic lettering are split apart; turn off when unrelated short lines are merged.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacing">Line spacing tolerance</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">Widen when widely spaced dialogue is split in two; narrow when separate paragraphs above and below are merged.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Wait for text to settle</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">The longest wait, after the text changes, for the picture to stop changing before it is read. Lengthen when text that fades in is misread; shorten when translations appear too late. Has almost no effect on text that appears letter by letter.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">No wait</sys:String>
@@ -494,10 +492,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeMid">Medium</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigher">Fairly high</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigh">High</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrow">Narrow</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrower">Fairly narrow</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWider">Fairly wide</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWide">Wide</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Realtime translation stopped: {0}</sys:String>

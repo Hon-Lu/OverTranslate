@@ -476,8 +476,6 @@
     <sys:String x:Key="S.Realtime.ProfileLayoutHint">한 대사가 여러 덩어리로 나뉘면 '한 덩어리', 메뉴나 목록이 한 덩어리로 합쳐지면 '항목별'을 선택하세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLettering">문장 부호가 없어도 합치기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">만화 대사처럼 문장 부호가 없는 여러 줄이 나뉘면 켜고, 관련 없는 짧은 줄이 합쳐지면 끄세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacing">줄 간격 허용</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">줄 간격이 넓은 대사가 둘로 나뉘면 넓히고, 위아래로 붙은 다른 단락이 합쳐지면 좁히세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">글자가 멈출 때까지 대기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">원문이 바뀐 뒤 화면 변화가 멈출 때까지 읽기를 기다리는 최대 시간입니다. 페이드인 중인 글자가 잘못 읽히면 늘리고, 번역문이 너무 늦게 나오면 줄이세요. 한 글자씩 나타나는 글자에는 거의 효과가 없습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">대기 안 함</sys:String>
@@ -498,10 +496,6 @@
     <sys:String x:Key="S.Realtime.ProfileGradeMid">중간</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigher">약간 높음</sys:String>
     <sys:String x:Key="S.Realtime.ProfileGradeHigh">높음</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrow">좁음</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingNarrower">약간 좁음</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWider">약간 넓음</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSpacingWide">넓음</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">실시간 번역을 중단했습니다: {0}</sys:String>
