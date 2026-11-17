@@ -43,7 +43,7 @@ internal static class AutoModeProbe
     {
         if (args.Length < 3)
             throw new ArgumentException(
-                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | drops cache.json lines.tsv [--profile mode.json] | extremes cache.json out-dir");
+                "--auto-probe capture cache.json @list | replay cache.json report.txt [--profile mode.json] | drops cache.json lines.tsv [--profile mode.json] | extremes cache.json out-dir | slider cache.json out-dir");
         if (args[0] == "capture")
         {
             using var engine = new OnnxOcrEngine();
@@ -75,6 +75,7 @@ internal static class AutoModeProbe
 
         var cache = JsonSerializer.Deserialize<Capture[]>(File.ReadAllText(args[1]))!;
         if (args[0] == "extremes") return Extremes(cache, args[2]);
+        if (args[0] == "slider") return MergeSliderProbe.Run(cache, args[2]);
 
         var profile = ResolvedProfile.Standard;
         int at = Array.IndexOf(args, "--profile");
