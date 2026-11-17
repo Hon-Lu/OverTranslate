@@ -224,9 +224,8 @@ public class RealtimeSettings
     /// either can be read with any mode.</para>
     ///
     /// <para>Written under a name of its own, not the <c>BlockMode</c> every file up to 2.12.0 holds.
-    /// That key was 字幕 in nearly all of them only because 字幕 was the default and the one
-    /// alternative, so reading it would leave everyone who never touched the tray on a mode they did
-    /// not choose. An old file's answer is not read; what is chosen from here on is kept.</para>
+    /// A file without this one has that answer converted once as it is read — see
+    /// <see cref="ProfileForLegacyBlockMode"/> — and what is chosen from then on is kept.</para>
     ///
     /// <para>Deliberately not on the settings page, like <see cref="GuidanceExpanded"/>: this is a
     /// state the edit layer sets by being used, not a preference anyone would go looking for.</para>
@@ -250,6 +249,25 @@ public class RealtimeSettings
     /// <c>SettingsService.UpdateRealtimeProfiles</c>, which tells a running session.
     /// </remarks>
     public List<RealtimeProfile> Profiles { get; set; } = [];
+
+    /// <summary>
+    /// The mode a new block starts on for a file written by 2.12.0 or earlier, from the layout it
+    /// kept for one (<c>BlockMode</c>): 字幕 is 字幕・漫畫, 面板 is 遊戲介面・聊天室, and no answer —
+    /// or one this build cannot read — is 標準.
+    /// </summary>
+    /// <remarks>
+    /// Those files wrote 字幕 unless the user had picked 面板, since 字幕 was the default; so nearly
+    /// everyone updating starts on 字幕・漫畫, which reads exactly as their blocks did before.
+    /// </remarks>
+    public static string ProfileForLegacyBlockMode(System.Text.Json.Nodes.JsonNode? blockMode) =>
+        blockMode is System.Text.Json.Nodes.JsonValue value && value.TryGetValue<string>(out var name)
+            ? name.Trim().ToLowerInvariant() switch
+            {
+                "subtitle" => RealtimePresets.SubtitleId,
+                "panel" => RealtimePresets.InterfaceId,
+                _ => RealtimePresets.StandardId,
+            }
+            : RealtimePresets.StandardId;
 
     /// <summary><see cref="NewBlockProfile"/> if it still names a mode, otherwise 標準.</summary>
     public string NewBlockProfileOrStandard() => KnownProfileId(NewBlockProfile);
