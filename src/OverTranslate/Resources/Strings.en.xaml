@@ -474,11 +474,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">Turn on when unpunctuated lines such as comic lettering are split apart; turn off when unrelated short lines are merged.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">Line spacing tolerance</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">Widen when widely spaced dialogue is split in two; narrow when separate paragraphs above and below are merged.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTiming">Reading</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingConfirm">Read, then confirm</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingSettle">Wait, then read</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">Follows how Line handling reads each group: Read, then confirm for a passage; Wait, then read for items.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingHint">Choose Read, then confirm when translations should appear as soon as possible; choose Wait, then read when the screen keeps changing and translations keep being replaced.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Wait for text to settle</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">The longest wait, after the text changes, for the picture to stop changing before it is read. Lengthen when text that fades in is misread; shorten when translations appear too late. Has almost no effect on text that appears letter by letter.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">No wait</sys:String>

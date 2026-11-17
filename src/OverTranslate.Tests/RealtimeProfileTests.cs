@@ -29,10 +29,7 @@ public class RealtimeProfileTests
 
         Assert.Equal(id, profile.Id);
         Assert.Equal(layout, profile.Layout);
-        Assert.Equal(RealtimeReadTiming.Auto, profile.Timing);
-        Assert.Null(profile.SettlePolls);
         Assert.Equal(RealtimeRegionState.EmptyPassesBeforeClearing, profile.ClearAfterEmptyReads);
-        Assert.Null(profile.DetectorFraction);
         Assert.Same(AutoRules.Default, profile.Auto);
         Assert.Same(GroupingProfile.Realtime, profile.PanelGrouping);
         Assert.Equal(0, profile.IgnoreSmallFraction);
@@ -123,7 +120,7 @@ public class RealtimeProfileTests
         {
             Id = "mine",
             BasedOn = RealtimePresets.SubtitleId,
-            ReadTiming = RealtimePresets.TimingSettle,
+            SettleSeconds = 0.3,
         });
 
         Assert.Equal(RealtimeBlockMode.Subtitle, profile.Layout);
@@ -138,13 +135,12 @@ public class RealtimeProfileTests
         {
             Id = "mine",
             BasedOn = RealtimePresets.InterfaceId,
-            ReadTiming = "whenever",
             SettleSeconds = double.NaN,
         });
 
         Assert.Equal(RealtimeBlockMode.Panel, profile.Layout);
-        Assert.Equal(RealtimeReadTiming.Auto, profile.Timing);
-        Assert.Null(profile.SettlePolls);
+        Assert.Equal(RealtimeReadTiming.SettleThenRead, profile.Timing);
+        Assert.Equal(1, profile.SettlePolls);
     }
 
     [Fact]
@@ -269,12 +265,22 @@ public class RealtimeProfileTests
     }
 
     [Theory]
-    [InlineData(RealtimePresets.TimingAuto, RealtimeBlockMode.Subtitle, true)]
-    [InlineData(RealtimePresets.TimingAuto, RealtimeBlockMode.Panel, false)]
-    [InlineData(RealtimePresets.TimingConfirm, RealtimeBlockMode.Panel, true)]
-    [InlineData(RealtimePresets.TimingSettle, RealtimeBlockMode.Subtitle, false)]
-    public void TheTimingFollowsTheReadingUnlessItIsSet(string timing, RealtimeBlockMode readsAs, bool dialogue) =>
-        Assert.Equal(dialogue, ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", ReadTiming = timing }).Dialogue(readsAs));
+    [InlineData(-1.0, RealtimeBlockMode.Subtitle, true)]
+    [InlineData(-1.0, RealtimeBlockMode.Panel, false)]
+    [InlineData(0.0, RealtimeBlockMode.Panel, true)]
+    [InlineData(0.3, RealtimeBlockMode.Subtitle, false)]
+    [InlineData(1.5, RealtimeBlockMode.Subtitle, false)]
+    public void TheTimingFollowsTheReadingUnlessAWaitIsSet(double seconds, RealtimeBlockMode readsAs, bool dialogue) =>
+        Assert.Equal(dialogue, ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", SettleSeconds = seconds }).Dialogue(readsAs));
+
+    [Theory]
+    [InlineData(-1.0, (int)RealtimeReadTiming.Auto)]
+    [InlineData(0.0, (int)RealtimeReadTiming.ReadThenConfirm)]
+    [InlineData(0.04, (int)RealtimeReadTiming.ReadThenConfirm)]
+    [InlineData(0.15, (int)RealtimeReadTiming.SettleThenRead)]
+    [InlineData(1.5, (int)RealtimeReadTiming.SettleThenRead)]
+    public void NoWaitReadsAtOnce_AnyWaitSettlesFirst(double seconds, int timing) =>
+        Assert.Equal((RealtimeReadTiming)timing, ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", SettleSeconds = seconds }).Timing);
 
     [Fact]
     public void AutomaticSettlingIsTheRuleEachTimingHad()
@@ -494,10 +500,16 @@ public class RealtimeProfileTests
     [InlineData(RealtimeMergeLevels.Passage, RealtimePresets.SubtitleId)]
     public void ACustomModeOnAPresetsStepIsThatPreset(int level, string preset)
     {
+        // The wait and the detector size are values of their own now, pinned in
+        // RealtimeTimingDetectorTests; here, everything else.
+        var expected = ResolvedProfile.Resolve(preset, []) with { Id = "m" };
         foreach (var basedOn in RealtimePresets.All)
         {
-            var mine = new RealtimeProfile { Id = "m", BasedOn = basedOn.Id, MergeLevel = level };
-            Assert.Equal(ResolvedProfile.Resolve(preset, []) with { Id = "m" }, ResolvedProfile.Resolve(mine));
+            var mine = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", BasedOn = basedOn.Id, MergeLevel = level });
+            Assert.Equal(expected, mine with
+            {
+                Timing = expected.Timing, SettlePolls = expected.SettlePolls, DetectorFraction = expected.DetectorFraction,
+            });
         }
     }
 
@@ -621,21 +633,19 @@ public class RealtimeProfileTests
     // ── What the page writes beside each value ──
 
     [Theory]
-    [InlineData(RealtimeMergeLevels.Min, (int)ActualReadTiming.SettleThenRead, 0.15, 68)]
-    [InlineData(RealtimeMergeLevels.Items, (int)ActualReadTiming.SettleThenRead, 0.15, 68)]
-    [InlineData(RealtimeMergeLevels.AutomaticLowest, (int)ActualReadTiming.ByContent, null, null)]
-    [InlineData(RealtimeMergeLevels.AutomaticMiddle, (int)ActualReadTiming.ByContent, null, null)]
-    [InlineData(RealtimeMergeLevels.AutomaticHighest, (int)ActualReadTiming.ByContent, null, null)]
-    [InlineData(RealtimeMergeLevels.Passage, (int)ActualReadTiming.ReadThenConfirm, 0.0, 85)]
-    [InlineData(RealtimeMergeLevels.Max, (int)ActualReadTiming.ReadThenConfirm, 0.0, 85)]
-    public void AutomaticComesToWhatTheStepReadsAs(int level, int timing, double? settle, int? detector)
+    [InlineData(RealtimeMergeLevels.Min, 0.15, 68)]
+    [InlineData(RealtimeMergeLevels.Items, 0.15, 68)]
+    [InlineData(RealtimeMergeLevels.AutomaticLowest, null, null)]
+    [InlineData(RealtimeMergeLevels.AutomaticMiddle, null, null)]
+    [InlineData(RealtimeMergeLevels.AutomaticHighest, null, null)]
+    [InlineData(RealtimeMergeLevels.Passage, 0.0, 85)]
+    [InlineData(RealtimeMergeLevels.Max, 0.0, 85)]
+    public void AutomaticComesToWhatTheStepReadsAs(int level, double? settle, int? detector)
     {
         var actual = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", MergeLevel = level });
 
         Assert.Equal(level, actual.MergeLevel);
         Assert.Equal(RealtimeMergeLevels.IsAutomatic(level), actual.MergeUnpunctuatedApplies);
-        Assert.True(actual.ReadTimingIsAutomatic);
-        Assert.Equal((ActualReadTiming)timing, actual.ReadTiming);
         Assert.True(actual.SettleIsAutomatic);
         Assert.Equal(settle, actual.SettleSeconds);
         Assert.True(actual.DetectorIsAutomatic);
@@ -645,23 +655,24 @@ public class RealtimeProfileTests
     [Fact]
     public void ThePresetsActualValues()
     {
-        Assert.Equal(ActualReadTiming.ByContent, RealtimeActualValues.Of(RealtimePresets.StandardId, []).ReadTiming);
-        Assert.Equal(new RealtimeActualValues(7, false, true, ActualReadTiming.ReadThenConfirm, true, 0.0, true, 85),
+        Assert.Equal(new RealtimeActualValues(4, true, true, null, true, null),
+            RealtimeActualValues.Of(RealtimePresets.StandardId, []));
+        Assert.Equal(new RealtimeActualValues(7, false, false, 0.0, false, 85),
             RealtimeActualValues.Of(RealtimePresets.SubtitleId, null));
-        Assert.Equal(new RealtimeActualValues(1, false, true, ActualReadTiming.SettleThenRead, true, 0.15, true, 68),
+        Assert.Equal(new RealtimeActualValues(1, false, false, 0.15, false, 68),
             RealtimeActualValues.Of(RealtimePresets.InterfaceId, null));
     }
 
     [Fact]
-    public void ASetTiming_DecidesTheWaitEvenOnTheAutomaticSteps()
+    public void ASetWait_IsShownAsSetEvenOnTheAutomaticSteps()
     {
-        var confirm = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", ReadTiming = RealtimePresets.TimingConfirm });
-        var settle = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", ReadTiming = RealtimePresets.TimingSettle });
+        var none = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", SettleSeconds = 0 });
+        var wait = RealtimeActualValues.Of(new RealtimeProfile { Id = "m", SettleSeconds = 0.3 });
 
-        Assert.Equal((false, ActualReadTiming.ReadThenConfirm, 0.0), (confirm.ReadTimingIsAutomatic, confirm.ReadTiming, confirm.SettleSeconds));
-        Assert.Equal((false, ActualReadTiming.SettleThenRead, 0.15), (settle.ReadTimingIsAutomatic, settle.ReadTiming, settle.SettleSeconds));
+        Assert.Equal((false, 0.0), (none.SettleIsAutomatic, none.SettleSeconds));
+        Assert.Equal((false, 0.3), (wait.SettleIsAutomatic, wait.SettleSeconds));
         // The detector still follows what the block holds.
-        Assert.Null(confirm.DetectorPercent);
+        Assert.Null(none.DetectorPercent);
     }
 
     [Fact]

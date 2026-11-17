@@ -384,7 +384,6 @@ public class SettingsParsingTests
         var written = new AppSettings();
         var mine = RealtimeProfile.CreateCustom(RealtimePresets.SubtitleId, "Visual novels");
         mine.SettleSeconds = 0.45;
-        mine.ReadTiming = RealtimePresets.TimingSettle;
         mine.DetectorPercent = RealtimePresets.Automatic;
         mine.MergeUnpunctuated = false;
         var chat = RealtimeProfile.CreateCustom(RealtimePresets.InterfaceId, "Chat");
@@ -400,7 +399,6 @@ public class SettingsParsingTests
         Assert.Equal("Visual novels", read.Name);
         Assert.Equal(RealtimePresets.SubtitleId, read.BasedOn);
         Assert.Equal(0.45, read.SettleSeconds);
-        Assert.Equal(RealtimePresets.TimingSettle, read.ReadTiming);
         Assert.Equal(RealtimePresets.Automatic, read.DetectorPercent);
         Assert.False(read.MergeUnpunctuated);
         // Unset stays unset — it follows the preset rather than a copy of what the preset was.
@@ -461,7 +459,8 @@ public class SettingsParsingTests
         Assert.Equal(2, realtime.Profiles.Count);
         var resolved = realtime.ResolveProfile("a");
         Assert.Equal(RealtimeBlockMode.Panel, resolved.Layout);
-        Assert.Equal(RealtimeReadTiming.Auto, resolved.Timing);
+        // ReadTiming is no longer a value: the mode waits as 遊戲介面・聊天室 does.
+        Assert.Equal(RealtimeReadTiming.SettleThenRead, resolved.Timing);
         Assert.Equal(3, resolved.ClearAfterEmptyReads);
         Assert.Equal(RealtimeTextOrientation.Vertical, realtime.TextOrientation);
         Assert.Equal(12, realtime.ScrimOpacity);

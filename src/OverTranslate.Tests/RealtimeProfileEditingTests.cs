@@ -82,7 +82,7 @@ public class RealtimeProfileEditingTests
         var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
         mode.MergeLevel = RealtimeMergeLevels.Passage;  // what 字幕・漫畫 holds
         mode.ClearAfterEmptyReads = 2;                 // what every preset holds
-        mode.SettleSeconds = -5;                        // 自動, written oddly
+        mode.SettleSeconds = 0.004;                     // 不等待, written oddly
         mode.DetectorPercent = 70;                      // really different
 
         var tidy = RealtimeProfileEditing.WithoutTemplateValues(mode);
@@ -144,7 +144,7 @@ public class RealtimeProfileEditingTests
         var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
         mode.MergeLevel = RealtimeMergeLevels.Passage;      // the preset's own: not a change
         mode.MergeUnpunctuated = false;                     // no effect at 整段, but the mode's own
-        mode.ReadTiming = RealtimePresets.TimingSettle;
+        mode.SettleSeconds = 0.6;
         mode.ConfidenceLevel = 5;                           // not on the page
 
         Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(mode));
@@ -267,18 +267,16 @@ public class RealtimeProfileEditingTests
     // ── What 自動 stands for ──
 
     [Theory]
-    [InlineData(RealtimeMergeLevels.AutomaticMiddle, RealtimePresets.TimingAuto, 0.15)]
-    [InlineData(RealtimeMergeLevels.Passage, RealtimePresets.TimingAuto, 0.0)]
-    [InlineData(RealtimeMergeLevels.Max, RealtimePresets.TimingAuto, 0.0)]
-    [InlineData(RealtimeMergeLevels.Items, RealtimePresets.TimingAuto, 0.15)]
-    [InlineData(RealtimeMergeLevels.Min, RealtimePresets.TimingAuto, 0.15)]
-    [InlineData(RealtimeMergeLevels.Items, RealtimePresets.TimingConfirm, 0.0)]
-    [InlineData(RealtimeMergeLevels.Passage, RealtimePresets.TimingSettle, 0.15)]
-    public void AutomaticSettle_RestsOnTheResolvedWait(int level, string timing, double expected)
+    [InlineData(RealtimeMergeLevels.AutomaticMiddle, 0.15)]
+    [InlineData(RealtimeMergeLevels.Passage, 0.0)]
+    [InlineData(RealtimeMergeLevels.Max, 0.0)]
+    [InlineData(RealtimeMergeLevels.Items, 0.15)]
+    [InlineData(RealtimeMergeLevels.Min, 0.15)]
+    public void AutomaticSettle_RestsOnTheResolvedWait(int level, double expected)
     {
         var mode = Custom("a", "A");
         mode.MergeLevel = level;
-        mode.ReadTiming = timing;
+        mode.SettleSeconds = 0.9;   // what the mode holds by hand does not move where 自動 rests
         Assert.Equal(expected, RealtimeProfileEditing.AutomaticSettleSeconds(mode.Filled()));
     }
 
@@ -309,6 +307,6 @@ public class RealtimeProfileEditingTests
     public void TheTimingValuesApplyToVerticalText_TheRestDoNot()
     {
         var both = RealtimeProfileEditing.All.Where(param => !RealtimeProfileEditing.IsHorizontalOnly(param));
-        Assert.Equal([ProfileParam.ReadTiming, ProfileParam.SettleSeconds, ProfileParam.ClearAfterEmptyReads], both);
+        Assert.Equal([ProfileParam.SettleSeconds, ProfileParam.ClearAfterEmptyReads], both);
     }
 }

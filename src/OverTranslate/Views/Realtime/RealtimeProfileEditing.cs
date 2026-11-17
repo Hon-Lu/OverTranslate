@@ -17,10 +17,7 @@ internal enum ProfileParam
     /// <summary>行距容許 (進階).</summary>
     LineSpacing,
 
-    /// <summary>讀取方式.</summary>
-    ReadTiming,
-
-    /// <summary>等文字停下.</summary>
+    /// <summary>畫面文字穩定後再讀取.</summary>
     SettleSeconds,
 
     /// <summary>譯文保留.</summary>
@@ -78,11 +75,11 @@ internal static class RealtimeProfileEditing
     public static readonly ProfileParam[] Shown = [.. All.Where(param => param != ProfileParam.ConfidenceLevel)];
 
     /// <summary>
-    /// Whether a block whose text runs vertically ignores this value: everything but the three
+    /// Whether a block whose text runs vertically ignores this value: everything but the two
     /// timing ones — see research §3, the vertical path neither groups nor sizes the detector.
     /// </summary>
     public static bool IsHorizontalOnly(ProfileParam param) =>
-        param is not (ProfileParam.ReadTiming or ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads);
+        param is not (ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads);
 
     /// <summary>
     /// Whether this value has any effect on the mode as it is filled: 沒有標點也合併 only while
@@ -99,7 +96,6 @@ internal static class RealtimeProfileEditing
         ProfileParam.MergeLevel => stored.MergeLevel is not null,
         ProfileParam.MergeUnpunctuated => stored.MergeUnpunctuated is not null,
         ProfileParam.LineSpacing => stored.LineSpacing is not null,
-        ProfileParam.ReadTiming => stored.ReadTiming is not null,
         ProfileParam.SettleSeconds => stored.SettleSeconds is not null,
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
         ProfileParam.DetectorPercent => stored.DetectorPercent is not null,
@@ -116,7 +112,6 @@ internal static class RealtimeProfileEditing
             case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
             case ProfileParam.MergeUnpunctuated: stored.MergeUnpunctuated = null; break;
             case ProfileParam.LineSpacing: stored.LineSpacing = null; break;
-            case ProfileParam.ReadTiming: stored.ReadTiming = null; break;
             case ProfileParam.SettleSeconds: stored.SettleSeconds = null; break;
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
             case ProfileParam.DetectorPercent: stored.DetectorPercent = null; break;
@@ -179,7 +174,6 @@ internal static class RealtimeProfileEditing
         ProfileParam.MergeLevel => filled.MergeLevel,
         ProfileParam.MergeUnpunctuated => filled.MergeUnpunctuated,
         ProfileParam.LineSpacing => filled.LineSpacing,
-        ProfileParam.ReadTiming => filled.ReadTiming,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds
             ? seconds < 0 ? RealtimePresets.Automatic : Math.Round(seconds, 2)
             : null,
@@ -310,7 +304,7 @@ internal static class RealtimeProfileEditing
     // ── What 自動 stands for ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Where 等文字停下's slider rests while 自動 is ticked: what the mode waits with — see
+    /// Where 畫面文字穩定後再讀取's slider rests while 自動 is ticked: what the mode waits with — see
     /// <see cref="RealtimeActualValues.SettleSeconds"/>. 依各組判斷 is shown at the settled
     /// reading's wait.
     /// </summary>

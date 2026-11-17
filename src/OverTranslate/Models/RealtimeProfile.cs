@@ -55,11 +55,19 @@ public sealed class RealtimeProfile
     public int? LineSpacing { get; set; }
 
     /// <summary>
-    /// 讀取方式: <c>auto</c>, <c>confirm</c> (先讀再確認) or <c>settle</c> (等穩定再讀).
+    /// 畫面文字穩定後再讀取, in seconds, 0–1.5; below zero is 自動.
     /// </summary>
-    public string? ReadTiming { get; set; }
-
-    /// <summary>等文字停下, in seconds, 0–1.5; below zero is 自動.</summary>
+    /// <remarks>
+    /// <para>0 is 不等待: a change is read at once and read again once to confirm it (what was
+    /// 先讀再確認). Above it a change inside the text is waited out up to that long and read once
+    /// (等穩定再讀), counted in polls of 0.15 s — see <see cref="MaxSettleSeconds"/>. 自動 is each
+    /// group's own way: 不等待 for a passage, one poll for items, and on 自動判斷's steps whichever
+    /// the block was last read as — see <see cref="Services.Realtime.ResolvedProfile.Dialogue"/>.</para>
+    ///
+    /// <para>One value where there used to be two, 讀取方式 and 等文字停下: a wait only means
+    /// anything when a change is settled before it is read, and reading at once only when it is
+    /// not waited for, so every pair but these was the same thing said twice.</para>
+    /// </remarks>
     public double? SettleSeconds { get; set; }
 
     /// <summary>譯文保留: how many readings in a row must find nothing before a translation goes, 1–4.</summary>
@@ -111,9 +119,6 @@ public sealed class RealtimeProfile
             MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
             MergeUnpunctuated = MergeUnpunctuated ?? template.MergeUnpunctuated,
             LineSpacing = Step(LineSpacing, template.LineSpacing!.Value),
-            ReadTiming = ReadTiming is RealtimePresets.TimingAuto or RealtimePresets.TimingConfirm or RealtimePresets.TimingSettle
-                ? ReadTiming
-                : template.ReadTiming,
             SettleSeconds = SettleSeconds is { } seconds && double.IsFinite(seconds)
                 ? seconds < 0 ? RealtimePresets.Automatic : Math.Min(seconds, MaxSettleSeconds)
                 : template.SettleSeconds,
@@ -177,10 +182,13 @@ public sealed class RealtimeProfile
 /// <para>The ids are written into settings files and name the mode a block was on, so they are fixed
 /// for good once released: renaming one would put everybody on it back on 標準 without a word.</para>
 ///
-/// <para>Every preset holds 自動 for the timing and the detector size and the middle step for each
-/// scale, which is exactly what 即時翻譯 did before modes existed; the presets differ only in
-/// 合併程度, and sit on the three places of it the layouts they replace stood for. Pinned by tests,
-/// because "the presets read as before" is a promise the whole feature was built on.</para>
+/// <para>Every preset reads exactly as 即時翻譯 did before modes existed: the middle step of each
+/// scale, and the presets differ in 合併程度, on the three places of it the layouts they replace
+/// stood for. 標準 leaves the wait and the detector size to 自動, because they follow what each
+/// reading turns out to hold; the other two read one way only, so they carry the figures that way
+/// had written out — 不等待 and 85% for 字幕・漫畫, one poll and 68% for 遊戲介面・聊天室 — which is
+/// what 自動 comes to on them, value for value. Pinned by tests, because "the presets read as
+/// before" is a promise the whole feature was built on.</para>
 /// </remarks>
 public static class RealtimePresets
 {
@@ -193,14 +201,22 @@ public static class RealtimePresets
     /// <summary>遊戲介面・聊天室: every group read as separate items.</summary>
     public const string InterfaceId = "interface";
 
-    /// <summary>The choice strings — see <see cref="RealtimeProfile.ReadTiming"/>.</summary>
-    public const string TimingAuto = "auto";
+    /// <summary>
+    /// 字幕・漫畫's detector size, in percent: <see cref="Services.Realtime.RealtimeDetectorSize.StripFraction"/>.
+    /// </summary>
+    public const int StripPercent = 85;
 
-    /// <inheritdoc cref="TimingAuto"/>
-    public const string TimingConfirm = "confirm";
+    /// <summary>
+    /// 遊戲介面・聊天室's detector size, in percent: <see cref="Services.Realtime.RealtimeDetectorSize.PanelFraction"/>.
+    /// </summary>
+    public const int PanelPercent = 68;
 
-    /// <inheritdoc cref="TimingAuto"/>
-    public const string TimingSettle = "settle";
+    /// <summary>
+    /// 遊戲介面・聊天室's wait, in seconds: one poll —
+    /// <see cref="Services.Realtime.RealtimeRegionState.MaxTextUnsettledPolls"/> of
+    /// <see cref="Services.Realtime.RealtimeRegionState.PollInterval"/>.
+    /// </summary>
+    public const double ItemsSettleSeconds = 0.15;
 
     /// <summary>The value of a nullable number that means 自動 — see <see cref="RealtimeProfile.SettleSeconds"/>.</summary>
     public const int Automatic = -1;
@@ -228,10 +244,19 @@ public static class RealtimePresets
             },
             MergeUnpunctuated = true,
             LineSpacing = 3,
-            ReadTiming = TimingAuto,
-            SettleSeconds = Automatic,
+            SettleSeconds = id switch
+            {
+                SubtitleId => 0,
+                InterfaceId => ItemsSettleSeconds,
+                _ => Automatic,
+            },
             ClearAfterEmptyReads = 2,
-            DetectorPercent = Automatic,
+            DetectorPercent = id switch
+            {
+                SubtitleId => StripPercent,
+                InterfaceId => PanelPercent,
+                _ => Automatic,
+            },
             IgnoreSmallPercent = 0,
             ConfidenceLevel = 3,
         };

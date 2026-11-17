@@ -474,11 +474,6 @@
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">漫画对白等没有标点的多行文字被拆开时开启；不相关的短行被并在一起时关闭。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">行距容许</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">行距较宽的对话被拆成两段时调宽；上下相邻的不同段落被并在一起时调窄。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTiming">读取方式</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingConfirm">先读再确认</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingSettle">等稳定再读</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">依分行处理的判读结果：整段时先读再确认，逐项时等稳定再读。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingHint">译文需要尽快出现时选“先读再确认”；画面持续变动、译文频繁更换时选“等稳定再读”。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">等文字停下</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文变动后，等画面停止变化再读取的最长时间。淡入中的文字被读错时拉长；译文出现太慢时缩短。对逐字出现的文字几乎没有作用。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">不等待</sys:String>

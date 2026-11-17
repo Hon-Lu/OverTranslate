@@ -478,11 +478,6 @@
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">マンガのセリフなど句読点のない複数行が分かれてしまうときはオン、関係のない短い行がまとまってしまうときはオフにします。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">行間の許容</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">行間の広い会話が二つに分かれてしまうときは広げ、上下に並ぶ別の段落がまとまってしまうときは狭めます。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTiming">読み取り方</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingConfirm">先に読んで確認</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingSettle">安定してから読む</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">行の扱いの判定結果に従います：まとめての場合は先に読んで確認、項目ごとの場合は安定してから読みます。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingHint">訳文をできるだけ早く出したいときは「先に読んで確認」、画面が動き続けて訳文が頻繁に変わるときは「安定してから読む」を選びます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が止まるまで待つ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">原文が変わったあと、画面の変化が止まるまで読み取りを待つ最長時間。フェードイン中の文字が誤って読まれるときは長くし、訳文が出るのが遅いときは短くします。一文字ずつ表示される文字にはほとんど効果がありません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">待たない</sys:String>

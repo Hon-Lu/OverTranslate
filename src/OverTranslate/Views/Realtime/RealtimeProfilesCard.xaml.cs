@@ -353,14 +353,6 @@ public partial class RealtimeProfilesCard : UserControl
     {
         switch (row.Param)
         {
-            case ProfileParam.ReadTiming:
-                CheckSegment(row, filled.ReadTiming switch
-                {
-                    RealtimePresets.TimingConfirm => 1,
-                    RealtimePresets.TimingSettle => 2,
-                    _ => 0,
-                });
-                break;
             case ProfileParam.MergeUnpunctuated:
                 row.Toggle!.IsChecked = filled.MergeUnpunctuated == true;
                 break;
@@ -388,12 +380,6 @@ public partial class RealtimeProfilesCard : UserControl
         row.Value.Text = Display(filled, row.Param);
     }
 
-    private static void CheckSegment(ParamRow row, int index)
-    {
-        row.Segments![index].IsChecked = true;
-        MoveThumb(row, animate: false);
-    }
-
     private static double PollSeconds => Services.Realtime.RealtimeRegionState.PollInterval.TotalSeconds;
 
     /// <summary>How a value reads on its row and on the 還原 tooltip.</summary>
@@ -402,12 +388,6 @@ public partial class RealtimeProfilesCard : UserControl
         ProfileParam.MergeLevel => LevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
         ProfileParam.MergeUnpunctuated => LocalizationService.Get(filled.MergeUnpunctuated == true ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff"),
         ProfileParam.LineSpacing => Spacing(filled.LineSpacing ?? RealtimeProfile.MiddleStep),
-        ProfileParam.ReadTiming => filled.ReadTiming switch
-        {
-            RealtimePresets.TimingConfirm => LocalizationService.Get("S.Realtime.ProfileReadTimingConfirm"),
-            RealtimePresets.TimingSettle => LocalizationService.Get("S.Realtime.ProfileReadTimingSettle"),
-            _ => LocalizationService.Get("S.Realtime.ProfileAuto"),
-        },
         ProfileParam.SettleSeconds => SecondsText(filled.SettleSeconds ?? RealtimePresets.Automatic),
         ProfileParam.ClearAfterEmptyReads => LocalizationService.Format("S.Realtime.ProfileTimes", filled.ClearAfterEmptyReads),
         ProfileParam.DetectorPercent => filled.DetectorPercent is < 0 or null
@@ -470,7 +450,6 @@ public partial class RealtimeProfilesCard : UserControl
     {
         Add(LayoutGroup, BuildRow(ProfileParam.MergeLevel, "S.Realtime.ProfileLayout", "S.Realtime.ProfileLayoutHint"));
         Add(LayoutGroup, BuildRow(ProfileParam.MergeUnpunctuated, "S.Realtime.ProfileLettering", "S.Realtime.ProfileLetteringHint"));
-        Add(TimingGroup, BuildRow(ProfileParam.ReadTiming, "S.Realtime.ProfileReadTiming", "S.Realtime.ProfileReadTimingHint"));
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
@@ -557,16 +536,6 @@ public partial class RealtimeProfilesCard : UserControl
             case ProfileParam.MergeLevel:
                 BuildSlider(row, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1, nameKey);
                 break;
-            case ProfileParam.ReadTiming:
-                BuildSegments(row, ["S.Realtime.ProfileAuto", "S.Realtime.ProfileReadTimingConfirm", "S.Realtime.ProfileReadTimingSettle"],
-                    "S.Realtime.ProfileReadTimingAutoTip",
-                    index => Commit(profile => profile.ReadTiming = index switch
-                    {
-                        1 => RealtimePresets.TimingConfirm,
-                        2 => RealtimePresets.TimingSettle,
-                        _ => RealtimePresets.TimingAuto,
-                    }));
-                break;
             case ProfileParam.MergeUnpunctuated:
             {
                 var toggle = new CheckBox { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(12, 0, 2, 0) };
@@ -635,73 +604,6 @@ public partial class RealtimeProfilesCard : UserControl
 
         _rows[param] = row;
         return row;
-    }
-
-    /// <summary>
-    /// A three-way tray — the 自動／固定 tray of 顯示外觀 with a third half — whose marker slides
-    /// under the chosen one.
-    /// </summary>
-    private void BuildSegments(ParamRow row, string[] keys, string? firstTip, Action<int> chosen)
-    {
-        var grid = new Grid();
-        var thumb = new Border { CornerRadius = new CornerRadius(6), RenderTransform = new TranslateTransform() };
-        thumb.SetResourceReference(Border.BackgroundProperty, "AppAccent");
-        var segments = new RadioButton[keys.Length];
-        for (int i = 0; i < keys.Length; i++)
-        {
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "ProfileSegment" });
-            var radio = new RadioButton { GroupName = "RealtimeProfile" + row.Param };
-            radio.SetResourceReference(StyleProperty, "SegmentedTrackRadio");
-            radio.SetResourceReference(ContentProperty, keys[i]);
-            if (i == 0 && firstTip is not null) radio.SetResourceReference(ToolTipProperty, firstTip);
-            Grid.SetColumn(radio, i);
-            int index = i;
-            radio.Checked += (_, _) =>
-            {
-                MoveThumb(row, animate: !_syncing);
-                if (!_syncing) chosen(index);
-            };
-            segments[i] = radio;
-        }
-        grid.Children.Add(thumb);
-        foreach (var radio in segments) grid.Children.Add(radio);
-        thumb.SizeChanged += (_, _) => MoveThumb(row, animate: false);
-
-        var tray = new Border { Child = grid, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(12, 0, 2, 0) };
-        tray.SetResourceReference(StyleProperty, "SegmentedTray");
-        tray.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty,
-            "S.Realtime.ProfileReadTiming");
-        // Its own scope for the three halves: shared with the other tray or across the rows, the
-        // sizes fed back into the rows' shared columns and the page's layout never settled.
-        Grid.SetIsSharedSizeScope(tray, true);
-        Grid.SetColumn(tray, 2);
-        row.Top.Children.Add(tray);
-
-        row.Segments = segments;
-        row.Thumb = thumb;
-        row.Controls.Add(tray);
-        row.Fades.Add(tray);
-    }
-
-    private static void MoveThumb(ParamRow row, bool animate)
-    {
-        if (row.Thumb is not { } thumb || row.Segments is not { } segments) return;
-        int index = Array.FindIndex(segments, radio => radio.IsChecked == true);
-        if (index < 0) index = 0;
-        var shift = (TranslateTransform)thumb.RenderTransform;
-        double target = index * thumb.ActualWidth;
-
-        if (!animate || thumb.ActualWidth <= 0 || !SystemParameters.ClientAreaAnimation)
-        {
-            shift.BeginAnimation(TranslateTransform.XProperty, null);
-            shift.X = target;
-            return;
-        }
-        shift.BeginAnimation(TranslateTransform.XProperty,
-            new System.Windows.Media.Animation.DoubleAnimation(target, TimeSpan.FromMilliseconds(220))
-            {
-                EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut },
-            });
     }
 
     /// <summary>
@@ -1203,7 +1105,5 @@ public partial class RealtimeProfilesCard : UserControl
         public Slider? Slider { get; set; }
         public CheckBox? Auto { get; set; }
         public CheckBox? Toggle { get; set; }
-        public RadioButton[]? Segments { get; set; }
-        public Border? Thumb { get; set; }
     }
 }

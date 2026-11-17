@@ -471,11 +471,6 @@
     <sys:String x:Key="S.Realtime.ProfileLetteringHint">Включите, если строки без знаков препинания, например реплики в манге, разделяются; выключите, если объединяются несвязанные короткие строки.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacing">Допуск межстрочного интервала</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLineSpacingHint">Расширьте, если реплика с широким интервалом делится надвое; сузьте, если сливаются соседние абзацы.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTiming">Способ чтения</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingConfirm">С проверкой</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingSettle">После остановки</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">По результату разбивки строк: для текста целиком — «С проверкой», для пунктов — «После остановки».</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileReadTimingHint">Выберите «С проверкой», если перевод нужен как можно быстрее; «После остановки», если экран постоянно меняется и перевод часто сменяется.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Ждать остановки текста</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Наибольшее время ожидания после изменения текста, пока изображение не перестанет меняться. Увеличьте, если плавно проявляющийся текст распознаётся с ошибками; уменьшите, если перевод появляется слишком поздно. На текст, появляющийся по буквам, почти не влияет.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">Без ожидания</sys:String>

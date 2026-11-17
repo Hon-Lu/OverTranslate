@@ -2,22 +2,6 @@ using OverTranslate.Models;
 
 namespace OverTranslate.Services.Realtime;
 
-/// <summary>讀取方式 as a block on a mode is really read.</summary>
-internal enum ActualReadTiming
-{
-    /// <summary>先讀再確認.</summary>
-    ReadThenConfirm,
-
-    /// <summary>等穩定再讀.</summary>
-    SettleThenRead,
-
-    /// <summary>
-    /// 依各組判斷: 自動 on a 自動判斷 step, where it follows what the block was last read as
-    /// (<see cref="RealtimeRegionState.AutoReadsAs"/>), so nothing can be said before it is read.
-    /// </summary>
-    ByContent,
-}
-
 /// <summary>
 /// What a mode's values come to, for the page to write beside each one: its own where it sets one,
 /// what 自動 stands for where it does not. Display only — the pipeline reads
@@ -28,12 +12,11 @@ internal enum ActualReadTiming
 /// Whether 沒有標點也合併 has any effect at this 合併程度 — only on 自動判斷's steps (2–6); greyed
 /// out elsewhere.
 /// </param>
-/// <param name="ReadTimingIsAutomatic">讀取方式 is left on 自動.</param>
-/// <param name="ReadTiming">How a change is read: as set, or what 自動 comes to.</param>
-/// <param name="SettleIsAutomatic">等文字停下 is left on 自動.</param>
+/// <param name="SettleIsAutomatic">畫面文字穩定後再讀取 is left on 自動.</param>
 /// <param name="SettleSeconds">
-/// How long a change inside the text is waited out, in seconds rounded to the hundredth — 0 is
-/// 不等待. Null for 依各組判斷, which only 自動 on a 自動判斷 step with 讀取方式 on 自動 is.
+/// 畫面文字穩定後再讀取 in seconds, rounded to the hundredth: as set, or what 自動 comes to — 0
+/// (不等待, read at once and confirmed) on 整段 and 合併, 0.15 (one poll, then read once) on 不合併
+/// and 逐項. Null for 依各組判斷: 自動 on a 自動判斷 step.
 /// </param>
 /// <param name="DetectorIsAutomatic">辨識解析度 is left on 自動.</param>
 /// <param name="DetectorPercent">
@@ -43,8 +26,6 @@ internal enum ActualReadTiming
 internal sealed record RealtimeActualValues(
     int MergeLevel,
     bool MergeUnpunctuatedApplies,
-    bool ReadTimingIsAutomatic,
-    ActualReadTiming ReadTiming,
     bool SettleIsAutomatic,
     double? SettleSeconds,
     bool DetectorIsAutomatic,
@@ -61,7 +42,8 @@ internal sealed record RealtimeActualValues(
     /// <summary>One mode, preset or custom, as stored.</summary>
     /// <remarks>
     /// 自動 on 不合併 and 逐項 reads as 逐項 does, on 整段 and 合併 as 整段 does — see
-    /// <see cref="ResolvedProfile.Layout"/>.
+    /// <see cref="ResolvedProfile.Layout"/>. Worked out with the session's own two questions,
+    /// <see cref="ResolvedProfile.Dialogue"/> and <see cref="ResolvedProfile.TextSettlePolls"/>.
     /// </remarks>
     public static RealtimeActualValues Of(RealtimeProfile profile)
     {
@@ -69,13 +51,9 @@ internal sealed record RealtimeActualValues(
         var resolved = ResolvedProfile.Resolve(profile);
         var layout = resolved.Layout;
 
-        // Known unless both the timing and the grouping are left to what the block turns out to hold.
-        bool? dialogue = resolved.Timing != RealtimeReadTiming.Auto || layout != RealtimeBlockMode.Auto
-            ? resolved.Dialogue(layout)
-            : null;
-
+        // Known unless both the wait and the grouping are left to what the block turns out to hold.
         double? settle = resolved.SettlePolls is { } polls ? Seconds(polls)
-            : dialogue is { } reads ? Seconds(resolved.TextSettlePolls(reads))
+            : layout != RealtimeBlockMode.Auto ? Seconds(resolved.TextSettlePolls(resolved.Dialogue(layout)))
             : null;
 
         int? detector = resolved.DetectorFraction is { } fraction ? (int)Math.Round(fraction * 100)
@@ -89,13 +67,6 @@ internal sealed record RealtimeActualValues(
         return new RealtimeActualValues(
             filled.MergeLevel!.Value,
             RealtimeMergeLevels.MergeUnpunctuatedApplies(filled.MergeLevel!.Value),
-            resolved.Timing == RealtimeReadTiming.Auto,
-            dialogue switch
-            {
-                true => ActualReadTiming.ReadThenConfirm,
-                false => ActualReadTiming.SettleThenRead,
-                null => ActualReadTiming.ByContent,
-            },
             resolved.SettlePolls is null,
             settle,
             resolved.DetectorFraction is null,

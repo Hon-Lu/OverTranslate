@@ -4,7 +4,8 @@ using OverTranslate.Services.Ocr;
 namespace OverTranslate.Services.Realtime;
 
 /// <summary>
-/// 讀取方式: when a change on screen is read. See <see cref="ResolvedProfile.Dialogue"/>.
+/// How a change on screen is read — 畫面文字穩定後再讀取 as 不等待, a wait, or 自動. See
+/// <see cref="ResolvedProfile.Dialogue"/>.
 /// </summary>
 internal enum RealtimeReadTiming
 {
@@ -88,6 +89,13 @@ internal sealed record AutoRules(
 /// (<see cref="AutoRules.Default"/>, <see cref="GroupingProfile.Realtime"/>) rather than a figure
 /// computed from a multiplier, whose floating point need not land on the constant.</para>
 ///
+/// <para>字幕・漫畫 and 遊戲介面・聊天室 carry their wait and detector size as figures rather than as
+/// 自動, and the figures are what 自動 came to on them, step for step: 不等待 reads at once and
+/// confirms with a wait of 0 polls, which is what a passage's null came to; one poll is what items'
+/// null came to; and 85 and 68 percent divide back to <see cref="RealtimeDetectorSize.StripFraction"/>
+/// and <see cref="RealtimeDetectorSize.PanelFraction"/> exactly, each starting the same chain of
+/// fallbacks — see <see cref="RealtimeDetectorSize.For"/>. Pinned by RealtimeTimingDetectorTests.</para>
+///
 /// <para>Equality is by value, which is how a change of settings tells whether a block's mode really
 /// changed.</para>
 /// </remarks>
@@ -152,12 +160,15 @@ public sealed record ResolvedProfile
         _ => RealtimeBlockMode.Auto,
     };
 
-    /// <summary>讀取方式.</summary>
+    /// <summary>
+    /// How a change is read: Auto for 畫面文字穩定後再讀取 left on 自動, ReadThenConfirm for 不等待,
+    /// SettleThenRead for any wait.
+    /// </summary>
     internal RealtimeReadTiming Timing { get; init; } = RealtimeReadTiming.Auto;
 
     /// <summary>
-    /// 等文字停下, in polls: the most a change inside the watched text is waited out before it is
-    /// read. Null is 自動 — none for a passage, <see cref="RealtimeRegionState.MaxTextUnsettledPolls"/>
+    /// 畫面文字穩定後再讀取, in polls: the most a change inside the watched text is waited out before
+    /// it is read. Null is 自動 — none for a passage, <see cref="RealtimeRegionState.MaxTextUnsettledPolls"/>
     /// for items.
     /// </summary>
     internal int? SettlePolls { get; init; }
@@ -238,12 +249,20 @@ public sealed record ResolvedProfile
     {
         var filled = stored.Filled();
         int level = filled.MergeLevel!.Value;
+        var settle = SettlePollsOf(filled.SettleSeconds!.Value);
         return new ResolvedProfile
         {
             Id = filled.Id,
             Merge = MergeOf(level),
-            Timing = TimingOf(filled.ReadTiming),
-            SettlePolls = SettlePollsOf(filled.SettleSeconds!.Value),
+            // The one value decides both: no wait is read at once and confirmed, any wait is waited
+            // out and read once, and 自動 leaves both to what the block is read as.
+            Timing = settle switch
+            {
+                null => RealtimeReadTiming.Auto,
+                0 => RealtimeReadTiming.ReadThenConfirm,
+                _ => RealtimeReadTiming.SettleThenRead,
+            },
+            SettlePolls = settle,
             ClearAfterEmptyReads = filled.ClearAfterEmptyReads!.Value,
             DetectorFraction = filled.DetectorPercent < 0 ? null : filled.DetectorPercent!.Value / 100.0,
             // Off 自動判斷 沒有標點也合併 is not read, and is held at the presets' value so that a
@@ -287,14 +306,6 @@ public sealed record ResolvedProfile
         RealtimeMergeLevels.Passage => RealtimeMerge.Passage,
         RealtimeMergeLevels.Max => RealtimeMerge.Merged,
         _ => RealtimeMerge.Auto,
-    };
-
-    // Filled values only: RealtimeProfile.Filled has already put every string among these.
-    private static RealtimeReadTiming TimingOf(string? value) => value switch
-    {
-        RealtimePresets.TimingConfirm => RealtimeReadTiming.ReadThenConfirm,
-        RealtimePresets.TimingSettle => RealtimeReadTiming.SettleThenRead,
-        _ => RealtimeReadTiming.Auto,
     };
 
     // Seconds to polls by the poll interval itself rather than PollsIn, which never answers less than
