@@ -1140,8 +1140,8 @@ public partial class RealtimeProfilesCard : UserControl
     }
 
     /// <summary>
-    /// Each value's name beside its controls while the longest name fits there, on a line of its own
-    /// above them when it does not.
+    /// Each value's name beside its controls while the widest heading fits there whole, on a line of
+    /// its own above them when it does not — see <see cref="HeadingWidth"/>.
     /// </summary>
     /// <remarks>
     /// The name's column takes what the controls leave, and a name is one line that does not wrap,
@@ -1161,15 +1161,7 @@ public partial class RealtimeProfilesCard : UserControl
         double width = Detail.ActualWidth - inset;
         double controls = ControlsWidth();
         double names = 0;
-        foreach (var row in _rows.Values)
-        {
-            var text = row.Name;
-            if (string.IsNullOrEmpty(text.Text)) continue;
-            var formatted = new FormattedText(text.Text, System.Globalization.CultureInfo.CurrentUICulture, text.FlowDirection,
-                new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, System.Windows.Media.Brushes.Black,
-                VisualTreeHelper.GetDpi(text).PixelsPerDip);
-            names = Math.Max(names, formatted.WidthIncludingTrailingWhitespace);
-        }
+        foreach (var row in _rows.Values) names = Math.Max(names, HeadingWidth(row));
         double needed = names + NameGap + controls;
         bool stacked = _stacked ? width < needed + StackingHysteresis : width < needed;
         if (stacked == _stacked) return;
@@ -1191,6 +1183,45 @@ public partial class RealtimeProfilesCard : UserControl
             }
         }
     }
+
+    /// <summary>
+    /// A row's heading on one line: the name, 僅適用於橫排 where it has it, and 已修改 with its
+    /// revert button — counted whether or not it is showing.
+    /// </summary>
+    /// <remarks>
+    /// Measured against the name alone, the heading fitted beside the controls only until a tag or
+    /// 已修改 joined it, and then wrapped: 已修改 sat on the name's line in rows without a tag and on
+    /// the line under it in rows with one. Counting the hidden 已修改 too keeps setting a value from
+    /// moving every row's name.
+    /// </remarks>
+    private static double HeadingWidth(ParamRow row)
+    {
+        if (string.IsNullOrEmpty(row.Name.Text)) return 0;
+        double width = TextWidth(row.Name);
+        foreach (UIElement child in ((System.Windows.Controls.Panel)row.Heading).Children)
+        {
+            if (ReferenceEquals(child, row.Name)) continue;
+            if (ReferenceEquals(child, row.Modified))
+            {
+                foreach (FrameworkElement part in row.Modified.Children)
+                    width += part.Margin.Left + part.Margin.Right
+                        + (part is TextBlock text ? TextWidth(text) : part.Width);
+            }
+            else if (child is Border { Child: TextBlock tagText } tag)
+            {
+                // From its parts rather than its DesiredSize: the 進階 rows' tags are not measured
+                // while 進階 is collapsed.
+                width += tag.Margin.Left + tag.Margin.Right + tag.Padding.Left + tag.Padding.Right
+                    + tag.BorderThickness.Left + tag.BorderThickness.Right + TextWidth(tagText);
+            }
+        }
+        return width;
+    }
+
+    private static double TextWidth(TextBlock text) =>
+        new FormattedText(text.Text, System.Globalization.CultureInfo.CurrentUICulture, text.FlowDirection,
+            new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, System.Windows.Media.Brushes.Black,
+            VisualTreeHelper.GetDpi(text).PixelsPerDip).WidthIncludingTrailingWhitespace;
 
     /// <summary>One value's row and the parts of it that change.</summary>
     private sealed class ParamRow(

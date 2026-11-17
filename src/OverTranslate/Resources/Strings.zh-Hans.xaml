@@ -485,7 +485,7 @@
     <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">依分行处理的判读结果：整段时先读再确认，逐项时等稳定再读。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTimingHint">译文需要尽快出现时选“先读再确认”；画面持续变动、译文频繁更换时选“等稳定再读”。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">等文字停下</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSettleHint">文字逐字出现时拉长，可避免翻译尚未完整的句子，并减少发送的翻译请求；译文出现太慢时缩短。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleHint">原文变动后，等画面停止变化再读取的最长时间。淡入中的文字被读错时拉长；译文出现太慢时缩短。对逐字出现的文字几乎没有作用。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">不等待</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">约 {0} 秒</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">译文保留</sys:String>

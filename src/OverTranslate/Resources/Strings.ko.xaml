@@ -489,7 +489,7 @@
     <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">줄 처리 판단 결과에 따릅니다: 한 덩어리는 먼저 읽고 확인, 항목별은 안정된 뒤 읽기.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTimingHint">번역문이 최대한 빨리 나와야 하면 '먼저 읽고 확인', 화면이 계속 바뀌어 번역문이 자주 바뀌면 '안정된 뒤 읽기'를 선택하세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">글자가 멈출 때까지 대기</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSettleHint">글자가 한 자씩 나타날 때 늘리면 완성되지 않은 문장의 번역을 피하고 보내는 번역 요청도 줄일 수 있습니다. 번역문이 너무 늦게 나오면 줄이세요.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleHint">원문이 바뀐 뒤 화면 변화가 멈출 때까지 읽기를 기다리는 최대 시간입니다. 페이드인 중인 글자가 잘못 읽히면 늘리고, 번역문이 너무 늦게 나오면 줄이세요. 한 글자씩 나타나는 글자에는 거의 효과가 없습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">대기 안 함</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">약 {0}초</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">번역문 유지</sys:String>

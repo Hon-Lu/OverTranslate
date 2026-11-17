@@ -489,7 +489,7 @@
     <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">行の扱いの判定結果に従います：まとめての場合は先に読んで確認、項目ごとの場合は安定してから読みます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTimingHint">訳文をできるだけ早く出したいときは「先に読んで確認」、画面が動き続けて訳文が頻繁に変わるときは「安定してから読む」を選びます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が止まるまで待つ</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSettleHint">文字が一文字ずつ表示されるときは長くすると、未完成の文の翻訳を避け、送信する翻訳リクエストも減らせます。訳文が出るのが遅いときは短くします。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleHint">原文が変わったあと、画面の変化が止まるまで読み取りを待つ最長時間。フェードイン中の文字が誤って読まれるときは長くし、訳文が出るのが遅いときは短くします。一文字ずつ表示される文字にはほとんど効果がありません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">待たない</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">約 {0} 秒</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">訳文の保持</sys:String>

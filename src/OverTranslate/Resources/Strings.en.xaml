@@ -485,7 +485,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTimingAutoTip">Follows how Line handling reads each group: Read, then confirm for a passage; Wait, then read for items.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileReadTimingHint">Choose Read, then confirm when translations should appear as soon as possible; choose Wait, then read when the screen keeps changing and translations keep being replaced.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Wait for text to settle</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileSettleHint">Lengthen when text appears letter by letter, to avoid translating unfinished sentences and to send fewer translation requests; shorten when translations appear too late.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleHint">The longest wait, after the text changes, for the picture to stop changing before it is read. Lengthen when text that fades in is misread; shorten when translations appear too late. Has almost no effect on text that appears letter by letter.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleNone">No wait</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSeconds">About {0} s</sys:String>
     <sys:String x:Key="S.Realtime.ProfileKeep">Keep translation</sys:String>
