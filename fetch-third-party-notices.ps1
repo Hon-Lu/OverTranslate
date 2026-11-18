@@ -117,6 +117,16 @@ $items = @(
         Files = @(
             @{ Label = "LICENSE"; Url = "https://raw.githubusercontent.com/clovaai/CRAFT-pytorch/master/LICENSE" }
         )
+    },
+    @{
+        Name = "SCOWL (Spell Checker Oriented Word Lists)"
+        Version = "2020.12.07"
+        License = "MIT-like (Kevin Atkinson), with public-domain and WordNet sources"
+        Project = "http://wordlist.aspell.net/"
+        Note = "The English, American, British and Canadian word lists up to size 60, words of two to five letters only, lower case, embedded as english-short-words.txt (made by tools/build-short-words.py)."
+        Files = @(
+            @{ Label = "Copyright"; Url = "https://raw.githubusercontent.com/en-wl/wordlist/v1/scowl/Copyright" }
+        )
     }
 )
 

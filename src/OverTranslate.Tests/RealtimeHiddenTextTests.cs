@@ -68,6 +68,9 @@ public class RealtimeHiddenTextTests
     // A sort button.
     [InlineData("A-Z")]
     [InlineData("A-Z▼")]
+    // A clock: AM and PM are the clock's, as the colon is.
+    [InlineData("03:33 AM")]
+    [InlineData("4:03 PM")]
     public void GroupsWithNothingToTranslateAreLeftOut(string text)
     {
         Assert.True(RealtimeHiddenText.CarriesNoWords(text));
@@ -101,7 +104,6 @@ public class RealtimeHiddenTextTests
     [InlineData("U.S.")]
     [InlineData("I/O")]
     // A word beside the numbers keeps the whole group.
-    [InlineData("03:33 AM")]
     [InlineData("Lose 3 HP.")]
     [InlineData("x2 Speed")]
     [InlineData("No.1")]
@@ -168,6 +170,95 @@ public class RealtimeHiddenTextTests
     public void WordsMadeOfLookAlikesAreNotPatterns(string text)
     {
         Assert.False(RealtimeHiddenText.IsShapeNoise(text));
+    }
+
+    [Theory]
+    // Capitals that are no English word and cannot be read aloud: a stat, a button, a setting, a
+    // tag. No list has them; no word or name looks like them.
+    [InlineData("CDR")]
+    [InlineData("CDR 30%")]
+    [InlineData("PWR")]
+    [InlineData("LB")]
+    [InlineData("LB RB")]
+    [InlineData("CTRL")]
+    [InlineData("BGM")]
+    [InlineData("TV")]
+    [InlineData("RTX")]
+    [InlineData("MVP")]
+    // Ones that read aloud, as the label of a number in their group.
+    [InlineData("SAN 45")]
+    [InlineData("VIG 20")]
+    [InlineData("MATK 120")]
+    [InlineData("SAN: 45/99")]
+    [InlineData("1400RP")]
+    // Camel case made of abbreviations only, and one letter among abbreviations.
+    [InlineData("SpAtk")]
+    [InlineData("CritDmg 150%")]
+    [InlineData("Sp. Atk 95")]
+    [InlineData("LvSP")]
+    [InlineData("TK/K/A")]
+    // A name beside a number is a stat's label as far as the text can tell; the name goes with it.
+    [InlineData("KAI 45")]
+    public void AbbreviationsNoListHasAreLeftOut(string text)
+    {
+        Assert.True(RealtimeHiddenText.CarriesNoWords(text));
+    }
+
+    [Theory]
+    // English words, whatever a game uses them for: the translators give their meaning.
+    [InlineData("END")]
+    [InlineData("HIT")]
+    [InlineData("END 20")]
+    [InlineData("HIT 95%")]
+    [InlineData("FLOOR 3")]
+    [InlineData("DAY 12")]
+    [InlineData("AXE")]
+    [InlineData("MAGE")]
+    [InlineData("MAX")]
+    [InlineData("MIN")]
+    [InlineData("NERF")]
+    [InlineData("SAVES")]
+    // Read aloud and alone: a name plate, a truncated word, an icon's edge read into a word —
+    // and a stat's head with no number in its group, which is drawn as it was before.
+    [InlineData("KAI")]
+    [InlineData("MIA")]
+    [InlineData("LEO")]
+    [InlineData("IO")]
+    [InlineData("COFFE")]
+    [InlineData("ILOAD")]
+    [InlineData("SAN")]
+    [InlineData("ESC")]
+    [InlineData("USA")]
+    [InlineData("PM")]
+    [InlineData("AM")]
+    // Title case is a name unless listed; camel case with a word in it is translated usefully.
+    [InlineData("Kai")]
+    [InlineData("Kai 45")]
+    [InlineData("PvP")]
+    [InlineData("AoE")]
+    [InlineData("MaxHP")]
+    [InlineData("HPRegen")]
+    // Six capitals or more, and capitals with a word.
+    [InlineData("ACTING")]
+    [InlineData("LB Jump")]
+    [InlineData("HP Potion")]
+    public void WordsNamesAndShortTextsThatReadAloudAreDrawn(string text)
+    {
+        Assert.False(RealtimeHiddenText.CarriesNoWords(text));
+        Assert.False(RealtimeHiddenText.NothingToTranslate(text));
+    }
+
+    [Fact]
+    public void TheWordListHasTheWordsAndNoneOfTheAbbreviations()
+    {
+        var words = RealtimeHiddenText.EnglishShortWords.Value;
+
+        foreach (var word in new[] { "go", "ok", "run", "bag", "end", "hit", "dev", "new", "save", "load", "win", "top", "max", "min", "axe", "mage" })
+            Assert.Contains(word, words);
+        foreach (var abbreviation in new[] { "hp", "mp", "atk", "def", "str", "dex", "int", "exp", "agi", "luk", "san", "vig", "cdr", "esc", "ko", "wis", "cha" })
+            Assert.DoesNotContain(abbreviation, words);
+        // Two to five letters, lower case, nothing else.
+        Assert.All(words, word => Assert.Matches("^[a-z]{2,5}$", word));
     }
 
     private static OcrTextBlock Block(string text) => new(text, new Rect(10, 10, 80, 20), Confidence: 0.95);

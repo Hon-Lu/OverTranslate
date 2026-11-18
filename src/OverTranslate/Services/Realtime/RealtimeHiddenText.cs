@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -40,8 +41,8 @@ internal static class RealtimeHiddenText
 
     /// <summary>
     /// Whether a group holds no words a translation could help with: numbers and symbols, with
-    /// nothing beside them but single letters, level marks and stat abbreviations — or symbols
-    /// alone, or stat abbreviations alone.
+    /// nothing beside them but single letters, level marks and abbreviations — or symbols alone,
+    /// or abbreviations alone.
     /// </summary>
     /// <remarks>
     /// <para>What is left out, word by word:</para>
@@ -50,14 +51,16 @@ internal static class RealtimeHiddenText
     /// <item>one Latin letter, against a number or beside it: a unit (84s, 7600R, x958), a button
     /// or a grade (A 1/3, 89 F 120), or an icon the recogniser read as a letter (a 189);</item>
     /// <item>a level mark, as printed or as misread over a moving picture (Lv, Lvl, Lvi, LxI);</item>
-    /// <item>a stat abbreviation (HP, MP, SP, EP, ATK, DEX…) — see <see cref="StatAbbreviations"/> —
-    /// and a sort label of single letters (A-Z).</item>
+    /// <item>an abbreviation (HP, CDR, LB, SAN 45, 4:03 PM…) — see <see cref="Classify"/> — and a
+    /// sort label of single letters (A-Z).</item>
     /// </list>
-    /// <para>Any other letter is a word and keeps the group: two Latin letters together that are not
-    /// a listed abbreviation (OK, GO, Io, No, AM, Dev), and every letter of any other script (是,
-    /// はい, 월, 5月, 15일). A lone letter or a misread level mark needs a number beside it to be
-    /// left out; a listed abbreviation does not, and 「HP」 or 「Lv」 alone is left out as
-    /// 「HP 100/200」 is. Full-width Latin is folded first, so ｘ９５８ is judged as x958.</para>
+    /// <para>Any other letter is a word and keeps the group: two Latin letters or more that make an
+    /// English word (OK, GO, END, Dev), a name or anything else in title or lower case (Io, Kai,
+    /// No), and every letter of any other script (是, はい, 월, 5月, 15일). A lone letter or a
+    /// misread level mark needs a number beside it to be left out, and so does an abbreviation
+    /// that reads aloud like a name (SAN, KAI); one that cannot be read aloud does not, and 「HP」
+    /// or 「LB」 alone is left out as 「HP 100/200」 is. Full-width Latin is folded first, so ｘ９５８
+    /// is judged as x958.</para>
     ///
     /// <para>「OpenAI 相容」 does not even send a text without a letter in it, and hands it back as its
     /// own translation (see OpenAiChatTranslator).</para>
@@ -70,6 +73,7 @@ internal static class RealtimeHiddenText
         var digits = false;
         var letters = false;
         var abbreviation = false;
+        var needsNumber = false;
         foreach (var word in folded.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
         {
             var count = 0;
@@ -92,29 +96,147 @@ internal static class RealtimeHiddenText
             if (!latin) return false;
             if (count == 1) continue;
             var runs = LetterRuns(word);
-            // Before the level mark: LV and Lv are listed, and alone they still say nothing.
-            if (runs.All(IsStatAbbreviation) || IsSortLabel(word, runs))
+            if (IsSortLabel(word, runs))
             {
                 abbreviation = true;
+                continue;
+            }
+
+            // A single letter between abbreviations goes with them (TK/K/A, a kills/deaths/assists
+            // head); single letters on their own are still words (U.S., I/O). Before the level
+            // mark: Lvl is listed, and alone it still says nothing.
+            var kinds = runs.Where(run => run.Length > 1).Select(Classify).ToList();
+            if (kinds.Count > 0 && !kinds.Contains(RunKind.Word))
+            {
+                abbreviation = true;
+                needsNumber |= kinds.Contains(RunKind.Label);
                 continue;
             }
             if (runs.Count == 1 && LevelMark.IsMatch(runs[0])) continue;
             return false;
         }
 
+        // An abbreviation that reads like a name says nothing only as the label of a number.
+        if (needsNumber && !digits) return false;
         // Symbols alone carry no words either; a letter or a level mark needs a number to be the
         // unit or the mark of.
         return digits || !letters || abbreviation;
     }
 
+    private enum RunKind
+    {
+        /// <summary>A word, a name, anything a translation might help with: the group is drawn.</summary>
+        Word,
+        /// <summary>An abbreviation, left out wherever it is.</summary>
+        Abbreviation,
+        /// <summary>An abbreviation only when its group has a number: KAI alone is a name, KAI 45 a stat.</summary>
+        Label,
+    }
+
     /// <summary>
-    /// The abbreviations a game's numbers are labelled with, which no translator can read without
-    /// the game around them.
+    /// What a run of two Latin letters or more is: a word, an abbreviation, or an abbreviation
+    /// only beside a number.
     /// </summary>
     /// <remarks>
-    /// <para>A list rather than a shape. Two to four capitals is also GO, OK, RUN, BAG, NEW, END,
-    /// TOP, SAVE, LOAD, SKIP, AUTO, QUIT, Dev — words a reader may need translated, and every
-    /// engine translates them. Only what is listed is left out, so nothing outside it ever is.</para>
+    /// <para>Words are listed, not abbreviations: no list of abbreviations is ever complete, and a
+    /// word a list of words misses is only left as the reader sees it. Capitals of two to five
+    /// letters that are not an English word — see <see cref="EnglishShortWords"/> — are an
+    /// abbreviation: a stat (CDR, SAN, VIG, MATK), a button (LB, RB, CTRL), a setting (BGM, SFX),
+    /// a real-world one (TV, USA) or a name (KAI, MIA). GO, OK, RUN, BAG, END, HIT, SAVE, LOAD
+    /// are words and stay, and so do the stats that are words (END, ARM, PER, CON, AD), whose
+    /// translation is the word's (END → 結束) — see <see cref="StatAbbreviations"/> for the rule
+    /// tried on those.</para>
+    ///
+    /// <para>Two tiers by whether the letters can be read aloud. Without a vowel (HP, STR, DMG,
+    /// LB, RB, CDR, BGM, TV) no word or name looks like that: left out alone. With one (SAN, VIG,
+    /// ESC, USA, and every name: KAI, MIA, LEO, EVA, IO) only beside a number in the same group:
+    /// 「SAN 45」 is a stat, 「KAI」 on a name plate stays, and so does a truncated word (COFFE on a
+    /// sign) or one an icon's edge was read into (ILOAD). The listed ones that read aloud (EXP,
+    /// INT, AGI, DEX, LUK) are left out alone too, as they were before.</para>
+    ///
+    /// <para>Camel case only when every part is an abbreviation (SpAtk, CritDmg, iLvl): the
+    /// translators make something useful of PvP, AoE and MaxHP. Title case only when listed (Hp,
+    /// Atk, Def): Kai, Mia, Leo, Io are names as often as Def is a stat.</para>
+    ///
+    /// <para>MEASURED (2026-11-19). 342 short texts on six engines, en→zh-TW: capitals that are
+    /// not a word came back with a useful meaning 9–28% of the time and a wrong one 24–37% (MS →
+    /// 多發性硬化症, LB → 磅, MSG → 味精, MIA → 失蹤); short names mostly came back as sounds. Over
+    /// 591 captures and 165 more, 標準: 222 groups left out that the list alone drew, none a reader
+    /// needed translated — clocks with AM/PM, graphics-card badges (RTX, VSR), chat avatars'
+    /// initials, prices (1400RP, NT$300), forum GP/BP counts, platform tags (PC, TV, VR, PS5/PS4)
+    /// on news sites, HTML/CSS tabs — and none the list left out is drawn now. The real-world
+    /// ones that read aloud (USA, VIP, FBI), which the translators do well, never stood alone
+    /// there without a number.</para>
+    /// </remarks>
+    private static RunKind Classify(string run)
+    {
+        if (IsStatAbbreviation(run)) return RunKind.Abbreviation;
+        if (!run.All(char.IsAsciiLetter)) return RunKind.Word;
+
+        if (run.All(char.IsAsciiLetterUpper))
+        {
+            if (run.Length > 5) return RunKind.Word;
+            // A clock's (4:03 PM, as 12:30 is), so only beside its number; AM alone is a word.
+            if (run is "AM" or "PM") return RunKind.Label;
+            if (EnglishShortWords.Value.Contains(run.ToLowerInvariant())) return RunKind.Word;
+            return run.Any(c => "AEIOUY".Contains(c)) ? RunKind.Label : RunKind.Abbreviation;
+        }
+
+        // Camel case: a capital after the first letter and a small one somewhere (PvP, MaxHP).
+        // Title case (Kai, Def) and lower case (hp, dev) are words unless listed.
+        if (!run.Skip(1).Any(char.IsAsciiLetterUpper) || !run.Any(char.IsAsciiLetterLower)) return RunKind.Word;
+        var parts = CamelPart.Matches(run).Select(m => m.Value).Where(part => part.Length > 1).ToList();
+        if (parts.Count == 0) return RunKind.Word;
+        var kinds = parts.Select(part => char.IsAsciiLetterUpper(part[0]) ? Classify(part) : RunKind.Word).ToList();
+        if (kinds.Contains(RunKind.Word)) return RunKind.Word;
+        return kinds.Contains(RunKind.Label) ? RunKind.Label : RunKind.Abbreviation;
+    }
+
+    // SpAtk → Sp, Atk; HPRegen → HP, Regen; iLvl → i, Lvl.
+    private static readonly Regex CamelPart = new("[A-Z]+(?![a-z])|[A-Z]?[a-z]+", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// English words of two to five letters, lower case: SCOWL's word lists up to size 60, made by
+    /// tools/build-short-words.py.
+    /// </summary>
+    /// <remarks>
+    /// Size 60 and no further: from 70 on SCOWL has cha, and from 80 dex, wis, ko, san, esc, vig —
+    /// rare words that are a game's abbreviations far more often on a screen. SCOWL keeps
+    /// abbreviations and names in files of their own, which are not read; ok, max, min and dev
+    /// are put back, since a screen uses them as words.
+    /// </remarks>
+    internal static readonly Lazy<HashSet<string>> EnglishShortWords = new(LoadEnglishShortWords);
+
+    private static HashSet<string> LoadEnglishShortWords()
+    {
+        using var stream = typeof(RealtimeHiddenText).Assembly.GetManifestResourceStream(EnglishShortWordsResource)
+            ?? throw new InvalidOperationException($"Embedded resource not found: {EnglishShortWordsResource}");
+        using var reader = new StreamReader(stream);
+        var words = new HashSet<string>(StringComparer.Ordinal);
+        while (reader.ReadLine() is { } line)
+            if (line.Length > 0 && line[0] != '#') words.Add(line.Trim());
+        return words;
+    }
+
+    private const string EnglishShortWordsResource = "OverTranslate.EnglishShortWords.txt";
+
+    /// <summary>
+    /// The abbreviations a game's numbers are labelled with, which no translator can read without
+    /// the game around them — left out even alone, though most of them read aloud.
+    /// </summary>
+    /// <remarks>
+    /// <para>What is not listed and not a word is found by <see cref="Classify"/>. What the list
+    /// still decides is that EXP, INT, AGI, DEX, LUK, AP and EP, and the title-case forms (Hp, Atk,
+    /// Def, Str), are left out with no number in their group — a column head over its numbers, a
+    /// stat on a line of its own. A name-like abbreviation that is not listed needs the number
+    /// (SAN 45); SAN alone is drawn, as it was before.</para>
+    ///
+    /// <para>Not taken: leaving out a capital word with a number (END 20, HIT 95%) when most of
+    /// the other labels in the picture are left out, to keep a stat panel of words and
+    /// abbreviations alike. MEASURED over 591 captures, 165 more and 148 sequences of nine: it
+    /// caught nothing in the captures and only 7600R read as 760OR in the sequences, so what it
+    /// would cost (FLOOR 3 and DAY 12 beside a column of stats; one word coming and going as the
+    /// labels around it are read) has nothing to show for it.</para>
     ///
     /// <para>MEASURED (2026-11-19, 63 abbreviations, en→zh-TW): the wrong word 20 times on Google,
     /// 16 on Bing, 21 on 有道, 5 on Microsoft — HP as 惠普 and MP as 國會議員 on all of them — and the
