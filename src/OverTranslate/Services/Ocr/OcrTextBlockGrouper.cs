@@ -344,6 +344,8 @@ internal static class OcrTextBlockGrouper
         for (var i = 1; i < row.Count; i++)
         {
             var (joined, rule) = JudgeSameLine(row[i - 1], row[i], threshold);
+            if (joined && profile.RefuseLabelRuns && IsLabelRun(row, i))
+                (joined, rule) = (false, "label run");
             if (!joined && rule == "horizontal gap" &&
                 profile.TakesProseEvidence &&
                 HasSpanningProseContinuation(row[i - 1], row[i], blocks))
@@ -525,6 +527,91 @@ internal static class OcrTextBlockGrouper
 
     /// <inheritdoc cref="IsSizeBreakInRow"/>
     private const int SizeBreakMinSmallerCharacters = 3;
+
+    /// <summary>
+    /// Whether two neighbours the gap test let through are two items of a bar — buttons, tabs, a
+    /// nav menu, a row of figures — rather than two pieces of one line.
+    /// </summary>
+    /// <remarks>
+    /// <para>The gap test cannot tell these apart on its own. Between <see cref="LabelRunMinGap"/>
+    /// and the 0.45 it falls back to, a word space and the space between two items overlap: a game's
+    /// key-hint bar (「決定」 0.39 「もどる」), a site's nav ("Tools" 0.38 "About" 0.38 "Blog") and a
+    /// stats header ("Stamina" 0.31 "Power") were each joined into one string and translated as one
+    /// phrase. What the bar has that a line does not is a third item at the same kind of distance,
+    /// so the pair is only refused when the next box out on either side is also between
+    /// <see cref="LabelRunMinGap"/> and <see cref="LabelRunMaxNeighbourGap"/> line heights away. Two
+    /// pieces alone on a row stay joined whatever the gap: a subtitle split once at a pause
+    /// (「何なんですか？」 0.39 「何なんですか？」, 「絡みに行く相手も」 0.39 "just like a 宇宙人") looks
+    /// exactly like two buttons, and nothing on the row says which it is.</para>
+    ///
+    /// <para>Both sides must look like labels (<see cref="LooksLikeLabel"/>). A key glyph or an
+    /// avatar letter beside its caption ("A" "Announcement", 「③」 「登録リスト」) is one item read in
+    /// two boxes, and is left joined. Prose never counts, because a line the detector boxed word by
+    /// word has word gaps up to 0.38 (see <see cref="SameLineGapThreshold.Fallback"/>) and three or
+    /// more of them in a row.</para>
+    ///
+    /// <para>Measured on the realtime corpus (591 captures), the 226 same-row joins of 不合併 hand-
+    /// marked as 103 unrelated items, 95 harmless (a key and its caption, a message and its time) and
+    /// 28 one line. This refuses 40 of the 103 and none of the others. The 28 sit at gaps of 0.06 or
+    /// less but for the two subtitles above; the misses are pairs alone on their row or under the
+    /// minimum gap.</para>
+    /// </remarks>
+    private static bool IsLabelRun(List<OcrTextBlock> row, int rightIndex)
+    {
+        var left = row[rightIndex - 1];
+        var right = row[rightIndex];
+        if (NormalizedGap(left, right) < LabelRunMinGap || !LooksLikeLabel(left) || !LooksLikeLabel(right))
+            return false;
+
+        return rightIndex >= 2 && IsItemSpacing(NormalizedGap(row[rightIndex - 2], left)) ||
+               rightIndex + 1 < row.Count && IsItemSpacing(NormalizedGap(right, row[rightIndex + 1]));
+
+        static bool IsItemSpacing(double gap) => gap is >= LabelRunMinGap and <= LabelRunMaxNeighbourGap;
+    }
+
+    /// <summary>
+    /// A box at least <see cref="LabelMinAspect"/> as wide as it is high, holding no sentence
+    /// punctuation and no word that starts in lower case.
+    /// </summary>
+    /// <remarks>
+    /// The width keeps out a lone glyph: a key, a button icon, an avatar's initial. The text test
+    /// keeps out prose, which is what a run of word-spaced boxes would otherwise be taken for. Menu
+    /// and button captions are capitalised or not in a cased script at all ("Photo Mode", "U.S.",
+    /// 「セーブデータ削除」); a sentence has lower-case words, or a mark that ends or pauses it. A
+    /// full stop counts only at the end after a lower-case letter, so "Rec. 200" and "U.S." are still
+    /// labels; a comma or semicolon only before a space or the end, so 「各1,800円」 is too.
+    /// </remarks>
+    private static bool LooksLikeLabel(OcrTextBlock block)
+    {
+        if (block.LayoutBounds.Width < block.LayoutBounds.Height * LabelMinAspect)
+            return false;
+
+        var text = block.Text.Trim();
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (SentenceMarks.Contains(c))
+                return false;
+            if (c is ',' or ';' && (i + 1 == text.Length || char.IsWhiteSpace(text[i + 1])))
+                return false;
+            // The first letter of a word, after anything that is not a letter or digit.
+            if (char.IsLower(c) && (i == 0 || !char.IsLetterOrDigit(text[i - 1])))
+                return false;
+        }
+
+        return !(text.Length >= 2 && text[^1] == '.' && char.IsLower(text[^2]));
+    }
+
+    private const string SentenceMarks = "。、，！？!?…「」『』";
+
+    /// <inheritdoc cref="IsLabelRun"/>
+    private const double LabelRunMinGap = 0.3;
+
+    /// <inheritdoc cref="IsLabelRun"/>
+    private const double LabelRunMaxNeighbourGap = 2.0;
+
+    /// <inheritdoc cref="LooksLikeLabel"/>
+    private const double LabelMinAspect = 1.5;
 
     /// <summary>
     /// How close in text size two lines have to be before one can be the other wrapping.

@@ -140,8 +140,12 @@ public class GroupingProfileContractTests
     /// <see cref="GroupingProfile.SolidLineAdvanceWhenWrapped"/>, given its own name so the leading
     /// figure can move without switching them. Every profile holds the answer the old comparison
     /// gave, which the test below pins.</para>
+    /// <para>The sixth, <see cref="GroupingProfile.RefuseLabelRuns"/>, arrived with the realtime
+    /// corpus's 226 same-row joins hand-marked: 103 were items of a bar strung into one string, and
+    /// refusing label runs takes 40 of them apart and none of the rest. The live panel profile takes
+    /// it alone, because the screenshot side has no such marking to measure it on.</para>
     [Fact]
-    public void TheProfile_CarriesFiveFields_AndASixthIsADesignChange()
+    public void TheProfile_CarriesSixFields_AndASeventhIsADesignChange()
     {
         var fields = typeof(GroupingProfile)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -153,8 +157,18 @@ public class GroupingProfileContractTests
              nameof(GroupingProfile.WaiveLengthTestWhenSetSolid),
              nameof(GroupingProfile.SolidLineAdvanceWhenWrapped),
              nameof(GroupingProfile.RefuseSpeakerLineStarts),
-             nameof(GroupingProfile.TakesProseEvidence)],
+             nameof(GroupingProfile.TakesProseEvidence),
+             nameof(GroupingProfile.RefuseLabelRuns)],
             fields);
+    }
+
+    [Fact]
+    public void OnlyTheRealtimeProfile_RefusesLabelRuns()
+    {
+        Assert.True(GroupingProfile.Realtime.RefuseLabelRuns);
+        Assert.False(GroupingProfile.General.RefuseLabelRuns);
+        Assert.False(GroupingProfile.Interface.RefuseLabelRuns);
+        Assert.False(GroupingProfile.Vertical.RefuseLabelRuns);
     }
 
     /// <summary>
