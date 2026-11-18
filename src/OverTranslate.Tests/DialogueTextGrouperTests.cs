@@ -478,6 +478,52 @@ public class DialogueTextGrouperTests
     }
 
     [Fact]
+    public void APageArrowBesideTheLastLine_DoesNotPartTheDialogue()
+    {
+        // After ja-aa-nameplate-region.png.
+        AssertJoinedBeside(Block("オレのシゴトは、あの暗い墓場を", 378, 68, 967, 60), Block("》", 1600, 145, 72, 65),
+            Block("暗い目で見守るコトなのさ。", 376, 151, 804, 62));
+    }
+
+    [Fact]
+    public void AnAutoButtonBesideTheLastLine_DoesNotPartTheDialogue()
+    {
+        // After en-uma-narration-region.png.
+        AssertJoinedBeside(Block("Special Week enjoys a hearty meal with her friends, lost in", 427, 71, 1046, 55),
+            Block("Auto", 1642, 125, 91, 50), Block("conversation from the first to the very last bite.", 424, 123, 852, 57));
+    }
+
+    private static void AssertJoinedBeside(OcrTextBlock first, OcrTextBlock item, OcrTextBlock second)
+    {
+        var groups = DialogueTextGrouper.Group([first, item, second]);
+        Assert.Equal(2, groups.Count);
+        Assert.Contains(groups, g => g.Lines.Count == 2 && g.Text.Contains(first.Text) && g.Text.Contains(second.Text));
+        Assert.Contains(groups, g => g.Text == item.Text);
+    }
+
+    [Theory]
+    [InlineData("OK", 800, 80)] // under the end of the longer line above: in the text's column
+    [InlineData("》", 1500, 60)] // 8 heights off: another part of the screen
+    [InlineData("メガクリスマスツリー", 1100, 400)] // not short: a second list column
+    public void AnItemNotBesideBothLines_StillPartsThem(string item, double x, double w)
+    {
+        var first = Block("Special Week enjoys a hearty meal with her friends", 0, 0, 1000, 60);
+        var second = Block("conversation to the very last bite.", 0, 85, 600, 60);
+        var groups = DialogueTextGrouper.Group([first, Block(item, x, 85, w, 60), second]);
+        Assert.DoesNotContain(groups, g => g.Text.Contains(first.Text) && g.Text.Contains(second.Text));
+    }
+
+    [Fact]
+    public void AShortItemInAColumnOfThem_StillPartsTheLines()
+    {
+        // A table's values, one per row, rather than a box's one button.
+        var first = Block("Special Week enjoys a hearty meal with her friends", 0, 0, 1000, 60);
+        var second = Block("conversation to the very last bite.", 0, 85, 600, 60);
+        var groups = DialogueTextGrouper.Group([first, second, Block("0", 1100, 85, 30, 60), Block("3", 1100, 170, 30, 60)]);
+        Assert.DoesNotContain(groups, g => g.Text.Contains(first.Text) && g.Text.Contains(second.Text));
+    }
+
+    [Fact]
     public void ConfidentSingleLetterCanJoinItsSentence()
     {
         var result = OcrService.GroupRealtime([Block("I", 0, 0, 8), Block("am here.", 15, 0, 90)], 100, RealtimeBlockMode.Subtitle);
