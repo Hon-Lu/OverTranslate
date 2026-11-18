@@ -293,6 +293,42 @@ OcrHarness.exe --scale-sweep --det 別的det.onnx:half 圖.png [更多.png ...]
 升級模型或函式庫時，先用同一批圖跑一次存起來當基準，改完再跑一次比對；
 PP-OCRv6 那次就是靠這個確認 `RapidOcrNet 1.0.1 → 3.0.0` 的輸出逐字元相同。
 
+## 即時翻譯模式的回歸驗證
+
+`--auto-probe` 系列：同一份語料只 OCR 一次存成快取，之後改分組、模式值或畫法都只重播快取（不跑 OCR、不讀圖、不連網），幾秒到幾分鐘就能比出差異。
+快取與報告放 `.test-artifacts/`（已 gitignore）；測試圖在 `.ai/test-images/`（本機，不進版控）。
+
+```powershell
+$h = 'tools/OcrHarness/bin/Release/net8.0-windows10.0.26100.0/win-x64/OcrHarness.exe'
+```
+
+- **語料快取**：清單 `.test-artifacts/auto/corpus.txt` 每行「圖片路徑<Tab>語言<Tab>標籤」，標籤 D（整段：字幕、對話、漫畫）／P（零散：介面、選單、聊天）／M（兩者同畫面）。
+  依標籤用該模式的偵測尺寸 OCR 一次，M 兩種尺寸各讀一次（目前 520 行 → 591 筆）。快取不見或換了 OCR 模型、偵測尺寸時重建：
+  `& $h --auto-probe capture .test-artifacts/auto/cache.json '@.test-artifacts/auto/corpus.txt'`
+- **三個預設的基準與比對**：`replay` 寫 `report.txt`、`report.groups.txt`、`report.modes.txt`、`report.extras.tsv`、`report.own.txt`。
+  標準不帶 `--profile`；字幕・漫畫、遊戲介面・聊天室用一筆模式 JSON（同設定檔 `Realtime.Profiles` 的一筆，只寫要改的值），例如 `{"Id":"subtitle","BasedOn":"subtitle"}`。
+  改動前用舊建置跑一次存成基準，改動後再跑，逐檔 `cmp`／`fc /b` 必須逐位元相同（標準的基準在 `.test-artifacts/profiles/base/`）。改分組、模式模型、`ResolvedProfile`、OCR 後處理時要跑。
+  `& $h --auto-probe replay .test-artifacts/auto/cache.json out/std/report.txt`
+  `& $h --auto-probe replay .test-artifacts/auto/cache.json out/sub/report.txt --profile sub.json`
+- **drops**：每條偵測行被哪個過濾（信心、橫跨區塊、過濾小字）拿掉，旁附主要文字高度。改過濾小字或信心門檻時跑。
+  `& $h --auto-probe drops .test-artifacts/auto/cache.json out/lines.tsv [--profile mode.json]`
+- **extremes**：每個模式值的兩端各重播一次，有例外就失敗。新增或改模式值的範圍時跑。
+  `& $h --auto-probe extremes .test-artifacts/auto/cache.json out/extremes`
+- **語句合併滑條單調性**：九格逐格重播，檢查每格是否併進前一格併的全部（summary.txt、instances.tsv）。改語句合併任一格的規則時跑。
+  `& $h --auto-probe slider .test-artifacts/auto/cache.json out/slider`
+- **merge-max**：最右格「合併」對整段與舊整個區塊多併了什麼（summary.txt、extra.tsv）。改「合併」的規則時跑。
+  `& $h --auto-probe mergemax .test-artifacts/auto/cache.json out/mergemax`
+- **譯文對齊統計**：標準自己的分組中，譯文對齊（自動）會改變畫法的組（out.txt＋同名 .tsv）。改 `RealtimeSourceAlignment` 推測規則時跑。
+  `& $h --auto-probe align .test-artifacts/auto/cache.json out/align.txt`
+- **面板退回帶子**：遊戲介面・聊天室拆不開而退回一條帶子的組數（out.txt＋同名 .tsv；固定字級造成的不計）。改 `RealtimePanelLines` 或面板畫法時跑。
+  `& $h --auto-probe band .test-artifacts/auto/cache.json out/band.txt`
+- **短句辨識門檻逐格掃描**：60–95% 每 1% 各丟掉多少行／組，並檢查單調、80% 與常數相同（sweep.tsv、summary.txt，失敗回傳 1）。改信心門檻或短句判斷時跑。
+  `& $h --auto-probe confidence .test-artifacts/auto/cache.json out/confidence`
+- **偵測解析度端對端比對**：字幕・漫畫、遊戲介面・聊天室以固定值（85%／68%）與自動各跑一次真實辨識，比偵測尺寸鏈與讀到的結果（out.tsv，有差異回傳 1）。會跑 OCR，清單格式同 capture。改辨識解析度或 `RealtimeDetectorSize` 時跑。
+  `& $h --auto-probe detector '@.test-artifacts/auto/corpus.txt' out/detector.tsv`
+
+重播比不到的：畫面文字穩定後再讀取、原文消失後立即清除譯文（作用在輪與輪之間）、辨識解析度（快取是用預設尺寸讀的），這些看單元測試、`detector` 或實機。
+
 ## 產生測試截圖
 
 `capture.ps1` — 用 .NET `CopyFromScreen` 把螢幕區域存成 PNG（模擬使用者框選）：
