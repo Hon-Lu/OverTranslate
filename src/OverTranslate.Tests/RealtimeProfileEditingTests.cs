@@ -254,33 +254,183 @@ public class RealtimeProfileEditingTests
         Assert.True(a.SequenceEqual(b));
     }
 
-    // ── What 自動 stands for ──
+    // ── 自動｜手動 and the figure for 手動, kept apart ──
 
-    [Theory]
-    [InlineData(RealtimeMergeLevels.AutomaticMiddle, 0.15)]
-    [InlineData(RealtimeMergeLevels.Passage, 0.0)]
-    [InlineData(RealtimeMergeLevels.Max, 0.0)]
-    [InlineData(RealtimeMergeLevels.Items, 0.15)]
-    [InlineData(RealtimeMergeLevels.Min, 0.15)]
-    public void AutomaticSettle_RestsOnTheResolvedWait(int level, double expected)
+    // What the page writes for each move: the switch alone, or a slider position on 手動 (switch
+    // and figure together) — then tidied, as every write from the page is.
+    private static RealtimeProfile Switch(RealtimeProfile mode, bool automatic)
     {
-        var mode = Custom("a", "A");
-        mode.MergeLevel = level;
-        mode.SettleSeconds = 0.9;   // what the mode holds by hand does not move where 自動 rests
-        Assert.Equal(expected, RealtimeProfileEditing.AutomaticSettleSeconds(mode.Filled()));
+        var copy = mode.Clone();
+        copy.SettleAutomatic = automatic;
+        copy.DetectorAutomatic = automatic;
+        return RealtimeProfileEditing.WithoutTemplateValues(copy);
+    }
+
+    private static RealtimeProfile Slide(RealtimeProfile mode, double seconds, int percent)
+    {
+        var copy = mode.Clone();
+        copy.SettleAutomatic = false;
+        copy.SettleSeconds = seconds;
+        copy.DetectorAutomatic = false;
+        copy.DetectorPercent = percent;
+        return RealtimeProfileEditing.WithoutTemplateValues(copy);
+    }
+
+    private static (bool, double, bool, int) Halves(RealtimeProfile mode)
+    {
+        var filled = mode.Filled();
+        return (filled.SettleAutomatic!.Value, filled.SettleSeconds!.Value, filled.DetectorAutomatic!.Value, filled.DetectorPercent!.Value);
     }
 
     [Theory]
-    [InlineData(RealtimeMergeLevels.AutomaticMiddle, 85)]
-    [InlineData(RealtimeMergeLevels.Passage, 85)]
-    [InlineData(RealtimeMergeLevels.Max, 85)]
-    [InlineData(RealtimeMergeLevels.Items, 68)]
-    [InlineData(RealtimeMergeLevels.Min, 68)]
-    public void AutomaticDetector_RestsOnTheMeasuredSize(int level, int expected)
+    [InlineData(RealtimePresets.StandardId)]
+    [InlineData(RealtimePresets.SubtitleId)]
+    [InlineData(RealtimePresets.InterfaceId)]
+    public void TheFigureForManual_SurvivesGoingToAutomaticAndBack(string basedOn)
     {
-        var mode = Custom("a", "A");
-        mode.MergeLevel = level;
-        Assert.Equal(expected, RealtimeProfileEditing.AutomaticDetectorPercent(mode.Filled()));
+        var manual = Slide(Switch(Custom("a", "A", basedOn), automatic: false), 0.6, 92);
+        Assert.Equal((false, 0.6, false, 92), Halves(manual));
+
+        var automatic = Switch(manual, automatic: true);
+        Assert.Equal((true, 0.6, true, 92), Halves(automatic));
+
+        var again = Switch(automatic, automatic: false);
+        Assert.Equal((false, 0.6, false, 92), Halves(again));
+        Assert.Equal((false, 0.6, false, 92), Halves(Switch(Switch(again, true), false)));
+    }
+
+    /// <summary>
+    /// Never moved: 手動 starts at the preset's figure where the preset has one, and at 0.15 seconds
+    /// and 85% on 標準, which is 自動.
+    /// </summary>
+    [Theory]
+    [InlineData(RealtimePresets.StandardId, 0.15, 85)]
+    [InlineData(RealtimePresets.SubtitleId, 0.0, 85)]
+    [InlineData(RealtimePresets.InterfaceId, 0.15, 68)]
+    public void NeverMoved_ManualStartsAtThePresetsFigure(string basedOn, double seconds, int percent)
+    {
+        var manual = Switch(Custom("a", "A", basedOn), automatic: false);
+        Assert.Equal((false, seconds, false, percent), Halves(manual));
+
+        var resolved = OverTranslate.Services.Realtime.ResolvedProfile.Resolve(manual);
+        Assert.Equal(percent / 100.0, resolved.DetectorFraction);
+        Assert.Equal((int)Math.Round(seconds / 0.15), resolved.SettlePolls);
+    }
+
+    [Fact]
+    public void TheFigureRemembered_IsNotRunWhileOnAutomatic()
+    {
+        var automatic = Switch(Slide(Custom("a", "A", RealtimePresets.SubtitleId), 0.9, 70), automatic: true);
+        var resolved = OverTranslate.Services.Realtime.ResolvedProfile.Resolve(automatic);
+
+        Assert.Null(resolved.SettlePolls);
+        Assert.Null(resolved.DetectorFraction);
+        Assert.Equal(OverTranslate.Services.Realtime.RealtimeReadTiming.Auto, resolved.Timing);
+    }
+
+    [Fact]
+    public void BothHalves_RoundTripThroughTheFile()
+    {
+        var settings = new AppSettings();
+        var mode = Switch(Slide(Custom("a", "A"), 0.6, 92), automatic: true);
+        settings.Realtime.Profiles = [mode];
+
+        var json = OverTranslate.Services.SettingsService.Serialize(settings);
+        var read = OverTranslate.Services.SettingsService.Parse(json).Realtime.Profiles.Single();
+
+        Assert.Contains("\"SettleAutomatic\": true", json);
+        Assert.Contains("\"SettleSeconds\": 0.6", json);
+        Assert.Equal((true, 0.6, true, 92), Halves(read));
+        Assert.Equal((false, 0.6, false, 92), Halves(Switch(read, automatic: false)));
+    }
+
+    /// <summary>
+    /// A file written while -1 meant 自動 reads as 自動 with no figure of the user's own; a figure
+    /// alone, as such a file kept 手動, is still 手動.
+    /// </summary>
+    [Theory]
+    [InlineData(RealtimePresets.SubtitleId, 0.0, 85)]
+    [InlineData(RealtimePresets.InterfaceId, 0.15, 68)]
+    [InlineData(RealtimePresets.StandardId, 0.15, 85)]
+    public void TheOldMinusOne_IsAutomaticWithNoFigureSet(string basedOn, double seconds, int percent)
+    {
+        var old = OverTranslate.Services.SettingsService.Parse(
+            "{\"Realtime\":{\"Profiles\":[{\"Id\":\"a\",\"Name\":\"A\",\"BasedOn\":\"" + basedOn +
+            "\",\"SettleSeconds\":-1,\"DetectorPercent\":-1}]}}").Realtime.Profiles.Single();
+
+        Assert.Equal((true, seconds, true, percent), Halves(old));
+        Assert.Equal((true, seconds, true, percent), Halves(RealtimeProfileEditing.WithoutTemplateValues(old)));
+        Assert.Equal((false, seconds, false, percent), Halves(Switch(old, automatic: false)));
+
+        var figureAlone = Custom("b", "B", basedOn);
+        figureAlone.SettleSeconds = 0.6;
+        figureAlone.DetectorPercent = 92;
+        Assert.Equal((false, 0.6, false, 92), Halves(figureAlone));
+        Assert.Equal((false, 0.6, false, 92), Halves(RealtimeProfileEditing.WithoutTemplateValues(figureAlone)));
+    }
+
+    /// <summary>
+    /// Putting the figure back to the preset's never turns a figure alone — an older file's 手動 —
+    /// into following a preset that is 自動.
+    /// </summary>
+    [Fact]
+    public void AFigureAloneAtThePresetsValue_StaysManual()
+    {
+        var old = Custom("a", "A");
+        old.SettleSeconds = 0.15;
+        old.DetectorPercent = 85;
+
+        var tidy = RealtimeProfileEditing.WithoutTemplateValues(old);
+
+        Assert.Equal((false, 0.15, false, 85), Halves(tidy));
+        Assert.Null(tidy.SettleSeconds);
+        Assert.False(tidy.SettleAutomatic);
+    }
+
+    [Fact]
+    public void Modified_IsTheSwitch_OrTheFigureOnManual()
+    {
+        var standard = Custom("a", "A");
+        Assert.False(RealtimeProfileEditing.IsModified(standard, ProfileParam.SettleSeconds));
+
+        // 標準 is 自動: 手動 differs even at the figure 手動 starts on.
+        var manual = Switch(standard, automatic: false);
+        Assert.True(RealtimeProfileEditing.IsModified(manual, ProfileParam.SettleSeconds));
+        Assert.True(RealtimeProfileEditing.IsModified(manual, ProfileParam.DetectorPercent));
+
+        // A figure remembered under 自動 is not a change.
+        var remembered = Switch(Slide(standard, 0.6, 92), automatic: true);
+        Assert.False(RealtimeProfileEditing.IsModified(remembered, ProfileParam.SettleSeconds));
+        Assert.False(RealtimeProfileEditing.IsModified(remembered, ProfileParam.DetectorPercent));
+        Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(remembered));
+        Assert.True(RealtimeProfileEditing.IsSet(remembered, ProfileParam.SettleSeconds));
+
+        // 字幕・漫畫 is 手動 at 不等待 and 85%: the same figures are no change, others are, and 自動 is.
+        var subtitle = Custom("b", "B", RealtimePresets.SubtitleId);
+        Assert.False(RealtimeProfileEditing.IsModified(Slide(subtitle, 0, 85), ProfileParam.SettleSeconds));
+        Assert.False(RealtimeProfileEditing.IsModified(Slide(subtitle, 0, 85), ProfileParam.DetectorPercent));
+        Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(Slide(subtitle, 0, 85)));
+        Assert.True(RealtimeProfileEditing.IsModified(Slide(subtitle, 0.3, 85), ProfileParam.SettleSeconds));
+        Assert.False(RealtimeProfileEditing.IsModified(Slide(subtitle, 0.3, 85), ProfileParam.DetectorPercent));
+        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(Switch(subtitle, automatic: true)));
+        Assert.Equal(2, RealtimeProfileEditing.ModifiedCount(Switch(Slide(subtitle, 0.3, 90), automatic: true)));
+    }
+
+    [Fact]
+    public void PuttingBack_ClearsBothHalves()
+    {
+        var mode = Switch(Slide(Custom("a", "A", RealtimePresets.SubtitleId), 0.6, 92), automatic: true);
+
+        var one = mode.Clone();
+        RealtimeProfileEditing.Clear(one, ProfileParam.SettleSeconds);
+        Assert.Null(one.SettleAutomatic);
+        Assert.Null(one.SettleSeconds);
+        Assert.Equal(true, one.DetectorAutomatic);
+
+        var all = RealtimeProfileEditing.ResetAll(mode);
+        Assert.Equal((false, 0.0, false, 85), Halves(all));
+        Assert.False(RealtimeProfileEditing.IsSet(all, ProfileParam.SettleSeconds));
+        Assert.False(RealtimeProfileEditing.IsSet(all, ProfileParam.DetectorPercent));
     }
 
     [Theory]

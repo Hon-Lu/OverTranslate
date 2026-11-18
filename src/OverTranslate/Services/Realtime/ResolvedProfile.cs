@@ -257,7 +257,7 @@ public sealed record ResolvedProfile
     {
         var filled = stored.Filled();
         int level = filled.MergeLevel!.Value;
-        var settle = SettlePollsOf(filled.SettleSeconds!.Value);
+        var settle = filled.SettleAutomatic == true ? null : SettlePollsOf(filled.SettleSeconds!.Value);
         return new ResolvedProfile
         {
             Id = filled.Id,
@@ -278,7 +278,7 @@ public sealed record ResolvedProfile
             },
             SettlePolls = settle,
             ClearAfterEmptyReads = filled.ClearAfterEmptyReads!.Value,
-            DetectorFraction = filled.DetectorPercent < 0 ? null : filled.DetectorPercent!.Value / 100.0,
+            DetectorFraction = filled.DetectorAutomatic == true ? null : filled.DetectorPercent!.Value / 100.0,
             Auto = RulesFor(RealtimeMergeLevels.Tendency(level)),
             IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
             ConfidenceFloor = filled.ConfidencePercent!.Value / 100.0,

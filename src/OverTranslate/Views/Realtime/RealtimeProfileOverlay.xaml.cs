@@ -363,7 +363,7 @@ public partial class RealtimeProfileOverlay : UserControl
 
         foreach (var row in _rows.Values)
         {
-            bool modified = !preset && RealtimeProfileEditing.IsSet(stored, row.Param);
+            bool modified = !preset && RealtimeProfileEditing.IsModified(stored, row.Param);
             // Its line is kept while hidden on a custom mode, so setting a value does not push the
             // rows below it down. A preset never shows it.
             row.Modified.Visibility = modified ? Visibility.Visible : preset ? Visibility.Collapsed : Visibility.Hidden;
@@ -405,20 +405,15 @@ public partial class RealtimeProfileOverlay : UserControl
                 row.AutoTip!.Visibility = index == 0 ? Visibility.Visible : Visibility.Hidden;
                 break;
             }
+            // The slider holds the figure for 手動 under 自動 too, so turning back to 手動 shows it.
             case ProfileParam.SettleSeconds:
-            {
-                bool automatic = filled.SettleSeconds < 0;
-                if (!automatic) row.Slider!.Value = Math.Round(filled.SettleSeconds!.Value / PollSeconds);
-                ShowAutomatic(row, automatic);
+                row.Slider!.Value = Math.Round(filled.SettleSeconds!.Value / PollSeconds);
+                ShowAutomatic(row, filled.SettleAutomatic == true);
                 break;
-            }
             case ProfileParam.DetectorPercent:
-            {
-                bool automatic = filled.DetectorPercent < 0;
-                if (!automatic) row.Slider!.Value = filled.DetectorPercent!.Value;
-                ShowAutomatic(row, automatic);
+                row.Slider!.Value = filled.DetectorPercent!.Value;
+                ShowAutomatic(row, filled.DetectorAutomatic == true);
                 break;
-            }
             default:
                 row.Slider!.Value = Convert.ToDouble(RealtimeProfileEditing.Value(filled, row.Param));
                 break;
@@ -455,12 +450,12 @@ public partial class RealtimeProfileOverlay : UserControl
     {
         ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
         ProfileParam.Align => RealtimeProfileEditing.AlignName(filled.Align),
-        ProfileParam.SettleSeconds => filled.SettleSeconds is < 0 or null
+        ProfileParam.SettleSeconds => filled.SettleAutomatic == true
             ? Services.Realtime.RealtimeActualValues.Of(filled).SettleSeconds is { } seconds
                 ? SecondsText(seconds)
                 : LocalizationService.Get("S.Realtime.ProfilePerGroup")
-            : SecondsText(filled.SettleSeconds.Value),
-        ProfileParam.DetectorPercent => filled.DetectorPercent is < 0 or null
+            : SecondsText(filled.SettleSeconds!.Value),
+        ProfileParam.DetectorPercent => filled.DetectorAutomatic == true
             ? Services.Realtime.RealtimeActualValues.Of(filled).DetectorPercent is { } percent
                 ? LocalizationService.Format("S.Realtime.ProfilePercent", percent)
                 : LocalizationService.Get("S.Realtime.ProfilePerGroup")
@@ -478,8 +473,8 @@ public partial class RealtimeProfileOverlay : UserControl
     /// </summary>
     private static string TemplateDisplay(RealtimeProfile template, ProfileParam param) => param switch
     {
-        ProfileParam.SettleSeconds when template.SettleSeconds < 0 => LocalizationService.Get("S.Realtime.ProfileAuto"),
-        ProfileParam.DetectorPercent when template.DetectorPercent < 0 => LocalizationService.Get("S.Realtime.ProfileAuto"),
+        ProfileParam.SettleSeconds when template.SettleAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
+        ProfileParam.DetectorPercent when template.DetectorAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
         _ => Display(template, param),
     };
 
@@ -774,7 +769,7 @@ public partial class RealtimeProfileOverlay : UserControl
                 if (_syncing) return;
                 _settleTimer.Stop();
                 _pendingRow = null;
-                Commit(profile => SetNumber(profile, param, manual ? ManualStart(profile, param) : RealtimePresets.Automatic));
+                Commit(profile => SetAutomatic(profile, param, !manual));
             };
             Grid.SetColumn(mode, 1);
             top.Children.Add(mode);
@@ -803,17 +798,14 @@ public partial class RealtimeProfileOverlay : UserControl
     }
 
     /// <summary>
-    /// Where the slider starts when a value is turned from 自動 to 手動: what 自動 came to on this
-    /// mode — so the value shown does not move under the switch — or, where 自動 decided per group
-    /// of text, about 0.15 seconds and 85% (reads a half-drawn line less often; misses small text less
-    /// often).
+    /// Turns a value to 自動 or 手動 and nothing else: the figure for 手動 stays as it was, so 手動
+    /// comes back where the user left it — or, never moved, at the preset's figure (on 標準, about
+    /// 0.15 seconds and 85%: see <see cref="RealtimePresets.Create"/>).
     /// </summary>
-    private static double ManualStart(RealtimeProfile stored, ProfileParam param)
+    private static void SetAutomatic(RealtimeProfile profile, ProfileParam param, bool automatic)
     {
-        var filled = stored.Filled();
-        return param == ProfileParam.SettleSeconds
-            ? Math.Round(RealtimeProfileEditing.AutomaticSettleSeconds(filled) / PollSeconds)
-            : RealtimeProfileEditing.AutomaticDetectorPercent(filled);
+        if (param == ProfileParam.SettleSeconds) profile.SettleAutomatic = automatic;
+        else profile.DetectorAutomatic = automatic;
     }
 
     private Slider NewSlider(ParamRow row, double min, double max, double step, string nameKey, string automationId)
@@ -873,17 +865,20 @@ public partial class RealtimeProfileOverlay : UserControl
     private static void SetNumber(RealtimeProfile profile, ProfileParam param, double position)
     {
         int whole = (int)Math.Round(position);
-        bool automatic = position < 0;
         switch (param)
         {
             case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
             case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
             case ProfileParam.ConfidencePercent: profile.ConfidencePercent = whole; break;
+            // A slider is only shown on 手動; the switch is written with the figure, as the file
+            // keeps it whenever a figure is kept — see RealtimeProfile.SettleAutomatic.
             case ProfileParam.DetectorPercent:
-                profile.DetectorPercent = automatic ? RealtimePresets.Automatic : whole;
+                profile.DetectorAutomatic = false;
+                profile.DetectorPercent = whole;
                 break;
             case ProfileParam.SettleSeconds:
-                profile.SettleSeconds = automatic ? RealtimePresets.Automatic : Math.Round(whole * PollSeconds, 2);
+                profile.SettleAutomatic = false;
+                profile.SettleSeconds = Math.Round(whole * PollSeconds, 2);
                 break;
         }
     }

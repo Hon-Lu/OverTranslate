@@ -59,7 +59,22 @@ public sealed class RealtimeProfile
     public string? Align { get; set; }
 
     /// <summary>
-    /// 畫面文字穩定後再讀取, in seconds, 0–1.5; below zero is 自動.
+    /// 畫面文字穩定後再讀取's 自動｜手動: true for 自動, false for the seconds in
+    /// <see cref="SettleSeconds"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Kept apart from the seconds so that turning to 自動 does not lose them: back on 手動 the
+    /// slider is where the user left it. Null follows the preset — or, where only seconds are
+    /// stored, is 手動, the way a file written before the two were apart reads; see
+    /// <see cref="Filled"/>.</para>
+    ///
+    /// <para>Whenever the page stores seconds it stores this beside them, even when it says what the
+    /// preset says, so that "seconds and no switch" only ever means such a file.</para>
+    /// </remarks>
+    public bool? SettleAutomatic { get; set; }
+
+    /// <summary>
+    /// 畫面文字穩定後再讀取 on 手動, in seconds, 0–1.5 — kept while the switch is on 自動.
     /// </summary>
     /// <remarks>
     /// <para>0 is 不等待: a change is read at once and read again once to confirm it (what was
@@ -71,6 +86,9 @@ public sealed class RealtimeProfile
     /// <para>One value where there used to be two, 讀取方式 and 等文字停下: a wait only means
     /// anything when a change is settled before it is read, and reading at once only when it is
     /// not waited for, so every pair but these was the same thing said twice.</para>
+    ///
+    /// <para>Below zero was 自動 before <see cref="SettleAutomatic"/> existed, never released: read as
+    /// 自動 with no seconds of the user's own.</para>
     /// </remarks>
     public double? SettleSeconds { get; set; }
 
@@ -87,7 +105,17 @@ public sealed class RealtimeProfile
     /// </remarks>
     public int? ClearAfterEmptyReads { get; set; }
 
-    /// <summary>辨識解析度, in percent of the block's longer side, 50–100; below zero is 自動.</summary>
+    /// <summary>
+    /// 辨識解析度's 自動｜手動: true for 自動, false for <see cref="DetectorPercent"/>. Kept apart
+    /// from the percentage as <see cref="SettleAutomatic"/> is from its seconds.
+    /// </summary>
+    /// <remarks>Horizontal text only.</remarks>
+    public bool? DetectorAutomatic { get; set; }
+
+    /// <summary>
+    /// 辨識解析度 on 手動, in percent of the block's longer side, 60–100 — kept while the switch is
+    /// on 自動. Below zero was 自動 before <see cref="DetectorAutomatic"/> existed.
+    /// </summary>
     /// <remarks>Horizontal text only.</remarks>
     public int? DetectorPercent { get; set; }
 
@@ -126,11 +154,14 @@ public sealed class RealtimeProfile
     /// <remarks>
     /// What the page shows on each control; whether a value is the mode's own is whether this
     /// instance's property is null. A mode made from anything but a preset follows 標準.
+    ///
+    /// The two values with 自動｜手動 come out with both halves filled: the switch, and the figure
+    /// 手動 runs on, which is there whichever way the switch is — the user's own, or else the
+    /// preset's (on 標準, which is 自動, where 手動 starts: see <see cref="RealtimePresets.Create"/>).
     /// </remarks>
     public RealtimeProfile Filled()
     {
         var template = RealtimePresets.Create(RealtimePresets.IsPreset(BasedOn) ? BasedOn : RealtimePresets.StandardId);
-        int percent = DetectorPercent ?? template.DetectorPercent!.Value;
         return new RealtimeProfile
         {
             Id = Id,
@@ -138,19 +169,51 @@ public sealed class RealtimeProfile
             BasedOn = template.Id,
             MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
             Align = RealtimeTextAligns.Normalize(Align) ?? template.Align,
-            SettleSeconds = SettleSeconds is { } seconds && double.IsFinite(seconds)
-                ? seconds < 0 ? RealtimePresets.Automatic : Math.Min(seconds, MaxSettleSeconds)
-                : template.SettleSeconds,
+            SettleAutomatic = StoredSettleAutomatic ?? template.SettleAutomatic,
+            SettleSeconds = OwnSettleSeconds is { } seconds ? Math.Min(seconds, MaxSettleSeconds) : template.SettleSeconds,
             ClearAfterEmptyReads = Math.Clamp(
                 ClearAfterEmptyReads ?? template.ClearAfterEmptyReads!.Value, MinClearAfterEmptyReads, MaxClearAfterEmptyReads),
-            DetectorPercent = percent < 0
-                ? RealtimePresets.Automatic
-                : Math.Clamp(percent, MinDetectorPercent, MaxDetectorPercent),
+            DetectorAutomatic = StoredDetectorAutomatic ?? template.DetectorAutomatic,
+            DetectorPercent = OwnDetectorPercent is { } percent
+                ? Math.Clamp(percent, MinDetectorPercent, MaxDetectorPercent)
+                : template.DetectorPercent,
             IgnoreSmallPercent = Math.Clamp(IgnoreSmallPercent ?? template.IgnoreSmallPercent!.Value, 0, MaxIgnoreSmallPercent),
             ConfidencePercent = Math.Clamp(
                 ConfidencePercent ?? template.ConfidencePercent!.Value, MinConfidencePercent, MaxConfidencePercent),
         };
     }
+
+    /// <summary>
+    /// A copy that says outright what an older file only implied: the switch written beside any
+    /// figure of the user's own, and no figure that only meant 自動 (below zero) or nothing (not a
+    /// number). Reads the same — see <see cref="Filled"/>.
+    /// </summary>
+    /// <remarks>
+    /// The page tidies a mode on this before it compares it with the preset, so that putting a figure
+    /// back to the preset's never turns an implied 手動 into "follow the preset".
+    /// </remarks>
+    public RealtimeProfile WithSwitchesWritten()
+    {
+        var copy = Clone();
+        copy.SettleAutomatic = StoredSettleAutomatic;
+        copy.SettleSeconds = OwnSettleSeconds;
+        copy.DetectorAutomatic = StoredDetectorAutomatic;
+        copy.DetectorPercent = OwnDetectorPercent;
+        return copy;
+    }
+
+    // A figure the user set for 手動: finite and not below zero.
+    private double? OwnSettleSeconds => SettleSeconds is { } seconds && double.IsFinite(seconds) && seconds >= 0 ? seconds : null;
+
+    private int? OwnDetectorPercent => DetectorPercent is >= 0 ? DetectorPercent : null;
+
+    // The switch as stored, or as a file from before it was stored apart meant it: a figure of the
+    // user's own alone is 手動, below zero is 自動, and neither follows the preset.
+    private bool? StoredSettleAutomatic =>
+        SettleAutomatic ?? (OwnSettleSeconds is not null ? false : SettleSeconds < 0 ? true : null);
+
+    private bool? StoredDetectorAutomatic =>
+        DetectorAutomatic ?? (OwnDetectorPercent is not null ? false : DetectorPercent < 0 ? true : null);
 
     // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
 
@@ -255,7 +318,10 @@ public static class RealtimePresets
     /// </summary>
     public const int ConfidencePercent = 80;
 
-    /// <summary>The value of a nullable number that means 自動 — see <see cref="RealtimeProfile.SettleSeconds"/>.</summary>
+    /// <summary>
+    /// The figure that meant 自動 before the switch was stored apart from it, and still reads so —
+    /// see <see cref="RealtimeProfile.SettleSeconds"/>.
+    /// </summary>
     public const int Automatic = -1;
 
     /// <summary>The three presets, in the order they are listed. New instances on every call.</summary>
@@ -287,19 +353,14 @@ public static class RealtimePresets
                 InterfaceId => RealtimeTextAligns.Left,
                 _ => RealtimeTextAligns.Auto,
             },
-            SettleSeconds = id switch
-            {
-                SubtitleId => 0,
-                InterfaceId => ItemsSettleSeconds,
-                _ => Automatic,
-            },
+            // 標準 is 自動 on both; its figures are where 手動 starts on a mode made from it until
+            // the user moves the slider: one poll and the strip size, which read a half-drawn line
+            // less often than 不等待 and miss small text less often than the panel size.
+            SettleAutomatic = id == StandardId,
+            SettleSeconds = id == SubtitleId ? 0 : ItemsSettleSeconds,
             ClearAfterEmptyReads = RealtimeProfile.MaxClearAfterEmptyReads,
-            DetectorPercent = id switch
-            {
-                SubtitleId => StripPercent,
-                InterfaceId => PanelPercent,
-                _ => Automatic,
-            },
+            DetectorAutomatic = id == StandardId,
+            DetectorPercent = id == InterfaceId ? PanelPercent : StripPercent,
             IgnoreSmallPercent = 0,
             ConfidencePercent = RealtimePresets.ConfidencePercent,
         };

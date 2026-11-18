@@ -1,7 +1,6 @@
 using System.Globalization;
 using OverTranslate.Models;
 using OverTranslate.Services;
-using OverTranslate.Services.Realtime;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -77,29 +76,32 @@ internal static class RealtimeProfileEditing
     public static bool IsHorizontalOnly(ProfileParam param) =>
         param is not (ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads);
 
-    /// <summary>Whether the stored mode sets this value of its own rather than following its preset.</summary>
+    /// <summary>
+    /// Whether the stored mode holds anything of its own for this value rather than following its
+    /// preset — for 自動｜手動, either half. Not whether it is 已修改: see <see cref="IsModified"/>.
+    /// </summary>
     public static bool IsSet(RealtimeProfile stored, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => stored.MergeLevel is not null,
         ProfileParam.Align => stored.Align is not null,
-        ProfileParam.SettleSeconds => stored.SettleSeconds is not null,
+        ProfileParam.SettleSeconds => stored.SettleAutomatic is not null || stored.SettleSeconds is not null,
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
-        ProfileParam.DetectorPercent => stored.DetectorPercent is not null,
+        ProfileParam.DetectorPercent => stored.DetectorAutomatic is not null || stored.DetectorPercent is not null,
         ProfileParam.IgnoreSmallPercent => stored.IgnoreSmallPercent is not null,
         ProfileParam.ConfidencePercent => stored.ConfidencePercent is not null,
         _ => false,
     };
 
-    /// <summary>Puts one value back to following the preset.</summary>
+    /// <summary>Puts one value back to following the preset — for 自動｜手動, both halves.</summary>
     public static void Clear(RealtimeProfile stored, ProfileParam param)
     {
         switch (param)
         {
             case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
             case ProfileParam.Align: stored.Align = null; break;
-            case ProfileParam.SettleSeconds: stored.SettleSeconds = null; break;
+            case ProfileParam.SettleSeconds: stored.SettleAutomatic = null; stored.SettleSeconds = null; break;
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
-            case ProfileParam.DetectorPercent: stored.DetectorPercent = null; break;
+            case ProfileParam.DetectorPercent: stored.DetectorAutomatic = null; stored.DetectorPercent = null; break;
             case ProfileParam.IgnoreSmallPercent: stored.IgnoreSmallPercent = null; break;
             case ProfileParam.ConfidencePercent: stored.ConfidencePercent = null; break;
         }
@@ -118,26 +120,60 @@ internal static class RealtimeProfileEditing
     /// put back to following the preset.
     /// </summary>
     /// <remarks>
-    /// Compared on the filled values, so 0.30 and 0.3 seconds, or a detector size of -5 and of -1
-    /// (both 自動), count as the same thing, which is what they are to the pipeline.
+    /// <para>Compared on the filled values, so 0.30 and 0.3 seconds, or a detector size of 120 and of
+    /// 100, count as the same thing, which is what they are to the pipeline.</para>
+    ///
+    /// <para>自動｜手動 is two halves, tidied one at a time: the figure goes back to the preset's when it
+    /// is the preset's, and the switch when it says what the preset says and no figure of the user's
+    /// own is left beside it — kept there, it is what tells a figure remembered under 自動 from the
+    /// 手動 an older file meant by a figure alone (see <see cref="RealtimeProfile.WithSwitchesWritten"/>).</para>
     /// </remarks>
     public static RealtimeProfile WithoutTemplateValues(RealtimeProfile stored)
     {
-        var copy = stored.Clone();
+        var copy = stored.WithSwitchesWritten();
         var mine = copy.Filled();
         var template = RealtimePresets.Create(mine.BasedOn);
         foreach (var param in All)
+        {
+            if (param is ProfileParam.SettleSeconds or ProfileParam.DetectorPercent) continue;
             if (IsSet(copy, param) && Equals(Value(mine, param), Value(template, param)))
                 Clear(copy, param);
+        }
+
+        if (copy.SettleSeconds is not null &&
+            Equals(Value(mine, ProfileParam.SettleSeconds), Value(template, ProfileParam.SettleSeconds)))
+            copy.SettleSeconds = null;
+        if (copy.SettleAutomatic is not null && copy.SettleSeconds is null && mine.SettleAutomatic == template.SettleAutomatic)
+            copy.SettleAutomatic = null;
+        if (copy.DetectorPercent is not null && mine.DetectorPercent == template.DetectorPercent)
+            copy.DetectorPercent = null;
+        if (copy.DetectorAutomatic is not null && copy.DetectorPercent is null && mine.DetectorAutomatic == template.DetectorAutomatic)
+            copy.DetectorAutomatic = null;
         return copy;
     }
 
-    /// <summary>How many of <paramref name="among"/> the mode sets differently from its preset.</summary>
-    public static int ModifiedCount(RealtimeProfile stored, IEnumerable<ProfileParam> among)
+    /// <summary>
+    /// Whether the mode runs this value differently from its preset — 已修改. For 自動｜手動: the
+    /// switch differs, or both are on 手動 at different figures; a figure remembered while the
+    /// switch is on 自動 is not a change, since nothing runs on it.
+    /// </summary>
+    public static bool IsModified(RealtimeProfile stored, ProfileParam param)
     {
-        var tidy = WithoutTemplateValues(stored);
-        return among.Count(param => IsSet(tidy, param));
+        var mine = stored.Filled();
+        var template = RealtimePresets.Create(mine.BasedOn);
+        return param switch
+        {
+            ProfileParam.SettleSeconds => mine.SettleAutomatic != template.SettleAutomatic ||
+                (mine.SettleAutomatic == false && !Equals(Value(mine, param), Value(template, param))),
+            ProfileParam.DetectorPercent => mine.DetectorAutomatic != template.DetectorAutomatic ||
+                (mine.DetectorAutomatic == false && mine.DetectorPercent != template.DetectorPercent),
+            _ => !Equals(Value(mine, param), Value(template, param)),
+        };
     }
+
+    /// <summary>How many of <paramref name="among"/> the mode sets differently from its preset.</summary>
+    public static int ModifiedCount(RealtimeProfile stored, IEnumerable<ProfileParam> among) =>
+        among.Count(param => IsModified(stored, param));
 
     /// <summary>
     /// How many of the values the page offers (<see cref="Shown"/>) the mode sets differently from
@@ -148,15 +184,14 @@ internal static class RealtimeProfileEditing
 
     /// <summary>
     /// One value of a filled mode in a form two of them can be compared by: strings, a bool, whole
-    /// numbers, and seconds rounded to the hundredth the page shows them at.
+    /// numbers, and seconds rounded to the hundredth the page shows them at. For 自動｜手動, the
+    /// figure 手動 runs on, whichever way the switch is.
     /// </summary>
     public static object? Value(RealtimeProfile filled, ProfileParam param) => param switch
     {
         ProfileParam.MergeLevel => filled.MergeLevel,
         ProfileParam.Align => filled.Align,
-        ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds
-            ? seconds < 0 ? RealtimePresets.Automatic : Math.Round(seconds, 2)
-            : null,
+        ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds ? Math.Round(seconds, 2) : null,
         ProfileParam.ClearAfterEmptyReads => filled.ClearAfterEmptyReads,
         ProfileParam.DetectorPercent => filled.DetectorPercent,
         ProfileParam.IgnoreSmallPercent => filled.IgnoreSmallPercent,
@@ -334,33 +369,6 @@ internal static class RealtimeProfileEditing
     /// <summary>自訂模式 N, in the interface language.</summary>
     public static string NewName(int number) =>
         LocalizationService.Format("S.Realtime.ProfileNewName", number);
-
-    // ── What 自動 stands for ────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Where 畫面文字穩定後再讀取's slider starts when the value is turned from 自動 to 手動: what the
-    /// mode waits with — see <see cref="RealtimeActualValues.SettleSeconds"/>. Where 自動 decides per
-    /// group of text, the settled reading's wait.
-    /// </summary>
-    public static double AutomaticSettleSeconds(RealtimeProfile filled)
-    {
-        var automatic = filled.Clone();
-        automatic.SettleSeconds = RealtimePresets.Automatic;
-        return RealtimeActualValues.Of(automatic).SettleSeconds
-            ?? Math.Round(RealtimeRegionState.MaxTextUnsettledPolls * RealtimeRegionState.PollInterval.TotalSeconds, 2);
-    }
-
-    /// <summary>
-    /// Where 辨識解析度's slider starts when the value is turned from 自動 to 手動: the size the mode
-    /// reads at — see <see cref="RealtimeActualValues.DetectorPercent"/>. Where 自動 decides per
-    /// group of text, the strip size, the one a block starts on.
-    /// </summary>
-    public static int AutomaticDetectorPercent(RealtimeProfile filled)
-    {
-        var automatic = filled.Clone();
-        automatic.DetectorPercent = RealtimePresets.Automatic;
-        return RealtimeActualValues.Of(automatic).DetectorPercent ?? (int)Math.Round(100 * RealtimeDetectorSize.StripFraction);
-    }
 
     /// <summary>Seconds as the page writes them: invariant, up to two decimals, no trailing zeros.</summary>
     public static string Seconds(double seconds) =>
