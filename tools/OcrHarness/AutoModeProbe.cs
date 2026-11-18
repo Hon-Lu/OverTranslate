@@ -37,6 +37,7 @@ using OverTranslate.Services.Realtime;
 /// <c>--auto-probe confidence cache.json out-dir</c> — 短句辨識門檻 at every percent it offers; see
 /// <see cref="ConfidenceSweepProbe"/>.
 /// <c>--auto-probe align cache.json out.txt</c> — 譯文對齊 on 標準's groups; see <see cref="AlignStatsProbe"/>.
+/// <c>--auto-probe band cache.json out.txt</c> — 遊戲介面・聊天室's groups that fall back to one band; see <see cref="AlignStatsProbe.RunBand"/>.
 /// </remarks>
 internal static class AutoModeProbe
 {
@@ -85,6 +86,7 @@ internal static class AutoModeProbe
         if (args[0] == "mergemax") return MergeMaxProbe.Run(cache, args[2]);
         if (args[0] == "confidence") return ConfidenceSweepProbe.Run(cache, args[2]);
         if (args[0] == "align") return AlignStatsProbe.Run(cache, args[2]);
+        if (args[0] == "band") return AlignStatsProbe.RunBand(cache, args[2]);
 
         var profile = ResolvedProfile.Standard;
         int at = Array.IndexOf(args, "--profile");
