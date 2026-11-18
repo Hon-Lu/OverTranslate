@@ -683,6 +683,15 @@ public sealed class RealtimeTranslationSession
                 if (redraw && reason == RealtimeReadReason.Nothing) reason = RealtimeReadReason.TextChanged;
                 if (reason == RealtimeReadReason.Nothing)
                 {
+                    // The text went, and the picture has held still since: the translation of it
+                    // comes down without a reading — see RealtimeRegionState.LongestHoldOverStillPicture.
+                    if (state.TakeHeldOverlayExpiry())
+                    {
+                        Log.Debug(
+                            "Realtime region {Region} read empty and held still for {Polls} polls; cleared",
+                            region.Id, RealtimeRegionState.LongestHoldPolls);
+                        pump.Publish(pump.NextPass(), []);
+                    }
                     skippedPolls++;
                     continue;
                 }

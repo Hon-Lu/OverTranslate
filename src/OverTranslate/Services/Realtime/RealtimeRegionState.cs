@@ -169,6 +169,40 @@ internal sealed class RealtimeRegionState
     public const int EmptyPassesBeforeClearing = 2;
 
     /// <summary>
+    /// How long a translation is left up after its text read empty, while nothing has been read
+    /// since and <see cref="EmptyPassesBeforeClearing"/> has not yet been met. After this it is taken
+    /// down anyway, at the first still poll — see <see cref="TakeHeldOverlayExpiry"/>. Counted from
+    /// when the empty reading finished, so a pause is held over for this and the time it took.
+    /// </summary>
+    /// <remarks>
+    /// <para>The passes after the first empty one wait for the picture to change, like every other
+    /// read, and a reading that came back empty records the frame it read. On a still page the
+    /// second pass therefore never came, and at any count above one a line that had gone kept its
+    /// translation up until something else on screen moved — for good, on a paused game or a page.
+    /// </para>
+    ///
+    /// <para>Fixed by time and not by owing the next pass at once, which was tried first and did
+    /// clear a still page a poll after the empty reading. But the same still poll is how the pause
+    /// between two lines of a dialogue box looks, and there the early clear also gave up the
+    /// strips the next line appears in: the region went back to searching, which waits a poll for
+    /// the picture to settle and asks the gate first, and the next line was read a poll later than
+    /// it had been. A poll is 150ms, and that is felt. Taking the translation down is all this
+    /// does — the region goes on watching, waiting and reading exactly as if it were still up, so
+    /// no line is read a poll later and no reading is added.</para>
+    ///
+    /// <para>One second, against what a still pause between lines is measured to last. A name
+    /// plate shown before its line is typed held 300ms; over every staged session logged, the next
+    /// line came within 4 polls (600ms) of an empty reading in all 760 cases where it came at all
+    /// before the stage's own blank of two seconds or more. A pause shorter than this is held over
+    /// exactly as before; a box left empty longer than this is the stale translation being fixed.
+    /// A picture that keeps moving never reaches it — the second empty pass comes first.</para>
+    /// </remarks>
+    public static readonly TimeSpan LongestHoldOverStillPicture = TimeSpan.FromSeconds(1);
+
+    /// <inheritdoc cref="LongestHoldOverStillPicture"/>
+    public static readonly int LongestHoldPolls = PollsIn(LongestHoldOverStillPicture);
+
+    /// <summary>
     /// How long a still picture is left alone after a pass over it failed, before it is read again;
     /// doubled with each failure in a row, up to <see cref="LongestWaitAfterFailure"/>.
     /// </summary>
@@ -208,6 +242,12 @@ internal sealed class RealtimeRegionState
     private int _pollsSinceFullScan;
     private int _pollsSinceLook;
     private int _emptyPasses;
+    // See TakeHeldOverlayExpiry: polls since the last reading, whether the poll just examined was
+    // still and asked for nothing, and whether the translation held up since the last reading that
+    // found text has already been taken down.
+    private int _pollsSinceReading;
+    private bool _stillPoll;
+    private bool _holdExpired;
     // The whole region as it was when a pass over it last failed, how many have failed in a row,
     // and polls since; null and 0 when the last pass did not fail.
     private FrameFingerprint? _failedOn;
@@ -398,12 +438,39 @@ internal sealed class RealtimeRegionState
         int? textSettlePolls = null)
     {
         _pollsSinceLook++;
+        _pollsSinceReading++;
+        _stillPoll = false;
         if (WaitingAfterFailure(capture)) return RealtimeReadReason.Nothing;
         var reason = Decide(capture, dialogue, captureEnds, textSettlePolls);
         // Whatever the pass then makes of it, the region has been handed to the reader — which is
         // all the idle scan counts, so that the poll it forces cannot be forced again by the next.
         if (reason != RealtimeReadReason.Nothing) _pollsSinceLook = 0;
+        // Not while a change is being waited out: that is a line arriving, and it is read a poll
+        // from now — taking its predecessor down first would only make it blink.
+        _stillPoll = reason == RealtimeReadReason.Nothing && _unsettledPolls == 0;
         return reason;
+    }
+
+    /// <summary>
+    /// Whether the translation still up after an empty reading should be taken down now, because
+    /// <see cref="LongestHoldOverStillPicture"/> has passed with nothing read since and this poll is
+    /// still; true once per line gone, so the caller clears the overlay once.
+    /// </summary>
+    /// <remarks>
+    /// Asked after an <see cref="Examine"/> that asked for nothing, and only then: a poll that reads
+    /// lets the reading decide, as it always did. Nothing else here is touched — the strips stay
+    /// watched and the empty passes counted, so every later poll decides what it would have decided
+    /// with the translation still up, and the next line is read when it always was. Never with one
+    /// empty pass to clear on (<see cref="ShouldClearOverlay"/> is then already true), nor before
+    /// any text has been read.
+    /// </remarks>
+    public bool TakeHeldOverlayExpiry()
+    {
+        if (!_stillPoll || _holdExpired || _emptyPasses == 0 || ShouldClearOverlay || !IsWatchingText)
+            return false;
+        if (_pollsSinceReading < LongestHoldPolls) return false;
+        _holdExpired = true;
+        return true;
     }
 
     /// <inheritdoc cref="Examine"/>
@@ -651,9 +718,11 @@ internal sealed class RealtimeRegionState
         IReadOnlyList<Rectangle>? endZones = null,
         Func<IReadOnlyList<Rectangle>, FrameFingerprint>? captureEnds = null)
     {
+        _pollsSinceReading = 0;
         if (textBounds.Count > 0)
         {
             _emptyPasses = 0;
+            _holdExpired = false;
             _watchBands = BuildBands(textBounds);
             _endZones = endZones ?? NoBands;
         }

@@ -113,7 +113,8 @@ public sealed class RealtimeProfile
     /// version may offer more than the two. It was a 1–4 slider first, but on a still picture a count
     /// above one is never reached (a frame that does not change is not read again), and nothing
     /// measured made a case for 3 or 4 elsewhere, so what is left is the one choice that behaves
-    /// differently. A 3 or 4 an earlier build wrote reads as 2.
+    /// differently. A 3 or 4 an earlier build wrote reads as 2. Unticked, a still picture takes the
+    /// translation down after a second instead — see RealtimeRegionState.LongestHoldOverStillPicture.
     /// </remarks>
     public int? ClearAfterEmptyReads { get; set; }
 

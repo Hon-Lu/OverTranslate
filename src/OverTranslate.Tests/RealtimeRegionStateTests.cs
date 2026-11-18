@@ -390,6 +390,201 @@ public class RealtimeRegionStateTests
         Assert.True(state.IsWatchingText);
     }
 
+    [Theory]
+    [InlineData(2, false)]
+    [InlineData(2, true)]
+    [InlineData(4, false)]
+    public void AStillPictureTakesTheHeldTranslationDownOnceTheHoldRunsOut(int keep, bool dialogue)
+    {
+        // The line went and the picture then held still. Nothing ever reads it again, so the empty
+        // reading 譯文保留 is waiting for never comes: the translation used to stay up for as long
+        // as the page did.
+        var (state, frame) = TextGoneAndReadEmpty(keep, dialogue);
+
+        for (var poll = 1; poll < RealtimeRegionState.LongestHoldPolls; poll++)
+        {
+            Assert.Equal(RealtimeReadReason.Nothing, state.Examine(frame.Capture, dialogue));
+            Assert.False(state.TakeHeldOverlayExpiry(), $"taken down after {poll} polls");
+        }
+
+        Assert.Equal(RealtimeReadReason.Nothing, state.Examine(frame.Capture, dialogue));
+        Assert.True(state.TakeHeldOverlayExpiry());
+
+        // Taken down without a reading, and without the region being told anything else: it goes
+        // on watching the strips the text was in, as it would have with the translation still up.
+        Assert.False(state.ShouldClearOverlay);
+        Assert.True(state.IsWatchingText);
+        // Once, and the still page stays free.
+        for (var poll = 0; poll < RealtimeRegionState.IdleScanPolls * 3; poll++)
+        {
+            Assert.Equal(RealtimeReadReason.Nothing, state.Examine(frame.Capture, dialogue));
+            Assert.False(state.TakeHeldOverlayExpiry());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheNextLineIsReadWhenItWasWhetherOrNotTheHoldRanOut(bool dialogue)
+    {
+        // The pause between two lines of a dialogue box is a still picture after an empty reading
+        // too. However long it lasts, the next line is read at the same poll and for the same
+        // reason as when the translation was left up: as a change in the strips, never as a search.
+        int? polls = null;
+        foreach (var pause in new[] { 1, RealtimeRegionState.LongestHoldPolls - 1, RealtimeRegionState.LongestHoldPolls, RealtimeRegionState.LongestHoldPolls * 4 })
+        {
+            var (state, frame) = TextGoneAndReadEmpty(RealtimeRegionState.EmptyPassesBeforeClearing, dialogue);
+            var expired = 0;
+            for (var poll = 1; poll <= pause; poll++)
+            {
+                Assert.Equal(RealtimeReadReason.Nothing, state.Examine(frame.Capture, dialogue));
+                if (state.TakeHeldOverlayExpiry()) expired++;
+            }
+            Assert.Equal(pause >= RealtimeRegionState.LongestHoldPolls ? 1 : 0, expired);
+
+            frame.ChangeText();
+            var waited = 0;
+            RealtimeReadReason reason;
+            while ((reason = state.Examine(frame.Capture, dialogue)) == RealtimeReadReason.Nothing)
+            {
+                // A line arriving is not a still picture, even with the hold just running out.
+                Assert.False(state.TakeHeldOverlayExpiry(), "taken down while the next line settled");
+                Assert.True(++waited <= RealtimeRegionState.MaxTextUnsettledPolls, "the next line was not read");
+            }
+
+            Assert.Equal(RealtimeReadReason.TextChanged, reason);
+            polls ??= waited;
+            Assert.Equal(polls, waited);
+        }
+
+        Assert.Equal(dialogue ? 0 : RealtimeRegionState.MaxTextUnsettledPolls, polls);
+    }
+
+    [Fact]
+    public void ALineArrivingAsTheHoldRunsOutIsNotPrecededByAClear()
+    {
+        // Waiting out the change is the poll the hold would have run out on: that is the next line
+        // on its way, and taking the last one down first would only make it blink.
+        var (state, frame) = TextGoneAndReadEmpty(RealtimeRegionState.EmptyPassesBeforeClearing, dialogue: false);
+        for (var poll = 1; poll < RealtimeRegionState.LongestHoldPolls; poll++)
+            Assert.Equal(RealtimeReadReason.Nothing, state.Examine(frame.Capture));
+
+        frame.ChangeText();
+        Assert.Equal(RealtimeReadReason.Nothing, state.Examine(frame.Capture));
+        Assert.False(state.TakeHeldOverlayExpiry());
+        Assert.Equal(RealtimeReadReason.TextChanged, state.Examine(frame.Capture));
+        state.MarkRendered(OneLine, frame.Capture, "the next line");
+        for (var poll = 0; poll < RealtimeRegionState.LongestHoldPolls * 2; poll++)
+        {
+            state.Examine(frame.Capture);
+            Assert.False(state.TakeHeldOverlayExpiry());
+        }
+    }
+
+    [Fact]
+    public void ClearingOnTheFirstEmptyReadingHoldsNothing()
+    {
+        // 原文消失後立即清除譯文: the first empty reading clears, as it always did, and there is no
+        // hold to run out.
+        var (state, frame) = TextGoneAndReadEmpty(1, dialogue: false);
+        Assert.True(state.ShouldClearOverlay);
+        for (var poll = 0; poll < RealtimeRegionState.IdleScanPolls * 3; poll++)
+        {
+            Assert.False(state.Observe(frame.Capture));
+            Assert.False(state.TakeHeldOverlayExpiry());
+        }
+    }
+
+    [Fact]
+    public void AMovingPictureClearsOnItsSecondEmptyReadingAsBefore()
+    {
+        // A video behind a subtitle that has gone: the strip changes at every poll, so the second
+        // empty reading comes from the change path, long before any hold could run out.
+        var (state, frame) = TextGoneAndReadEmpty(RealtimeRegionState.EmptyPassesBeforeClearing, dialogue: false);
+
+        var polls = 0;
+        RealtimeReadReason reason;
+        do
+        {
+            frame.ChangeText();
+            reason = state.Examine(frame.Capture);
+            Assert.False(state.TakeHeldOverlayExpiry());
+            polls++;
+        }
+        while (reason == RealtimeReadReason.Nothing);
+
+        Assert.Equal(RealtimeRegionState.MaxTextUnsettledPolls + 1, polls);
+        Assert.Equal(RealtimeReadReason.TextChanged, reason);
+        ReadEmpty(state, frame);
+        Assert.True(state.ShouldClearOverlay);
+        Assert.False(state.TakeHeldOverlayExpiry());
+    }
+
+    [Fact]
+    public void EachLineThatGoesHasAHoldOfItsOwn()
+    {
+        var (state, frame) = TextGoneAndReadEmpty(RealtimeRegionState.EmptyPassesBeforeClearing, dialogue: false);
+        for (var poll = 0; poll < RealtimeRegionState.LongestHoldPolls; poll++) state.Examine(frame.Capture);
+        Assert.True(state.TakeHeldOverlayExpiry());
+
+        // The next line, read and then gone in its turn: its translation is held, and taken down,
+        // just the same.
+        frame.ChangeText();
+        while (!state.Observe(frame.Capture)) { }
+        state.MarkRendered(OneLine, frame.Capture, "the next line");
+        frame.ChangeText();
+        while (!state.Observe(frame.Capture)) { }
+        ReadEmpty(state, frame);
+        Assert.False(state.ShouldClearOverlay);
+
+        for (var poll = 1; poll < RealtimeRegionState.LongestHoldPolls; poll++)
+        {
+            state.Examine(frame.Capture);
+            Assert.False(state.TakeHeldOverlayExpiry());
+        }
+        state.Examine(frame.Capture);
+        Assert.True(state.TakeHeldOverlayExpiry());
+    }
+
+    [Fact]
+    public void TheHoldIsLongerThanAPauseBetweenLines()
+    {
+        // A name plate shown before its line is typed out held 300ms; staged sessions brought the
+        // next line within 600ms of an empty reading every time. The hold has to clear both well.
+        Assert.True(RealtimeRegionState.LongestHoldOverStillPicture >= TimeSpan.FromSeconds(1));
+        Assert.True(RealtimeRegionState.LongestHoldPolls * RealtimeRegionState.PollInterval
+            >= TimeSpan.FromSeconds(1));
+        // And shorter than the idle scan, which is what took down a translation over a picture
+        // that only looks still.
+        Assert.True(RealtimeRegionState.LongestHoldPolls < RealtimeRegionState.IdleScanPolls);
+    }
+
+    // A line read and shown, then gone from a picture that holds still, and the first reading of
+    // it empty — the moment the overlay used to be left up for good.
+    private static (RealtimeRegionState State, FakeFrame Frame) TextGoneAndReadEmpty(int keep, bool dialogue)
+    {
+        var state = new RealtimeRegionState(RealtimeTextOrientation.Horizontal, keep);
+        var frame = new FakeFrame();
+        var read = new[] { new OverTranslate.Services.OcrTextBlock("A complete line.", new System.Windows.Rect(10, 40, 300, 20)) };
+        state.RememberRead(read);
+        state.MarkRendered(OneLine, frame.Capture, state.Dialogue.Merge([], read).Lines);
+
+        frame.ChangeText();
+        var polls = 0;
+        while (!state.Observe(frame.Capture, dialogue))
+            Assert.True(++polls <= RealtimeRegionState.MaxTextUnsettledPolls, "the line going was not read");
+        ReadEmpty(state, frame);
+        return (state, frame);
+    }
+
+    // What ReadRegionAsync does with a pass that found nothing.
+    private static void ReadEmpty(RealtimeRegionState state, FakeFrame frame)
+    {
+        state.RememberRead([]);
+        state.Dialogue.Reset();
+        state.MarkRendered([], frame.Capture, "");
+    }
+
     [Fact]
     public void ARegionHuntingForTextScansOftenEnoughToCatchAShortLine()
     {
