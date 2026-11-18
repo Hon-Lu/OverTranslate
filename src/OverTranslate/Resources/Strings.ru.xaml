@@ -430,13 +430,10 @@
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">Подходит для большинства экранов: объединять ли строки, решается по содержанию и расположению текста. Если диалог разбивается или пункты меню сливаются, выберите другой режим.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">Для субтитров к видео, сюжетных диалогов в играх и реплик в манге. Идущие подряд строки обычно переводятся вместе; если на экране много меню и интерфейса, выберите другой режим.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">Для отдельных надписей: игровых меню, строк состояния, чата. Если одна реплика переводится по частям, выберите режим «Субтитры и манга».</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCustomTag">Пользовательский</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">На основе «{0}».</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">На основе «{0}», изменено параметров: {1}.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">Настройки режимов…</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManageTip">Завершает текущий перевод в реальном времени и открывает настройки режимов</sys:String>
-    <sys:String x:Key="S.Realtime.CollapseGuidance">Скрыть описание режимов</sys:String>
-    <sys:String x:Key="S.Realtime.ExpandGuidance">Показать описание режимов</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">Режимы</sys:String>

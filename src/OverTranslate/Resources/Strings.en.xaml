@@ -433,13 +433,10 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">Suitable for most screens. Whether lines are merged depends on the content and layout of the text. If dialogue is split or menu items are merged, try another mode.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">For video subtitles, game dialogue, and comic speech bubbles. Consecutive lines are more likely to be merged for translation. For screens with many menus or UI labels, try another mode.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">For separate pieces of text such as game menus, status bars and chat. If one line of dialogue is split into several translations, switch to “Subtitles &amp; Comics”.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCustomTag">Custom</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">Based on “{0}”.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">Based on “{0}”, with {1} settings changed.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">Mode settings…</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManageTip">Ends the current realtime translation and opens mode settings</sys:String>
-    <sys:String x:Key="S.Realtime.CollapseGuidance">Hide mode details</sys:String>
-    <sys:String x:Key="S.Realtime.ExpandGuidance">Show mode details</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">Modes</sys:String>

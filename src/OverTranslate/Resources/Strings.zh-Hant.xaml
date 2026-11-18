@@ -453,13 +453,10 @@
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">適合大多數畫面，會依文字內容與排列決定是否合併。若對話被拆開，或選單文字被合在一起時，可改用其他模式。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">適合影片字幕、遊戲劇情對話與漫畫對白。多行連續的文字會傾向合併翻譯；選單或介面文字較多時，可改用其他模式。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">適合遊戲選單、狀態欄、聊天室等各自獨立的文字。若一段對話被拆成多句翻譯時，可改用「字幕・漫畫」模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCustomTag">自訂</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">以「{0}」為範本。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">以「{0}」為範本，已修改 {1} 項。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">模式設定…</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManageTip">結束目前的即時翻譯並開啟模式設定畫面</sys:String>
-    <sys:String x:Key="S.Realtime.CollapseGuidance">收合模式說明</sys:String>
-    <sys:String x:Key="S.Realtime.ExpandGuidance">展開模式說明</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">模式</sys:String>

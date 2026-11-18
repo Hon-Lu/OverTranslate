@@ -437,13 +437,10 @@
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">ほとんどの画面に適しています。文字の内容と並び方から、まとめるかどうかを判断します。会話が分かれてしまうときや、メニューの文字がまとまってしまうときは、ほかのモードに切り替えてください。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">動画の字幕、ゲームのストーリー会話、マンガのセリフに適しています。続いている複数行はまとめて翻訳されやすくなります。メニューや UI の文字が多いときは、ほかのモードに切り替えてください。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">ゲームのメニュー、ステータス表示、チャットなど、それぞれ独立した文字に適しています。ひと続きの会話がいくつもの文に分かれて翻訳されるときは、「字幕・マンガ」モードに切り替えてください。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCustomTag">カスタム</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">「{0}」をテンプレートにしています。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">「{0}」をテンプレートにしています（{1} 項目を変更）。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">モード設定…</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManageTip">現在のリアルタイム翻訳を終了して、モード設定を開きます</sys:String>
-    <sys:String x:Key="S.Realtime.CollapseGuidance">モードの説明を閉じる</sys:String>
-    <sys:String x:Key="S.Realtime.ExpandGuidance">モードの説明を開く</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">モード</sys:String>

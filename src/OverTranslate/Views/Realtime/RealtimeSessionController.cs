@@ -760,7 +760,6 @@ internal sealed class RealtimeSessionController
 
         var edit = new RealtimeEditWindow(
             request.ScreenBounds, _blocks, Models.RealtimeSettings.MaxBlockCount,
-            settings.Current.Realtime.GuidanceExpanded,
             settings.Current.Realtime.NewBlockProfileOrStandard(),
             settings.Current.Realtime.TextOrientation,
             RealtimeProfileEditing.Choices(settings.Current.Realtime.Profiles),
@@ -771,15 +770,9 @@ internal sealed class RealtimeSessionController
             control.SetBlockCount(_blocks.Count, Models.RealtimeSettings.MaxBlockCount);
         };
         // Written on the press rather than at the end of the session: a session over a full-screen
-        // game is as likely to end with the machine being shut down as with 結束即時翻譯.
-        edit.GuidanceExpandedChanged += (_, expanded) =>
-        {
-            if (settings.Current.Realtime.GuidanceExpanded == expanded) return;
-            settings.Current.Realtime.GuidanceExpanded = expanded;
-            settings.Save();
-        };
-        // On the press for the same reason, and the pair together because they arrive together: one
-        // tray being pressed is the user telling this sitting what they are watching.
+        // game is as likely to end with the machine being shut down as with 結束即時翻譯. The pair
+        // together because they arrive together: one tray being pressed is the user telling this
+        // sitting what they are watching.
         edit.BlockDefaultsChanged += (_, defaults) =>
         {
             var realtime = settings.Current.Realtime;

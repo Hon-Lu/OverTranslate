@@ -304,7 +304,7 @@ internal static class RealtimeProfileEditing
         _ => LocalizationService.Get("S.Realtime.ProfileStandardSummary"),
     };
 
-    /// <summary>A preset's sentence on when to use it — the edit layer's guidance plate.</summary>
+    /// <summary>A preset's sentence on when to use it — its tooltip on the edit layer.</summary>
     public static string PresetGuidance(string id) => id switch
     {
         RealtimePresets.SubtitleId => LocalizationService.Get("S.Realtime.ProfileSubtitleGuidance"),
@@ -321,8 +321,8 @@ internal static class RealtimeProfileEditing
         : LocalizationService.Format("S.Realtime.ProfileTemplateOf", PresetName(choice.BasedOn));
 
     /// <summary>
-    /// The sentence that opens a custom mode's guidance on the edit layer: the preset it is made
-    /// from, and how many values it changed when it changed any.
+    /// A custom mode's tooltip on the edit layer: the preset it is made from, and how many values it
+    /// changed when it changed any.
     /// </summary>
     public static string BasedOnSentence(ProfileChoice choice) => choice.Modified > 0
         ? LocalizationService.Format("S.Realtime.ProfileBasedOnModified", PresetName(choice.BasedOn), choice.Modified)

@@ -783,7 +783,6 @@ public class SettingsParsingTests
             },
             Realtime =
             {
-                GuidanceExpanded = false,
                 TargetLanguage = "JA",
                 Provider = TranslationProvider.OpenAI,
                 CaptureMode = RealtimeCaptureMode.Window,
@@ -812,7 +811,6 @@ public class SettingsParsingTests
         Assert.True(settings.AutoTranslateAfterSelection);
         Assert.True(settings.SaveScreenshotToDisk);
         Assert.Equal(@"D:\shots", settings.ScreenshotSavePath);
-        Assert.False(settings.Realtime.GuidanceExpanded);
         Assert.False(settings.TranslationWindowHotkeyEnabled);
         Assert.Equal(5u, settings.RealtimePauseHotkeyModifiers);
         Assert.Equal(0x44u, settings.RealtimePauseHotkeyVirtualKey);
@@ -993,14 +991,19 @@ public class SettingsParsingTests
         Assert.Equal("Ctrl+Alt+Q", existing.QuickLookupHotkeyDisplay);
     }
 
-    // Expanded on a file written before the setting existed: someone who has never been shown the
-    // framing guidance must not have it folded away on their behalf.
-    [Fact]
-    public void MissingRealtimeGuidanceSetting_StartsExpanded()
+    // 2.12.0 wrote whether the edit layer's guidance plate was folded away. The plate is gone; a file
+    // that still says so reads as any other, and the key is not written back.
+    [Theory]
+    [InlineData("true")]
+    [InlineData("false")]
+    public void TheGuidanceStateAnOlderFileHolds_IsReadPastAndDropped(string expanded)
     {
-        var settings = SettingsService.Parse("""{"Theme":"Light"}""");
+        var settings = SettingsService.Parse(
+            "{\"Theme\":\"Light\",\"Realtime\":{\"GuidanceExpanded\":" + expanded + ",\"TargetLanguage\":\"JA\"}}");
 
-        Assert.True(settings.Realtime.GuidanceExpanded);
+        Assert.Equal("Light", settings.Theme);
+        Assert.Equal("JA", settings.Realtime.TargetLanguage);
+        Assert.DoesNotContain("GuidanceExpanded", SettingsService.Serialize(settings));
     }
 
     /// <summary>

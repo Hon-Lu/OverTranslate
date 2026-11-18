@@ -52,12 +52,6 @@ public sealed record RealtimeRegion(
 /// mode changed on the page reaches the block; one deleted since reads as 標準 — see
 /// <see cref="Models.RealtimeSettings.ResolveProfile"/>.
 /// </param>
-/// <remarks>
-/// Whether the framing guidance is folded away is deliberately not here. It is not a property of a
-/// block: it says whether this user still needs the instructions, which is the same answer for every
-/// block they draw — so it lives in the settings file as
-/// <see cref="Models.RealtimeSettings.GuidanceExpanded"/> and outlives the session.
-/// </remarks>
 /// <param name="CompareOffset">
 /// Where 對照顯示 draws this block's translation, as an offset from <paramref name="Bounds"/> in
 /// physical pixels — or null while the user has never dragged it, which means "wherever

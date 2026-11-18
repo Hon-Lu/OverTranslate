@@ -437,13 +437,10 @@
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">대부분의 화면에 적합하며, 텍스트의 내용과 배치를 보고 병합 여부를 결정합니다. 대사가 나뉘거나 메뉴 항목이 하나로 합쳐지면 다른 모드를 선택하세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">영상 자막, 게임 스토리 대사, 만화 대사에 적합합니다. 연속된 여러 줄은 합쳐서 번역하는 경향이 있습니다. 메뉴나 UI 텍스트가 많으면 다른 모드를 선택하세요.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">게임 메뉴, 상태 표시줄, 채팅처럼 서로 독립된 텍스트에 적합합니다. 하나의 대사가 여러 문장으로 나뉘어 번역되면 '자막・만화' 모드로 전환하세요.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileCustomTag">사용자 지정</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOn">템플릿: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">템플릿: {0} · 변경된 항목: {1}개</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">모드 설정…</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManageTip">현재 실시간 번역을 끝내고 모드 설정을 엽니다</sys:String>
-    <sys:String x:Key="S.Realtime.CollapseGuidance">모드 설명 접기</sys:String>
-    <sys:String x:Key="S.Realtime.ExpandGuidance">모드 설명 펼치기</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">모드</sys:String>

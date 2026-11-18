@@ -208,10 +208,10 @@ public class RealtimeSettings
     /// last chose on a block, restored for the next one and for the next sitting.
     /// </summary>
     /// <remarks>
-    /// <para>The pair the edit layer sets. They are remembered for the same reason
-    /// <see cref="GuidanceExpanded"/> is, and stored the same way — the last choice wins, written on
-    /// the press rather than at the end of a session — but they are worth more, because the framing
-    /// itself is not kept: every sitting begins by drawing the blocks again, and without this every
+    /// <para>The pair the edit layer sets. They are stored the way <see cref="CompareDisplay"/> is —
+    /// the last choice wins, written on the press rather than at the end of a session — and they are
+    /// worth keeping because the framing itself is not kept: every sitting begins by drawing the
+    /// blocks again, and without this every
     /// one of them begins on the same two answers however many times the user has corrected
     /// them.</para>
     ///
@@ -228,7 +228,7 @@ public class RealtimeSettings
     /// alternative, so reading it would leave everyone who never touched the tray on a mode they did
     /// not choose. An old file's answer is not read; what is chosen from here on is kept.</para>
     ///
-    /// <para>Deliberately not on the settings page, like <see cref="GuidanceExpanded"/>: this is a
+    /// <para>Deliberately not on the settings page, like <see cref="CompareDisplay"/>: this is a
     /// state the edit layer sets by being used, not a preference anyone would go looking for.</para>
     /// </remarks>
     public string NewBlockProfile { get; set; } = RealtimePresets.StandardId;
@@ -314,32 +314,14 @@ public class RealtimeSettings
     }
 
     /// <summary>
-    /// Whether the per-block framing guidance on the edit layer is unfolded. Expanded on a first run,
-    /// because the guidance is what stops a badly framed block.
-    /// </summary>
-    /// <remarks>
-    /// One value for the whole feature rather than one per block: a user who has read the guidance has
-    /// read it, and folding it away on every block of every sitting to say so is the same instruction
-    /// being dismissed over and over. Whichever block's chevron is pressed last writes here, and the
-    /// next edit layer opens every block that way. Deliberately not shown on the settings page — it is
-    /// a state the control sets by being used, not a preference anyone would go looking for.
-    ///
-    /// The one value in this group that is not a choice the user came to make. It moves with them
-    /// anyway: it is read and written by 即時翻譯 and nothing else, and a settings file where the rule
-    /// is "which feature owns it" stays sortable, while one where the rule is "which feature owns it,
-    /// except the states" needs the exception explained every time.
-    /// </remarks>
-    public bool GuidanceExpanded { get; set; } = true;
-
-    /// <summary>
     /// Whether 對照顯示 is on: the source is left showing and each translation is drawn in a copy of
     /// its block beside it, instead of over it.
     /// </summary>
     /// <remarks>
     /// Off by default, because covering the source is what this feature is for — the reader who wants
-    /// to compare the two is the one who goes looking for the switch. Kept between sittings for the
-    /// reason <see cref="GuidanceExpanded"/> is, and written the same way: on the press, from the
-    /// floating bar that owns the button, because it is a way of watching rather than a fact about
+    /// to compare the two is the one who goes looking for the switch. Kept between sittings, and
+    /// written on the press, from the floating bar that owns the button, because it is a way of
+    /// watching rather than a fact about
     /// one picture. Deliberately not on the page — it is switched while looking at the screen, often
     /// mid-session, and the bar is the one control on screen then.
     ///
