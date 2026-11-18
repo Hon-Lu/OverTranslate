@@ -238,6 +238,14 @@ internal static class RealtimeHiddenText
     /// would cost (FLOOR 3 and DAY 12 beside a column of stats; one word coming and going as the
     /// labels around it are read) has nothing to show for it.</para>
     ///
+    /// <para>Not taken either: leaving out a name-like abbreviation alone (SAN) when the nearest
+    /// group to its right on its row is a number left out — a stat panel read as label and value
+    /// apart, where SAN, VIG and MATK on their own still come back as 儲存網路, 維格 and 馬特克.
+    /// MEASURED over the same captures: no such panel among them; it caught only a party
+    /// member's CPU tag, and on a staggered row that put another member's numbers beside one CPU
+    /// and not the other, so of two CPU tags side by side one was boxed and one bare, coming and
+    /// going over a moving picture.</para>
+    ///
     /// <para>MEASURED (2026-11-19, 63 abbreviations, en→zh-TW): the wrong word 20 times on Google,
     /// 16 on Bing, 21 on 有道, 5 on Microsoft — HP as 惠普 and MP as 國會議員 on all of them — and the
     /// game's meaning 13–22 times (EXP → 經驗值, ATK → 攻擊力), which is what leaving them out gives
