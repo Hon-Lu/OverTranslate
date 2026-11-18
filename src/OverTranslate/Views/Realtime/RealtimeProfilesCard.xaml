@@ -5,7 +5,9 @@
     <UserControl.Resources>
         <!-- One mode in the list, on one line: the whole row opens it. No selected look — the list
              says which modes there are, not which one is in use; each block has its own. The last
-             row drops its rule (BorderThickness 0), so it does not double the list's own border. -->
+             row drops its rule (BorderThickness 0), so it does not double the list's own border.
+             No padding on the row: the cells carry it, so the name's band (ProfileNameBand) runs the
+             row's full height. -->
         <Style x:Key="ProfileListRow" TargetType="Button">
             <Setter Property="FontFamily"      Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize"        Value="{StaticResource AppFontSize}"/>
@@ -17,9 +19,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Root" Background="Transparent"
-                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="16,8,12,8">
-                            <ContentPresenter VerticalAlignment="Center"/>
+                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -36,6 +37,15 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- The name's cell: a tinted band down the row's left, so the names read as a column of
+             their own and not as the first words of the sentence beside them. See-through
+             (AppSubtleFill), so the row's hover and press show through it and the band stays a
+             step apart from the row in every state. -->
+        <Style x:Key="ProfileNameBand" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppSubtleFill}"/>
+            <Setter Property="Padding"    Value="16,8,12,8"/>
+        </Style>
     </UserControl.Resources>
 
     <Border Style="{StaticResource CardBorder}">
@@ -44,16 +54,18 @@
                  whole card, not on any row of it, and at the foot of the list it read as one more
                  step to go through before 選取翻譯區塊. Disabled at the cap rather than hidden: the
                  count on it is what says why it stopped. -->
-            <Grid>
+            <!-- The heading as on the rest of the page (CardTitle), with the button let into its line
+                 by the negative margin so the 30-high button does not push the title down. The hint
+                 under it is the heading's subtitle, so it sits close, the 4 PageSubtitle leaves. -->
+            <Grid Margin="0,0,0,4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{DynamicResource S.Realtime.Profiles}" Style="{StaticResource SectionHeader}"
-                           VerticalAlignment="Center" Margin="0"/>
+                <TextBlock Text="{DynamicResource S.Realtime.Profiles}" Style="{StaticResource CardTitle}"/>
                 <Button x:Name="AddButton" Grid.Column="1"
                         Style="{StaticResource IconTextButton}"
-                        Margin="12,0,0,0"
+                        Margin="12,-5,0,-5"
                         VerticalAlignment="Center"
                         ToolTipService.ShowOnDisabled="True"
                         AutomationProperties.AutomationId="ProfileAddRow"

@@ -13,6 +13,10 @@
          because the card underneath is already white and there is nothing above it to lift to. -->
     <SolidColorBrush x:Key="AppInfoBg"         Color="#EDF5FC"/>
 
+    <!-- The light half of AppSubtleFill — see DarkTheme.xaml. #F5F5F5 over the white card, the
+         step AppHeaderBg takes off it. -->
+    <SolidColorBrush x:Key="AppSubtleFill"     Color="#0A000000"/>
+
     <!-- Text — two levels, and there is no third. See DarkTheme for why AppTextMuted was removed;
          its light value (#999999) was 2.75:1, no better. -->
     <SolidColorBrush x:Key="AppTextPrimary"    Color="#1A1A1A"/>

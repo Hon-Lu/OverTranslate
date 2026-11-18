@@ -23,13 +23,17 @@ namespace OverTranslate.Views.Realtime;
 /// <para>One line a mode — the name, its description in grey beside it, › — because the card sits
 /// between 顯示外觀 and 選取翻譯區塊, and as a list of two-line rows with a 預設 tag on three of
 /// them it read as a step to be worked through before starting, when most people never need it.
-/// The names are set in the ordinary weight so they read as a column of entries, not headings.</para>
+/// The names are set in the ordinary weight so they read as a column of entries, not headings,
+/// and on a tinted band (ProfileNameBand) so that column is told from the descriptions at a glance:
+/// as plain text side by side the two read as one run of words.</para>
 /// </remarks>
 public partial class RealtimeProfilesCard : UserControl
 {
-    // Room between the name and its description, and the share of the row a custom name may take
-    // before it is cut: past that a long name would push its description into a sliver.
-    private const double NameGap = 16;
+    // The band's own padding either side of the name (ProfileNameBand), the room between the band
+    // and the description, and the share of the row a custom name's band may take before the name
+    // is cut: past that a long name would push its description into a sliver.
+    private const double BandPadding = 16 + 12;
+    private const double DescriptionGap = 14;
     private const double CustomNameShare = 0.4;
 
     private double _presetNameWidth;
@@ -120,7 +124,6 @@ public partial class RealtimeProfilesCard : UserControl
             Text = choice.Name,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, NameGap, 0),
         };
         if (choice.IsPreset)
         {
@@ -139,8 +142,12 @@ public partial class RealtimeProfilesCard : UserControl
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(DescriptionGap, 8, 0, 8),
         };
         description.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
+
+        var band = new Border { Child = name };
+        band.SetResourceReference(StyleProperty, "ProfileNameBand");
 
         var chevron = new TextBlock
         {
@@ -148,7 +155,7 @@ public partial class RealtimeProfilesCard : UserControl
             FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(10, 0, 0, 0),
+            Margin = new Thickness(10, 0, 12, 0),
         };
         chevron.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
 
@@ -156,7 +163,7 @@ public partial class RealtimeProfilesCard : UserControl
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(name);
+        grid.Children.Add(band);
         Grid.SetColumn(description, 1);
         grid.Children.Add(description);
         Grid.SetColumn(chevron, 2);
@@ -173,14 +180,14 @@ public partial class RealtimeProfilesCard : UserControl
 
     private static readonly object CustomNameTag = new();
 
-    // The cap on a custom name follows the list's width; the gap after the name is inside it.
+    // The cap on a custom name follows the list's width; the band's padding is inside it.
     private void CapCustomNames(double listWidth)
     {
         if (listWidth <= 0) return;
         foreach (var row in ListHost.Children.OfType<Button>())
         {
-            if (row.Content is Grid grid && grid.Children[0] is TextBlock name && ReferenceEquals(name.Tag, CustomNameTag))
-                name.MaxWidth = Math.Max(name.MinWidth, listWidth * CustomNameShare - NameGap);
+            if (row.Content is Grid { Children: [Border { Child: TextBlock name }, ..] } && ReferenceEquals(name.Tag, CustomNameTag))
+                name.MaxWidth = Math.Max(name.MinWidth, listWidth * CustomNameShare - BandPadding);
         }
     }
 
