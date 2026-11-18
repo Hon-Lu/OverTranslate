@@ -1341,6 +1341,8 @@ public sealed class RealtimeTranslationSession
         var missing = new List<OcrTextBlock>();
         foreach (var block in blocks)
         {
+            // Nothing in it to translate, so nothing is asked for it — see RealtimeHiddenText.
+            if (RealtimeHiddenText.NothingToTranslate(block.Text)) continue;
             var key = cacheKeyPrefix + block.Text;
             if (_translationCache.TryGet(key, generation, out _)) continue;
             if (!withContext)
@@ -1377,9 +1379,8 @@ public sealed class RealtimeTranslationSession
         if (!_translationCache.IsCurrent(generation)) return null;
 
         return blocks
-            .Select(block => _translationCache.TryGet(cacheKeyPrefix + block.Text, generation, out var translated)
-                ? Translated(block, translated, untranslated: false)
-                : Translated(block, block.Text, untranslated: true))
+            .Select(block => ForOverlay(block,
+                _translationCache.TryGet(cacheKeyPrefix + block.Text, generation, out var translated) ? translated : null))
             .ToList();
 
         async Task SendAsync()
@@ -1429,8 +1430,32 @@ public sealed class RealtimeTranslationSession
         }
     }
 
+    /// <summary>
+    /// A recognised line as the overlay is handed it: translated, hidden, or in its original
+    /// waiting for a translation that did not come.
+    /// </summary>
+    /// <remarks>
+    /// Every line goes back, the hidden ones with the rest — see <see cref="TranslatedBlock.Hidden"/>.
+    /// A line with nothing to translate was never asked for and is not waiting on anything, so it is
+    /// not untranslated either: marked so, the pump would retry it for as long as it is up.
+    ///
+    /// <para>What is hidden is decided from the text alone, never from what an engine answered.
+    /// Hiding a short line that came back as itself was tried and given up: which lines those are
+    /// depends on the engine (Microsoft leaves 27 of 35 short names alone, Google 1), and on a length
+    /// cut-off, so a column came out half boxed — a name of five letters left bare beside one of ten
+    /// still boxed, QLOAD bare beside QSAVE translated. The reader sees the same letters either way;
+    /// the half-and-half column is the only thing it changed.</para>
+    /// </remarks>
+    /// <param name="translation">The translation, or null when no engine gave one.</param>
+    internal static TranslatedBlock ForOverlay(OcrTextBlock block, string? translation) =>
+        RealtimeHiddenText.NothingToTranslate(block.Text)
+            ? Translated(block, block.Text, untranslated: false, hidden: true)
+            : translation is not null
+                ? Translated(block, translation, untranslated: false)
+                : Translated(block, block.Text, untranslated: true);
+
     /// <summary>A recognised line holding <paramref name="text"/>, as the overlay draws it.</summary>
-    private static TranslatedBlock Translated(OcrTextBlock block, string text, bool untranslated) =>
+    private static TranslatedBlock Translated(OcrTextBlock block, string text, bool untranslated, bool hidden = false) =>
         new(block.Text, text, block.Bounds, block.SourceLineBounds, block.RenderGlyphHeight)
         {
             RunsAcross = block.RunsAcross,
@@ -1438,6 +1463,7 @@ public sealed class RealtimeTranslationSession
             FontGlyphHeight = block.FontGlyphHeight,
             Tilt = block.Tilt,
             Untranslated = untranslated,
+            Hidden = hidden,
         };
 
     private static string DescribeFailure(Exception ex) => ex switch
@@ -1542,8 +1568,8 @@ public sealed class RealtimeTranslationSession
                     if (Publish(pass, translated, generation))
                     {
                         Log.Debug(
-                            "Realtime pass region={Region} ocr={Ocr}ms translate={Translate}ms lines={Lines}",
-                            region.Id, ocrMs, translateMs, translated.Count);
+                            "Realtime pass region={Region} ocr={Ocr}ms translate={Translate}ms lines={Lines} hidden={Hidden}",
+                            region.Id, ocrMs, translateMs, translated.Count, translated.Count(line => line.Hidden));
 
                         // Drawn as it is, since the other lines are real, but a line shown in its
                         // original text is waiting on a translation. The pixels will not change to ask

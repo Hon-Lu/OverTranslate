@@ -61,6 +61,17 @@ public record TranslatedBlock(
     /// name or "OK" translates to itself, and a caller that retried those would retry forever.
     /// </remarks>
     public bool Untranslated { get; init; }
+
+    /// <summary>
+    /// True when the overlay leaves this line out: what it would draw is what the screen already
+    /// shows. Set by realtime translation only — see Realtime.RealtimeHiddenText.
+    /// </summary>
+    /// <remarks>
+    /// Carried on the line rather than the line left out of the list, because everything but the
+    /// drawing still needs it: the line holds its place among the others, its type size counts
+    /// towards theirs, and a translation beside it keeps to its own room rather than growing over it.
+    /// </remarks>
+    public bool Hidden { get; init; }
 }
 
 public class TranslationService
