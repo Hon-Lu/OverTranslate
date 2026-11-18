@@ -65,15 +65,23 @@ internal static class RealtimeSourceAlignment
     /// </param>
     /// <param name="lines">The group's source lines, in physical pixels.</param>
     /// <remarks>
-    /// 靠左 on a panel answers null rather than Left: its rows already start at their left edge, and
-    /// the panel's own fallback — a group that cannot be split, drawn as one band — keeps the
-    /// centring it has always had, so 遊戲介面・聊天室, whose value this is, draws as it did before
-    /// 譯文對齊 existed, to the pixel. 置中 on a band is what a band always did.
+    /// <para>靠左 is Left however the group is drawn. A panel's rows start at their left edge either
+    /// way; where it differs from null is the panel's own fallback — a group that cannot be split,
+    /// drawn as one band — which is set from its source's left edge rather than round its centre.
+    /// That band was centred at first, so that 遊戲介面・聊天室, whose value 靠左 is, drew exactly as
+    /// before 譯文對齊; the user agreed to it following 靠左 once it was measured to be rare.</para>
+    ///
+    /// <para>MEASURED (OcrHarness --auto-probe band, the 自動 corpus, 2026-11-19): of 遊戲介面・聊天室's
+    /// 5,541 groups, 328 of several rows, none fell back — with the size following the source the
+    /// band is only reached by a row with no usable geometry. With 固定字級 it is also reached by a
+    /// row the size does not fit, which turns on the translation and is not in the corpus.</para>
+    ///
+    /// <para>置中 on a band is what a band always did.</para>
     /// </remarks>
     public static SourceAlignment? For(RealtimeTextAlign setting, RealtimeBlockMode drawnAs, IReadOnlyList<Rect>? lines) => setting switch
     {
         RealtimeTextAlign.Center => SourceAlignment.Center,
-        RealtimeTextAlign.Left => drawnAs == RealtimeBlockMode.Panel ? null : SourceAlignment.Left,
+        RealtimeTextAlign.Left => SourceAlignment.Left,
         _ => Of(lines),
     };
 

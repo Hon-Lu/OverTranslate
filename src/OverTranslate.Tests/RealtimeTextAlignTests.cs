@@ -100,8 +100,8 @@ public class RealtimeTextAlignTests
             Assert.Equal(SourceAlignment.Center, RealtimeSourceAlignment.For(RealtimeTextAlign.Center, RealtimeBlockMode.Subtitle, rows));
             Assert.Equal(SourceAlignment.Center, RealtimeSourceAlignment.For(RealtimeTextAlign.Center, RealtimeBlockMode.Panel, rows));
             Assert.Equal(SourceAlignment.Left, RealtimeSourceAlignment.For(RealtimeTextAlign.Left, RealtimeBlockMode.Subtitle, rows));
-            // A panel's rows are on their left edge already; null keeps its fallback as it was.
-            Assert.Null(RealtimeSourceAlignment.For(RealtimeTextAlign.Left, RealtimeBlockMode.Panel, rows));
+            // A panel too, so the band it falls back to follows 靠左 (the user agreed, 2026-11-19).
+            Assert.Equal(SourceAlignment.Left, RealtimeSourceAlignment.For(RealtimeTextAlign.Left, RealtimeBlockMode.Panel, rows));
         }
     }
 
@@ -198,12 +198,17 @@ public class RealtimeTextAlignTests
     });
 
     /// <summary>
-    /// 遊戲介面・聊天室 splits each group back into its rows, each from its source row's left edge,
-    /// and a group it cannot split is a band round its centre — as before 譯文對齊, whichever way
-    /// the source is set.
+    /// 遊戲介面・聊天室 splits each group back into its rows, each from its source row's left edge, as
+    /// before 譯文對齊, whichever way the source is set; a group it cannot split is a band set from
+    /// its source's left edge, as 靠左 sets any band.
     /// </summary>
+    /// <remarks>
+    /// That band was centred, as before 譯文對齊, until the user agreed (2026-11-19) to it following
+    /// 靠左 once the corpus showed it to be rare — see <see cref="RealtimeSourceAlignment.For"/>.
+    /// The rows are still exactly as before.
+    /// </remarks>
     [Fact]
-    public void InterfaceDrawsAsBefore() => OnSta(() =>
+    public void InterfaceDrawsItsRowsAsBefore_AndItsBandFromTheLeft() => OnSta(() =>
     {
         foreach (var rows in new[] { FlushLeft, Centred, FlushRight })
         {
@@ -218,11 +223,13 @@ public class RealtimeTextAlignTests
         }
 
         // Rows it cannot flow the translation through (one of them has no width): drawn as the
-        // band, centred as ever.
+        // band, from the source's left edge as 靠左 sets one, no longer round its centre.
         var whole = Group("ui", "第一列項目 第二列 第三列項目", [.. FlushLeft, new Rect(100, 120, 0, 30)]);
         var band = Assert.Single(Texts(RealtimeBlockMode.Panel, ResolvedProfile.Interface.Align, [whole]));
-        Assert.Equal(DrawLines([whole], alignment: null), Draw(RealtimeBlockMode.Panel, ResolvedProfile.Interface.Align, [whole]));
-        Assert.Equal(HorizontalAlignment.Center, Assert.IsType<TextBlock>(band.Child).HorizontalAlignment);
+        Assert.Equal(DrawLines([whole], alignment: SourceAlignment.Left), Draw(RealtimeBlockMode.Panel, ResolvedProfile.Interface.Align, [whole]));
+        Assert.NotEqual(DrawLines([whole], alignment: null), Draw(RealtimeBlockMode.Panel, ResolvedProfile.Interface.Align, [whole]));
+        Assert.Equal(HorizontalAlignment.Left, Assert.IsType<TextBlock>(band.Child).HorizontalAlignment);
+        Assert.Equal(100 - band.Padding.Left, Canvas.GetLeft(band), 6);
     });
 
     [Fact]
