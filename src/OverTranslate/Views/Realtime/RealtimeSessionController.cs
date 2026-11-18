@@ -462,6 +462,8 @@ internal sealed class RealtimeSessionController
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
         control.LanguagesChangeRequested += (_, pair) => ChangeLanguages(pair.Source, pair.Target);
         control.AppearanceChanged += (_, _) => ApplyAppearance();
+        // A static source again: unsubscribed in Stop, or it would keep this session alive.
+        SettingsService.Instance.RealtimeProfilesChanged += OnRealtimeProfilesChanged;
         _control = control;
         control.Show();
 
@@ -681,6 +683,7 @@ internal sealed class RealtimeSessionController
 
         // A static event: left subscribed, it would keep this session's handler alive and running.
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        SettingsService.Instance.RealtimeProfilesChanged -= OnRealtimeProfilesChanged;
         _displaySettle.Stop();
         _foregroundWatch?.Dispose();
         _foregroundWatch = null;
@@ -757,9 +760,9 @@ internal sealed class RealtimeSessionController
 
         var edit = new RealtimeEditWindow(
             request.ScreenBounds, _blocks, Models.RealtimeSettings.MaxBlockCount,
-            settings.Current.Realtime.GuidanceExpanded,
-            settings.Current.Realtime.NewBlockMode,
+            settings.Current.Realtime.NewBlockProfileOrStandard(),
             settings.Current.Realtime.TextOrientation,
+            RealtimeProfileEditing.Choices(settings.Current.Realtime.Profiles),
             _compareDisplay);
         edit.BlocksChanged += (_, _) =>
         {
@@ -767,26 +770,27 @@ internal sealed class RealtimeSessionController
             control.SetBlockCount(_blocks.Count, Models.RealtimeSettings.MaxBlockCount);
         };
         // Written on the press rather than at the end of the session: a session over a full-screen
-        // game is as likely to end with the machine being shut down as with 結束即時翻譯.
-        edit.GuidanceExpandedChanged += (_, expanded) =>
-        {
-            if (settings.Current.Realtime.GuidanceExpanded == expanded) return;
-            settings.Current.Realtime.GuidanceExpanded = expanded;
-            settings.Save();
-        };
-        // On the press for the same reason, and the pair together because they arrive together: one
-        // tray being pressed is the user telling this sitting what they are watching.
+        // game is as likely to end with the machine being shut down as with 結束即時翻譯. The pair
+        // together because they arrive together: one tray being pressed is the user telling this
+        // sitting what they are watching.
         edit.BlockDefaultsChanged += (_, defaults) =>
         {
             var realtime = settings.Current.Realtime;
-            if (realtime.NewBlockMode == defaults.Mode &&
+            if (realtime.NewBlockProfile == defaults.Profile &&
                 realtime.TextOrientation == defaults.Orientation) return;
-            realtime.NewBlockMode = defaults.Mode;
+            realtime.NewBlockProfile = defaults.Profile;
             realtime.TextOrientation = defaults.Orientation;
             settings.Save();
         };
         edit.LimitReached += (_, _) =>
             control.ShowMessage(LocalizationService.Format("S.Realtime.TooManyBlocks", Models.RealtimeSettings.MaxBlockCount));
+        // 管理模式… ends the sitting rather than opening the page over it: the layer covers the whole
+        // screen at the top of the topmost band, and the window would open underneath it looking as
+        // if nothing had happened. The blocks and their modes are kept (RememberedBlocks), so the
+        // way back is one press. Deferred, because the press arrives inside the layer's own input
+        // handling and this closes that layer.
+        edit.ManageProfilesRequested += (_, profileId) =>
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => OpenProfiles(profileId));
         _edit = edit;
         edit.Show();
         RefreshOverlayHandles();
@@ -810,7 +814,27 @@ internal sealed class RealtimeSessionController
         // Only while editing. The hook swallows Esc process-wide, and a translating session can run
         // for hours next to an application that needs its own Esc key.
         DisposeEscapeHook();
-        _escapeHook = GlobalEscapeHook.Install(Stop);
+        _escapeHook = GlobalEscapeHook.Install(OnEscapeWhileFraming);
+    }
+
+    /// <summary>
+    /// Esc while framing: puts away a block's open list of modes if there is one, and only
+    /// otherwise ends the sitting — a press meant for the list must not cost the user every block.
+    /// </summary>
+    private void OnEscapeWhileFraming()
+    {
+        if (_edit?.TryDismissMenu() == true) return;
+        Stop();
+    }
+
+    /// <summary>
+    /// 模式設定… on the edit layer: ends the sitting and opens the 即時翻譯 page with
+    /// <paramref name="profileId"/> — the block's mode — open over it.
+    /// </summary>
+    private void OpenProfiles(string profileId)
+    {
+        Stop();
+        Shell.ShellWindow.ShowOrActivate(Shell.ShellPage.Realtime).ShowRealtimeProfile(profileId);
     }
 
     /// <summary>
@@ -881,7 +905,9 @@ internal sealed class RealtimeSessionController
     // Ids are positions in _blocks: the session and the overlays are both built from this list, so a
     // result arriving for region 1 is for whatever block is second in it.
     private List<RealtimeRegion> Regions() => _blocks
-        .Select((block, index) => new RealtimeRegion(index, block.Bounds, block.Mode, block.Orientation))
+        .Select((block, index) => new RealtimeRegion(
+            index, block.Bounds, SettingsService.Instance.Current.Realtime.ResolveProfile(block.ProfileId),
+            block.Orientation))
         .ToList();
 
     /// <summary>
@@ -912,9 +938,9 @@ internal sealed class RealtimeSessionController
                 look.TextColor, look.ScrimColor, look.ScrimOpacity,
                 look.NaturalBackground,
                 look.SampleTextColor,
-                region.Mode, look.Border, look.BorderColor, region.Orientation,
+                region.Profile.Layout, look.Border, look.BorderColor, region.Orientation,
                 compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
-                look.FixedFontSize);
+                look.FixedFontSize, region.Profile.Align);
             _blockWindows[region.Id] = window;
             window.Show();
         }
@@ -1077,6 +1103,44 @@ internal sealed class RealtimeSessionController
             request.SourceLanguage, request.TargetLanguage, source, target, rebuilt, paused);
 
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Raised by whoever saved the modes, on whatever thread that was; the work is the dispatcher's.
+    private void OnRealtimeProfilesChanged(object? sender, EventArgs e) =>
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(ApplyProfiles);
+
+    /// <summary>
+    /// Puts every block on what its mode says now, after the modes were changed on the page, without
+    /// ending anything.
+    /// </summary>
+    /// <remarks>
+    /// <para>A block whose mode was deleted goes back to 標準 — on the block itself, so the edit layer
+    /// and the next sitting show it there too. Each overlay is redrawn in its mode's layout at once,
+    /// and the session reads every block again on the new values — see
+    /// <see cref="RealtimeTranslationSession.ChangeProfiles"/>, which does nothing when no block's
+    /// values really changed.</para>
+    ///
+    /// <para>The direction is not touched: it is not part of a mode.</para>
+    /// </remarks>
+    private void ApplyProfiles()
+    {
+        if (_session is not { } session) return;
+
+        var realtime = SettingsService.Instance.Current.Realtime;
+        _blocks = [.. _blocks.Select(block => block with { ProfileId = realtime.KnownProfileId(block.ProfileId) })];
+
+        // While framing, the layer's lists and buttons follow — a mode added or renamed on the page
+        // is offered at once, one deleted takes its blocks to 標準 there too. It reports its blocks
+        // back through BlocksChanged, which brings _blocks into line with what it shows.
+        _edit?.SetProfileChoices(RealtimeProfileEditing.Choices(realtime.Profiles));
+
+        var regions = Regions();
+        foreach (var region in regions)
+            if (_blockWindows.TryGetValue(region.Id, out var window))
+                window.SetLayout(region.Profile.Layout, region.Profile.Align);
+
+        if (session.ChangeProfiles(regions) && IsTranslating && !session.IsPaused)
+            _loadingHint?.Wait(session.ModelsLoading);
     }
 
     /// <summary>

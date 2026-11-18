@@ -37,10 +37,21 @@ internal static class DialogueTextGrouper
     /// fields have no dialogue meaning and are left at zero; the ones filled are named in the
     /// harness's own legend.
     /// </param>
+    /// <param name="maxStackGap">
+    /// The widest gap between stacked rows, in line heights — <see cref="MaxStackGap"/>, which every
+    /// mode reads with (see <see cref="ResolvedProfile"/>).
+    /// </param>
+    /// <param name="merge">
+    /// 合併, 合併程度's last step: stacked lines join regardless of size and alignment, and across a
+    /// short item beside one of them — see <see cref="NextRowMerging"/> and <see cref="AsideOnly"/>.
+    /// Pieces of one row are joined as always.
+    /// </param>
     internal static List<OcrTextBlock> Group(
         IReadOnlyList<OcrTextBlock> input,
         GroupingTrace? trace = null,
-        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null)
+        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null,
+        double maxStackGap = MaxStackGap,
+        bool merge = false)
     {
         if (trace is not null && trace.Blocks.Count == 0) trace.RegisterBlocks(input);
         if (input.Count <= 1)
@@ -65,6 +76,8 @@ internal static class DialogueTextGrouper
         // ValuesBesideItems.
         var itemRows = new List<(Rect Span, List<OcrTextBlock> Row)>();
         var lineRows = new Dictionary<OcrTextBlock, List<OcrTextBlock>>(ReferenceEqualityComparer.Instance);
+        // 合併: the other lines of each line's row — see AsideOnly.
+        var besides = new Dictionary<OcrTextBlock, List<OcrTextBlock>>(ReferenceEqualityComparer.Instance);
         foreach (var row in rows)
         {
             var segments = new List<List<OcrTextBlock>>();
@@ -93,6 +106,7 @@ internal static class DialogueTextGrouper
             // isolated symbols would manufacture enough length to evade the downstream filter.
             segments = segments.SelectMany(s => s.Count > 1 && s.All(b => b.Text.Count(c => !char.IsWhiteSpace(c)) < 2)
                 ? s.Select(b => new List<OcrTextBlock> { b }) : new[] { s }).ToList();
+            var rowLines = new List<OcrTextBlock>();
             foreach (var segment in segments)
             {
                 var line = OcrTextBlockGrouper.BuildGroup(segment);
@@ -104,9 +118,13 @@ internal static class DialogueTextGrouper
                 trace?.RegisterLine(line, segment);
                 lines.Add((line, segments.Count > 1));
                 lineRows[line] = row;
+                rowLines.Add(line);
             }
+            if (merge)
+                foreach (var line in rowLines)
+                    besides[line] = rowLines.Where(other => !ReferenceEquals(other, line)).ToList();
         }
-        var chatNames = ChatNameLines(lines, joinedLines);
+        var chatNames = ChatNameLines(lines, joinedLines, maxStackGap);
         var groups = new List<List<OcrTextBlock>>();
         var open = new List<bool>();
         trace?.OrderLines(lines.OrderBy(l => l.Block.LayoutBounds.Y).ThenBy(l => l.Block.LayoutBounds.X).Select(l => l.Block).ToList());
@@ -114,12 +132,19 @@ internal static class DialogueTextGrouper
         {
             int target = -1;
             double nearest = double.MaxValue;
-            for (int i = 0; !line.Unresolved && i < groups.Count; i++)
+            for (int i = 0; (merge || !line.Unresolved) && i < groups.Count; i++)
             {
                 if (!open[i]) continue;
                 var previous = groups[i][^1].LayoutBounds;
                 var current = line.Block.LayoutBounds;
-                var joins = NextRow(previous, current, out var rule);
+                var joins = merge
+                    ? NextRowMerging(previous, current, maxStackGap, out var rule)
+                    : NextRow(previous, current, maxStackGap, out rule);
+                if (joins && merge && !AsideOnly(besides[groups[i][^1]], current, besides[line.Block], previous))
+                {
+                    joins = false;
+                    rule = "row-beside";
+                }
                 // Only a group of that one line can be a name: the last line of a paragraph that
                 // happens to be short and unpunctuated is still that paragraph's.
                 if (joins && groups[i].Count == 1 && !joinedLines.Contains(groups[i][^1]) &&
@@ -164,7 +189,7 @@ internal static class DialogueTextGrouper
                 if (current.Y > previous.Y && Math.Min(previous.Right, current.Right) > Math.Max(previous.Left, current.Left))
                     open[i] = false;
             }
-            if (target < 0) { groups.Add([line.Block]); open.Add(!line.Unresolved); }
+            if (target < 0) { groups.Add([line.Block]); open.Add(merge || !line.Unresolved); }
             else groups[target].Add(line.Block);
         }
         trace?.RegisterGroups(groups);
@@ -188,7 +213,7 @@ internal static class DialogueTextGrouper
     /// little left of it.</para>
     /// </remarks>
     private static HashSet<OcrTextBlock> ChatNameLines(
-        List<(OcrTextBlock Block, bool Unresolved)> lines, HashSet<OcrTextBlock> joinedLines)
+        List<(OcrTextBlock Block, bool Unresolved)> lines, HashSet<OcrTextBlock> joinedLines, double maxStackGap)
     {
         var names = new HashSet<OcrTextBlock>(ReferenceEqualityComparer.Instance);
         var ordered = lines.Where(l => !l.Unresolved).Select(l => l.Block)
@@ -197,7 +222,7 @@ internal static class DialogueTextGrouper
         {
             var name = ordered[i];
             if (joinedLines.Contains(name)) continue;
-            var message = ordered.Skip(i + 1).FirstOrDefault(b => NextRow(name.LayoutBounds, b.LayoutBounds, out _));
+            var message = ordered.Skip(i + 1).FirstOrDefault(b => NextRow(name.LayoutBounds, b.LayoutBounds, maxStackGap, out _));
             if (message is not null && NameOverMessage(name, message)) names.Add(name);
         }
         int recurring = names.GroupBy(b => b.Text.Trim()).Where(g => g.Count() >= 2).Sum(g => g.Count());
@@ -367,7 +392,7 @@ internal static class DialogueTextGrouper
         return runs;
     }
 
-    private static bool NextRow(Rect a, Rect b, out string rule)
+    private static bool NextRow(Rect a, Rect b, double maxStackGap, out string rule)
     {
         rule = "stacked";
         double height = Math.Max(a.Height, b.Height);
@@ -381,7 +406,7 @@ internal static class DialogueTextGrouper
         if (SameRow(a, b)) { rule = "same-row"; return false; }
         if (!LineMeasure.HeightsWithin(a, b, substantialRows ? SubstantialStackHeightRatio : StackHeightRatio))
         { rule = "height-mismatch"; return false; }
-        if (b.Top - a.Bottom > height * MaxStackGap) { rule = "gap-too-wide"; return false; }
+        if (b.Top - a.Bottom > height * maxStackGap) { rule = "gap-too-wide"; return false; }
         if (b.Top - a.Bottom < -height * MaxStackOverlap) { rule = "overlaps-above"; return false; }
         var overlap = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
         if (overlap < Math.Min(a.Width, b.Width) * 0.5) { rule = "no-column-overlap"; return false; }
@@ -395,6 +420,64 @@ internal static class DialogueTextGrouper
         if (alignment > height * (substantialRows ? 2.5 : 1.25)) { rule = "alignment"; return false; }
         rule = substantialRows ? "stacked-substantial" : "stacked";
         return true;
+    }
+
+    /// <summary>
+    /// 合併's stacking test (合併程度's last step): <see cref="NextRow"/> without the size and the
+    /// alignment tests. The gap, the overlap above and the shared column still part rows.
+    /// </summary>
+    /// <remarks>
+    /// <para>A size difference still parts a line under half as wide as the other: that is a name
+    /// plate or a label over the dialogue (Lua, 月島まりな, エマ in the corpus), not a line of it.
+    /// Without this, 合併 joined them on 3 more dialogue frames and changed nothing else there.</para>
+    ///
+    /// <para>The gap is 整段's. MEASURED (OcrHarness --auto-probe mergemax): at 1.25 times it the
+    /// dialogue frames gained a choice menu's names (一条 美雲 / 大ドロボウ) and a reward list's
+    /// entries joined to each other, and nothing that read better.</para>
+    /// </remarks>
+    private static bool NextRowMerging(Rect a, Rect b, double maxStackGap, out string rule)
+    {
+        rule = "merged";
+        double height = Math.Max(a.Height, b.Height);
+        if (height <= 0 || b.Y <= a.Y) { rule = "not-below"; return false; }
+        if (SameRow(a, b)) { rule = "same-row"; return false; }
+        if (!LineMeasure.HeightsWithin(a, b, StackHeightRatio))
+        {
+            Rect smaller = a.Height < b.Height ? a : b, larger = a.Height < b.Height ? b : a;
+            if (smaller.Width < larger.Width * 0.5) { rule = "small-label"; return false; }
+        }
+        if (b.Top - a.Bottom > height * maxStackGap) { rule = "gap-too-wide"; return false; }
+        if (b.Top - a.Bottom < -height * MaxStackOverlap) { rule = "overlaps-above"; return false; }
+        var overlap = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
+        if (overlap < Math.Min(a.Width, b.Width) * 0.5) { rule = "no-column-overlap"; return false; }
+        return true;
+    }
+
+    /// <summary>
+    /// 合併: whether two stacked lines may join although a row of theirs holds something else — only
+    /// when it is a short item off to the side (an arrow, Auto, a key hint) and only one of the two
+    /// rows has one.
+    /// </summary>
+    /// <remarks>
+    /// <para>整段 never stacks a line whose row is cut in pieces (see the class remarks), and a
+    /// dialogue box's 》 or Auto sitting on the second line's row cuts it, which parts the box's two
+    /// lines (ja-aa-nameplate ×3, en-uma-narration). An item short as <see cref="ShortItem"/> and
+    /// clear of the other line's width does not.</para>
+    ///
+    /// <para>Not when both rows have one: that is a table, a label over a label with their values
+    /// beside them, and the column of labels would be read as one sentence. MEASURED on the panel
+    /// captures: with both allowed, 合併 joined 986 pairs 整段 parted, 756 without. Long items beside
+    /// a line (a second list column, as in ja-va11-2line-list) are not taken either: allowing them
+    /// joined that dialogue but also 6,601 pairs on the panel captures, the columns of every list.</para>
+    /// </remarks>
+    private static bool AsideOnly(List<OcrTextBlock> aboveRow, Rect below, List<OcrTextBlock> belowRow, Rect above)
+    {
+        if (aboveRow.Count > 0 && belowRow.Count > 0) return false;
+        return Aside(aboveRow, below) && Aside(belowRow, above);
+
+        static bool Aside(List<OcrTextBlock> others, Rect partner) =>
+            others.All(other => ShortItem(other.LayoutBounds) &&
+                Math.Min(other.LayoutBounds.Right, partner.Right) <= Math.Max(other.LayoutBounds.Left, partner.Left));
     }
 
     /// <summary>
@@ -419,7 +502,7 @@ internal static class DialogueTextGrouper
     private const double SubstantialStackHeightRatio = 0.6;
 
     /// <summary>The widest gap, and the most overlap, between two stacked rows, in line heights.</summary>
-    private const double MaxStackGap = 0.65;
+    internal const double MaxStackGap = 0.65;
 
     /// <inheritdoc cref="MaxStackGap"/>
     private const double MaxStackOverlap = 0.25;

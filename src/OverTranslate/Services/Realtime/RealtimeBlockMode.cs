@@ -6,6 +6,11 @@ namespace OverTranslate.Services.Realtime;
 /// What a watched block holds, as the user says it rather than as the block's shape implies it.
 /// </summary>
 /// <remarks>
+/// <para>Since modes (<see cref="ResolvedProfile"/>) this is how a mode's 合併程度 draws and reads —
+/// Auto is 自動判斷, Subtitle 整段 and 合併, Panel 逐項 and 不合併 (see
+/// <see cref="ResolvedProfile.Layout"/>) — and what each group was read as
+/// (<see cref="OcrTextBlock.ReadAs"/>). The history below is why the question is asked at all.</para>
+///
 /// The two kinds need opposite corrections from the detector — a subtitle strip's glyphs are large
 /// and want downscaling, an interface panel's are already small and want none — so something has to
 /// say which is which. That used to be the block's width-to-height ratio, and the ratio is a
@@ -23,10 +28,8 @@ namespace OverTranslate.Services.Realtime;
 /// inferred. See <see cref="RealtimeDetectorSize"/> for what each mode is worth in detector size.
 ///
 /// A block's own answer lives with the block and is redrawn every sitting. What the settings file
-/// keeps is the answer a newly drawn block starts on — see
-/// <see cref="Models.RealtimeSettings.NewBlockMode"/> — persisted by name, so a third mode can be added
-/// without changing what the file looks like and a name this build cannot read falls back to the
-/// property's default.
+/// keeps is the mode a newly drawn block starts on — see
+/// <see cref="Models.RealtimeSettings.NewBlockProfile"/>.
 /// </remarks>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RealtimeBlockMode
@@ -47,8 +50,8 @@ public enum RealtimeBlockMode
     /// answers per cluster rather than per block — so a dialogue box that turns into a list of
     /// choices, or a subtitle over a game's interface, is not one answer stretched over both.</para>
     ///
-    /// <para>Last in the enum so the two explicit modes keep their values; it is what a new block
-    /// starts on all the same — see <see cref="Models.RealtimeSettings.NewBlockMode"/>.</para>
+    /// <para>Last in the enum so the two explicit modes keep their values; it is what 標準, the mode a
+    /// new block starts on, reads with — see <see cref="Models.RealtimeSettings.NewBlockProfile"/>.</para>
     /// </remarks>
     Auto,
 }

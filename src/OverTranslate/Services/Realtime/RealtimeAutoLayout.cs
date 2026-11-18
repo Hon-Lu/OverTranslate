@@ -85,19 +85,29 @@ internal static class RealtimeAutoLayout
     /// <summary>The frame's groups, in reading order, each marked with what it was read as.</summary>
     internal static List<OcrTextBlock> Group(IReadOnlyList<OcrTextBlock> blocks) => Read(blocks).Groups;
 
+    /// <inheritdoc cref="Group(IReadOnlyList{OcrTextBlock})"/>
+    /// <param name="rules">The block's mode's figures — see <see cref="ResolvedProfile.Auto"/>.</param>
+    internal static List<OcrTextBlock> Group(IReadOnlyList<OcrTextBlock> blocks, AutoRules rules) =>
+        Read(blocks, rules).Groups;
+
     /// <inheritdoc cref="Reading"/>
-    internal static Reading Read(IReadOnlyList<OcrTextBlock> blocks)
+    internal static Reading Read(IReadOnlyList<OcrTextBlock> blocks) => Read(blocks, AutoRules.Default);
+
+    /// <inheritdoc cref="Reading"/>
+    /// <param name="rules">The block's mode's figures — see <see cref="ResolvedProfile.Auto"/>.</param>
+    internal static Reading Read(IReadOnlyList<OcrTextBlock> blocks, AutoRules rules)
     {
         var input = blocks.ToList();
         var dialogueTrace = new GroupingTrace();
         var panelTrace = new GroupingTrace();
         var dialogue = Members(
-            DialogueTextGrouper.Group(HorizontalRubyLines.Drop(input), dialogueTrace), dialogueTrace, input);
+            DialogueTextGrouper.Group(HorizontalRubyLines.Drop(input), dialogueTrace, null, rules.MaxStackGap),
+            dialogueTrace, input);
         var panel = Members(
-            OcrTextBlockGrouper.Group(input, GroupingProfile.Realtime, null, panelTrace), panelTrace, input);
+            OcrTextBlockGrouper.Group(input, rules.PanelGrouping, null, panelTrace), panelTrace, input);
 
         int zones = CountZones(input, dialogue, panel);
-        bool sparse = zones <= SparseZones;
+        bool sparse = zones <= rules.SparseZones;
 
         // What the dialogue grouper joined that the panel grouper did not: the only groups whose
         // reading is in question.
@@ -106,7 +116,7 @@ internal static class RealtimeAutoLayout
             .Select(group =>
             {
                 var shape = Describe(group.Members);
-                return new Candidate(group, shape, IsPassage(shape, zones, StandsOutOf(group, shape, input)));
+                return new Candidate(group, shape, IsPassage(shape, zones, StandsOutOf(group, shape, input, rules), rules));
             })
             .ToList();
 
@@ -137,7 +147,7 @@ internal static class RealtimeAutoLayout
                 .ToList();
             var restTrace = new GroupingTrace();
             kept = [.. passages, .. Members(
-                OcrTextBlockGrouper.Group(rest, GroupingProfile.Realtime, null, restTrace), restTrace, rest)];
+                OcrTextBlockGrouper.Group(rest, rules.PanelGrouping, null, restTrace), restTrace, rest)];
             kept = [.. kept.OrderBy(group => First(group).Y).ThenBy(group => First(group).X)];
         }
 
@@ -146,7 +156,7 @@ internal static class RealtimeAutoLayout
             {
                 ReadAs = passages.Contains(group)
                     ? RealtimeBlockMode.Subtitle
-                    : ReadAs(group, zones, input, stacked),
+                    : ReadAs(group, zones, input, stacked, rules),
             })
             .ToList();
         return new Reading(groups, candidates, zones, sparse);
@@ -180,12 +190,16 @@ internal static class RealtimeAutoLayout
     /// two short sentences set apart on one subtitle line. Without punctuation it is a row of
     /// buttons.</para>
     /// </remarks>
-    internal static bool IsPassage(Shape shape, int zones, bool standsOut)
+    internal static bool IsPassage(Shape shape, int zones, bool standsOut) =>
+        IsPassage(shape, zones, standsOut, AutoRules.Default);
+
+    /// <inheritdoc cref="IsPassage(Shape, int, bool)"/>
+    internal static bool IsPassage(Shape shape, int zones, bool standsOut, AutoRules rules)
     {
-        bool sparse = zones <= SparseZones;
+        bool sparse = zones <= rules.SparseZones;
         if (shape.Rows < 2) return sparse && shape.Marks > 0 && shape.MaxPerRow <= 3;
         if (shape.Marks > 0) return sparse || standsOut;
-        return Lettering(shape, zones);
+        return Lettering(shape, zones, rules);
     }
 
     // Rows with no punctuation that are a passage all the same — see IsPassage. Short rows only: a
@@ -196,19 +210,23 @@ internal static class RealtimeAutoLayout
     // wrapped across rows carries on in lower case; a menu set solid — New Game, Continue, Game
     // Options — starts every row afresh. Lettering is capitals throughout and is not touched by
     // this. Found on a live stage, where exactly that menu was drawn as one paragraph.
-    private static bool Lettering(Shape shape, int zones) =>
-        zones <= LetteringZones && shape.MaxAdvance <= PassageLeading && shape.Wordy &&
-        shape.WidestAspect <= LetteringAspect && !shape.TitledRows;
+    //
+    // AutoRules.Lettering off turns this rule off, and unpunctuated rows are then never a passage;
+    // no mode does that any more (沒有標點也合併 was taken back), but the rules still say it.
+    private static bool Lettering(Shape shape, int zones, AutoRules rules) =>
+        rules.Lettering &&
+        zones <= rules.LetteringZones && shape.MaxAdvance <= rules.PassageLeading && shape.Wordy &&
+        shape.WidestAspect <= rules.LetteringAspect && !shape.TitledRows;
 
     // Against the rest of the frame, not the whole of it: two lines of dialogue are half the
     // text on a screen that holds a name plate and three buttons besides, and would set the
     // typical height themselves.
-    private static bool StandsOutOf(TextGroup group, Shape shape, List<OcrTextBlock> frame)
+    private static bool StandsOutOf(TextGroup group, Shape shape, List<OcrTextBlock> frame, AutoRules rules)
     {
         double typical = Median(frame
             .Where(block => !group.Members.Contains(block, ReferenceEqualityComparer.Instance))
             .Select(block => block.LayoutBounds.Height));
-        return typical > 0 && shape.Height >= typical * StandsOut;
+        return typical > 0 && shape.Height >= typical * rules.StandsOut;
     }
 
     /// <summary>How a group that is not a passage of the dialogue grouper's is to be drawn.</summary>
@@ -218,18 +236,18 @@ internal static class RealtimeAutoLayout
     /// little small, a label let out of its box lies across its neighbours.
     /// </remarks>
     private static RealtimeBlockMode ReadAs(
-        TextGroup group, int zones, List<OcrTextBlock> frame, HashSet<OcrTextBlock> stacked)
+        TextGroup group, int zones, List<OcrTextBlock> frame, HashSet<OcrTextBlock> stacked, AutoRules rules)
     {
         var shape = Describe(group.Members);
-        bool sparse = zones <= SparseZones;
-        bool standsOut = StandsOutOf(group, shape, frame);
+        bool sparse = zones <= rules.SparseZones;
+        bool standsOut = StandsOutOf(group, shape, frame, rules);
 
         // Rows the panel grouper joined itself: a paragraph that showed it wrapped. Nothing is
         // being joined on this answer, only drawn, so punctuation is enough wherever it is — on a
         // live stage a dialogue box 1.2 times its interface's size was joined rightly and then set
         // row by row, because it did not stand out by the figure a join is held to.
         if (shape.Rows > 1)
-            return shape.Marks > 0 || Lettering(shape, zones)
+            return shape.Marks > 0 || Lettering(shape, zones, rules)
                 ? RealtimeBlockMode.Subtitle
                 : RealtimeBlockMode.Panel;
 

@@ -45,14 +45,36 @@ public partial class RealtimeEditWindow : Window
     private const double BaseRemoveGap = 6;
 
     /// <summary>
-    /// Smallest width of one segment of the mode control. Both segments are the same width whichever
-    /// label is longer, because a segmented control whose halves change width as the selection moves
-    /// reads as two buttons rather than as one control with two states. A locale whose labels do not
-    /// fit widens both segments together — see <see cref="BaseModeLabelPadding"/>.
+    /// The narrowest and widest the mode button is, before the widest name it may have to show is
+    /// measured into it — see <see cref="ModeSegments"/>.
     /// </summary>
-    private const double BaseModeSegmentWidth = 82;
+    /// <remarks>
+    /// Fixed for the life of the layer, at the widest of every mode it can be set to, so choosing a
+    /// mode never changes its width: a control that grows and shrinks with its answer reads as the
+    /// screen being rearranged. The cap is for the custom names, which are the user's own text; a
+    /// custom name past it is cut with an ellipsis and shown whole on the tooltip. The presets'
+    /// names are never cut — the button grows past the cap for one of those instead — because they
+    /// are the words the list is read by.
+    /// </remarks>
+    private const double BaseModeButtonMinWidth = 160;
 
-    /// <summary>Space kept either side of the widest mode label before the segment edge.</summary>
+    /// <inheritdoc cref="BaseModeButtonMinWidth"/>
+    private const double BaseModeButtonMaxWidth = 240;
+
+    /// <summary>
+    /// Widest the open list of modes is: as wide as the button, or as its longest name or summary,
+    /// up to this.
+    /// </summary>
+    /// <remarks>
+    /// Measured, not chosen: the widest Chinese summary — 標準's, 25 characters at
+    /// <see cref="BaseModeSummaryFontSize"/> — is 312 wide (簡體 324), and with the row's and the
+    /// list's padding that is 344 (356); at this width each of them is one line. The longer
+    /// languages' summaries wrap to two lines rather than being cut. Worth measuring again whenever
+    /// a summary is edited.
+    /// </remarks>
+    private const double BaseModeMenuMaxWidth = 360;
+
+    /// <summary>Space kept before a mode's name inside the button, and either side of each direction label.</summary>
     private const double BaseModeLabelPadding = 14;
 
     /// <summary>
@@ -89,31 +111,8 @@ public partial class RealtimeEditWindow : Window
 
     private const double BaseModeFontSize = 13.5;
 
-    /// <summary>
-    /// Width of the guidance plate under the mode control, and with it how the sentence wraps.
-    /// </summary>
-    /// <remarks>
-    /// Fixed rather than sized to whichever sentence is showing: the two modes' guidance is a
-    /// different length, and a plate that resized as the selection moved would make choosing a mode
-    /// look like it had rearranged the screen.
-    ///
-    /// The number keeps each mode's guidance on a single visual line at
-    /// <see cref="BaseHintFontSize"/> — measured, not chosen. Worth re-measuring whenever either
-    /// sentence is edited; the text still wraps rather than clips if it outgrows this, so the
-    /// failure is a taller plate and not a lost half-sentence, and the Japanese and Korean strings
-    /// are already over it and take two visual lines.
-    ///
-    /// ONE SENTENCE PER MODE, saying when to use it. There used to be a second, saying how to frame
-    /// a block of that kind — where to leave room, when to draw two blocks instead of one — and it
-    /// was dropped deliberately: it was teaching the user to operate the tool rather than telling
-    /// them what the control in front of them does, and the reader is holding a block over a running
-    /// game while they read it. What the framing advice was worth (issue #35 measured a subtitle
-    /// framed against its own text losing 20 of 39 frames) is now the recogniser's problem to
-    /// absorb, not the reader's to pre-empt.
-    /// </remarks>
-    private const double BaseHintWidth = 680;
-
-    private const double BaseHintFontSize = 13;
+    /// <summary>The line under each mode's name on the open list.</summary>
+    private const double BaseModeSummaryFontSize = 12;
 
     // The copy's hint as a fraction of the copy's height — see PlaceCopyHint.
     private const double CopyHintHeightRatio = 0.2;
@@ -173,13 +172,6 @@ public partial class RealtimeEditWindow : Window
     private readonly int _maxBlocks;
     private readonly List<BlockVisual> _blocks = [];
 
-    /// <summary>
-    /// Whether a block drawn from here on opens with its guidance unfolded — the answer the layer
-    /// started with, then whatever the user's last chevron said. Persisting it is the caller's job:
-    /// see <see cref="GuidanceExpandedChanged"/>.
-    /// </summary>
-    private bool _guidanceExpanded;
-
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
 
@@ -190,11 +182,9 @@ public partial class RealtimeEditWindow : Window
     private double _handleSize = BaseHandleSize;
     private double _removeSize = BaseRemoveSize;
     private double _removeGap = BaseRemoveGap;
-    private double _modeSegmentWidth = BaseModeSegmentWidth;
     private double _directionSegmentWidth = BaseDirectionSegmentWidth;
     private double _modeHeight = BaseModeHeight;
     private double _modeInset = BaseModeInset;
-    private double _hintWidth = BaseHintWidth;
 
     // How wide the copy's hint is per unit of font size — measured once, since the text is fixed for
     // the layer's lifetime. See PlaceCopyHint.
@@ -209,12 +199,12 @@ public partial class RealtimeEditWindow : Window
     private bool _crosshairEnabled = true;
 
     /// <summary>
-    /// What the next block drawn is set to. The two trays move these as they are used — see
-    /// <see cref="BlockDefaultsChanged"/>.
+    /// What the next block drawn is set to: a mode, by id, and a direction. The two trays move these
+    /// as they are used — see <see cref="BlockDefaultsChanged"/>.
     /// </summary>
-    private RealtimeBlockMode _blockMode;
+    private string _blockProfile;
 
-    /// <inheritdoc cref="_blockMode"/>
+    /// <inheritdoc cref="_blockProfile"/>
     private RealtimeTextOrientation _textOrientation;
 
     /// <summary>
@@ -223,13 +213,30 @@ public partial class RealtimeEditWindow : Window
     /// </summary>
     private bool _compareDisplay;
 
+    /// <summary>
+    /// Every mode a block can be set to, presets first, as the controller read them from the
+    /// settings file — this layer never reads the file itself. Replaced whole by
+    /// <see cref="SetProfileChoices"/>.
+    /// </summary>
+    private IReadOnlyList<ProfileChoice> _choices;
+
+    /// <summary>The list of modes while it is open, and the block it was opened from.</summary>
+    private ModeMenu? _menu;
+    private BlockVisual? _menuOwner;
+
+    /// <summary>
+    /// The whole canvas under the open list, above everything else: the press that closes the list
+    /// lands here and goes no further — see <see cref="OpenMenu"/>.
+    /// </summary>
+    private Border? _menuCatcher;
+
     public RealtimeEditWindow(
         System.Drawing.Rectangle physBounds,
         IReadOnlyList<RealtimeBlockPlacement> initialBlocks,
         int maxBlocks,
-        bool guidanceExpanded,
-        RealtimeBlockMode blockMode,
+        string blockProfile,
         RealtimeTextOrientation textOrientation,
+        IReadOnlyList<ProfileChoice> choices,
         bool compareDisplay = false)
     {
         InitializeComponent();
@@ -237,8 +244,8 @@ public partial class RealtimeEditWindow : Window
         _physBounds = physBounds;
         _initialBlocks = initialBlocks;
         _maxBlocks = maxBlocks;
-        _guidanceExpanded = guidanceExpanded;
-        _blockMode = blockMode;
+        _choices = choices;
+        _blockProfile = KnownProfile(blockProfile);
         _textOrientation = textOrientation;
         _compareDisplay = compareDisplay;
 
@@ -252,11 +259,9 @@ public partial class RealtimeEditWindow : Window
 
             ApplyScreenScale();
 
-            // Every block opens the way the user last left a chevron, wherever they left it: the
-            // guidance answers "how do I frame this?", and that answer does not differ block by block.
             foreach (var block in _initialBlocks)
                 AddBlock(
-                    ToCanvas(block.Bounds), block.Mode, block.Orientation, _guidanceExpanded,
+                    ToCanvas(block.Bounds), block.ProfileId, block.Orientation,
                     notify: false,
                     block.CompareOffset is { } offset
                         ? new Vector(offset.X / _dpiX, offset.Y / _dpiY)
@@ -336,13 +341,6 @@ public partial class RealtimeEditWindow : Window
     public event EventHandler? LimitReached;
 
     /// <summary>
-    /// Raised with the new state whenever the user folds the guidance away or brings it back, so the
-    /// caller can keep it. One setting for the whole feature, written by whichever block was pressed
-    /// last — the layer itself keeps nothing beyond its own lifetime.
-    /// </summary>
-    public event EventHandler<bool>? GuidanceExpandedChanged;
-
-    /// <summary>
     /// Raised with what a block was just set to, which is what the next block drawn starts on.
     /// </summary>
     /// <remarks>
@@ -350,15 +348,67 @@ public partial class RealtimeEditWindow : Window
     /// same press should outlive the block, and the session records it. Both trays raise it, because
     /// the user answering one of the two questions is the same kind of event as answering the other.
     /// </remarks>
-    public event EventHandler<(RealtimeBlockMode Mode, RealtimeTextOrientation Orientation)>?
+    public event EventHandler<(string Profile, RealtimeTextOrientation Orientation)>?
         BlockDefaultsChanged;
 
+    /// <summary>
+    /// Raised with the mode of the block whose list asked for 管理模式…: the caller ends the sitting
+    /// and opens the page on that mode. Nothing on the block changes.
+    /// </summary>
+    public event EventHandler<string>? ManageProfilesRequested;
+
     public int BlockCount => _blocks.Count;
+
+    /// <summary>
+    /// Puts every block on the modes as they are now — after one was added, renamed or deleted on
+    /// the page while this layer was up.
+    /// </summary>
+    /// <remarks>
+    /// Each block's trays are built again, because the button's width and its tooltip are measured
+    /// from the names. A block on a mode that is gone goes to 標準,
+    /// and so does the answer the next block starts on; the blocks are then reported as changed, so
+    /// the session holds what they show. Nothing is rebuilt when only a value of a mode changed:
+    /// nothing this layer shows depends on one.
+    /// </remarks>
+    public void SetProfileChoices(IReadOnlyList<ProfileChoice> choices)
+    {
+        if (choices.SequenceEqual(_choices)) return;
+
+        CloseMenu(animate: false);
+        _choices = choices;
+        _blockProfile = KnownProfile(_blockProfile);
+
+        foreach (var visual in _blocks)
+        {
+            var old = visual.ModeControl;
+            visual.ModeControl = BuildModeControl(KnownProfile(visual.ProfileId), old.TextOrientation);
+            visual.ProfileId = visual.ModeControl.ProfileId;
+            WireModeControl(visual);
+        }
+
+        RebuildCanvas();
+        RaiseBlocksChanged();
+    }
+
+    /// <summary>
+    /// Closes the open list of modes, if there is one. Esc asks this first, so a press that only
+    /// meant to put the list away does not end the sitting.
+    /// </summary>
+    /// <returns>Whether a list was open.</returns>
+    public bool TryDismissMenu()
+    {
+        if (_menu is null) return false;
+        CloseMenu(animate: true);
+        return true;
+    }
+
+    private string KnownProfile(string? id) =>
+        _choices.Any(choice => choice.Id == id) ? id! : Models.RealtimePresets.StandardId;
 
     /// <summary>The current blocks in physical screen pixels, ready to be watched.</summary>
     public IReadOnlyList<RealtimeBlockPlacement> GetPhysicalBlocks() =>
         [.. _blocks.Select(block => new RealtimeBlockPlacement(
-            ToPhysical(block.Bounds), block.ModeControl.Value, block.ModeControl.TextOrientation,
+            ToPhysical(block.Bounds), block.ProfileId, block.ModeControl.TextOrientation,
             ToPhysical(block.CompareOffset), block.CompareScale, block.CompareHidden))];
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -388,11 +438,9 @@ public partial class RealtimeEditWindow : Window
         _handleSize = BaseHandleSize * _uiScale;
         _removeSize = BaseRemoveSize * _uiScale;
         _removeGap = BaseRemoveGap * _uiScale;
-        _modeSegmentWidth = BaseModeSegmentWidth * _uiScale;
         _directionSegmentWidth = BaseDirectionSegmentWidth * _uiScale;
         _modeHeight = BaseModeHeight * _uiScale;
         _modeInset = BaseModeInset * _uiScale;
-        _hintWidth = BaseHintWidth * _uiScale;
     }
 
     // ── Drawing a new block ──────────────────────────────────────────────────────────────────────
@@ -463,8 +511,8 @@ public partial class RealtimeEditWindow : Window
         // Whatever the user last set a block to. The two answers they arrive at are about the thing
         // they are watching, and they are watching one thing — so the second block of a sitting, and
         // the first of the next one, should not make them say it again. What these start at when
-        // nobody has said anything yet is RealtimeSettings.NewBlockMode, which keeps the reasoning.
-        AddBlock(box, _blockMode, _textOrientation, _guidanceExpanded, notify: true);
+        // nobody has said anything yet is RealtimeSettings.NewBlockProfile, which keeps the reasoning.
+        AddBlock(box, _blockProfile, _textOrientation, notify: true);
     }
 
     // Capture lost to something else entirely (an Alt+Tab, another window taking it). The drag is
@@ -496,21 +544,25 @@ public partial class RealtimeEditWindow : Window
 
     // ── Blocks ───────────────────────────────────────────────────────────────────────────────────
 
+    private ModeSegments BuildModeControl(string profileId, RealtimeTextOrientation orientation) =>
+        new(profileId, _choices, orientation, _modeHeight, _directionSegmentWidth, _modeInset,
+            _removeGap, _uiScale);
+
     private void AddBlock(
         Rect bounds,
-        RealtimeBlockMode mode,
+        string profileId,
         RealtimeTextOrientation orientation,
-        bool guidanceExpanded,
         bool notify,
         Vector? compareOffset = null,
         double compareScale = 1.0,
         bool compareHidden = false)
     {
+        profileId = KnownProfile(profileId);
         var visual = new BlockVisual(
-            bounds, mode, orientation, guidanceExpanded, _handleSize, _removeSize,
-            _modeSegmentWidth, _directionSegmentWidth, _modeHeight, _modeInset, _hintWidth,
-            _removeGap, _uiScale)
+            bounds, BuildModeControl(profileId, orientation), _handleSize, _removeSize,
+            _uiScale)
         {
+            ProfileId = profileId,
             CompareOffset = compareOffset,
             CompareScale = compareScale,
             CompareHidden = compareHidden,
@@ -537,35 +589,7 @@ public partial class RealtimeEditWindow : Window
             e.Handled = true;
             SetCompareHidden(visual, true);
         };
-        visual.Restore.Click += (_, e) =>
-        {
-            e.Handled = true;
-            SetCompareHidden(visual, false);
-        };
-        visual.ModeControl.SelectionChanged += (_, tray) =>
-        {
-            // The direction decides which side an automatic copy goes, so it may have just moved.
-            if (tray == ModeSegments.BlockTray.Direction) ApplyAll();
-            RaiseBlocksChanged();
-
-            // The tray last pressed is the one that counts, on whichever block it was pressed — and
-            // only that tray, so a block that is 遊戲 for its own reasons does not make 遊戲 the
-            // answer for the next block just because its direction was corrected. The blocks already
-            // drawn are left alone either way: correcting one says nothing about the rest.
-            if (tray == ModeSegments.BlockTray.Mode) _blockMode = visual.ModeControl.Value;
-            else _textOrientation = visual.ModeControl.TextOrientation;
-            BlockDefaultsChanged?.Invoke(this, (_blockMode, _textOrientation));
-        };
-        visual.ModeControl.ExpansionChanged += (_, expanded) =>
-        {
-            Apply(visual, animateMode: true);
-
-            // The last chevron pressed is the one that counts, for the blocks drawn after it and for
-            // the next sitting alike. The blocks already on screen are left as they are: folding one
-            // away should not make the others move under the pointer.
-            _guidanceExpanded = expanded;
-            GuidanceExpandedChanged?.Invoke(this, expanded);
-        };
+        WireModeControl(visual);
 
         for (int corner = 0; corner < visual.Corners.Length; corner++)
         {
@@ -581,11 +605,183 @@ public partial class RealtimeEditWindow : Window
         if (notify) RaiseBlocksChanged();
     }
 
+    /// <summary>
+    /// Hooks a block's trays up to the layer — once when the block is made, and again whenever
+    /// <see cref="SetProfileChoices"/> gives it new ones.
+    /// </summary>
+    private void WireModeControl(BlockVisual visual)
+    {
+        var mode = visual.ModeControl;
+
+        mode.Restore.Click += (_, e) =>
+        {
+            e.Handled = true;
+            SetCompareHidden(visual, false);
+        };
+        mode.SelectionChanged += (_, tray) =>
+        {
+            // The direction decides which side an automatic copy goes, so it may have just moved.
+            if (tray == ModeSegments.BlockTray.Direction) ApplyAll();
+            else visual.ProfileId = mode.ProfileId;
+            RaiseBlocksChanged();
+
+            // The tray last pressed is the one that counts, on whichever block it was pressed — and
+            // only that tray, so a block that is 遊戲 for its own reasons does not make 遊戲 the
+            // answer for the next block just because its direction was corrected. The blocks already
+            // drawn are left alone either way: correcting one says nothing about the rest.
+            if (tray == ModeSegments.BlockTray.Mode) _blockProfile = visual.ProfileId;
+            else _textOrientation = mode.TextOrientation;
+            BlockDefaultsChanged?.Invoke(this, (_blockProfile, _textOrientation));
+        };
+        mode.MenuRequested += (_, _) =>
+        {
+            // A second press on the button that opened the list closes it — though the catcher
+            // over everything takes that press first, so this is the keyboard-free path only.
+            if (ReferenceEquals(_menuOwner, visual)) CloseMenu(animate: true);
+            else OpenMenu(visual);
+        };
+    }
+
     private void RemoveBlock(BlockVisual visual)
     {
         _blocks.Remove(visual);
         RebuildCanvas();
         RaiseBlocksChanged();
+    }
+
+    // ── The list of modes ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Where the windows this layer owns — the control bar — are, in canvas coordinates.
+    /// </summary>
+    private IEnumerable<Rect> OwnedWindowBounds()
+    {
+        foreach (Window owned in OwnedWindows)
+        {
+            if (!owned.IsVisible || owned.ActualWidth <= 0 || owned.ActualHeight <= 0) continue;
+            var topLeft = BlockCanvas.PointFromScreen(owned.PointToScreen(new Point(0, 0)));
+            var bottomRight = BlockCanvas.PointFromScreen(
+                owned.PointToScreen(new Point(owned.ActualWidth, owned.ActualHeight)));
+            yield return new Rect(topLeft, bottomRight);
+        }
+    }
+
+    /// <summary>
+    /// Opens the list of modes under a block's mode button — or over it, where there is no room
+    /// below — on this canvas rather than in a popup or a window of its own.
+    /// </summary>
+    /// <remarks>
+    /// <para>Drawn here because this layer never takes activation: a WPF popup is a window of its
+    /// own, and one owned by a window that cannot be active has no keyboard and, where the
+    /// foreground is refused, closes the moment it opens (#358, see RealtimeLanguageMenu). A list
+    /// on the canvas needs neither — it is just more of the layer.</para>
+    ///
+    /// <para>A catcher covers the whole canvas under it while it is open. A press anywhere off the
+    /// list closes it and goes no further: on a game screen, "click somewhere empty to put the menu
+    /// away" would otherwise also start drawing a new block, or press whatever control of another
+    /// block happened to be there.</para>
+    ///
+    /// <para>Mouse only, and Esc through <see cref="TryDismissMenu"/>: without activation there are
+    /// no arrow keys to give it.</para>
+    /// </remarks>
+    private void OpenMenu(BlockVisual visual)
+    {
+        CloseMenu(animate: false);
+
+        var button = visual.ModeControl.MenuButton;
+        var origin = button.TranslatePoint(new Point(0, 0), BlockCanvas);
+        double buttonHeight = button.ActualHeight > 0 ? button.ActualHeight : _modeHeight;
+
+        var menu = new ModeMenu(
+            _choices, visual.ModeControl.ProfileId, button.ActualWidth > 0 ? button.ActualWidth : button.Width,
+            BaseModeMenuMaxWidth * _uiScale, _modeHeight, _uiScale);
+        menu.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        double height = menu.DesiredSize.Height;
+        double width = menu.DesiredSize.Width;
+
+        // Pushed back in from the right edge rather than cut off.
+        double left = Math.Clamp(origin.X, 0, Math.Max(0, BlockCanvas.ActualWidth - width));
+
+        // Below by preference, where a list is expected; above where it does not fit; and where it
+        // fits neither way, on the roomier side with the custom modes scrolled. The room either way
+        // ends at the screen's edge, or at the control bar where the bar is in the list's way: the
+        // bar is a window of its own above this layer, and a list running under it loses its last
+        // rows — 模式設定… among them — with no sign that they are there.
+        double belowTop = origin.Y + buttonHeight + _removeGap;
+        double belowEnd = BlockCanvas.ActualHeight;
+        double aboveEnd = 0;
+        foreach (var bar in OwnedWindowBounds())
+        {
+            if (bar.Right <= left || bar.Left >= left + width) continue;
+            if (bar.Top >= belowTop) belowEnd = Math.Min(belowEnd, bar.Top - _removeGap);
+            else if (bar.Bottom <= origin.Y) aboveEnd = Math.Max(aboveEnd, bar.Bottom + _removeGap);
+        }
+        double below = Math.Max(0, belowEnd - belowTop);
+        double above = Math.Max(0, origin.Y - _removeGap - aboveEnd);
+        double top;
+        if (height <= below) top = belowTop;
+        else if (height <= above) top = origin.Y - _removeGap - height;
+        else if (below >= above)
+        {
+            height = menu.FitHeight(below);
+            top = belowTop;
+        }
+        else
+        {
+            height = menu.FitHeight(above);
+            top = origin.Y - _removeGap - height;
+        }
+
+        var catcher = new Border { Background = System.Windows.Media.Brushes.Transparent };
+        catcher.Width = BlockCanvas.ActualWidth;
+        catcher.Height = BlockCanvas.ActualHeight;
+        catcher.MouseDown += (_, e) =>
+        {
+            e.Handled = true;
+            CloseMenu(animate: true);
+        };
+        catcher.MouseUp += (_, e) => e.Handled = true;
+        System.Windows.Controls.Panel.SetZIndex(catcher, 1000);
+        System.Windows.Controls.Panel.SetZIndex(menu, 1001);
+
+        Canvas.SetLeft(menu, SnapToPixels(left, _dpiX));
+        Canvas.SetTop(menu, SnapToPixels(Math.Max(0, top), _dpiY));
+
+        menu.Picked += (_, id) =>
+        {
+            CloseMenu(animate: true);
+            visual.ModeControl.Pick(id);
+        };
+        menu.ManageRequested += (_, _) =>
+        {
+            CloseMenu(animate: false);
+            ManageProfilesRequested?.Invoke(this, visual.ModeControl.ProfileId);
+        };
+
+        BlockCanvas.Children.Add(catcher);
+        BlockCanvas.Children.Add(menu);
+        _menu = menu;
+        _menuOwner = visual;
+        _menuCatcher = catcher;
+        visual.ModeControl.SetMenuOpen(true);
+        menu.FadeIn();
+    }
+
+    /// <summary>
+    /// Takes the list off the canvas, fading it when <paramref name="animate"/>. The catcher goes at
+    /// once either way, so the next press already reaches whatever is under it.
+    /// </summary>
+    private void CloseMenu(bool animate)
+    {
+        if (_menu is not { } menu) return;
+
+        _menuOwner?.ModeControl.SetMenuOpen(false);
+        if (_menuCatcher is not null) BlockCanvas.Children.Remove(_menuCatcher);
+        _menu = null;
+        _menuOwner = null;
+        _menuCatcher = null;
+
+        menu.FadeOut(animate, () => BlockCanvas.Children.Remove(menu));
     }
 
     // Three layers, bottom to top, and what is drawn on top is also what a click lands on:
@@ -604,6 +800,8 @@ public partial class RealtimeEditWindow : Window
     // reachable from its other three.
     private void RebuildCanvas()
     {
+        // A block added or removed puts the list away: it was opened for a layout that has changed.
+        CloseMenu(animate: false);
         BlockCanvas.Children.Clear();
 
         foreach (var block in _blocks)
@@ -845,7 +1043,7 @@ public partial class RealtimeEditWindow : Window
         RaiseBlocksChanged();
     }
 
-    private void Apply(BlockVisual visual, bool animateMode = false)
+    private void Apply(BlockVisual visual)
     {
         var bounds = visual.Bounds;
 
@@ -888,32 +1086,8 @@ public partial class RealtimeEditWindow : Window
         // wherever the pointer left it and is right to be; a plate of 13-point CJK starting half way
         // across a pixel is soft for the whole time it is on screen, and UseLayoutRounding inside the
         // control cannot correct an origin that is already on a half pixel.
-        PlaceModeControl(
-            visual.ModeControl,
-            SnapToPixels(modeLeft, _dpiX),
-            SnapToPixels(Math.Max(0, modeTop), _dpiY),
-            animateMode);
-    }
-
-    private static void PlaceModeControl(ModeSegments mode, double left, double top, bool animate)
-    {
-        if (!animate || !SystemParameters.ClientAreaAnimation)
-        {
-            mode.BeginAnimation(Canvas.LeftProperty, null);
-            mode.BeginAnimation(Canvas.TopProperty, null);
-            Canvas.SetLeft(mode, left);
-            Canvas.SetTop(mode, top);
-            return;
-        }
-
-        mode.BeginAnimation(Canvas.LeftProperty, new DoubleAnimation(Canvas.GetLeft(mode), left, ModeSegments.GuidanceDuration)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-        });
-        mode.BeginAnimation(Canvas.TopProperty, new DoubleAnimation(Canvas.GetTop(mode), top, ModeSegments.GuidanceDuration)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-        });
+        Canvas.SetLeft(mode, SnapToPixels(modeLeft, _dpiX));
+        Canvas.SetTop(mode, SnapToPixels(Math.Max(0, modeTop), _dpiY));
     }
 
     // Canvas coordinates are this window's device-independent units; a device pixel is 1/dpi of one.
@@ -940,8 +1114,8 @@ public partial class RealtimeEditWindow : Window
     /// <para>Placed by the block and its copy, never by a copy alone. They used to step round a copy
     /// sitting above or below, and that made the trays follow the copy rather than the block: drag a
     /// copy well clear and its block's trays went with it, out of reach of the block they set.
-    /// Tucked inside with the guidance open, they cover part of what the user is framing; that is
-    /// the accepted cost, and the guidance folds away.</para>
+    /// Tucked inside, they cover a strip of what the user is framing; that is the accepted
+    /// cost.</para>
     /// </remarks>
     internal static double ModeControlTop(
         Rect block, Size control, double controlLeft, Rect? copy, double screenHeight, double gap)
@@ -1148,19 +1322,12 @@ public partial class RealtimeEditWindow : Window
 
         public BlockVisual(
             Rect bounds,
-            RealtimeBlockMode mode,
-            RealtimeTextOrientation orientation,
-            bool guidanceExpanded,
+            ModeSegments modeControl,
             double handleSize,
             double removeSize,
-            double modeSegmentWidth,
-            double directionSegmentWidth,
-            double modeHeight,
-            double modeInset,
-            double hintWidth,
-            double gap,
             double uiScale)
         {
+            ModeControl = modeControl;
             Bounds = bounds;
 
             Body = new Thumb
@@ -1185,10 +1352,6 @@ public partial class RealtimeEditWindow : Window
                 ToolTip = LocalizationService.Get("S.Realtime.RemoveBlock"),
                 Template = BuildRemoveTemplate(removeSize, uiScale),
             };
-
-            ModeControl = new ModeSegments(
-                mode, orientation, guidanceExpanded, modeHeight, modeSegmentWidth,
-                directionSegmentWidth, modeInset, hintWidth, gap, uiScale);
 
             Copy = new Thumb
             {
@@ -1332,8 +1495,14 @@ public partial class RealtimeEditWindow : Window
         /// <summary>The line from the block to its copy.</summary>
         public System.Windows.Shapes.Line Link { get; }
 
-        /// <summary>What the user says this block holds — see <see cref="RealtimeBlockMode"/>.</summary>
-        public ModeSegments ModeControl { get; }
+        /// <summary>
+        /// The block's trays: which mode it reads with and which way its text runs. Replaced when
+        /// the modes on offer change — see <see cref="RealtimeEditWindow.SetProfileChoices"/>.
+        /// </summary>
+        public ModeSegments ModeControl { get; set; }
+
+        /// <summary>The mode this block is on, by id — see <see cref="RealtimeBlockPlacement.ProfileId"/>.</summary>
+        public string ProfileId { get; set; } = Models.RealtimePresets.StandardId;
 
         private static ControlTemplate BuildFrameTemplate(double uiScale)
         {
@@ -1493,10 +1662,17 @@ public partial class RealtimeEditWindow : Window
 
 
     /// <summary>
-    /// The per-block control: both choices of each question always on screen, the selected one
-    /// filled in, and under them a line saying what that kind of block is.
+    /// The per-block control: the block's mode as a button that opens the list of modes, and both
+    /// directions always on screen with the selected one filled in.
     /// </summary>
     /// <remarks>
+    /// THE MODE BUTTON. The mode used to be three segments on one track, like the direction beside
+    /// it. Custom modes ended that: up to thirteen answers do not fit on a track, so the mode shows
+    /// only its current answer and the rest come up in a list — see <see cref="ModeMenu"/>. The
+    /// button is that answer drawn the way the segments drew one, a blue pill on the dark track, so
+    /// the two controls on the row still read alike. It does not grey out for a vertical block: the
+    /// timing values of a mode apply to either direction.
+    ///
     /// A two-state chip that flips when clicked would be smaller, and it was tried first. It reads
     /// badly for this job in two ways: a chip labelled only with its state reads equally well as a
     /// state and as an action, and the two readings are opposites; and with several blocks on screen
@@ -1513,10 +1689,13 @@ public partial class RealtimeEditWindow : Window
     /// because the mode is the question every block has to answer and this one is the question few
     /// do.
     ///
-    /// The guidance sits under the control rather than beside it, both hard against the same left
-    /// edge, so the pair reads as one column starting at the block's corner. It answers "which of
-    /// these two is the thing in front of me?" and nothing else — see <see cref="BaseHintWidth"/>
-    /// for the second sentence that used to be there and why it went.
+    /// WHAT A MODE IS FOR is said on the list, where it is chosen: a line under every name, and the
+    /// longer sentence on each row's tooltip and on the button's. A plate under the trays used to
+    /// say it for the chosen mode, and it went. It said it for the one mode already chosen, and was
+    /// covered by the list at the one moment it was needed; the rest of the time it sat over the
+    /// picture just above the block — the subtitle before, the quest text, the choices — on a layer
+    /// that covers the whole screen. The chevron that folded it away went with it, and so did the
+    /// setting that remembered which way it was folded.
     ///
     /// Everything here is built in code rather than as a template because the whole edit layer is —
     /// see <see cref="BlockVisual"/> — and because the pill has to be animated by hand: the control
@@ -1540,19 +1719,14 @@ public partial class RealtimeEditWindow : Window
         // button was pressed, and a bounce would be motion the gesture did not pay for.
         private static readonly Duration SlideDuration = new(TimeSpan.FromMilliseconds(260));
 
-        // The guidance does not move when the mode changes, it is replaced — so it crosses over
-        // rather than sliding, and faster than the pill, because a sentence that is still fading
-        // while the user starts reading it is worse than one that was simply there.
-        private static readonly Duration HintFadeDuration = new(TimeSpan.FromMilliseconds(140));
-
-        // A small disclosure should feel attached to the control, not staged like a panel reveal.
-        // Critically damped in character: one short ease-out, no overshoot, and reversible from the
-        // value currently on screen when the user changes their mind mid-transition.
-        internal static readonly Duration GuidanceDuration = new(TimeSpan.FromMilliseconds(180));
+        // The mode button's chevron turning as its list opens and closes. It should feel attached to
+        // the button, not staged like a panel reveal: one short ease-out, no overshoot, and
+        // reversible from the angle on screen when the list is put away part way through.
+        private static readonly Duration ChevronDuration = new(TimeSpan.FromMilliseconds(180));
 
         // Feedback on press has to be immediate or the control feels dead, so this is short enough
         // to read as instant while still being a movement rather than a jump.
-        private static readonly Duration PressDuration = new(TimeSpan.FromMilliseconds(100));
+        internal static readonly Duration PressDuration = new(TimeSpan.FromMilliseconds(100));
 
         // Pressing lights the segment rather than shrinking the control, and that is a rendering
         // decision as much as a design one. A scale on the track is a transform over text, and WPF
@@ -1561,178 +1735,130 @@ public partial class RealtimeEditWindow : Window
         // ShellWindow.AnimateContentIn, which pays a bitmap cache to avoid exactly that). Lighting
         // the segment also says which of the two is being pressed, which a scale of the whole
         // control cannot.
-        private static readonly SolidColorBrush PressHighlight =
+        internal static readonly SolidColorBrush PressHighlight =
             Freeze(Color.FromArgb(0x2E, 0xFF, 0xFF, 0xFF));
 
-        /// <summary>
-        /// One step up from regular, for the guidance — a paragraph of small text on a translucent
-        /// surface over moving picture, which needs the weight to stay readable.
-        /// </summary>
-        /// <remarks>
-        /// Deliberately not Medium, which is what "a little heavier" would normally mean. This text
-        /// is Chinese and falls back to Microsoft JhengHei UI, which ships Regular and Bold and
-        /// nothing between: measured on this sentence at 13pt, Medium renders identically to Regular
-        /// (17.47% ink) because 500 matches back to the 400 face, while SemiBold renders identically
-        /// to Bold (21.97%) because 600 matches forward to the 700 one. There is no half step to
-        /// pick, and this is the same one the rest of the application uses to emphasise (see
-        /// SectionHeader in SharedStyles).
-        ///
-        /// The two mode labels do NOT take it, and the same measurement is why. Weight buys
-        /// readability by thickening strokes, and it costs the gaps between them — which is a good
-        /// trade over a sentence of ordinary characters and a bad one over 字幕 / 對話 and 遊戲 / UI,
-        /// where 遊, 戲 and 幕 carry twelve to seventeen strokes each and close up into a blot at this
-        /// size. Those two words are also not the ones needing help to be found: one sits in white
-        /// on a saturated pill and the other is the only other thing on the track.
-        /// </remarks>
-        private static readonly FontWeight HeavierOverPicture = FontWeights.SemiBold;
-
-        /// <summary>
-        /// How to draw a block of each kind. Named for what the user does, not for what the
-        /// recogniser then does with it: the reasons live in <see cref="RealtimeDetectorSize"/> and
-        /// <see cref="CollapsedDetection"/>, and neither is something to explain over a paused game.
-        /// </summary>
-        private static string AutoHint =>
-            LocalizationService.Get("S.Realtime.ModeAutoGuidance");
-
-        private static string SubtitleHint =>
-            LocalizationService.Get("S.Realtime.ModeSubtitleGuidance");
-
-        /// <summary>
-        /// The modes in the order the tray shows them: 自動 first, as the one to start from, and the
-        /// two it chooses between after it, for the screen it reads wrongly.
-        /// </summary>
-        private static readonly RealtimeBlockMode[] Modes =
-            [RealtimeBlockMode.Auto, RealtimeBlockMode.Subtitle, RealtimeBlockMode.Panel];
-
-        private static string PanelHint =>
-            LocalizationService.Get("S.Realtime.ModeGameUiGuidance");
-
-        private readonly TranslateTransform _pillOffset = new();
+        private readonly IReadOnlyList<ProfileChoice> _choices;
         private readonly TranslateTransform _directionPillOffset = new();
-        private readonly Border[] _segments;
+        private readonly Border _menuButtonHighlight;
+        private readonly TextBlock _menuName;
+        private readonly RotateTransform _menuChevronRotation = new();
         private readonly Border[] _directionSegments;
-        private readonly Border[] _highlights;
         private readonly Border[] _directionHighlights;
         private readonly System.Windows.Shapes.Path[] _directionGlyphs;
         private readonly TextBlock[] _directionLabels;
-        private readonly TextBlock[] _labels;
-        private readonly TextBlock[] _hints;
-        private readonly Grid _hintHost;
-        private readonly Border _hintPlate;
-        private readonly Border _guidanceToggle;
-        private readonly Border _guidanceToggleHighlight;
-        private readonly RotateTransform _guidanceChevronRotation = new();
-        private readonly double _segmentWidth;
         private readonly double _directionSegmentWidth;
-        private readonly double _expandedWidth;
-        private readonly double _expandedHeight;
-        private readonly double _collapsedWidth;
-        private readonly double _collapsedHeight;
-        private readonly double _expandedHintHeight;
+        private readonly double _uiScale;
+
+        // What the button keeps round its name — padding, chevron, inset — so a name can be told to
+        // be cut short by the same sum the button's width was taken from.
+        private readonly double _menuChrome;
+
+        // The trays' resting size, measured once up front: the canvas positions this by hand before
+        // layout has run.
+        private readonly double _width;
+        private readonly double _height;
 
         // What the restore button adds to the trays' width while it is showing: it is measured out
-        // with the rest, collapsed, so the widths above do not include it.
+        // with the rest, collapsed, so the width above does not include it.
         private readonly double _restoreWidth;
         private bool _restoreShown;
 
         // Which segment the pointer went down on, or -1. The click is committed on release and only
         // if the pointer is still over that segment, so a press the user thought better of can be
         // taken back by sliding off it — the same forgiveness every other button on the desktop has.
-        private int _pressedSegment = -1;
+        // The mode button is held to the same rule.
+        private bool _menuButtonPressed;
         private int _pressedDirection = -1;
-        private bool _guidanceTogglePressed;
-        private bool _guidanceExpanded;
-        private int _guidanceTransition;
 
         public ModeSegments(
-            RealtimeBlockMode mode,
+            string profileId,
+            IReadOnlyList<ProfileChoice> choices,
             RealtimeTextOrientation orientation,
-            bool guidanceExpanded,
             double height,
-            double segmentWidth,
             double directionSegmentWidth,
             double inset,
-            double hintWidth,
             double gap,
             double uiScale)
         {
-            Value = mode;
+            _choices = choices;
+            _uiScale = uiScale;
+            ProfileId = choices.Any(choice => choice.Id == profileId) ? profileId : Models.RealtimePresets.StandardId;
             TextOrientation = orientation;
-            _guidanceExpanded = guidanceExpanded;
 
-            Orientation = System.Windows.Controls.Orientation.Vertical;
+            Orientation = System.Windows.Controls.Orientation.Horizontal;
             HorizontalAlignment = HorizontalAlignment.Left;
 
             // Sizes here are base units times a monitor scale, so most of them land on fractions of
             // a pixel. Rounded, the plate edges and the text inside them start on whole pixels.
             UseLayoutRounding = true;
 
-            _labels =
-            [
-                BuildLabel(LocalizationService.Get("S.Realtime.ModeAuto"), uiScale),
-                BuildLabel(LocalizationService.Get("S.Realtime.ModeSubtitle"), uiScale),
-                BuildLabel(LocalizationService.Get("S.Realtime.ModeGameUi"), uiScale),
-            ];
-
-            // The base width suits labels of a word or two; a locale that needs more room gets it,
-            // and every segment takes the widest figure so they stay equal.
-            foreach (var label in _labels)
-                label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-
-            segmentWidth = Math.Max(
-                segmentWidth,
-                _labels.Max(label => label.DesiredSize.Width) + BaseModeLabelPadding * 2 * uiScale);
-            _segmentWidth = segmentWidth;
-
-            var trackWidth = segmentWidth * Modes.Length + inset * 2;
             var radius = height / 2;
+            var pillHeight = height - inset * 2;
+
+            // The mode button: the current answer as the blue pill the segments used to slide, its
+            // name and a chevron on it — see the class remarks.
+            _menuName = BuildLabel("", uiScale);
+            _menuName.HorizontalAlignment = HorizontalAlignment.Left;
+            _menuName.TextTrimming = TextTrimming.CharacterEllipsis;
+            _menuName.Foreground = RemoveForeground;
+            _menuName.Margin = new Thickness(BaseModeLabelPadding * uiScale, 0, 0, 0);
+
+            var menuChevron = new System.Windows.Shapes.Path
+            {
+                Data = Geometry.Parse("M 1,2 L 6,7 L 11,2"),
+                Width = 12 * uiScale,
+                Height = 8 * uiScale,
+                Stretch = Stretch.Fill,
+                Stroke = RemoveForeground,
+                StrokeThickness = 1.5 * uiScale,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8 * uiScale, 0, 12 * uiScale, 0),
+                RenderTransformOrigin = new Point(0.5, 0.5),
+                RenderTransform = _menuChevronRotation,
+                IsHitTestVisible = false,
+            };
+
+            var menuContent = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(menuChevron, Dock.Right);
+            menuContent.Children.Add(menuChevron);
+            menuContent.Children.Add(_menuName);
+
+            _menuButtonHighlight = new Border
+            {
+                Background = PressHighlight,
+                CornerRadius = new CornerRadius(pillHeight / 2),
+                Opacity = 0,
+                IsHitTestVisible = false,
+            };
+
+            var pillContent = new Grid();
+            pillContent.Children.Add(_menuButtonHighlight);
+            pillContent.Children.Add(menuContent);
 
             var pill = new Border
             {
-                Width = segmentWidth,
-                Height = height - inset * 2,
-                HorizontalAlignment = HorizontalAlignment.Left,
+                Height = pillHeight,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(inset, 0, 0, 0),
-                CornerRadius = new CornerRadius((height - inset * 2) / 2),
-                Background = FrameStroke,
-                RenderTransform = _pillOffset,
-            };
-
-            // Rounded on the outer ends only, so a press on any segment stays inside the capsule.
-            _highlights =
-            [
-                BuildHighlight(new CornerRadius(radius, 0, 0, radius), inset),
-                BuildHighlight(new CornerRadius(0), inset),
-                BuildHighlight(new CornerRadius(0, radius, radius, 0), inset),
-            ];
-
-            _segments =
-            [
-                BuildSegment(_labels[0], _highlights[0], segmentWidth,
-                    LocalizationService.Get("S.Realtime.ModeAutoSummary")),
-                BuildSegment(_labels[1], _highlights[1], segmentWidth,
-                    LocalizationService.Get("S.Realtime.ModeSubtitleSummary")),
-                BuildSegment(_labels[2], _highlights[2], segmentWidth,
-                    LocalizationService.Get("S.Realtime.ModeGameUiSummary")),
-            ];
-
-            var row = new StackPanel
-            {
-                Orientation = System.Windows.Controls.Orientation.Horizontal,
                 Margin = new Thickness(inset, 0, inset, 0),
+                CornerRadius = new CornerRadius(pillHeight / 2),
+                Background = FrameStroke,
+                Child = pillContent,
             };
-            foreach (var segment in _segments) row.Children.Add(segment);
 
-            // The pill goes in first so the labels sit on top of it; a label the pill slid over
-            // would otherwise disappear underneath it halfway through the move.
-            var trackContent = new Grid();
-            trackContent.Children.Add(pill);
-            trackContent.Children.Add(row);
-
-            var track = Plate(trackWidth, new CornerRadius(radius), trackContent, uiScale);
+            var chrome = menuChevron.Width + menuChevron.Margin.Left + menuChevron.Margin.Right + inset * 2;
+            _menuChrome = BaseModeLabelPadding * uiScale + chrome;
+            MenuButtonWidth = ButtonWidth(choices, chrome, uiScale);
+            var track = Plate(MenuButtonWidth, new CornerRadius(radius), pill, uiScale);
             track.HorizontalAlignment = HorizontalAlignment.Left;
             track.Height = height;
+            track.Cursor = Cursors.Hand;
+            System.Windows.Automation.AutomationProperties.SetName(
+                track, LocalizationService.Get("S.Realtime.ProfileMenu"));
+            MenuButton = track;
 
             // Same parts, narrower: one capsule, two segments, one pill that slides between them.
             _directionGlyphs =
@@ -1818,56 +1944,11 @@ public partial class RealtimeEditWindow : Window
             System.Windows.Automation.AutomationProperties.SetName(
                 directionTrack, LocalizationService.Get("S.Toolbar.Direction"));
 
-            var chevron = new System.Windows.Shapes.Path
-            {
-                Data = Geometry.Parse("M 1,7 L 6,2 L 11,7"),
-                Width = 12 * uiScale,
-                Height = 9 * uiScale,
-                Stretch = Stretch.Fill,
-                Stroke = RemoveForeground,
-                StrokeThickness = 1.5 * uiScale,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                StrokeLineJoin = PenLineJoin.Round,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                RenderTransformOrigin = new Point(0.5, 0.5),
-                RenderTransform = _guidanceChevronRotation,
-                IsHitTestVisible = false,
-            };
+            Children.Add(track);
+            Children.Add(directionTrack);
 
-            _guidanceToggleHighlight = new Border
-            {
-                Background = PressHighlight,
-                CornerRadius = new CornerRadius(radius),
-                Margin = new Thickness(inset),
-                Opacity = 0,
-                IsHitTestVisible = false,
-            };
-
-            var toggleContent = new Grid();
-            toggleContent.Children.Add(_guidanceToggleHighlight);
-            toggleContent.Children.Add(chevron);
-
-            _guidanceToggle = Plate(height, new CornerRadius(radius), toggleContent, uiScale);
-            _guidanceToggle.Width = height;
-            _guidanceToggle.Height = height;
-            _guidanceToggle.Margin = new Thickness(gap, 0, 0, 0);
-            _guidanceToggle.Background = System.Windows.Media.Brushes.Transparent;
-            _guidanceToggle.Cursor = Cursors.Hand;
-            UpdateGuidanceToggleLabel();
-
-            var header = new StackPanel
-            {
-                Orientation = System.Windows.Controls.Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
-            header.Children.Add(track);
-            header.Children.Add(directionTrack);
-            header.Children.Add(_guidanceToggle);
-
-            // Last in the row and the size of the toggle beside it, in the block's blue rather than
-            // the trays' dark: it acts on the block, and it is the one tray that is not always there.
+            // Last in the row and as tall as the trays beside it, in the block's blue rather than the
+            // trays' dark: it acts on the block, and it is the one tray that is not always there.
             Restore = new Button
             {
                 Width = height,
@@ -1879,61 +1960,32 @@ public partial class RealtimeEditWindow : Window
                 Template = BuildRestoreTemplate(height, uiScale),
                 Visibility = Visibility.Collapsed,
             };
-            header.Children.Add(Restore);
+            Children.Add(Restore);
             _restoreWidth = height + gap;
 
-            _hints = [BuildHint(AutoHint, uiScale), BuildHint(SubtitleHint, uiScale), BuildHint(PanelHint, uiScale)];
-
-            // Every sentence is laid out at once and only one is opaque, so the plate is as tall as
-            // the longest of them from the start and choosing a mode cannot change its size.
-            var hintContent = new Grid
+            track.MouseLeftButtonDown += (_, e) =>
             {
-                Margin = new Thickness(14 * uiScale, 8 * uiScale, 14 * uiScale, 8 * uiScale),
+                // Must not fall through to the canvas underneath, which would take this as the
+                // start of a new block being drawn.
+                e.Handled = true;
+                _menuButtonPressed = true;
+                track.CaptureMouse();
+                SetMenuButtonPressed(true);
             };
-            foreach (var hint in _hints) hintContent.Children.Add(hint);
-
-            _hintPlate = Plate(hintWidth, new CornerRadius(8 * uiScale), hintContent, uiScale);
-            _hintPlate.Margin = new Thickness(0, gap, 0, 0);
-
-            // Reads, never clicked. Left hit-testable it would swallow the drag that starts a new
-            // block on the picture behind it, for no gain.
-            _hintPlate.IsHitTestVisible = false;
-
-            _hintHost = new Grid { ClipToBounds = true };
-            _hintHost.Children.Add(_hintPlate);
-
-            Children.Add(header);
-            Children.Add(_hintHost);
-
-            for (var index = 0; index < _segments.Length; index++)
+            track.MouseLeftButtonUp += (_, e) =>
             {
-                var segment = _segments[index];
-                var picked = index;
+                e.Handled = true;
+                var commit = _menuButtonPressed && track.IsMouseOver;
+                _menuButtonPressed = false;
+                track.ReleaseMouseCapture();
+                SetMenuButtonPressed(false);
+                if (commit) MenuRequested?.Invoke(this, EventArgs.Empty);
+            };
 
-                segment.MouseLeftButtonDown += (_, e) =>
-                {
-                    // Must not fall through to the canvas underneath, which would take this as the
-                    // start of a new block being drawn.
-                    e.Handled = true;
-                    _pressedSegment = picked;
-                    segment.CaptureMouse();
-                    SetPressed(picked, true);
-                };
-                segment.MouseLeftButtonUp += (_, e) =>
-                {
-                    e.Handled = true;
-                    var commit = _pressedSegment == picked && segment.IsMouseOver;
-                    _pressedSegment = -1;
-                    segment.ReleaseMouseCapture();
-                    SetPressed(picked, false);
-                    if (commit) Select(Modes[picked]);
-                };
-
-                // Dragged off and back on again while held: the press follows the pointer, so the
-                // control keeps saying what releasing right now would do.
-                segment.MouseEnter += (_, _) => { if (_pressedSegment == picked) SetPressed(picked, true); };
-                segment.MouseLeave += (_, _) => { if (_pressedSegment == picked) SetPressed(picked, false); };
-            }
+            // Dragged off and back on again while held: the press follows the pointer, so the
+            // control keeps saying what releasing right now would do.
+            track.MouseEnter += (_, _) => { if (_menuButtonPressed) SetMenuButtonPressed(true); };
+            track.MouseLeave += (_, _) => { if (_menuButtonPressed) SetMenuButtonPressed(false); };
 
             for (var index = 0; index < _directionSegments.Length; index++)
             {
@@ -1964,51 +2016,18 @@ public partial class RealtimeEditWindow : Window
                 segment.MouseLeave += (_, _) => { if (_pressedDirection == picked) SetDirectionPressed(picked, false); };
             }
 
-            _guidanceToggle.MouseLeftButtonDown += (_, e) =>
-            {
-                e.Handled = true;
-                _guidanceTogglePressed = true;
-                _guidanceToggle.CaptureMouse();
-                SetGuidanceTogglePressed(true);
-            };
-            _guidanceToggle.MouseLeftButtonUp += (_, e) =>
-            {
-                e.Handled = true;
-                var commit = _guidanceTogglePressed && _guidanceToggle.IsMouseOver;
-                _guidanceTogglePressed = false;
-                _guidanceToggle.ReleaseMouseCapture();
-                SetGuidanceTogglePressed(false);
-                if (commit) ToggleGuidance();
-            };
-            _guidanceToggle.MouseEnter += (_, _) =>
-            {
-                if (_guidanceTogglePressed) SetGuidanceTogglePressed(true);
-            };
-            _guidanceToggle.MouseLeave += (_, _) =>
-            {
-                if (_guidanceTogglePressed) SetGuidanceTogglePressed(false);
-            };
-
-            ApplySelection(animate: false);
+            ApplySelection();
             ApplyDirection(animate: false);
 
-            // Both resting sizes are measured up front because the canvas positions this by hand
-            // before layout has run. Toggling then only chooses between known expanded and collapsed
-            // targets, so neither state depends on a half-finished animation's DesiredSize.
             Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-            _expandedWidth = DesiredSize.Width;
-            _expandedHeight = DesiredSize.Height;
-            _collapsedWidth = header.DesiredSize.Width;
-            _collapsedHeight = header.DesiredSize.Height;
-            _expandedHintHeight = _hintHost.DesiredSize.Height;
-            _hintHost.Height = _expandedHintHeight;
-            ApplyGuidanceState(animate: false);
+            _width = DesiredSize.Width;
+            _height = DesiredSize.Height;
         }
 
         /// <summary>Which of the block's two trays the user moved.</summary>
         public enum BlockTray
         {
-            /// <summary>字幕 or 遊戲 — what the block holds.</summary>
+            /// <summary>The mode the block reads with.</summary>
             Mode,
 
             /// <summary>橫排 or 直排 — which way its text runs.</summary>
@@ -2029,12 +2048,66 @@ public partial class RealtimeEditWindow : Window
         public event EventHandler<BlockTray>? SelectionChanged;
 
         /// <summary>
-        /// Raised with the new state when the guidance changes size, so the canvas can keep it beside
-        /// its block and the window can record what the user asked for.
+        /// Raised when the mode button is clicked: the list belongs to the layer, which opens it
+        /// over everything else — see <see cref="ModeMenu"/>.
         /// </summary>
-        public event EventHandler<bool>? ExpansionChanged;
+        public event EventHandler? MenuRequested;
 
-        public RealtimeBlockMode Value { get; private set; }
+        /// <summary>The mode this block is on, by id — one of the choices it was built with.</summary>
+        public string ProfileId { get; private set; }
+
+        /// <summary>The mode button, which the open list is placed against.</summary>
+        public FrameworkElement MenuButton { get; }
+
+        /// <summary>How wide the mode button is: the same whichever mode is chosen.</summary>
+        public double MenuButtonWidth { get; }
+
+        /// <summary>Puts the block on <paramref name="profileId"/>, as a pick from the open list.</summary>
+        /// <remarks>Picking the mode it is already on changes nothing and says nothing.</remarks>
+        public void Pick(string profileId)
+        {
+            if (profileId == ProfileId || _choices.All(choice => choice.Id != profileId)) return;
+
+            ProfileId = profileId;
+            ApplySelection();
+            SelectionChanged?.Invoke(this, BlockTray.Mode);
+        }
+
+        /// <summary>Turns the button's chevron to say whether its list is open.</summary>
+        public void SetMenuOpen(bool open)
+        {
+            var target = open ? 180.0 : 0.0;
+            if (!SystemParameters.ClientAreaAnimation)
+            {
+                _menuChevronRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+                _menuChevronRotation.Angle = target;
+                return;
+            }
+
+            _menuChevronRotation.BeginAnimation(
+                RotateTransform.AngleProperty,
+                Transition(_menuChevronRotation.Angle, target, ChevronDuration));
+        }
+
+        /// <summary>
+        /// The width the mode button is built at: room for the widest name it may show, held
+        /// between <see cref="BaseModeButtonMinWidth"/> and <see cref="BaseModeButtonMaxWidth"/> —
+        /// except that a preset's name always fits whole.
+        /// </summary>
+        private static double ButtonWidth(IReadOnlyList<ProfileChoice> choices, double chrome, double uiScale)
+        {
+            double Fit(string text)
+            {
+                var label = BuildLabel(text, uiScale);
+                label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                return label.DesiredSize.Width + BaseModeLabelPadding * uiScale + chrome;
+            }
+
+            double widest = choices.Max(choice => Fit(choice.Name));
+            double widestPreset = choices.Where(choice => choice.IsPreset).Select(choice => Fit(choice.Name)).DefaultIfEmpty(0).Max();
+            double width = Math.Clamp(widest, BaseModeButtonMinWidth * uiScale, BaseModeButtonMaxWidth * uiScale);
+            return Math.Ceiling(Math.Max(width, widestPreset));
+        }
 
         /// <summary>
         /// Which way this block's text runs. Not called Orientation: this is a StackPanel, and that
@@ -2042,15 +2115,8 @@ public partial class RealtimeEditWindow : Window
         /// </summary>
         public RealtimeTextOrientation TextOrientation { get; private set; }
 
-        /// <summary>Current size, so the caller can keep the visible surface on screen.</summary>
-        public double TotalWidth
-        {
-            get
-            {
-                double header = _collapsedWidth + (_restoreShown ? _restoreWidth : 0);
-                return _guidanceExpanded ? Math.Max(_expandedWidth, header) : header;
-            }
-        }
+        /// <summary>Current size, so the caller can keep the trays on screen.</summary>
+        public double TotalWidth => _width + (_restoreShown ? _restoreWidth : 0);
 
         /// <summary>
         /// Brings the block's turned-off 對照顯示 copy back. Shown by <see cref="SetRestoreShown"/>
@@ -2086,28 +2152,29 @@ public partial class RealtimeEditWindow : Window
             return new ControlTemplate(typeof(Button)) { VisualTree = chip };
         }
 
-        public double TotalHeight => _guidanceExpanded ? _expandedHeight : _collapsedHeight;
+        /// <inheritdoc cref="TotalWidth"/>
+        public double TotalHeight => _height;
 
-        private void Select(RealtimeBlockMode mode)
+        /// <summary>
+        /// Shows the chosen mode: its name on the button, and on the tooltip what it is for — see
+        /// <see cref="ModeTip"/>.
+        /// </summary>
+        private void ApplySelection()
         {
-            if (mode == Value) return;
+            var choice = _choices.FirstOrDefault(choice => choice.Id == ProfileId) ?? _choices[0];
 
-            Value = mode;
-            ApplySelection(animate: true);
-            SelectionChanged?.Invoke(this, BlockTray.Mode);
+            _menuName.Text = choice.Name;
+            MenuButton.ToolTip = ModeTip(choice, nameCut: !choice.IsPreset && IsCut(choice.Name));
+            System.Windows.Automation.AutomationProperties.SetItemStatus(MenuButton, choice.Name);
         }
 
-        private void ApplySelection(bool animate)
+        // Whether the button shows the name cut short: the sum its width was taken from, for this
+        // name, does not fit in the width it was given.
+        private bool IsCut(string name)
         {
-            var selected = Math.Max(0, Array.IndexOf(Modes, Value));
-
-            for (var index = 0; index < _labels.Length; index++)
-                _labels[index].Foreground = index == selected ? RemoveForeground : ModeIdleForeground;
-
-            Move(_pillOffset, TranslateTransform.XProperty, selected * _segmentWidth, SlideDuration, animate);
-
-            for (var index = 0; index < _hints.Length; index++)
-                Fade(_hints[index], index == selected ? 1.0 : 0.0, HintFadeDuration, animate);
+            var label = BuildLabel(name, _uiScale);
+            label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            return label.DesiredSize.Width + _menuChrome > MenuButtonWidth + 0.5;
         }
 
         private void Select(RealtimeTextOrientation orientation)
@@ -2135,73 +2202,11 @@ public partial class RealtimeEditWindow : Window
                 selected * _directionSegmentWidth, SlideDuration, animate);
         }
 
-        private void SetPressed(int segment, bool pressed) =>
-            Fade(_highlights[segment], pressed ? 1.0 : 0.0, PressDuration, animate: true);
+        private void SetMenuButtonPressed(bool pressed) =>
+            Fade(_menuButtonHighlight, pressed ? 1.0 : 0.0, PressDuration, animate: true);
 
         private void SetDirectionPressed(int segment, bool pressed) =>
             Fade(_directionHighlights[segment], pressed ? 1.0 : 0.0, PressDuration, animate: true);
-
-        private void SetGuidanceTogglePressed(bool pressed) =>
-            Fade(_guidanceToggleHighlight, pressed ? 1.0 : 0.0, PressDuration, animate: true);
-
-        private void ToggleGuidance()
-        {
-            _guidanceExpanded = !_guidanceExpanded;
-            UpdateGuidanceToggleLabel();
-            ApplyGuidanceState(animate: true);
-            ExpansionChanged?.Invoke(this, _guidanceExpanded);
-        }
-
-        private void UpdateGuidanceToggleLabel()
-        {
-            var label = LocalizationService.Get(
-                _guidanceExpanded ? "S.Realtime.CollapseGuidance" : "S.Realtime.ExpandGuidance");
-            _guidanceToggle.ToolTip = label;
-            System.Windows.Automation.AutomationProperties.SetName(_guidanceToggle, label);
-        }
-
-        private void ApplyGuidanceState(bool animate)
-        {
-            var expanded = _guidanceExpanded;
-            var targetHeight = expanded ? _expandedHintHeight : 0;
-            var targetOpacity = expanded ? 1.0 : 0.0;
-            var targetAngle = expanded ? 0.0 : 180.0;
-            var transition = ++_guidanceTransition;
-
-            if (!animate || !SystemParameters.ClientAreaAnimation)
-            {
-                _hintHost.BeginAnimation(HeightProperty, null);
-                _hintPlate.BeginAnimation(OpacityProperty, null);
-                _guidanceChevronRotation.BeginAnimation(RotateTransform.AngleProperty, null);
-                _hintHost.Height = targetHeight;
-                _hintPlate.Opacity = targetOpacity;
-                _guidanceChevronRotation.Angle = targetAngle;
-                _hintHost.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
-                return;
-            }
-
-            if (expanded) _hintHost.Visibility = Visibility.Visible;
-
-            var heightAnimation = new DoubleAnimation(_hintHost.ActualHeight, targetHeight, GuidanceDuration)
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-            };
-            heightAnimation.Completed += (_, _) =>
-            {
-                if (transition != _guidanceTransition) return;
-                _hintHost.BeginAnimation(HeightProperty, null);
-                _hintHost.Height = targetHeight;
-                if (!expanded) _hintHost.Visibility = Visibility.Collapsed;
-            };
-            _hintHost.BeginAnimation(HeightProperty, heightAnimation);
-
-            _hintPlate.BeginAnimation(
-                OpacityProperty,
-                Transition(_hintPlate.Opacity, targetOpacity, GuidanceDuration));
-            _guidanceChevronRotation.BeginAnimation(
-                RotateTransform.AngleProperty,
-                Transition(_guidanceChevronRotation.Angle, targetAngle, GuidanceDuration));
-        }
 
         /// <summary>
         /// A dark surface with a hairline along its top edge, holding the content.
@@ -2215,10 +2220,10 @@ public partial class RealtimeEditWindow : Window
         /// <para>The hairline is a border nested inside the fill rather than the fill's own border:
         /// a Border paints its background inside its border, so on one element the hairline would
         /// sit over whatever is behind the plate instead of over the plate. The fill is itself inside
-        /// the Border returned, which carries no fill of its own: callers size and style that one,
-        /// and the guidance toggle sets its background to make the whole circle clickable.</para>
+        /// the Border returned, which carries no fill of its own: callers size and style that
+        /// one.</para>
         /// </remarks>
-        private static Border Plate(double width, CornerRadius corner, UIElement content, double uiScale) => new()
+        internal static Border Plate(double width, CornerRadius corner, UIElement content, double uiScale) => new()
         {
             Width = width,
             Child = new Border
@@ -2261,13 +2266,13 @@ public partial class RealtimeEditWindow : Window
             });
         }
 
-        private static DoubleAnimation Transition(double from, double to, Duration duration) => new(from, to, duration)
+        internal static DoubleAnimation Transition(double from, double to, Duration duration) => new(from, to, duration)
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
         };
 
         /// <summary>Cross-fades a layer, from its current opacity — see <see cref="Move"/>.</summary>
-        private static void Fade(UIElement element, double to, Duration duration, bool animate)
+        internal static void Fade(UIElement element, double to, Duration duration, bool animate)
         {
             if (!animate || !SystemParameters.ClientAreaAnimation)
             {
@@ -2282,7 +2287,7 @@ public partial class RealtimeEditWindow : Window
             });
         }
 
-        private static TextBlock BuildLabel(string text, double uiScale) =>
+        internal static TextBlock BuildLabel(string text, double uiScale) =>
             Sharpen(new TextBlock
             {
                 Text = text,
@@ -2291,26 +2296,38 @@ public partial class RealtimeEditWindow : Window
                 VerticalAlignment = VerticalAlignment.Center,
             });
 
-        // Leading a little looser than the default: this is dense CJK read once, off a translucent
-        // surface, over moving picture, and the extra air is what stops the lines running together.
-        private static TextBlock BuildHint(string text, double uiScale) =>
-            Sharpen(new TextBlock
-            {
-                Text = text,
-                FontSize = BaseHintFontSize * uiScale,
-                FontWeight = HeavierOverPicture,
-                LineHeight = BaseHintFontSize * 1.6 * uiScale,
-                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = RemoveForeground,
-                VerticalAlignment = VerticalAlignment.Top,
-            });
+        /// <summary>
+        /// What a mode is for, as a tooltip on the button and on the mode's row of the list: a
+        /// preset's sentence on when to use it, or which preset a custom mode is made from and how
+        /// many of its values were changed.
+        /// </summary>
+        /// <remarks>
+        /// <para>The longer of the two things said about a mode. The row already carries its
+        /// one-line summary, or 範本：… for a custom mode; this is what that line does not have room
+        /// for. A custom mode's says nothing more than which preset and how much was changed: its
+        /// preset's sentence is about the preset, and is on that preset's row.</para>
+        ///
+        /// <para>A custom mode whose name is cut short on the button or the row has its whole name
+        /// on the first line.</para>
+        ///
+        /// <para>Wider than the app's tooltip (340), measured: at 400 the Russian sentence for 標準
+        /// took four lines and the Japanese ones did too; at 420 every language is three lines at
+        /// most, and Chinese two.</para>
+        /// </remarks>
+        internal static System.Windows.Controls.ToolTip ModeTip(ProfileChoice choice, bool nameCut)
+        {
+            var text = choice.IsPreset
+                ? RealtimeProfileEditing.PresetGuidance(choice.Id)
+                : RealtimeProfileEditing.BasedOnSentence(choice);
+            if (nameCut) text = choice.Name + "\n" + text;
+            return new() { Content = text, MaxWidth = 420 };
+        }
 
         // Display formatting rounds glyph widths and positions onto whole pixels, which at these
         // sizes is the difference between a stem one pixel wide and a stem smeared across two. WPF's
         // default (Ideal) keeps the typographic metrics instead, which is right for large text and
         // wrong for small interface text — and this is small interface text over moving picture.
-        private static TextBlock Sharpen(TextBlock text)
+        internal static TextBlock Sharpen(TextBlock text)
         {
             TextOptions.SetTextFormattingMode(text, TextFormattingMode.Display);
             TextOptions.SetTextRenderingMode(text, TextRenderingMode.ClearType);
@@ -2389,6 +2406,362 @@ public partial class RealtimeEditWindow : Window
                 ToolTip = tip,
                 Child = content,
             };
+        }
+    }
+
+    /// <summary>
+    /// The open list of modes under a block's mode button: the presets, the custom modes, and
+    /// 模式設定…, on the trays' dark plate. Each mode on two lines, its name and under it what it
+    /// is for — a preset's summary, or 範本：… for a custom mode — as the page's list of modes
+    /// says it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Built of the trays' own parts — the plate, the blue pill for the chosen answer, the
+    /// press light for the pointer — so it reads as the button opened out rather than as a menu from
+    /// somewhere else. No tick: the pill is what says "chosen" on every control of this layer.</para>
+    ///
+    /// <para>Fades in and out and never slides: everything on it is text, and WPF leaves text it
+    /// sees moving soft for about a second afterwards (see ShellWindow.AnimateContentIn).</para>
+    ///
+    /// <para>A choice is committed on release, on whichever row the pointer is over then — pressing
+    /// one row and letting go on another picks the other, as menus do; letting go off every row
+    /// picks nothing and leaves the list open.</para>
+    ///
+    /// <para>Thirteen modes at most, about 44 high each in Chinese, fit any ordinary screen. Where
+    /// they do not, the presets and 模式設定… stay put and only the custom modes scroll, a row per
+    /// wheel notch, faded at whichever edge has more beyond it.</para>
+    /// </remarks>
+    private sealed class ModeMenu : Border
+    {
+        private static readonly Duration OpenDuration = new(TimeSpan.FromMilliseconds(120));
+        private static readonly Duration CloseDuration = new(TimeSpan.FromMilliseconds(80));
+        private static readonly SolidColorBrush MenuFill = Freeze(Color.FromArgb(0xF5, 0x1C, 0x1C, 0x1E));
+
+        // The line under a name: dimmer than the name, so the two read as one row and not as two;
+        // brighter under the pointer, and brighter still on the blue of the chosen row. The names
+        // are brighter than the trays' unchosen labels for the same reason — at that strength the
+        // two lines would be too close to tell apart.
+        private static readonly SolidColorBrush NameIdle = Freeze(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF));
+        private static readonly SolidColorBrush SummaryIdle = Freeze(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF));
+        private static readonly SolidColorBrush SummaryHover = Freeze(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF));
+        private static readonly SolidColorBrush SummaryChosen = Freeze(Color.FromArgb(0xD9, 0xFF, 0xFF, 0xFF));
+
+        // Either side of a row's text, and above and below a two-line row's.
+        private const double RowPaddingX = 12;
+        private const double RowPaddingTop = 6;
+        private const double RowPaddingBottom = 7;
+
+        private readonly double _rowHeight;
+        private readonly double _uiScale;
+        private readonly StackPanel? _customRows;
+        private readonly Border? _customViewport;
+
+        // How far the custom modes are scrolled: zero or less, the top margin of their stack.
+        private double _scrollOffset;
+
+        // One custom row, and all of them, as measured at the list's width — see FitHeight.
+        private double _customRowHeight;
+        private double _customHeight;
+        private double _scrollRange;
+
+        public ModeMenu(
+            IReadOnlyList<ProfileChoice> choices,
+            string selectedId,
+            double minWidth,
+            double maxWidth,
+            double rowHeight,
+            double uiScale)
+        {
+            _rowHeight = rowHeight;
+            _uiScale = uiScale;
+            UseLayoutRounding = true;
+            Opacity = 0;
+
+            var texts = new List<TextBlock>();
+            var rows = new StackPanel { Margin = new Thickness(4 * uiScale) };
+
+            foreach (var choice in choices.Where(choice => choice.IsPreset))
+            {
+                var (row, _) = Row(choice.Name, RealtimeProfileEditing.PresetSummary(choice.Id),
+                    choice.Id == selectedId, () => Picked?.Invoke(this, choice.Id), texts);
+                row.ToolTip = ModeSegments.ModeTip(choice, nameCut: false);
+                rows.Children.Add(row);
+            }
+
+            // A custom row's tooltip waits for the list's width: it carries the whole name when the
+            // row has to cut it short.
+            var customNames = new List<(ProfileChoice Choice, Border Row, TextBlock Name)>();
+            var custom = choices.Where(choice => !choice.IsPreset).ToList();
+            if (custom.Count > 0)
+            {
+                rows.Children.Add(Separator());
+                _customRows = new StackPanel();
+                foreach (var choice in custom)
+                {
+                    var (row, name) = Row(choice.Name, RealtimeProfileEditing.TemplateLine(choice),
+                        choice.Id == selectedId, () => Picked?.Invoke(this, choice.Id), texts);
+                    customNames.Add((choice, row, name));
+                    _customRows.Children.Add(row);
+                }
+                _customViewport = new Border { ClipToBounds = true, Child = _customRows };
+                rows.Children.Add(_customViewport);
+            }
+
+            rows.Children.Add(Separator());
+            var (manage, _) = Row(LocalizationService.Get("S.Realtime.ProfileManage"), null,
+                selected: false, () => ManageRequested?.Invoke(this, EventArgs.Empty), texts);
+            manage.ToolTip = LocalizationService.Get("S.Realtime.ProfileManageTip");
+            rows.Children.Add(manage);
+
+            // As wide as the button at least, and as its longest name or summary at most up to the
+            // cap — see BaseModeMenuMaxWidth. Past that a summary wraps to a second line, and a
+            // custom name is cut and its tooltip carries it whole.
+            double widest = texts.Max(text =>
+            {
+                text.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                return text.DesiredSize.Width;
+            });
+            double padding = (RowPaddingX * 2 + 8) * uiScale;
+            double width = Math.Ceiling(Math.Max(minWidth, Math.Min(maxWidth, widest + padding)));
+
+            foreach (var (choice, row, name) in customNames)
+                row.ToolTip = ModeSegments.ModeTip(choice, nameCut: name.DesiredSize.Width > width - padding + 0.5);
+
+            Width = width;
+            var plate = ModeSegments.Plate(width, new CornerRadius(8 * uiScale), rows, uiScale);
+            // Nearly opaque, unlike the trays: a list is read row by row over whatever the block is
+            // framing, and at the trays' strength the text underneath showed through between the rows.
+            ((Border)plate.Child).Background = MenuFill;
+            Child = plate;
+
+            // Handled here so a press anywhere on the list — a row, a separator, the padding — never
+            // reaches the canvas, which would take it for the start of a new block.
+            MouseLeftButtonDown += (_, e) => e.Handled = true;
+            MouseLeftButtonUp += (_, e) => e.Handled = true;
+            MouseDown += (_, e) => e.Handled = true;
+            MouseWheel += (_, e) =>
+            {
+                e.Handled = true;
+                Scroll(e.Delta > 0 ? 1 : -1);
+            };
+        }
+
+        /// <summary>Raised with the id of the mode picked.</summary>
+        public event EventHandler<string>? Picked;
+
+        /// <summary>Raised when 管理模式… is picked.</summary>
+        public event EventHandler? ManageRequested;
+
+        /// <summary>
+        /// Shortens the list to <paramref name="available"/> by letting the custom modes scroll,
+        /// keeping at least one of them in view.
+        /// </summary>
+        /// <returns>The list's height now.</returns>
+        public double FitHeight(double available)
+        {
+            Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            double natural = DesiredSize.Height;
+            if (_customViewport is null || _customRows is null || natural <= available) return natural;
+
+            // Measured rather than counted: a row is as tall as its summary wraps, and the language
+            // decides that. The custom rows' second line is 範本：…, one line in every language, so
+            // the first of them is a fair notch for the wheel.
+            _customHeight = _customRows.DesiredSize.Height;
+            _customRowHeight = _customRows.Children.Count > 0
+                ? _customRows.Children[0].DesiredSize.Height
+                : _rowHeight;
+
+            double fixedPart = natural - _customHeight;
+            double viewport = Math.Max(_customRowHeight, available - fixedPart);
+            _customViewport.Height = viewport;
+            _scrollRange = Math.Max(0, _customHeight - viewport);
+            UpdateScrollMask();
+            return fixedPart + viewport;
+        }
+
+        public void FadeIn()
+        {
+            if (!SystemParameters.ClientAreaAnimation)
+            {
+                Opacity = 1;
+                return;
+            }
+            BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, OpenDuration)
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            });
+        }
+
+        /// <summary>Fades the list out and then hands it to <paramref name="removed"/> to take away.</summary>
+        public void FadeOut(bool animate, Action removed)
+        {
+            IsHitTestVisible = false;
+            if (!animate || !SystemParameters.ClientAreaAnimation)
+            {
+                BeginAnimation(OpacityProperty, null);
+                Opacity = 0;
+                removed();
+                return;
+            }
+
+            var fade = new DoubleAnimation(Opacity, 0, CloseDuration)
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            };
+            fade.Completed += (_, _) => removed();
+            BeginAnimation(OpacityProperty, fade);
+        }
+
+        // A row per wheel notch, set rather than animated: a scroll is the user moving the list,
+        // not the list moving on its own. Moved by its margin, not by a transform: the stack is
+        // taller than the slot it is arranged in, so WPF clips it to that slot in its own
+        // coordinates, and a transform carried the clip up with the rows — the rows scrolled in
+        // from below came in blank.
+        private void Scroll(int rows)
+        {
+            if (_scrollRange <= 0 || _customRows is null) return;
+            _scrollOffset = Math.Clamp(_scrollOffset + rows * _customRowHeight, -_scrollRange, 0);
+            _customRows.Margin = new Thickness(0, _scrollOffset, 0, 0);
+            UpdateScrollMask();
+        }
+
+        // Fades the edge of the custom modes that has more beyond it, so a list cut short says so.
+        private void UpdateScrollMask()
+        {
+            if (_customViewport is null || _scrollRange <= 0)
+            {
+                if (_customViewport is not null) _customViewport.OpacityMask = null;
+                return;
+            }
+
+            double height = _customViewport.Height;
+            double fade = Math.Min(0.5, 12 * _uiScale / height);
+            var top = _scrollOffset < 0 ? Colors.Transparent : Colors.Black;
+            var bottom = _scrollOffset > -_scrollRange ? Colors.Transparent : Colors.Black;
+            _customViewport.OpacityMask = new LinearGradientBrush(
+                new GradientStopCollection
+                {
+                    new(top, 0),
+                    new(Colors.Black, fade),
+                    new(Colors.Black, 1 - fade),
+                    new(bottom, 1),
+                },
+                new Point(0, 0),
+                new Point(0, 1));
+        }
+
+        private Border Separator() => new()
+        {
+            Height = Math.Max(1, _uiScale),
+            Background = ModeTrackEdge,
+            Margin = new Thickness(0, 4 * _uiScale, 0, 4 * _uiScale),
+            IsHitTestVisible = false,
+        };
+
+        /// <summary>
+        /// One row: the chosen one on the blue pill in white, the rest dimmer until the pointer is
+        /// over them. Committed on release over it — see the class remarks.
+        /// </summary>
+        /// <remarks>
+        /// A mode's row is two lines, <paramref name="name"/> and under it
+        /// <paramref name="summary"/>, and as tall as the summary wraps to; 模式設定… has no summary
+        /// and keeps the trays' height. The name is cut short, never wrapped — it can be the user's
+        /// own text, of any length — and the summary wraps, never cut.
+        /// </remarks>
+        /// <returns>The row, and the line its name is on.</returns>
+        private (Border Row, TextBlock Name) Row(
+            string name, string? summary, bool selected, Action picked, List<TextBlock> texts)
+        {
+            var idle = summary is null ? ModeIdleForeground : NameIdle;
+            var label = ModeSegments.Sharpen(new TextBlock
+            {
+                Text = name,
+                FontSize = BaseModeFontSize * _uiScale,
+                Foreground = selected ? RemoveForeground : idle,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            });
+            texts.Add(label);
+
+            TextBlock? line = null;
+            if (summary is not null)
+            {
+                line = ModeSegments.Sharpen(new TextBlock
+                {
+                    Text = summary,
+                    FontSize = BaseModeSummaryFontSize * _uiScale,
+                    Foreground = selected ? SummaryChosen : SummaryIdle,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 1 * _uiScale, 0, 0),
+                });
+                texts.Add(line);
+            }
+
+            UIElement text;
+            if (line is null)
+            {
+                label.VerticalAlignment = VerticalAlignment.Center;
+                label.Margin = new Thickness(RowPaddingX * _uiScale, 0, RowPaddingX * _uiScale, 0);
+                text = label;
+            }
+            else
+            {
+                var lines = new StackPanel
+                {
+                    Margin = new Thickness(
+                        RowPaddingX * _uiScale, RowPaddingTop * _uiScale,
+                        RowPaddingX * _uiScale, RowPaddingBottom * _uiScale),
+                };
+                lines.Children.Add(label);
+                lines.Children.Add(line);
+                text = lines;
+            }
+
+            var light = new Border
+            {
+                Background = ModeSegments.PressHighlight,
+                CornerRadius = new CornerRadius(6 * _uiScale),
+                Opacity = 0,
+                IsHitTestVisible = false,
+            };
+
+            var content = new Grid();
+            content.Children.Add(light);
+            content.Children.Add(text);
+
+            var row = new Border
+            {
+                CornerRadius = new CornerRadius(6 * _uiScale),
+                Background = selected ? FrameStroke : System.Windows.Media.Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Child = content,
+            };
+            if (line is null) row.Height = _rowHeight;
+            else row.MinHeight = _rowHeight;
+
+            // The summary is on screen already; a screen reader gets it as the row's help text.
+            if (summary is not null)
+                System.Windows.Automation.AutomationProperties.SetHelpText(row, summary);
+
+            row.MouseEnter += (_, _) =>
+            {
+                if (selected) return;
+                label.Foreground = RemoveForeground;
+                if (line is not null) line.Foreground = SummaryHover;
+                ModeSegments.Fade(light, 1.0, ModeSegments.PressDuration, animate: true);
+            };
+            row.MouseLeave += (_, _) =>
+            {
+                if (selected) return;
+                label.Foreground = idle;
+                if (line is not null) line.Foreground = SummaryIdle;
+                ModeSegments.Fade(light, 0.0, ModeSegments.PressDuration, animate: true);
+            };
+            row.MouseLeftButtonUp += (_, e) =>
+            {
+                e.Handled = true;
+                picked();
+            };
+            return (row, label);
         }
     }
 }

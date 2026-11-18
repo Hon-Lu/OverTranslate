@@ -322,6 +322,7 @@ public partial class RealtimePage : UserControl
         SyncFixedFontSize();
         RenderColours();
         RenderPauseHint();
+        ProfilesCard.Reload();
         RenderState();
     }
 
@@ -355,6 +356,7 @@ public partial class RealtimePage : UserControl
         RealtimeSessionController.Instance.AppearanceChanged -= OnSessionAppearanceChanged;
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
+        ProfilesCard.Teardown();
     }
 
     /// <summary>

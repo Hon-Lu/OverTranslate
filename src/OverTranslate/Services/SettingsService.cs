@@ -163,7 +163,34 @@ public class SettingsService
             if (target is not null)
                 settings.QuickTranslate.TargetLanguage = target.Code;
         }
+
+        settings.Realtime.Profiles = RealtimeSettings.CleanProfiles(
+            settings.Realtime.Profiles.Count > 0 ? settings.Realtime.Profiles : ReadProfilesOneByOne(root));
         return settings;
+    }
+
+    /// <summary>
+    /// The custom 即時翻譯 modes one at a time, for a list that would not read in one piece: a
+    /// value of the wrong type in one mode costs that mode, not every mode the user made.
+    /// </summary>
+    private static List<RealtimeProfile?> ReadProfilesOneByOne(JsonObject root)
+    {
+        var read = new List<RealtimeProfile?>();
+        if (root[nameof(AppSettings.Realtime)] is not JsonObject realtime ||
+            realtime[nameof(RealtimeSettings.Profiles)] is not JsonArray entries) return read;
+
+        foreach (var entry in entries)
+        {
+            try
+            {
+                read.Add(entry?.Deserialize<RealtimeProfile>());
+            }
+            catch (JsonException ex)
+            {
+                Log.Warn(ex, "Ignoring an unreadable realtime mode; keeping the others");
+            }
+        }
+        return read;
     }
 
     /// <summary>
@@ -305,6 +332,30 @@ public class SettingsService
         Current.HiddenProviders = stored;
         Save();
         ProviderVisibilityChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    /// Raised when the custom 即時翻譯 modes change, once the change is in the file — for a running
+    /// session to put its blocks on the new values, and for anything else listing the modes.
+    /// </summary>
+    public event EventHandler? RealtimeProfilesChanged;
+
+    /// <summary>
+    /// Stores the custom 即時翻譯 modes: the whole list as it should now be, in order. Adding,
+    /// renaming, deleting, changing a value and putting one back are all this one call with a
+    /// changed list — see <see cref="RealtimeProfile"/> for how a value is put back (null).
+    /// </summary>
+    /// <remarks>
+    /// <para>Stored as <see cref="RealtimeSettings.SetProfiles"/> says: copies, tidied, and a
+    /// deleted mode taking <see cref="RealtimeSettings.NewBlockProfile"/> back to 標準 with it.</para>
+    /// </remarks>
+    /// <returns>Whether anything changed, and so was saved and announced.</returns>
+    public bool UpdateRealtimeProfiles(IEnumerable<RealtimeProfile> profiles)
+    {
+        if (!Current.Realtime.SetProfiles(profiles)) return false;
+        Save();
+        RealtimeProfilesChanged?.Invoke(this, EventArgs.Empty);
         return true;
     }
 

@@ -10,34 +10,48 @@ namespace OverTranslate.Services.Realtime;
 /// Stable for as long as the block exists, so a result arriving after the user has re-entered edit
 /// mode and rearranged things can be matched to the window it belongs to (or dropped).
 /// </param>
-/// <param name="Mode">
-/// What the user says this block holds. Lives here rather than in the settings file because it
-/// belongs to one block of one session: the same user watches a subtitle strip and a game panel at
-/// once, and the answer is different for each. Defaults to <see cref="RealtimeBlockMode.Subtitle"/>,
-/// which is what the great majority of blocks are.
+/// <param name="Profile">
+/// The mode this block reads with, resolved — see <see cref="ResolvedProfile"/>. Lives here rather
+/// than in the settings file because it belongs to one block of one session: the same user watches a
+/// subtitle strip and a game panel at once, and the answer is different for each. A snapshot: a
+/// change of modes reaches a running session as new regions — see
+/// <see cref="RealtimeTranslationSession.ChangeProfiles"/>.
 /// </param>
 /// <param name="Orientation">
 /// Which way this block's text is written. Lives here for the same reason the mode does — see
 /// <see cref="RealtimeTextOrientation"/> — and is independent of it: either kind of block can hold
-/// either kind of writing.
+/// either kind of writing, and no mode says which.
 /// </param>
 public sealed record RealtimeRegion(
     int Id,
     Rectangle Bounds,
-    RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
-    RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal);
+    ResolvedProfile Profile,
+    RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal)
+{
+    /// <summary>
+    /// A block on the preset a layout used to stand for — see <see cref="ResolvedProfile.ForLayout"/>.
+    /// For tests and tools; <see cref="RealtimeBlockMode.Subtitle"/> by default, as before modes.
+    /// </summary>
+    internal RealtimeRegion(
+        int id,
+        Rectangle bounds,
+        RealtimeBlockMode mode = RealtimeBlockMode.Subtitle,
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal)
+        : this(id, bounds, ResolvedProfile.ForLayout(mode), orientation)
+    {
+    }
+}
 
 /// <summary>
 /// One block as the user has it arranged, before a session gives it an id — what edit mode hands
 /// back and what the controller keeps between edits, so re-entering edit mode restores the modes
 /// along with the rectangles.
 /// </summary>
-/// <remarks>
-/// Whether the framing guidance is folded away is deliberately not here. It is not a property of a
-/// block: it says whether this user still needs the instructions, which is the same answer for every
-/// block they draw — so it lives in the settings file as
-/// <see cref="Models.RealtimeSettings.GuidanceExpanded"/> and outlives the session.
-/// </remarks>
+/// <param name="ProfileId">
+/// The mode the block is on, by id — a preset's or a custom mode's. An id, not the values, so a
+/// mode changed on the page reaches the block; one deleted since reads as 標準 — see
+/// <see cref="Models.RealtimeSettings.ResolveProfile"/>.
+/// </param>
 /// <param name="CompareOffset">
 /// Where 對照顯示 draws this block's translation, as an offset from <paramref name="Bounds"/> in
 /// physical pixels — or null while the user has never dragged it, which means "wherever
@@ -68,7 +82,7 @@ public sealed record RealtimeRegion(
 /// </param>
 public sealed record RealtimeBlockPlacement(
     Rectangle Bounds,
-    RealtimeBlockMode Mode = RealtimeBlockMode.Subtitle,
+    string ProfileId = Models.RealtimePresets.StandardId,
     RealtimeTextOrientation Orientation = RealtimeTextOrientation.Horizontal,
     Point? CompareOffset = null,
     double CompareScale = 1.0,
