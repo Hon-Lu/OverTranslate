@@ -16,13 +16,6 @@
          marks things the reader can press. -->
     <SolidColorBrush x:Key="AppInfoBg"         Color="#2A3037"/>
 
-    <!-- A neutral tint laid over a row to set part of it apart — the name column of the 模式 list.
-         See-through rather than a surface colour: no opaque token is a visible step off the card in
-         both themes (AppSurfaceBg is the card's own white in Light), and see-through lets the row's
-         hover and press show through it, so the tinted part stays a step apart in every state, as
-         AppScrollTrack does over two different panes. About #333333 over the card here. -->
-    <SolidColorBrush x:Key="AppSubtleFill"     Color="#10FFFFFF"/>
-
     <!-- Text — two levels, and there is no third. AppTextMuted (#666666) was removed: against the
          surfaces it was used on it reached 2.4:1, under the 4.5:1 any text needs and under even the
          3:1 for non-text, so none of its seven uses were legible — least of all the ones on the

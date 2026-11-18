@@ -31,10 +31,8 @@
                      which matters on a page whose real work — the three steps — is underneath. -->
                 <Border Style="{StaticResource CardBorder}">
                     <StackPanel>
-                        <!-- Card headings on this page are 設定's: CardTitle, and the 12 under it that
-                             CardHeaderRow leaves before the first setting. -->
-                        <TextBlock Text="{DynamicResource S.Realtime.TranslationSettings}" Style="{StaticResource CardTitle}"
-                                   Margin="0,0,0,12"/>
+                        <!-- Card headings on this page: RealtimeCardTitle, 設定's CardTitle a step down. -->
+                        <TextBlock Text="{DynamicResource S.Realtime.TranslationSettings}" Style="{StaticResource RealtimeCardTitle}"/>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -406,9 +404,10 @@
                              say how much of the card it was about to undo. -->
                         <!-- The button's 30 is let into the heading's line by the negative margin, as
                              開啟資料夾 is on 設定's 辨識模型, so it does not push the title down. -->
-                        <Grid Margin="0,0,0,12">
+                        <Grid Margin="0,0,0,10">
                             <TextBlock Text="{DynamicResource S.Realtime.Appearance}"
-                                       Style="{StaticResource CardTitle}"/>
+                                       Style="{StaticResource RealtimeCardTitle}"
+                                       Margin="0"/>
                             <Button x:Name="ResetAppearanceBtn"
                                     Style="{StaticResource IconTextButton}"
                                     HorizontalAlignment="Right"
@@ -1006,8 +1005,7 @@
                      way to put the overlays away for a scene without giving up the blocks. -->
                 <Border Style="{StaticResource CardBorder}">
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource S.Realtime.HowItWorks}" Style="{StaticResource CardTitle}"
-                                   Margin="0,0,0,12"/>
+                        <TextBlock Text="{DynamicResource S.Realtime.HowItWorks}" Style="{StaticResource RealtimeCardTitle}"/>
                         <TextBlock Style="{StaticResource FieldHint}" TextWrapping="Wrap" LineHeight="16" Margin="0,0,0,6"
                                    Text="{DynamicResource S.Realtime.Step1}"/>
                         <TextBlock Style="{StaticResource FieldHint}" TextWrapping="Wrap" LineHeight="16" Margin="0,0,0,6"

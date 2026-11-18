@@ -158,6 +158,24 @@
     </Style>
 
     <!-- ═══════════════════════════════════════════ -->
+    <!--  REALTIME CARD TITLE                        -->
+    <!--  CardTitle a step down, for the cards of    -->
+    <!--  即時翻譯. That page is one column read top   -->
+    <!--  to bottom under a 26 page title, and the    -->
+    <!--  full CardTitle there competed with it.      -->
+    <!--  Here rather than on the page, because the  -->
+    <!--  模式 card is a control of its own and needs  -->
+    <!--  the same heading.                          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <Style x:Key="RealtimeCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CardTitle}">
+        <Setter Property="FontSize"   Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <!-- 10 rather than CardHeaderRow's 12: with the smaller title, 12 left more room under it
+             than the card's own 12 of padding leaves over it. -->
+        <Setter Property="Margin"     Value="0,0,0,10"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════ -->
     <!--  TRANSLATION SERVICE MARKS                  -->
     <!--                                             -->
     <!--  Transcribed from the vendors' own SVGs in  -->
