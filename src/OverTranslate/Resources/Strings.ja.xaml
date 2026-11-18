@@ -470,9 +470,6 @@
     <sys:String x:Key="S.Realtime.ProfileRevert">テンプレートの値に戻す：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">詳細設定</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvancedModified">詳細設定（{0} 項目を変更）</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupLayout">レイアウト</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupTiming">タイミング</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupRecognition">認識</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">横書きのみ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字の向きが縦書きのブロックでは使われません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>

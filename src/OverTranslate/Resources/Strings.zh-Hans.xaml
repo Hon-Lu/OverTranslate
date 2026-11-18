@@ -466,9 +466,6 @@
     <sys:String x:Key="S.Realtime.ProfileRevert">还原为模板的值：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">高级</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvancedModified">高级（已修改 {0} 项）</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupLayout">版面</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupTiming">时机</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupRecognition">识别</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">仅适用于横排</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字方向为竖排的区块不使用此设置。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">自动</sys:String>

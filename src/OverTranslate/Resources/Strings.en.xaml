@@ -466,9 +466,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileRevert">Reset to the template's value: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">Advanced</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvancedModified">Advanced ({0} modified)</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupLayout">Layout</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupTiming">Timing</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupRecognition">Recognition</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">Horizontal text only</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">Not used by blocks whose text direction is vertical.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">Auto</sys:String>

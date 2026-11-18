@@ -215,23 +215,19 @@
                                     </Grid>
                                 </StackPanel>
 
-                                <!-- The values, one group per question, filled in code. A preset's are
-                                     the same rows, locked: see RealtimeProfileOverlay.ApplyLock. -->
+                                <!-- The values, one card per question, filled in code. No heading on a
+                                     card: the user found 版面／時機／辨識 said nothing the rows inside did
+                                     not. A preset's are the same rows, locked: see
+                                     RealtimeProfileOverlay.ApplyLock. -->
                                 <StackPanel x:Name="MainGroups">
                                     <Border Style="{StaticResource InnerGroupBorder}">
-                                        <StackPanel x:Name="LayoutGroup">
-                                            <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupLayout}" Style="{StaticResource SectionHeader}"/>
-                                        </StackPanel>
+                                        <StackPanel x:Name="LayoutGroup"/>
                                     </Border>
                                     <Border Style="{StaticResource InnerGroupBorder}">
-                                        <StackPanel x:Name="TimingGroup">
-                                            <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupTiming}" Style="{StaticResource SectionHeader}"/>
-                                        </StackPanel>
+                                        <StackPanel x:Name="TimingGroup"/>
                                     </Border>
                                     <Border Style="{StaticResource InnerGroupBorder}">
-                                        <StackPanel x:Name="RecognitionGroup">
-                                            <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupRecognition}" Style="{StaticResource SectionHeader}"/>
-                                        </StackPanel>
+                                        <StackPanel x:Name="RecognitionGroup"/>
                                     </Border>
                                 </StackPanel>
 
@@ -249,9 +245,7 @@
 
                                 <StackPanel x:Name="AdvancedPanel" Visibility="Collapsed" Margin="0,6,0,0">
                                     <Border Style="{StaticResource InnerGroupBorder}" Margin="0">
-                                        <StackPanel x:Name="AdvancedRecognitionGroup">
-                                            <TextBlock Text="{DynamicResource S.Realtime.ProfileGroupRecognition}" Style="{StaticResource SectionHeader}"/>
-                                        </StackPanel>
+                                        <StackPanel x:Name="AdvancedRecognitionGroup"/>
                                     </Border>
                                 </StackPanel>
                             </StackPanel>

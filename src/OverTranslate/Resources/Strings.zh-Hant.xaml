@@ -486,9 +486,6 @@
     <sys:String x:Key="S.Realtime.ProfileRevert">還原為範本的值：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">進階</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvancedModified">進階（已修改 {0} 項）</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupLayout">版面</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupTiming">時機</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupRecognition">辨識</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">僅適用於橫排</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字方向為直排的區塊不使用此設定。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>

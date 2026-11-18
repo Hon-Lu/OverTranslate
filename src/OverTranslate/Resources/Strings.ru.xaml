@@ -463,9 +463,6 @@
     <sys:String x:Key="S.Realtime.ProfileRevert">Вернуть значение шаблона: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">Дополнительно</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvancedModified">Дополнительно (изменено: {0})</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupLayout">Компоновка</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupTiming">Время</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupRecognition">Распознавание</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">Только горизонтальный текст</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">Не используется в областях с вертикальным направлением текста.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">Авто</sys:String>

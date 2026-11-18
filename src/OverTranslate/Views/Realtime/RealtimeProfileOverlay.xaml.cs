@@ -507,10 +507,10 @@ public partial class RealtimeProfileOverlay : UserControl
         Add(AdvancedRecognitionGroup, BuildRow(ProfileParam.IgnoreSmallPercent, "S.Realtime.ProfileIgnoreSmall", "S.Realtime.ProfileIgnoreSmallHint"));
         Add(AdvancedRecognitionGroup, BuildRow(ProfileParam.ConfidencePercent, "S.Realtime.ProfileConfidence", "S.Realtime.ProfileConfidenceHint"));
 
-        // A rule between rows, never above the first: the group's header is the first row's top.
+        // A rule between rows, never above the first: the card's own edge is the first row's top.
         static void Add(Panel group, ParamRow row)
         {
-            if (group.Children.Count > 1) group.Children.Add(Rule(new Thickness(0, 12, 0, 12)));
+            if (group.Children.Count > 0) group.Children.Add(Rule(new Thickness(0, 12, 0, 12)));
             group.Children.Add(row.Root);
         }
     }

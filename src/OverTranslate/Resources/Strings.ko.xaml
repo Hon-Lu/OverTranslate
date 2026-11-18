@@ -470,9 +470,6 @@
     <sys:String x:Key="S.Realtime.ProfileRevert">템플릿 값으로 되돌리기: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvanced">고급</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAdvancedModified">고급({0}개 변경됨)</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupLayout">레이아웃</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupTiming">타이밍</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGroupRecognition">인식</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">가로쓰기 전용</sys:String>
     <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">텍스트 방향이 세로쓰기인 블록에는 사용되지 않습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAuto">자동</sys:String>
