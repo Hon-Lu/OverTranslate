@@ -420,6 +420,9 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">Удалить эту область</sys:String>
 
     <!-- Block mode picker -->
+    <sys:String x:Key="S.Realtime.ModeAuto">Авто</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoSummary">Определяется по содержимому экрана — связный текст переводится целиком, меню и интерфейс — по пунктам</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoGuidance">Подходит для большинства случаев: сам отличает связный текст от отдельных надписей интерфейса. Если результат не тот, выберите один из режимов справа.</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitle">Субтитры / манга</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">Игра / интерфейс</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">Один фрагмент, который сменяется следующим — субтитры, сюжетные диалоги, манга</sys:String>

@@ -1018,7 +1018,9 @@ public partial class RealtimeBlockWindow : Window
                 if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } tilted)
                     yield return tilted;
             }
-            else if (_mode == RealtimeBlockMode.Panel)
+            // 自動 says group by group what it took each for; a block set to one mode reads every
+            // group as that mode. A group 自動 left unmarked is drawn as a line, like 字幕.
+            else if ((_mode == RealtimeBlockMode.Auto ? block.ReadAs : _mode) == RealtimeBlockMode.Panel)
             {
                 double fontGlyphHeight = GetFontGlyphHeight(block, block.Bounds.Height / _dpiY);
                 IReadOnlyList<Rect> sourceRows = block.SourceLineBounds ?? [block.Bounds];

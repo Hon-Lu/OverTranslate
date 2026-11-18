@@ -427,6 +427,9 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">이 블록 삭제</sys:String>
 
     <!-- Block mode picker -->
+    <sys:String x:Key="S.Realtime.ModeAuto">자동</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoSummary">화면 내용에 따라 자동으로 판단 — 이어서 읽는 글은 한 덩어리로, 메뉴와 인터페이스 글자는 항목별로 번역</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoGuidance">대부분의 상황에 적합합니다. 이어서 읽는 글과 흩어진 인터페이스 글자를 자동으로 구분합니다. 결과가 맞지 않으면 오른쪽 모드로 바꾸세요.</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitle">자막 / 만화</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">게임 / UI</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">한 덩어리의 글이 다음 글로 바뀌는 화면 — 자막, 스토리 대사, 만화 대사</sys:String>

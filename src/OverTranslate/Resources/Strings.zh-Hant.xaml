@@ -443,6 +443,9 @@
 
     <!-- Block mode picker. The em dash in the summaries separates what the mode is for from what
          it does to the text; en-dash-with-spaces reads better in English. -->
+    <sys:String x:Key="S.Realtime.ModeAuto">自動</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoSummary">依畫面內容自動判斷——對話整段翻譯，選單與介面逐項翻譯</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoGuidance">適合大多數情境；依畫面內容自動區分連續閱讀的文字與零散的介面文字。若結果不如預期，建議改用右側的模式。</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫畫</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / 介面</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段連續的話，整段換成下一段——影片字幕、劇情對話、漫畫對白</sys:String>

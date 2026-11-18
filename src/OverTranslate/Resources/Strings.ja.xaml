@@ -427,6 +427,9 @@
     <sys:String x:Key="S.Realtime.RemoveBlock">このブロックを削除</sys:String>
 
     <!-- Block mode picker -->
+    <sys:String x:Key="S.Realtime.ModeAuto">自動</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoSummary">画面の内容から自動で判断 — 続けて読む文章はまとめて、メニューや UI の文字は項目ごとに翻訳</sys:String>
+    <sys:String x:Key="S.Realtime.ModeAutoGuidance">ほとんどの場面に向いています。続けて読む文章と、ばらばらの UI の文字を自動で見分けます。結果が合わない場合は、右のモードに切り替えてください。</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / マンガ</sys:String>
     <sys:String x:Key="S.Realtime.ModeGameUi">ゲーム / UI</sys:String>
     <sys:String x:Key="S.Realtime.ModeSubtitleSummary">ひとまとまりの文が次の文に入れ替わる場面 — 字幕、ストーリー会話、マンガのセリフ</sys:String>

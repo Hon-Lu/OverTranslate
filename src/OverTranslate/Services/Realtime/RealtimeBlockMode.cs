@@ -24,7 +24,7 @@ namespace OverTranslate.Services.Realtime;
 ///
 /// A block's own answer lives with the block and is redrawn every sitting. What the settings file
 /// keeps is the answer a newly drawn block starts on — see
-/// <see cref="Models.RealtimeSettings.BlockMode"/> — persisted by name, so a third mode can be added
+/// <see cref="Models.RealtimeSettings.NewBlockMode"/> — persisted by name, so a third mode can be added
 /// without changing what the file looks like and a name this build cannot read falls back to the
 /// property's default.
 /// </remarks>
@@ -36,4 +36,19 @@ public enum RealtimeBlockMode
 
     /// <summary>An interface panel, a tooltip, an item description — smaller text, chunkier block.</summary>
     Panel,
+
+    /// <summary>
+    /// Not said: each cluster of text in the block is read as whichever of the two its own content
+    /// calls for, frame by frame — see <see cref="RealtimeAutoLayout"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is not the guess the remarks above retired. That one read the block's shape, which
+    /// is how the user dragged; this one reads the text, which is what they are translating, and it
+    /// answers per cluster rather than per block — so a dialogue box that turns into a list of
+    /// choices, or a subtitle over a game's interface, is not one answer stretched over both.</para>
+    ///
+    /// <para>Last in the enum so the two explicit modes keep their values; it is what a new block
+    /// starts on all the same — see <see cref="Models.RealtimeSettings.NewBlockMode"/>.</para>
+    /// </remarks>
+    Auto,
 }
