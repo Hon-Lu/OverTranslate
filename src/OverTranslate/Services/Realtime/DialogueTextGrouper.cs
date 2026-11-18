@@ -5,7 +5,8 @@ namespace OverTranslate.Services.Realtime;
 
 /// <summary>
 /// Dialogue-box geometry, independent of screenshot paragraph, punctuation and heading rules.
-/// Horizontal rows are completed first. An unresolved row is never partially joined vertically.
+/// Horizontal rows are completed first. An unresolved row is never partially joined vertically,
+/// but for a line beside a dialogue box's arrow or button (see <see cref="StacksBesideItems"/>).
 /// </summary>
 /// <remarks>
 /// <para>One content test is shared with the other grouper: a line that opens like a chat entry —
@@ -76,7 +77,8 @@ internal static class DialogueTextGrouper
         // ValuesBesideItems.
         var itemRows = new List<(Rect Span, List<OcrTextBlock> Row)>();
         var lineRows = new Dictionary<OcrTextBlock, List<OcrTextBlock>>(ReferenceEqualityComparer.Instance);
-        // 合併: the other lines of each line's row — see AsideOnly.
+        // The other lines of each line's row: what 合併 may stack across (AsideOnly), and what
+        // 整段 may (StacksBesideItems).
         var besides = new Dictionary<OcrTextBlock, List<OcrTextBlock>>(ReferenceEqualityComparer.Instance);
         foreach (var row in rows)
         {
@@ -120,9 +122,8 @@ internal static class DialogueTextGrouper
                 lineRows[line] = row;
                 rowLines.Add(line);
             }
-            if (merge)
-                foreach (var line in rowLines)
-                    besides[line] = rowLines.Where(other => !ReferenceEquals(other, line)).ToList();
+            foreach (var line in rowLines)
+                besides[line] = rowLines.Where(other => !ReferenceEquals(other, line)).ToList();
         }
         var chatNames = ChatNameLines(lines, joinedLines, maxStackGap);
         var groups = new List<List<OcrTextBlock>>();
@@ -132,7 +133,8 @@ internal static class DialogueTextGrouper
         {
             int target = -1;
             double nearest = double.MaxValue;
-            for (int i = 0; (merge || !line.Unresolved) && i < groups.Count; i++)
+            bool stacks = merge || !line.Unresolved || StacksBesideItems(line.Block, besides[line.Block], lines);
+            for (int i = 0; stacks && i < groups.Count; i++)
             {
                 if (!open[i]) continue;
                 var previous = groups[i][^1].LayoutBounds;
@@ -141,6 +143,11 @@ internal static class DialogueTextGrouper
                     ? NextRowMerging(previous, current, maxStackGap, out var rule)
                     : NextRow(previous, current, maxStackGap, out rule);
                 if (joins && merge && !AsideOnly(besides[groups[i][^1]], current, besides[line.Block], previous))
+                {
+                    joins = false;
+                    rule = "row-beside";
+                }
+                if (joins && !merge && !ItemBesideBoth(besides[groups[i][^1]], previous, besides[line.Block], current))
                 {
                     joins = false;
                     rule = "row-beside";
@@ -189,7 +196,7 @@ internal static class DialogueTextGrouper
                 if (current.Y > previous.Y && Math.Min(previous.Right, current.Right) > Math.Max(previous.Left, current.Left))
                     open[i] = false;
             }
-            if (target < 0) { groups.Add([line.Block]); open.Add(merge || !line.Unresolved); }
+            if (target < 0) { groups.Add([line.Block]); open.Add(stacks); }
             else groups[target].Add(line.Block);
         }
         trace?.RegisterGroups(groups);
@@ -481,6 +488,64 @@ internal static class DialogueTextGrouper
     }
 
     /// <summary>
+    /// 整段: whether a line its row cut in pieces may still be stacked — when it is a line, not an
+    /// item, and the only other thing on its row is one short item to its right (a page arrow,
+    /// Auto) with no short item stacked over or under it.
+    /// </summary>
+    /// <remarks>
+    /// <para>A dialogue box's 》 or Auto beside its last line cuts that row, and an unresolved row is
+    /// never stacked (see the class summary), so the box's two lines were parted
+    /// (ja-aa-nameplate ×3, en-uma-narration) where 逐項 and 自動 kept them. Whether the pair may
+    /// join across the item is asked in <see cref="ItemBesideBoth"/>.</para>
+    ///
+    /// <para>MEASURED (OcrHarness --auto-probe replay, 字幕・漫畫): letting any short items clear
+    /// of both lines through changed 40 frames, 29 of them interface captures — a city panel's
+    /// column of 0s beside its "Amenities from …" rows, a forum header's login, chat names. A
+    /// short item with another one in its column is a table's value, not a box's button; with
+    /// that, the right side only, and the tests of <see cref="ItemBesideBoth"/>, the 11 frames
+    /// that change are the arrow and Auto frames and nothing else. ja-va11-2line-list stays
+    /// parted: what sits beside its line is the next list column's entry, not a short item.</para>
+    /// </remarks>
+    private static bool StacksBesideItems(OcrTextBlock line, List<OcrTextBlock> besideIt,
+        List<(OcrTextBlock Block, bool Unresolved)> lines)
+    {
+        if (besideIt.Count != 1 || ShortItem(line.LayoutBounds)) return false;
+        var item = besideIt[0];
+        Rect r = item.LayoutBounds;
+        if (!ShortItem(r) || r.Left < line.LayoutBounds.Right) return false;
+        return !lines.Any(other => !ReferenceEquals(other.Block, item) && ShortItem(other.Block.LayoutBounds) &&
+            Math.Min(other.Block.LayoutBounds.Right, r.Right) > Math.Max(other.Block.LayoutBounds.Left, r.Left) &&
+            Math.Max(other.Block.LayoutBounds.Top - r.Bottom, r.Top - other.Block.LayoutBounds.Bottom) <= r.Height * 2);
+    }
+
+    /// <summary>
+    /// 整段: whether two stacked lines may join across the item beside one of them (see
+    /// <see cref="StacksBesideItems"/>) — only two substantial lines, only one of the two rows has
+    /// one, and it starts right of both lines, within <see cref="ItemBesideMaxGap"/> of the longer.
+    /// </summary>
+    /// <remarks>
+    /// <para>Narrower than 合併's <see cref="AsideOnly"/>, which measures each row's items against the
+    /// other line only: an item under the end of a longer line above sits in the column of the
+    /// text and may be part of it.</para>
+    ///
+    /// <para>MEASURED: the arrows and Auto sat 2.4–5.5 line heights right of the longer line. What
+    /// sat further off was another part of the screen — a dialogue log's Log and Sparks buttons
+    /// (6.8, 7.2), a menu's Other (14), a forum's login (13–27), a map's L:83 (25–37) — where
+    /// joining was right about as often as wrong, all on interface captures, and changing them is
+    /// not this rule's business. Short or unequal lines (a name over a
+    /// figure, an item title over its description) are not dialogue lines and are left parted.</para>
+    /// </remarks>
+    private static bool ItemBesideBoth(List<OcrTextBlock> aboveRow, Rect above, List<OcrTextBlock> belowRow, Rect below)
+    {
+        if (aboveRow.Count == 0 && belowRow.Count == 0) return true;
+        if (aboveRow.Count > 0 && belowRow.Count > 0) return false;
+        if (!SubstantialRows(above, below)) return false;
+        double right = Math.Max(above.Right, below.Right), height = Math.Max(above.Height, below.Height);
+        return aboveRow.Concat(belowRow).All(other =>
+            other.LayoutBounds.Left >= right && other.LayoutBounds.Left - right <= height * ItemBesideMaxGap);
+    }
+
+    /// <summary>
     /// Two rows long enough, and close enough in width, to be given extra tolerance on height and
     /// alignment — which a short name or an isolated symbol beside them must not borrow.
     /// </summary>
@@ -488,6 +553,12 @@ internal static class DialogueTextGrouper
         LineMeasure.Spans(a, LineMeasure.SubstantialLineMinAspect) &&
         LineMeasure.Spans(b, LineMeasure.SubstantialLineMinAspect) &&
         Math.Min(a.Width, b.Width) >= Math.Max(a.Width, b.Width) * 0.5;
+
+    /// <summary>
+    /// How far right of two stacked lines the one short item beside them may sit for 整段 to stack
+    /// them across it, in line heights — see <see cref="ItemBesideBoth"/>.
+    /// </summary>
+    private const double ItemBesideMaxGap = 6;
 
     /// <summary>How close in box height two pieces of one row have to be.</summary>
     private const double RowHeightRatio = 0.6;

@@ -621,8 +621,8 @@ public class RealtimeProfileTests
         Assert.Equal(items[0].Text, string.Join(" ", lines.Select(line => line.Text)));
     }
 
-    // ja-aa-nameplate-region: a dialogue box's 》 sits on its second line's row, which 整段 takes
-    // for a row it cannot stack.
+    // ja-aa-nameplate-region: a dialogue box's 》 sits on its second line's row, which 整段 once
+    // took for a row it cannot stack.
     private static List<OcrTextBlock> DialogueWithAnArrow() =>
     [
         At("オレのシゴトは、あの暗い墓場を", 378, 61, 967, 73),
@@ -636,7 +636,7 @@ public class RealtimeProfileTests
         var passage = OcrService.GroupRealtime(DialogueWithAnArrow(), 292, ProfileAt(RealtimeMergeLevels.Passage));
         var merged = OcrService.GroupRealtime(DialogueWithAnArrow(), 292, ProfileAt(RealtimeMergeLevels.Max));
 
-        Assert.Equal(3, passage.Count);
+        Assert.Equal(["オレのシゴトは、あの暗い墓場を 暗い目で見守るコトなのさ。", "》"], passage.Select(group => group.Text));
         Assert.Equal(["オレのシゴトは、あの暗い墓場を 暗い目で見守るコトなのさ。", "》"], merged.Select(group => group.Text));
         Assert.All(merged, group => Assert.Null(group.ReadAs));
     }
