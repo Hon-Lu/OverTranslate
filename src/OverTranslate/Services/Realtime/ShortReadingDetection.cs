@@ -80,9 +80,14 @@ internal static class ShortReadingDetection
     /// in the reasoning. <c>null</c> confidence means the engine reported no scores, and then this
     /// says nothing rather than guessing.
     /// </remarks>
-    public static bool IsUnconvincingShortText(string? text, double? confidence) =>
+    /// <param name="floor">
+    /// The score to be believed by: <see cref="ShortTextConfidenceFloor"/> unless a block's mode
+    /// moved it (短句辨識門檻, see <see cref="ResolvedProfile.ConfidenceFloor"/>).
+    /// </param>
+    public static bool IsUnconvincingShortText(
+        string? text, double? confidence, double floor = ShortTextConfidenceFloor) =>
         confidence is { } score
-        && score < ShortTextConfidenceFloor
+        && score < floor
         && (text?.Trim().Length ?? 0) < ShortTextLength;
 
     /// <summary>

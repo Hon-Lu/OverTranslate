@@ -33,4 +33,27 @@ internal static class RealtimeBandPlacement
         // keeps the start of the sentence readable, and the window clips the rest.
         return Math.Clamp(centred, 0, Math.Max(0, blockWidth - bandWidth));
     }
+
+    /// <summary>
+    /// The band's left edge set against the edge 譯文對齊 asks for — the text inside it starting at
+    /// the source's left edge — and kept inside the block. Centred, or
+    /// with no edge asked for, it is <see cref="Left(double, double, double, double)"/>.
+    /// </summary>
+    /// <remarks>
+    /// A source set flush left keeps its left edge whatever length the translation comes back: the
+    /// edge is where the reader's eye goes back to at each line, which is the case the centring above
+    /// does not cover.
+    /// </remarks>
+    /// <param name="padding">The band's own padding either side of its text.</param>
+    public static double Left(
+        double sourceLeft, double sourceWidth, double bandWidth, double blockWidth,
+        SourceAlignment? alignment, double padding)
+    {
+        double at = alignment switch
+        {
+            SourceAlignment.Left => sourceLeft - padding,
+            _ => sourceLeft + sourceWidth / 2 - bandWidth / 2,
+        };
+        return Math.Clamp(at, 0, Math.Max(0, blockWidth - bandWidth));
+    }
 }

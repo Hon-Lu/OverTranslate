@@ -7,8 +7,12 @@ namespace OverTranslate.Layout;
 /// <summary>Flows a complete translation through the original UI rows, in source reading order.</summary>
 internal static class RealtimePanelLines
 {
+    /// <param name="alignment">
+    /// Which end of its source row each row's box keeps when it is wider than the row — see
+    /// <see cref="AvailableWidths"/>. Null is the left end, as rows have always been set.
+    /// </param>
     public static List<TranslatedBlock> Split(TranslatedBlock block, Func<string, double> measure,
-        IReadOnlyList<double>? availableWidths = null)
+        IReadOnlyList<double>? availableWidths = null, SourceAlignment? alignment = null)
     {
         if (block.SourceLineBounds is not { Count: > 1 } rows ||
             rows.Any(r => r.IsEmpty || !double.IsFinite(r.Width) || !double.IsFinite(r.Height) ||
@@ -112,7 +116,11 @@ internal static class RealtimePanelLines
             result.Add(block with
             {
                 TranslatedText = text[from..to].Trim(),
-                Bounds = new Rect(rows[row].X, rows[row].Y, widths[row], rows[row].Height),
+                Bounds = new Rect(alignment switch
+                {
+                    SourceAlignment.Center => rows[row].X + rows[row].Width / 2 - widths[row] / 2,
+                    _ => rows[row].X,
+                }, rows[row].Y, widths[row], rows[row].Height),
                 SourceLineBounds = null,
             });
             cut = end;
@@ -124,20 +132,36 @@ internal static class RealtimePanelLines
     /// OCR bounds describe ink, not a chat column's capacity. A short wrapped tail
     /// may use the rest of its own paragraph's width, stopping before another block.
     /// </summary>
-    public static double[] AvailableWidths(TranslatedBlock block, IReadOnlyList<TranslatedBlock> scene)
+    /// <remarks>
+    /// The room is on the side the rows are set from (譯文對齊, see <see cref="RealtimeSourceAlignment"/>):
+    /// past the right end of a row set flush left, as before; for a centred row the same either way,
+    /// as far as the nearer side allows. Where <see cref="Split"/> then places a row is that side's
+    /// too.
+    /// </remarks>
+    public static double[] AvailableWidths(TranslatedBlock block, IReadOnlyList<TranslatedBlock> scene,
+        SourceAlignment? alignment = null)
     {
         var rows = block.SourceLineBounds ?? [block.Bounds];
         return rows.Select(row =>
         {
             double right = block.Bounds.Right;
+            double left = block.Bounds.Left;
             foreach (var other in scene)
             {
                 if (ReferenceEquals(other, block)) continue;
                 foreach (var obstacle in other.SourceLineBounds ?? [other.Bounds])
-                    if (obstacle.Left >= row.Right && obstacle.Top < row.Bottom && obstacle.Bottom > row.Top)
-                        right = Math.Min(right, obstacle.Left - 2);
+                {
+                    if (obstacle.Top >= row.Bottom || obstacle.Bottom <= row.Top) continue;
+                    if (obstacle.Left >= row.Right) right = Math.Min(right, obstacle.Left - 2);
+                    if (obstacle.Right <= row.Left) left = Math.Max(left, obstacle.Right + 2);
+                }
             }
-            return Math.Max(row.Width, right - row.Left);
+            double centre = row.Left + row.Width / 2;
+            return alignment switch
+            {
+                SourceAlignment.Center => Math.Max(row.Width, 2 * Math.Min(centre - left, right - centre)),
+                _ => Math.Max(row.Width, right - row.Left),
+            };
         }).ToArray();
     }
 

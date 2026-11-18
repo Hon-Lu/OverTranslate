@@ -342,9 +342,16 @@ internal static class RealtimeDetectorSize
     /// that runs ACROSS — subtitle strips and interface panels — and columns do not behave like it;
     /// see <see cref="ColumnsAreReadAtTheScreenshotSize"/>.
     /// </param>
+    /// <param name="fraction">
+    /// 辨識解析度, when the block's mode sets one (see <see cref="ResolvedProfile.DetectorFraction"/>):
+    /// read at that fraction of the longer side, falling back to whichever of the two measured
+    /// fractions lies further from it and then to the native size. Null is the measured rule.
+    /// Neither a block under <see cref="DownscaleMinSide"/> nor a vertical one reads it.
+    /// </param>
     public static (int Primary, IReadOnlyList<int> Fallbacks) For(
         int width, int height, RealtimeBlockMode mode,
-        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal)
+        RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal,
+        double? fraction = null)
     {
         var native = Math.Max(width, height);
 
@@ -364,7 +371,16 @@ internal static class RealtimeDetectorSize
         var chosen = isStrip ? StripFraction : PanelFraction;
         var other = isStrip ? PanelFraction : StripFraction;
 
-        var primary = RoundToStride((int)(native * chosen));
+        // The user's own figure starts the chain, and the measured fraction it is furthest from is
+        // the first thing tried after it: the fallbacks exist for text out of range in the other
+        // direction, and a figure near one of the two is already where that one would have looked.
+        if (fraction is { } own)
+        {
+            chosen = own;
+            other = own >= (StripFraction + PanelFraction) / 2 ? PanelFraction : StripFraction;
+        }
+
+        var primary = chosen >= 1.0 ? native : RoundToStride((int)(native * chosen));
         var fallbacks = new[] { other, NativeFraction }
             .Select(fraction => fraction >= 1.0 ? native : RoundToStride((int)(native * fraction)))
             .Where(size => size != primary)

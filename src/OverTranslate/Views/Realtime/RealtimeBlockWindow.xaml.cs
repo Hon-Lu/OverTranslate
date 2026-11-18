@@ -136,7 +136,12 @@ public partial class RealtimeBlockWindow : Window
     // How far past their boxes the lines of the rebuild in progress run — see OverhangOf. Null
     // outside a rebuild.
     private Lazy<Dictionary<TranslatedBlock, System.Drawing.Rectangle>>? _overhangs;
-    private readonly RealtimeBlockMode _mode;
+    // How the block's mode draws (ResolvedProfile.Layout): Auto draws each group as it was read, the other two every group
+    // their way. Changed under a running session by SetLayout.
+    private RealtimeBlockMode _mode;
+
+    // 譯文對齊, set with _mode and changed with it — see RealtimeSourceAlignment.For.
+    private RealtimeTextAlign _align;
 
     // Which way this block's source runs, as the user said in edit mode. It decides how the
     // translation is set here and how the frame was read upstream — see RealtimeTextOrientation.
@@ -208,6 +213,10 @@ public partial class RealtimeBlockWindow : Window
     /// <param name="fixedFontSize">
     /// The size 顯示外觀 → 文字大小 → 固定 asked for, in device-independent units; null for 自動.
     /// </param>
+    /// <param name="align">
+    /// 譯文對齊 (<see cref="ResolvedProfile.Align"/>). Null is the value of the preset
+    /// <paramref name="mode"/> stands for, which draws every group as that mode always has.
+    /// </param>
     public RealtimeBlockWindow(
         int regionId,
         System.Drawing.Rectangle physBounds,
@@ -225,13 +234,15 @@ public partial class RealtimeBlockWindow : Window
         RealtimeTextOrientation orientation = RealtimeTextOrientation.Horizontal,
         System.Drawing.Point? displayLocation = null,
         double displayScale = 1.0,
-        double? fixedFontSize = null)
+        double? fixedFontSize = null,
+        RealtimeTextAlign? align = null)
     {
         InitializeComponent();
         // Shown again over a game after its source was covered (see the session controller's
         // UpdateBlockVisibility), and showing must never take the focus from the game.
         ShowActivated = false;
         _mode = mode;
+        _align = align ?? ResolvedProfile.ForLayout(mode).Align;
         _orientation = orientation;
         _fixedFontSize = fixedFontSize;
         _border = border;
@@ -329,6 +340,21 @@ public partial class RealtimeBlockWindow : Window
         // WDA_EXCLUDEFROMCAPTURE so the loop would not read its own translation back; keeping the
         // overlays out of the frame is now the capture backend's job and only the backend's, which is
         // why a session cannot start on a source that has not proved it (#105).
+    }
+
+    /// <summary>
+    /// Draws the groups the way the block's mode now says — after its mode was changed or deleted
+    /// on the page while the session runs. The lines on screen are drawn again at once; the session
+    /// reads the block again beside it, unless only 譯文對齊 changed.
+    /// </summary>
+    public void SetLayout(RealtimeBlockMode layout, RealtimeTextAlign align)
+    {
+        if (_mode == layout && _align == align) return;
+        _mode = layout;
+        _align = align;
+
+        if (!_isLoaded) return;
+        Rebuild();
     }
 
     public void SetLines(IReadOnlyList<TranslatedBlock> lines)
@@ -540,8 +566,15 @@ public partial class RealtimeBlockWindow : Window
     private SolidColorBrush BorderBrushFor(TranslatedBlock line) =>
         _fixedBorderBrush ?? Freeze(new SolidColorBrush(RealtimeSubtitleColors.RandomBorder(line.OriginalText)));
 
+    /// <param name="alignment">
+    /// 譯文對齊 on this group — see <see cref="RealtimeSourceAlignment.For"/>. Null, or centred, is
+    /// the band as it has always been set: round the source's centre. Left, the band keeps the
+    /// source's left edge and grows to the right, and the text in it keeps to that side.
+    /// Ignored on a tilted card, which is set along its own margin.
+    /// </param>
     private LineVisual? BuildLine(
-        TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame)
+        TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame, System.Drawing.Bitmap? repairedFrame,
+        SourceAlignment? alignment = null)
     {
         if (line.Tilt is { } tilt)
             return BuildTiltedLine(line, tilt, canvasWidth, canvasHeight, frame, repairedFrame);
@@ -695,7 +728,7 @@ public partial class RealtimeBlockWindow : Window
 
         // The scrim covers the source, so it grows around the source's own centre — horizontally as
         // well as vertically — rather than hanging off its top-left corner.
-        double scrimLeft = RealtimeBandPlacement.Left(left, sourceWidth, scrimWidth, canvasWidth);
+        double scrimLeft = RealtimeBandPlacement.Left(left, sourceWidth, scrimWidth, canvasWidth, alignment, ScrimPaddingX);
         double scrimTop = Math.Clamp(
             coverage.Y / _dpiY + coverage.Height / _dpiY / 2 - scrimHeight / 2,
             0, Math.Max(0, canvasHeight - scrimHeight));
@@ -791,11 +824,20 @@ public partial class RealtimeBlockWindow : Window
                 //
                 // Read right to left, the lines start at the same right edge instead: Left is the
                 // start of a line, and a TextBlock set right to left mirrors it (TextDirection).
-                TextAlignment = wrapped ? TextAlignment.Left : TextAlignment.Center,
+                //
+                // Set against the source's left edge (譯文對齊), the text keeps to that side of the
+                // box, one line or several, its lines starting at the same edge as ever.
+                TextAlignment = wrapped || alignment is SourceAlignment.Left
+                    ? TextAlignment.Left
+                    : TextAlignment.Center,
                 FlowDirection = TextDirection.Of(line.TranslatedText, _targetLanguage),
-                HorizontalAlignment = wrapped
-                    ? System.Windows.HorizontalAlignment.Center
-                    : System.Windows.HorizontalAlignment.Stretch,
+                HorizontalAlignment = alignment switch
+                {
+                    SourceAlignment.Left => System.Windows.HorizontalAlignment.Left,
+                    _ => wrapped
+                        ? System.Windows.HorizontalAlignment.Center
+                        : System.Windows.HorizontalAlignment.Stretch,
+                },
             })
         };
 
@@ -1022,6 +1064,7 @@ public partial class RealtimeBlockWindow : Window
             // group as that mode. A group 自動 left unmarked is drawn as a line, like 字幕.
             else if ((_mode == RealtimeBlockMode.Auto ? block.ReadAs : _mode) == RealtimeBlockMode.Panel)
             {
+                var alignment = RealtimeSourceAlignment.For(_align, RealtimeBlockMode.Panel, block.SourceLineBounds);
                 double fontGlyphHeight = GetFontGlyphHeight(block, block.Bounds.Height / _dpiY);
                 IReadOnlyList<Rect> sourceRows = block.SourceLineBounds ?? [block.Bounds];
                 double fontSize = _fixedFontSize ?? Math.Max(1, Math.Min(
@@ -1030,10 +1073,10 @@ public partial class RealtimeBlockWindow : Window
                 var rows = RealtimePanelLines.Split(block,
                     text => new FormattedText(text, CultureInfo.CurrentCulture, TextDirection.Of(text, _targetLanguage),
                         typeface, fontSize, Brushes.Black, _dpiY).WidthIncludingTrailingWhitespace * _dpiX,
-                    RealtimePanelLines.AvailableWidths(block, _layoutLines));
+                    RealtimePanelLines.AvailableWidths(block, _layoutLines, alignment), alignment);
                 if (rows.Count == 1 && rows[0].SourceLineBounds is { Count: > 1 })
                 {
-                    if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
+                    if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame, alignment) is { } fallback) yield return fallback;
                     continue;
                 }
                 // 固定 keeps the size and gives up the rows instead: one row too long for the source
@@ -1056,7 +1099,7 @@ public partial class RealtimeBlockWindow : Window
                     && (measured.Width > row.Bounds.Width / _dpiX
                         || measured.Height > NearestRowPitch(row.Bounds, block, rows.Select(other => other.Bounds)) / _dpiY)))
                 {
-                    if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } fallback) yield return fallback;
+                    if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame, alignment) is { } fallback) yield return fallback;
                     continue;
                 }
                 // Keep one font size across the paragraph, including uneven row widths. 固定 has
@@ -1096,14 +1139,15 @@ public partial class RealtimeBlockWindow : Window
                     var row = rows[index];
                     // Invalid source geometry keeps the original whole-block fallback.
                     var visual = row.SourceLineBounds is { Count: > 1 }
-                        ? BuildLine(row, canvasWidth, canvasHeight, frame, repairedFrame)
+                        ? BuildLine(row, canvasWidth, canvasHeight, frame, repairedFrame, alignment)
                         : BuildPanelLine(row, canvasWidth, canvasHeight, frame, fontSize, index == 0 ? scrim : null, repairedFrame,
                             // The group's patch is the first row's, so it is measured against the whole group.
-                            () => OverhangOf(block));
+                            () => OverhangOf(block), alignment);
                     if (visual is { } drawn) yield return index == 0 ? drawn : drawn with { JoinsPrevious = true };
                 }
             }
-            else if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame) is { } visual)
+            else if (BuildLine(block, canvasWidth, canvasHeight, frame, repairedFrame,
+                         RealtimeSourceAlignment.For(_align, RealtimeBlockMode.Subtitle, block.SourceLineBounds)) is { } visual)
                 yield return visual;
         }
     }
@@ -1851,7 +1895,8 @@ public partial class RealtimeBlockWindow : Window
 
     private LineVisual? BuildPanelLine(
         TranslatedBlock line, double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame,
-        double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame, Func<System.Drawing.Rectangle?> overhang)
+        double fontSize, Rect? scrim, System.Drawing.Bitmap? repairedFrame, Func<System.Drawing.Rectangle?> overhang,
+        SourceAlignment? alignment = null)
     {
         var canvas = new Rect(0, 0, canvasWidth * _dpiX, canvasHeight * _dpiY);
         var cell = Rect.Intersect(line.Bounds, canvas);
@@ -1906,11 +1951,17 @@ public partial class RealtimeBlockWindow : Window
             {
                 Stretch = Stretch.Uniform,
                 StretchDirection = StretchDirection.DownOnly,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                HorizontalAlignment = alignment switch
+                {
+                    SourceAlignment.Center => System.Windows.HorizontalAlignment.Center,
+                    _ => System.Windows.HorizontalAlignment.Left,
+                },
                 VerticalAlignment = VerticalAlignment.Center,
                 // On the source row's own start, the left one, whichever way the row reads: each row
                 // has a box of its own, as ragged at the right as the source's lines were, and only
-                // their left edges line up — a menu read down its margin stays read down it.
+                // their left edges line up — a menu read down its margin stays read down it. A row
+                // whose source is centred (譯文對齊) keeps to that instead, its box placed round the
+                // row's centre — see RealtimePanelLines.Split.
                 Child = Outlined(edge, fontSize, () => new TextBlock
                 {
                     Text = line.TranslatedText, FontFamily = _textFont, FontSize = fontSize,

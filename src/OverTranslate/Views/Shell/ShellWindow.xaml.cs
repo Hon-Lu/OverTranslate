@@ -244,6 +244,22 @@ public partial class ShellWindow : Window
     /// <summary>Puts the 即時翻譯 shortcut's refusal on the realtime page — see MainWindow.</summary>
     public void ShowRealtimeShortcutRefusal(string key) => _realtimePage.ShowShortcutRefusal(key);
 
+    /// <summary>
+    /// Opens one 即時翻譯 mode over the realtime page — the edit layer's 模式設定…, once the page is
+    /// on screen.
+    /// </summary>
+    public void ShowRealtimeProfile(string profileId) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => RealtimeProfiles.Open(profileId));
+
+    /// <summary>
+    /// Opens one 即時翻譯 mode over the whole window, from the 模式 list: hosted here rather than in
+    /// the page, as the service panel is, so the scrim covers the nav rail too.
+    /// </summary>
+    public void OpenRealtimeProfile(string profileId) => RealtimeProfiles.Open(profileId);
+
+    /// <summary>Opens the first step of a new custom 即時翻譯 mode, over the whole window.</summary>
+    public void OpenNewRealtimeProfile() => RealtimeProfiles.OpenNew();
+
     public void RefreshHotkeyHints()
     {
         var settings = SettingsService.Instance.Current;

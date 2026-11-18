@@ -441,19 +441,91 @@
     <sys:String x:Key="S.Realtime.SessionEndedTitle">即時翻譯已結束</sys:String>
     <sys:String x:Key="S.Realtime.RemoveBlock">移除此區塊</sys:String>
 
-    <!-- Block mode picker. The em dash in the summaries separates what the mode is for from what
-         it does to the text; en-dash-with-spaces reads better in English. -->
-    <sys:String x:Key="S.Realtime.ModeAuto">自動</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoSummary">依畫面內容自動判斷——對話整段翻譯，選單與介面逐項翻譯</sys:String>
-    <sys:String x:Key="S.Realtime.ModeAutoGuidance">適合大多數情境；依畫面內容自動區分連續閱讀的文字與零散的介面文字。若結果不如預期，建議改用右側的模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitle">字幕 / 漫畫</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUi">遊戲 / 介面</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleSummary">一段連續的話，整段換成下一段——影片字幕、劇情對話、漫畫對白</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiSummary">各自獨立的零散短文字——HUD、選單、物品說明、聊天室</sys:String>
-    <sys:String x:Key="S.Realtime.ModeSubtitleGuidance">適合影音字幕、遊戲劇情對話、漫畫文字等情境；若內容以連續閱讀的文字為主，建議使用此模式。</sys:String>
-    <sys:String x:Key="S.Realtime.ModeGameUiGuidance">適合遊戲畫面、聊天室、選單與介面文字等情境；若內容不是字幕、劇情對話或漫畫文字，建議使用此模式。</sys:String>
-    <sys:String x:Key="S.Realtime.CollapseGuidance">收合模式說明</sys:String>
-    <sys:String x:Key="S.Realtime.ExpandGuidance">展開模式說明</sys:String>
+    <!-- Block mode picker on the edit layer. The em dash in the summaries separates what the mode
+         is for from what it does to the text; en-dash-with-spaces reads better in English. -->
+    <sys:String x:Key="S.Realtime.ProfileMenu">模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandard">標準</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitle">字幕・漫畫</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterface">遊戲介面・聊天室</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">依畫面內容自動調整——滿足日常使用需求，建議優先使用</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">連續閱讀的文字——影片字幕、劇情對話、漫畫對白</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">各自獨立的文字——遊戲選單、狀態欄、聊天室</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardGuidance">適合大多數畫面，會依文字內容與排列決定是否合併。若對話被拆開，或選單文字被合在一起時，可改用其他模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSubtitleGuidance">適合影片字幕、遊戲劇情對話與漫畫對白。多行連續的文字會傾向合併翻譯；選單或介面文字較多時，可改用其他模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileInterfaceGuidance">適合遊戲選單、狀態欄、聊天室等各自獨立的文字。若一段對話被拆成多句翻譯時，可改用「字幕・漫畫」模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOn">以「{0}」為範本。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileBasedOnModified">以「{0}」為範本，已修改 {1} 項。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManage">模式設定…</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManageTip">結束目前的即時翻譯並開啟模式設定畫面</sys:String>
+
+    <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
+    <sys:String x:Key="S.Realtime.Profiles">模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesHint">模式可在每個翻譯區塊上獨立切換。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetTag">預設</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateOf">範本：{0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateModified">範本：{0}・已修改 {1} 項</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdd">新增自訂模式（{0}/{1}）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileLimit">自訂模式最多 {0} 個</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewTitle">新增自訂模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplate">範本</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileTemplateHint">選擇一個預設作為範本，建立後可接續調整各項設定。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileCreate">建立</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileLiveApply">設定變更後會立即套用至目前的翻譯</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNewName">自訂模式 {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">預設模式無法修改。需要調整時，可在清單新增自訂模式並選此模式為範本。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileName">名稱</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileNameTaken">名稱重複，請重新命名</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetAll">還原為範本</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDelete">刪除</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteTitle">刪除自訂模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDeleteConfirm">確定刪除「{0}」模式嗎？</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileModified">已修改</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileRevert">還原為範本的值：{0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdvanced">進階</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdvancedModified">進階（已修改 {0} 項）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileHorizontalOnly">僅適用於橫排</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileHorizontalOnlyTip">文字方向為直排的區塊不使用此設定。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAuto">自動</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePerGroup">依文字內容調整</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileManual">手動</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMerge">語句合併</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">上下語句被拆開時往右調，較容易合併；不相關的行被合在一起時往左調，較容易分開。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNone">不合併</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItems">逐項</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAuto">自動判斷</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">自動判斷・{0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean1">偏逐項</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean2">稍偏逐項</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean4">稍偏整段</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeLean5">偏整段</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassage">整段</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlock">合併</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">每行獨立翻譯，不合併上下行。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">每行獨立翻譯，只有明顯是同一句時才會上下合併。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">依文字排版與內容判斷是否合併，往右較容易合併上下行。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大小與位置相近的上下多行語句，會優先合併成一段。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">不受字級與對齊限制，位置相近的上下語句都會合併成一段。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlign">譯文對齊</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignCenter">置中</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignLeft">靠左</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">依原文的對齊方式排列；無法判斷時，整段文字置中，零散文字靠左。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettle">畫面文字穩定後再讀取</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleHint">文字容易閃爍或是不穩定時可往右調，但翻譯速度也會隨之變慢。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">整段文字不等待；零散文字約等 0.15 秒。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSettleNone">不等待</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSeconds">約 {0} 秒</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeep">原文消失後立即清除譯文</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileKeepHint">原文消失時會立即清除譯文；部分情境下譯文可能會發生短暫閃爍。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDetector">辨識解析度</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDetectorHint">小字辨識不清時調高；處理器或顯示卡負擔太重時調低。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileDetectorAutoTip">整段文字設為 85%；零散文字設為 68%。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePercent">{0}%</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileIgnoreSmall">過濾小字</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileIgnoreSmallHint">以畫面上的主要文字為基準，過濾小於設定比例的文字。比例越高，過濾的文字越多，部分需要翻譯的小字也可能被濾掉。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidence">短句辨識門檻</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileConfidenceHint">僅適用於未滿 10 字的文字。調高可減少誤判，但部分較短的文字可能無法辨識；調低則能辨識更多文字，但也可能增加誤判。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileOff">關閉</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">即時翻譯已中止：{0}</sys:String>

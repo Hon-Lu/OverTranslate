@@ -9,12 +9,16 @@
          The halves share one width, as the page's do (RealtimeModeSegment), through the host's
          shared size scope: every half of every switch is as wide as the widest word. Star columns
          did not hold them equal — sized to content in an Auto column, "Automatic" came out wider
-         than "Fixed", and a marker one first half wide overshot the tray. -->
+         than "Fixed", and a marker one first half wide overshot the tray.
+
+         A third part is there for the choices of three (譯文對齊: 自動｜置中｜靠左) and folded away
+         otherwise: its column joins the shared width only once it is given words — see SetLabels. -->
     <Border Style="{StaticResource SegmentedTray}">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
+                <ColumnDefinition x:Name="ThirdColumn" Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Border x:Name="Thumb"
                     Grid.Column="0"
@@ -31,6 +35,11 @@
                          Checked="Radio_Checked"/>
             <RadioButton x:Name="SecondRadio"
                          Grid.Column="1"
+                         Style="{StaticResource SegmentedTrackRadio}"
+                         Checked="Radio_Checked"/>
+            <RadioButton x:Name="ThirdRadio"
+                         Grid.Column="2"
+                         Visibility="Collapsed"
                          Style="{StaticResource SegmentedTrackRadio}"
                          Checked="Radio_Checked"/>
         </Grid>

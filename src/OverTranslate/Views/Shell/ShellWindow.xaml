@@ -12,6 +12,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:OverTranslate.Views.Shell"
         xmlns:settings="clr-namespace:OverTranslate.Views.Settings"
+        xmlns:realtime="clr-namespace:OverTranslate.Views.Realtime"
         Title="OverTranslate"
         Width="1280" Height="760"
         MinWidth="1024" MinHeight="640"
@@ -465,6 +466,7 @@
             <settings:ServiceSettingsOverlay Grid.ColumnSpan="2" x:Name="ServiceSettings"/>
             <settings:DiagnosticNoteOverlay Grid.ColumnSpan="2" x:Name="DiagnosticNote"/>
             <settings:QuickTranslateSettingsOverlay Grid.ColumnSpan="2" x:Name="QuickTranslateSettings"/>
+            <realtime:RealtimeProfileOverlay Grid.ColumnSpan="2" x:Name="RealtimeProfiles"/>
             <!-- Last: it is opened from the AI translation panel inside ServiceSettings too. -->
             <settings:AssetsLocationOverlay Grid.ColumnSpan="2" x:Name="AssetsLocation"/>
         </Grid>

@@ -1,0 +1,102 @@
+<UserControl x:Class="OverTranslate.Views.Realtime.RealtimeProfilesCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <!-- One mode in the list, on one line: the whole row opens it. No selected look — the list
+             says which modes there are, not which one is in use; each block has its own. The last
+             row drops its rule (BorderThickness 0), so it does not double the list's own border.
+             No padding on the row: the cells carry it, so the name's band (ProfileNameBand) runs the
+             row's full height. -->
+        <Style x:Key="ProfileListRow" TargetType="Button">
+            <Setter Property="FontFamily"      Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"        Value="{StaticResource AppFontSize}"/>
+            <Setter Property="Foreground"      Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent"
+                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The name's cell: a band of the accent's tint down the row's left, so the names read as a
+             column of their own and not as the first words of the sentence beside them. It steps
+             with the row — AppAccentSubtle's own hover and pressed tints, the ones the nav rail's
+             rows use — so a hovered or pressed row answers across its whole width. -->
+        <Style x:Key="ProfileNameBand" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppAccentSubtle}"/>
+            <Setter Property="Padding"    Value="16,8,12,8"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsKeyboardFocused, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppAccentSubtlePressed}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource CardBorder}">
+        <StackPanel>
+            <!-- The heading and the add on one line, as 顯示外觀 has its reset: adding acts on the
+                 whole card, not on any row of it, and at the foot of the list it read as one more
+                 step to go through before 選取翻譯區塊. Disabled at the cap rather than hidden: the
+                 count on it is what says why it stopped. -->
+            <!-- The heading as on the rest of the page (RealtimeCardTitle), with the button let into its line
+                 by the negative margin so the 30-high button does not push the title down. The hint
+                 under it is the heading's subtitle, so it sits close, the 4 PageSubtitle leaves. -->
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{DynamicResource S.Realtime.Profiles}" Style="{StaticResource RealtimeCardTitle}"
+                           Margin="0"/>
+                <Button x:Name="AddButton" Grid.Column="1"
+                        Style="{StaticResource IconTextButton}"
+                        Margin="12,-5,0,-5"
+                        VerticalAlignment="Center"
+                        ToolTipService.ShowOnDisabled="True"
+                        AutomationProperties.AutomationId="ProfileAddRow"
+                        Click="AddButton_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="12" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                        <TextBlock x:Name="AddButtonText" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+            <TextBlock Text="{DynamicResource S.Realtime.ProfilesHint}" Style="{StaticResource FieldHint}"
+                       LineHeight="16" Margin="0,0,0,10"/>
+
+            <!-- The list only: a mode is looked at and changed in RealtimeProfileOverlay, over the
+                 shell, opened from its row. -->
+            <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10">
+                <StackPanel x:Name="ListHost" SizeChanged="ListHost_SizeChanged"/>
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,7 +1,8 @@
 <UserControl x:Class="OverTranslate.Views.Realtime.RealtimePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ctl="clr-namespace:OverTranslate.Controls">
+             xmlns:ctl="clr-namespace:OverTranslate.Controls"
+             xmlns:local="clr-namespace:OverTranslate.Views.Realtime">
 
     <Grid Margin="28,22,28,20">
         <Grid.RowDefinitions>
@@ -30,7 +31,8 @@
                      which matters on a page whose real work — the three steps — is underneath. -->
                 <Border Style="{StaticResource CardBorder}">
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource S.Realtime.TranslationSettings}" Style="{StaticResource SectionHeader}"/>
+                        <!-- Card headings on this page: RealtimeCardTitle, 設定's CardTitle a step down. -->
+                        <TextBlock Text="{DynamicResource S.Realtime.TranslationSettings}" Style="{StaticResource RealtimeCardTitle}"/>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -400,15 +402,17 @@
                              now, so it belongs to the name of the card rather than to any group under
                              it — there were three of them before, each inside a group, and none could
                              say how much of the card it was about to undo. -->
-                        <Grid Margin="0,0,0,6">
+                        <!-- The button's 30 is let into the heading's line by the negative margin, as
+                             開啟資料夾 is on 設定's 辨識模型, so it does not push the title down. -->
+                        <Grid Margin="0,0,0,10">
                             <TextBlock Text="{DynamicResource S.Realtime.Appearance}"
-                                       Style="{StaticResource SectionHeader}"
-                                       VerticalAlignment="Center"
+                                       Style="{StaticResource RealtimeCardTitle}"
                                        Margin="0"/>
                             <Button x:Name="ResetAppearanceBtn"
                                     Style="{StaticResource IconTextButton}"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
+                                    Margin="0,-5,0,-5"
                                     ToolTip="{DynamicResource S.Realtime.ResetAppearance}"
                                     AutomationProperties.Name="{DynamicResource S.Realtime.ResetAppearance}"
                                     Click="ResetAppearanceBtn_Click">
@@ -989,6 +993,11 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ── 模式 ── -->
+                <!-- After 顯示外觀 and like it kept, but not locked while a session runs: a mode
+                     changed here reaches the running blocks at once. See RealtimeProfilesCard. -->
+                <local:RealtimeProfilesCard x:Name="ProfilesCard"/>
+
                 <!-- ── 運作方式 ── -->
                 <!-- Four lines, because the on-screen half of this feature is a mode the user has
                      not seen before: what the button does, what happens next, the one property that
@@ -996,7 +1005,7 @@
                      way to put the overlays away for a scene without giving up the blocks. -->
                 <Border Style="{StaticResource CardBorder}">
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource S.Realtime.HowItWorks}" Style="{StaticResource SectionHeader}"/>
+                        <TextBlock Text="{DynamicResource S.Realtime.HowItWorks}" Style="{StaticResource RealtimeCardTitle}"/>
                         <TextBlock Style="{StaticResource FieldHint}" TextWrapping="Wrap" LineHeight="16" Margin="0,0,0,6"
                                    Text="{DynamicResource S.Realtime.Step1}"/>
                         <TextBlock Style="{StaticResource FieldHint}" TextWrapping="Wrap" LineHeight="16" Margin="0,0,0,6"
