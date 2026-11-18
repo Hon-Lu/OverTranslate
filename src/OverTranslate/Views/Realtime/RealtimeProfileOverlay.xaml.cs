@@ -365,8 +365,12 @@ public partial class RealtimeProfileOverlay : UserControl
         {
             bool modified = !preset && RealtimeProfileEditing.IsModified(stored, row.Param);
             // Its line is kept while hidden on a custom mode, so setting a value does not push the
-            // rows below it down. A preset never shows it.
-            row.Modified.Visibility = modified ? Visibility.Visible : preset ? Visibility.Collapsed : Visibility.Hidden;
+            // rows below it down: beside a slider the row is about that tall anyway. Not on the tick's row,
+            // which has no slider beside the name, so the kept line was a gap between the name and its
+            // hint; there it comes and goes with the tick. A preset never shows it.
+            row.Modified.Visibility = modified ? Visibility.Visible
+                : preset || row.Param == ProfileParam.ClearAfterEmptyReads ? Visibility.Collapsed
+                : Visibility.Hidden;
             row.Revert.ToolTip = row.Param == ProfileParam.ClearAfterEmptyReads
                 ? LocalizationService.Get("S.Realtime.ProfileResetAll")
                 : LocalizationService.Format("S.Realtime.ProfileRevert", TemplateDisplay(template, row.Param));
