@@ -427,7 +427,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandard">Standard</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitle">Subtitles &amp; Comics</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterface">Game UI &amp; Chat</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileStandardSummary">Automatically adjusts text merging — suitable for most screens</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">Adapts automatically to on-screen content — covers everyday use; recommended</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">Continuous text — video subtitles, story dialogue, comic speech bubbles</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">Standalone text — game menus, status bars, chat</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">Suitable for most screens. Whether lines are merged depends on the content and layout of the text. If dialogue is split or menu items are merged, try another mode.</sys:String>

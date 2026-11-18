@@ -2376,7 +2376,7 @@ public partial class RealtimeEditWindow : Window
             var choice = _choices.FirstOrDefault(choice => choice.Id == ProfileId) ?? _choices[0];
 
             _menuName.Text = choice.Name;
-            MenuButton.ToolTip = choice.IsPreset ? RealtimeProfileEditing.PresetSummary(choice.Id) : choice.Name;
+            MenuButton.ToolTip = choice.IsPreset ? SummaryTip(RealtimeProfileEditing.PresetSummary(choice.Id)) : choice.Name;
             System.Windows.Automation.AutomationProperties.SetItemStatus(MenuButton, choice.Name);
 
             var shown = HintKey(choice);
@@ -2624,6 +2624,14 @@ public partial class RealtimeEditWindow : Window
         // The block's blue at about a third of its strength, under the 自訂 tag.
         private static readonly SolidColorBrush CustomTagFill = Freeze(Color.FromArgb(0x59, 0x1E, 0x90, 0xD5));
 
+        /// <summary>A preset's summary as a tooltip, a little wider than the app's own.</summary>
+        /// <remarks>
+        /// At the app's 340 the Chinese summary of 標準 (25 characters at 12) ran a few pixels over
+        /// and left its last character alone on a second line; at 400 it is one line, and the
+        /// longer languages still wrap to two.
+        /// </remarks>
+        internal static System.Windows.Controls.ToolTip SummaryTip(string summary) => new() { Content = summary, MaxWidth = 400 };
+
         // Display formatting rounds glyph widths and positions onto whole pixels, which at these
         // sizes is the difference between a stem one pixel wide and a stem smeared across two. WPF's
         // default (Ideal) keeps the typographic metrics instead, which is right for large text and
@@ -2760,7 +2768,7 @@ public partial class RealtimeEditWindow : Window
             var rows = new StackPanel { Margin = new Thickness(4 * uiScale) };
 
             foreach (var choice in choices.Where(choice => choice.IsPreset))
-                rows.Children.Add(Row(choice.Name, RealtimeProfileEditing.PresetSummary(choice.Id),
+                rows.Children.Add(Row(choice.Name, ModeSegments.SummaryTip(RealtimeProfileEditing.PresetSummary(choice.Id)),
                     choice.Id == selectedId, () => Picked?.Invoke(this, choice.Id), labels));
 
             var custom = choices.Where(choice => !choice.IsPreset).ToList();
@@ -2913,7 +2921,7 @@ public partial class RealtimeEditWindow : Window
         /// One row: the chosen one on the blue pill in white, the rest dimmer until the pointer is
         /// over them. Committed on release over it — see the class remarks.
         /// </summary>
-        private Border Row(string text, string? tip, bool selected, Action picked, List<TextBlock> labels)
+        private Border Row(string text, object? tip, bool selected, Action picked, List<TextBlock> labels)
         {
             var label = ModeSegments.Sharpen(new TextBlock
             {

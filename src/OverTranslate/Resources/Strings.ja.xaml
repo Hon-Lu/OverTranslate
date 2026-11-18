@@ -431,7 +431,7 @@
     <sys:String x:Key="S.Realtime.ProfileStandard">標準</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitle">字幕・マンガ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterface">ゲーム UI・チャット</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileStandardSummary">文字のまとめ方を自動で調整 — ほとんどの画面に対応</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">画面の内容に合わせて自動調整 — 日常的な用途に対応、まずはこちらがおすすめ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">続けて読む文章 — 動画の字幕、ストーリーの会話、マンガのセリフ</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">それぞれ独立した文字 — ゲームのメニュー、ステータス表示、チャット</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">ほとんどの画面に適しています。文字の内容と並び方から、まとめるかどうかを判断します。会話が分かれてしまうときや、メニューの文字がまとまってしまうときは、ほかのモードに切り替えてください。</sys:String>
