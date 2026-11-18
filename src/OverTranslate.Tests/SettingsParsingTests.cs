@@ -333,55 +333,27 @@ public class SettingsParsingTests
     }
 
     /// <summary>
-    /// The layout a file from 2.12.0 or earlier kept for a new block (BlockMode) becomes the mode
-    /// a new block starts on: 面板 → 遊戲介面・聊天室; 字幕 — which those files wrote whether or not it
-    /// was chosen — none, or one this build cannot read → 標準. The direction beside it was a choice, and is kept.
+    /// The mode a file from 2.12.0 or earlier holds is not carried over, nor the one this branch
+    /// wrote before modes had ids: both open on 標準.
     /// </summary>
+    /// <remarks>
+    /// The 2.12.0 file says 字幕 for nearly everyone, and only because 字幕 was the default of the
+    /// two there were. Read as a choice, it would keep every one of them off the mode that is now the
+    /// one to start from — see <see cref="RealtimeSettings.NewBlockProfile"/>. NewBlockMode was never
+    /// released. The direction beside them was a choice, and is kept.
+    /// </remarks>
     [Theory]
-    [InlineData("\"BlockMode\":\"Subtitle\",", RealtimePresets.StandardId)]
-    [InlineData("\"BlockMode\":\"Panel\",", RealtimePresets.InterfaceId)]
-    [InlineData("\"BlockMode\":\"panel\",", RealtimePresets.InterfaceId)]
-    [InlineData("\"BlockMode\":\"Auto\",", RealtimePresets.StandardId)]
-    [InlineData("\"BlockMode\":3,", RealtimePresets.StandardId)]
-    [InlineData("\"BlockMode\":null,", RealtimePresets.StandardId)]
-    [InlineData("", RealtimePresets.StandardId)]
-    public void The2120BlockMode_BecomesTheModeANewBlockStartsOn(string blockMode, string profile)
+    [InlineData("BlockMode", "Subtitle")]
+    [InlineData("BlockMode", "Panel")]
+    [InlineData("NewBlockMode", "Subtitle")]
+    [InlineData("NewBlockMode", "Panel")]
+    public void TheModeAnOlderFileHolds_IsNotReadAsAChoice(string key, string mode)
     {
         var settings = SettingsService.Parse(
-            "{\"Realtime\":{" + blockMode + "\"TextOrientation\":\"Vertical\"}}");
-
-        Assert.Equal(profile, settings.Realtime.NewBlockProfile);
-        Assert.Equal(profile, settings.Realtime.NewBlockProfileOrStandard());
-        Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
-    }
-
-    /// <summary>
-    /// Converted once: written back, the file holds the new value and not the old one, and reads the
-    /// same again; a file that already holds the new value keeps it whatever BlockMode says.
-    /// </summary>
-    [Fact]
-    public void The2120BlockMode_IsConvertedOnce_AndNeverOverTheNewValue()
-    {
-        var converted = SettingsService.Parse("""{"Realtime":{"BlockMode":"Panel"}}""");
-        var written = SettingsService.Serialize(converted);
-
-        Assert.Contains("\"NewBlockProfile\": \"interface\"", written);
-        Assert.DoesNotContain("\"BlockMode\"", written);
-        Assert.Equal(RealtimePresets.InterfaceId, SettingsService.Parse(written).Realtime.NewBlockProfile);
-
-        var current = SettingsService.Parse("""{"Realtime":{"BlockMode":"Panel","NewBlockProfile":"standard"}}""");
-        Assert.Equal(RealtimePresets.StandardId, current.Realtime.NewBlockProfile);
-    }
-
-    /// <summary>NewBlockMode was this branch's before modes had ids, never released: not read.</summary>
-    [Theory]
-    [InlineData("Subtitle")]
-    [InlineData("Panel")]
-    public void TheUnreleasedNewBlockMode_IsNotRead(string mode)
-    {
-        var settings = SettingsService.Parse("{\"Realtime\":{\"NewBlockMode\":\"" + mode + "\"}}");
+            "{\"Realtime\":{\"" + key + "\":\"" + mode + "\",\"TextOrientation\":\"Vertical\"}}");
 
         Assert.Equal(RealtimePresets.StandardId, settings.Realtime.NewBlockProfile);
+        Assert.Equal(RealtimeTextOrientation.Vertical, settings.Realtime.TextOrientation);
         Assert.DoesNotContain("NewBlockMode", SettingsService.Serialize(settings));
     }
 

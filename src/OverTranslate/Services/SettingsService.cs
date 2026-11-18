@@ -166,13 +166,6 @@ public class SettingsService
 
         settings.Realtime.Profiles = RealtimeSettings.CleanProfiles(
             settings.Realtime.Profiles.Count > 0 ? settings.Realtime.Profiles : ReadProfilesOneByOne(root));
-
-        // 2.12.0 and earlier kept the layout a new block starts on as BlockMode (字幕 or 面板); the
-        // mode a new block starts on is its successor. Read only while the new value is absent, so
-        // it is converted once: the next save writes NewBlockProfile, and from then on that wins.
-        if (root[nameof(AppSettings.Realtime)] is JsonObject realtime &&
-            !realtime.ContainsKey(nameof(RealtimeSettings.NewBlockProfile)))
-            settings.Realtime.NewBlockProfile = RealtimeSettings.ProfileForLegacyBlockMode(realtime["BlockMode"]);
         return settings;
     }
 
