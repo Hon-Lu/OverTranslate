@@ -3,32 +3,22 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <UserControl.Resources>
-        <!-- The small tag after a preset's name. A copy of the service panel's ProfileTag, not a
-             reference to it: that one is scoped to its own overlay. -->
-        <Style x:Key="ProfileTag" TargetType="Border">
-            <Setter Property="Background"        Value="{DynamicResource AppButtonBg}"/>
-            <Setter Property="BorderBrush"       Value="{DynamicResource AppBorder}"/>
-            <Setter Property="BorderThickness"   Value="1"/>
-            <Setter Property="CornerRadius"      Value="9"/>
-            <Setter Property="Padding"           Value="7,0,7,1"/>
-            <Setter Property="Margin"            Value="8,0,0,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <!-- One mode in the list: the whole row opens it. No selected look — the list says which
-             modes there are, not which one is in use; each block has its own. -->
+        <!-- One mode in the list, on one line: the whole row opens it. No selected look — the list
+             says which modes there are, not which one is in use; each block has its own. The last
+             row drops its rule (BorderThickness 0), so it does not double the list's own border. -->
         <Style x:Key="ProfileListRow" TargetType="Button">
-            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-            <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-            <Setter Property="Cursor"     Value="Hand"/>
+            <Setter Property="FontFamily"      Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"        Value="{StaticResource AppFontSize}"/>
+            <Setter Property="Foreground"      Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Cursor"          Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Root" Background="Transparent"
-                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1"
-                                Padding="16,11,12,11">
+                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="16,8,12,8">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -46,61 +36,42 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <!-- The last row of the list and the only way to add: the service panel's add row. Disabled
-             at the cap rather than hidden: the count on it is what says why it stopped. -->
-        <Style x:Key="ProfileAddRow" TargetType="Button">
-            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-            <Setter Property="FontSize"   Value="{StaticResource AppFontSize}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
-            <Setter Property="Cursor"     Value="Hand"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root" Background="Transparent" Padding="16,0">
-                            <ContentPresenter Height="44" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45"/>
-                                <Setter Property="Cursor" Value="Arrow"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Border Style="{StaticResource CardBorder}">
         <StackPanel>
-            <TextBlock Text="{DynamicResource S.Realtime.Profiles}" Style="{StaticResource SectionHeader}" Margin="0,0,0,2"/>
+            <!-- The heading and the add on one line, as 顯示外觀 has its reset: adding acts on the
+                 whole card, not on any row of it, and at the foot of the list it read as one more
+                 step to go through before 選取翻譯區塊. Disabled at the cap rather than hidden: the
+                 count on it is what says why it stopped. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{DynamicResource S.Realtime.Profiles}" Style="{StaticResource SectionHeader}"
+                           VerticalAlignment="Center" Margin="0"/>
+                <Button x:Name="AddButton" Grid.Column="1"
+                        Style="{StaticResource IconTextButton}"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        ToolTipService.ShowOnDisabled="True"
+                        AutomationProperties.AutomationId="ProfileAddRow"
+                        Click="AddButton_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="12" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                        <TextBlock x:Name="AddButtonText" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
             <TextBlock Text="{DynamicResource S.Realtime.ProfilesHint}" Style="{StaticResource FieldHint}"
                        LineHeight="16" Margin="0,0,0,10"/>
 
             <!-- The list only: a mode is looked at and changed in RealtimeProfileOverlay, over the
                  shell, opened from its row. -->
             <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10">
-                <StackPanel x:Name="ListBody" SizeChanged="ListBody_SizeChanged">
-                    <StackPanel x:Name="ListHost"/>
-                    <Button x:Name="AddRow" Style="{StaticResource ProfileAddRow}"
-                            ToolTipService.ShowOnDisabled="True"
-                            AutomationProperties.AutomationId="ProfileAddRow"
-                            Click="AddRow_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock x:Name="AddRowText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <StackPanel x:Name="ListHost" SizeChanged="ListHost_SizeChanged"/>
             </Border>
         </StackPanel>
     </Border>
