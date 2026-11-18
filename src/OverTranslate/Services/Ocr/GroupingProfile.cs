@@ -96,12 +96,25 @@ namespace OverTranslate.Services.Ocr;
 /// the ink measurement on or off with it. Each profile holds exactly the answer that comparison
 /// gave, so no verdict moved when the question was given its own name.</para>
 /// </param>
+/// <param name="RefuseLabelRuns">
+/// <para>Whether two short labels the same-line gap let through stay apart when a third item sits
+/// beside them at the same kind of distance: a button bar, a row of tabs, a stats header. See
+/// <c>OcrTextBlockGrouper.IsLabelRun</c>.</para>
+///
+/// <para>MEASURED CASE: the realtime corpus under <c>.test-artifacts/auto</c>, whose 226 same-row
+/// joins on the live panel path were hand-marked — 103 of them unrelated items strung into one
+/// string (「決定 もどる」, "Tools About Blog", "Stamina Power"). Refusing label runs takes 40 of the
+/// 103 apart and none of the 123 that were one line or harmless. Only the live profile takes it:
+/// the screenshot side has no hand-marked same-row joins to measure it on, and moving it there
+/// would change the default mode on no evidence.</para>
+/// </param>
 internal sealed record GroupingProfile(
     double TightlySetMinTextSizeRatio,
     bool WaiveLengthTestWhenSetSolid,
     double SolidLineAdvanceWhenWrapped,
     bool RefuseSpeakerLineStarts,
-    bool TakesProseEvidence)
+    bool TakesProseEvidence,
+    bool RefuseLabelRuns)
 {
     /// <summary>
     /// Interfaces: game UI, menus, multi-column panels. The conservative half of the pair, and what
@@ -125,7 +138,8 @@ internal sealed record GroupingProfile(
         WaiveLengthTestWhenSetSolid: false,
         SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
         RefuseSpeakerLineStarts: false,
-        TakesProseEvidence: false);
+        TakesProseEvidence: false,
+        RefuseLabelRuns: false);
 
     /// <summary>
     /// The default: articles, comics, dialogue, and most of what anyone frames. Relaxed only where a
@@ -178,7 +192,8 @@ internal sealed record GroupingProfile(
         WaiveLengthTestWhenSetSolid: true,
         SolidLineAdvanceWhenWrapped: 1.45,
         RefuseSpeakerLineStarts: true,
-        TakesProseEvidence: true);
+        TakesProseEvidence: true,
+        RefuseLabelRuns: false);
 
     /// <summary>
     /// The live-screen path's own profile. It is not <see cref="Interface"/>, it merely holds the
@@ -202,7 +217,8 @@ internal sealed record GroupingProfile(
         WaiveLengthTestWhenSetSolid: false,
         SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
         RefuseSpeakerLineStarts: true,
-        TakesProseEvidence: false);
+        TakesProseEvidence: false,
+        RefuseLabelRuns: true);
 
     /// <summary>
     /// Historical rotated-frame grouping, retained for offline comparisons and fixtures.
@@ -213,7 +229,8 @@ internal sealed record GroupingProfile(
         WaiveLengthTestWhenSetSolid: false,
         SolidLineAdvanceWhenWrapped: UnrelaxedSolidLineAdvance,
         RefuseSpeakerLineStarts: false,
-        TakesProseEvidence: false);
+        TakesProseEvidence: false,
+        RefuseLabelRuns: false);
 
     /// <summary>The thresholds for a capture the user has declared the kind of.</summary>
     /// <remarks>

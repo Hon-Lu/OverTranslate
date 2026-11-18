@@ -247,7 +247,8 @@ var harnessGroupingBaseline = new GroupingProfile(
     WaiveLengthTestWhenSetSolid: false,
     SolidLineAdvanceWhenWrapped: 1.20,
     RefuseSpeakerLineStarts: false,
-    TakesProseEvidence: false);
+    TakesProseEvidence: false,
+    RefuseLabelRuns: false);
 
 // Which language to read as. It picks the recognition model, and that is not a detail on a Korean
 // dump: the general model carries no Hangul at all, so a Korean frame read as EN comes back as
