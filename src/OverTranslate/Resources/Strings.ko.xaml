@@ -877,7 +877,10 @@
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0}개 켜짐</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">스크린샷 후 자동으로 닫기</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">‘스크린샷’으로 클립보드에 복사한 뒤 바로 종료합니다</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreContent">번역 내용</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">일반</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreOther">기타</sys:String>
+    <sys:String x:Key="S.Toolbar.InfoIcon">설명</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">자동 번역</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">스크린샷 저장</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">저장 위치는 설정에서 변경할 수 있습니다</sys:String>
@@ -895,6 +898,7 @@
     <sys:String x:Key="S.Debug.BoxDisplayScope">테두리 표시 범위</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">원문만</sys:String>
     <sys:String x:Key="S.Debug.SourceAndTranslation">원문과 번역</sys:String>
+    <sys:String x:Key="S.Debug.FilteredLegend">걸러진 그룹 {0}개</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">원문만: 테두리를 원문 화면에만 표시합니다.&#x0A;원문과 번역: 원문과 번역 화면 모두에 테두리를 표시합니다</sys:String>

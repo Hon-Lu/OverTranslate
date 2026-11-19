@@ -55,6 +55,17 @@ public class CaptureSettings
     /// </remarks>
     public bool CloseAfterCopy { get; set; } = false;
 
+    /// <summary>
+    /// Whether a capture leaves out the groups with nothing in them to translate — numbers, stat
+    /// abbreviations, symbols — as realtime translation's 過濾數字與縮寫 does. Off by default, and a
+    /// settings file written before it existed reads as off; set from the toolbar's 設定 menu.
+    /// </summary>
+    /// <remarks>
+    /// Off by default where every realtime preset has it on: a capture is framed on purpose and read
+    /// once, and is seldom where anyone needs it. See <see cref="Services.CaptureFilteredTranslation"/> for what it does.
+    /// </remarks>
+    public bool FilterNumbersAndAbbreviations { get; set; } = false;
+
     /// <summary>Whether 偵錯輔助 in the 設定 menu was left unfolded.</summary>
     /// <remarks>
     /// Folded by default: the boxes are for reporting a problem, and unfolded they took half the

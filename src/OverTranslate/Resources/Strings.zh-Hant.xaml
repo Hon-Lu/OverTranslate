@@ -896,7 +896,10 @@
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} 項開啟</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">截圖後自動關閉</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">按下「截圖」複製到剪貼簿後，直接結束截圖翻譯</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreContent">翻譯內容</sys:String>
     <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreOther">其他</sys:String>
+    <sys:String x:Key="S.Toolbar.InfoIcon">說明</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.SaveScreenshot">儲存截圖</sys:String>
     <sys:String x:Key="S.Toolbar.SavePathInSettings">儲存位置可在設定中變更</sys:String>
@@ -914,6 +917,7 @@
     <sys:String x:Key="S.Debug.BoxDisplayScope">框線顯示範圍</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">僅原文</sys:String>
     <sys:String x:Key="S.Debug.SourceAndTranslation">原文與譯文</sys:String>
+    <sys:String x:Key="S.Debug.FilteredLegend">已過濾 {0} 組</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">僅原文：框線只顯示於原文畫面&#x0A;原文與譯文：原文、譯文畫面皆顯示框線</sys:String>

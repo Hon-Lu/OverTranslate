@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctl="clr-namespace:OverTranslate.Controls"
         xmlns:local="clr-namespace:OverTranslate.Views.Capture"
+        xmlns:vc="clr-namespace:OverTranslate.Views.Controls"
         WindowStyle="None"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
@@ -538,9 +539,11 @@
                              in a paragraph under it - the panel opens over the capture being looked at, so
                              every line it spends is a line of the capture it hides.
 
-                             一般 first because it is what most people come here for; 偵錯輔助 under it.
-                             The switches are the settings page's own keys, so the two places always
-                             agree - see SettingsService.UpdateCaptureOptions.
+                             翻譯內容 first, on its own: the one switch here that changes what the
+                             translation says. 一般 and 其他 under it are things done besides
+                             translating, and 偵錯輔助 last. The switches are the settings page's own
+                             keys, so the two places always agree - see
+                             SettingsService.UpdateCaptureOptions.
 
                              Its right edge is lined up under the button that opens it (MoreBtn_Click), so
                              it reads as coming out of that button rather than out of the bar. No close
@@ -561,9 +564,96 @@
                                             <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
                                             <Setter Property="Margin" Value="10,6,10,4"/>
                                         </Style>
+                                        <!-- A section heading after the first: the gap above it is
+                                             what divides the sections, with no rule between them. -->
+                                        <Style x:Key="MoreSectionHeaderAfter" TargetType="TextBlock" BasedOn="{StaticResource MoreSectionHeader}">
+                                            <Setter Property="Margin" Value="10,12,10,4"/>
+                                        </Style>
+                                        <!-- What 過濾數字與縮寫 covers, in the card its info mark opens:
+                                             the realtime mode panel's FilterTag, tinted while the
+                                             switch is on and grey while it is off. Each tag's Tag is
+                                             the switch, handed over in code - the card is a popup of
+                                             its own, out of reach of an ElementName. -->
+                                        <Style x:Key="FilterTag" TargetType="ContentControl">
+                                            <Setter Property="Margin" Value="0,0,6,6"/>
+                                            <Setter Property="Focusable" Value="False"/>
+                                            <Setter Property="IsTabStop" Value="False"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ContentControl">
+                                                        <Grid>
+                                                            <Border x:Name="Tint"
+                                                                    Background="{DynamicResource AppTextPrimary}"
+                                                                    Opacity="0.08"
+                                                                    CornerRadius="4"/>
+                                                            <TextBlock x:Name="Label"
+                                                                       Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                       FontFamily="{DynamicResource AppFont}"
+                                                                       FontSize="12"
+                                                                       Margin="7,1,7,2"
+                                                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                                                        </Grid>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding Tag.IsChecked, RelativeSource={RelativeSource Self}}" Value="True">
+                                                                <Setter TargetName="Tint" Property="Background" Value="{DynamicResource AppAccent}"/>
+                                                                <Setter TargetName="Tint" Property="Opacity" Value="0.2"/>
+                                                                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
                                     </StackPanel.Resources>
 
-                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeader}"/>
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreContent}" Style="{StaticResource MoreSectionHeader}"/>
+                                    <!-- Turned over the capture on screen as well as the next one: see
+                                         CaptureFilteredTranslation. No tooltip on the row: what it
+                                         covers is the info mark's card, and a second hint on the
+                                         row around it would open under the first. The mark itself
+                                         does not turn the switch - a press on it is taken there. -->
+                                    <CheckBox x:Name="FilterNumbersSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE71C;"
+                                              AutomationProperties.Name="{DynamicResource S.Realtime.ProfileFilterNumbers}"
+                                              AutomationProperties.HelpText="{DynamicResource S.Realtime.ProfileFilterNumbersHint}"
+                                              Checked="FilterNumbersSwitch_Changed" Unchecked="FilterNumbersSwitch_Changed">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{DynamicResource S.Realtime.ProfileFilterNumbers}" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="FilterNumbersInfo"
+                                                       Text="&#xE946;"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource AppTextSecondary}"
+                                                       Background="Transparent"
+                                                       Padding="4,2"
+                                                       Margin="2,-2,0,-2"
+                                                       VerticalAlignment="Center"
+                                                       Cursor="Help"
+                                                       AutomationProperties.Name="{DynamicResource S.Toolbar.InfoIcon}"
+                                                       AutomationProperties.HelpText="{DynamicResource S.Realtime.ProfileFilterNumbersHint}"
+                                                       PreviewMouseLeftButtonDown="FilterNumbersInfo_PreviewMouseButton"
+                                                       PreviewMouseLeftButtonUp="FilterNumbersInfo_PreviewMouseButton">
+                                                <vc:HoverToolTip.Content>
+                                                    <StackPanel Width="300">
+                                                        <WrapPanel x:Name="FilterNumbersTags" Margin="0,2,0,2">
+                                                            <ContentControl Style="{StaticResource FilterTag}" Content="{DynamicResource S.Realtime.ProfileFilterTagNumbers}"/>
+                                                            <ContentControl Style="{StaticResource FilterTag}" Content="{DynamicResource S.Realtime.ProfileFilterTagNumberSymbols}"/>
+                                                            <ContentControl Style="{StaticResource FilterTag}" Content="{DynamicResource S.Realtime.ProfileFilterTagSymbols}"/>
+                                                            <ContentControl Style="{StaticResource FilterTag}" Content="{DynamicResource S.Realtime.ProfileFilterTagAbbreviations}"/>
+                                                        </WrapPanel>
+                                                        <TextBlock Text="{DynamicResource S.Realtime.ProfileFilterNumbersHint}"
+                                                                   Foreground="{DynamicResource AppTextSecondary}"
+                                                                   FontFamily="{DynamicResource AppFont}"
+                                                                   FontSize="12.5"
+                                                                   LineHeight="19"
+                                                                   TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </vc:HoverToolTip.Content>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </CheckBox>
+
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeaderAfter}"/>
                                     <!-- Takes effect from the next selection: it is read the moment a
                                          selection is finished, and this one already was. -->
                                     <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
@@ -571,14 +661,6 @@
                                               Content="{DynamicResource S.Toolbar.AutoTranslate}"
                                               ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
                                               Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
-                                    <!-- Before 儲存截圖: both say what 截圖 does once the picture is
-                                         copied, and this one decides whether there is anything left
-                                         on screen afterwards. See CaptureSettings.CloseAfterCopy. -->
-                                    <CheckBox x:Name="CloseAfterCopySwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                              Tag="&#xE8C8;"
-                                              Content="{DynamicResource S.Toolbar.CloseAfterCopy}"
-                                              ToolTip="{DynamicResource S.Toolbar.CloseAfterCopyTip}"
-                                              Checked="CloseAfterCopySwitch_Changed" Unchecked="CloseAfterCopySwitch_Changed"/>
                                     <!-- Where to change the folder, not the folder itself. A folder picker
                                          or an Explorer window opened from this bar would land under the
                                          capture overlay, which is full screen and topmost; and the notice
@@ -594,6 +676,16 @@
                                             </StackPanel>
                                         </CheckBox.ToolTip>
                                     </CheckBox>
+                                    <!-- After 儲存截圖: both say what 截圖 does once the picture is
+                                         copied, and this one decides whether there is anything left
+                                         on screen afterwards. See CaptureSettings.CloseAfterCopy. -->
+                                    <CheckBox x:Name="CloseAfterCopySwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE8C8;"
+                                              Content="{DynamicResource S.Toolbar.CloseAfterCopy}"
+                                              ToolTip="{DynamicResource S.Toolbar.CloseAfterCopyTip}"
+                                              Checked="CloseAfterCopySwitch_Changed" Unchecked="CloseAfterCopySwitch_Changed"/>
+
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreOther}" Style="{StaticResource MoreSectionHeaderAfter}"/>
                                     <!-- The model footer under this bar (CaptureSettings.ShowModelHint).
                                          This bar's own: the realtime page shows its line regardless.
                                          Put positively, like the two above it — ticked turns something on. -->

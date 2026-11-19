@@ -22,6 +22,12 @@ public partial class ToolbarWindow : Window
     public event EventHandler? CloseAllRequested;
     public event EventHandler<bool>? BubblesVisibilityChanged;
 
+    /// <summary>
+    /// 過濾數字與縮寫 was turned on or off in the 設定 menu — already saved, to be applied to the
+    /// capture on screen as well. See CaptureFilteredTranslation.
+    /// </summary>
+    public event EventHandler<bool>? FilterNumbersChanged;
+
     /// <summary>The speak button was pressed: start reading, or stop if already reading.</summary>
     public event EventHandler? SpeakToggleRequested;
 
@@ -93,6 +99,9 @@ public partial class ToolbarWindow : Window
         _selPhysHeight = selPhysHeight;
 
         InitializeComponent();
+        // The card the info mark opens is a popup of its own; its tags follow the switch through this.
+        foreach (var tag in FilterNumbersTags.Children.OfType<System.Windows.Controls.ContentControl>())
+            tag.Tag = FilterNumbersSwitch;
         SyncDebugSwitches(this, EventArgs.Empty);
         SyncCaptureSwitches(this, EventArgs.Empty);
         SettingsService.Instance.OcrDebugChanged += SyncDebugSwitches;
@@ -761,8 +770,24 @@ public partial class ToolbarWindow : Window
         SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
         CloseAfterCopySwitch.IsChecked = SettingsService.Instance.Current.Capture.CloseAfterCopy;
         ModelHintSwitch.IsChecked = SettingsService.Instance.Current.Capture.ShowModelHint;
+        FilterNumbersSwitch.IsChecked = SettingsService.Instance.Current.Capture.FilterNumbersAndAbbreviations;
         _syncingCapture = false;
     }
+
+    private void FilterNumbersSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingCapture) return;
+        var on = FilterNumbersSwitch.IsChecked == true;
+        SettingsService.Instance.UpdateCaptureOptions(filterNumbers: on);
+        FilterNumbersChanged?.Invoke(this, on);
+    }
+
+    /// <summary>
+    /// Keeps a press on the info mark from reaching the row around it: the mark only explains the
+    /// switch, and the card it opens on hover is what it is for.
+    /// </summary>
+    private void FilterNumbersInfo_PreviewMouseButton(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        => e.Handled = true;
 
     // The footer follows through MangaModelOptions. This bar only: the realtime page ignores it.
     private void ModelHintSwitch_Changed(object sender, RoutedEventArgs e)
