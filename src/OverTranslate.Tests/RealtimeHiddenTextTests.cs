@@ -106,7 +106,6 @@ public class RealtimeHiddenTextTests
     // A word beside the numbers keeps the whole group.
     [InlineData("Lose 3 HP.")]
     [InlineData("x2 Speed")]
-    [InlineData("No.1")]
     [InlineData("1st")]
     [InlineData("Lo 15")]
     [InlineData("Lap 3/5")]
@@ -229,6 +228,32 @@ public class RealtimeHiddenTextTests
     public void NoNameBesideALevelIsLeftOut(string text)
     {
         Assert.True(RealtimeHiddenText.CarriesNoWords(text));
+    }
+
+    [Theory]
+    // A numbering sign with its number: a monster's entry on its summary page.
+    [InlineData("No. 025")]
+    [InlineData("No.025")]
+    [InlineData("NO. 151")]
+    [InlineData("No 12")]
+    [InlineData("No.1")]
+    public void ANumberingSignWithItsNumberIsLeftOut(string text)
+    {
+        Assert.True(RealtimeHiddenText.CarriesNoWords(text));
+    }
+
+    [Theory]
+    // Alone it is the word no; with any other word the group is that word's.
+    [InlineData("No")]
+    [InlineData("No.")]
+    [InlineData("NO")]
+    [InlineData("No way")]
+    [InlineData("No. 1 fan")]
+    [InlineData("No, 5 of them")]
+    [InlineData("YES NO")]
+    public void NoAsAWordIsDrawn(string text)
+    {
+        Assert.False(RealtimeHiddenText.CarriesNoWords(text));
     }
 
     [Theory]

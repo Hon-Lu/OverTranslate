@@ -51,6 +51,7 @@ internal static class RealtimeHiddenText
     /// <item>one Latin letter, against a number or beside it: a unit (84s, 7600R, x958), a button
     /// or a grade (A 1/3, 89 F 120), or an icon the recogniser read as a letter (a 189);</item>
     /// <item>a level mark, as printed or as misread over a moving picture (Lv, Lvl, Lvi, LxI);</item>
+    /// <item>a numbering sign with its number (No. 025, a monster's entry on its summary page);</item>
     /// <item>an abbreviation (HP, CDR, LB, SAN 45, 4:03 PM…) — see <see cref="Classify"/> — and a
     /// sort label of single letters (A-Z).</item>
     /// </list>
@@ -104,6 +105,15 @@ internal static class RealtimeHiddenText
             if (IsSortLabel(word, runs))
             {
                 abbreviation = true;
+                continue;
+            }
+
+            // No. 025, NO.151: the numbering sign of a list, said only of the number after it. Alone
+            // it is the word, and with any other word the group is drawn.
+            if (runs is ["No" or "NO"])
+            {
+                abbreviation = true;
+                needsNumber = true;
                 continue;
             }
 
