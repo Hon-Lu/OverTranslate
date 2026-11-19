@@ -64,7 +64,8 @@ public record TranslatedBlock(
 
     /// <summary>
     /// True when the overlay leaves this line out: what it would draw is what the screen already
-    /// shows. Set by realtime translation only — see Realtime.RealtimeHiddenText.
+    /// shows. Set by realtime translation, and by capture translation with 過濾數字與縮寫 on — see
+    /// Realtime.RealtimeHiddenText and CaptureFilteredTranslation.
     /// </summary>
     /// <remarks>
     /// Carried on the line rather than the line left out of the list, because everything but the

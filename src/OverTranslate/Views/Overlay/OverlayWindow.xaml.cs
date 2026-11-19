@@ -162,6 +162,8 @@ public partial class OverlayWindow : Window
         UpdateDebugVisibility();
         BubbleBackgroundCanvas.Children.Clear();
         BubbleTextCanvas.Children.Clear();
+        _pieceElements.Clear();
+        _goingElements.Clear();
         DebugCanvas.Children.Clear();
 
         double winPhysLeft = _physBounds.Left;
@@ -254,6 +256,123 @@ public partial class OverlayWindow : Window
 
     public void SetBubblesVisible(bool visible) => SetTranslationLayersVisible(visible);
 
+    /// <summary>How long a bubble takes to go when 過濾數字與縮寫 is turned on over it.</summary>
+    private static readonly TimeSpan PieceFadeOut = TimeSpan.FromMilliseconds(160);
+
+    /// <summary>How long a bubble takes to come back when the switch is turned off.</summary>
+    private static readonly TimeSpan PieceFadeIn = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>
+    /// What each drawn piece put on the two bubble canvases, by its index in the blocks last drawn,
+    /// so one piece can be faded on its own. A piece left out (<see cref="TranslatedBlock.Hidden"/>)
+    /// has none, unless it was drawn anyway — see <see cref="BuildOverlay"/>.
+    /// </summary>
+    private readonly Dictionary<int, List<PieceElement>> _pieceElements = [];
+
+    /// <summary>The elements of pieces fading out, still on their canvases until the fade ends.</summary>
+    private readonly Dictionary<int, List<PieceElement>> _goingElements = [];
+
+    /// <summary>One element a piece drew, and which of the two canvases it is on.</summary>
+    private readonly record struct PieceElement(UIElement Element, bool Background);
+
+    /// <summary>
+    /// Takes the same bubbles again with other pieces <see cref="TranslatedBlock.Hidden"/> — 過濾數字
+    /// 與縮寫 turned over a capture already on screen — and fades just the pieces that come or go.
+    /// </summary>
+    /// <remarks>
+    /// <para>Opacity only, never a slide or a scale: a text element moved by a transform is drawn
+    /// soft until it settles. Nothing else moves either: a hidden piece is still a neighbour to every
+    /// bubble beside it (see <see cref="TranslatedBlock.Hidden"/>), so every other bubble is built
+    /// again exactly where it was, in the same frame.</para>
+    ///
+    /// <para>A piece going keeps its old elements on the canvas, over the rest, until they have
+    /// faded out. A piece coming starts from nothing, or from wherever it had faded to if the switch
+    /// was turned straight back, and fades up. Without the system's animations, or while the
+    /// original is on screen, they are simply there or not.</para>
+    /// </remarks>
+    internal void ApplyHidden(List<TranslatedBlock> blocks)
+    {
+        bool sameBubbles = blocks.Count == _currentBlocks.Count;
+        _currentBlocks = blocks;
+        if (!_isLoaded) return;
+
+        bool animate = sameBubbles && SystemParameters.ClientAreaAnimation
+            && BubbleBackgroundCanvas.Visibility == Visibility.Visible;
+        var before = new Dictionary<int, List<PieceElement>>(_pieceElements);
+        var going = new Dictionary<int, List<PieceElement>>(_goingElements);
+        BuildOverlay(_currentBlocks, _currentSelectionScreenX, _currentSelectionScreenY,
+            _currentSelectionScreenWidth, _currentSelectionScreenHeight);
+        if (!animate) return;
+
+        foreach (var (index, elements) in _pieceElements)
+        {
+            if (before.TryGetValue(index, out var shown) && shown.Count > 0 && shown[0].Element.Opacity >= 1) continue;
+            double from = shown is { Count: > 0 } ? shown[0].Element.Opacity
+                : going.TryGetValue(index, out var fading) && fading.Count > 0 ? fading[0].Element.Opacity
+                : 0;
+            foreach (var piece in elements)
+            {
+                piece.Element.Opacity = from;
+                Fade(piece.Element, 1, PieceFadeIn);
+            }
+        }
+
+        foreach (var (index, elements) in before.Concat(going))
+        {
+            if (_pieceElements.ContainsKey(index) || _goingElements.ContainsKey(index)) continue;
+            _goingElements[index] = elements;
+            foreach (var piece in elements)
+            {
+                (piece.Background ? BubbleBackgroundCanvas : BubbleTextCanvas).Children.Add(piece.Element);
+                Fade(piece.Element, 0, PieceFadeOut, () =>
+                {
+                    if (!_goingElements.TryGetValue(index, out var still) || !ReferenceEquals(still, elements)) return;
+                    _goingElements.Remove(index);
+                    foreach (var gone in elements)
+                        (gone.Background ? BubbleBackgroundCanvas : BubbleTextCanvas).Children.Remove(gone.Element);
+                });
+            }
+        }
+    }
+
+    private static void Fade(UIElement element, double to, TimeSpan duration, Action? done = null)
+    {
+        // No From: it sets off from wherever the element is now, so a fade turned back halfway
+        // reverses rather than jumping.
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(to, duration)
+        {
+            EasingFunction = new System.Windows.Media.Animation.QuadraticEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut,
+            },
+        };
+        if (done is not null) fade.Completed += (_, _) => done();
+        element.BeginAnimation(OpacityProperty, fade);
+    }
+
+    /// <summary>
+    /// Notes which elements the piece at <paramref name="index"/> adds to the bubble canvases between
+    /// now and the end of the returned scope. Appends, so a piece drawn by one pass and only counted
+    /// by the other keeps what the first one drew.
+    /// </summary>
+    private PieceScope TrackPiece(int index) =>
+        new(this, index, BubbleBackgroundCanvas.Children.Count, BubbleTextCanvas.Children.Count);
+
+    private readonly struct PieceScope(OverlayWindow owner, int index, int backgrounds, int texts) : IDisposable
+    {
+        public void Dispose()
+        {
+            var added = new List<PieceElement>();
+            for (var i = backgrounds; i < owner.BubbleBackgroundCanvas.Children.Count; i++)
+                added.Add(new(owner.BubbleBackgroundCanvas.Children[i], Background: true));
+            for (var i = texts; i < owner.BubbleTextCanvas.Children.Count; i++)
+                added.Add(new(owner.BubbleTextCanvas.Children[i], Background: false));
+            if (added.Count == 0) return;
+            if (owner._pieceElements.TryGetValue(index, out var elements)) elements.AddRange(added);
+            else owner._pieceElements[index] = added;
+        }
+    }
+
     // Renders everything this window has laid over the capture — the translation bubbles and the
     // marks drawn on top of them — cropped to the given selection region (physical pixels), for the
     // "copy screenshot" feature. Returns null when there is nothing laid over it at all.
@@ -316,7 +435,83 @@ public partial class OverlayWindow : Window
         return cropped;
     }
 
+    /// <summary>
+    /// Draws the bubbles: every piece but the hidden ones — and a hidden one all the same where a
+    /// bubble drawn beside it would cover it.
+    /// </summary>
+    /// <remarks>
+    /// <para>A hidden piece is left as it is on screen, which is only worth anything while it can be
+    /// seen. A bubble may still reach over it: grown to fit its translation, centred over a box the
+    /// piece sits inside (a count on a button, a level inside a name plate), or held to its minimum
+    /// width. Left out under such a bubble, the number would be under a translation with nothing of
+    /// its own over it, and the reader would lose the very number hiding it was meant to leave on
+    /// show — so it is drawn as it was before the switch existed, over what covers it when it comes
+    /// after it, holding its own text. Covered means covered enough that it can no longer be read,
+    /// by realtime translation's own measure: see RealtimeBlockWindow.HidesRow.</para>
+    ///
+    /// <para>MEASURED (2026-11-20) over 65 captures (screen-rpg-en, screen-web-en,
+    /// screen-panel-en-ja; Microsoft, into Traditional Chinese): of 346 groups left out, a drawn
+    /// bubble reached into 54 at all, over a quarter of their area 10 times, over half twice — a
+    /// count badge inside a button, wholly under the button's translation. This draws 5 of them;
+    /// of the rest none is covered over 40%, and each by less than half its row's height or width.</para>
+    /// </remarks>
     private void BuildOverlay(
+        List<TranslatedBlock> blocks,
+        double selScreenX,
+        double selScreenY,
+        double selScreenWidth,
+        double selScreenHeight)
+    {
+        DrawBubbles(blocks, selScreenX, selScreenY, selScreenWidth, selScreenHeight);
+        if (!blocks.Any(block => block.Hidden)) return;
+
+        var covered = Enumerable.Range(0, blocks.Count)
+            .Where(index => blocks[index].Hidden && CoveredByDrawn(blocks[index], selScreenX, selScreenY))
+            .ToHashSet();
+        if (covered.Count == 0) return;
+
+        DrawBubbles(
+            [.. blocks.Select((block, index) => covered.Contains(index) ? block with { Hidden = false } : block)],
+            selScreenX, selScreenY, selScreenWidth, selScreenHeight);
+    }
+
+    /// <summary>Whether a bubble already drawn leaves any row of <paramref name="block"/> unreadable.</summary>
+    private bool CoveredByDrawn(TranslatedBlock block, double selScreenX, double selScreenY)
+    {
+        foreach (var source in block.SourceLineBounds is { Count: > 0 } rows ? rows : [block.Bounds])
+        {
+            var row = new Rect(
+                (selScreenX + source.X - _physBounds.Left) / _dpiX,
+                (selScreenY + source.Y - _physBounds.Top) / _dpiY,
+                source.Width / _dpiX,
+                source.Height / _dpiY);
+            foreach (var piece in _pieceElements.Values.SelectMany(elements => elements))
+                if (Covers(piece) is var at && !at.IsEmpty && Realtime.RealtimeBlockWindow.HidesRow(at, row))
+                    return true;
+        }
+        return false;
+
+        // A bubble's text box, or a flat card. Not a plate: it reaches past the bubble by its
+        // feathered edge, which fades to nothing over whatever is beside it and hides none of it;
+        // the bubble the plate is under is the text box, which is counted.
+        static Rect Covers(PieceElement piece) =>
+            piece.Element is FrameworkElement drawn
+            && (!piece.Background || drawn is Border { Background: SolidColorBrush })
+                ? OnCanvas(drawn)
+                : Rect.Empty;
+
+        // Where an element was put on its canvas, by the size it was given; one given none covers nothing.
+        static Rect OnCanvas(FrameworkElement element)
+        {
+            double left = Canvas.GetLeft(element), top = Canvas.GetTop(element);
+            double width = element.Width, height = element.Height;
+            return double.IsFinite(left) && double.IsFinite(top) && double.IsFinite(width) && double.IsFinite(height)
+                ? new Rect(left, top, width, height)
+                : Rect.Empty;
+        }
+    }
+
+    private void DrawBubbles(
         List<TranslatedBlock> blocks,
         double selScreenX,
         double selScreenY,
@@ -325,6 +520,8 @@ public partial class OverlayWindow : Window
     {
         BubbleBackgroundCanvas.Children.Clear();
         BubbleTextCanvas.Children.Clear();
+        _pieceElements.Clear();
+        _goingElements.Clear();
         BuildDebugBoxes(selScreenX, selScreenY);
 
         // Chosen per build, not once per window: re-translating into another target reuses this
@@ -358,9 +555,13 @@ public partial class OverlayWindow : Window
         double canvasWidth = BubbleBackgroundCanvas.ActualWidth > 0 ? BubbleBackgroundCanvas.ActualWidth : Width;
         double canvasHeight = BubbleBackgroundCanvas.ActualHeight > 0 ? BubbleBackgroundCanvas.ActualHeight : Height;
 
-        foreach (var block in blocks)
+        for (var index = 0; index < blocks.Count; index++)
         {
+            var block = blocks[index];
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+            // Left as it is on screen, but still counted as a neighbour — see TranslatedBlock.Hidden.
+            if (block.Hidden) continue;
+            using var piece = TrackPiece(index);
             // Before the tilt: a turned column group is still a column group, and what decides how
             // it is set across is its shape, not its angle.
             if (block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns)
@@ -1008,10 +1209,13 @@ public partial class OverlayWindow : Window
         // VerticalTextGrid.VerticalGlyphFor.
         var translatedFont = TranslatedTextFont.For(_currentTargetLanguage);
 
-        foreach (var block in blocks)
+        for (var index = 0; index < blocks.Count; index++)
         {
+            var block = blocks[index];
             if (string.IsNullOrWhiteSpace(block.TranslatedText))
                 continue;
+            if (block.Hidden) continue;
+            using var piece = TrackPiece(index);
             // Horizontal writing on a vertical page, or a target not written downwards: the
             // ordinary path sets it across.
             if (block.RunsAcross || block.LayoutIntent == OverlayLayoutIntent.AcrossInColumns)

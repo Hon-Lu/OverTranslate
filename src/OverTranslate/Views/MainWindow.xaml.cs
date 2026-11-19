@@ -82,6 +82,16 @@ public partial class MainWindow : Window
     private string _lastTargetLang = "";
     private int _selectionSessionId;
 
+    // 過濾數字與縮寫 over the capture on screen: what was asked for and answered, group by group,
+    // with the shapes and the request the bubbles were drawn from, so the switch can be turned
+    // either way without translating again what already has an answer. Null until a translation
+    // is on screen, and while one is on its way.
+    private CaptureFilteredTranslation? _captureFilter;
+    private CaptureBubbleShapes? _captureFilterShapes;
+    private TranslateRequest? _captureFilterRequest;
+    // A translation of this capture is on its way: the switch waits for it — see ApplyCaptureFilter.
+    private bool _captureTranslating;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -791,6 +801,10 @@ public partial class MainWindow : Window
         _lastOcrBlocks     = ocrBlocks;
         _lastTranslatedBlocks = blocks;
         _lastColoredBlocks = blocks;
+        _captureFilter = null;
+        _captureFilterShapes = null;
+        _captureFilterRequest = null;
+        _captureTranslating = false;
         _lastSelPhysLeft   = selection.Left;
         _lastSelPhysTop    = selection.Top;
         _lastSelPhysWidth  = selection.Width;
@@ -825,6 +839,7 @@ public partial class MainWindow : Window
         toolbar.CopyScreenshotRequested += OnCopyScreenshotRequested;
         toolbar.CloseAllRequested       += (_, _) => CloseAll("toolbar close");
         toolbar.BubblesVisibilityChanged += (_, visible) => _overlayWindow?.SetBubblesVisible(visible);
+        toolbar.FilterNumbersChanged    += (_, _) => ApplyCaptureFilter();
         toolbar.SpeakToggleRequested    += OnSpeakToggleRequested;
         toolbar.SpeakStopRequested      += (_, _) => _tts.Stop();
         toolbar.AnnotateModeChanged     += OnAnnotateModeChanged;
@@ -934,6 +949,7 @@ public partial class MainWindow : Window
         }
 
         requestToolbar?.SetBusy(true);
+        _captureTranslating = true;
 
         // Each stage's share of the wait, for the line written when the bubbles are up. Recognition,
         // the engine and the backdrop repair are each "the slow one" on some machine or screen, and
@@ -1062,9 +1078,13 @@ public partial class MainWindow : Window
             }, cancellationToken);
 
             stage = Stopwatch.GetTimestamp();
-            var translation = AppServices.Translation.TranslateAsync(
-                _lastOcrBlocks, req.SourceLang, req.TargetLang, settings.ApiKey,
-                cancellationToken: cancellationToken);
+            // 過濾數字與縮寫: the groups with nothing to translate are not asked for. Off, every
+            // group is, in the list as it was read — see CaptureFilteredTranslation.
+            var filtered = new CaptureFilteredTranslation(
+                _lastOcrBlocks, settings.Capture.FilterNumbersAndAbbreviations);
+            var translation = filtered.TranslateAsync(async request => (await AppServices.Translation.TranslateAsync(
+                request, req.SourceLang, req.TargetLang, settings.ApiKey,
+                cancellationToken: cancellationToken)).Blocks);
             CaptureBubbleBackdrop? backdrop;
             try
             {
@@ -1077,17 +1097,24 @@ public partial class MainWindow : Window
                 throw;
             }
 
-            var (translated, _) = await translation;
+            var translated = await translation;
             if (!IsCurrentSelectionSession(requestSessionId, requestToolbar, requestCaptureWindow))
                 return;
             translateMs = ElapsedMs(stage);
 
-            _lastTranslatedBlocks = [.. translated];
+            // One block per group again, the groups left out holding their own text. An answer
+            // that does not line up with what was asked is taken as it came, unfiltered.
+            var answer = translated.Taken ? filtered.Blocks() : translated.Answer;
+            _lastTranslatedBlocks = [.. answer];
 
             // The answer lines up with what was read block for block; should it ever not, it is
-            // placed and coloured on its own.
-            var coloredTranslated = bubbles.Final(translated)
-                ?? [.. OverlayPlacement.Place(translated, layoutMode, req.IsVerticalText, req.TargetLang)
+            // placed and coloured on its own. So is one that came back short of a filtered request:
+            // its blocks would line up with nothing.
+            var final = translated.Taken || translated.Asked.Count == _lastOcrBlocks.Count
+                ? bubbles.Final(answer)
+                : null;
+            var coloredTranslated = final
+                ?? [.. OverlayPlacement.Place(answer, layoutMode, req.IsVerticalText, req.TargetLang)
                     .Select(b =>
                     {
                         var (bg, fg) = b.Tilt is { } tilt
@@ -1112,9 +1139,15 @@ public partial class MainWindow : Window
                 req.TargetLang,
                 req.IsVerticalText,
                 backdrop);
+            // Kept only where the bubbles were cut from those shapes: the switch redraws them from
+            // the same shapes, and a fallback placement has none to redraw from.
+            _captureFilter = final is null ? null : filtered;
+            _captureFilterShapes = bubbles;
+            _captureFilterRequest = req;
             requestToolbar?.SetTranslationState(true);
             requestToolbar?.SetToggleEnabled(coloredTranslated.Count > 0);
-            requestToolbar?.SetEngineBadge(AppServices.Translation.LastEngineUsage);
+            // Nothing was asked of any engine when every group was left out.
+            requestToolbar?.SetEngineBadge(translated.Asked.Count > 0 ? AppServices.Translation.LastEngineUsage : null);
 
             // Sizes and times only, never the text: this is Info, in every diagnostic bundle.
             // The backdrop runs alongside the translation, so the two times overlap.
@@ -1181,8 +1214,96 @@ public partial class MainWindow : Window
                 requestToolbar?.SetSpeakableText(
                     _lastColoredBlocks.Count > 0 && SourceTextForSpeech().Length > 0);
                 requestToolbar?.SetBusy(false);
+
+                // The switch may have been turned while this was on its way.
+                _captureTranslating = false;
+                ApplyCaptureFilter();
             }
         }
+    }
+
+    /// <summary>
+    /// Brings the capture on screen into line with 過濾數字與縮寫 as it is set now: turned on, the
+    /// bubbles of the groups with nothing to translate fade out; turned off, those that were never
+    /// asked for are asked for — only those — and fade in with the rest of the left-out ones.
+    /// </summary>
+    /// <remarks>
+    /// <para>Nothing to do before a translation is on screen, and nothing while one is on its way:
+    /// that one runs this again when it lands, so the switch is never lost. Turned with nothing
+    /// translated yet, it only decides how the next translation goes.</para>
+    ///
+    /// <para>Only the groups the switch concerns are touched. Every other bubble keeps its answer
+    /// and its place, since a group left out is still laid out against — see
+    /// <see cref="CaptureFilteredTranslation"/> and <see cref="OverlayWindow.ApplyHidden"/>.</para>
+    /// </remarks>
+    private async void ApplyCaptureFilter()
+    {
+        if (_captureTranslating || _overlayWindow is null || _captureFilter is not { } state
+            || _captureFilterShapes is not { } shapes || _captureFilterRequest is not { } req)
+            return;
+
+        var settings = SettingsService.Instance.Current;
+        var on = settings.Capture.FilterNumbersAndAbbreviations;
+        if (state.Filter != on)
+        {
+            state.SetFilter(on);
+            ShowCaptureFilter(state, shapes);
+        }
+
+        if (!state.NeedsAsking) return;
+
+        var toolbar = _toolbarWindow;
+        var captureWindow = _captureWindow;
+        var sessionId = _selectionSessionId;
+        var cancellationToken = _sessionCts?.Token ?? CancellationToken.None;
+        var stillCurrent = () =>
+            IsCurrentSelectionSession(sessionId, toolbar, captureWindow) && ReferenceEquals(state, _captureFilter);
+
+        toolbar?.SetBusy(true);
+        try
+        {
+            var translated = await state.TranslateAsync(async request => (await AppServices.Translation.TranslateAsync(
+                request, req.SourceLang, req.TargetLang, settings.ApiKey,
+                cancellationToken: cancellationToken)).Blocks);
+            if (!stillCurrent()) return;
+
+            if (!translated.Taken)
+            {
+                Log.Warn("Capture filter: {Answered} answers for {Asked} groups, left as they were",
+                    translated.Answer.Count, translated.Asked.Count);
+                return;
+            }
+
+            toolbar?.SetEngineBadge(AppServices.Translation.LastEngineUsage);
+            ShowCaptureFilter(state, shapes);
+            Log.Info("Capture filter off: {Asked} groups translated", translated.Asked.Count);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Translating the groups the capture filter had left out failed");
+            if (stillCurrent())
+                ShowNotice(LocalizationService.Get("S.Main.TranslateFailedTitle"), ex.Message);
+        }
+        finally
+        {
+            if (IsCurrentSelectionSession(sessionId, toolbar, captureWindow))
+                toolbar?.SetBusy(false);
+        }
+    }
+
+    /// <summary>Hands the overlay the bubbles as <paramref name="state"/> has them now.</summary>
+    private void ShowCaptureFilter(CaptureFilteredTranslation state, CaptureBubbleShapes shapes)
+    {
+        var blocks = state.Blocks();
+        // The same groups as the shapes were cut from, so the same pieces: never null here.
+        if (shapes.Final(blocks) is not { } colored) return;
+
+        _lastTranslatedBlocks = blocks;
+        _lastColoredBlocks = colored;
+        _overlayWindow?.ApplyHidden(colored);
     }
 
     // Deep copy of a capture crop, owned by the caller. Clone(Rectangle, PixelFormat) allocates a
