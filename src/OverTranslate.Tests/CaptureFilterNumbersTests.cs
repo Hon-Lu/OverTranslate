@@ -317,8 +317,9 @@ public class CaptureFilterNumbersTests
     });
 
     /// <summary>
-    /// The debug boxes mark a group left out: grey instead of orange, with a 「已過濾」 label — the
-    /// label with either kind of box on, nothing with both off, and nothing at all with the switch off.
+    /// The debug boxes mark a group left out in grey — the group box dashed, the line boxes thin and
+    /// solid — and one legend says how many there are: with either kind of box on, never with both
+    /// off, and nothing at all with the switch off.
     /// </summary>
     [Theory]
     [InlineData(true, false)]
@@ -340,32 +341,36 @@ public class CaptureFilterNumbersTests
             var canvas = (Canvas)window.FindName("DebugCanvas");
             window.ShowOcrDebug(source, 0, 0);
             var off = Snapshot(canvas);
-            Assert.Empty(Tags(canvas));
+            Assert.Empty(Legends(canvas));
 
             window.SetFilteredGroups(source, new HashSet<int> { 1, 2 });
-            var strokes = canvas.Children.OfType<System.Windows.Shapes.Rectangle>()
-                .Select(box => ((System.Windows.Media.SolidColorBrush)box.Stroke).Color.ToString()).ToList();
+            var boxes = canvas.Children.OfType<System.Windows.Shapes.Rectangle>().ToList();
+            var strokes = boxes.Select(box => ((System.Windows.Media.SolidColorBrush)box.Stroke).Color.ToString()).ToList();
             if (groups)
                 Assert.Equal(new[] { "#FFFFB454", "#FFB8BEC6", "#FFB8BEC6", "#FFFFB454" }, strokes.Take(4));
-            // The left-out groups' line boxes: the same blue at half strength, unfilled, as thick.
-            Assert.Equal(lines ? 2 : 0, strokes.Count(stroke => stroke == "#FF4DA3FF"));
-            Assert.Equal(lines ? 2 : 0, strokes.Count(stroke => stroke == "#804DA3FF"));
-            Assert.All(canvas.Children.OfType<System.Windows.Shapes.Rectangle>()
-                    .Where(box => ((System.Windows.Media.SolidColorBrush)box.Stroke).Color.ToString() == "#804DA3FF"),
-                box =>
-                {
-                    Assert.Equal(0, ((System.Windows.Media.SolidColorBrush)box.Fill).Color.A);
-                    Assert.Equal(1, box.StrokeThickness);
-                });
-            Assert.Equal(groups || lines ? 2 : 0, Tags(canvas).Count);
+            if (lines)
+            {
+                // One line each, in group order, after the group boxes: grey for the two left out,
+                // thin, solid, with the low fill every box has.
+                var lineBoxes = boxes.Skip(groups ? 4 : 0).ToList();
+                Assert.Equal(new[] { "#FF4DA3FF", "#FFB8BEC6", "#FFB8BEC6", "#FF4DA3FF" },
+                    lineBoxes.Select(box => ((System.Windows.Media.SolidColorBrush)box.Stroke).Color.ToString()));
+                Assert.All(lineBoxes, box => Assert.Equal(1, box.StrokeThickness));
+                Assert.All(lineBoxes, box => Assert.Null(box.StrokeDashArray));
+                Assert.Equal("#26B8BEC6", ((System.Windows.Media.SolidColorBrush)lineBoxes[1].Fill).Color.ToString());
+            }
+            Assert.DoesNotContain("#804DA3FF", strokes);
+
+            var legends = Legends(canvas);
+            Assert.Equal(groups || lines ? 1 : 0, legends.Count);
             if (groups || lines)
             {
-                // On the outside of the box's top-left corner, the label's bottom just above it.
-                var tag = Tags(canvas)[0];
-                var box = Rect.Inflate(Health.Bounds, 3, 3);
-                var desktop = ScreenGeometry.VirtualDesktopBounds();
-                Assert.Equal(box.X - desktop.Left, Canvas.GetLeft(tag), 3);
-                Assert.True(Canvas.GetTop(tag) < box.Y - desktop.Top);
+                var row = (StackPanel)legends[0].Child;
+                var sample = (System.Windows.Shapes.Rectangle)row.Children[0];
+                Assert.Equal("#FFB8BEC6", ((System.Windows.Media.SolidColorBrush)sample.Stroke).Color.ToString());
+                // The sample is the grey box that is on screen: dashed with the group boxes on.
+                Assert.Equal(groups, sample.StrokeDashArray is { Count: > 0 });
+                Assert.Equal(LocalizationService.Format("S.Debug.FilteredLegend", 2), ((TextBlock)row.Children[1]).Text);
             }
 
             // A reading other than the one judged is not marked; nor is anything with the switch off.
@@ -382,34 +387,35 @@ public class CaptureFilterNumbersTests
         }
     });
 
-    /// <summary>A group box against the selection's top edge carries its label inside, top left.</summary>
+    /// <summary>
+    /// The legend goes outside the selection's top-left corner; below its bottom-left corner where
+    /// the monitor's top edge or the toolbar is in the way; inside its top-left corner only when
+    /// neither has room.
+    /// </summary>
     [Fact]
-    public void TheFilteredLabelGoesInsideWhereThereIsNoRoomAbove() => OnSta(() =>
+    public void TheLegendGoesAboveThenBelowThenInside()
     {
-        var debug = SettingsService.Instance.Current.OcrDebug;
-        var (oldGroups, oldLines) = (debug.ShowGroupBoxes, debug.ShowLineBoxes);
-        debug.ShowGroupBoxes = true;
-        debug.ShowLineBoxes = false;
-        var top = new OcrTextBlock("HP 12", new Rect(10, 1, 60, 20));
-        var window = new OverlayWindow([], [], 0, 0, 400, 300, "EN", "ZH-HANT", false);
-        try
-        {
-            typeof(OverlayWindow).GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
-            var canvas = (Canvas)window.FindName("DebugCanvas");
-            List<OcrTextBlock> source = [top];
-            window.ShowOcrDebug(source, 0, 0);
-            window.SetFilteredGroups(source, new HashSet<int> { 0 });
-            var desktop = ScreenGeometry.VirtualDesktopBounds();
-            Assert.True(Canvas.GetTop(Assert.Single(Tags(canvas))) >= -desktop.Top);
-        }
-        finally
-        {
-            window.Close();
-            (debug.ShowGroupBoxes, debug.ShowLineBoxes) = (oldGroups, oldLines);
-        }
-    });
+        var monitor = new Rect(0, 0, 1920, 1080);
+        var legend = new Size(140, 26);
 
-    private static List<Border> Tags(Canvas canvas) => [.. canvas.Children.OfType<Border>()];
+        Assert.Equal(new Point(100, 200 - 4 - 26),
+            OverlayWindow.FilteredLegendPlace(new Rect(100, 200, 600, 400), legend, monitor, Rect.Empty, 4));
+        // Against the monitor's top edge.
+        Assert.Equal(new Point(100, 10 + 400 + 4),
+            OverlayWindow.FilteredLegendPlace(new Rect(100, 10, 600, 400), legend, monitor, Rect.Empty, 4));
+        // The toolbar above the selection, where it goes when there is no room under it.
+        var bar = new Rect(80, 600, 900, 90);
+        Assert.Equal(new Point(100, 700 + 300 + 4),
+            OverlayWindow.FilteredLegendPlace(new Rect(100, 700, 600, 300), legend, monitor, bar, 4));
+        // Neither: the selection fills the monitor.
+        Assert.Equal(new Point(4, 4),
+            OverlayWindow.FilteredLegendPlace(new Rect(0, 0, 1920, 1080), legend, monitor, Rect.Empty, 4));
+        // Below the selection is the toolbar and above it is the monitor's edge: inside.
+        Assert.Equal(new Point(104, 14),
+            OverlayWindow.FilteredLegendPlace(new Rect(100, 10, 600, 400), legend, monitor, new Rect(90, 412, 800, 90), 4));
+    }
+
+    private static List<Border> Legends(Canvas canvas) => [.. canvas.Children.OfType<Border>()];
 
     private static List<string> Snapshot(Canvas canvas) =>
         [.. canvas.Children.Cast<FrameworkElement>().Select(e =>

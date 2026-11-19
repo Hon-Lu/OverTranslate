@@ -896,7 +896,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Debug.BoxDisplayScope">Box display scope</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">Source only</sys:String>
     <sys:String x:Key="S.Debug.SourceAndTranslation">Source and translation</sys:String>
-    <sys:String x:Key="S.Debug.FilteredTag">Filtered</sys:String>
+    <sys:String x:Key="S.Debug.FilteredLegend">Filtered groups: {0}</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">Source only: outlines are drawn on the source view only.&#x0A;Source and translation: outlines are drawn on both the source view and the translation view</sys:String>

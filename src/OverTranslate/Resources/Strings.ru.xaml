@@ -887,7 +887,7 @@
     <sys:String x:Key="S.Debug.BoxDisplayScope">Где показывать рамки</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">Только оригинал</sys:String>
     <sys:String x:Key="S.Debug.SourceAndTranslation">Оригинал и перевод</sys:String>
-    <sys:String x:Key="S.Debug.FilteredTag">Отсеяно</sys:String>
+    <sys:String x:Key="S.Debug.FilteredLegend">Отсеяно групп: {0}</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">Только оригинал: рамки рисуются только в окне оригинала.&#x0A;Оригинал и перевод: рамки рисуются и в окне оригинала, и в окне перевода</sys:String>

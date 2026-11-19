@@ -898,7 +898,7 @@
     <sys:String x:Key="S.Debug.BoxDisplayScope">枠の表示範囲</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">原文のみ</sys:String>
     <sys:String x:Key="S.Debug.SourceAndTranslation">原文と訳文</sys:String>
-    <sys:String x:Key="S.Debug.FilteredTag">除外済み</sys:String>
+    <sys:String x:Key="S.Debug.FilteredLegend">除外済み {0} グループ</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">原文のみ：枠線は原文の画面にのみ表示します。&#x0A;原文と訳文：原文・訳文どちらの画面にも枠線を表示します</sys:String>

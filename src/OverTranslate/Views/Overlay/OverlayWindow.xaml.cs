@@ -40,10 +40,9 @@ public partial class OverlayWindow : Window
     private const byte DebugFillAlpha = 0x26;
     private static readonly System.Windows.Media.Color OcrLineBoxColor = System.Windows.Media.Color.FromRgb(0x4D, 0xA3, 0xFF);
     private static readonly System.Windows.Media.Color TextGroupBoxColor = System.Windows.Media.Color.FromRgb(0xFF, 0xB4, 0x54);
-    // A group 過濾數字與縮寫 left out: a mid grey, which reads over dark captures and light ones.
+    // A group 過濾數字與縮寫 left out, in either kind of box: a mid grey, which reads over dark
+    // captures and light ones, and over blue ones, where a paler blue did not.
     private static readonly System.Windows.Media.Color FilteredGroupBoxColor = System.Windows.Media.Color.FromRgb(0xB8, 0xBE, 0xC6);
-    // The line boxes of such a group: the same blue at about half strength, with no fill.
-    private const byte FilteredLineBoxAlpha = 0x80;
 
     private bool _isLoaded;
     private bool _translationVisible;
@@ -1551,24 +1550,18 @@ public partial class OverlayWindow : Window
                 DebugCanvas.Children.Add(CreateDebugBox(groups[i], selScreenX, selScreenY,
                     filtered.Contains(i) ? FilteredGroupBoxColor : TextGroupBoxColor, dashed: true));
 
-        // A left-out group's lines keep their blue, faded and unfilled: still where the recogniser
-        // read them, no longer reading as text waiting for a translation. Group by group, in the
-        // order OcrDebugBoxes.LineBoxes lists them.
+        // A left-out group's lines are grey too, thin and solid as every line box is: one rule for
+        // both kinds of box, grey is left out. A paler blue was tried and vanished over blue pictures.
         if (debug.ShowLineBoxes)
             for (var i = 0; i < _currentOcrBlocks.Count; i++)
                 foreach (var box in OcrDebugBoxes.LineBoxes([_currentOcrBlocks[i]]))
-                    DebugCanvas.Children.Add(filtered.Contains(i)
-                        ? CreateDebugBox(box, selScreenX, selScreenY,
-                            System.Windows.Media.Color.FromArgb(
-                                FilteredLineBoxAlpha, OcrLineBoxColor.R, OcrLineBoxColor.G, OcrLineBoxColor.B),
-                            dashed: false, filled: false)
-                        : CreateDebugBox(box, selScreenX, selScreenY, OcrLineBoxColor, dashed: false));
+                    DebugCanvas.Children.Add(CreateDebugBox(box, selScreenX, selScreenY,
+                        filtered.Contains(i) ? FilteredGroupBoxColor : OcrLineBoxColor, dashed: false));
 
-        // Over the boxes, and whichever of the two is on: the label is what says this one was
-        // left out rather than lost.
-        if (debug.ShowGroupBoxes || debug.ShowLineBoxes)
-            foreach (var i in filtered.Where(i => i < groups.Count).Order())
-                DebugCanvas.Children.Add(CreateFilteredTag(groups[i], selScreenX, selScreenY));
+        // One key for the whole capture rather than a label on every group: on a packed panel a
+        // label per group covered the line above it, the very text the boxes are there to show.
+        if ((debug.ShowGroupBoxes || debug.ShowLineBoxes) && filtered.Count > 0)
+            DebugCanvas.Children.Add(CreateFilteredLegend(filtered.Count, dashed: debug.ShowGroupBoxes));
     }
 
     /// <summary>
@@ -1578,64 +1571,116 @@ public partial class OverlayWindow : Window
     private IReadOnlySet<int> _filteredGroups = new HashSet<int>();
     private IReadOnlyList<OcrTextBlock>? _filteredSource;
 
+    /// <summary>Where the capture toolbar sits, in physical pixels, for the legend to keep clear of.</summary>
+    private Rect _legendAvoid = Rect.Empty;
+
     /// <summary>
     /// Says which groups of <paramref name="source"/> are left out, so the debug boxes can mark
-    /// them: grey instead of orange, and a 「已過濾」 label on their corner.
+    /// them grey and say, once, how many there are.
     /// </summary>
     /// <remarks>
     /// Without it a group left out is an orange box like any other with no translation beside it,
     /// and whoever turned the boxes on reads it as a group that failed to translate. Nothing is
     /// marked with the switch off: the set is empty, and the boxes are the ones there always were.
     /// </remarks>
-    internal void SetFilteredGroups(IReadOnlyList<OcrTextBlock>? source, IReadOnlySet<int> filtered)
+    /// <param name="avoid">The toolbar, in physical pixels: the legend is never put under or over it.</param>
+    internal void SetFilteredGroups(IReadOnlyList<OcrTextBlock>? source, IReadOnlySet<int> filtered, Rect avoid = default)
     {
         _filteredSource = source;
         _filteredGroups = filtered;
+        _legendAvoid = avoid.IsEmpty || avoid.Width <= 0 ? Rect.Empty : avoid;
         if (_isLoaded) BuildDebugBoxes(_currentSelectionScreenX, _currentSelectionScreenY);
     }
 
     /// <summary>
-    /// The 「已過濾」 label: small, light on dark with a thin grey edge, on the outside of the group
-    /// box's top-left corner — inside it where the selection's top edge leaves no room above.
+    /// 「[sample] 已過濾 N 組」: a sample of the grey box — dashed while the group boxes are on, thin
+    /// and solid with only the line boxes — and the count, light on dark with a thin grey edge.
     /// </summary>
-    private Border CreateFilteredTag(Rect box, double selScreenX, double selScreenY)
+    /// <remarks>
+    /// Outside the selection's top-left corner, so it covers none of what was read; below its
+    /// bottom-left corner where the monitor's top edge or the toolbar leaves no room above; inside
+    /// the top-left corner only when neither has room.
+    /// </remarks>
+    private Border CreateFilteredLegend(int count, bool dashed)
     {
+        var sample = new System.Windows.Shapes.Rectangle
+        {
+            Width = 18,
+            Height = 11,
+            RadiusX = 2,
+            RadiusY = 2,
+            Stroke = new SolidColorBrush(FilteredGroupBoxColor),
+            StrokeThickness = dashed ? 1.5 : 1,
+            StrokeDashArray = dashed ? new DoubleCollection([3, 2]) : null,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+        };
         var text = new TextBlock
         {
-            Text = LocalizationService.Get("S.Debug.FilteredTag"),
-            FontSize = 11,
+            Text = LocalizationService.Format("S.Debug.FilteredLegend", count),
+            FontSize = 12,
             Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF0, 0xF0, 0xF0)),
+            VerticalAlignment = VerticalAlignment.Center,
         };
         text.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
-        var tag = new Border
+        var row = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+        row.Children.Add(sample);
+        row.Children.Add(text);
+        var legend = new Border
         {
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0x3A, 0x3E, 0x44)),
-            BorderBrush = new SolidColorBrush(FilteredGroupBoxColor),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0x28, 0x2A, 0x2E)),
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x6B, 0x70, 0x78)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(6, 0, 6, 1),
-            Child = text,
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(9, 3, 9, 4),
+            Child = row,
         };
-        tag.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        legend.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
 
-        double left = (selScreenX + box.X - _physBounds.Left) / _dpiX;
-        double top = (selScreenY + box.Y - _physBounds.Top) / _dpiY;
-        double selectionTop = (selScreenY - _physBounds.Top) / _dpiY;
-        double above = top - FilteredTagGap - tag.DesiredSize.Height;
-        Canvas.SetLeft(tag, above >= selectionTop ? left : left + FilteredTagGap);
-        Canvas.SetTop(tag, above >= selectionTop ? above : top + FilteredTagGap);
-        return tag;
+        var at = FilteredLegendPlace(
+            new Rect(_currentSelectionScreenX, _currentSelectionScreenY, _currentSelectionScreenWidth, _currentSelectionScreenHeight),
+            new System.Windows.Size(legend.DesiredSize.Width * _dpiX, legend.DesiredSize.Height * _dpiY),
+            MonitorAt(_currentSelectionScreenX + _currentSelectionScreenWidth / 2, _currentSelectionScreenY + _currentSelectionScreenHeight / 2),
+            _legendAvoid,
+            FilteredLegendGap * _dpiY);
+        Canvas.SetLeft(legend, (at.X - _physBounds.Left) / _dpiX);
+        Canvas.SetTop(legend, (at.Y - _physBounds.Top) / _dpiY);
+        return legend;
     }
 
-    private const double FilteredTagGap = 2;
+    /// <summary>
+    /// Where the legend's top-left corner goes, in physical pixels: above the selection's top-left
+    /// corner, else below its bottom-left one, else just inside its top-left one. Above or below
+    /// only where the whole legend is on the monitor and clear of <paramref name="avoid"/>.
+    /// </summary>
+    internal static System.Windows.Point FilteredLegendPlace(
+        Rect selection, System.Windows.Size legend, Rect monitor, Rect avoid, double gap)
+    {
+        bool Fits(System.Windows.Point corner)
+        {
+            var area = new Rect(corner, legend);
+            return monitor.Contains(area) && (avoid.IsEmpty || !area.IntersectsWith(avoid));
+        }
+
+        var above = new System.Windows.Point(selection.Left, selection.Top - gap - legend.Height);
+        if (Fits(above)) return above;
+        var below = new System.Windows.Point(selection.Left, selection.Bottom + gap);
+        if (Fits(below)) return below;
+        return new System.Windows.Point(selection.Left + gap, selection.Top + gap);
+    }
+
+    private static Rect MonitorAt(double x, double y)
+    {
+        var bounds = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)x, (int)y)).Bounds;
+        return new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+    }
+
+    private const double FilteredLegendGap = 4;
 
     private System.Windows.Shapes.Rectangle CreateDebugBox(
-        Rect box, double selScreenX, double selScreenY, System.Windows.Media.Color color, bool dashed,
-        bool filled = true)
+        Rect box, double selScreenX, double selScreenY, System.Windows.Media.Color color, bool dashed)
     {
-        var fill = new SolidColorBrush(filled
-            ? System.Windows.Media.Color.FromArgb(DebugFillAlpha, color.R, color.G, color.B)
-            : Colors.Transparent);
+        var fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(DebugFillAlpha, color.R, color.G, color.B));
         var stroke = new SolidColorBrush(color);
         fill.Freeze();
         stroke.Freeze();

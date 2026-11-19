@@ -1319,7 +1319,9 @@ public partial class MainWindow : Window
         var filtered = state is null
             ? new HashSet<int>()
             : Enumerable.Range(0, state.Source.Count).Where(state.IsLeftOut).ToHashSet();
-        _overlayWindow?.SetFilteredGroups(state?.Source, filtered);
+        // The bar as it is now, for the legend to keep clear of.
+        var bar = _toolbarWindow is { IsLoaded: true } toolbar ? toolbar.VisiblePhysicalBounds().Visible : System.Windows.Rect.Empty;
+        _overlayWindow?.SetFilteredGroups(state?.Source, filtered, bar);
     }
 
     // Deep copy of a capture crop, owned by the caller. Clone(Rectangle, PixelFormat) allocates a
