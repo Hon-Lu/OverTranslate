@@ -898,6 +898,7 @@
     <sys:String x:Key="S.Debug.BoxDisplayScope">테두리 표시 범위</sys:String>
     <sys:String x:Key="S.Debug.SourceOnly">원문만</sys:String>
     <sys:String x:Key="S.Debug.SourceAndTranslation">원문과 번역</sys:String>
+    <sys:String x:Key="S.Debug.FilteredTag">걸러짐</sys:String>
     <!-- Two lines, one per half of the switch. xml:space is what keeps the break: without it XAML
          collapses the &#x0A; away and the two sentences run together. -->
     <sys:String x:Key="S.Debug.ScopeHint" xml:space="preserve">원문만: 테두리를 원문 화면에만 표시합니다.&#x0A;원문과 번역: 원문과 번역 화면 모두에 테두리를 표시합니다</sys:String>

@@ -1144,6 +1144,7 @@ public partial class MainWindow : Window
             _captureFilter = final is null ? null : filtered;
             _captureFilterShapes = bubbles;
             _captureFilterRequest = req;
+            ShowFilteredGroups();
             requestToolbar?.SetTranslationState(true);
             requestToolbar?.SetToggleEnabled(coloredTranslated.Count > 0);
             // Nothing was asked of any engine when every group was left out.
@@ -1303,7 +1304,22 @@ public partial class MainWindow : Window
 
         _lastTranslatedBlocks = blocks;
         _lastColoredBlocks = colored;
+        ShowFilteredGroups();
         _overlayWindow?.ApplyHidden(colored);
+    }
+
+    /// <summary>
+    /// Tells the debug boxes which groups the switch leaves out of the capture on screen, so they
+    /// are marked as left out rather than looking untranslated — see OverlayWindow.SetFilteredGroups.
+    /// None with the switch off.
+    /// </summary>
+    private void ShowFilteredGroups()
+    {
+        var state = _captureFilter;
+        var filtered = state is null
+            ? new HashSet<int>()
+            : Enumerable.Range(0, state.Source.Count).Where(state.IsLeftOut).ToHashSet();
+        _overlayWindow?.SetFilteredGroups(state?.Source, filtered);
     }
 
     // Deep copy of a capture crop, owned by the caller. Clone(Rectangle, PixelFormat) allocates a

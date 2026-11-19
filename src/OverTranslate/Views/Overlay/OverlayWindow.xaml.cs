@@ -40,6 +40,10 @@ public partial class OverlayWindow : Window
     private const byte DebugFillAlpha = 0x26;
     private static readonly System.Windows.Media.Color OcrLineBoxColor = System.Windows.Media.Color.FromRgb(0x4D, 0xA3, 0xFF);
     private static readonly System.Windows.Media.Color TextGroupBoxColor = System.Windows.Media.Color.FromRgb(0xFF, 0xB4, 0x54);
+    // A group 過濾數字與縮寫 left out: a mid grey, which reads over dark captures and light ones.
+    private static readonly System.Windows.Media.Color FilteredGroupBoxColor = System.Windows.Media.Color.FromRgb(0xB8, 0xBE, 0xC6);
+    // The line boxes of such a group: the same blue at about half strength, with no fill.
+    private const byte FilteredLineBoxAlpha = 0x80;
 
     private bool _isLoaded;
     private bool _translationVisible;
@@ -1538,21 +1542,100 @@ public partial class OverlayWindow : Window
         var debug = SettingsService.Instance.Current.OcrDebug;
         if (_currentOcrBlocks.Count == 0) return;
 
-        if (debug.ShowGroupBoxes)
-            foreach (var box in OcrDebugBoxes.GroupBoxes(_currentOcrBlocks))
-                DebugCanvas.Children.Add(
-                    CreateDebugBox(box, selScreenX, selScreenY, TextGroupBoxColor, dashed: true));
+        // Only for the reading the set was taken from: one recognised since is another list.
+        IReadOnlySet<int> filtered = ReferenceEquals(_filteredSource, _currentOcrBlocks) ? _filteredGroups : new HashSet<int>();
+        var groups = OcrDebugBoxes.GroupBoxes(_currentOcrBlocks);
 
+        if (debug.ShowGroupBoxes)
+            for (var i = 0; i < groups.Count; i++)
+                DebugCanvas.Children.Add(CreateDebugBox(groups[i], selScreenX, selScreenY,
+                    filtered.Contains(i) ? FilteredGroupBoxColor : TextGroupBoxColor, dashed: true));
+
+        // A left-out group's lines keep their blue, faded and unfilled: still where the recogniser
+        // read them, no longer reading as text waiting for a translation. Group by group, in the
+        // order OcrDebugBoxes.LineBoxes lists them.
         if (debug.ShowLineBoxes)
-            foreach (var box in OcrDebugBoxes.LineBoxes(_currentOcrBlocks))
-                DebugCanvas.Children.Add(
-                    CreateDebugBox(box, selScreenX, selScreenY, OcrLineBoxColor, dashed: false));
+            for (var i = 0; i < _currentOcrBlocks.Count; i++)
+                foreach (var box in OcrDebugBoxes.LineBoxes([_currentOcrBlocks[i]]))
+                    DebugCanvas.Children.Add(filtered.Contains(i)
+                        ? CreateDebugBox(box, selScreenX, selScreenY,
+                            System.Windows.Media.Color.FromArgb(
+                                FilteredLineBoxAlpha, OcrLineBoxColor.R, OcrLineBoxColor.G, OcrLineBoxColor.B),
+                            dashed: false, filled: false)
+                        : CreateDebugBox(box, selScreenX, selScreenY, OcrLineBoxColor, dashed: false));
+
+        // Over the boxes, and whichever of the two is on: the label is what says this one was
+        // left out rather than lost.
+        if (debug.ShowGroupBoxes || debug.ShowLineBoxes)
+            foreach (var i in filtered.Where(i => i < groups.Count).Order())
+                DebugCanvas.Children.Add(CreateFilteredTag(groups[i], selScreenX, selScreenY));
     }
 
-    private System.Windows.Shapes.Rectangle CreateDebugBox(
-        Rect box, double selScreenX, double selScreenY, System.Windows.Media.Color color, bool dashed)
+    /// <summary>
+    /// The groups 過濾數字與縮寫 left out of the capture on screen, by index in the reading they were
+    /// judged on — see <see cref="SetFilteredGroups"/>. Empty with the switch off.
+    /// </summary>
+    private IReadOnlySet<int> _filteredGroups = new HashSet<int>();
+    private IReadOnlyList<OcrTextBlock>? _filteredSource;
+
+    /// <summary>
+    /// Says which groups of <paramref name="source"/> are left out, so the debug boxes can mark
+    /// them: grey instead of orange, and a 「已過濾」 label on their corner.
+    /// </summary>
+    /// <remarks>
+    /// Without it a group left out is an orange box like any other with no translation beside it,
+    /// and whoever turned the boxes on reads it as a group that failed to translate. Nothing is
+    /// marked with the switch off: the set is empty, and the boxes are the ones there always were.
+    /// </remarks>
+    internal void SetFilteredGroups(IReadOnlyList<OcrTextBlock>? source, IReadOnlySet<int> filtered)
     {
-        var fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(DebugFillAlpha, color.R, color.G, color.B));
+        _filteredSource = source;
+        _filteredGroups = filtered;
+        if (_isLoaded) BuildDebugBoxes(_currentSelectionScreenX, _currentSelectionScreenY);
+    }
+
+    /// <summary>
+    /// The 「已過濾」 label: small, light on dark with a thin grey edge, on the outside of the group
+    /// box's top-left corner — inside it where the selection's top edge leaves no room above.
+    /// </summary>
+    private Border CreateFilteredTag(Rect box, double selScreenX, double selScreenY)
+    {
+        var text = new TextBlock
+        {
+            Text = LocalizationService.Get("S.Debug.FilteredTag"),
+            FontSize = 11,
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF0, 0xF0, 0xF0)),
+        };
+        text.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+        var tag = new Border
+        {
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0x3A, 0x3E, 0x44)),
+            BorderBrush = new SolidColorBrush(FilteredGroupBoxColor),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(6, 0, 6, 1),
+            Child = text,
+        };
+        tag.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        double left = (selScreenX + box.X - _physBounds.Left) / _dpiX;
+        double top = (selScreenY + box.Y - _physBounds.Top) / _dpiY;
+        double selectionTop = (selScreenY - _physBounds.Top) / _dpiY;
+        double above = top - FilteredTagGap - tag.DesiredSize.Height;
+        Canvas.SetLeft(tag, above >= selectionTop ? left : left + FilteredTagGap);
+        Canvas.SetTop(tag, above >= selectionTop ? above : top + FilteredTagGap);
+        return tag;
+    }
+
+    private const double FilteredTagGap = 2;
+
+    private System.Windows.Shapes.Rectangle CreateDebugBox(
+        Rect box, double selScreenX, double selScreenY, System.Windows.Media.Color color, bool dashed,
+        bool filled = true)
+    {
+        var fill = new SolidColorBrush(filled
+            ? System.Windows.Media.Color.FromArgb(DebugFillAlpha, color.R, color.G, color.B)
+            : Colors.Transparent);
         var stroke = new SolidColorBrush(color);
         fill.Freeze();
         stroke.Freeze();

@@ -316,6 +316,106 @@ public class CaptureFilterNumbersTests
         }
     });
 
+    /// <summary>
+    /// The debug boxes mark a group left out: grey instead of orange, with a 「已過濾」 label — the
+    /// label with either kind of box on, nothing with both off, and nothing at all with the switch off.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void TheDebugBoxesMarkTheGroupsLeftOut(bool groups, bool lines) => OnSta(() =>
+    {
+        var debug = SettingsService.Instance.Current.OcrDebug;
+        var (oldGroups, oldLines, oldScope) = (debug.ShowGroupBoxes, debug.ShowLineBoxes, debug.ShowOnTranslation);
+        debug.ShowGroupBoxes = groups;
+        debug.ShowLineBoxes = lines;
+        debug.ShowOnTranslation = true;
+        var source = Panel();
+        var window = new OverlayWindow([], [], 0, 0, 400, 300, "EN", "ZH-HANT", false);
+        try
+        {
+            typeof(OverlayWindow).GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
+            var canvas = (Canvas)window.FindName("DebugCanvas");
+            window.ShowOcrDebug(source, 0, 0);
+            var off = Snapshot(canvas);
+            Assert.Empty(Tags(canvas));
+
+            window.SetFilteredGroups(source, new HashSet<int> { 1, 2 });
+            var strokes = canvas.Children.OfType<System.Windows.Shapes.Rectangle>()
+                .Select(box => ((System.Windows.Media.SolidColorBrush)box.Stroke).Color.ToString()).ToList();
+            if (groups)
+                Assert.Equal(new[] { "#FFFFB454", "#FFB8BEC6", "#FFB8BEC6", "#FFFFB454" }, strokes.Take(4));
+            // The left-out groups' line boxes: the same blue at half strength, unfilled, as thick.
+            Assert.Equal(lines ? 2 : 0, strokes.Count(stroke => stroke == "#FF4DA3FF"));
+            Assert.Equal(lines ? 2 : 0, strokes.Count(stroke => stroke == "#804DA3FF"));
+            Assert.All(canvas.Children.OfType<System.Windows.Shapes.Rectangle>()
+                    .Where(box => ((System.Windows.Media.SolidColorBrush)box.Stroke).Color.ToString() == "#804DA3FF"),
+                box =>
+                {
+                    Assert.Equal(0, ((System.Windows.Media.SolidColorBrush)box.Fill).Color.A);
+                    Assert.Equal(1, box.StrokeThickness);
+                });
+            Assert.Equal(groups || lines ? 2 : 0, Tags(canvas).Count);
+            if (groups || lines)
+            {
+                // On the outside of the box's top-left corner, the label's bottom just above it.
+                var tag = Tags(canvas)[0];
+                var box = Rect.Inflate(Health.Bounds, 3, 3);
+                var desktop = ScreenGeometry.VirtualDesktopBounds();
+                Assert.Equal(box.X - desktop.Left, Canvas.GetLeft(tag), 3);
+                Assert.True(Canvas.GetTop(tag) < box.Y - desktop.Top);
+            }
+
+            // A reading other than the one judged is not marked; nor is anything with the switch off.
+            window.ShowOcrDebug([.. source], 0, 0);
+            Assert.Equal(off, Snapshot(canvas));
+            window.ShowOcrDebug(source, 0, 0);
+            window.SetFilteredGroups(source, new HashSet<int>());
+            Assert.Equal(off, Snapshot(canvas));
+        }
+        finally
+        {
+            window.Close();
+            (debug.ShowGroupBoxes, debug.ShowLineBoxes, debug.ShowOnTranslation) = (oldGroups, oldLines, oldScope);
+        }
+    });
+
+    /// <summary>A group box against the selection's top edge carries its label inside, top left.</summary>
+    [Fact]
+    public void TheFilteredLabelGoesInsideWhereThereIsNoRoomAbove() => OnSta(() =>
+    {
+        var debug = SettingsService.Instance.Current.OcrDebug;
+        var (oldGroups, oldLines) = (debug.ShowGroupBoxes, debug.ShowLineBoxes);
+        debug.ShowGroupBoxes = true;
+        debug.ShowLineBoxes = false;
+        var top = new OcrTextBlock("HP 12", new Rect(10, 1, 60, 20));
+        var window = new OverlayWindow([], [], 0, 0, 400, 300, "EN", "ZH-HANT", false);
+        try
+        {
+            typeof(OverlayWindow).GetField("_isLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
+            var canvas = (Canvas)window.FindName("DebugCanvas");
+            List<OcrTextBlock> source = [top];
+            window.ShowOcrDebug(source, 0, 0);
+            window.SetFilteredGroups(source, new HashSet<int> { 0 });
+            var desktop = ScreenGeometry.VirtualDesktopBounds();
+            Assert.True(Canvas.GetTop(Assert.Single(Tags(canvas))) >= -desktop.Top);
+        }
+        finally
+        {
+            window.Close();
+            (debug.ShowGroupBoxes, debug.ShowLineBoxes) = (oldGroups, oldLines);
+        }
+    });
+
+    private static List<Border> Tags(Canvas canvas) => [.. canvas.Children.OfType<Border>()];
+
+    private static List<string> Snapshot(Canvas canvas) =>
+        [.. canvas.Children.Cast<FrameworkElement>().Select(e =>
+            $"{e.GetType().Name} {Canvas.GetLeft(e)},{Canvas.GetTop(e)} {e.Width}x{e.Height} " +
+            (e is System.Windows.Shapes.Rectangle r ? ((System.Windows.Media.SolidColorBrush)r.Stroke).Color.ToString() : ""))];
+
     private static List<string> Written(Canvas canvas) =>
         [.. canvas.Children.OfType<Border>().Select(border => ((TextBlock)border.Child).Text)];
 
