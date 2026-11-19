@@ -546,6 +546,35 @@ public class RealtimeRegionStateTests
         Assert.True(state.TakeHeldOverlayExpiry());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheSameLineBackAfterTheHoldIsReadAndDrawnAgain(bool dialogue)
+    {
+        // Text blinking slowly: gone for longer than the hold, then back with the same words. Taking
+        // the translation down touched nothing the region decides by, so the line is read at the
+        // poll it always was — and the empty reading had already recorded the region as showing
+        // nothing, so the same words are new to it and drawn again rather than let go as unchanged.
+        var (state, frame) = TextGoneAndReadEmpty(RealtimeRegionState.EmptyPassesBeforeClearing, dialogue);
+        for (var poll = 0; poll < RealtimeRegionState.LongestHoldPolls; poll++) state.Examine(frame.Capture, dialogue);
+        Assert.True(state.TakeHeldOverlayExpiry());
+
+        frame.ChangeText();
+        var waited = 0;
+        RealtimeReadReason reason;
+        while ((reason = state.Examine(frame.Capture, dialogue)) == RealtimeReadReason.Nothing)
+            Assert.True(++waited <= RealtimeRegionState.MaxTextUnsettledPolls, "the line coming back was not read");
+        Assert.Equal(RealtimeReadReason.TextChanged, reason);
+        Assert.Equal(dialogue ? 0 : RealtimeRegionState.MaxTextUnsettledPolls, waited);
+
+        Assert.Equal("", state.RenderedText);
+        var read = new[] { new OverTranslate.Services.OcrTextBlock("A complete line.", new System.Windows.Rect(10, 40, 300, 20)) };
+        var merged = dialogue
+            ? state.Dialogue.Merge(state.RenderedLines, read)
+            : state.Dialogue.MergePanel(state.RenderedLines, read);
+        Assert.True(merged.Changed);
+    }
+
     [Fact]
     public void TheHoldIsLongerThanAPauseBetweenLines()
     {
