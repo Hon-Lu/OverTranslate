@@ -205,6 +205,33 @@ public class RealtimeHiddenTextTests
     }
 
     [Theory]
+    // Beside a level mark, capitals that read aloud are a name or a spell: no stat has a level.
+    [InlineData("KAI Lv 12")]
+    [InlineData("KAI Lv12")]
+    [InlineData("KAI Lv.12")]
+    [InlineData("TERRA LV 12")]
+    [InlineData("KAI Lvi 12")]
+    [InlineData("KAI Lv 12 HP 45/120")]
+    [InlineData("FIRA Lv3")]
+    // A computer player's tag goes with its level as a name does; translated, it does no harm.
+    [InlineData("CPU Lv 9")]
+    public void ANameBesideItsLevelIsDrawn(string text)
+    {
+        Assert.False(RealtimeHiddenText.CarriesNoWords(text));
+        Assert.False(RealtimeHiddenText.NothingToTranslate(text));
+    }
+
+    [Theory]
+    // A listed abbreviation, or one that cannot be read aloud, is no name beside a level either.
+    [InlineData("DEF Lv 3")]
+    [InlineData("CDR Lv 2")]
+    [InlineData("4:03 PM Lv 3")]
+    public void NoNameBesideALevelIsLeftOut(string text)
+    {
+        Assert.True(RealtimeHiddenText.CarriesNoWords(text));
+    }
+
+    [Theory]
     // English words, whatever a game uses them for: the translators give their meaning.
     [InlineData("END")]
     [InlineData("HIT")]

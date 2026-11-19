@@ -59,8 +59,10 @@ internal static class RealtimeHiddenText
     /// No), and every letter of any other script (是, はい, 월, 5月, 15일). A lone letter or a
     /// misread level mark needs a number beside it to be left out, and so does an abbreviation
     /// that reads aloud like a name (SAN, KAI); one that cannot be read aloud does not, and 「HP」
-    /// or 「LB」 alone is left out as 「HP 100/200」 is. Full-width Latin is folded first, so ｘ９５８
-    /// is judged as x958.</para>
+    /// or 「LB」 alone is left out as 「HP 100/200」 is. One that reads aloud beside a level mark is
+    /// a name and keeps the group (KAI Lv 12, FIRA Lv3): an old game's party in capitals is drawn
+    /// whether its name plate and level are read as one group or two. Full-width Latin is folded
+    /// first, so ｘ９５８ is judged as x958.</para>
     ///
     /// <para>「OpenAI 相容」 does not even send a text without a letter in it, and hands it back as its
     /// own translation (see OpenAiChatTranslator).</para>
@@ -74,6 +76,8 @@ internal static class RealtimeHiddenText
         var letters = false;
         var abbreviation = false;
         var needsNumber = false;
+        var name = false;
+        var levelMark = false;
         foreach (var word in folded.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
         {
             var count = 0;
@@ -96,6 +100,7 @@ internal static class RealtimeHiddenText
             if (!latin) return false;
             if (count == 1) continue;
             var runs = LetterRuns(word);
+            levelMark |= runs.Any(LevelMark.IsMatch);
             if (IsSortLabel(word, runs))
             {
                 abbreviation = true;
@@ -105,17 +110,25 @@ internal static class RealtimeHiddenText
             // A single letter between abbreviations goes with them (TK/K/A, a kills/deaths/assists
             // head); single letters on their own are still words (U.S., I/O). Before the level
             // mark: Lvl is listed, and alone it still says nothing.
-            var kinds = runs.Where(run => run.Length > 1).Select(Classify).ToList();
-            if (kinds.Count > 0 && !kinds.Contains(RunKind.Word))
+            var kinds = runs.Where(run => run.Length > 1).Select(run => (Run: run, Kind: Classify(run))).ToList();
+            if (kinds.Count > 0 && kinds.All(k => k.Kind != RunKind.Word))
             {
                 abbreviation = true;
-                needsNumber |= kinds.Contains(RunKind.Label);
+                foreach (var (run, kind) in kinds.Where(k => k.Kind == RunKind.Label))
+                {
+                    needsNumber = true;
+                    // A clock's PM is no one's name.
+                    name |= run is not ("AM" or "PM");
+                }
                 continue;
             }
             if (runs.Count == 1 && LevelMark.IsMatch(runs[0])) continue;
             return false;
         }
 
+        // Beside a level mark it is a name: KAI Lv 12 is a party member and FIRA Lv3 a spell, and
+        // no stat has a level of its own.
+        if (name && levelMark) return false;
         // An abbreviation that reads like a name says nothing only as the label of a number.
         if (needsNumber && !digits) return false;
         // Symbols alone carry no words either; a letter or a level mark needs a number to be the
@@ -129,7 +142,10 @@ internal static class RealtimeHiddenText
         Word,
         /// <summary>An abbreviation, left out wherever it is.</summary>
         Abbreviation,
-        /// <summary>An abbreviation only when its group has a number: KAI alone is a name, KAI 45 a stat.</summary>
+        /// <summary>
+        /// An abbreviation only when its group has a number and no level mark: KAI alone is a name,
+        /// KAI 45 a stat, KAI Lv 12 a name again.
+        /// </summary>
         Label,
     }
 
@@ -252,7 +268,8 @@ internal static class RealtimeHiddenText
     /// up: a reader of the game knows them anyway. In capitals, or a capital and lower case (Hp,
     /// Atk, Def → 定義); KO in capitals only. Not CON, which is a word, nor EVA, which is a name.
     /// FPS with them: an overlay's frame counter, read beside a game's numbers as often as they are.
-    /// Outside a game the same letters can mean what the translator said (the AP of a news logo, the
+    /// Not CPU or COM: beside a level (CPU Lv 9) they are drawn as a name is, and a computer
+    /// player's tag translated with its level does no harm. Outside a game the same letters can mean what the translator said (the AP of a news logo, the
     /// PP stamped on a plastic tub), and there too they are left as they are.</para>
     /// </remarks>
     internal static readonly IReadOnlySet<string> StatAbbreviations = new HashSet<string>(StringComparer.Ordinal)
