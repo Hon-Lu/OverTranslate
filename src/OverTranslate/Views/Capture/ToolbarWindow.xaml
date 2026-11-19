@@ -540,7 +540,7 @@
                              every line it spends is a line of the capture it hides.
 
                              翻譯內容 first, on its own: the one switch here that changes what the
-                             translation says. 功能 and 其他 under it are things done besides
+                             translation says. 一般 and 其他 under it are things done besides
                              translating, and 偵錯輔助 last. The switches are the settings page's own
                              keys, so the two places always agree - see
                              SettingsService.UpdateCaptureOptions.
@@ -653,7 +653,7 @@
                                         </StackPanel>
                                     </CheckBox>
 
-                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreFeatures}" Style="{StaticResource MoreSectionHeaderAfter}"/>
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeaderAfter}"/>
                                     <!-- Takes effect from the next selection: it is read the moment a
                                          selection is finished, and this one already was. -->
                                     <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"

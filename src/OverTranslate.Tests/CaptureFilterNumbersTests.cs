@@ -325,7 +325,7 @@ public class CaptureFilterNumbersTests
     // ── The menu ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void TheMenuReadsContentThenFeaturesThenOther()
+    public void TheMenuReadsContentThenGeneralThenOther()
     {
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
         var document = XDocument.Load(Path.Combine(StringsParityTests.ProjectDirectory(), "Views", "Capture", "ToolbarWindow.xaml"));
@@ -338,7 +338,7 @@ public class CaptureFilterNumbersTests
         Assert.Equal(new[]
         {
             "{DynamicResource S.Toolbar.MoreContent}", "FilterNumbersSwitch",
-            "{DynamicResource S.Toolbar.MoreFeatures}", "AutoTranslateSwitch", "SaveScreenshotSwitch", "CloseAfterCopySwitch",
+            "{DynamicResource S.Toolbar.MoreGeneral}", "AutoTranslateSwitch", "SaveScreenshotSwitch", "CloseAfterCopySwitch",
             "{DynamicResource S.Toolbar.MoreOther}", "ModelHintSwitch",
         }, order);
     }

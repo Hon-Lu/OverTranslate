@@ -867,7 +867,7 @@
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">Закрывать после снимка</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">Завершает снимок экрана, как только «Снимок» скопирует его в буфер обмена</sys:String>
     <sys:String x:Key="S.Toolbar.MoreContent">Перевод</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreFeatures">Функции</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">Общие</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">Другое</sys:String>
     <sys:String x:Key="S.Toolbar.InfoIcon">Подробнее</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">Автоперевод</sys:String>

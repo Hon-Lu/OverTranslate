@@ -897,7 +897,7 @@
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">截圖後自動關閉</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">按下「截圖」複製到剪貼簿後，直接結束截圖翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.MoreContent">翻譯內容</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreFeatures">功能</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">其他</sys:String>
     <sys:String x:Key="S.Toolbar.InfoIcon">說明</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻譯</sys:String>

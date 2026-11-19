@@ -878,7 +878,7 @@
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">スクリーンショット後に閉じる</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">「スクリーンショット」でクリップボードにコピーしたら、そのまま終了します</sys:String>
     <sys:String x:Key="S.Toolbar.MoreContent">翻訳内容</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreFeatures">機能</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreGeneral">一般</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">その他</sys:String>
     <sys:String x:Key="S.Toolbar.InfoIcon">説明</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自動翻訳</sys:String>
