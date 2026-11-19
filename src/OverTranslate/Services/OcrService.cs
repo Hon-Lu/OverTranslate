@@ -222,7 +222,7 @@ public class OcrService : IDisposable
         // There is no toolbar in front of a running video, so there is no CaptureLayoutMode to
         // honour here; taking one would mean a mode the user chose for a still capture silently
         // steering frames it was never asked about.
-        return TiltedOverlap.Level(GroupRealtime(blocks, bitmap.Height, profile));
+        return TiltedOverlap.Level(GroupRealtime(blocks, bitmap.Height, profile, edges: new Ocr.PanelEdges(bitmap)));
     }
 
     /// <summary>
@@ -302,27 +302,32 @@ public class OcrService : IDisposable
 
     /// <inheritdoc cref="GroupRealtime(List{OcrTextBlock}, double, Realtime.RealtimeBlockMode, GroupingTrace?, List{OcrTextBlockGrouper.NextLineDecision}?)"/>
     /// <param name="profile">The block's mode: its layout, and the figures each grouper runs on.</param>
+    /// <param name="edges">
+    /// The frame the blocks were read from, for the panel grouper to tell a panel's frame between
+    /// two boxes on a row — see <see cref="Ocr.PanelEdges"/>. Only the panel grouper asks: the
+    /// dialogue grouper joins whole rows into passages and is left as it was measured.
+    /// </param>
     internal static List<OcrTextBlock> GroupRealtime(List<OcrTextBlock> blocks, double frameHeight,
         Realtime.ResolvedProfile profile, GroupingTrace? trace = null,
-        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null)
+        List<OcrTextBlockGrouper.NextLineDecision>? decisions = null, Ocr.PanelEdges? edges = null)
     {
         // Tilted cards are levelled for the grouping rules and given back upright afterwards — see
         // Ocr.TiltedLayout. Before the filters, which read only text, confidence and Bounds, so that
         // the harness trace below registers the same instances the groupers then see.
         blocks = TiltedLayout.Straighten(blocks);
-        return TiltedLayout.Restore(GroupStraightened(blocks, frameHeight, profile, trace, decisions));
+        return TiltedLayout.Restore(GroupStraightened(blocks, frameHeight, profile, trace, decisions, edges));
     }
 
     private static List<OcrTextBlock> GroupStraightened(List<OcrTextBlock> blocks, double frameHeight,
         Realtime.ResolvedProfile profile, GroupingTrace? trace,
-        List<OcrTextBlockGrouper.NextLineDecision>? decisions)
+        List<OcrTextBlockGrouper.NextLineDecision>? decisions, Ocr.PanelEdges? edges)
     {
         // 自動 runs both groupers and keeps, cluster by cluster, the one its text calls for. Both
         // are given what the dialogue grouper is given below: a box thrown across the whole block
         // is thrown out by the session whichever mode read it, and taking it out first is what
         // keeps it from being joined to a real line on the way.
         if (profile.Merge == Realtime.RealtimeMerge.Auto)
-            return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight, profile), profile.Auto);
+            return Realtime.RealtimeAutoLayout.Group(FilterForRealtime(blocks, frameHeight, profile), profile.Auto, edges);
 
         // 不合併 is filtered as 逐項 is and 合併 as 整段 is, being drawn and read as them.
         var filtered = IgnoreSmallText(
@@ -330,9 +335,9 @@ public class OcrService : IDisposable
         switch (profile.Merge)
         {
             case Realtime.RealtimeMerge.Lines:
-                return OcrTextBlockGrouper.GroupLines(filtered, profile.PanelGrouping, decisions, trace);
+                return OcrTextBlockGrouper.GroupLines(filtered, profile.PanelGrouping, decisions, trace, edges);
             case Realtime.RealtimeMerge.Items:
-                return OcrTextBlockGrouper.Group(filtered, profile.PanelGrouping, decisions, trace);
+                return OcrTextBlockGrouper.Group(filtered, profile.PanelGrouping, decisions, trace, edges);
         }
         // Remove scene-sized noise before it can contaminate a real dialogue row. Confident
         // single letters (such as a split "I") may still join; isolated ones are filtered later.
