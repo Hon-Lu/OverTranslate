@@ -135,6 +135,41 @@ public class RealtimeHiddenLinesDrawingTests
     }
 
     [Fact]
+    public void AHiddenLineTheRowAboveOnlyReachesTheEdgeOfIsLeftOut()
+    {
+        // A name over its HP, the two rows read with boxes a couple of pixels into each other, so
+        // the name's box reaches into the top of the HP row: the figures under it can still be
+        // read, so they are left out like every other in the column, not drawn for a margin.
+        var name = new TranslatedBlock("名前", "名前名前", new Rect(20, 30, 120, 24)) { ReadAs = RealtimeBlockMode.Panel };
+        var hp = new TranslatedBlock("HP 210/300", "HP 210/300", new Rect(20, 52, 120, 24)) { ReadAs = RealtimeBlockMode.Panel, Hidden = true };
+
+        var shown = Draw([name, hp with { Hidden = false }]);
+        var above = shown.Texts.Single(text => text.Text == "名前名前");
+        Assert.True(above.Top + above.Height > hp.Bounds.Top + 0.5, "the name's box no longer reaches into the row below");
+
+        var drawn = Draw([name, hp]);
+        Assert.Equal("名前名前", Assert.Single(drawn.Texts).Text);
+    }
+
+    [Theory]
+    // Down into the row from above, across all of it: half its height is where its letters are.
+    [InlineData(0, 0, 400, 30 + 11.9, false)]
+    [InlineData(0, 0, 400, 30 + 12, true)]
+    // Up into it from below, the same.
+    [InlineData(0, 54 - 11.9, 400, 100, false)]
+    [InlineData(0, 54 - 12, 400, 100, true)]
+    // Across it on its own row, as a subtitle band does: the same length again, about a letter.
+    [InlineData(0, 30, 100 + 11.9, 24, false)]
+    [InlineData(0, 30, 100 + 12, 24, true)]
+    // A corner, deep enough one way and not the other.
+    [InlineData(0, 0, 100 + 6, 54, false)]
+    public void ARowIsHiddenOnceSomethingReachesHalfItsHeightIntoIt(double left, double top, double width, double height, bool hides)
+    {
+        var row = new Rect(100, 30, 50, 24);
+        Assert.Equal(hides, RealtimeBlockWindow.HidesRow(new Rect(left, top, width, height), row));
+    }
+
+    [Fact]
     public void AChangeInAHiddenLineAloneDrawsNothingAgain()
     {
         OnStaThread(() =>

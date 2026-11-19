@@ -492,11 +492,13 @@ public partial class RealtimeBlockWindow : Window
         // on top, and a number to the right of a sentence was read as its own box over the band.
         // Left out, it would be under the band with nothing over it, and the reader would lose the
         // very number the hiding was meant to leave on show. So it is drawn as it always was.
+        // Covered means covered enough that it could no longer be read (see HidesRow): a box that
+        // only reaches into the margin of the row below leaves that row's figures as they are.
         HashSet<int> leftOut = [.. Enumerable.Range(0, _lines.Count).Where(index => _lines[index].Hidden)];
         var visuals = BuildVisuals(canvasWidth, canvasHeight, frame, leftOut).ToList();
         if (leftOut.Count > 0)
         {
-            var covered = leftOut.Where(index => visuals.Any(visual => Covers(visual, _lines[index].Bounds))).ToList();
+            var covered = leftOut.Where(index => visuals.Any(visual => Covers(visual, _lines[index]))).ToList();
             if (covered.Count > 0)
             {
                 leftOut.ExceptWith(covered);
@@ -2014,19 +2016,17 @@ public partial class RealtimeBlockWindow : Window
     private static IReadOnlyList<TranslatedBlock> Drawn(IReadOnlyList<TranslatedBlock> lines, IReadOnlySet<int> leftOut) =>
         leftOut.Count == 0 ? lines : [.. lines.Where((_, index) => !leftOut.Contains(index))];
 
-    // Whether a drawn line reaches over a line's source box, which is in physical pixels.
-    private bool Covers(LineVisual visual, Rect source)
+    // Whether a drawn line hides one of a line's source rows, which are in physical pixels.
+    private bool Covers(LineVisual visual, TranslatedBlock line)
     {
-        var box = new Rect(source.X / _dpiX, source.Y / _dpiY, source.Width / _dpiX, source.Height / _dpiY);
-        return Overlaps(OnCanvas(visual.Text), box)
-            || visual.Background is { } background && Overlaps(OnCanvas(background), box);
-
-        // By more than a shared edge: a band that stops where the number starts covers none of it.
-        static bool Overlaps(Rect a, Rect b)
+        foreach (var source in line.SourceLineBounds is { Count: > 0 } rows ? rows : [line.Bounds])
         {
-            var both = Rect.Intersect(a, b);
-            return !both.IsEmpty && both.Width > 0.5 && both.Height > 0.5;
+            var row = new Rect(source.X / _dpiX, source.Y / _dpiY, source.Width / _dpiX, source.Height / _dpiY);
+            if (HidesRow(OnCanvas(visual.Text), row)
+                || visual.Background is { } background && HidesRow(OnCanvas(background), row))
+                return true;
         }
+        return false;
 
         // Where an element was put on its canvas, by the size it was given; one given none covers nothing.
         static Rect OnCanvas(FrameworkElement element)
@@ -2038,6 +2038,36 @@ public partial class RealtimeBlockWindow : Window
                 : Rect.Empty;
         }
     }
+
+    /// <summary>
+    /// Whether something drawn over a row of source text leaves it unreadable: it reaches at least
+    /// half the row's height into it, and at least as far across.
+    /// </summary>
+    /// <remarks>
+    /// <para>Down, half: a row's box is taller than its letters — a Latin one by half again — and
+    /// a box drawn over the row above or below that reaches into that margin, or over the edge of
+    /// the letters, leaves them readable. Every hidden line a drawn box reached into at all, over
+    /// the realtime corpus and the supplementary set in all three presets (239 of 2,743), was drawn
+    /// left out: up to 0.46 of the row's height every one could still be read; from 0.59 the
+    /// covered part took the figures with it; the few in between were covered across no more than
+    /// a fifth of their width, and could be read too. Any reach at all, as
+    /// this was before, drew a number whenever the box over the row above came out a few pixels
+    /// taller, so in one column of figures some had a box and some did not, changing with the size
+    /// the rows settled at.</para>
+    ///
+    /// <para>Across, the same length — a letter or so: a band set as a subtitle that reaches over a
+    /// number on its own row takes all of it, while a box that ends a few pixels into the row's
+    /// side margin took nothing that could not still be read.</para>
+    /// </remarks>
+    internal static bool HidesRow(Rect drawn, Rect row)
+    {
+        var both = Rect.Intersect(drawn, row);
+        double reach = row.Height * CoveredRowFraction;
+        return !both.IsEmpty && both.Height >= reach && both.Width >= reach;
+    }
+
+    // See HidesRow.
+    private const double CoveredRowFraction = 0.5;
 
     private void UpdateNaturalRefreshTimer()
     {
