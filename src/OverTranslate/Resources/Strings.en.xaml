@@ -489,6 +489,12 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignCenter">Center</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignLeft">Left</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">Follows the alignment of the original text; when it cannot be determined, passages are centered and separate text is left-aligned.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbers">Filter numbers and abbreviations</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbersHint">Filters out content that would be meaningless or easily mistranslated. Some short all-caps English names may also be skipped.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumbers">Numbers only</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumberSymbols">Numbers with symbols</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagSymbols">Symbols</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagAbbreviations">English abbreviations</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Read once text settles</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Move right if text tends to flicker or is unstable; translations will also appear more slowly.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">No wait for passages; about 0.15 s for separate text.</sys:String>

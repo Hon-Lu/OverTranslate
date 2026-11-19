@@ -493,6 +493,12 @@
     <sys:String x:Key="S.Realtime.ProfileAlignCenter">中央揃え</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignLeft">左揃え</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">原文の揃え方に合わせます。判断できない場合、まとまった文章は中央揃え、ばらばらの文字は左揃えにします。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbers">数字と略語を除外</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbersHint">翻訳しても意味がない内容や、誤訳されやすい内容を除外します。すべて大文字の短い英語名も一緒に除外されることがあります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumbers">数字のみ</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumberSymbols">数字と記号の組み合わせ</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagSymbols">特殊記号</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagAbbreviations">英語の略語</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">文字が安定してから読み取る</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">文字がちらついたり不安定になったりする場合は、右へ調整します。ただし、翻訳の表示も遅くなります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">まとまった文章は待たず、ばらばらの文字は約 0.15 秒待ちます。</sys:String>

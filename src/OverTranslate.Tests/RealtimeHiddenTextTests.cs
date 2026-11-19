@@ -293,7 +293,7 @@ public class RealtimeHiddenTextTests
     [Fact]
     public void AGroupWithNothingToTranslateIsHiddenAndNotWaitingOnAnything()
     {
-        var line = RealtimeTranslationSession.ForOverlay(Block("Lv 15"), translation: null);
+        var line = RealtimeTranslationSession.ForOverlay(Block("Lv 15"), translation: null, filter: true);
 
         Assert.True(line.Hidden);
         // Not untranslated: the pump retries those for as long as they are up.
@@ -304,7 +304,7 @@ public class RealtimeHiddenTextTests
     [Fact]
     public void ALineNoEngineAnsweredIsNeverHidden()
     {
-        var line = RealtimeTranslationSession.ForOverlay(Block("QSAVE"), translation: null);
+        var line = RealtimeTranslationSession.ForOverlay(Block("QSAVE"), translation: null, filter: true);
 
         Assert.True(line.Untranslated);
         Assert.False(line.Hidden);
@@ -320,7 +320,7 @@ public class RealtimeHiddenTextTests
     [InlineData("QSAVE", "快速存檔")]
     public void ALineWithWordsIsDrawnWhateverItsTranslation(string source, string translation)
     {
-        var line = RealtimeTranslationSession.ForOverlay(Block(source), translation);
+        var line = RealtimeTranslationSession.ForOverlay(Block(source), translation, filter: true);
 
         Assert.False(line.Hidden);
         Assert.Equal(translation, line.TranslatedText);
@@ -336,7 +336,7 @@ public class RealtimeHiddenTextTests
             FontGlyphHeight = 17,
         };
 
-        var line = RealtimeTranslationSession.ForOverlay(block, translation: null);
+        var line = RealtimeTranslationSession.ForOverlay(block, translation: null, filter: true);
 
         // Its place among the others, and its height for the type size of the rest.
         Assert.Equal(block.Bounds, line.Bounds);

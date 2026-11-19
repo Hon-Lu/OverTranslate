@@ -13,6 +13,9 @@ internal enum ProfileParam
     /// <summary>譯文對齊.</summary>
     Align,
 
+    /// <summary>過濾數字與縮寫: a tick.</summary>
+    FilterNumbersAndAbbreviations,
+
     /// <summary>畫面文字穩定後再讀取.</summary>
     SettleSeconds,
 
@@ -71,10 +74,16 @@ internal static class RealtimeProfileEditing
 
     /// <summary>
     /// Whether a block whose text runs vertically ignores this value: everything but the two
-    /// timing ones — see research §3, the vertical path neither groups nor sizes the detector.
+    /// timing ones and 過濾數字與縮寫 — see research §3, the vertical path neither groups nor sizes
+    /// the detector; what is translated is decided after either path has read.
     /// </summary>
     public static bool IsHorizontalOnly(ProfileParam param) =>
-        param is not (ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads);
+        param is not (ProfileParam.SettleSeconds or ProfileParam.ClearAfterEmptyReads
+            or ProfileParam.FilterNumbersAndAbbreviations);
+
+    /// <summary>Whether the page shows this value as a tick rather than a slider or a switch.</summary>
+    public static bool IsTick(ProfileParam param) =>
+        param is ProfileParam.ClearAfterEmptyReads or ProfileParam.FilterNumbersAndAbbreviations;
 
     /// <summary>
     /// Whether the stored mode holds anything of its own for this value rather than following its
@@ -84,6 +93,7 @@ internal static class RealtimeProfileEditing
     {
         ProfileParam.MergeLevel => stored.MergeLevel is not null,
         ProfileParam.Align => stored.Align is not null,
+        ProfileParam.FilterNumbersAndAbbreviations => stored.FilterNumbersAndAbbreviations is not null,
         ProfileParam.SettleSeconds => stored.SettleAutomatic is not null || stored.SettleSeconds is not null,
         ProfileParam.ClearAfterEmptyReads => stored.ClearAfterEmptyReads is not null,
         ProfileParam.DetectorPercent => stored.DetectorAutomatic is not null || stored.DetectorPercent is not null,
@@ -99,6 +109,7 @@ internal static class RealtimeProfileEditing
         {
             case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
             case ProfileParam.Align: stored.Align = null; break;
+            case ProfileParam.FilterNumbersAndAbbreviations: stored.FilterNumbersAndAbbreviations = null; break;
             case ProfileParam.SettleSeconds: stored.SettleAutomatic = null; stored.SettleSeconds = null; break;
             case ProfileParam.ClearAfterEmptyReads: stored.ClearAfterEmptyReads = null; break;
             case ProfileParam.DetectorPercent: stored.DetectorAutomatic = null; stored.DetectorPercent = null; break;
@@ -191,6 +202,7 @@ internal static class RealtimeProfileEditing
     {
         ProfileParam.MergeLevel => filled.MergeLevel,
         ProfileParam.Align => filled.Align,
+        ProfileParam.FilterNumbersAndAbbreviations => filled.FilterNumbersAndAbbreviations,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds ? Math.Round(seconds, 2) : null,
         ProfileParam.ClearAfterEmptyReads => filled.ClearAfterEmptyReads,
         ProfileParam.DetectorPercent => filled.DetectorPercent,

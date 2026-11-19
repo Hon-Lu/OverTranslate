@@ -444,9 +444,9 @@ public class RealtimeProfileEditingTests
     }
 
     [Fact]
-    public void TheTimingValuesApplyToVerticalText_TheRestDoNot()
+    public void TheTimingValuesAndTheFilterApplyToVerticalText_TheRestDoNot()
     {
         var both = RealtimeProfileEditing.All.Where(param => !RealtimeProfileEditing.IsHorizontalOnly(param));
-        Assert.Equal([ProfileParam.SettleSeconds, ProfileParam.ClearAfterEmptyReads], both);
+        Assert.Equal([ProfileParam.FilterNumbersAndAbbreviations, ProfileParam.SettleSeconds, ProfileParam.ClearAfterEmptyReads], both);
     }
 }

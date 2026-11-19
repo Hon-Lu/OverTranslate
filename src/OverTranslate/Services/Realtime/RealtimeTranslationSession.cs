@@ -454,8 +454,9 @@ public sealed class RealtimeTranslationSession
     private static void LogProfiles(IReadOnlyList<RealtimeRegion> regions)
     {
         foreach (var region in regions)
-            Log.Info("Realtime region {Region} ({Orientation}): {Profile} align={Align}",
-                region.Id, region.Orientation, region.Profile.Describe(), region.Profile.Align);
+            Log.Info("Realtime region {Region} ({Orientation}): {Profile} align={Align} filter={Filter:l}",
+                region.Id, region.Orientation, region.Profile.Describe(), region.Profile.Align,
+                region.Profile.FilterNumbersAndAbbreviations ? "on" : "off");
     }
 
     /// <param name="releaseRecogniser">
@@ -1320,10 +1321,15 @@ public sealed class RealtimeTranslationSession
     /// <para>What is cached is unchanged by any of it: a line is asked for once per session and kept
     /// once it has an answer, and a line no engine translated is not kept.</para>
     /// </remarks>
+    /// <param name="filter">
+    /// 過濾數字與縮寫 — see <see cref="ResolvedProfile.FilterNumbersAndAbbreviations"/>. Off, every
+    /// line is asked for and drawn, as before it existed.
+    /// </param>
     private async Task<List<TranslatedBlock>?> TranslateAsync(
         List<OcrTextBlock> blocks,
         string sourceLanguage,
         string targetLanguage,
+        bool filter,
         int generation,
         CancellationToken token)
     {
@@ -1342,7 +1348,7 @@ public sealed class RealtimeTranslationSession
         foreach (var block in blocks)
         {
             // Nothing in it to translate, so nothing is asked for it — see RealtimeHiddenText.
-            if (RealtimeHiddenText.NothingToTranslate(block.Text)) continue;
+            if (LeftOut(block, filter)) continue;
             var key = cacheKeyPrefix + block.Text;
             if (_translationCache.TryGet(key, generation, out _)) continue;
             if (!withContext)
@@ -1380,7 +1386,8 @@ public sealed class RealtimeTranslationSession
 
         return blocks
             .Select(block => ForOverlay(block,
-                _translationCache.TryGet(cacheKeyPrefix + block.Text, generation, out var translated) ? translated : null))
+                _translationCache.TryGet(cacheKeyPrefix + block.Text, generation, out var translated) ? translated : null,
+                filter))
             .ToList();
 
         async Task SendAsync()
@@ -1447,12 +1454,21 @@ public sealed class RealtimeTranslationSession
     /// the half-and-half column is the only thing it changed.</para>
     /// </remarks>
     /// <param name="translation">The translation, or null when no engine gave one.</param>
-    internal static TranslatedBlock ForOverlay(OcrTextBlock block, string? translation) =>
-        RealtimeHiddenText.NothingToTranslate(block.Text)
+    /// <param name="filter">過濾數字與縮寫: off, no line is hidden — see <see cref="LeftOut"/>.</param>
+    internal static TranslatedBlock ForOverlay(OcrTextBlock block, string? translation, bool filter) =>
+        LeftOut(block, filter)
             ? Translated(block, block.Text, untranslated: false, hidden: true)
             : translation is not null
                 ? Translated(block, translation, untranslated: false)
                 : Translated(block, block.Text, untranslated: true);
+
+    /// <summary>
+    /// Whether a line is neither asked for nor drawn: 過濾數字與縮寫 on, and nothing in it to
+    /// translate — see <see cref="RealtimeHiddenText.NothingToTranslate"/>. The one test both the
+    /// request and the overlay go by, so a line is never asked for and then hidden, or the reverse.
+    /// </summary>
+    internal static bool LeftOut(OcrTextBlock block, bool filter) =>
+        filter && RealtimeHiddenText.NothingToTranslate(block.Text);
 
     /// <summary>A recognised line holding <paramref name="text"/>, as the overlay draws it.</summary>
     private static TranslatedBlock Translated(OcrTextBlock block, string text, bool untranslated, bool hidden = false) =>
@@ -1549,7 +1565,7 @@ public sealed class RealtimeTranslationSession
                 {
                     session.SetBusy(true);
                     var translated = await session.TranslateAsync(
-                        blocks, sourceLanguage, targetLanguage, generation, token);
+                        blocks, sourceLanguage, targetLanguage, region.Profile.FilterNumbersAndAbbreviations, generation, token);
                     var translateMs = (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
                     // A cancelled token is a run that has been stopped — paused, or started again on
