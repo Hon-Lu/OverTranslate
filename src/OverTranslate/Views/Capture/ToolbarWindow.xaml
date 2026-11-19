@@ -634,7 +634,7 @@
                                                        PreviewMouseLeftButtonDown="FilterNumbersInfo_PreviewMouseButton"
                                                        PreviewMouseLeftButtonUp="FilterNumbersInfo_PreviewMouseButton">
                                                 <vc:HoverToolTip.Content>
-                                                    <StackPanel Width="262">
+                                                    <StackPanel Width="300">
                                                         <WrapPanel x:Name="FilterNumbersTags" Margin="0,2,0,2">
                                                             <ContentControl Style="{StaticResource FilterTag}" Content="{DynamicResource S.Realtime.ProfileFilterTagNumbers}"/>
                                                             <ContentControl Style="{StaticResource FilterTag}" Content="{DynamicResource S.Realtime.ProfileFilterTagNumberSymbols}"/>
