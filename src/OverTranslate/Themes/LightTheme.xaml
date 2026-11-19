@@ -13,6 +13,11 @@
          because the card underneath is already white and there is nothing above it to lift to. -->
     <SolidColorBrush x:Key="AppInfoBg"         Color="#EDF5FC"/>
 
+    <!-- The light half of the 自動判斷 plate — see DarkTheme.xaml. A dip of black rather than a
+         lift, the card being white already. -->
+    <SolidColorBrush x:Key="RealtimeMergeZoneBg"       Color="#0F000000"/>
+    <SolidColorBrush x:Key="RealtimeMergeZoneActiveBg" Color="#1A0078D4"/>
+
     <!-- Text — two levels, and there is no third. See DarkTheme for why AppTextMuted was removed;
          its light value (#999999) was 2.75:1, no better. -->
     <SolidColorBrush x:Key="AppTextPrimary"    Color="#1A1A1A"/>
