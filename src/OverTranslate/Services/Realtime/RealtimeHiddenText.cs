@@ -117,10 +117,13 @@ internal static class RealtimeHiddenText
                 continue;
             }
 
+            // A sound spelled in capitals (PFFT., TSK!, GRR...) ends its sentence; only the last run can.
+            var sounded = EndsSentence(word);
             // A single letter between abbreviations goes with them (TK/K/A, a kills/deaths/assists
             // head); single letters on their own are still words (U.S., I/O). Before the level
             // mark: Lvl is listed, and alone it still says nothing.
-            var kinds = runs.Where(run => run.Length > 1).Select(run => (Run: run, Kind: Classify(run))).ToList();
+            var kinds = runs.Select((run, i) => (Run: run, Sounded: sounded && i == runs.Count - 1))
+                .Where(k => k.Run.Length > 1).Select(k => (k.Run, Kind: Classify(k.Run, k.Sounded))).ToList();
             if (kinds.Count > 0 && kinds.All(k => k.Kind != RunKind.Word))
             {
                 abbreviation = true;
@@ -193,8 +196,33 @@ internal static class RealtimeHiddenText
     /// on news sites, HTML/CSS tabs — and none the list left out is drawn now. The real-world
     /// ones that read aloud (USA, VIP, FBI), which the translators do well, never stood alone
     /// there without a number.</para>
+    ///
+    /// <para>A sound read aloud is not an abbreviation either: capitals without a vowel that end a
+    /// sentence (PFFT., TSK!, HMPH., GRR..., HM?) or hold one letter three times over (GRRR, ZZZ,
+    /// MMMM) go to the tier that reads aloud — drawn alone, left out beside a number. Comics and
+    /// webtoons lettered in capitals spell their sighs and scoffs this way; a game's or a page's
+    /// abbreviation never ends a sentence on its own.</para>
+    ///
+    /// <para>MEASURED (2026-11-19). Over the same captures, 165 more, 148 sequences of nine and the
+    /// old RPG screens, in all three presets (112,412 groups), and every English line a user's
+    /// sessions read over two days (11,687 readings): nothing changed but three sounds, all in a
+    /// webtoon (PFFT., TSK., FLNCH.). Over a modern webtoon set lettered in capitals, official and
+    /// fan-translated (1,007 regions, 2,555 groups in 標準): every bubble sound is drawn (HNG...,
+    /// HMPH!, TCH!, HMMPH?!); the recogniser kept the mark of all 40 short lines printed with one
+    /// and added none to the 50 without; no such sound shared a group with other words. The
+    /// engines made a sound of them 65% of the time there (HMPH! → 哼！ on all six), 56% over a
+    /// wider list (Microsoft 19 of 25: PFFT. → 噗。, TSK. → 啧。).</para>
+    ///
+    /// <para>Not taken, the same measures: a sound effect over the art with no mark and no letter
+    /// three times (BZZT, SSK-, CWNK) — 11 groups in those 1,007 regions, five of them a word with
+    /// a vowel misread (SWING → SWLNG); a sound 5% of the time on the engines and a wrong word 23%
+    /// (CLVNK → 左心室, NG → 不合格), and nothing in its letters tells it from CDR or RTX. Nor a
+    /// trailing dash as a sentence's end (SSK-): no abbreviation ends that way, but every engine
+    /// handed it back as it was. Nor letting every vowel-less run through where most sentences in
+    /// the picture are capitals: it buys only those effects, and a party panel's column of HP
+    /// values reads as capitals too.</para>
     /// </remarks>
-    private static RunKind Classify(string run)
+    private static RunKind Classify(string run, bool sounded = false)
     {
         if (IsStatAbbreviation(run)) return RunKind.Abbreviation;
         if (!run.All(char.IsAsciiLetter)) return RunKind.Word;
@@ -205,6 +233,7 @@ internal static class RealtimeHiddenText
             // A clock's (4:03 PM, as 12:30 is), so only beside its number; AM alone is a word.
             if (run is "AM" or "PM") return RunKind.Label;
             if (EnglishShortWords.Value.Contains(run.ToLowerInvariant())) return RunKind.Word;
+            if (sounded || TripledLetter.IsMatch(run)) return RunKind.Label;
             return run.Any(c => "AEIOUY".Contains(c)) ? RunKind.Label : RunKind.Abbreviation;
         }
 
@@ -217,6 +246,26 @@ internal static class RealtimeHiddenText
         if (kinds.Contains(RunKind.Word)) return RunKind.Word;
         return kinds.Contains(RunKind.Label) ? RunKind.Label : RunKind.Abbreviation;
     }
+
+    // GRRR, ZZZ, SHHH: one letter three times over.
+    private static readonly Regex TripledLetter = new(@"(\p{L})\1\1", RegexOptions.CultureInvariant);
+
+    // PFFT. TSK! GRR... HM?! — the word's last letter followed by closing marks only, a sentence's
+    // end among them. Not a comma or a colon: 「TSK,」 goes on, 「BGM:」 labels what follows.
+    private static bool EndsSentence(string word)
+    {
+        var last = -1;
+        for (var i = 0; i < word.Length; i++)
+            if (char.IsLetter(word[i])) last = i;
+        if (last < 0 || last == word.Length - 1) return false;
+        var tail = word.AsSpan(last + 1);
+        foreach (var c in tail)
+            if (!SentenceEnds.Contains(c) && !ClosingMarks.Contains(c)) return false;
+        return tail.IndexOfAny(SentenceEnds) >= 0;
+    }
+
+    private const string SentenceEnds = ".!?…‥⋯~";
+    private const string ClosingMarks = ",'\"’”)]」』";
 
     // SpAtk → Sp, Atk; HPRegen → HP, Regen; iLvl → i, Lvl.
     private static readonly Regex CamelPart = new("[A-Z]+(?![a-z])|[A-Z]?[a-z]+", RegexOptions.CultureInvariant);

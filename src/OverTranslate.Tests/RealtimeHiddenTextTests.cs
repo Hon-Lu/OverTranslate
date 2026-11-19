@@ -204,6 +204,49 @@ public class RealtimeHiddenTextTests
     }
 
     [Theory]
+    // Capitals without a vowel that end a sentence, or hold one letter three times, are a sound a
+    // comic lettered in capitals spells out, and are drawn as a name is.
+    [InlineData("PFFT.")]
+    [InlineData("TSK.")]
+    [InlineData("TSK, TSK.")]
+    [InlineData("FLNCH.")]
+    [InlineData("HMPH!")]
+    [InlineData("HM?")]
+    [InlineData("GRR...")]
+    [InlineData("NGH…")]
+    [InlineData("PFFT.. HAHA!")]
+    [InlineData("GRRR")]
+    [InlineData("ZZZ")]
+    [InlineData("SHHH")]
+    [InlineData("「HMPH.」")]
+    [InlineData("HMMPH?!")]
+    [InlineData("HNG...")]
+    [InlineData("GRRR GRRR")]
+    public void SoundsInCapitalsAreDrawn(string text)
+    {
+        Assert.False(RealtimeHiddenText.CarriesNoWords(text));
+    }
+
+    [Theory]
+    // Not a listed stat with a mark after it, a sound beside a number, a tag before a colon or a
+    // comma or a dash, or a sound effect with no mark and no letter three times — nothing tells
+    // BZZT from CDR.
+    [InlineData("HP!")]
+    [InlineData("GRRR 100")]
+    [InlineData("PFFT. 3")]
+    [InlineData("BGM:")]
+    [InlineData("TSK,")]
+    [InlineData("SSK-")]
+    [InlineData("RTX VSR")]
+    [InlineData("BZZT")]
+    [InlineData("KRSH")]
+    [InlineData("BARRO00OMM")]
+    public void WhatIsNoSoundIsStillLeftOut(string text)
+    {
+        Assert.True(RealtimeHiddenText.CarriesNoWords(text));
+    }
+
+    [Theory]
     // Beside a level mark, capitals that read aloud are a name or a spell: no stat has a level.
     [InlineData("KAI Lv 12")]
     [InlineData("KAI Lv12")]
