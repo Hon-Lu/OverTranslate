@@ -195,6 +195,10 @@ public partial class RealtimeBlockWindow : Window
     // being steadied does not move the ink that has to be covered.
     private IReadOnlyList<TranslatedBlock> _layoutLines = [];
 
+    // The lines of _lines the last Rebuild left off the overlay, by index: the hidden ones nothing
+    // drawn covers. Written once per Rebuild and never changed after, because the refresh reads it.
+    private HashSet<int> _leftOut = [];
+
     /// <param name="grabUnderlying">
     /// Asks the session's capture backend for a screen rectangle. Required rather than optional:
     /// 進階選項 cannot be drawn without it, and a window that quietly fell back to reading the
@@ -425,13 +429,18 @@ public partial class RealtimeBlockWindow : Window
     // A pixel of movement is below what anyone can see and well inside recognition's own precision.
     private const double SamePositionTolerance = 2.0;
 
-    private static bool LooksIdentical(IReadOnlyList<TranslatedBlock> current, IReadOnlyList<TranslatedBlock> next)
+    private bool LooksIdentical(IReadOnlyList<TranslatedBlock> current, IReadOnlyList<TranslatedBlock> next)
     {
         if (current.Count != next.Count) return false;
 
         for (int i = 0; i < current.Count; i++)
         {
-            if (!string.Equals(current[i].TranslatedText, next[i].TranslatedText, StringComparison.Ordinal))
+            // What a hidden line says is not on screen, so a timer ticking over in one is no reason
+            // to draw the others again — unless it is drawn after all (see Rebuild). Where it is
+            // still counts: it is the room beside them.
+            if (current[i].Hidden != next[i].Hidden) return false;
+            if ((!next[i].Hidden || !_leftOut.Contains(i)) &&
+                !string.Equals(current[i].TranslatedText, next[i].TranslatedText, StringComparison.Ordinal))
                 return false;
 
             var a = current[i].Bounds;
@@ -477,8 +486,30 @@ public partial class RealtimeBlockWindow : Window
         // Measured once for every block, and only if a band asks — see OverhangOf.
         _overhangs = new Lazy<Dictionary<TranslatedBlock, System.Drawing.Rectangle>>(() => MeasureOverhangs(frame));
 
+        // The hidden lines are left out (TranslatedBlock.Hidden) — except one that something drawn
+        // would cover. A band set as a subtitle is as wide as its translation, and reaches across
+        // whatever sits beside its line; with the line beside it drawn too, the later of the two is
+        // on top, and a number to the right of a sentence was read as its own box over the band.
+        // Left out, it would be under the band with nothing over it, and the reader would lose the
+        // very number the hiding was meant to leave on show. So it is drawn as it always was.
+        // Covered means covered enough that it could no longer be read (see HidesRow): a box that
+        // only reaches into the margin of the row below leaves that row's figures as they are.
+        HashSet<int> leftOut = [.. Enumerable.Range(0, _lines.Count).Where(index => _lines[index].Hidden)];
+        var visuals = BuildVisuals(canvasWidth, canvasHeight, frame, leftOut).ToList();
+        if (leftOut.Count > 0)
+        {
+            var covered = leftOut.Where(index => visuals.Any(visual => Covers(visual, _lines[index]))).ToList();
+            if (covered.Count > 0)
+            {
+                leftOut.ExceptWith(covered);
+                visuals = BuildVisuals(canvasWidth, canvasHeight, frame, leftOut).ToList();
+            }
+        }
+        // Read by the refresh off this thread, so it is handed a set nothing changes afterwards.
+        Volatile.Write(ref _leftOut, leftOut);
+
         var boxes = new List<List<FrameworkElement>>();
-        foreach (var visual in BuildVisuals(canvasWidth, canvasHeight, frame))
+        foreach (var visual in visuals)
         {
             if (visual.JoinsPrevious && boxes.Count > 0) boxes[^1].Add(visual.Text);
             else boxes.Add([visual.Text]);
@@ -1021,10 +1052,11 @@ public partial class RealtimeBlockWindow : Window
         return new LineVisual(background, text, patchBounds);
     }
 
+    /// <param name="leftOut">The lines not drawn, by index — see Rebuild.</param>
     private IEnumerable<LineVisual> BuildVisuals(
-        double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame)
+        double canvasWidth, double canvasHeight, System.Drawing.Bitmap? frame, IReadOnlySet<int> leftOut)
     {
-        using var repairedFrame = _naturalBackground ? RepairNaturalFrame(frame, _lines) : null;
+        using var repairedFrame = _naturalBackground ? RepairNaturalFrame(frame, Drawn(_lines, leftOut)) : null;
         // Read out of the repair once, and only when a column is about to ask for a plate.
         var backdrop = new Lazy<CaptureBubbleBackdrop?>(() =>
             repairedFrame is null ? null : CaptureBubbleBackdrop.FromRepaired(repairedFrame));
@@ -1032,6 +1064,9 @@ public partial class RealtimeBlockWindow : Window
         for (int lineIndex = 0; lineIndex < _layoutLines.Count; lineIndex++)
         {
             var block = _layoutLines[lineIndex];
+            // Left as it is on screen — see TranslatedBlock.Hidden and Rebuild. Only here: everything
+            // above and every neighbour's room below still counts it.
+            if (leftOut.Contains(lineIndex)) continue;
             if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
 
             // RunsAcross is the reading stage saying this block is horizontal writing that happened
@@ -1976,6 +2011,64 @@ public partial class RealtimeBlockWindow : Window
         return new LineVisual(background, text, patchBounds);
     }
 
+    // The lines whose source is covered: a line left out keeps its text on screen as it is, and
+    // erasing it under a neighbour's feathered edge would take part of it away.
+    private static IReadOnlyList<TranslatedBlock> Drawn(IReadOnlyList<TranslatedBlock> lines, IReadOnlySet<int> leftOut) =>
+        leftOut.Count == 0 ? lines : [.. lines.Where((_, index) => !leftOut.Contains(index))];
+
+    // Whether a drawn line hides one of a line's source rows, which are in physical pixels.
+    private bool Covers(LineVisual visual, TranslatedBlock line)
+    {
+        foreach (var source in line.SourceLineBounds is { Count: > 0 } rows ? rows : [line.Bounds])
+        {
+            var row = new Rect(source.X / _dpiX, source.Y / _dpiY, source.Width / _dpiX, source.Height / _dpiY);
+            if (HidesRow(OnCanvas(visual.Text), row)
+                || visual.Background is { } background && HidesRow(OnCanvas(background), row))
+                return true;
+        }
+        return false;
+
+        // Where an element was put on its canvas, by the size it was given; one given none covers nothing.
+        static Rect OnCanvas(FrameworkElement element)
+        {
+            double left = Canvas.GetLeft(element), top = Canvas.GetTop(element);
+            double width = element.Width, height = element.Height;
+            return double.IsFinite(left) && double.IsFinite(top) && double.IsFinite(width) && double.IsFinite(height)
+                ? new Rect(left, top, width, height)
+                : Rect.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Whether something drawn over a row of source text leaves it unreadable: it reaches at least
+    /// half the row's height into it, and at least as far across.
+    /// </summary>
+    /// <remarks>
+    /// <para>Down, half: a row's box is taller than its letters — a Latin one by half again — and
+    /// a box drawn over the row above or below that reaches into that margin, or over the edge of
+    /// the letters, leaves them readable. Every hidden line a drawn box reached into at all, over
+    /// the realtime corpus and the supplementary set in all three presets (239 of 2,743), was drawn
+    /// left out: up to 0.46 of the row's height every one could still be read; from 0.59 the
+    /// covered part took the figures with it; the few in between were covered across no more than
+    /// a fifth of their width, and could be read too. Any reach at all, as
+    /// this was before, drew a number whenever the box over the row above came out a few pixels
+    /// taller, so in one column of figures some had a box and some did not, changing with the size
+    /// the rows settled at.</para>
+    ///
+    /// <para>Across, the same length — a letter or so: a band set as a subtitle that reaches over a
+    /// number on its own row takes all of it, while a box that ends a few pixels into the row's
+    /// side margin took nothing that could not still be read.</para>
+    /// </remarks>
+    internal static bool HidesRow(Rect drawn, Rect row)
+    {
+        var both = Rect.Intersect(drawn, row);
+        double reach = row.Height * CoveredRowFraction;
+        return !both.IsEmpty && both.Height >= reach && both.Width >= reach;
+    }
+
+    // See HidesRow.
+    private const double CoveredRowFraction = 0.5;
+
     private void UpdateNaturalRefreshTimer()
     {
         // Never runs with the switch off: the patches it would refresh are only recorded when the
@@ -2028,7 +2121,7 @@ public partial class RealtimeBlockWindow : Window
                 {
                     var generation = Volatile.Read(ref _patchGeneration);
                     var patches = Volatile.Read(ref _naturalPatches);
-                    var blocks = _lines;
+                    var blocks = Drawn(_lines, Volatile.Read(ref _leftOut));
                     if (patches.Length == 0) continue;
 
                     using var frame = CaptureUnderlyingRegion();

@@ -169,6 +169,18 @@ public sealed record ResolvedProfile
     internal RealtimeTextAlign Align { get; init; } = RealtimeTextAlign.Auto;
 
     /// <summary>
+    /// 過濾數字與縮寫: whether a group with nothing to translate is left unasked and undrawn — see
+    /// <see cref="RealtimeHiddenText"/>. Off, every group is translated and drawn.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is read differently either way, but a change of it is a change of mode all the same
+    /// (<see cref="ReadsLike"/> counts it): the session reads every block again at once, and that
+    /// read is what sends the groups that were held back, which have no translation to show yet.
+    /// Like 譯文對齊 it is not in <see cref="Describe"/>; the session's log writes it beside that line.
+    /// </remarks>
+    internal bool FilterNumbersAndAbbreviations { get; init; } = true;
+
+    /// <summary>
     /// How a change is read: Auto for 畫面文字穩定後再讀取 left on 自動, ReadThenConfirm for 不等待,
     /// SettleThenRead for any wait.
     /// </summary>
@@ -268,6 +280,7 @@ public sealed record ResolvedProfile
                 RealtimeTextAligns.Left => RealtimeTextAlign.Left,
                 _ => RealtimeTextAlign.Auto,
             },
+            FilterNumbersAndAbbreviations = filled.FilterNumbersAndAbbreviations != false,
             // The one value decides both: no wait is read at once and confirmed, any wait is waited
             // out and read once, and 自動 leaves both to what the block is read as.
             Timing = settle switch

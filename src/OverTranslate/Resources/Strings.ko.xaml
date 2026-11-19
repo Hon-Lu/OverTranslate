@@ -493,6 +493,12 @@
     <sys:String x:Key="S.Realtime.ProfileAlignCenter">가운데</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignLeft">왼쪽</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">원문의 정렬 방식을 따릅니다. 판단할 수 없으면 이어진 글은 가운데, 흩어진 텍스트는 왼쪽에 맞춥니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbers">숫자와 약어 거르기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbersHint">번역해도 의미가 없거나 잘못 번역되기 쉬운 내용을 걸러 냅니다. 모두 대문자로 된 짧은 영문 이름도 함께 걸러질 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumbers">숫자만</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumberSymbols">숫자와 기호 조합</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagSymbols">특수 기호</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagAbbreviations">영문 약어</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">텍스트가 안정된 뒤 읽기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">텍스트가 자주 깜박이거나 불안정하면 오른쪽으로 옮기세요. 다만 번역 속도도 그만큼 느려집니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">이어진 글은 기다리지 않고, 흩어진 텍스트는 약 0.15초 기다립니다.</sys:String>

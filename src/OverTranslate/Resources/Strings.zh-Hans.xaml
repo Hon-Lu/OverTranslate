@@ -489,6 +489,12 @@
     <sys:String x:Key="S.Realtime.ProfileAlignCenter">居中</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignLeft">左对齐</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">按原文的对齐方式排列；无法判断时，整段文字居中，零散文字左对齐。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbers">过滤数字与缩写</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbersHint">过滤翻译后无意义或容易误译的内容；部分简短的全大写英文名称也可能一并略过。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumbers">纯数字</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumberSymbols">数字与符号组合</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagSymbols">特殊符号</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagAbbreviations">英文缩写</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">画面文字稳定后再读取</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">文字容易闪烁或不稳定时可往右调，但翻译速度也会随之变慢。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">整段文字不等待；零散文字约等 0.15 秒。</sys:String>

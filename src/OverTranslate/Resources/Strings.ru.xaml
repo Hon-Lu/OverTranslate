@@ -486,6 +486,12 @@
     <sys:String x:Key="S.Realtime.ProfileAlignCenter">По центру</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignLeft">Слева</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlignAutoTip">Как в оригинале; если определить нельзя, связный текст — по центру, отдельные надписи — слева.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbers">Отсеивать числа и сокращения</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterNumbersHint">Отсеивает то, что после перевода теряет смысл или легко переводится неверно. Некоторые короткие английские названия заглавными буквами тоже могут быть пропущены.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumbers">Только числа</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagNumberSymbols">Числа со знаками</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagSymbols">Спецсимволы</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFilterTagAbbreviations">Английские сокращения</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettle">Считывать после стабилизации текста</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleHint">Сдвиньте вправо, если текст мерцает или нестабилен, но перевод будет появляться медленнее.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSettleAutoTip">Для связного текста — без ожидания, для отдельных надписей — около 0.15 с.</sys:String>

@@ -59,6 +59,18 @@ public sealed class RealtimeProfile
     public string? Align { get; set; }
 
     /// <summary>
+    /// 過濾數字與縮寫: true to leave untranslated and undrawn the groups with nothing to translate —
+    /// numbers, symbols, levels, abbreviations, shapes read as letters — false to translate and draw
+    /// every group, as 即時翻譯 did before. Every preset holds true.
+    /// </summary>
+    /// <remarks>
+    /// One switch for the whole of <see cref="Services.Realtime.RealtimeHiddenText.NothingToTranslate"/>,
+    /// name beside a level included: it is offered for the few who want the numbers boxed after all,
+    /// and nobody could tell one of its rules from another by name. Both directions of text.
+    /// </remarks>
+    public bool? FilterNumbersAndAbbreviations { get; set; }
+
+    /// <summary>
     /// 畫面文字穩定後再讀取's 自動｜手動: true for 自動, false for the seconds in
     /// <see cref="SettleSeconds"/>.
     /// </summary>
@@ -169,6 +181,7 @@ public sealed class RealtimeProfile
             BasedOn = template.Id,
             MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
             Align = RealtimeTextAligns.Normalize(Align) ?? template.Align,
+            FilterNumbersAndAbbreviations = FilterNumbersAndAbbreviations ?? template.FilterNumbersAndAbbreviations,
             SettleAutomatic = StoredSettleAutomatic ?? template.SettleAutomatic,
             SettleSeconds = OwnSettleSeconds is { } seconds ? Math.Min(seconds, MaxSettleSeconds) : template.SettleSeconds,
             ClearAfterEmptyReads = Math.Clamp(
@@ -353,6 +366,7 @@ public static class RealtimePresets
                 InterfaceId => RealtimeTextAligns.Left,
                 _ => RealtimeTextAligns.Auto,
             },
+            FilterNumbersAndAbbreviations = true,
             // 標準 is 自動 on both; its figures are where 手動 starts on a mode made from it until
             // the user moves the slider: one poll and the strip size, which read a half-drawn line
             // less often than 不等待 and miss small text less often than the panel size.

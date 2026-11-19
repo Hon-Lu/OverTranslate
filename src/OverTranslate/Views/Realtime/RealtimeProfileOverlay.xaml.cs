@@ -369,9 +369,9 @@ public partial class RealtimeProfileOverlay : UserControl
             // which has no slider beside the name, so the kept line was a gap between the name and its
             // hint; there it comes and goes with the tick. A preset never shows it.
             row.Modified.Visibility = modified ? Visibility.Visible
-                : preset || row.Param == ProfileParam.ClearAfterEmptyReads ? Visibility.Collapsed
+                : preset || RealtimeProfileEditing.IsTick(row.Param) ? Visibility.Collapsed
                 : Visibility.Hidden;
-            row.Revert.ToolTip = row.Param == ProfileParam.ClearAfterEmptyReads
+            row.Revert.ToolTip = RealtimeProfileEditing.IsTick(row.Param)
                 ? LocalizationService.Get("S.Realtime.ProfileResetAll")
                 : LocalizationService.Format("S.Realtime.ProfileRevert", TemplateDisplay(template, row.Param));
             ShowValue(row, filled);
@@ -399,6 +399,9 @@ public partial class RealtimeProfileOverlay : UserControl
             }
             case ProfileParam.ClearAfterEmptyReads:
                 row.Check!.IsChecked = filled.ClearAfterEmptyReads == RealtimeProfile.MinClearAfterEmptyReads;
+                return;
+            case ProfileParam.FilterNumbersAndAbbreviations:
+                row.Check!.IsChecked = filled.FilterNumbersAndAbbreviations != false;
                 return;
             case ProfileParam.Align:
             {
@@ -505,6 +508,7 @@ public partial class RealtimeProfileOverlay : UserControl
     {
         Add(LayoutGroup, BuildMergeRow());
         Add(LayoutGroup, BuildAlignRow());
+        Add(FilterGroup, BuildRow(ProfileParam.FilterNumbersAndAbbreviations, "S.Realtime.ProfileFilterNumbers", "S.Realtime.ProfileFilterNumbersHint"));
         Add(TimingGroup, BuildRow(ProfileParam.SettleSeconds, "S.Realtime.ProfileSettle", "S.Realtime.ProfileSettleHint"));
         Add(TimingGroup, BuildRow(ProfileParam.ClearAfterEmptyReads, "S.Realtime.ProfileKeep", "S.Realtime.ProfileKeepHint"));
         Add(RecognitionGroup, BuildRow(ProfileParam.DetectorPercent, "S.Realtime.ProfileDetector", "S.Realtime.ProfileDetectorHint"));
@@ -699,7 +703,7 @@ public partial class RealtimeProfileOverlay : UserControl
     /// <summary>
     /// Every other value: name on the left; 自動｜手動 where the value can be left to 自動; a slot of
     /// <see cref="SlotWidth"/> for the slider; the value in a column of <see cref="ValueWidth"/> — or
-    /// for 原文消失後立即清除譯文 the tick there instead.
+    /// for a tick (原文消失後立即清除譯文, 過濾數字與縮寫) the tick there instead.
     /// </summary>
     /// <remarks>
     /// The switch and value columns are shared down the card (the scope is EditPanel), so every
@@ -712,7 +716,7 @@ public partial class RealtimeProfileOverlay : UserControl
     {
         var top = new Grid();
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        if (param != ProfileParam.ClearAfterEmptyReads)
+        if (!RealtimeProfileEditing.IsTick(param))
         {
             top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "ProfileSwitch" });
             top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = SlotMinWidth, MaxWidth = SlotWidth });
@@ -721,16 +725,20 @@ public partial class RealtimeProfileOverlay : UserControl
         var row = NewRow(param, nameKey, top);
         int valueColumn = top.ColumnDefinitions.Count - 1;
 
-        if (param == ProfileParam.ClearAfterEmptyReads)
+        if (RealtimeProfileEditing.IsTick(param))
         {
             // The tick in the value column, the name across the rest: no switch and no slot here.
+            bool filter = param == ProfileParam.FilterNumbersAndAbbreviations;
             var tick = new CheckBox { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
             tick.SetResourceReference(StyleProperty, "ModernCheckBox");
             tick.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, nameKey);
-            System.Windows.Automation.AutomationProperties.SetAutomationId(tick, "KeepCheck");
+            System.Windows.Automation.AutomationProperties.SetAutomationId(tick, filter ? "FilterCheck" : "KeepCheck");
             RoutedEventHandler changed = (_, _) =>
             {
-                if (!_syncing) Commit(profile => profile.ClearAfterEmptyReads = tick.IsChecked == true
+                if (_syncing) return;
+                bool on = tick.IsChecked == true;
+                if (filter) Commit(profile => profile.FilterNumbersAndAbbreviations = on);
+                else Commit(profile => profile.ClearAfterEmptyReads = on
                     ? RealtimeProfile.MinClearAfterEmptyReads
                     : RealtimeProfile.MaxClearAfterEmptyReads);
             };
@@ -739,6 +747,7 @@ public partial class RealtimeProfileOverlay : UserControl
             Grid.SetColumn(tick, valueColumn);
             top.Children.Add(tick);
             row.Check = tick;
+            if (filter) row.Root.Children.Add(FilterTags(tick));
             AddHint(row, hintKey);
             return row;
         }
@@ -892,6 +901,29 @@ public partial class RealtimeProfileOverlay : UserControl
         var rule = new Border { Height = 1, Margin = margin };
         rule.SetResourceReference(Border.BackgroundProperty, "AppSubtleBorder");
         return rule;
+    }
+
+    /// <summary>
+    /// What 過濾數字與縮寫 covers, as tags straight under its name and with no word before them: the
+    /// name says 過濾 already. Tinted while <paramref name="tick"/> is ticked and grey while it is not
+    /// — see the FilterTag style — and wrapped onto a second line where the card is narrow.
+    /// </summary>
+    private static WrapPanel FilterTags(CheckBox tick)
+    {
+        // The bottom margin of each tag is the gap between wrapped lines; the panel gives it back.
+        var tags = new WrapPanel { Margin = new Thickness(0, 8, 0, -6) };
+        foreach (var key in new[]
+                 {
+                     "S.Realtime.ProfileFilterTagNumbers", "S.Realtime.ProfileFilterTagNumberSymbols",
+                     "S.Realtime.ProfileFilterTagSymbols", "S.Realtime.ProfileFilterTagAbbreviations",
+                 })
+        {
+            var tag = new ContentControl { Tag = tick, Focusable = false, IsTabStop = false };
+            tag.SetResourceReference(StyleProperty, "FilterTag");
+            tag.SetResourceReference(ContentControl.ContentProperty, key);
+            tags.Children.Add(tag);
+        }
+        return tags;
     }
 
     private static Border TagChip(string key)
