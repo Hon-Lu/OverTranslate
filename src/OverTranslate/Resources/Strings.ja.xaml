@@ -977,6 +977,6 @@
     <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">、</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSharedWith">ブロック {0} と共用</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetTitle">テンプレートに戻しますか？</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileResetConfirm">変更した {0} 項目の設定が「{1}」の値に戻ります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">変更した設定は「{0}」テンプレートの既定値に戻ります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">戻す</sys:String>
 </ResourceDictionary>

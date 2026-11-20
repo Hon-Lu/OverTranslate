@@ -1014,10 +1014,9 @@ public partial class RealtimeProfileOverlay : UserControl
     private void ResetAllBtn_Click(object sender, RoutedEventArgs e)
     {
         FlushPending();
-        int modified = Shown().Modified;
-        if (modified == 0) return;
+        if (Shown().Modified == 0) return;
         ShowConfirm(ConfirmKind.Reset, LocalizationService.Format(
-            "S.Realtime.ProfileResetConfirm", modified, RealtimeProfileEditing.PresetName(Shown().BasedOn)));
+            "S.Realtime.ProfileResetConfirm", RealtimeProfileEditing.PresetName(Shown().BasedOn)));
     }
 
     private void DeleteBtn_Click(object sender, RoutedEventArgs e)

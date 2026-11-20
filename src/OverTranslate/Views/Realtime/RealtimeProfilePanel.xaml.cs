@@ -728,7 +728,7 @@ internal partial class RealtimeProfilePanel : Window
         CancelFork();
         CloseModeList();
         ConfirmMessage.Text = LocalizationService.Format(
-            "S.Realtime.ProfileResetConfirm", choice.Modified, RealtimeProfileEditing.PresetName(choice.BasedOn));
+            "S.Realtime.ProfileResetConfirm", RealtimeProfileEditing.PresetName(choice.BasedOn));
         ConfirmLayer.Visibility = Visibility.Visible;
     });
 

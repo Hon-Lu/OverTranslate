@@ -966,6 +966,6 @@
     <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Realtime.ProfileSharedWith">Также используется в области {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetTitle">Вернуть к шаблону?</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileResetConfirm">Изменённые параметры ({0}) вернутся к значениям «{1}».</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">Изменённые параметры вернутся к значениям шаблона «{0}» по умолчанию.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">Вернуть</sys:String>
 </ResourceDictionary>

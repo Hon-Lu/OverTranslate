@@ -977,6 +977,6 @@
     <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Realtime.ProfileSharedWith">블록 {0}에서도 사용 중</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetTitle">템플릿으로 되돌릴까요?</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileResetConfirm">변경한 설정 {0}개가 '{1}'의 값으로 되돌아갑니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">변경한 설정이 '{0}' 템플릿의 기본값으로 되돌아갑니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">되돌리기</sys:String>
 </ResourceDictionary>

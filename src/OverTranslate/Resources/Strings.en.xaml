@@ -975,6 +975,6 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">, </sys:String>
     <sys:String x:Key="S.Realtime.ProfileSharedWith">Also used by block {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetTitle">Reset to template?</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileResetConfirm">The {0} changed settings will go back to the values of “{1}”.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">Changed settings will go back to the defaults of the “{0}” template.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">Reset</sys:String>
 </ResourceDictionary>

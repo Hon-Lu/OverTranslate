@@ -97,6 +97,43 @@
             <Setter Property="Margin" Value="12,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+
+        <!-- A card's answer: 取消's shape (ToolbarFlatButton - corner, height, padding, 1px edge) in
+             the bar's primary colour. The bar's own primary button is a glowing pill, which beside
+             取消 read as two kinds of button for one choice (the user's call). The edge is the fill's
+             colour, so the two come out the same size. -->
+        <Style x:Key="CardPrimaryButton" TargetType="Button" BasedOn="{StaticResource ToolbarFlatButton}">
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
+            <Setter Property="Background" Value="{DynamicResource ToolbarPrimaryBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarPrimaryBg}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- The margin is the room the shadow is drawn in, as on 顯示外觀; the LayoutTransform is set in
@@ -246,7 +283,7 @@
                                             Height="28" Padding="12,0" FontSize="12"
                                             AutomationProperties.AutomationId="PanelForkCancelBtn"
                                             Click="ForkCancel_Click"/>
-                                    <Button x:Name="ForkCreateBtn" Style="{StaticResource ToolbarPrimaryButton}" Focusable="False"
+                                    <Button x:Name="ForkCreateBtn" Style="{StaticResource CardPrimaryButton}" Focusable="False"
                                             Height="28" Padding="12,0" FontSize="12" Margin="6,0,0,0"
                                             Content="{DynamicResource S.Realtime.ProfileFork}"
                                             AutomationProperties.AutomationId="PanelForkCreateBtn"
@@ -271,7 +308,7 @@
                                             Content="{DynamicResource S.Common.Cancel}"
                                             AutomationProperties.AutomationId="PanelConfirmCancelBtn"
                                             Click="ConfirmCancel_Click"/>
-                                    <Button Style="{StaticResource ToolbarPrimaryButton}" Focusable="False"
+                                    <Button Style="{StaticResource CardPrimaryButton}" Focusable="False"
                                             Height="28" Padding="12,0" FontSize="12" Margin="6,0,0,0"
                                             Content="{DynamicResource S.Realtime.ProfileResetAction}"
                                             AutomationProperties.AutomationId="PanelConfirmResetBtn"

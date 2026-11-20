@@ -973,6 +973,6 @@
     <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">、</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSharedWith">与区块 {0} 共用此模式</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetTitle">还原为模板？</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileResetConfirm">已修改的 {0} 项设置将恢复为“{1}”的值。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">已修改的设置将还原为“{0}”模板的默认值。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">还原</sys:String>
 </ResourceDictionary>
