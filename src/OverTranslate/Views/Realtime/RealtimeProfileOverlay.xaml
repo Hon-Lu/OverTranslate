@@ -19,7 +19,7 @@
 
         <!-- What 過濾數字與縮寫 covers: the AI translation page's ModeTag (ModeCardStyles.xaml) — a tint
              laid over the card, the text colour's while off and the accent's while on — but on with
-             the tick it belongs to, which the code hands each tag as its Tag, rather than with a
+             the switch it belongs to, which the code hands each tag as its Tag, rather than with a
              card around it. On a preset the accent is the grey ApplyLock puts in its place. -->
         <Style x:Key="FilterTag" TargetType="ContentControl">
             <Setter Property="Margin" Value="0,0,6,6"/>
