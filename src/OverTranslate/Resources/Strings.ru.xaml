@@ -451,7 +451,12 @@
     <sys:String x:Key="S.Realtime.ProfileCreate">Создать</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">Изменения сразу применяются к текущему переводу</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">Пользовательский режим {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Встроенные режимы нельзя изменить. Для настройки создайте пользовательский режим на его основе.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Встроенные режимы нельзя изменить</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFork">Создать пользовательский режим</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkName">{0} (свой)</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkNameNumbered">{0} (свой {1})</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkChange">{0}: {1} → {2}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileOn">Вкл.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">Название</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">Такое название уже есть, выберите другое</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">Вернуть к шаблону</sys:String>

@@ -454,7 +454,12 @@
     <sys:String x:Key="S.Realtime.ProfileCreate">创建</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">设置变更后会立即应用到当前的翻译</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">自定义模式 {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">预设模式无法修改。需要调整时，可在列表中新增自定义模式，并选择此模式作为模板。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">预设模式无法修改</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFork">创建自定义模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkName">{0}（自定义）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkNameNumbered">{0}（自定义 {1}）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkChange">{0}：{1} → {2}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileOn">开启</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">名称</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">名称重复，请重新命名</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">还原为模板</sys:String>

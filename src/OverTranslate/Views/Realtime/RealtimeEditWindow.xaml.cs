@@ -368,19 +368,24 @@ public partial class RealtimeEditWindow : Window
     /// and so does the answer the next block starts on; the blocks are then reported as changed, so
     /// the session holds what they show. Nothing is rebuilt when only a value of a mode changed:
     /// nothing this layer shows depends on one.
+    /// <para>With <paramref name="follow"/>, the blocks on its first mode — and the answer the next
+    /// block starts on — are put on its second: a mode split off a preset on the page takes the
+    /// preset's blocks with it.</para>
     /// </remarks>
-    public void SetProfileChoices(IReadOnlyList<ProfileChoice> choices)
+    public void SetProfileChoices(IReadOnlyList<ProfileChoice> choices, (string From, string To)? follow = null)
     {
-        if (choices.SequenceEqual(_choices)) return;
+        if (follow is null && choices.SequenceEqual(_choices)) return;
+
+        string Followed(string? id) => follow is { } f && id == f.From ? f.To : id ?? "";
 
         CloseMenu(animate: false);
         _choices = choices;
-        _blockProfile = KnownProfile(_blockProfile);
+        _blockProfile = KnownProfile(Followed(_blockProfile));
 
         foreach (var visual in _blocks)
         {
             var old = visual.ModeControl;
-            visual.ModeControl = BuildModeControl(KnownProfile(visual.ProfileId), old.TextOrientation);
+            visual.ModeControl = BuildModeControl(KnownProfile(Followed(visual.ProfileId)), old.TextOrientation);
             visual.ProfileId = visual.ModeControl.ProfileId;
             WireModeControl(visual);
         }

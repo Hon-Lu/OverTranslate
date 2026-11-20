@@ -194,20 +194,30 @@
 
                             <!-- ══════════ A mode: the same rows for a preset (locked) and a custom mode ══════════ -->
                             <StackPanel x:Name="EditPanel" Grid.IsSharedSizeScope="True">
-                                <!-- Preset: what the window is, and the way to a mode that can be changed. -->
+                                <!-- Preset: what the window is, and the way to a mode that can be changed —
+                                     the same split the card under a touched row offers (see OfferFork),
+                                     for whoever reads before touching, and from the keyboard. -->
                                 <Border x:Name="ReadOnlyNote" Background="{DynamicResource AppHeaderBg}" CornerRadius="6"
-                                        Padding="10,7" Margin="0,0,0,12">
+                                        Padding="10,6" Margin="0,0,0,12">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="&#xE72E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
-                                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Top"
-                                                   Margin="0,2,8,0"/>
+                                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"
+                                                   Margin="0,1,8,0"/>
                                         <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.ProfilePresetReadOnly}"
                                                    FontFamily="{DynamicResource AppFont}" FontSize="12"
-                                                   Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"/>
+                                        <Button x:Name="ForkBtn" Grid.Column="2" Style="{StaticResource AccentButton}"
+                                                Height="28" Padding="14,0" FontSize="12" Margin="12,0,0,0"
+                                                Content="{DynamicResource S.Realtime.ProfileFork}"
+                                                ToolTipService.ShowOnDisabled="True"
+                                                AutomationProperties.AutomationId="ProfileForkBtn"
+                                                Click="ForkBtn_Click"/>
                                     </Grid>
                                 </Border>
 
@@ -334,6 +344,51 @@
                     </StackPanel>
                 </Grid>
             </Border>
+        </Grid>
+
+        <!-- A preset's row touched: a small card under it offering the change on a mode of the
+             user's own. The clear layer round it takes a press anywhere else as 取消 — and the wheel,
+             so the row cannot scroll away from its card. See OfferFork. -->
+        <Grid x:Name="ForkLayer" Visibility="Collapsed" Background="Transparent"
+              MouseLeftButtonDown="ForkLayer_MouseLeftButtonDown">
+            <Canvas>
+                <Border x:Name="ForkCard" Width="380" UseLayoutRounding="True"
+                        CornerRadius="10" Background="{DynamicResource AppCardBg}"
+                        BorderBrush="{DynamicResource AppBorder}" BorderThickness="1"
+                        AutomationProperties.AutomationId="ProfileForkCard"
+                        MouseLeftButtonDown="Card_MouseLeftButtonDown">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.28" Color="#000000"/>
+                    </Border.Effect>
+                    <StackPanel Margin="16,14,16,14">
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
+                                       Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"
+                                       Margin="0,1,8,0"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource S.Realtime.ProfilePresetReadOnly}"
+                                       FontFamily="{DynamicResource AppFont}" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTextPrimary}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                        <TextBlock x:Name="ForkChangeText" FontFamily="{DynamicResource AppFont}" FontSize="12.5"
+                                   Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"
+                                   Margin="0,0,0,14"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="ForkCancelBtn" Style="{StaticResource FlatButton}" Height="32" Padding="16,0"
+                                    AutomationProperties.AutomationId="ProfileForkCancelBtn"
+                                    Click="ForkCancel_Click"/>
+                            <Button x:Name="ForkCreateBtn" Style="{StaticResource AccentButton}" Margin="10,0,0,0"
+                                    Content="{DynamicResource S.Realtime.ProfileFork}"
+                                    AutomationProperties.AutomationId="ProfileForkCreateBtn"
+                                    Click="ForkCreate_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Canvas>
         </Grid>
 
         <!-- Delete, asked over the card the way the prompt editor asks. -->

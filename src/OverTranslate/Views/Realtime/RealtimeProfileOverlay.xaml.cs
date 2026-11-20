@@ -36,9 +36,13 @@ namespace OverTranslate.Views.Realtime;
 /// <see cref="KeyboardSettle"/>): every write that changes something makes a session read again.</para>
 ///
 /// <para>A preset is shown with exactly the rows a custom mode has, locked (the user's call): looking
-/// at a preset is looking at what a custom mode made from it starts as. Locked means not hit-testable,
-/// out of the tab order, and the accent swapped for the secondary text colour inside the rows — not
-/// the 0.45 fade the controls use when disabled, which would make the values hard to read.</para>
+/// at a preset is looking at what a custom mode made from it starts as. Locked means nothing is
+/// written, out of the tab order, and the accent swapped for the secondary text colour inside the
+/// rows — not the 0.45 fade the controls use when disabled, which would make the values hard to
+/// read. The controls still move under the pointer: a change that would be written is offered
+/// instead on a mode of the user's own, split off the preset with the change on it — see
+/// <see cref="OfferFork"/>. Before that they took no pointer at all, and a press on one did nothing
+/// whatever, which read as broken.</para>
 ///
 /// <para>What is shown for a value is the mode as it reads — <see cref="RealtimeProfile.Filled"/>. What
 /// is written is only what differs from the preset — see
@@ -84,6 +88,10 @@ public partial class RealtimeProfileOverlay : UserControl
     private bool _advancedExpanded;
     private string _templateId = RealtimePresets.StandardId;
 
+    // The change a preset's row was given and the row, while the card under it offers to split.
+    private Action<RealtimeProfile>? _forkChange;
+    private ProfileParam? _forkParam;
+
     /// <summary>Raised once the card has gone, so the page behind it can take focus back.</summary>
     public event EventHandler? Closed;
 
@@ -97,7 +105,12 @@ public partial class RealtimeProfileOverlay : UserControl
             _settleTimer.Stop();
             FlushPending();
         };
-        SizeChanged += (_, _) => FitCard();
+        SizeChanged += (_, _) =>
+        {
+            FitCard();
+            // The small card is placed once, under its row; the row moves when the window does.
+            if (ForkLayer.Visibility == Visibility.Visible) CancelFork();
+        };
     }
 
     // ── Open / close ────────────────────────────────────────────────────────────────────────────
@@ -134,6 +147,9 @@ public partial class RealtimeProfileOverlay : UserControl
     public void Close()
     {
         if (!IsOpen) return;
+        // A preset's slider let go just before closing would only offer to split, over a card that is going.
+        if (ShowsPreset) _pendingRow = null;
+        HideFork();
         FlushPending();
         if (!_creating) CommitName(revertIfTaken: true);
         ConfirmLayer.Visibility = Visibility.Collapsed;
@@ -210,6 +226,7 @@ public partial class RealtimeProfileOverlay : UserControl
         if (e.Key == Key.Escape)
         {
             if (ConfirmLayer.Visibility == Visibility.Visible) CloseConfirm();
+            else if (ForkLayer.Visibility == Visibility.Visible) CancelFork();
             else Close();
             e.Handled = true;
         }
@@ -235,10 +252,18 @@ public partial class RealtimeProfileOverlay : UserControl
             ? RealtimePresets.Create(_profileId)
             : Realtime.Profiles.FirstOrDefault(profile => profile.Id == _profileId) ?? RealtimePresets.Create(null);
 
-    /// <summary>Changes the custom mode shown and stores the whole list — see the class remarks.</summary>
-    private void Commit(Action<RealtimeProfile> change)
+    /// <summary>
+    /// Changes the custom mode shown and stores the whole list — see the class remarks. On a preset,
+    /// a change to <paramref name="param"/>'s row is offered on a mode split off it instead.
+    /// </summary>
+    private void Commit(Action<RealtimeProfile> change, ProfileParam? param = null)
     {
-        if (ShowsPreset || _creating) return;
+        if (_creating) return;
+        if (ShowsPreset)
+        {
+            if (param is { } touched) OfferFork(touched, change);
+            return;
+        }
 
         var list = Realtime.Profiles.Select(profile => profile.Clone()).ToList();
         int index = list.FindIndex(profile => profile.Id == _profileId);
@@ -322,7 +347,13 @@ public partial class RealtimeProfileOverlay : UserControl
         ReadOnlyNote.Visibility = preset ? Visibility.Visible : Visibility.Collapsed;
         CustomHeader.Visibility = preset ? Visibility.Collapsed : Visibility.Visible;
 
-        if (!preset)
+        if (preset)
+        {
+            bool full = Realtime.Profiles.Count >= RealtimeSettings.MaxCustomProfiles;
+            ForkBtn.IsEnabled = !full;
+            ForkBtn.ToolTip = full ? LocalizationService.Format("S.Realtime.ProfileLimit", RealtimeSettings.MaxCustomProfiles) : null;
+        }
+        else
         {
             if (!NameBox.IsKeyboardFocusWithin) NameBox.Text = choice.Name;
             TemplateLineText.Text = RealtimeProfileEditing.TemplateLine(choice);
@@ -341,14 +372,14 @@ public partial class RealtimeProfileOverlay : UserControl
     }
 
     /// <summary>
-    /// A preset's rows: no pointer, no tab stop, and the accent inside them swapped for the secondary
-    /// text colour — a slider's fill, the chosen half of 自動｜手動, a switch's track — at full strength.
+    /// A preset's rows: no tab stop, and the accent inside them swapped for the secondary text colour
+    /// — a slider's fill, the chosen half of 自動｜手動, a switch's track — at full strength. They
+    /// still take the pointer: a change goes to <see cref="OfferFork"/> rather than being written.
     /// </summary>
     private void ApplyLock(bool locked)
     {
         foreach (var host in new FrameworkElement[] { MainGroups, AdvancedPanel })
         {
-            host.IsHitTestVisible = !locked;
             KeyboardNavigation.SetTabNavigation(host, locked ? KeyboardNavigationMode.None : KeyboardNavigationMode.Continue);
             if (locked && TryFindResource("AppTextSecondary") is Brush grey) host.Resources["AppAccent"] = grey;
             else host.Resources.Remove("AppAccent");
@@ -675,7 +706,7 @@ public partial class RealtimeProfileOverlay : UserControl
                 1 => RealtimeTextAligns.Center,
                 2 => RealtimeTextAligns.Left,
                 _ => RealtimeTextAligns.Auto,
-            });
+            }, ProfileParam.Align);
         };
         Grid.SetColumn(mode, 1);
         Grid.SetColumnSpan(mode, 2);
@@ -739,10 +770,10 @@ public partial class RealtimeProfileOverlay : UserControl
             {
                 if (_syncing) return;
                 bool on = tick.IsChecked == true;
-                if (filter) Commit(profile => profile.FilterNumbersAndAbbreviations = on);
+                if (filter) Commit(profile => profile.FilterNumbersAndAbbreviations = on, param);
                 else Commit(profile => profile.ClearAfterEmptyReads = on
                     ? RealtimeProfile.MinClearAfterEmptyReads
-                    : RealtimeProfile.MaxClearAfterEmptyReads);
+                    : RealtimeProfile.MaxClearAfterEmptyReads, param);
             };
             tick.Checked += changed;
             tick.Unchecked += changed;
@@ -784,7 +815,7 @@ public partial class RealtimeProfileOverlay : UserControl
                 if (_syncing) return;
                 _settleTimer.Stop();
                 _pendingRow = null;
-                Commit(profile => SetAutomatic(profile, param, !manual));
+                Commit(profile => SetAutomatic(profile, param, !manual), param);
             };
             Grid.SetColumn(mode, 1);
             top.Children.Add(mode);
@@ -870,10 +901,10 @@ public partial class RealtimeProfileOverlay : UserControl
         _settleTimer.Stop();
         if (_pendingRow is not { } row) return;
         _pendingRow = null;
-        if (row.Slider is not { IsVisible: true } slider || ShowsPreset || _creating) return;
+        if (row.Slider is not { IsVisible: true } slider || _creating) return;
 
         double value = slider.Value;
-        Commit(profile => SetNumber(profile, row.Param, value));
+        Commit(profile => SetNumber(profile, row.Param, value), row.Param);
     }
 
     /// <summary>Writes a slider position as the value it stands for, in the user's units.</summary>
@@ -1125,6 +1156,164 @@ public partial class RealtimeProfileOverlay : UserControl
         if (SystemParameters.ClientAreaAnimation)
             BodyScroller.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { FillBehavior = FillBehavior.Stop });
     }
+
+    // ── Split a preset ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A preset's row was given a change: the card under the row offers it on a mode of the user's
+    /// own, split off the preset — or, with ten made already, says so. The row shows the change, in
+    /// the preset's grey, until the card is answered; 取消 puts it back.
+    /// </summary>
+    /// <remarks>
+    /// The users' question was "why can't I change this?"; the presets stay as they are (the user's
+    /// call) and this is the one step to a copy that can be changed, keeping what the user was doing
+    /// rather than sending them to 新增 to pick a template, a name, and find the row again. A change
+    /// that comes to nothing — a thumb let go where it was — offers nothing.
+    /// </remarks>
+    private void OfferFork(ProfileParam param, Action<RealtimeProfile> change)
+    {
+        var trial = RealtimeProfile.CreateCustom(_profileId, "");
+        change(trial);
+        if (!RealtimeProfileEditing.IsModified(RealtimeProfileEditing.WithoutTemplateValues(trial), param))
+        {
+            Render();
+            return;
+        }
+
+        _forkParam = param;
+        _forkChange = change;
+        bool full = Realtime.Profiles.Count >= RealtimeSettings.MaxCustomProfiles;
+        var preset = RealtimePresets.Create(_profileId).Filled();
+        ForkChangeText.Text = full
+            ? LocalizationService.Format("S.Realtime.ProfileLimit", RealtimeSettings.MaxCustomProfiles)
+            : LocalizationService.Format("S.Realtime.ProfileForkChange",
+                LocalizationService.Get(NameKey(param)), ValueName(preset, param), ValueName(trial.Filled(), param));
+        ForkCreateBtn.Visibility = full ? Visibility.Collapsed : Visibility.Visible;
+        ForkCancelBtn.Content = LocalizationService.Get(full ? "S.Common.Close" : "S.Common.Cancel");
+
+        // Under the row, centred on it; above it where the window has no room below.
+        ForkLayer.Visibility = Visibility.Visible;
+        ForkCard.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var row = _rows[param].Root;
+        var top = row.TranslatePoint(new Point(0, 0), this);
+        double cardWidth = ForkCard.Width, cardHeight = ForkCard.DesiredSize.Height;
+        double left = Math.Clamp(top.X + (row.ActualWidth - cardWidth) / 2, 8, Math.Max(8, ActualWidth - cardWidth - 8));
+        double y = top.Y + row.ActualHeight + 6;
+        if (y + cardHeight > ActualHeight - 8) y = top.Y - cardHeight - 6;
+        Canvas.SetLeft(ForkCard, left);
+        Canvas.SetTop(ForkCard, Math.Clamp(y, 8, Math.Max(8, ActualHeight - cardHeight - 8)));
+        ForkCard.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, FadeDuration));
+
+        var focus = full ? ForkCancelBtn : ForkCreateBtn;
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => focus.Focus());
+    }
+
+    private void HideFork()
+    {
+        ForkLayer.Visibility = Visibility.Collapsed;
+        _forkChange = null;
+        _forkParam = null;
+    }
+
+    /// <summary>The card answered 取消, or put away: the row goes back to the preset's value.</summary>
+    private void CancelFork()
+    {
+        HideFork();
+        Render();
+        Focus();
+    }
+
+    private void ForkLayer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => CancelFork();
+
+    private void ForkCancel_Click(object sender, RoutedEventArgs e) => CancelFork();
+
+    private void ForkCreate_Click(object sender, RoutedEventArgs e) => Fork(_forkChange, _forkParam);
+
+    private void ForkBtn_Click(object sender, RoutedEventArgs e) => Fork(null, null);
+
+    /// <summary>
+    /// Makes a custom mode of the preset shown — named after it, see
+    /// <see cref="RealtimeProfileEditing.ForkName(string, IEnumerable{string})"/> — with
+    /// <paramref name="change"/> on it, and turns the card into its editor where it stood.
+    /// </summary>
+    /// <remarks>
+    /// The blocks on the preset go with it, and so does the answer new blocks start on where it was
+    /// the preset (the user's call): what is changed here is meant for what is on screen, and while
+    /// translating the foot says changes apply at once — true only if the blocks are on this mode.
+    /// Not 自動切換 of anything else: a block on another mode stays where it is.
+    /// </remarks>
+    private void Fork(Action<RealtimeProfile>? change, ProfileParam? param)
+    {
+        if (!ShowsPreset || _creating) return;
+        HideFork();
+        var list = Realtime.Profiles.Select(profile => profile.Clone()).ToList();
+        if (list.Count >= RealtimeSettings.MaxCustomProfiles)
+        {
+            Render();
+            return;
+        }
+
+        string presetId = _profileId;
+        var created = RealtimeProfile.CreateCustom(presetId,
+            RealtimeProfileEditing.ForkName(presetId, Choices().Select(choice => choice.Name)));
+        change?.Invoke(created);
+        created = RealtimeProfileEditing.WithoutTemplateValues(created);
+        list.Add(created);
+
+        // Where the row the change came from sits now, so the card's new head above it does not move it.
+        FrameworkElement? anchor = param is { } p ? _rows[p].Root : null;
+        double? before = anchor?.TranslatePoint(new Point(0, 0), BodyScroller).Y;
+
+        var realtime = Realtime;
+        if (realtime.NewBlockProfile == presetId) realtime.NewBlockProfile = created.Id;
+        SettingsService.Instance.UpdateRealtimeProfiles(list);
+        RealtimeSessionController.Instance.FollowProfile(presetId, created.Id);
+
+        _profileId = created.Id;
+        _syncing = true;
+        NameBox.Text = created.Name;
+        _syncing = false;
+        Render();
+        if (anchor is not null && before is { } y)
+        {
+            UpdateLayout();
+            double after = anchor.TranslatePoint(new Point(0, 0), BodyScroller).Y;
+            BodyScroller.ScrollToVerticalOffset(BodyScroller.VerticalOffset + after - y);
+        }
+        else
+        {
+            BodyScroller.ScrollToTop();
+        }
+        Focus();
+
+        if (SystemParameters.ClientAreaAnimation)
+            BodyScroller.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { FillBehavior = FillBehavior.Stop });
+    }
+
+    /// <summary>A value's row by name, as the card's line about the change names it.</summary>
+    private static string NameKey(ProfileParam param) => param switch
+    {
+        ProfileParam.MergeLevel => "S.Realtime.ProfileMerge",
+        ProfileParam.Align => "S.Realtime.ProfileAlign",
+        ProfileParam.FilterNumbersAndAbbreviations => "S.Realtime.ProfileFilterNumbers",
+        ProfileParam.SettleSeconds => "S.Realtime.ProfileSettle",
+        ProfileParam.ClearAfterEmptyReads => "S.Realtime.ProfileKeep",
+        ProfileParam.DetectorPercent => "S.Realtime.ProfileDetector",
+        ProfileParam.IgnoreSmallPercent => "S.Realtime.ProfileIgnoreSmall",
+        _ => "S.Realtime.ProfileConfidence",
+    };
+
+    /// <summary>A value as the card's line about the change gives it: 自動 for 自動, 開啟／關閉 for a switch.</summary>
+    private static string ValueName(RealtimeProfile filled, ProfileParam param) => param switch
+    {
+        ProfileParam.FilterNumbersAndAbbreviations => OnOff(filled.FilterNumbersAndAbbreviations != false),
+        ProfileParam.ClearAfterEmptyReads => OnOff(filled.ClearAfterEmptyReads == RealtimeProfile.MinClearAfterEmptyReads),
+        ProfileParam.SettleSeconds when filled.SettleAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
+        ProfileParam.DetectorPercent when filled.DetectorAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
+        _ => Display(filled, param),
+    };
+
+    private static string OnOff(bool on) => LocalizationService.Get(on ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff");
 
     // Round the template list to the inside of its border, so a filled row does not square off the
     // corners — the service panel's list does the same.

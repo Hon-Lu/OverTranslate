@@ -1123,6 +1123,25 @@ internal sealed class RealtimeSessionController
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Puts every block on <paramref name="fromId"/> — this sitting's, while framing or translating,
+    /// and the blocks kept for the next — on <paramref name="toId"/>, a mode just split off that
+    /// preset on the page (the user's call: what is changed there is meant for what is on screen).
+    /// </summary>
+    /// <remarks>
+    /// Called on the dispatcher straight after the new mode is stored, so the blocks move onto it in
+    /// the same pass that reads them again; the deferred <see cref="ApplyProfiles"/> the store raised
+    /// then finds nothing left to change.
+    /// </remarks>
+    public void FollowProfile(string fromId, string toId)
+    {
+        _blocks = RealtimeProfileEditing.Follow(_blocks, fromId, toId);
+        if (_remembered is { } kept)
+            _remembered = kept with { Blocks = RealtimeProfileEditing.Follow(kept.Blocks, fromId, toId) };
+        _edit?.SetProfileChoices(RealtimeProfileEditing.Choices(SettingsService.Instance.Current.Realtime.Profiles), (fromId, toId));
+        ApplyProfiles();
+    }
+
     // Raised by whoever saved the modes, on whatever thread that was; the work is the dispatcher's.
     private void OnRealtimeProfilesChanged(object? sender, EventArgs e) =>
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(ApplyProfiles);

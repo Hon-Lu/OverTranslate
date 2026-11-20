@@ -458,7 +458,12 @@
     <sys:String x:Key="S.Realtime.ProfileCreate">作成</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">変更は現在の翻訳にすぐ反映されます</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">カスタムモード {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">プリセットのモードは変更できません。調整したいときは、一覧でカスタムモードを追加し、このモードをテンプレートに選んでください。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">プリセットのモードは変更できません</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFork">カスタムモードを作成</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkName">{0}（カスタム）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkNameNumbered">{0}（カスタム {1}）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkChange">{0}：{1} → {2}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileOn">オン</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">名前</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">名前が重複しています。別の名前を付けてください</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">テンプレートに戻す</sys:String>

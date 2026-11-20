@@ -454,7 +454,12 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileCreate">Create</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">Changes apply to the current translation right away</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">Custom mode {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Preset modes cannot be changed. To customize one, add a custom mode from the list and use this preset as its template.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">Preset modes cannot be changed</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFork">Create custom mode</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkName">{0} (custom)</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkNameNumbered">{0} (custom {1})</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkChange">{0}: {1} → {2}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileOn">On</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">Name</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">This name is already taken. Choose another.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">Reset to template</sys:String>
