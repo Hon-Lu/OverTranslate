@@ -572,16 +572,13 @@
     <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">두 번 누르기는 위의 두 가지만 지원해 원래 기능이 중복 실행되지 않게 합니다</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">관리자 권한으로 실행 중인 프로그램에서는 이 단축키가 작동하지 않을 수 있습니다</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">실시간 번역</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">단축키를 눌러 [[블록을 선택하고 번역]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeStartPauseHotkey">시작/일시 정지</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">중지 상태에서 단축키를 누르면 블록 선택을 시작하고, 선택 중에 다시 누르면 번역을 시작합니다. 번역 중에는 일시 정지·재개할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">원문 대조</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">단축키로 [[원문 대조]] 전환</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">실시간 번역 중에만 작동합니다. 번역문으로 원문을 덮을지, 대조 영역에 표시할지 전환합니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">팝업 번역</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">단축키로 [[팝업 번역]] 열기</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">텍스트를 선택해 두면 창이 열릴 때 자동으로 불러와 번역합니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">대치 번역</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">[[선택한 텍스트]]를 번역해 그대로 붙여넣어 원문을 바꿉니다</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">글자를 입력할 수 있는 칸에서만 동작하며, 입력란이 아니면 붙여넣을 수 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">번역 설정</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">이 언어 설정은 대치 번역에만 적용되며 스크린샷, 텍스트 또는 실시간 번역에는 영향을 주지 않습니다.</sys:String>
@@ -590,13 +587,13 @@
     <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
     <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, 선택한 텍스트의 언어로 방향 결정</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 단독으로 쓸 수 있는 키는 F1–F24, Pause, Scroll Lock뿐입니다. 다른 키는 Ctrl／Alt／Shift와 함께 사용하세요</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyCopyRefused">✗ Ctrl+C는 복사이므로 지정할 수 없습니다. Ctrl+C+C는 Ctrl을 누른 채 C를 빠르게 두 번 누르세요</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPasteRefused">✗ Ctrl+V는 붙여넣기이므로 지정할 수 없습니다</sys:String>
 
     <sys:String x:Key="S.Settings.General">일반</sys:String>
     <sys:String x:Key="S.Settings.Options">옵션</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">캡처 번역</sys:String>
-    <sys:String x:Key="S.Settings.CaptureHotkeyHint">단축키로 [[캡처 번역]] 시작</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">번역 창 열기</sys:String>
-    <sys:String x:Key="S.Settings.WindowHotkeyHint">단축키로 [[번역 창]] 열기</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">캡처 번역에서 영역을 다 지정하면 곧바로 번역해, 따로 누를 필요가 없습니다.</sys:String>
     <sys:String x:Key="S.Settings.Startup">시작 프로그램</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Windows 시작 시 자동 실행</sys:String>

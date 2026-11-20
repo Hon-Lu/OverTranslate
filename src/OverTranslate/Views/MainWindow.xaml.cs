@@ -226,20 +226,21 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            if (!binding.Enabled)
+            // Reachable through a hand-edited settings.json or one an older version wrote — the
+            // settings page refuses to record it — and refused here for the reason it is refused
+            // there: a bare typing key, or the Ctrl+C / Ctrl+V this application sends itself.
+            if (binding.Refused)
             {
-                Log.Info("Hotkey {Action} is not set", binding.Action);
+                Log.Warn(
+                    "Hotkey {Action} treated as not set: the stored {Display} (modifiers {Modifiers}, key {VirtualKey}) cannot be bound",
+                    binding.Action, HotkeyBindings.DisplayFor(settings, binding.Action),
+                    binding.Trigger.Modifiers, binding.Trigger.VirtualKey);
                 continue;
             }
 
-            // Reachable only through a hand-edited settings.json — the settings page refuses to
-            // record it — and refused here for the reason it is refused there: a bare typing key
-            // registered globally stops working in every other application.
-            if (!HotkeyBindings.IsBindable(binding.Trigger))
+            if (!binding.Enabled)
             {
-                Log.Warn(
-                    "Hotkey {Action} not registered: {Display} is a single key that cannot be claimed globally",
-                    binding.Action, binding.Trigger.VirtualKey);
+                Log.Info("Hotkey {Action} is not set", binding.Action);
                 continue;
             }
 

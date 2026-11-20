@@ -65,6 +65,9 @@ internal static class SelectionReplacer
             return PasteOutcome.FocusMoved;
         }
 
+        // Until the clipboard is back, for the reason SelectedTextReader.ReadAsync gives.
+        using var replacing = SyntheticKeyGuard.Shared.Enter();
+
         object? snapshot;
 
         try

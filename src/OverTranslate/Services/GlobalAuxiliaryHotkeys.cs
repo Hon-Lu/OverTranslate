@@ -269,9 +269,12 @@ internal sealed class GlobalAuxiliaryHotkeys : IDisposable
             {
                 var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
 
+                // The marker answers for keys sent through KeyboardInput; the guard is the second
+                // line, for anything sent while it is in progress that does not carry one.
                 if (data.dwExtraInfo != KeyboardInput.InjectedMarker &&
                     sequences.OnKey(data.vkCode, down, data.time) is { } hit &&
-                    Volatile.Read(ref _bindings).TryGetValue(ShortcutTrigger.KeySequence(hit.Kind), out var action))
+                    Volatile.Read(ref _bindings).TryGetValue(ShortcutTrigger.KeySequence(hit.Kind), out var action) &&
+                    SyntheticKeyGuard.Shared.AllowsShortcut(hit.Kind.ToString()))
                 {
                     Raise(action, hit.ClipboardBefore);
                 }

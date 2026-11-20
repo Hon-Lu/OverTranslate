@@ -368,6 +368,124 @@ public class HotkeyBindingsTests
         Assert.Empty(HotkeyBindings.KeysFor(settings, HotkeyAction.RealtimePause));
     }
 
+    private const uint Ctrl = 2;
+    private const uint VkC = 0x43;
+    private const uint VkV = 0x56;
+
+    [Fact]
+    public void TheCopyAndPasteThisApplicationSendsCannotBeShortcuts()
+    {
+        // 2026-11-20: 取詞翻譯 on Ctrl+C fired itself with its own copy until the desktop's input
+        // stopped. Refused for every shortcut — elsewhere it would take copy and paste from the system.
+        Assert.False(HotkeyBindings.IsBindable(ShortcutTrigger.Keyboard(Ctrl, VkC)));
+        Assert.False(HotkeyBindings.IsBindable(ShortcutTrigger.Keyboard(Ctrl, VkV)));
+    }
+
+    [Fact]
+    public void OnlyTheExactChordIsRefused()
+    {
+        // The chord is sent with every other modifier released, so these are never produced.
+        Assert.True(HotkeyBindings.IsBindable(ShortcutTrigger.Keyboard(Ctrl | 4, VkC))); // Ctrl+Shift+C
+        Assert.True(HotkeyBindings.IsBindable(ShortcutTrigger.Keyboard(CtrlAlt, VkV)));  // Ctrl+Alt+V
+        Assert.True(HotkeyBindings.IsBindable(ShortcutTrigger.Keyboard(Ctrl, 0x58)));    // Ctrl+X
+        Assert.True(HotkeyBindings.IsBindable(ShortcutTrigger.KeySequence(ShortcutInputKind.CtrlCC)));
+    }
+
+    [Fact]
+    public void RecordingCtrlCSaysHowCtrlCCIsPressed()
+    {
+        // Mostly reached by a second C that came too late for Ctrl+C+C.
+        Assert.Equal("S.Settings.HotkeyCopyRefused",
+            HotkeyBindings.RefusalKey(ShortcutTrigger.Keyboard(Ctrl, VkC)));
+        Assert.Equal("S.Settings.HotkeyPasteRefused",
+            HotkeyBindings.RefusalKey(ShortcutTrigger.Keyboard(Ctrl, VkV)));
+        Assert.Equal("S.Settings.HotkeyNeedsModifier",
+            HotkeyBindings.RefusalKey(ShortcutTrigger.Keyboard(0, 0x41)));
+        Assert.Null(HotkeyBindings.RefusalKey(ShortcutTrigger.Keyboard(CtrlAlt, 0x41)));
+        Assert.Null(HotkeyBindings.RefusalKey(ShortcutTrigger.KeySequence(ShortcutInputKind.CtrlCC)));
+    }
+
+    [Theory]
+    [InlineData(HotkeyAction.QuickLookup)]
+    [InlineData(HotkeyAction.QuickTranslate)]
+    [InlineData(HotkeyAction.Capture)]
+    public void AStoredCtrlCIsTreatedAsNotSetWithoutBeingRewritten(HotkeyAction action)
+    {
+        // The settings file the loop came from: 取詞翻譯 on Ctrl+C and switched on.
+        var settings = WithKeyboard(new AppSettings(), action, Ctrl, VkC, "Ctrl+C");
+
+        var binding = HotkeyBindings.Resolve(settings).Single(b => b.Action == action);
+
+        Assert.False(binding.Enabled);
+        Assert.False(binding.IsActive);
+        Assert.True(binding.Refused);
+        Assert.DoesNotContain(HotkeyBindings.Active(settings), b => b.Action == action);
+        Assert.Empty(HotkeyBindings.KeysFor(settings, action));
+
+        // Ignored, not rewritten: the stored values are exactly as they were.
+        Assert.Equal(ShortcutTrigger.Keyboard(Ctrl, VkC), HotkeyBindings.TriggerFor(settings, action));
+        Assert.Equal("Ctrl+C", HotkeyBindings.DisplayFor(settings, action));
+        if (action == HotkeyAction.QuickLookup) Assert.True(settings.QuickLookupHotkeyEnabled);
+    }
+
+    [Fact]
+    public void ARefusedShortcutHoldsNothing()
+    {
+        // Not set means not claiming: a lower shortcut on the same stored chord is not shadowed by it
+        // — it is refused on its own account instead.
+        var settings = WithKeyboard(new AppSettings(), HotkeyAction.QuickLookup, Ctrl, VkV, "Ctrl+V");
+        settings = WithKeyboard(settings, HotkeyAction.QuickTranslate, Ctrl, VkV, "Ctrl+V");
+
+        var replace = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.QuickTranslate);
+
+        Assert.Null(replace.ShadowedBy);
+        Assert.True(replace.Refused);
+    }
+
+    [Fact]
+    public void AnUnsetShortcutIsNotReportedAsRefused()
+    {
+        var settings = WithKeyboard(new AppSettings(), HotkeyAction.QuickLookup, Ctrl, VkC, "Ctrl+C");
+        settings.QuickLookupHotkeyEnabled = false;
+
+        var lookup = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.QuickLookup);
+
+        Assert.False(lookup.Enabled);
+        Assert.False(lookup.Refused);
+    }
+
+    private static AppSettings WithKeyboard(
+        AppSettings settings, HotkeyAction action, uint modifiers, uint vk, string display)
+    {
+        switch (action)
+        {
+            case HotkeyAction.Capture:
+                settings.HotkeyInputKind = ShortcutInputKind.Keyboard;
+                settings.HotkeyModifiers = modifiers;
+                settings.HotkeyVirtualKey = vk;
+                settings.HotkeyDisplay = display;
+                break;
+            case HotkeyAction.QuickLookup:
+                settings.QuickLookupHotkeyInputKind = ShortcutInputKind.Keyboard;
+                settings.QuickLookupHotkeyModifiers = modifiers;
+                settings.QuickLookupHotkeyVirtualKey = vk;
+                settings.QuickLookupHotkeyDisplay = display;
+                settings.QuickLookupHotkeyEnabled = true;
+                break;
+            case HotkeyAction.QuickTranslate:
+                settings.QuickTranslateHotkeyInputKind = ShortcutInputKind.Keyboard;
+                settings.QuickTranslateHotkeyModifiers = modifiers;
+                settings.QuickTranslateHotkeyVirtualKey = vk;
+                settings.QuickTranslateHotkeyDisplay = display;
+                settings.QuickTranslateHotkeyEnabled = true;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action));
+        }
+
+        return settings;
+    }
+
     [Fact]
     public void AMouseButtonIsOneCapWithItsWholeName()
     {

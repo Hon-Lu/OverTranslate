@@ -590,16 +590,13 @@
     <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">連按兩下僅支援以上兩組，避免重複觸發原有功能</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">在以系統管理員身分執行的程式中，此快捷鍵可能無法使用</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">即時翻譯</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷鍵開始[[框選翻譯]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeStartPauseHotkey">開始／暫停</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文對照</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">按下快捷鍵切換[[原文對照]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">僅在即時翻譯期間有效，切換譯文覆蓋原文或顯示於對照區域。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷鍵開啟[[取詞翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">替換翻譯</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">將[[選取文字]]翻譯後貼上並取代原文</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">僅適用於可輸入文字的欄位，非輸入區域則無法貼上。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻譯設定</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此設定僅適用於替換翻譯，不會影響截圖翻譯、文字翻譯或即時翻譯。</sys:String>
@@ -608,15 +605,15 @@
     <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
     <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}，依選取文字的語言決定方向</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 單一按鍵只能是 F1–F24、Pause 或 Scroll Lock，其他按鍵請搭配 Ctrl／Alt／Shift</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyCopyRefused">✗ Ctrl+C 為複製，無法設為快捷鍵；Ctrl+C+C 請按住 Ctrl 快速連按兩下 C</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPasteRefused">✗ Ctrl+V 為貼上，無法設為快捷鍵</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般設定</sys:String>
     <sys:String x:Key="S.Settings.Options">選項</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">截圖翻譯</sys:String>
     <!-- [[…]] 內的字會以主題色強調，見 Views/Controls/HighlightedText。兩種語言的標記數量必須一致，
          StringsParityTests 會擋。 -->
-    <sys:String x:Key="S.Settings.CaptureHotkeyHint">按下快捷鍵開始[[截圖翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">開啟翻譯視窗</sys:String>
-    <sys:String x:Key="S.Settings.WindowHotkeyHint">按下快捷鍵開啟[[翻譯視窗]]</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">截圖翻譯框選完成時立即翻譯，不需要再手動點擊。</sys:String>
     <sys:String x:Key="S.Settings.Startup">開機啟動</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">開機時自動啟動</sys:String>
