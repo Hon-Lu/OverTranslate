@@ -110,6 +110,8 @@ public partial class RealtimeControlWindow : Window
     private RealtimeLanguageMenuKind? _menuClosedByPress;
     // 顯示外觀, while it is open (#355).
     private RealtimeAppearancePanel? _appearance;
+    // 模式, while it is open (翻譯中調整模式). Never open together with 顯示外觀 or a language list.
+    private RealtimeProfilePanel? _profiles;
     private bool _isPaused;
     private bool _isLoadingModels;
     // What the session last said through SetBusy; the dot also pulses while the models load.
@@ -185,6 +187,7 @@ public partial class RealtimeControlWindow : Window
             _scaleFixupSettle.Stop();
             CloseMenu("bar closed");
             CloseAppearance();
+            CloseProfiles();
         };
 
         // A list left open over a capsule that has gone away — a capture standing the session down —
@@ -194,6 +197,7 @@ public partial class RealtimeControlWindow : Window
             if (IsVisible) return;
             CloseMenu("bar hidden");
             CloseAppearance();
+            CloseProfiles();
         };
 
         // 顯示外觀 is set against the capsule, so it goes wherever the capsule goes: pushed along by
@@ -506,6 +510,7 @@ public partial class RealtimeControlWindow : Window
         _mode = mode;
         CloseMenu($"mode {mode}");
         CloseAppearance();
+        CloseProfiles();
         Labels.Hide();
         EditPanel.Visibility = mode == RealtimeControlMode.Edit ? Visibility.Visible : Visibility.Collapsed;
         RunPanel.Visibility = mode == RealtimeControlMode.Running ? Visibility.Visible : Visibility.Collapsed;
@@ -619,7 +624,11 @@ public partial class RealtimeControlWindow : Window
         CloseMenuIfPairHidden();
 
         // Its button has gone with the rest of the capsule.
-        if (_collapsed) CloseAppearance();
+        if (_collapsed)
+        {
+            CloseAppearance();
+            CloseProfiles();
+        }
     }
 
     /// <summary>
@@ -827,6 +836,7 @@ public partial class RealtimeControlWindow : Window
         CloseMenu("another list opening");
         // One thing open over the capsule at a time: the two would open into the same space.
         CloseAppearance();
+        CloseProfiles();
 
         var menu = new RealtimeLanguageMenu(
             kind,
@@ -932,6 +942,7 @@ public partial class RealtimeControlWindow : Window
         }
 
         CloseMenu("appearance panel opening");
+        CloseProfiles();
 
         var panel = new RealtimeAppearancePanel(PhysicalRect(Chrome), _screenBounds);
         panel.AppearanceChanged += (_, _) => AppearanceChanged?.Invoke(this, EventArgs.Empty);
@@ -958,7 +969,75 @@ public partial class RealtimeControlWindow : Window
 
     private void FollowCapsule()
     {
-        if (_appearance is { } panel && IsLoaded) panel.UpdateAnchor(PhysicalRect(Chrome));
+        if (!IsLoaded) return;
+        if (_appearance is { } panel) panel.UpdateAnchor(PhysicalRect(Chrome));
+        if (_profiles is { } profiles) profiles.UpdateAnchor(PhysicalRect(Chrome));
+    }
+
+    // ── 模式 (翻譯中調整模式) ────────────────────────────────────────────────────────────────────
+
+    private void ProfilesBtn_Click(object sender, RoutedEventArgs e)
+    {
+        // Human-paced, and the first thing to look at if the panel is reported as not opening, as the
+        // language lists log theirs (#358).
+        Log.Info("Realtime mode panel button pressed, open={Open}", _profiles is not null);
+
+        // Pressing it again is how the panel is put away, as 顯示外觀's is: it stays open otherwise,
+        // so one value after another can be tried against the translation.
+        if (_profiles is not null)
+        {
+            CloseProfiles();
+            return;
+        }
+
+        // One thing open over the capsule at a time: they open into the same space.
+        CloseMenu("mode panel opening");
+        CloseAppearance();
+
+        RealtimeProfilePanel panel;
+        try
+        {
+            panel = new RealtimeProfilePanel(PhysicalRect(Chrome), _screenBounds);
+        }
+        catch (Exception ex)
+        {
+            // A press that cannot open the panel costs the press, not the session.
+            Log.Error(ex, "Realtime mode panel could not be opened");
+            return;
+        }
+        panel.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_profiles, panel)) return;
+            _profiles = null;
+            SetHeldDown(ProfilesBtn, false);
+        };
+
+        _profiles = panel;
+        SetHeldDown(ProfilesBtn, true);
+        panel.Show();
+    }
+
+    private void CloseProfiles()
+    {
+        var panel = _profiles;
+        if (panel is null) return;
+        _profiles = null;
+        SetHeldDown(ProfilesBtn, false);
+        panel.Dismiss();
+    }
+
+    private static void SetHeldDown(System.Windows.Controls.Button button, bool open)
+    {
+        if (open)
+        {
+            button.SetResourceReference(ForegroundProperty, "AppAccent");
+            button.SetResourceReference(BackgroundProperty, "ToolbarGroupBg");
+        }
+        else
+        {
+            button.ClearValue(ForegroundProperty);
+            button.ClearValue(BackgroundProperty);
+        }
     }
 
     /// <summary>The button held down while its panel is open, in 原文對照's way of showing a state.</summary>
@@ -1088,6 +1167,7 @@ public partial class RealtimeControlWindow : Window
         // A press on the bar itself, not one of its buttons, is a press outside 顯示外觀, as it is
         // for the lists: put away rather than dragged along, where the bar could end up under it.
         CloseAppearance();
+        CloseProfiles();
 
         _isDragging = true;
         _dragStartMouse = System.Windows.Forms.Control.MousePosition;

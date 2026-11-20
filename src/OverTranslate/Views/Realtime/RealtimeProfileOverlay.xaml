@@ -402,10 +402,12 @@
                     <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
                 </Border.Effect>
                 <StackPanel Margin="24,20,24,20">
+                    <!-- One card for the two answers a mode asks to be confirmed — 刪除 and 還原為範本 —
+                         set up by ShowConfirm. -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18"
+                        <TextBlock x:Name="ConfirmGlyph" Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18"
                                    Foreground="{DynamicResource AppError}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="{DynamicResource S.Realtime.ProfileDeleteTitle}"
+                        <TextBlock x:Name="ConfirmTitle" Text="{DynamicResource S.Realtime.ProfileDeleteTitle}"
                                    FontFamily="{DynamicResource AppFont}" FontSize="16" FontWeight="SemiBold"
                                    Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -418,10 +420,10 @@
                                 Content="{DynamicResource S.Common.Cancel}"
                                 AutomationProperties.AutomationId="ProfileConfirmCancelBtn"
                                 Click="ConfirmCancel_Click"/>
-                        <Button Style="{StaticResource DangerButton}" Margin="10,0,0,0" Padding="18,0"
+                        <Button x:Name="ConfirmActionBtn" Style="{StaticResource DangerButton}" Margin="10,0,0,0" Padding="18,0"
                                 Content="{DynamicResource S.Realtime.ProfileDelete}"
                                 AutomationProperties.AutomationId="ProfileConfirmDeleteBtn"
-                                Click="ConfirmDelete_Click"/>
+                                Click="ConfirmAction_Click"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

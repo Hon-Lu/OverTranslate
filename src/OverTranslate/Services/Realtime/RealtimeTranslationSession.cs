@@ -243,15 +243,29 @@ public sealed class RealtimeTranslationSession
         // interface to keep responsive for as long as this runs.
         var loops = new List<RegionLoop>(regions.Count);
         foreach (var region in regions)
-        {
-            var watched = region;
-            var step = new StepMarker("starting");
-            var loop = Task.Run(
-                () => RunRegionAsync(watched, sourceLanguage, targetLanguage, readAtOnce, step, cts.Token),
-                cts.Token);
-            loops.Add(new RegionLoop(watched.Id, loop, step));
-        }
+            loops.Add(StartLoop(region, sourceLanguage, targetLanguage, readAtOnce, cts.Token));
         _loops = loops;
+    }
+
+    /// <summary>
+    /// Starts one region's loop, on a token of its own under <paramref name="run"/>: a pause or a
+    /// stop cancels them all through the run's, and a mode changed on one block cancels only that
+    /// block's — see <see cref="ChangeProfiles"/>.
+    /// </summary>
+    private RegionLoop StartLoop(
+        RealtimeRegion region, string sourceLanguage, string targetLanguage, bool readAtOnce, CancellationToken run)
+    {
+        var stopper = CancellationTokenSource.CreateLinkedTokenSource(run);
+        var token = stopper.Token;
+        var step = new StepMarker("starting");
+        var loop = Task.Run(
+            () => RunRegionAsync(region, sourceLanguage, targetLanguage, readAtOnce, step, token),
+            token);
+        // Disposed once the loop is over, which unhooks it from the run's token: a session tuned
+        // for an hour restarts the same block hundreds of times under one run.
+        _ = loop.ContinueWith(_ => stopper.Dispose(), CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        return new RegionLoop(region.Id, loop, step) { Stopper = stopper };
     }
 
     /// <summary>
@@ -411,13 +425,19 @@ public sealed class RealtimeTranslationSession
     /// whose mode resolves to the same values as before is no reason to do anything, so nothing is
     /// done unless one of them really changed.</para>
     ///
-    /// <para>A running session starts again on the new modes at once, every region read at once, as
-    /// <see cref="ChangeLanguages"/> does and for the same reason: everything a region loop took
-    /// from its mode when it started — the read timing, the empty reads it waits out, the detector
-    /// size — is taken again, and nothing is left running on an old value. A new detector size is a
-    /// new reading of the frame by construction. What is not done is fence the cache or clear the
-    /// history: the languages are the same and so is every translation already made, and a pass
-    /// still in flight was cancelled with its loop.</para>
+    /// <para>A running session starts each changed block again on its new mode at once, read at once,
+    /// as <see cref="ChangeLanguages"/> does for every block and for the same reason: everything a
+    /// region loop took from its mode when it started — the read timing, the empty reads it waits
+    /// out, the detector size — is taken again, and nothing is left running on an old value. A new
+    /// detector size is a new reading of the frame by construction. What is not done is fence the
+    /// cache or clear the history: the languages are the same and so is every translation already
+    /// made, and a pass still in flight was cancelled with its loop.</para>
+    ///
+    /// <para>Only the changed blocks. A mode can be tuned from the running bar while the user watches
+    /// (翻譯中調整模式), a value at a time; restarting every block for each of them blanked and re-read
+    /// blocks nobody touched, and stacked one abandoned recognition per block per change behind the
+    /// recogniser's gate — a pass already inside it cannot be called back. The models do not change
+    /// with a mode (only the language and the direction pick them), so nothing is loaded either.</para>
     ///
     /// <para>Paused, or between sittings, the new modes are only remembered: 繼續 and 開始翻譯
     /// start on them.</para>
@@ -427,18 +447,58 @@ public sealed class RealtimeTranslationSession
     {
         if (regions.Count == _regions.Count && regions.Zip(_regions).All(pair => pair.First == pair.Second))
             return false;
-        // 譯文對齊 alone: the overlays redraw themselves (see RealtimeBlockWindow.SetLayout), and
-        // nothing the loops read with has changed. The regions they hold are kept: what differs is
-        // not theirs to read.
-        if (regions.Count == _regions.Count && regions.Zip(_regions).All(pair =>
-                pair.First with { Profile = pair.Second.Profile } == pair.Second && pair.First.Profile.ReadsLike(pair.Second.Profile)))
-            return false;
 
+        // Not the same blocks — never sent from the bar or the page, which only change modes — is
+        // a new arrangement, and gets the whole restart it always did.
+        if (regions.Count != _regions.Count ||
+            regions.Zip(_regions).Any(pair => pair.First with { Profile = pair.Second.Profile } != pair.Second))
+            return RestartAll(regions);
+
+        // 譯文對齊 alone reads nothing differently: the overlays redraw themselves (see
+        // RealtimeBlockWindow.SetLayout). The regions the loops hold are kept for those blocks, so
+        // the next comparison is still against what each loop reads with.
+        var changed = Enumerable.Range(0, regions.Count)
+            .Where(index => !regions[index].Profile.ReadsLike(_regions[index].Profile))
+            .ToList();
+        if (changed.Count == 0) return false;
+
+        var running = !IsPaused && _capture is not null && _cts is not null && _loops.Count == regions.Count;
+        Log.Info("Realtime session modes changed: {State:l}, region(s) {Regions:l}",
+            running ? "restarting at once" : IsPaused ? "still paused" : "not started",
+            string.Join(",", changed.Select(index => regions[index].Id)));
+
+        var updated = _regions.ToArray();
+        foreach (var index in changed) updated[index] = regions[index];
+        _regions = updated;
+        LogProfiles([.. changed.Select(index => regions[index])]);
+
+        if (!running) return true;
+
+        var loops = _loops.ToArray();
+        var stopped = new List<RegionLoop>(changed.Count);
+        foreach (var index in changed)
+        {
+            var region = regions[index];
+            var old = loops[index];
+            Cancel(old);
+            stopped.Add(old);
+            // What it was retrying is the old mode's to report; the new loop reports its own.
+            if (_failures.Forget(region.Id)) RaiseFailureChanged();
+            loops[index] = StartLoop(region, _sourceLanguage, _targetLanguage, readAtOnce: true, _cts!.Token);
+        }
+        _loops = loops;
+        _ = RealtimeLoopWatch.WatchStop(stopped, _capture, RealtimeLoopWatch.WarnAfter);
+        return true;
+    }
+
+    // The old way, for a list of blocks that is not the one running.
+    private bool RestartAll(IReadOnlyList<RealtimeRegion> regions)
+    {
         var running = !IsPaused && _capture is not null;
         if (running) StopLoops();
 
         Log.Info("Realtime session modes changed: {State}",
-            running ? "restarting at once" : IsPaused ? "still paused" : "not started");
+            running ? "restarting every region at once" : IsPaused ? "still paused" : "not started");
         _regions = regions;
 
         if (running)
@@ -446,6 +506,18 @@ public sealed class RealtimeTranslationSession
         else
             LogProfiles(regions);
         return true;
+    }
+
+    // A loop that already ended on its own has had its token disposed with it; there is nothing to stop.
+    private static void Cancel(RegionLoop loop)
+    {
+        try
+        {
+            loop.Stopper?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     // One line per block: the values it reads with, which a report of "it reads too late" or "it

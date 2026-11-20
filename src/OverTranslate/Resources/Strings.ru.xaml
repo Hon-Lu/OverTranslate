@@ -960,4 +960,12 @@
     <sys:String x:Key="S.Assets.FailedTitle">Не удалось переместить модели</sys:String>
     <sys:String x:Key="S.Assets.FailedBody">При записи {0} произошла ошибка. Расположение не изменено.</sys:String>
     <sys:String x:Key="S.Assets.Ok">ОК</sys:String>
+    <!-- 即時翻譯：翻譯中調整模式 -->
+    <sys:String x:Key="S.Realtime.ProfilePanelHint">Настройка режима каждой области перевода</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumber">Область {0}</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSharedWith">Также используется в области {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetTitle">Вернуть к шаблону?</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">Изменённые параметры ({0}) вернутся к значениям «{1}».</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetAction">Вернуть</sys:String>
 </ResourceDictionary>

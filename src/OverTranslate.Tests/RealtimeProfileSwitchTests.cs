@@ -162,11 +162,114 @@ public class RealtimeProfileSwitchTests
         session.Stop(releaseRecogniser: true);
 
         Assert.True(changed);
-        Assert.Contains(log, line => line.Contains("restarting at once"));
-        Assert.Contains(log, line => line.StartsWith("Info|Realtime session started"));
+        Assert.Contains(log, line => line.Contains("restarting at once, region(s) 0"));
+        // The block's loop alone: the session itself is not started again.
+        Assert.DoesNotContain(log, line => line.StartsWith("Info|Realtime session started"));
         Assert.Contains(log, line => line.StartsWith("Info|Realtime region 0") && line.Contains("profile=slow"));
         // The translations are still right: the languages and the screen are the same.
         Assert.Equal(generation, CacheGeneration(session));
+    }
+
+    private static RealtimeRegion Block(int id, ResolvedProfile profile) =>
+        new(id, new Rectangle(id * 300, 0, 280, 200), profile, RealtimeTextOrientation.Horizontal);
+
+    private static IReadOnlyList<RegionLoop> Loops(RealtimeTranslationSession session) =>
+        (IReadOnlyList<RegionLoop>)typeof(RealtimeTranslationSession)
+            .GetField("_loops", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(session)!;
+
+    [Fact]
+    public void Running_OnlyTheBlockWhoseModeChanged_StartsAgain()
+    {
+        using var ocr = new OcrService();
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+        session.Start([Block(0, ResolvedProfile.Standard), Block(1, ResolvedProfile.Standard)],
+            Source, "ZH-HANT", TranslationProvider.Google, new NoPicture());
+        var before = Loops(session);
+
+        string[] log = [];
+        log = SessionLog(() => session.ChangeProfiles([Block(0, ResolvedProfile.Standard), Block(1, Slow)]));
+        var after = Loops(session);
+        session.Stop(releaseRecogniser: true);
+
+        Assert.Contains(log, line => line.Contains("restarting at once, region(s) 1"));
+        Assert.DoesNotContain(log, line => line.StartsWith("Info|Realtime region 0"));
+        Assert.Contains(log, line => line.StartsWith("Info|Realtime region 1") && line.Contains("profile=slow"));
+        // Block 1's loop is a new one; block 0 kept reading on the loop it had.
+        Assert.Same(before[0], after[0]);
+        Assert.NotSame(before[1], after[1]);
+    }
+
+    [Fact]
+    public void Running_ManyChangesInARow_LeaveOneLoopPerBlock_AndEveryOldOneStops()
+    {
+        using var ocr = new OcrService();
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+        session.Start([Block(0, ResolvedProfile.Standard), Block(1, ResolvedProfile.Standard)],
+            Source, "ZH-HANT", TranslationProvider.Google, new NoPicture());
+
+        var stopped = new List<RegionLoop>();
+        for (int i = 0; i < 200; i++)
+        {
+            var before = Loops(session);
+            var profile = i % 2 == 0 ? Slow : ResolvedProfile.Standard;
+            Assert.True(session.ChangeProfiles([Block(0, profile), Block(1, ResolvedProfile.Standard)]));
+            stopped.Add(before[0]);
+        }
+        var current = Loops(session);
+
+        Assert.Equal(2, current.Count);
+        Assert.True(AllEnd(stopped), "a loop told to stop was still running");
+        Assert.False(current[0].Task.IsCompleted);
+        Assert.False(current[1].Task.IsCompleted);
+
+        session.Stop(releaseRecogniser: true);
+        Assert.True(AllEnd(current));
+    }
+
+    // Ended one way or another: a loop cancelled before it began ends cancelled, not run.
+    private static bool AllEnd(IEnumerable<RegionLoop> loops)
+    {
+        var all = Task.WhenAll(loops.Select(loop => loop.Task));
+        Task.WhenAny(all, Task.Delay(TimeSpan.FromSeconds(10))).Wait();
+        return all.IsCompleted;
+    }
+
+    [Fact]
+    public void Running_OnlyTheAlignChanged_RestartsNothing()
+    {
+        using var ocr = new OcrService();
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+        session.Start([Block(0, ResolvedProfile.Interface)], Source, "ZH-HANT", TranslationProvider.Google, new NoPicture());
+        var before = Loops(session);
+
+        var centred = ResolvedProfile.Resolve(new RealtimeProfile
+        {
+            Id = RealtimePresets.InterfaceId,
+            BasedOn = RealtimePresets.InterfaceId,
+            Align = RealtimeTextAligns.Center,
+        });
+        bool changed = session.ChangeProfiles([Block(0, centred)]);
+        var after = Loops(session);
+        session.Stop(releaseRecogniser: true);
+
+        Assert.False(changed);
+        Assert.Same(before[0], after[0]);
+    }
+
+    [Fact]
+    public void Running_ADifferentSetOfBlocks_StartsEveryBlockAgain()
+    {
+        using var ocr = new OcrService();
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+        session.Start([Block(0, ResolvedProfile.Standard)], Source, "ZH-HANT", TranslationProvider.Google, new NoPicture());
+
+        var log = SessionLog(() => session.ChangeProfiles([Block(0, ResolvedProfile.Standard), Block(1, Slow)]));
+        var after = Loops(session);
+        session.Stop(releaseRecogniser: true);
+
+        Assert.Contains(log, line => line.Contains("restarting every region at once"));
+        Assert.Equal(2, after.Count);
     }
 
     [Fact]

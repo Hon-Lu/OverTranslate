@@ -440,6 +440,19 @@
                                     AutomationProperties.Name="{DynamicResource S.Realtime.Appearance}"
                                     Click="AppearanceBtn_Click"/>
 
+                            <!-- 模式 (翻譯中調整模式): each block's mode and its values, in a panel beside the
+                                 capsule like 顯示外觀's, and held down the same way while it is open. The
+                                 sliders glyph the page's mode card carries in its title. -->
+                            <Button x:Name="ProfilesBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                    FontSize="14"
+                                    Content="&#xE9E9;"
+                                    Margin="0,0,4,0"
+                                    AutomationProperties.AutomationId="RealtimeProfilesBtn"
+                                    AutomationProperties.Name="{DynamicResource S.Realtime.ProfileMenu}"
+                                    Click="ProfilesBtn_Click"/>
+
                             <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
                                  be read at a glance and one word set in a flat button among icons was the
                                  only thing on it drawing the eye. The pencil is the same one Windows uses
