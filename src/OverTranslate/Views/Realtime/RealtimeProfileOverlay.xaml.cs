@@ -342,7 +342,7 @@ public partial class RealtimeProfileOverlay : UserControl
 
     /// <summary>
     /// A preset's rows: no pointer, no tab stop, and the accent inside them swapped for the secondary
-    /// text colour — a slider's fill, the chosen half of 自動｜手動, a tick — at full strength.
+    /// text colour — a slider's fill, the chosen half of 自動｜手動, a switch's track — at full strength.
     /// </summary>
     private void ApplyLock(bool locked)
     {
@@ -703,7 +703,7 @@ public partial class RealtimeProfileOverlay : UserControl
     /// <summary>
     /// Every other value: name on the left; 自動｜手動 where the value can be left to 自動; a slot of
     /// <see cref="SlotWidth"/> for the slider; the value in a column of <see cref="ValueWidth"/> — or
-    /// for a tick (原文消失後立即清除譯文, 過濾數字與縮寫) the tick there instead.
+    /// for an on/off (原文消失後立即清除譯文, 過濾數字與縮寫) a switch there instead.
     /// </summary>
     /// <remarks>
     /// The switch and value columns are shared down the card (the scope is EditPanel), so every
@@ -727,10 +727,12 @@ public partial class RealtimeProfileOverlay : UserControl
 
         if (RealtimeProfileEditing.IsTick(param))
         {
-            // The tick in the value column, the name across the rest: no switch and no slot here.
+            // An on/off switch in the value column, the name across the rest: no 自動｜手動 and no slot
+            // here. The settings page's switch rather than a tick box: the user asked for the two to
+            // look alike. At 44 wide it fits the value column's least width, so the column does not grow.
             bool filter = param == ProfileParam.FilterNumbersAndAbbreviations;
             var tick = new CheckBox { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
-            tick.SetResourceReference(StyleProperty, "ModernCheckBox");
+            tick.SetResourceReference(StyleProperty, "ToggleSwitch");
             tick.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, nameKey);
             System.Windows.Automation.AutomationProperties.SetAutomationId(tick, filter ? "FilterCheck" : "KeepCheck");
             RoutedEventHandler changed = (_, _) =>
@@ -905,7 +907,7 @@ public partial class RealtimeProfileOverlay : UserControl
 
     /// <summary>
     /// What 過濾數字與縮寫 covers, as tags straight under its name and with no word before them: the
-    /// name says 過濾 already. Tinted while <paramref name="tick"/> is ticked and grey while it is not
+    /// name says 過濾 already. Tinted while the switch <paramref name="tick"/> is on and grey while it is not
     /// — see the FilterTag style — and wrapped onto a second line where the card is narrow.
     /// </summary>
     private static WrapPanel FilterTags(CheckBox tick)
