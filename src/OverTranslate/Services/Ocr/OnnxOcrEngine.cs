@@ -695,6 +695,13 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                     _detectorSpaceBoxes = extended;
                     mapped = ToSourceSpace(extended);
                 }
+
+                // On the boxes as they will be read, and for the same lines: a ―― is set in
+                // Chinese and Japanese. See HorizontalInnerDashes.
+                if (!_verticalText && HorizontalInnerDashes.Enabled &&
+                    (OcrLanguageRouter.UsesCjkOnnx(normalizedLanguage) ||
+                     OcrLanguageRouter.UsesAutomaticLayout(normalizedLanguage)))
+                    _innerDashes = FindInnerDashes(mapped);
             }
 
             Boxes = mapped;
@@ -709,6 +716,38 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                         return (Bounds: _frame.ToSourceBounds(points), box.Score);
                     })
                     .ToList();
+        }
+
+        // Each box with a ―― inside it, and the two halves to read it in, one pair per dash.
+        private Dictionary<RapidOcrNet.TextBox, (RapidOcrNet.TextBox Before, RapidOcrNet.TextBox After)[]>? _innerDashes;
+
+        private Dictionary<RapidOcrNet.TextBox, (RapidOcrNet.TextBox Before, RapidOcrNet.TextBox After)[]>? FindInnerDashes(
+            IReadOnlyList<(System.Windows.Rect Bounds, float Score)> mapped)
+        {
+            Dictionary<RapidOcrNet.TextBox, (RapidOcrNet.TextBox, RapidOcrNet.TextBox)[]>? found = null;
+            for (var i = 0; i < _detectorSpaceBoxes.Count; i++)
+            {
+                var box = _detectorSpaceBoxes[i];
+                var p = box.BoxPoints;
+                // Upright, corners in the library's order, as HorizontalLineEnds walks them.
+                if (p.Length != 4 || p[0].X >= p[1].X || p[3].X >= p[2].X || p[0].Y >= p[3].Y || p[1].Y >= p[2].Y)
+                    continue;
+                var b = mapped[i].Bounds;
+                var dashes = HorizontalInnerDashes.Find(_skBitmap, new SKRectI(
+                    (int)Math.Floor(b.Left), (int)Math.Floor(b.Top), (int)Math.Ceiling(b.Right), (int)Math.Ceiling(b.Bottom)));
+                if (dashes.Count == 0) continue;
+
+                // Into the detector's space as HorizontalLineEnds.Apply does: the frame's scale, then
+                // the library's padding. Each half stops at the dash and takes none of it.
+                found ??= new(ReferenceEqualityComparer.Instance);
+                found[box] =
+                [
+                    .. dashes.Select(d => (
+                        HorizontalInnerDashes.Cut(box, (int)Math.Floor(d.Left * _frame.RatioX + _options.Padding), keepLeft: true),
+                        HorizontalInnerDashes.Cut(box, (int)Math.Ceiling(d.Right * _frame.RatioX + _options.Padding), keepLeft: false))),
+                ];
+            }
+            return found;
         }
 
         /// <summary>Every box the detector found, in the handed-in bitmap's own coordinates.</summary>
@@ -798,6 +837,18 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 if (originals.Count > 0)
                     cropBoxes = [.. cropBoxes, .. originals.Select(o => o.Growth.Original)];
             }
+            // A line with a ―― inside it is read in halves as well, in the same batch: where its
+            // halves start among the readings, and how many dashes it has. See HorizontalInnerDashes.
+            var halves = new Dictionary<int, (int At, int Count)>();
+            if (_innerDashes is not null)
+            {
+                for (var i = 0; i < chosen.Count; i++)
+                {
+                    if (!_innerDashes.TryGetValue(chosen[i], out var cuts)) continue;
+                    halves[i] = (cropBoxes.Count, cuts.Length);
+                    cropBoxes = [.. cropBoxes, .. cuts.SelectMany(c => new[] { c.Before, c.After })];
+                }
+            }
             var partImages = (SKBitmap[])GetPartImagesMethod.Invoke(
                 null, new object[] { _recognitionBitmap, cropBoxes })!;
             try
@@ -874,6 +925,19 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                     // reaches ConvertBlocks on the shipped path has already been through it.
                     if (scores is not { Length: > 0 } || scores.Average() < _options.TextScore)
                         continue;
+
+                    if (halves.TryGetValue(i, out var cut))
+                    {
+                        var read = Enumerable.Range(0, cut.Count)
+                            .Select(k => (string.Concat(lines[cut.At + 2 * k].Chars ?? []),
+                                string.Concat(lines[cut.At + 2 * k + 1].Chars ?? [])))
+                            .ToList();
+                        if (HorizontalInnerDashes.WithDashes(dashChars ?? line.Chars, scores, read) is { } dashed)
+                        {
+                            dashChars = dashed.Chars;
+                            scores = dashed.Scores;
+                        }
+                    }
 
                     var points = (SKPointI[])box.BoxPoints.Clone();
                     MapToOriginalMethod.Invoke(_detectorInput, new object[] { points });

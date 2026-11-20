@@ -601,6 +601,13 @@ internal static class EdgePunctuationProbe
             }).ToList();
             var bounds = boxes.Select(b => b.Bounds).ToList();
             var walk = Fastest(() => HorizontalLineEnds.Apply(pixels, bounds, detector, 1.0, 1.0, 0, out _));
+            // The search for a ―― inside each line (HorizontalInnerDashes), on the same boxes.
+            var inner = Fastest(() =>
+            {
+                foreach (var b in bounds)
+                    HorizontalInnerDashes.Find(pixels, new SKRectI(
+                        (int)Math.Floor(b.Left), (int)Math.Floor(b.Top), (int)Math.Ceiling(b.Right), (int)Math.Ceiling(b.Bottom)));
+            });
 
             double Read(bool on)
             {
@@ -610,7 +617,7 @@ internal static class EdgePunctuationProbe
             var off = Read(false);
             var with = Read(true);
             Console.WriteLine($"{Path.GetFileName(path)} {image.Width}x{image.Height} detect={primary} boxes={boxes.Count}  " +
-                $"walk={walk:0.00}ms  read off={off:0.0}ms on={with:0.0}ms");
+                $"walk={walk:0.00}ms  inner-dash={inner:0.00}ms  read off={off:0.0}ms on={with:0.0}ms");
         }
         return 0;
 

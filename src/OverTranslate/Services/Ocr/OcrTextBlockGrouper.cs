@@ -746,6 +746,81 @@ internal static class OcrTextBlockGrouper
     private static bool IsCyrillic(char c) => c is >= '\u0400' and <= '\u052F';
 
     /// <summary>
+    /// The lines of one group as one passage: a space where a line breaks, except where a line of a
+    /// script without word spaces runs on into the next.
+    /// </summary>
+    /// <remarks>
+    /// <para>Japanese and Chinese wrap wherever the line runs out, mid-word as often as not, so a space
+    /// at such a break is a gap the original never had. #398: 嫌い。で / もあんたは came out as
+    /// 「で もあんたは」, and the translator read that で on its own. Vertical columns have always been
+    /// joined with nothing (<see cref="VerticalColumnGrouping"/>).</para>
+    ///
+    /// <para>Both sides of the break have to be Han, kana or full-width punctuation. Hangul is left out
+    /// on purpose: Korean sets spaces between words and wraps at them. A line that ends or starts in
+    /// Latin letters or digits keeps its space, as every line did before. Dashes, ellipses and curly
+    /// quotes are set in both kinds of text and take the side of the nearest character that is not
+    /// one.</para>
+    ///
+    /// <para>And the line has to run on: reach the group's right edge, give or take its own height. A
+    /// line that stops short of it ended where the writer ended it (a title over a name, a label over
+    /// its value, one item over the next), and the space is what keeps the two apart for the
+    /// translator.</para>
+    /// </remarks>
+    internal static string JoinLines(IReadOnlyList<OcrTextBlock> lines)
+    {
+        // The detector's boxes, not Bounds: Bounds carries the render normalisation, which differs
+        // with the source language picked, and the same capture has to read the same under each.
+        static Rect Box(OcrTextBlock line) => line.LayoutBounds.IsEmpty || line.LayoutBounds == default
+            ? line.Bounds : line.LayoutBounds;
+
+        var right = lines.Count == 0 ? 0 : lines.Max(line => Box(line).Right);
+        return JoinLines(lines.Select(line => (line.Text, Box(line).Right >= right - Box(line).Height)));
+    }
+
+    /// <param name="lines">Each line's text, and whether it runs on into the next.</param>
+    /// <inheritdoc cref="JoinLines(IReadOnlyList{OcrTextBlock})"/>
+    internal static string JoinLines(IEnumerable<(string Text, bool RunsOn)> lines)
+    {
+        var joined = new System.Text.StringBuilder();
+        var runsOn = false;
+        foreach (var (raw, next) in lines)
+        {
+            var line = raw.Trim();
+            if (line.Length == 0)
+                continue;
+            if (joined.Length > 0 && !(runsOn && BreaksWithoutSpace(joined, line)))
+                joined.Append(' ');
+            joined.Append(line);
+            runsOn = next;
+        }
+
+        return joined.ToString();
+    }
+
+    private static bool BreaksWithoutSpace(System.Text.StringBuilder before, string after)
+    {
+        bool? left = null;
+        for (var i = before.Length - 1; i >= 0 && left is null; i--)
+            left = SetsWithoutSpaces(before[i]);
+        bool? right = null;
+        for (var i = 0; i < after.Length && right is null; i++)
+            right = SetsWithoutSpaces(after[i]);
+
+        // A side of nothing but dashes or dots goes with the other side.
+        return (left ?? right ?? true) && (right ?? left ?? true);
+    }
+
+    // True for a script without word spaces, false for one with them, null for a mark set in both.
+    private static bool? SetsWithoutSpaces(char c)
+    {
+        if (c is '…' or '‥' or '―' or '—' or '“' or '”' or '‘' or '’')
+            return null;
+        return LayoutScriptDetection.IsKana(c) || LayoutScriptDetection.IsHanIdeograph(c) ||
+               c is >= '\u3000' and <= '\u303F' ||  // CJK symbols and punctuation: 、。「」〜
+               c is >= '\uFF00' and <= '\uFFEF';    // full-width forms and half-width kana
+    }
+
+    /// <summary>
     /// Which of the groups opened so far this line carries on, or null if it starts a new one.
     /// </summary>
     /// <remarks>
@@ -1896,7 +1971,7 @@ internal static class OcrTextBlockGrouper
         var y = blocks.Min(block => block.Bounds.Y);
         var right = blocks.Max(block => block.Bounds.Right);
         var bottom = blocks.Max(block => block.Bounds.Bottom);
-        var text = string.Join(" ", blocks.Select(block => block.Text.Trim()).Where(text => text.Length > 0));
+        var text = JoinLines(blocks);
 
         // Aggregate the per-line glyph heights (Latin only; null for CJK) so the group's overlay
         // font is sized from the real glyph height, while Bounds remains the full coverage area.

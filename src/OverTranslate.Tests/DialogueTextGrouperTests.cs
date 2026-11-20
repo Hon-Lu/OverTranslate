@@ -146,7 +146,7 @@ public class DialogueTextGrouperTests
         OcrTextBlock[] hai = [Block("はい", 400, 40, 100, 55), Block("はい", 577, 40, 100, 55), Block("はい", 754, 40, 100, 55)];
         Assert.Equal(["はいはいはい 10時30分に3番線へ"],
             DialogueTextGrouper.Group([.. hai, Block("10時30分に3番線へ", 350, 110, 560, 55)]).Select(b => b.Text));
-        Assert.Equal(["はいはいはい いやいやいや"],
+        Assert.Equal(["はいはいはいいやいやいや"],
             DialogueTextGrouper.Group([.. hai, Block("いや", 400, 110, 100, 55), Block("いや", 577, 110, 100, 55),
                 Block("いや", 754, 110, 100, 55)]).Select(b => b.Text));
     }
@@ -275,7 +275,7 @@ public class DialogueTextGrouperTests
     [Fact]
     public void HudValuesAtTheBreakDoNotCutTheDialogue()
     {
-        Assert.Equal(["HP", "120/200", "MP", "80/90", "今日はいい天気ですね散歩に行こう そうしましょう", "SP", "10/10"],
+        Assert.Equal(["HP", "120/200", "MP", "80/90", "今日はいい天気ですね散歩に行こうそうしましょう", "SP", "10/10"],
             DialogueTextGrouper.Group(
             [
                 Block("HP", 300, 200, 60, 40), Block("120/200", 650, 200, 150, 40), Block("MP", 300, 250, 60, 40),
