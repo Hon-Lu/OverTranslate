@@ -40,6 +40,12 @@ if (args.Contains("--no-inner-dash"))
     HorizontalInnerDashes.Enabled = false;
     args = [.. args.Where(argument => argument != "--no-inner-dash")];
 }
+// The second look at full-size kana (SmallKanaReread, #412) off, for any mode.
+if (args.Contains("--no-small-kana"))
+{
+    SmallKanaReread.Enabled = false;
+    args = [.. args.Where(argument => argument != "--no-small-kana")];
+}
 if (args.Contains("--inner-dash-trace"))
 {
     HorizontalInnerDashes.Trace = s => Console.WriteLine("        inner-dash " + s);
@@ -117,6 +123,9 @@ if (args.Length > 0 && args[0] == "--detector-geometry")
 
 if (args.Length > 0 && args[0] == "--edge-punct")
     return EdgePunctuationProbe.Run(args.Skip(1).ToArray());
+
+if (args.Length > 0 && args[0] == "--small-kana")
+    return SmallKanaProbe.Run(args.Skip(1).ToArray());
 
 if (args.Length > 0 && args[0] == "--group-prototype")
     return await GroupingPrototype.Run(args.Skip(1).ToArray());

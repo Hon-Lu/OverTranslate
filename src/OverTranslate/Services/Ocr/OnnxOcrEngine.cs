@@ -857,11 +857,19 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 // library's own 180° rotation is gated on it.
                 var recognizer = (TextRecognizer)TextRecognizerField.GetValue(_engine)!;
                 var lines = recognizer.GetTextLines(partImages);
+                // Every reading a line can end up with (its own, or the detector's box when a grown
+                // one is not kept) read again with room above and below; merged in below, once the
+                // line's reading is chosen, so the comparisons that choose it see the readings as they
+                // came. Not the halves of a dashed line: they only decide where a ―― goes.
+                var rereads = !_verticalText && SmallKanaReread.AppliesTo(_language)
+                    ? SmallKanaReread.Reread(recognizer, partImages, lines, chosen.Count + originals.Count)
+                    : null;
 
                 var textBlocks = new List<TextBlock>(chosen.Count);
                 for (var i = 0; i < chosen.Count; i++)
                 {
                     var line = lines[i];
+                    var at = i;
                     var box = chosen[i];
                     var scores = line.CharScores;
                     string[]? dashChars = null;
@@ -915,6 +923,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                         if (!keep)
                         {
                             line = original;
+                            at = chosen.Count + second;
                             box = growth.Original;
                             scores = line.CharScores;
                             dashChars = null;
@@ -925,6 +934,15 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                     // reaches ConvertBlocks on the shipped path has already been through it.
                     if (scores is not { Length: > 0 } || scores.Average() < _options.TextScore)
                         continue;
+
+                    // The small kana the reading with room saw. Not on a line HorizontalLineEnds put a
+                    // ―― on: the two readings no longer line up character for character.
+                    if (dashChars is null && rereads?[at] is { } reread &&
+                        SmallKanaReread.Merge(line.Chars, scores, reread.Chars, reread.CharScores) is { } small)
+                    {
+                        line = new TextLine { Chars = small.Chars, CharScores = small.Scores };
+                        scores = small.Scores;
+                    }
 
                     if (halves.TryGetValue(i, out var cut))
                     {
