@@ -10,12 +10,13 @@ using Size = System.Windows.Size;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// The plate that sets 自動判斷's five steps apart under 語句合併's slider.
+/// The bracket that sets 自動判斷's five steps apart under 語句合併's slider.
 /// </summary>
 /// <remarks>
-/// The plate replaced a hairline bracket that users missed. What it has to keep doing is be read as
-/// the group of 1–5 and nothing else: hold all five, stay clear of 逐項 and 整段 on either side
-/// whatever width the card is and however far long names push them, and carry its name inside.
+/// The bracket was made heavier and given a text colour because users missed it. What it has to keep
+/// doing is read as the group of 1–5: span all five names whatever width the card is and however far
+/// long names push them, carry its name centred under them, and take the accent — line and name —
+/// whenever the slider is on any of the five, not only on the step's own number.
 /// </remarks>
 public class MergeScaleTests
 {
@@ -27,76 +28,67 @@ public class MergeScaleTests
     [InlineData(520, false)]
     [InlineData(300, false)]
     [InlineData(880, true)]
-    [InlineData(720, true)]
-    public void The_plate_holds_one_to_five_and_stays_clear_of_their_neighbours(double width, bool russian)
+    [InlineData(560, true)]
+    [InlineData(420, true)]
+    public void The_bracket_spans_one_to_five_with_its_name_under_them(double width, bool russian)
     {
         OnUiThread(() =>
         {
             var scale = Build(width, russian ? Ru : ZhHant);
-            var zone = Box(scale, scale.Zone);
+            var bracket = Box(scale, scale.Bracket);
 
             for (int step = RealtimeMergeLevels.AutomaticLowest; step <= RealtimeMergeLevels.AutomaticHighest; step++)
             {
                 var label = Box(scale, scale.StepLabel(step));
-                Assert.True(zone.Left < label.Left && label.Right < zone.Right, $"step {step} {label} outside {zone}");
+                Assert.True(bracket.Left <= label.Left && label.Right <= bracket.Right, $"step {step} {label} outside {bracket}");
             }
 
-            var items = Box(scale, scale.StepLabel(RealtimeMergeLevels.AutomaticLowest - 1));
-            var passage = Box(scale, scale.StepLabel(RealtimeMergeLevels.AutomaticHighest + 1));
-            Assert.True(items.Right < zone.Left, $"逐項 {items} runs into {zone}");
-            Assert.True(zone.Right < passage.Left, $"整段 {passage} runs into {zone}");
-
-            var name = Box(scale, scale.ZoneLabel);
-            Assert.True(zone.Left <= name.Left && name.Right <= zone.Right && name.Bottom <= zone.Bottom, $"name {name} outside {zone}");
-            Assert.Equal((zone.Left + zone.Right) / 2, (name.Left + name.Right) / 2, 3);
+            var name = Box(scale, scale.BracketLabel);
+            Assert.Equal((bracket.Left + bracket.Right) / 2, (name.Left + name.Right) / 2, 3);
             Assert.True(name.Top >= Box(scale, scale.StepLabel(RealtimeMergeLevels.AutomaticMiddle)).Bottom, "the name sits over the numbers");
-        });
-    }
-
-    /// <summary>
-    /// On a card so narrow that the names already crowd one another — Russian on a card squeezed to well under its usual 800 — there
-    /// is no gap left for the plate to stop in; it still holds all five rather than cutting 1 or 5 off.
-    /// </summary>
-    [Fact]
-    public void On_a_crowded_scale_the_plate_still_holds_one_to_five()
-    {
-        OnUiThread(() =>
-        {
-            var scale = Build(560, Ru);
-            var zone = Box(scale, scale.Zone);
-            for (int step = RealtimeMergeLevels.AutomaticLowest; step <= RealtimeMergeLevels.AutomaticHighest; step++)
-            {
-                var label = Box(scale, scale.StepLabel(step));
-                Assert.True(zone.Left < label.Left && label.Right < zone.Right, $"step {step} {label} outside {zone}");
-            }
+            Assert.True(name.Bottom <= scale.Height, $"the name {name} runs out of the scale");
         });
     }
 
     [Theory]
+    [InlineData(RealtimeMergeLevels.Min, false)]
     [InlineData(RealtimeMergeLevels.AutomaticLowest - 1, false)]
     [InlineData(RealtimeMergeLevels.AutomaticLowest, true)]
+    [InlineData(RealtimeMergeLevels.AutomaticLowest + 1, true)]
     [InlineData(RealtimeMergeLevels.AutomaticMiddle, true)]
     [InlineData(RealtimeMergeLevels.AutomaticHighest, true)]
     [InlineData(RealtimeMergeLevels.AutomaticHighest + 1, false)]
     [InlineData(RealtimeMergeLevels.Max, false)]
-    public void The_plate_lights_while_the_slider_is_on_it(int step, bool lit)
+    public void The_bracket_and_its_name_take_the_accent_on_any_of_the_five(int step, bool lit)
     {
         OnUiThread(() =>
         {
             var scale = Build(880, ZhHant);
             scale.Current = step;
-            var plate = ((SolidColorBrush)scale.Zone.Background).Color;
-            var name = ((SolidColorBrush)scale.ZoneLabel.Foreground).Color;
-            Assert.Equal(lit, scale.OnZone);
-            Assert.Equal(lit ? ActiveBg : IdleBg, plate);
-            Assert.Equal(lit ? Accent : Primary, name);
+            Assert.Equal(lit, scale.OnAutomatic);
+            Assert.Equal(lit ? Accent : Secondary, ((SolidColorBrush)scale.Bracket.BorderBrush).Color);
+            Assert.Equal(lit ? Accent : Primary, ((SolidColorBrush)scale.BracketLabel.Foreground).Color);
+            Assert.Equal(Accent, ((SolidColorBrush)scale.StepLabel(step).Foreground).Color);
         });
     }
 
-    private static readonly Color IdleBg = Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF);
-    private static readonly Color ActiveBg = Color.FromArgb(0x29, 0x52, 0xC4, 0xFA);
+    /// <summary>A preset swaps the accent for grey above the scale; the bracket follows it there.</summary>
+    [Fact]
+    public void On_a_preset_the_lit_bracket_is_grey()
+    {
+        OnUiThread(() =>
+        {
+            var scale = Build(880, ZhHant);
+            scale.Resources["AppAccent"] = new SolidColorBrush(Secondary);
+            scale.Current = RealtimeMergeLevels.AutomaticMiddle + 1;
+            Assert.Equal(Secondary, ((SolidColorBrush)scale.Bracket.BorderBrush).Color);
+            Assert.Equal(Secondary, ((SolidColorBrush)scale.BracketLabel.Foreground).Color);
+        });
+    }
+
     private static readonly Color Accent = Color.FromRgb(0x52, 0xC4, 0xFA);
     private static readonly Color Primary = Color.FromRgb(0xF0, 0xF0, 0xF0);
+    private static readonly Color Secondary = Color.FromRgb(0xAA, 0xAA, 0xAA);
 
     private static RealtimeProfileOverlay.MergeScale Build(double width, string[] names)
     {
@@ -110,10 +102,9 @@ public class MergeScaleTests
         resources["AppFont"] = new FontFamily("Segoe UI");
         resources["AppAccent"] = new SolidColorBrush(Accent);
         resources["AppTextPrimary"] = new SolidColorBrush(Primary);
-        resources["AppTextSecondary"] = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
+        resources["AppTextSecondary"] = new SolidColorBrush(Secondary);
         resources["AppInputBorder"] = new SolidColorBrush(Color.FromRgb(0x48, 0x48, 0x48));
-        resources["RealtimeMergeZoneBg"] = new SolidColorBrush(IdleBg);
-        resources["RealtimeMergeZoneActiveBg"] = new SolidColorBrush(ActiveBg);
+        resources["AppCardBg"] = new SolidColorBrush(Color.FromRgb(0x25, 0x25, 0x25));
 
         scale.Measure(new Size(width, double.PositiveInfinity));
         scale.Arrange(new Rect(0, 0, width, scale.Height));

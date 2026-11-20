@@ -342,8 +342,7 @@ public partial class RealtimeProfileOverlay : UserControl
 
     /// <summary>
     /// A preset's rows: no pointer, no tab stop, and the accent inside them swapped for the secondary
-    /// text colour — a slider's fill, the chosen half of 自動｜手動, a switch's track — at full strength,
-    /// and 自動判斷's plate left unlit.
+    /// text colour — a slider's fill, the chosen half of 自動｜手動, a switch's track — at full strength.
     /// </summary>
     private void ApplyLock(bool locked)
     {
@@ -353,9 +352,6 @@ public partial class RealtimeProfileOverlay : UserControl
             KeyboardNavigation.SetTabNavigation(host, locked ? KeyboardNavigationMode.None : KeyboardNavigationMode.Continue);
             if (locked && TryFindResource("AppTextSecondary") is Brush grey) host.Resources["AppAccent"] = grey;
             else host.Resources.Remove("AppAccent");
-            // 自動判斷's plate takes its accent tint from a brush of its own; unlit, as the accent is.
-            if (locked && TryFindResource("RealtimeMergeZoneBg") is Brush plate) host.Resources["RealtimeMergeZoneActiveBg"] = plate;
-            else host.Resources.Remove("RealtimeMergeZoneActiveBg");
         }
     }
 
@@ -1157,19 +1153,20 @@ public partial class RealtimeProfileOverlay : UserControl
 
     /// <summary>
     /// The nine steps of 語句合併 named under its slider — 不合併, 逐項, 1–5, 整段, 合併 — with the
-    /// five 自動判斷 steps set on a plate of their own and the step the slider is on picked out.
+    /// five 自動判斷 steps bracketed and the step the slider is on picked out.
     /// </summary>
     /// <remarks>
     /// <para>Each name is centred on its step, which a slider's thumb travels between half a thumb in
     /// from either end; the two end names are held to the ends instead. Where names would touch — the
     /// outer two pairs in Russian — the inner one gives way towards the middle, and the tick mark
     /// stays on the step.</para>
-    /// <para>自動判斷 was first a 1px bracket under 1–5 with its name in 10.5px secondary text; drawn in
-    /// the same hairline and grey as the ticks and numbers above it, it read as one more row of the
-    /// scale, and users had to look for it. A filled plate groups the five by region rather than by
-    /// outline, which is seen before anything is read, and its name in heavier primary text names
-    /// the group rather than a sixth step. The plate takes a tint of the accent while the slider is
-    /// on it, so where the slider sits answers "in 自動判斷 or not" without reading the number.</para>
+    /// <para>The bracket was first a 1px line in the ticks' colour with its name in 10.5px secondary
+    /// text: drawn like the scale above it, it read as one more row of the scale, and users had to
+    /// look for it. It is now heavier and a text colour, and its name heavier and in primary text, so
+    /// it names the group rather than adding a sixth step. While the slider is on any of the five,
+    /// the bracket and its name take the accent with that step's number, so where the slider sits
+    /// answers "in 自動判斷 or not" without reading the number. A filled plate under the five was
+    /// tried first and turned down by the user in favour of this.</para>
     /// </remarks>
     internal sealed class MergeScale : Panel
     {
@@ -1177,24 +1174,30 @@ public partial class RealtimeProfileOverlay : UserControl
         private const double Gap = 6;
         private const int Steps = RealtimeMergeLevels.Max - RealtimeMergeLevels.Min + 1;
 
-        /// <summary>How far the plate reaches past 1 and 5 at most: on a wide card half a step would
-        /// stretch it towards 逐項 and 整段 until the gap that sets it apart closes.</summary>
-        private const double ZoneReach = 28;
-        private const double ZoneHeight = 45;
-        private const double ZoneLabelTop = 25;
+        private const double BracketTop = 26;
+        private const double BracketHeight = 10;
+        private const double BracketLabelTop = 28;
 
         private readonly TextBlock[] _labels = new TextBlock[Steps];
         private readonly Border[] _ticks = new Border[Steps];
-        private readonly Border _zone = new() { CornerRadius = new CornerRadius(6) };
-        private readonly TextBlock _zoneLabel = new() { FontSize = 11.5, FontWeight = FontWeights.SemiBold };
+
+        // 1.5 rather than 2: at 2 the line outweighs the numbers it groups. Snapped, so it lands on
+        // whole device pixels — 2 of them at 125% — instead of a blurred 1.875.
+        private readonly Border _band = new()
+        {
+            BorderThickness = new Thickness(1.5, 0, 1.5, 1.5),
+            CornerRadius = new CornerRadius(0, 0, 5, 5),
+            SnapsToDevicePixels = true,
+        };
+
+        private readonly Border _bandLabel = new() { Padding = new Thickness(5, 0, 5, 0) };
+        private readonly TextBlock _bandText = new() { FontSize = 12, FontWeight = FontWeights.SemiBold };
         private int _current = -1;
 
         public MergeScale()
         {
             Height = 46;
             Margin = new Thickness(0, 2, 0, 0);
-            // First, so the plate lies under the ticks and numbers it holds.
-            Children.Add(_zone);
             string[] keys =
             [
                 "S.Realtime.ProfileMergeNone", "S.Realtime.ProfileMergeItems", "", "", "", "", "",
@@ -1214,23 +1217,31 @@ public partial class RealtimeProfileOverlay : UserControl
                 _ticks[i] = tick;
                 Children.Add(tick);
             }
-            _zoneLabel.SetResourceReference(TextBlock.TextProperty, "S.Realtime.ProfileMergeAuto");
-            _zoneLabel.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
-            Children.Add(_zoneLabel);
+            Children.Add(_band);
+            _bandText.SetResourceReference(TextBlock.TextProperty, "S.Realtime.ProfileMergeAuto");
+            _bandText.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+            _bandLabel.Child = _bandText;
+            // The card behind the name breaks the bracket's bottom line where the name sits on it.
+            _bandLabel.SetResourceReference(Border.BackgroundProperty, "AppCardBg");
+            Children.Add(_bandLabel);
             Current = RealtimeMergeLevels.AutomaticMiddle;
         }
 
-        /// <summary>The plate under 1–5 and the name on it, laid out by the last arrange.</summary>
-        internal Border Zone => _zone;
+        /// <summary>The bracket under 1–5, laid out by the last arrange.</summary>
+        internal Border Bracket => _band;
 
-        internal TextBlock ZoneLabel => _zoneLabel;
+        /// <summary>The bracket's name, 自動判斷.</summary>
+        internal TextBlock BracketLabel => _bandText;
 
         internal TextBlock StepLabel(int step) => _labels[step];
 
-        /// <summary>Whether the slider is on one of 自動判斷's steps, which lights the plate.</summary>
-        internal bool OnZone => _current is >= RealtimeMergeLevels.AutomaticLowest and <= RealtimeMergeLevels.AutomaticHighest;
+        /// <summary>Whether the slider is on one of 自動判斷's steps, which lights the bracket.</summary>
+        internal bool OnAutomatic => _current is >= RealtimeMergeLevels.AutomaticLowest and <= RealtimeMergeLevels.AutomaticHighest;
 
-        /// <summary>The step the slider is on, named in the control colour and a step heavier.</summary>
+        /// <summary>
+        /// The step the slider is on, named in the control colour and a step heavier; on 自動判斷's
+        /// steps, the bracket and its name in the control colour too.
+        /// </summary>
         public int Current
         {
             get => _current;
@@ -1246,8 +1257,8 @@ public partial class RealtimeProfileOverlay : UserControl
                         on ? "AppAccent" : end ? "AppTextPrimary" : "AppTextSecondary");
                     _labels[i].FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
                 }
-                _zone.SetResourceReference(Border.BackgroundProperty, OnZone ? "RealtimeMergeZoneActiveBg" : "RealtimeMergeZoneBg");
-                _zoneLabel.SetResourceReference(TextBlock.ForegroundProperty, OnZone ? "AppAccent" : "AppTextPrimary");
+                _band.SetResourceReference(Border.BorderBrushProperty, OnAutomatic ? "AppAccent" : "AppTextSecondary");
+                _bandText.SetResourceReference(TextBlock.ForegroundProperty, OnAutomatic ? "AppAccent" : "AppTextPrimary");
                 InvalidateMeasure();
             }
         }
@@ -1277,19 +1288,14 @@ public partial class RealtimeProfileOverlay : UserControl
                 _labels[i].Arrange(new Rect(new Point(left[i], 7), _labels[i].DesiredSize));
             }
 
-            // The plate reaches half a step past 1 and 5 on a narrow card and ZoneReach on a wide one,
-            // stops short of 逐項 and 整段 wherever those were pushed, and always takes in the names 1
-            // and 5 — the names, not the ticks: where a long 逐項 has pushed 1 off its tick, the tick
-            // lies under 逐項 and a plate reaching for it would run under that name too.
+            // Half a thumb out from the steps of 1 and 5, and out far enough to take in their names
+            // where a long 逐項 or 整段 (Russian) has pushed them off their steps.
             const int low = RealtimeMergeLevels.AutomaticLowest, high = RealtimeMergeLevels.AutomaticHighest;
-            double reach = Math.Min(ZoneReach, (StepX(1) - StepX(0)) / 2 - Gap);
-            double zoneLeft = Math.Max(StepX(low) - reach, left[low - 1] + size[low - 1] + Gap);
-            double zoneRight = Math.Min(StepX(high) + reach, left[high + 1] - Gap);
-            zoneLeft = Math.Min(zoneLeft, left[low] - Gap);
-            zoneRight = Math.Max(zoneRight, left[high] + size[high] + Gap);
-            _zone.Arrange(new Rect(zoneLeft, 0, Math.Max(0, zoneRight - zoneLeft), ZoneHeight));
-            var labelSize = _zoneLabel.DesiredSize;
-            _zoneLabel.Arrange(new Rect(new Point((zoneLeft + zoneRight - labelSize.Width) / 2, ZoneLabelTop), labelSize));
+            double bandLeft = Math.Min(StepX(low) - ThumbHalf, left[low] - 2);
+            double bandRight = Math.Max(StepX(high) + ThumbHalf, left[high] + size[high] + 2);
+            _band.Arrange(new Rect(bandLeft, BracketTop, Math.Max(0, bandRight - bandLeft), BracketHeight));
+            var bandSize = _bandLabel.DesiredSize;
+            _bandLabel.Arrange(new Rect(new Point((bandLeft + bandRight - bandSize.Width) / 2, BracketLabelTop), bandSize));
             return finalSize;
         }
     }

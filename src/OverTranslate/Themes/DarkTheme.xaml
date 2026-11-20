@@ -16,12 +16,6 @@
          marks things the reader can press. -->
     <SolidColorBrush x:Key="AppInfoBg"         Color="#2A3037"/>
 
-    <!-- The plate under 語句合併's five 自動判斷 steps, on AppCardBg. A lift of white while the
-         slider is elsewhere, so the five read as one group without competing with the step that is
-         chosen; a tint of the accent while the slider is on one of them. See MergeScale. -->
-    <SolidColorBrush x:Key="RealtimeMergeZoneBg"       Color="#1AFFFFFF"/>
-    <SolidColorBrush x:Key="RealtimeMergeZoneActiveBg" Color="#2952C4FA"/>
-
     <!-- Text — two levels, and there is no third. AppTextMuted (#666666) was removed: against the
          surfaces it was used on it reached 2.4:1, under the 4.5:1 any text needs and under even the
          3:1 for non-text, so none of its seven uses were legible — least of all the ones on the
