@@ -578,6 +578,8 @@
     <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
     <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, направление по языку выделенного текста</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ Одной клавишей можно назначить только F1–F24, Pause или Scroll Lock — для остальных нужны Ctrl/Alt/Shift</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyCopyRefused">✗ Ctrl+C — это копирование, назначить нельзя. Для Ctrl+C+C удерживайте Ctrl и быстро нажмите C дважды</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPasteRefused">✗ Ctrl+V — это вставка, назначить нельзя</sys:String>
 
     <sys:String x:Key="S.Settings.General">Общие</sys:String>
     <sys:String x:Key="S.Settings.Options">Параметры</sys:String>

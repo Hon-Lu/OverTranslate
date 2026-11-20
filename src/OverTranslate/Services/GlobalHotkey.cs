@@ -87,7 +87,10 @@ public class GlobalHotkey : IDisposable
     {
         if (msg == WM_HOTKEY && wParam.ToInt32() == _id)
         {
-            HotkeyPressed?.Invoke(this, EventArgs.Empty);
+            // WM_HOTKEY cannot say whether the press was the user's or one this application sent,
+            // so presses during and just after a send are dropped — see SyntheticKeyGuard.
+            if (SyntheticKeyGuard.Shared.AllowsShortcut($"hotkey {_id}"))
+                HotkeyPressed?.Invoke(this, EventArgs.Empty);
             handled = true;
         }
         return IntPtr.Zero;

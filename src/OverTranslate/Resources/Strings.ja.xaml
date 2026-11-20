@@ -587,6 +587,8 @@
     <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
     <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}（選択したテキストの言語で向きを判断）</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 単独で使えるのは F1–F24、Pause、Scroll Lock のみです。ほかのキーは Ctrl／Alt／Shift と組み合わせてください</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyCopyRefused">✗ Ctrl+C はコピーのため設定できません。Ctrl+C+C は Ctrl を押したまま C をすばやく 2 回押してください</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPasteRefused">✗ Ctrl+V は貼り付けのため設定できません</sys:String>
 
     <sys:String x:Key="S.Settings.General">一般</sys:String>
     <sys:String x:Key="S.Settings.Options">オプション</sys:String>

@@ -60,15 +60,24 @@ public static class ShortcutInputKinds
         ShortcutInputKind.CtrlCC;
 }
 
+/// <param name="Enabled">
+/// Whether the shortcut is set. False both when the user cleared it and when what is stored is a
+/// trigger that may not be bound at all — see <paramref name="Refused"/>.
+/// </param>
 /// <param name="ShadowedBy">
 /// The higher-priority action holding this trigger, or null when this one gets it. Carried so the
 /// settings page can say which shortcut took it rather than only that this one is off.
+/// </param>
+/// <param name="Refused">
+/// Set but holding a trigger <see cref="HotkeyBindings.IsBindable"/> refuses, so treated as not set.
+/// Carried only so the one log line that says why can be written.
 /// </param>
 public readonly record struct HotkeyBinding(
     HotkeyAction Action,
     ShortcutTrigger Trigger,
     bool Enabled,
-    HotkeyAction? ShadowedBy)
+    HotkeyAction? ShadowedBy,
+    bool Refused = false)
 {
     /// <summary>Whether this one should actually be registered/observed.</summary>
     public bool IsActive => Enabled && ShadowedBy is null;
@@ -202,14 +211,50 @@ public static class HotkeyBindings
     /// <see cref="GlobalAuxiliaryHotkeys"/>.
     ///
     /// Asked in two places on purpose. The settings page refuses to record what this refuses, so the
-    /// interface never offers it; the registration path asks again because settings.json is a text
-    /// file someone can edit, which is the same reason the shadowing above is resolved here rather
-    /// than left to Windows.
+    /// interface never offers it; <see cref="Resolve"/> asks again and treats a refused trigger as
+    /// not set, because settings.json is a text file someone can edit and an older version recorded
+    /// combinations this now refuses.
     /// </remarks>
     public static bool IsBindable(ShortcutTrigger trigger) =>
         trigger.Kind != ShortcutInputKind.Keyboard ||
-        trigger.Modifiers != 0 ||
-        KeysThatMayStandAlone.Contains(trigger.VirtualKey);
+        (trigger.Modifiers != 0
+            ? !IsSentByThisApplication(trigger)
+            : KeysThatMayStandAlone.Contains(trigger.VirtualKey));
+
+    /// <summary>
+    /// Whether this is one of the chords 取詞翻譯 and 替換翻譯 send — Ctrl+C and Ctrl+V, exactly.
+    /// </summary>
+    /// <remarks>
+    /// <para>Refused for every shortcut, not only the two that send them. On 取詞翻譯 or 替換翻譯 the
+    /// shortcut fires itself: the copy it sends is the shortcut again, which sent hundreds a second
+    /// until the whole desktop's input stopped (2026-11-20). On any other shortcut the loop cannot
+    /// happen, but RegisterHotKey takes the combination from every application on the system, so
+    /// copy or paste would stop working everywhere — and the copy those two features send would
+    /// start a capture or open a window instead of copying.</para>
+    ///
+    /// <para>Exactly Ctrl and nothing else: the chord is sent with every other modifier released
+    /// (see <see cref="KeyboardInput.SendControlChordAsync"/>), so Ctrl+Shift+C is never produced and
+    /// stays available. Ctrl+C+C is a different trigger — observed, never claimed — and is not
+    /// affected.</para>
+    /// </remarks>
+    public static bool IsSentByThisApplication(ShortcutTrigger trigger) =>
+        trigger.Kind == ShortcutInputKind.Keyboard &&
+        trigger.Modifiers == GlobalHotkey.MOD_CONTROL &&
+        trigger.VirtualKey is KeyboardInput.VK_C or KeyboardInput.VK_V;
+
+    /// <summary>
+    /// The string key of the message the settings page shows for a trigger it refuses to record, or
+    /// null when the trigger may be bound.
+    /// </summary>
+    /// <remarks>
+    /// Ctrl+C has its own: it is mostly reached by someone aiming for Ctrl+C+C whose second C came
+    /// too late, so its message says how that one is pressed.
+    /// </remarks>
+    public static string? RefusalKey(ShortcutTrigger trigger) =>
+        IsBindable(trigger) ? null
+        : !IsSentByThisApplication(trigger) ? "S.Settings.HotkeyNeedsModifier"
+        : trigger.VirtualKey == KeyboardInput.VK_C ? "S.Settings.HotkeyCopyRefused"
+        : "S.Settings.HotkeyPasteRefused";
 
     private static ShortcutTrigger BuildTrigger(
         ShortcutInputKind kind,
@@ -256,9 +301,14 @@ public static class HotkeyBindings
         var claimed = new Dictionary<ShortcutTrigger, HotkeyAction>();
         var resolved = new List<HotkeyBinding>(declared.Length);
 
-        foreach (var (action, trigger, enabled) in declared)
+        foreach (var (action, trigger, stored) in declared)
         {
             HotkeyAction? shadowedBy = null;
+
+            // A stored trigger that may not be bound is as good as not set: not registered, shown as
+            // 未設定, and holding nothing. Only the stored value is ignored — nothing is rewritten.
+            var refused = stored && !IsBindable(trigger);
+            var enabled = stored && !refused;
 
             // A disabled shortcut does not claim its trigger, so turning one off hands the trigger to
             // whatever was shadowed by it rather than leaving it reserved.
@@ -268,7 +318,7 @@ public static class HotkeyBindings
                 else claimed[trigger] = action;
             }
 
-            resolved.Add(new HotkeyBinding(action, trigger, enabled, shadowedBy));
+            resolved.Add(new HotkeyBinding(action, trigger, enabled, shadowedBy, refused));
         }
 
         return resolved;

@@ -266,17 +266,18 @@ public partial class ShellWindow : Window
 
         // Blank rather than a "未設定" placeholder: the label already says what the button does,
         // and a slot that only ever holds a shortcut should be empty when there is none.
-        CaptureHotkeyText.Text = string.IsNullOrWhiteSpace(settings.HotkeyDisplay)
-            ? ""
-            : settings.HotkeyDisplay;
-
-        // Also blank when the shortcut is switched off in 設定: this row is not registered then, so
-        // printing the combination would advertise a key press that does nothing. The button
-        // itself stays — it is a way in of its own, not a reminder of the shortcut.
-        QuickLookupHotkeyText.Text =
-            settings.QuickLookupHotkeyEnabled && !string.IsNullOrWhiteSpace(settings.QuickLookupHotkeyDisplay)
-                ? settings.QuickLookupHotkeyDisplay
+        // Also blank when the shortcut is not set — switched off in 設定, or holding a combination
+        // that is refused (HotkeyBindings.IsBindable): the row is not registered then, so printing
+        // the combination would advertise a key press that does nothing. The button itself stays —
+        // it is a way in of its own, not a reminder of the shortcut.
+        var resolved = HotkeyBindings.Resolve(settings);
+        string Hint(HotkeyAction action, string? display) =>
+            resolved.Single(b => b.Action == action).Enabled && !string.IsNullOrWhiteSpace(display)
+                ? display
                 : "";
+
+        CaptureHotkeyText.Text = Hint(HotkeyAction.Capture, settings.HotkeyDisplay);
+        QuickLookupHotkeyText.Text = Hint(HotkeyAction.QuickLookup, settings.QuickLookupHotkeyDisplay);
     }
 
     /// <summary>

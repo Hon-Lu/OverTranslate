@@ -79,6 +79,10 @@ internal static class SelectedTextReader
         if (copiedSince is { } userCopyBefore)
             return await ReadUserCopyAsync(userCopyBefore, maxLength, keepLineBreaks);
 
+        // From before the copy until the clipboard is back: a shortcut pressed in here — by the user
+        // or by the copy itself — would start a second read over this one's borrowed clipboard.
+        using var reading = SyntheticKeyGuard.Shared.Enter();
+
         object? snapshot;
         uint before;
 

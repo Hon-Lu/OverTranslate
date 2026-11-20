@@ -1397,11 +1397,13 @@ public partial class SettingsPage : UserControl
     /// </summary>
     /// <remarks>
     /// A shortcut that is not set reads 未設定 in the secondary colour, with no ✕ to clear it and no
-    /// warning about a combination that is not in use.
+    /// warning about a combination that is not in use. So does one holding a combination that may
+    /// not be bound — an older version recorded Ctrl+C and Ctrl+V — because it is not registered
+    /// either (<see cref="HotkeyBindings.Resolve"/>).
     /// </remarks>
     private static void ShowStoredShortcut(HotkeyField field, AppSettings settings)
     {
-        var set = field.IsSet?.Invoke(settings) ?? true;
+        var set = (field.IsSet?.Invoke(settings) ?? true) && HotkeyBindings.IsBindable(field.Trigger(settings));
 
         if (set)
         {
@@ -1642,19 +1644,11 @@ public partial class SettingsPage : UserControl
         if (vk == 0) return;
 
         var trigger = ShortcutTrigger.Keyboard(mods, vk);
-
-        // A bare key is not merely watched, it is taken from every other application — so only the
-        // keys that can afford to be taken are offered. See HotkeyBindings.IsBindable.
-        if (!HotkeyBindings.IsBindable(trigger))
-        {
-            ShowError(LocalizationService.Get("S.Settings.HotkeyNeedsModifier"));
-            StopRecording();
-            return;
-        }
-
         var prefix = GlobalHotkey.ModifiersToString(mods);
         var display = string.IsNullOrEmpty(prefix) ? key.ToString() : $"{prefix}+{key}";
 
+        // Held back before the check below, which refuses Ctrl+C: it is also the start of Ctrl+C+C,
+        // and only if no second C comes is it refused — see CommitPendingCtrlC.
         if (mods == GlobalHotkey.MOD_CONTROL && key == Key.C)
         {
             _pendingCtrlC = (recording, trigger, display);
@@ -1663,7 +1657,33 @@ public partial class SettingsPage : UserControl
             return;
         }
 
+        // A bare key is not merely watched, it is taken from every other application — so only the
+        // keys that can afford to be taken are offered. See HotkeyBindings.IsBindable.
+        if (!HotkeyBindings.IsBindable(trigger))
+        {
+            RefuseUnbindable(trigger);
+            return;
+        }
+
         CommitShortcut(recording, trigger, display);
+    }
+
+    /// <summary>
+    /// Says why a combination cannot be a shortcut and puts the stored one back in the box.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is saved: the shortcut keeps whatever it had, or stays 未設定. Recording ends rather
+    /// than waiting for another try, the same as every other refusal on this page, so the box never
+    /// shows a prompt and an error at once; one click starts it again.
+    ///
+    /// Ctrl+C is most often reached by someone aiming for Ctrl+C+C whose second C came too late, so
+    /// its message says how Ctrl+C+C is pressed rather than only that Ctrl+C is refused.
+    /// </remarks>
+    private void RefuseUnbindable(ShortcutTrigger trigger)
+    {
+        ShowError(LocalizationService.Get(
+            HotkeyBindings.RefusalKey(trigger) ?? "S.Settings.HotkeyNeedsModifier"));
+        StopRecording();
     }
 
     private void HotkeyBox_PreviewKeyUp(object sender, KeyEventArgs e)
@@ -1701,7 +1721,12 @@ public partial class SettingsPage : UserControl
         return true;
     }
 
-    /// <summary>No second C came: it was Ctrl+C after all.</summary>
+    /// <summary>No second C came: it was Ctrl+C after all, which is refused.</summary>
+    /// <remarks>
+    /// Committing it used to be what this did, and that is how 取詞翻譯 ended up on Ctrl+C and fired
+    /// itself until the desktop's input stopped (2026-11-20). Ctrl+C is refused for every shortcut —
+    /// see <see cref="HotkeyBindings.IsSentByThisApplication"/>.
+    /// </remarks>
     private void CommitPendingCtrlC()
     {
         _ctrlCCommitTimer.Stop();
@@ -1793,6 +1818,13 @@ public partial class SettingsPage : UserControl
     /// </remarks>
     private void CommitShortcut(HotkeyField recording, ShortcutTrigger trigger, string display)
     {
+        // Every recording path ends here, so this is the one check none of them can miss.
+        if (!HotkeyBindings.IsBindable(trigger))
+        {
+            RefuseUnbindable(trigger);
+            return;
+        }
+
         var settings = SettingsService.Instance.Current;
         var enabled = HotkeyBindings.Resolve(settings)
             .Where(binding => binding.Enabled)

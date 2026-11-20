@@ -583,6 +583,8 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
     <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}, by the language of the selected text</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ A single key can only be F1–F24, Pause or Scroll Lock — other keys need Ctrl/Alt/Shift</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyCopyRefused">✗ Ctrl+C is copy and cannot be a shortcut — for Ctrl+C+C, hold Ctrl and press C twice quickly</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPasteRefused">✗ Ctrl+V is paste and cannot be a shortcut</sys:String>
 
     <sys:String x:Key="S.Settings.General">General</sys:String>
     <sys:String x:Key="S.Settings.Options">Options</sys:String>

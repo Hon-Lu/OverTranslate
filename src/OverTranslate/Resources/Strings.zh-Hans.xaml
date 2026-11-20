@@ -583,6 +583,8 @@
     <sys:String x:Key="S.QuickTranslate.OneWaySummary">{0} → {1}</sys:String>
     <sys:String x:Key="S.QuickTranslate.BilingualSummary">{0} ⇄ {1}，依所选文字的语言决定方向</sys:String>
     <sys:String x:Key="S.Settings.HotkeyNeedsModifier">✗ 单个按键只能是 F1–F24、Pause 或 Scroll Lock，其他按键请搭配 Ctrl／Alt／Shift</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyCopyRefused">✗ Ctrl+C 为复制，无法设为快捷键；Ctrl+C+C 请按住 Ctrl 快速连按两下 C</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyPasteRefused">✗ Ctrl+V 为粘贴，无法设为快捷键</sys:String>
 
     <sys:String x:Key="S.Settings.General">常规设置</sys:String>
     <sys:String x:Key="S.Settings.Options">选项</sys:String>

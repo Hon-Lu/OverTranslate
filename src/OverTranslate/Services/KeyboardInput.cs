@@ -60,9 +60,15 @@ internal static class KeyboardInput
     /// <remarks>
     /// The release is in a finally block: a chord left down would be a stuck Ctrl key, which is the
     /// whole keyboard broken for the application underneath rather than one failed translation.
+    ///
+    /// The whole chord runs inside <see cref="SyntheticKeyGuard"/>, so a shortcut bound to the very
+    /// keys being sent cannot fire from them — whoever the caller is, including ones added later.
     /// </remarks>
-    internal static async Task HoldChordAsync(Action press, Func<Task> hold, Action release)
+    internal static async Task HoldChordAsync(
+        Action press, Func<Task> hold, Action release, SyntheticKeyGuard? guard = null)
     {
+        using var sending = (guard ?? SyntheticKeyGuard.Shared).Enter();
+
         press();
         try
         {
