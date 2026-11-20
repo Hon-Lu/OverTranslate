@@ -400,7 +400,9 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         try
         {
             using var skBitmap = ConvertToSkBitmap(bitmap);
-            using var frame = CreateDetectorFrame(skBitmap, maxDetectSize);
+            // As the full read does, so the cheap look and the read agree on pixel art.
+            using var smoothed = PixelArtSmoothing.ForDetection(skBitmap);
+            using var frame = CreateDetectorFrame(smoothed ?? skBitmap, maxDetectSize);
 
             return runtime.Engine.DetectBoxes(frame.Bitmap, frame.Options)
                 .Select(box => (frame.ToSourceBounds(box.BoxPoints), box.Score))
@@ -570,6 +572,11 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         // Boxed, because the type is internal to the library and cannot be named here.
         private readonly object _detectorInput;
         private readonly SKBitmap _detectorBitmap;
+        // What recognition crops from: the detector's own input, except on pixel art, where the
+        // detector saw a smoothed redraw and this is the same frame as captured.
+        private readonly SKBitmap _recognitionBitmap;
+        private readonly DetectorFrame _sharpFrame;
+        private readonly object? _sharpInput;
         private readonly RapidOcrOptions _options;
         private IReadOnlyList<RapidOcrNet.TextBox> _detectorSpaceBoxes;
         // False when the caller acquired the runtime itself and releases it in its own finally.
@@ -596,11 +603,22 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             _engine = runtime.Engine;
             _language = normalizedLanguage;
             _skBitmap = ConvertToSkBitmap(bitmap);
-            _frame = CreateDetectorFrame(_skBitmap, maxDetectSize);
+            // The detector looks at pixel art redrawn smooth, and recognition still reads the
+            // pixels as they are; see PixelArtSmoothing. Both frames have the same geometry, since
+            // the redraw keeps the size, so every box means the same place in either.
+            using var smoothed = verticalText ? null : PixelArtSmoothing.ForDetection(_skBitmap);
+            _frame = CreateDetectorFrame(smoothed ?? _skBitmap, maxDetectSize);
             _options = _frame.Options;
 
             _detectorInput = PrepareDetectorInputMethod.Invoke(null, new object[] { _frame.Bitmap, _options })!;
             _detectorBitmap = (SKBitmap)DetectorInputBitmapField.GetValue(_detectorInput)!;
+            _recognitionBitmap = _detectorBitmap;
+            if (smoothed is not null)
+            {
+                _sharpFrame = CreateDetectorFrame(_skBitmap, maxDetectSize);
+                _sharpInput = PrepareDetectorInputMethod.Invoke(null, new object[] { _sharpFrame.Bitmap, _options })!;
+                _recognitionBitmap = (SKBitmap)DetectorInputBitmapField.GetValue(_sharpInput)!;
+            }
             var scale = (ScaleParam)DetectorInputScaleField.GetValue(_detectorInput)!;
 
             var detector = (TextDetector)TextDetectorField.GetValue(_engine)!;
@@ -781,7 +799,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                     cropBoxes = [.. cropBoxes, .. originals.Select(o => o.Growth.Original)];
             }
             var partImages = (SKBitmap[])GetPartImagesMethod.Invoke(
-                null, new object[] { _detectorBitmap, cropBoxes })!;
+                null, new object[] { _recognitionBitmap, cropBoxes })!;
             try
             {
                 // No classifier pass: DoAngle is false on every options set the app builds, and the
@@ -892,6 +910,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         public void Dispose()
         {
             ((IDisposable)_detectorInput).Dispose();
+            (_sharpInput as IDisposable)?.Dispose();
+            _sharpFrame.Dispose();
             _frame.Dispose();
             _skBitmap.Dispose();
             if (_releasesRuntime)
