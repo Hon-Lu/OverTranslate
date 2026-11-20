@@ -439,11 +439,13 @@
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">Режимы</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilesHint">Режим выбирается для каждой области перевода отдельно.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesHint">Режим выбирается после выбора областей перевода; у каждой области может быть свой.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesPreset">Встроенные</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesCustom">Свои режимы</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">Встроенный</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">Шаблон: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateModified">Шаблон: {0} · изменено: {1}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileAdd">Создать свой режим ({0}/{1})</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdd">Создать свой режим</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">Не более {0} пользовательских режимов</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewTitle">Новый пользовательский режим</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplate">Шаблон</sys:String>

@@ -446,11 +446,13 @@
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">모드</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilesHint">모드는 번역 블록마다 따로 바꿀 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesHint">모드는 번역 블록을 선택한 후 고르며, 블록마다 다른 모드를 사용할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesPreset">기본 모드</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesCustom">사용자 지정 모드</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">기본</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">템플릿: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateModified">템플릿: {0} · {1}개 변경됨</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileAdd">사용자 지정 모드 추가({0}/{1})</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdd">사용자 지정 모드 추가</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">사용자 지정 모드는 최대 {0}개입니다</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewTitle">사용자 지정 모드 추가</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplate">템플릿</sys:String>
