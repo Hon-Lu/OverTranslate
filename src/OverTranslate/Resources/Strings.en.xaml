@@ -568,16 +568,13 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">Double press is limited to the two above, so programs don’t act twice</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">May not work in programs running as administrator</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to [[select blocks and translate]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeStartPauseHotkey">Start / pause</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Compare with original</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">Press the shortcut to toggle [[compare with original]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Works only during realtime translation. Switches between the translation covering the original and showing it in the compare area.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">In-place translation</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">Translates the [[selected text]] and pastes it over the original</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Only in fields that accept typed text; nothing can be pasted outside an input area.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Translation settings</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">These languages apply only to in-place translation, without affecting screenshot, text or real-time translation.</sys:String>
@@ -590,9 +587,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.General">General</sys:String>
     <sys:String x:Key="S.Settings.Options">Options</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">Capture</sys:String>
-    <sys:String x:Key="S.Settings.CaptureHotkeyHint">Press this shortcut to start a [[screen capture translation]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Open window</sys:String>
-    <sys:String x:Key="S.Settings.WindowHotkeyHint">Press this shortcut to open the [[translation window]]</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">Translate as soon as a screen capture region is selected, with nothing left to click.</sys:String>
     <sys:String x:Key="S.Settings.Startup">Startup</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Launch when Windows starts</sys:String>

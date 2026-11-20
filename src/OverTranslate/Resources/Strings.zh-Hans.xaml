@@ -568,16 +568,13 @@
     <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">连按两下仅支持以上两组，避免重复触发原有功能</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">在以管理员身份运行的程序中，此快捷键可能无法使用</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">实时翻译</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷键开始[[框选翻译]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeStartPauseHotkey">开始／暂停</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未启动时按下快捷键开始框选，框选时再按一次开始翻译；翻译中可暂停或继续。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文对照</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">按下快捷键切换[[原文对照]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">仅在实时翻译期间有效，切换译文覆盖原文或显示在对照区域。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取词翻译</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷键打开[[取词翻译]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若已选中文字，打开窗口时会自动带入并翻译。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">替换翻译</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">将[[选中的文字]]翻译后粘贴并替换原文</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">仅适用于可输入文字的字段，非输入区域则无法粘贴。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">翻译设置</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">此设置仅适用于替换翻译，不会影响截图翻译、文字翻译或实时翻译。</sys:String>
@@ -590,9 +587,7 @@
     <sys:String x:Key="S.Settings.General">常规设置</sys:String>
     <sys:String x:Key="S.Settings.Options">选项</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">截图翻译</sys:String>
-    <sys:String x:Key="S.Settings.CaptureHotkeyHint">按下快捷键开始[[截图翻译]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">打开翻译窗口</sys:String>
-    <sys:String x:Key="S.Settings.WindowHotkeyHint">按下快捷键打开[[翻译窗口]]</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">截图翻译框选完成时立即翻译，不需要再手动点击。</sys:String>
     <sys:String x:Key="S.Settings.Startup">开机启动</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">开机时自动启动</sys:String>

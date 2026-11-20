@@ -92,6 +92,27 @@
         <Style x:Key="HotkeyRow" TargetType="Border" BasedOn="{StaticResource ToggleRowBorder}">
             <Setter Property="Padding" Value="12,11"/>
         </Style>
+        <!-- Every box the same width, so they end and start in one column down the card. -->
+        <GridLength x:Key="HotkeyBoxWidth">240</GridLength>
+        <!-- A feature's name when its block holds one shortcut, beside the tile. -->
+        <Style x:Key="HotkeyRowName" TargetType="TextBlock" BasedOn="{StaticResource OptionTitle}">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin"            Value="0,0,14,0"/>
+        </Style>
+        <Style x:Key="HotkeyRowText" TargetType="StackPanel">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin"            Value="0,0,14,0"/>
+        </Style>
+        <!-- One of several shortcuts inside a feature's block: lined up under the feature's name,
+             past the tile (34) and its gap (13). -->
+        <Style x:Key="HotkeySubRow" TargetType="Grid">
+            <Setter Property="Margin" Value="47,10,0,0"/>
+        </Style>
+        <Style x:Key="HotkeySubRule" TargetType="Border">
+            <Setter Property="Height"     Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="Margin"     Value="47,10,0,0"/>
+        </Style>
         <!-- The same tile 側邊欄 gives a 快速工具, at the larger size this page works in: fill,
              border and a corner radius held to the same fraction of the tile. A shortcut row
              here and the rail row that fires it are the same feature, so the two should not be
@@ -967,9 +988,8 @@
                 </Border>
 
                 <!-- ══════════ 快捷鍵 ══════════
-                     Order is priority order: a combination claimed by a row above turns the row
-                     below off rather than one of the two silently failing to register. See
-                     Services/HotkeyBindings. -->
+                     Grouped by feature (#398). Which of two shortcuts sharing a combination stays on
+                     is Services/HotkeyBindings' priority order, not the order here. -->
                 <Border x:Name="HotkeysSection"
                         Style="{StaticResource CardBorder}"
                         Margin="0,0,0,12">
@@ -1107,67 +1127,32 @@
                             </Popup>
                         </Grid>
 
-                        <!-- Two to a line, in the priority order the comment above gives, read across then down:
-                             截圖｜取詞, 替換｜翻譯視窗, 即時翻譯. 替換翻譯's settings open in a line of their own
-                             under its row and across both columns, so opening them does not stretch the row
-                             beside it. Below a width where two rows no longer fit side by side, LayoutHotkeys
-                             puts them back one to a line. -->
-                        <Grid x:Name="HotkeyGrid" SizeChanged="HotkeyGrid_SizeChanged">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                        <!-- One block per feature, named as the rail names it: 截圖翻譯, the feature the
+                             application is for, then 即時翻譯, 取詞翻譯 and 替換翻譯. Then 開啟翻譯視窗
+                             under a rule, because it opens the window rather than starting a feature. A
+                             feature with more than one shortcut lists them inside its block, under its
+                             name. Each row is a name, at most one line on what the name does not say, and
+                             the box; there is no switch — a shortcut is turned off by clearing it. -->
+                        <StackPanel x:Name="HotkeyList">
 
-                            <!-- Capture has no on/off tick at all: this is the feature the application
-                                 is for. Its last column is empty and still here, so the three rows'
-                                 shortcut boxes end at the same place — see SharedSizeGroup. -->
-                            <Border x:Name="CaptureHotkeyRow" Grid.Row="0" Grid.Column="0" Style="{StaticResource HotkeyRow}">
+                            <!-- 截圖翻譯. No ✕: this is the feature the application is for. -->
+                            <Border Style="{StaticResource HotkeyRow}">
                                 <StackPanel>
                                     <Grid>
-                                        <!-- The shortcut box grows with the window rather than sitting
-                                             at a fixed width: while recording it holds a whole sentence
-                                             asking for a key, which no width that also suits a card
-                                             beside another card can show in full. MinWidth is on the
-                                             column, not the box — a star column will squeeze a child
-                                             past its own minimum and clip it, and the rows have to keep
-                                             ending at the same place.
-
-                                             The name and description column has no minimum of its own:
-                                             it is the one thing here that can give, and at the narrowest
-                                             window it has to, or the switch on the end is pushed out of
-                                             the card and the row loses a control instead of losing a
-                                             line of prose. -->
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
                                         </Grid.ColumnDefinitions>
-
                                         <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
                                             <Path Style="{StaticResource DrawnMark}"
                                                   Data="{StaticResource CaptureMarkGeometry}"
                                                   Stroke="{DynamicResource AppAccent}"/>
                                         </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                            <TextBlock Text="{DynamicResource S.Settings.CaptureHotkey}"
-                                                       Style="{StaticResource OptionTitle}"/>
-                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.CaptureHotkeyHint}"
-                                                       Style="{StaticResource OptionDescription}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxHeight="34"/>
-                                        </StackPanel>
-
-                                        <TextBox Grid.Column="2" x:Name="HotkeyBox"
+                                        <TextBlock Grid.Column="1" Text="{DynamicResource S.Settings.CaptureHotkey}"
+                                                   Style="{StaticResource HotkeyRowName}"/>
+                                        <TextBox Grid.Column="3" x:Name="HotkeyBox"
                                                  Style="{StaticResource HotkeyBox}"
                                                  PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                                  PreviewKeyDown="HotkeyBox_PreviewKeyDown"
@@ -1175,114 +1160,129 @@
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
                                     </Grid>
-
                                     <ContentControl x:Name="CaptureElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- 取詞翻譯. The only feature with no way in but a shortcut, which is why
-                                 this row is the one place in the interface that names it. -->
-                            <Border x:Name="QuickLookupHotkeyRow" Grid.Row="0" Grid.Column="1" Style="{StaticResource HotkeyRow}">
+                            <!-- 即時翻譯: its two shortcuts under the feature's name. -->
+                            <Border Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource HotkeyRowIcon}">
+                                            <Path Style="{StaticResource DrawnMark}"
+                                                  Data="{StaticResource RealtimeMarkGeometry}"
+                                                  Stroke="{DynamicResource AppAccent}"/>
+                                        </Border>
+                                        <TextBlock Text="{DynamicResource S.Shell.RealtimeTranslate}"
+                                                   Style="{StaticResource HotkeyRowName}"/>
+                                    </StackPanel>
+
+                                    <Grid Style="{StaticResource HotkeySubRow}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Style="{StaticResource HotkeyRowText}">
+                                            <TextBlock Text="{DynamicResource S.Settings.RealtimeStartPauseHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
+                                                       Style="{StaticResource OptionDescription}"/>
+                                        </StackPanel>
+                                        <TextBox Grid.Column="3" x:Name="RealtimePauseHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
+                                        <Button Grid.Column="3" x:Name="RealtimePauseHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
+                                    </Grid>
+                                    <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}" Margin="47,8,0,0"/>
+
+                                    <Border Style="{StaticResource HotkeySubRule}"/>
+
+                                    <Grid Style="{StaticResource HotkeySubRow}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Style="{StaticResource HotkeyRowText}">
+                                            <TextBlock Text="{DynamicResource S.Settings.RealtimeCompareHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.RealtimeCompareHotkeyNote}"
+                                                       Style="{StaticResource OptionDescription}"/>
+                                        </StackPanel>
+                                        <TextBox Grid.Column="3" x:Name="RealtimeCompareHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
+                                        <Button Grid.Column="3" x:Name="RealtimeCompareHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
+                                    </Grid>
+                                    <ContentControl x:Name="RealtimeCompareElevatedNote" Style="{StaticResource HotkeyElevatedNote}" Margin="47,8,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 取詞翻譯. The only feature besides 替換翻譯 with no way in but a shortcut and
+                                 the rail, which is why its one note stays. -->
+                            <Border Style="{StaticResource HotkeyRow}">
                                 <StackPanel>
                                     <Grid>
-                                        <!-- The column widths are the row above this one's, and have to
-                                             stay that way: they are what makes the four boxes end at
-                                             the same place. See the comment on that row for why the
-                                             minimum is on the column rather than the box. -->
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
                                         </Grid.ColumnDefinitions>
-
                                         <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
                                             <Path Style="{StaticResource DrawnMark}"
                                                   Data="{StaticResource QuickLookupMarkGeometry}"
                                                   Stroke="{DynamicResource AppAccent}"/>
                                         </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <StackPanel Grid.Column="1" Style="{StaticResource HotkeyRowText}">
                                             <TextBlock Text="{DynamicResource S.Settings.QuickLookupHotkey}"
                                                        Style="{StaticResource OptionTitle}"/>
-                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.QuickLookupHotkeyHint}"
-                                                       Style="{StaticResource OptionDescription}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxHeight="34"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
+                                                       Style="{StaticResource OptionDescription}"/>
                                         </StackPanel>
-
-                                        <TextBox Grid.Column="2" x:Name="QuickLookupHotkeyBox"
+                                        <TextBox Grid.Column="3" x:Name="QuickLookupHotkeyBox"
                                                  Style="{StaticResource HotkeyBox}"
                                                  PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                                  PreviewKeyDown="HotkeyBox_PreviewKeyDown"
                                                  PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
-                                        <Button Grid.Column="2" x:Name="QuickLookupHotkeyClearBtn"
+                                        <Button Grid.Column="3" x:Name="QuickLookupHotkeyClearBtn"
                                                 Style="{StaticResource HotkeyClearButton}"
                                                 Click="HotkeyClear_Click"/>
                                     </Grid>
-
-                                    <!-- The one thing about this shortcut that the name does not say,
-                                         inside the row it is about. -->
-                                    <Grid Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Path Grid.Column="0"
-                                              Data="{StaticResource InfoMarkGeometry}"
-                                              Stroke="{DynamicResource AppTextSecondary}"
-                                              StrokeThickness="1.1"
-                                              StrokeStartLineCap="Round"
-                                              StrokeEndLineCap="Round"
-                                              Stretch="None"
-                                              Width="12" Height="12"
-                                              VerticalAlignment="Top"
-                                              Margin="0,1.7,8,0"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{DynamicResource S.Settings.QuickLookupHotkeyNote}"
-                                                   Style="{StaticResource FieldHint}"
-                                                   Margin="0"
-                                                   VerticalAlignment="Top"/>
-                                    </Grid>
-
                                     <ContentControl x:Name="QuickLookupElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- 替換翻譯. Beside 取詞翻譯 because the two start from the same gesture —
-                                 select some text, press a key — and differ only in where the answer
-                                 goes: that one shows it, this one writes it into the document. After
-                                 it, because reading an answer is the smaller step of the two and the
-                                 one to meet first. -->
-                            <Border x:Name="QuickTranslateHotkeyRow" Grid.Row="1" Grid.Column="0" Style="{StaticResource HotkeyRow}">
+                            <!-- 替換翻譯, with its own translation settings beside the box. -->
+                            <Border Style="{StaticResource HotkeyRow}">
                                 <StackPanel>
                                     <Grid>
-                                        <!-- The column widths are the rows above this one's, and have to
-                                             stay that way: they are what makes the boxes end at the same
-                                             place. See the capture row for why the minimum is on the
-                                             column rather than the box. -->
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
                                         </Grid.ColumnDefinitions>
-
                                         <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                            <!-- The one mark in the set drawn in more than one pass —
-                                                 see the geometries in SharedStyles.xaml for why, and
-                                                 for why all three are given the same explicit box.
-
-                                                 And the one drawn larger than 16. Its two plates sit on
-                                                 a diagonal, so the corners of the square it is drawn in
-                                                 are empty and it reads smaller than the single shapes
-                                                 beside it at the same size. The Viewbox is what takes it
-                                                 up to the tile: scaling the drawing rather than redrawing
-                                                 it keeps the geometries in the same 16-unit square every
-                                                 other mark is authored in. -->
+                                            <!-- See SharedStyles for why this mark is drawn in three
+                                                 passes and scaled up from 16. -->
                                             <Viewbox Width="22" Height="22">
                                                 <Grid Width="16" Height="16">
                                                     <Path Data="{StaticResource QuickTranslateTilesGeometry}"
@@ -1304,59 +1304,16 @@
                                                 </Grid>
                                             </Viewbox>
                                         </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <StackPanel Grid.Column="1" Style="{StaticResource HotkeyRowText}">
                                             <TextBlock Text="{DynamicResource S.Settings.QuickTranslateHotkey}"
                                                        Style="{StaticResource OptionTitle}"/>
-                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.QuickTranslateHotkeyHint}"
-                                                       Style="{StaticResource OptionDescription}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxHeight="34"/>
+                                            <TextBlock Text="{DynamicResource S.Settings.QuickTranslateHotkeyNote}"
+                                                       Style="{StaticResource OptionDescription}"/>
                                         </StackPanel>
-
-                                        <TextBox Grid.Column="2" x:Name="QuickTranslateHotkeyBox"
-                                                 Style="{StaticResource HotkeyBox}"
-                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                                 GotFocus="HotkeyBox_GotFocus"
-                                                 LostFocus="HotkeyBox_LostFocus"/>
-                                        <Button Grid.Column="2" x:Name="QuickTranslateHotkeyClearBtn"
-                                                Style="{StaticResource HotkeyClearButton}"
-                                                Click="HotkeyClear_Click"/>
-                                    </Grid>
-
-                                    <!-- The note wraps within its column while the button keeps its width. -->
-                                    <Grid Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <Path Grid.Column="0"
-                                                  Data="{StaticResource InfoMarkGeometry}"
-                                                  Stroke="{DynamicResource AppTextSecondary}"
-                                                  StrokeThickness="1.1"
-                                                  StrokeStartLineCap="Round"
-                                                  StrokeEndLineCap="Round"
-                                                  Stretch="None"
-                                                  Width="12" Height="12"
-                                                  VerticalAlignment="Top"
-                                                  Margin="0,1.7,8,0"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{DynamicResource S.Settings.QuickTranslateHotkeyNote}"
-                                                       Style="{StaticResource FieldHint}"
-                                                       Margin="0"
-                                                       VerticalAlignment="Top"/>
-                                        </Grid>
-                                        <Button Grid.Column="1" x:Name="QuickTranslateSettingsBtn"
+                                        <Button Grid.Column="2" x:Name="QuickTranslateSettingsBtn"
                                                       Click="QuickTranslateSettingsBtn_Click"
                                                       HorizontalAlignment="Right"
+                                                      Margin="0,0,10,0"
                                                       VerticalAlignment="Center"
                                                       Padding="10,5"
                                                       Foreground="{DynamicResource AppAccent}"
@@ -1389,221 +1346,52 @@
                                                            FontSize="12" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
+                                        <TextBox Grid.Column="3" x:Name="QuickTranslateHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
+                                        <Button Grid.Column="3" x:Name="QuickTranslateHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
                                     </Grid>
-
                                     <ContentControl x:Name="QuickTranslateElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- Translation window. Same editing controls as the capture shortcut and
-                                 deliberately nothing else: this one opens a window that is already one
-                                 tray click away, so it is not announced at startup. -->
-                            <Border x:Name="WindowHotkeyRow" Grid.Row="1" Grid.Column="1" Style="{StaticResource HotkeyRow}">
+                            <!-- 開啟翻譯視窗: the window, not a feature, so after a rule. -->
+                            <Border Style="{StaticResource HotkeySubRule}" Margin="2,4,2,12"/>
+                            <Border Style="{StaticResource HotkeyRow}" Margin="0">
                                 <StackPanel>
                                     <Grid>
-                                        <!-- The shortcut box grows with the window rather than sitting
-                                             at a fixed width: while recording it holds a whole sentence
-                                             asking for a key, which no width that also suits a card
-                                             beside another card can show in full. MinWidth is on the
-                                             column, not the box — a star column will squeeze a child
-                                             past its own minimum and clip it, and the rows have to keep
-                                             ending at the same place.
-
-                                             The name and description column has no minimum of its own:
-                                             it is the one thing here that can give, and at the narrowest
-                                             window it has to, or the switch on the end is pushed out of
-                                             the card and the row loses a control instead of losing a
-                                             line of prose. -->
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
                                         </Grid.ColumnDefinitions>
-
                                         <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
                                             <TextBlock Text="&#xE737;" Style="{StaticResource HotkeyRowGlyph}"/>
                                         </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                            <TextBlock Text="{DynamicResource S.Settings.WindowHotkey}"
-                                                       Style="{StaticResource OptionTitle}"/>
-                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.WindowHotkeyHint}"
-                                                       Style="{StaticResource OptionDescription}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxHeight="34"/>
-                                        </StackPanel>
-
-                                        <TextBox Grid.Column="2" x:Name="WindowHotkeyBox"
+                                        <TextBlock Grid.Column="1" Text="{DynamicResource S.Settings.WindowHotkey}"
+                                                   Style="{StaticResource HotkeyRowName}"/>
+                                        <TextBox Grid.Column="3" x:Name="WindowHotkeyBox"
                                                  Style="{StaticResource HotkeyBox}"
                                                  PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
                                                  PreviewKeyDown="HotkeyBox_PreviewKeyDown"
                                                  PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
-                                        <Button Grid.Column="2" x:Name="WindowHotkeyClearBtn"
+                                        <Button Grid.Column="3" x:Name="WindowHotkeyClearBtn"
                                                 Style="{StaticResource HotkeyClearButton}"
                                                 Click="HotkeyClear_Click"/>
                                     </Grid>
-
                                     <ContentControl x:Name="WindowElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                 </StackPanel>
                             </Border>
-
-                            <!-- Pausing a running session. The only realtime shortcut there is: block
-                                 framing had one above this until a session started by naming a window on
-                                 the page, which is not something a shortcut can answer. -->
-                            <Border x:Name="RealtimePauseHotkeyRow" Grid.Row="3" Grid.Column="0" Style="{StaticResource HotkeyRow}">
-                                <StackPanel>
-                                    <Grid>
-                                        <!-- The shortcut box grows with the window rather than sitting
-                                             at a fixed width: while recording it holds a whole sentence
-                                             asking for a key, which no width that also suits a card
-                                             beside another card can show in full. MinWidth is on the
-                                             column, not the box — a star column will squeeze a child
-                                             past its own minimum and clip it, and the rows have to keep
-                                             ending at the same place.
-
-                                             The name and description column has no minimum of its own:
-                                             it is the one thing here that can give, and at the narrowest
-                                             window it has to, or the switch on the end is pushed out of
-                                             the card and the row loses a control instead of losing a
-                                             line of prose. -->
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                            <Path Style="{StaticResource DrawnMark}"
-                                                  Data="{StaticResource RealtimeMarkGeometry}"
-                                                  Stroke="{DynamicResource AppAccent}"/>
-                                        </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                            <TextBlock Text="{DynamicResource S.Settings.RealtimePauseHotkey}"
-                                                       Style="{StaticResource OptionTitle}"/>
-                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.RealtimePauseHotkeyHint}"
-                                                       Style="{StaticResource OptionDescription}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxHeight="34"/>
-                                        </StackPanel>
-
-                                        <TextBox Grid.Column="2" x:Name="RealtimePauseHotkeyBox"
-                                                 Style="{StaticResource HotkeyBox}"
-                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                                 GotFocus="HotkeyBox_GotFocus"
-                                                 LostFocus="HotkeyBox_LostFocus"/>
-                                        <Button Grid.Column="2" x:Name="RealtimePauseHotkeyClearBtn"
-                                                Style="{StaticResource HotkeyClearButton}"
-                                                Click="HotkeyClear_Click"/>
-                                    </Grid>
-
-                                    <!-- When this shortcut does nothing, inside the row it is about
-                                         rather than under the three of them: nothing here applies to
-                                         the other two. -->
-                                    <Grid Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Path Grid.Column="0"
-                                              Data="{StaticResource InfoMarkGeometry}"
-                                              Stroke="{DynamicResource AppTextSecondary}"
-                                              StrokeThickness="1.1"
-                                              StrokeStartLineCap="Round"
-                                              StrokeEndLineCap="Round"
-                                              Stretch="None"
-                                              Width="12" Height="12"
-                                              VerticalAlignment="Top"
-                                              Margin="0,1.7,8,0"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{DynamicResource S.Settings.RealtimePauseHotkeyNote}"
-                                                   Style="{StaticResource FieldHint}"
-                                                   Margin="0"
-                                                   VerticalAlignment="Top"/>
-                                    </Grid>
-
-                                    <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 原文對照 (#398). Beside the realtime row because it is the other key that
-                                 belongs to a session; unset until someone records one. -->
-                            <Border x:Name="RealtimeCompareHotkeyRow" Grid.Row="3" Grid.Column="1" Style="{StaticResource HotkeyRow}">
-                                <StackPanel>
-                                    <Grid>
-                                        <!-- The same columns as the rows above, so the boxes end in one place. -->
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
-                                            <Path Width="18" Height="18"
-                                                  Data="{StaticResource RealtimeCompareGlyph}"
-                                                  Stroke="{DynamicResource AppAccent}"
-                                                  StrokeThickness="1.05"
-                                                  StrokeStartLineCap="Round"
-                                                  StrokeEndLineCap="Round"
-                                                  StrokeLineJoin="Round"/>
-                                        </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                            <TextBlock Text="{DynamicResource S.Settings.RealtimeCompareHotkey}"
-                                                       Style="{StaticResource OptionTitle}"/>
-                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.RealtimeCompareHotkeyHint}"
-                                                       Style="{StaticResource OptionDescription}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxHeight="34"/>
-                                        </StackPanel>
-
-                                        <TextBox Grid.Column="2" x:Name="RealtimeCompareHotkeyBox"
-                                                 Style="{StaticResource HotkeyBox}"
-                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
-                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
-                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
-                                                 GotFocus="HotkeyBox_GotFocus"
-                                                 LostFocus="HotkeyBox_LostFocus"/>
-                                        <Button Grid.Column="2" x:Name="RealtimeCompareHotkeyClearBtn"
-                                                Style="{StaticResource HotkeyClearButton}"
-                                                Click="HotkeyClear_Click"/>
-                                    </Grid>
-
-                                    <Grid Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Path Grid.Column="0"
-                                              Data="{StaticResource InfoMarkGeometry}"
-                                              Stroke="{DynamicResource AppTextSecondary}"
-                                              StrokeThickness="1.1"
-                                              StrokeStartLineCap="Round"
-                                              StrokeEndLineCap="Round"
-                                              Stretch="None"
-                                              Width="12" Height="12"
-                                              VerticalAlignment="Top"
-                                              Margin="0,1.7,8,0"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{DynamicResource S.Settings.RealtimeCompareHotkeyNote}"
-                                                   Style="{StaticResource FieldHint}"
-                                                   Margin="0"
-                                                   VerticalAlignment="Top"/>
-                                    </Grid>
-
-                                    <ContentControl x:Name="RealtimeCompareElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                        </StackPanel>
 
                     </StackPanel>
                 </Border>
