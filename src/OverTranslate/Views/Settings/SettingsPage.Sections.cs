@@ -28,17 +28,14 @@ public enum SettingsSection
 /// </summary>
 public partial class SettingsPage
 {
-    // Below these widths the halves no longer fit side by side and go one under the other. The
-    // shortcut rows need their box at its 140 minimum and the switch beside it; the models need the
-    // manga card's three feature cells on one line.
-    private const double HotkeyTwoColumnWidth = 780;
+    // Below this width the halves no longer fit side by side and go one under the other: the models
+    // need the manga card's three feature cells on one line.
     private const double ModelsTwoColumnWidth = 640;
 
     private static readonly Duration SectionScrollDuration = new(TimeSpan.FromMilliseconds(320));
     private static readonly IEasingFunction SectionScrollEasing = new CubicEase { EasingMode = EasingMode.EaseOut };
 
     private SettingsSection _currentSection;
-    private bool? _hotkeysTwoColumns;
     private bool? _modelsTwoColumns;
 
     /// <summary>The section at the top of the view changed, from scrolling or from <see cref="ScrollToSection"/>.</summary>
@@ -130,49 +127,6 @@ public partial class SettingsPage
         if (section == _currentSection) return;
         _currentSection = section;
         CurrentSectionChanged?.Invoke(this, section);
-    }
-
-    // ── 快捷鍵: two to a line where they fit ──
-
-    private void HotkeyGrid_SizeChanged(object sender, SizeChangedEventArgs e) =>
-        LayoutHotkeys(e.NewSize.Width >= HotkeyTwoColumnWidth);
-
-    /// <summary>
-    /// Two columns: 截圖｜取詞, 替換｜翻譯視窗, 即時翻譯｜原文對照. One: all of
-    /// them down the left in that order. The rows keep their own bottom margin; the gap between the
-    /// columns is split between the two sides.
-    /// </summary>
-    private void LayoutHotkeys(bool twoColumns)
-    {
-        if (_hotkeysTwoColumns == twoColumns) return;
-        _hotkeysTwoColumns = twoColumns;
-
-        (FrameworkElement Element, int Row, int Column)[] cells = twoColumns
-            ?
-            [
-                (CaptureHotkeyRow, 0, 0), (QuickLookupHotkeyRow, 0, 1),
-                (QuickTranslateHotkeyRow, 1, 0), (WindowHotkeyRow, 1, 1),
-                (RealtimePauseHotkeyRow, 2, 0), (RealtimeCompareHotkeyRow, 2, 1),
-            ]
-            :
-            [
-                (CaptureHotkeyRow, 0, 0), (QuickLookupHotkeyRow, 1, 0),
-                (QuickTranslateHotkeyRow, 2, 0),
-                (WindowHotkeyRow, 3, 0), (RealtimePauseHotkeyRow, 4, 0),
-                (RealtimeCompareHotkeyRow, 5, 0),
-            ];
-
-        foreach (var (element, row, column) in cells)
-        {
-            Grid.SetRow(element, row);
-            Grid.SetColumn(element, column);
-
-            var bottom = element.Margin.Bottom;
-            element.Margin = !twoColumns ? new Thickness(0, 0, 0, bottom)
-                : column == 0 ? new Thickness(0, 0, 5, bottom)
-                : new Thickness(5, 0, 0, bottom);
-            Grid.SetColumnSpan(element, twoColumns ? 1 : 2);
-        }
     }
 
     // ── 辨識模型: the manga card beside the languages where they fit ──

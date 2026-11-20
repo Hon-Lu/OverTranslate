@@ -563,16 +563,13 @@
     <sys:String x:Key="S.Settings.HotkeyGuideSharedDouble">Двойное нажатие — только два сочетания выше, чтобы ничего не срабатывало дважды</sys:String>
     <sys:String x:Key="S.Settings.HotkeyElevatedNote">Может не работать в программах, запущенных от имени администратора</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Перевод в реальном времени</sys:String>
-    <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Нажмите сочетание, чтобы [[выбрать области и перевести]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeStartPauseHotkey">Запуск и пауза</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Если перевод не запущен, первое нажатие выбирает области, второе запускает перевод; во время перевода — пауза и продолжение.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Сравнение с оригиналом</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">Нажмите сочетание, чтобы переключить [[сравнение с оригиналом]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Работает только во время перевода в реальном времени. Переключает перевод поверх оригинала и показ в области сравнения.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Всплывающий перевод</sys:String>
-    <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Нажмите сочетание, чтобы открыть [[всплывающий перевод]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">Если выделен текст, он сразу подставляется и переводится при открытии окна.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">Перевод с заменой</sys:String>
-    <sys:String x:Key="S.Settings.QuickTranslateHotkeyHint">Переводит [[выделенный текст]] и вставляет перевод вместо оригинала</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkeyNote" xml:space="preserve">Работает только в полях для ввода текста; вне поля ввода вставить ничего нельзя.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateSettings">Настройки перевода</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateLanguageNote">Эти языки используются только для перевода с заменой и не влияют на перевод снимка экрана, текста и перевод в реальном времени.</sys:String>
@@ -585,9 +582,7 @@
     <sys:String x:Key="S.Settings.General">Общие</sys:String>
     <sys:String x:Key="S.Settings.Options">Параметры</sys:String>
     <sys:String x:Key="S.Settings.CaptureHotkey">Снимок экрана</sys:String>
-    <sys:String x:Key="S.Settings.CaptureHotkeyHint">Нажмите это сочетание, чтобы начать [[перевод снимка экрана]]</sys:String>
     <sys:String x:Key="S.Settings.WindowHotkey">Открыть окно</sys:String>
-    <sys:String x:Key="S.Settings.WindowHotkeyHint">Нажмите это сочетание, чтобы открыть [[окно перевода]]</sys:String>
     <sys:String x:Key="S.Settings.AutoTranslateCheck">Переводить сразу после выделения области снимка, без лишних нажатий.</sys:String>
     <sys:String x:Key="S.Settings.Startup">Автозапуск</sys:String>
     <sys:String x:Key="S.Settings.StartupCheck">Запускать вместе с Windows</sys:String>
