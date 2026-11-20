@@ -48,12 +48,19 @@ public class AppSettings
     public GamepadShortcutButton TranslationWindowHotkeyGamepadButton { get; set; } = GamepadShortcutButton.None;
 
     /// <summary>
-    /// Whether the translation-window shortcut is registered at all.
+    /// Whether the translation-window shortcut is set at all. False is what 設定 shows as 未設定.
     /// </summary>
     /// <remarks>
     /// There is no matching field for the capture shortcut, and deliberately not: that one is the
-    /// feature the application exists for, so its checkbox is ticked and disabled rather than backed
-    /// by a value. A stored flag that must always be true is a way to end up with it false.
+    /// feature the application exists for, so its row offers no way to clear it rather than a value
+    /// behind one. A stored flag that must always be true is a way to end up with it false.
+    ///
+    /// These flags used to be a switch beside each shortcut; #398 replaced the switch with clearing.
+    /// The combination stays stored when the flag goes false, but nothing offers it back: the only
+    /// way from 未設定 to a live shortcut is recording one, and recording is where a combination
+    /// another shortcut holds is refused. The switch put the old combination back without that
+    /// check, which is how two shortcuts used to end up on one key — so no "restore the last key"
+    /// or "restore default" may be added that skips it either.
     /// </remarks>
     public bool TranslationWindowHotkeyEnabled { get; set; } = true;
 
@@ -147,6 +154,31 @@ public class AppSettings
 
     /// <inheritdoc cref="TranslationWindowHotkeyEnabled"/>
     public bool QuickTranslateHotkeyEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Switches a running realtime session's 原文對照 on and off (#398). Not set by default.
+    /// </summary>
+    /// <remarks>
+    /// Unset by default, unlike the shortcuts above: it is for the reader who flips between the
+    /// overlay and the original all the time, and the bar's button says 未設定快捷鍵 for them to
+    /// find. Nobody else is handed a combination they never asked for.
+    ///
+    /// Registered only while a session is up, not from startup — see
+    /// <c>MainWindow.SyncRealtimeCompareHotkey</c>. Outside a session it would do nothing, and a
+    /// registered combination is taken from every other application for as long as it is held.
+    /// </remarks>
+    public uint RealtimeCompareHotkeyModifiers { get; set; }
+
+    /// <inheritdoc cref="RealtimeCompareHotkeyModifiers"/>
+    public uint RealtimeCompareHotkeyVirtualKey { get; set; }
+
+    /// <inheritdoc cref="RealtimeCompareHotkeyModifiers"/>
+    public string RealtimeCompareHotkeyDisplay { get; set; } = "";
+    public ShortcutInputKind RealtimeCompareHotkeyInputKind { get; set; } = ShortcutInputKind.Keyboard;
+    public GamepadShortcutButton RealtimeCompareHotkeyGamepadButton { get; set; } = GamepadShortcutButton.None;
+
+    /// <inheritdoc cref="TranslationWindowHotkeyEnabled"/>
+    public bool RealtimeCompareHotkeyEnabled { get; set; }
 
     public string SourceLanguage { get; set; } = LanguageData.DefaultOcrSourceLanguage;
     public string TargetLanguage { get; set; } = "ZH-HANT";

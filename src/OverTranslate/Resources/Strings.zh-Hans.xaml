@@ -377,6 +377,8 @@
     <sys:String x:Key="S.Realtime.CrosshairOff">暂停框选，改为操作下方画面</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">恢复框选</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文对照</sys:String>
+    <sys:String x:Key="S.Realtime.ShortcutUnset">未设置快捷键</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHotkeyTaken">原文对照快捷键 {0} 已被其他程序占用</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">已开启</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">已关闭</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">原文对照：关闭后，译文将直接覆盖在原文画面上</sys:String>
@@ -541,8 +543,8 @@
 
     <sys:String x:Key="S.Settings.Hotkeys">快捷键</sys:String>
     <!-- The checkbox carries no text, so this is its ToolTip rather than a label -->
-    <sys:String x:Key="S.Settings.HotkeyEnable">启用此快捷键</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyDisable">停用此快捷键</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyUnset">未设置</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyClear">清除快捷键</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">点击重新录制快捷键</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuide">可用按键说明</sys:String>
@@ -568,6 +570,9 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">实时翻译</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷键开始[[框选翻译]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未启动时按下快捷键开始框选，框选时再按一次开始翻译；翻译中可暂停或继续。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文对照</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">按下快捷键切换[[原文对照]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">仅在实时翻译期间有效，切换译文覆盖原文或显示在对照区域。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取词翻译</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷键打开[[取词翻译]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若已选中文字，打开窗口时会自动带入并翻译。</sys:String>

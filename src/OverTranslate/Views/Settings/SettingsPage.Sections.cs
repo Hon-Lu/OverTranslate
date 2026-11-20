@@ -138,7 +138,7 @@ public partial class SettingsPage
         LayoutHotkeys(e.NewSize.Width >= HotkeyTwoColumnWidth);
 
     /// <summary>
-    /// Two columns: 截圖｜取詞, 替換｜翻譯視窗, 即時翻譯. One: all of
+    /// Two columns: 截圖｜取詞, 替換｜翻譯視窗, 即時翻譯｜原文對照. One: all of
     /// them down the left in that order. The rows keep their own bottom margin; the gap between the
     /// columns is split between the two sides.
     /// </summary>
@@ -152,13 +152,14 @@ public partial class SettingsPage
             [
                 (CaptureHotkeyRow, 0, 0), (QuickLookupHotkeyRow, 0, 1),
                 (QuickTranslateHotkeyRow, 1, 0), (WindowHotkeyRow, 1, 1),
-                (RealtimePauseHotkeyRow, 2, 0),
+                (RealtimePauseHotkeyRow, 2, 0), (RealtimeCompareHotkeyRow, 2, 1),
             ]
             :
             [
                 (CaptureHotkeyRow, 0, 0), (QuickLookupHotkeyRow, 1, 0),
                 (QuickTranslateHotkeyRow, 2, 0),
                 (WindowHotkeyRow, 3, 0), (RealtimePauseHotkeyRow, 4, 0),
+                (RealtimeCompareHotkeyRow, 5, 0),
             ];
 
         foreach (var (element, row, column) in cells)

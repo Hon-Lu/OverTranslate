@@ -374,6 +374,8 @@
     <sys:String x:Key="S.Realtime.CrosshairOff">Приостановить выделение и работать с программой под ним</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Продолжить выделение</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">Сравнение с оригиналом</sys:String>
+    <sys:String x:Key="S.Realtime.ShortcutUnset">Сочетание не задано</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHotkeyTaken">Сочетание {0} для сравнения с оригиналом занято другой программой</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">Вкл.</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">Выкл.</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">Сравнение с оригиналом: выключите, чтобы показывать перевод прямо поверх оригинала</sys:String>
@@ -537,8 +539,8 @@
     <sys:String x:Key="S.Settings.Subtitle">Сочетания клавиш, службы перевода, внешний вид и дополнительные параметры</sys:String>
 
     <sys:String x:Key="S.Settings.Hotkeys">Сочетания клавиш</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyEnable">Включить это сочетание</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyDisable">Отключить это сочетание</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyUnset">Не задано</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyClear">Очистить сочетание</sys:String>
     <sys:String x:Key="S.Settings.HotkeyRecordTip">Нажмите, чтобы записать новое сочетание</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuide">Доступные клавиши</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuideCombo">Сочетание</sys:String>
@@ -563,6 +565,9 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Перевод в реальном времени</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Нажмите сочетание, чтобы [[выбрать области и перевести]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Если перевод не запущен, первое нажатие выбирает области, второе запускает перевод; во время перевода — пауза и продолжение.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Сравнение с оригиналом</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">Нажмите сочетание, чтобы переключить [[сравнение с оригиналом]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Работает только во время перевода в реальном времени. Переключает перевод поверх оригинала и показ в области сравнения.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Всплывающий перевод</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Нажмите сочетание, чтобы открыть [[всплывающий перевод]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">Если выделен текст, он сразу подставляется и переводится при открытии окна.</sys:String>

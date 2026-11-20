@@ -377,6 +377,8 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOff">Pause framing and use the app underneath</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">Resume framing</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">Compare with original</sys:String>
+    <sys:String x:Key="S.Realtime.ShortcutUnset">No shortcut set</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHotkeyTaken">The compare shortcut {0} is in use by another program</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">On</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">Off</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">Compare with original: turn off to show the translation directly over the original</sys:String>
@@ -541,8 +543,8 @@ Actually used this time: {2}</sys:String>
 
     <sys:String x:Key="S.Settings.Hotkeys">Shortcuts</sys:String>
     <!-- The checkbox carries no text, so this is its ToolTip rather than a label -->
-    <sys:String x:Key="S.Settings.HotkeyEnable">Enable this shortcut</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyDisable">Disable this shortcut</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyUnset">Not set</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyClear">Clear shortcut</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">Click to record a new shortcut</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuide">Supported keys</sys:String>
@@ -568,6 +570,9 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">Realtime translation</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">Press the shortcut to [[select blocks and translate]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Compare with original</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">Press the shortcut to toggle [[compare with original]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Works only during realtime translation. Switches between the translation covering the original and showing it in the compare area.</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">Press the shortcut to open [[quick lookup]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>

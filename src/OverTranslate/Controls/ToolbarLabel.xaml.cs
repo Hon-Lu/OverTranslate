@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using OverTranslate.Services;
 
 namespace OverTranslate.Controls;
 
@@ -56,7 +57,11 @@ public partial class ToolbarLabel : Popup
     private DispatcherTimer? _coolTimer;
     private DispatcherTimer? _flashTimer;
 
-    private sealed record Target(FrameworkElement Element, Func<string> Name, Func<string?> Description);
+    private sealed record Target(
+        FrameworkElement Element,
+        Func<string> Name,
+        Func<string?> Description,
+        Func<IReadOnlyList<string>>? Shortcut);
 
     public ToolbarLabel()
     {
@@ -113,7 +118,16 @@ public partial class ToolbarLabel : Popup
     /// the collapsed realtime capsule's own tooltip came up under the card, saying something else.
     /// A button that has a ToolTip and cancels it ends the search there.</para>
     /// </remarks>
-    public void Add(FrameworkElement element, Func<string> name, Func<string?>? description = null)
+    /// <param name="shortcut">
+    /// For a button that has a global shortcut: its keys, one per cap, or none when the shortcut is
+    /// not set, which the card says in so many words. Null for a button that has no shortcut at all,
+    /// which gets no line for it.
+    /// </param>
+    public void Add(
+        FrameworkElement element,
+        Func<string> name,
+        Func<string?>? description = null,
+        Func<IReadOnlyList<string>>? shortcut = null)
     {
         element.ToolTip ??= string.Empty;
         element.ToolTipOpening += (_, e) => e.Handled = true;
@@ -121,7 +135,7 @@ public partial class ToolbarLabel : Popup
         {
             var tip = element.ToolTip as string;
             return string.IsNullOrWhiteSpace(tip) || tip == name() ? null : tip;
-        })));
+        }), shortcut));
     }
 
     /// <summary>Has the button just pressed say that it worked, in the card, for a moment.</summary>
@@ -232,6 +246,7 @@ public partial class ToolbarLabel : Popup
         LabelTick.Visibility = flash is null ? Visibility.Collapsed : Visibility.Visible;
         LabelDescription.Text = description ?? "";
         LabelDescription.Visibility = description is null ? Visibility.Collapsed : Visibility.Visible;
+        FillShortcut(flash is null ? target.Shortcut?.Invoke() : null);
 
         var element = target.Element;
         _button = element;
@@ -363,6 +378,77 @@ public partial class ToolbarLabel : Popup
 
     /// <summary>Takes the card away at once, for a bar that is about to change under it.</summary>
     public void Hide() => Hide(animate: false);
+
+    /// <summary>
+    /// The shortcut line: a keycap per key, or a dashed 未設定快捷鍵 when there is none (#398).
+    /// </summary>
+    /// <remarks>
+    /// Drawn as keys rather than written out because it used to be a line of the same dim text as
+    /// the description, and read as part of it. The caps are the settings page's own
+    /// (HotkeyGuideKey): one look for "a key to press" across the application, in the button colours
+    /// rather than the accent, so the line stands out from the prose without reading as a control
+    /// or a state. The unset mark is dashed so it cannot be mistaken for a key called 未設定.
+    /// </remarks>
+    private void FillShortcut(IReadOnlyList<string>? keys)
+    {
+        LabelShortcut.Children.Clear();
+        if (keys is null)
+        {
+            LabelShortcut.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        LabelShortcut.Visibility = Visibility.Visible;
+
+        if (keys.Count == 0)
+        {
+            var mark = new Grid();
+            var outline = new System.Windows.Shapes.Rectangle
+            {
+                RadiusX = 4,
+                RadiusY = 4,
+                StrokeThickness = 1,
+                StrokeDashArray = [3, 2],
+                SnapsToDevicePixels = true,
+            };
+            outline.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "AppButtonBorder");
+            mark.Children.Add(outline);
+            mark.Children.Add(KeyText(LocalizationService.Get("S.Realtime.ShortcutUnset"), dim: true, new Thickness(7, 1, 7, 2)));
+            LabelShortcut.Children.Add(mark);
+            return;
+        }
+
+        for (int i = 0; i < keys.Count; i++)
+        {
+            if (i > 0)
+            {
+                var plus = KeyText("+", dim: true, new Thickness(3, 0, 3, 0));
+                plus.VerticalAlignment = VerticalAlignment.Center;
+                LabelShortcut.Children.Add(plus);
+            }
+
+            var cap = new Border
+            {
+                BorderThickness = new Thickness(1, 1, 1, 2),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(6, 1, 6, 1),
+                Margin = new Thickness(0, 1, 0, 1),
+                SnapsToDevicePixels = true,
+                Child = KeyText(keys[i], dim: false, new Thickness(0)),
+            };
+            cap.SetResourceReference(Border.BackgroundProperty, "AppButtonBg");
+            cap.SetResourceReference(Border.BorderBrushProperty, "AppButtonBorder");
+            LabelShortcut.Children.Add(cap);
+        }
+    }
+
+    private static TextBlock KeyText(string text, bool dim, Thickness padding)
+    {
+        var block = new TextBlock { Text = text, FontSize = 11, Padding = padding };
+        block.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+        block.SetResourceReference(TextBlock.ForegroundProperty, dim ? "TooltipFgDim" : "TooltipFg");
+        return block;
+    }
 
     private void Hide(bool animate)
     {

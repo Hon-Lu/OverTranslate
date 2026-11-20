@@ -28,7 +28,7 @@ public partial class RealtimeControlWindow
         };
 
         // Edit mode.
-        Labels.Add(CompareEditBtn, CompareName, CompareDescription(CompareEditBtn));
+        Labels.Add(CompareEditBtn, CompareName, CompareDescription(CompareEditBtn), CompareKeys);
         Labels.Add(CrosshairBtn, () => LocalizationService.Get(
             _crosshairEnabled ? "S.Realtime.CrosshairOff" : "S.Realtime.CrosshairOn"));
         Labels.Add(StartBtn, () => LocalizationService.Get("S.Realtime.StartTranslating"));
@@ -37,15 +37,15 @@ public partial class RealtimeControlWindow
         // Running.
         Labels.Add(SourceLangBtn, () => LocalizationService.Get("S.Realtime.ChangeSourceLanguage"));
         Labels.Add(TargetLangBtn, () => LocalizationService.Get("S.Realtime.ChangeTargetLanguage"));
-        Labels.Add(CompareRunBtn, CompareName, CompareDescription(CompareRunBtn));
+        Labels.Add(CompareRunBtn, CompareName, CompareDescription(CompareRunBtn), CompareKeys);
         Labels.Add(CaptureBtn, () => LocalizationService.Get("S.Shell.CaptureTranslate"));
 
-        // The shortcut on a line of its own under the name, rather than in brackets after it as the
-        // tooltip had it: the line under the name is where the card says more, and a key combination
-        // on its own there needs no word to say what it is.
+        // No description: the button's ToolTip only repeats the name with the key in brackets, and
+        // the key has its own line of caps now (#398).
         Labels.Add(PauseBtn,
             () => LocalizationService.Get(_isPaused ? "S.Realtime.Resume" : "S.Realtime.Pause"),
-            () => RealtimePauseHint.CurrentHotkey?.Trim() is { Length: > 0 } key ? key : null);
+            () => null,
+            () => HotkeyBindings.KeysFor(SettingsService.Instance.Current, HotkeyAction.RealtimePause));
         Labels.Add(EditBtn, () => LocalizationService.Get("S.Realtime.EditBlocks"));
         Labels.Add(AppearanceBtn, () => LocalizationService.Get("S.Realtime.Appearance"));
         Labels.Add(CollapseBtn, () => LocalizationService.Get(
@@ -54,6 +54,10 @@ public partial class RealtimeControlWindow
     }
 
     private static string CompareName() => LocalizationService.Get("S.Realtime.CompareDisplay");
+
+    // Read at each showing, so a shortcut set or cleared mid-session is what the card says.
+    private static IReadOnlyList<string> CompareKeys() =>
+        HotkeyBindings.KeysFor(SettingsService.Instance.Current, HotkeyAction.RealtimeCompare);
 
     /// <summary>
     /// What 對照顯示 does when pressed, from the button's tooltip, without the name it opens with.

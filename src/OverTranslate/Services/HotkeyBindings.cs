@@ -10,6 +10,7 @@ public enum HotkeyAction
     RealtimePause,
     QuickLookup,
     QuickTranslate,
+    RealtimeCompare,
 }
 
 /// <summary>
@@ -134,8 +135,44 @@ public static class HotkeyBindings
             settings.QuickTranslateHotkeyModifiers,
             settings.QuickTranslateHotkeyVirtualKey,
             settings.QuickTranslateHotkeyGamepadButton),
+        HotkeyAction.RealtimeCompare => BuildTrigger(
+            settings.RealtimeCompareHotkeyInputKind,
+            settings.RealtimeCompareHotkeyModifiers,
+            settings.RealtimeCompareHotkeyVirtualKey,
+            settings.RealtimeCompareHotkeyGamepadButton),
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, null),
     };
+
+    /// <summary>The text 設定 shows for one action's shortcut, whether or not it is set.</summary>
+    public static string DisplayFor(AppSettings settings, HotkeyAction action) => action switch
+    {
+        HotkeyAction.Capture => settings.HotkeyDisplay,
+        HotkeyAction.TranslationWindow => settings.TranslationWindowHotkeyDisplay,
+        HotkeyAction.RealtimePause => settings.RealtimePauseHotkeyDisplay,
+        HotkeyAction.QuickLookup => settings.QuickLookupHotkeyDisplay,
+        HotkeyAction.QuickTranslate => settings.QuickTranslateHotkeyDisplay,
+        HotkeyAction.RealtimeCompare => settings.RealtimeCompareHotkeyDisplay,
+        _ => throw new ArgumentOutOfRangeException(nameof(action), action, null),
+    };
+
+    /// <summary>
+    /// The keys to draw one at a time for a shortcut — Ctrl, Alt, S — or none when it is not set.
+    /// </summary>
+    /// <remarks>
+    /// Split on the "+" only for the keyboard and the key sequences, whose display is built from key
+    /// names joined that way. A mouse or controller button is one thing to press and its name is
+    /// localized prose, so it stays whole.
+    /// </remarks>
+    public static IReadOnlyList<string> KeysFor(AppSettings settings, HotkeyAction action)
+    {
+        var binding = Resolve(settings).Single(b => b.Action == action);
+        var display = DisplayFor(settings, action)?.Trim() ?? "";
+        if (!binding.Enabled || display.Length == 0) return [];
+
+        return binding.Trigger.Kind == ShortcutInputKind.Keyboard || binding.Trigger.IsKeySequence
+            ? display.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : [display];
+    }
 
     // The virtual keys a shortcut may claim on its own, with no Ctrl/Alt/Shift beside them.
     //
@@ -210,6 +247,10 @@ public static class HotkeyBindings
             (HotkeyAction.QuickTranslate,
                 TriggerFor(settings, HotkeyAction.QuickTranslate),
                 settings.QuickTranslateHotkeyEnabled),
+            // Last: the newest, and live only while a realtime session is up.
+            (HotkeyAction.RealtimeCompare,
+                TriggerFor(settings, HotkeyAction.RealtimeCompare),
+                settings.RealtimeCompareHotkeyEnabled),
         };
 
         var claimed = new Dictionary<ShortcutTrigger, HotkeyAction>();
