@@ -286,8 +286,55 @@ public class RealtimeTimingDetectorTests
                     Hold(4, 20, "line " + round, 230);
                 }
                 break;
+            default:
+                // "pause-N": a line, then the box held empty and still for N polls, then the next.
+                var pause = int.Parse(name["pause-".Length..]);
+                Hold(6, 20, "a line", 230);
+                Hold(pause, 20, "", 0);
+                Hold(8, 20, "the next line", 120);
+                break;
         }
         return shots;
+    }
+
+    // ── 原文消失後立即清除譯文 unticked, over a still picture ──
+
+    /// <summary>
+    /// The pause between two lines of a dialogue box, held still for anything from two polls to
+    /// eight seconds. Under the hold the translation is left up exactly as it was; past it, it is
+    /// taken down once. Either way every poll decides what it did — and so the next line is read at
+    /// the same poll after it appears, however long the pause before it.
+    /// </summary>
+    [Theory]
+    [InlineData(RealtimePresets.StandardId)]
+    [InlineData(RealtimePresets.SubtitleId)]
+    [InlineData(RealtimePresets.InterfaceId)]
+    public void TheNextLineAfterAStillPauseIsReadAtTheSamePollHoweverLongThePause(string id)
+    {
+        int? latency = null;
+        foreach (var pause in new[] { 2, 4, RealtimeRegionState.LongestHoldPolls, RealtimeRegionState.LongestHoldPolls * 2, 53 })
+        {
+            var log = Drive(Preset(id), Scenario($"pause-{pause}"));
+            var appears = 6 + pause;
+            var read = log.FindIndex(appears, entry => entry.Contains("shown=the next line"));
+            latency ??= read - appears;
+            Assert.Equal(latency, read - appears);
+
+            // Without the drop the log is the decisions alone, poll for poll the same as a pause
+            // nobody took anything down in.
+            var drops = log.Count(entry => entry.EndsWith(" drop"));
+            Assert.Equal(pause > RealtimeRegionState.LongestHoldPolls + 1 ? 1 : 0, drops);
+            if (drops > 0)
+                Assert.True(log.FindIndex(entry => entry.EndsWith(" drop")) < appears, "taken down as the next line came");
+        }
+    }
+
+    [Fact]
+    public void ClearingAtOnceIsNotHeldAtAll()
+    {
+        var once = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", BasedOn = RealtimePresets.StandardId, ClearAfterEmptyReads = 1 });
+        foreach (var scenario in new[] { "gone", "cycle", "pause-53" })
+            Assert.DoesNotContain(Drive(once, Scenario(scenario)), entry => entry.EndsWith(" drop"));
     }
 
     private static Bitmap Draw(Shot shot)
@@ -316,6 +363,9 @@ public class RealtimeTimingDetectorTests
             bool dialogue = profile.Dialogue(state.ReadsAs(profile.Layout));
             var reason = state.Examine(capture, dialogue, null, profile.SettlePolls);
             var entry = $"{poll} {reason} again={state.ReadingAgain} same={state.SamePictureAsRead}";
+            // A still picture's held translation taken down, which the session asks after a poll
+            // that read nothing.
+            if (reason == RealtimeReadReason.Nothing && state.TakeHeldOverlayExpiry()) entry += " drop";
             if (reason != RealtimeReadReason.Nothing)
             {
                 var shot = shots[poll];
