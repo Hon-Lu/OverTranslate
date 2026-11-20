@@ -43,6 +43,61 @@ public class RealtimeProfileEditingTests
         Assert.Equal(3, RealtimeProfileEditing.NextNumber([" custom 1 ", "CUSTOM 2", "Visual novel"], NewName));
     }
 
+    // ── A mode split off a preset ──
+
+    private static string Fork(params string[] names) =>
+        RealtimeProfileEditing.ForkName("Subtitles", names, name => $"{name} (custom)", (name, n) => $"{name} (custom {n})");
+
+    [Fact]
+    public void ForkName_IsThePresetsName_MarkedAsCustom()
+    {
+        Assert.Equal("Subtitles (custom)", Fork("Standard", "Subtitles", "Interface"));
+    }
+
+    [Fact]
+    public void ForkName_NumbersFromTwo_TakingTheSmallestFree()
+    {
+        Assert.Equal("Subtitles (custom 2)", Fork("Subtitles (custom)"));
+        Assert.Equal("Subtitles (custom 3)", Fork("subtitles (CUSTOM)", "Subtitles (custom 2)", "Subtitles (custom 4)"));
+    }
+
+    [Fact]
+    public void ForkName_KeepsToTheNameLimit()
+    {
+        var name = RealtimeProfileEditing.ForkName(new string('x', 40), [], n => $"{n} (custom)", (n, i) => $"{n} (custom {i})");
+        Assert.Equal(RealtimeProfileEditing.MaxNameLength, name.Length);
+    }
+
+    [Fact]
+    public void Follow_MovesOnlyTheBlocksOnThePreset()
+    {
+        var blocks = new[]
+        {
+            new Services.Realtime.RealtimeBlockPlacement(new System.Drawing.Rectangle(0, 0, 10, 10), RealtimePresets.SubtitleId),
+            new Services.Realtime.RealtimeBlockPlacement(new System.Drawing.Rectangle(0, 20, 10, 10), RealtimePresets.StandardId),
+            new Services.Realtime.RealtimeBlockPlacement(new System.Drawing.Rectangle(0, 40, 10, 10), RealtimePresets.SubtitleId,
+                Services.Realtime.RealtimeTextOrientation.Vertical),
+        };
+
+        var moved = RealtimeProfileEditing.Follow(blocks, RealtimePresets.SubtitleId, "mine");
+
+        Assert.Equal(["mine", RealtimePresets.StandardId, "mine"], moved.Select(block => block.ProfileId));
+        Assert.Equal(blocks.Select(block => block.Bounds), moved.Select(block => block.Bounds));
+        Assert.Equal(Services.Realtime.RealtimeTextOrientation.Vertical, moved[2].Orientation);
+    }
+
+    [Fact]
+    public void AChangeOnASplitMode_IsKeptAsADifferenceFromItsPreset()
+    {
+        var split = RealtimeProfile.CreateCustom(RealtimePresets.SubtitleId, "Subtitles (custom)");
+        split.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
+        var stored = RealtimeProfileEditing.WithoutTemplateValues(split);
+
+        Assert.Equal(RealtimeMergeLevels.AutomaticMiddle, stored.MergeLevel);
+        Assert.True(RealtimeProfileEditing.IsModified(stored, ProfileParam.MergeLevel));
+        Assert.Equal(1, RealtimeProfileEditing.ModifiedCount(stored));
+    }
+
     // ── Names ──
 
     [Theory]

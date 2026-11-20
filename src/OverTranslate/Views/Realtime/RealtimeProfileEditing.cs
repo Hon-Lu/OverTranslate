@@ -1,6 +1,7 @@
 using System.Globalization;
 using OverTranslate.Models;
 using OverTranslate.Services;
+using OverTranslate.Services.Realtime;
 
 namespace OverTranslate.Views.Realtime;
 
@@ -224,6 +225,36 @@ internal static class RealtimeProfileEditing
         while (taken.Contains(format(number).Trim())) number++;
         return number;
     }
+
+    /// <summary>
+    /// The name of a mode split off a preset where the preset would not take a change: the preset's
+    /// name marked as the user's own — 字幕・漫畫（自訂）, then 字幕・漫畫（自訂 2） and on, the
+    /// smallest number nobody has (see <see cref="NextNumber"/>).
+    /// </summary>
+    /// <remarks>
+    /// The preset's name rather than 自訂模式 N, which 新增 keeps: the edit layer's list shows a mode
+    /// by its name first, and a mode split off this way is that preset with something changed.
+    /// </remarks>
+    public static string ForkName(
+        string presetName, IEnumerable<string> names, Func<string, string> first, Func<string, int, string> numbered)
+    {
+        string Format(int number) => CleanName(number == 1 ? first(presetName) : numbered(presetName, number));
+        return Format(NextNumber(names, Format));
+    }
+
+    /// <summary><see cref="ForkName(string, IEnumerable{string}, Func{string, string}, Func{string, int, string})"/> in the interface language.</summary>
+    public static string ForkName(string presetId, IEnumerable<string> names) =>
+        ForkName(PresetName(presetId), names,
+            name => LocalizationService.Format("S.Realtime.ProfileForkName", name),
+            (name, number) => LocalizationService.Format("S.Realtime.ProfileForkNameNumbered", name, number));
+
+    /// <summary>
+    /// The blocks with every one on <paramref name="fromId"/> put on <paramref name="toId"/>: the
+    /// blocks on a preset go with the mode just split off it (the user's call), so what is changed
+    /// on that mode is what those blocks show.
+    /// </summary>
+    public static List<RealtimeBlockPlacement> Follow(IEnumerable<RealtimeBlockPlacement> blocks, string fromId, string toId) =>
+        [.. blocks.Select(block => block.ProfileId == fromId ? block with { ProfileId = toId } : block)];
 
     /// <summary>
     /// What typing <paramref name="typed"/> into the name box stores: one line — a line break or tab

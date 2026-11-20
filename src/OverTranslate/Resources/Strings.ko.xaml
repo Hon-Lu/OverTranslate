@@ -458,7 +458,12 @@
     <sys:String x:Key="S.Realtime.ProfileCreate">만들기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLiveApply">변경 사항은 현재 번역에 바로 적용됩니다</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewName">사용자 지정 모드 {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">기본 모드는 수정할 수 없습니다. 조정하려면 목록에서 사용자 지정 모드를 추가하고 이 모드를 템플릿으로 선택하세요.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilePresetReadOnly">기본 모드는 수정할 수 없습니다</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileFork">사용자 지정 모드 만들기</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkName">{0} (사용자 지정)</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkNameNumbered">{0} (사용자 지정 {1})</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileForkChange">{0}: {1} → {2}</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileOn">켬</sys:String>
     <sys:String x:Key="S.Realtime.ProfileName">이름</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNameTaken">이름이 중복됩니다. 다른 이름을 입력하세요</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAll">템플릿으로 되돌리기</sys:String>
