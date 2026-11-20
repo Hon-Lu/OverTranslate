@@ -87,15 +87,20 @@ internal static class RealtimeAutoLayout
 
     /// <inheritdoc cref="Group(IReadOnlyList{OcrTextBlock})"/>
     /// <param name="rules">The block's mode's figures — see <see cref="ResolvedProfile.Auto"/>.</param>
-    internal static List<OcrTextBlock> Group(IReadOnlyList<OcrTextBlock> blocks, AutoRules rules) =>
-        Read(blocks, rules).Groups;
+    /// <param name="edges">
+    /// The frame, for the panel grouper to ask about the frames between boxes on a row — see
+    /// <see cref="PanelEdges"/>. Null groups on the boxes alone.
+    /// </param>
+    internal static List<OcrTextBlock> Group(IReadOnlyList<OcrTextBlock> blocks, AutoRules rules, PanelEdges? edges = null) =>
+        Read(blocks, rules, edges).Groups;
 
     /// <inheritdoc cref="Reading"/>
     internal static Reading Read(IReadOnlyList<OcrTextBlock> blocks) => Read(blocks, AutoRules.Default);
 
     /// <inheritdoc cref="Reading"/>
     /// <param name="rules">The block's mode's figures — see <see cref="ResolvedProfile.Auto"/>.</param>
-    internal static Reading Read(IReadOnlyList<OcrTextBlock> blocks, AutoRules rules)
+    /// <param name="edges"><inheritdoc cref="Group(IReadOnlyList{OcrTextBlock}, AutoRules, PanelEdges)" path="/param[@name='edges']"/></param>
+    internal static Reading Read(IReadOnlyList<OcrTextBlock> blocks, AutoRules rules, PanelEdges? edges = null)
     {
         var input = blocks.ToList();
         var dialogueTrace = new GroupingTrace();
@@ -104,7 +109,7 @@ internal static class RealtimeAutoLayout
             DialogueTextGrouper.Group(HorizontalRubyLines.Drop(input), dialogueTrace, null, rules.MaxStackGap),
             dialogueTrace, input);
         var panel = Members(
-            OcrTextBlockGrouper.Group(input, rules.PanelGrouping, null, panelTrace), panelTrace, input);
+            OcrTextBlockGrouper.Group(input, rules.PanelGrouping, null, panelTrace, edges), panelTrace, input);
 
         int zones = CountZones(input, dialogue, panel);
         bool sparse = zones <= rules.SparseZones;
@@ -147,7 +152,7 @@ internal static class RealtimeAutoLayout
                 .ToList();
             var restTrace = new GroupingTrace();
             kept = [.. passages, .. Members(
-                OcrTextBlockGrouper.Group(rest, rules.PanelGrouping, null, restTrace), restTrace, rest)];
+                OcrTextBlockGrouper.Group(rest, rules.PanelGrouping, null, restTrace, edges), restTrace, rest)];
             kept = [.. kept.OrderBy(group => First(group).Y).ThenBy(group => First(group).X)];
         }
 

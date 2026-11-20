@@ -17,7 +17,9 @@ using OverTranslate.Services.Realtime;
 /// P (separate items: a panel, a menu, a chat) or M (both on one screen). OCR runs once, at the
 /// size the labelled mode would have used; an M image is read at both.
 /// <c>--auto-probe replay cache.json report.txt</c> — no OCR, so a rule can be changed and judged
-/// in seconds. Beside the report it writes <c>report.extras.tsv</c>, one line for every group the
+/// in seconds. Each cached picture is opened again for the one rule that looks at the frame rather
+/// than the boxes (<see cref="PanelEdges"/>); a picture no longer on disk is grouped on its boxes
+/// alone. Beside the report it writes <c>report.extras.tsv</c>, one line for every group the
 /// two groupers disagreed over, <c>report.groups.txt</c>, 自動's own answer per image — the
 /// file to diff between two builds — <c>report.modes.txt</c>, the 字幕 and 面板 groupers'
 /// answers with their boxes, and <c>report.own.txt</c>, the frame grouped as a session on the mode
@@ -249,12 +251,15 @@ internal static class AutoModeProbe
         foreach (var capture in cache)
         {
             List<OcrTextBlock> Raw() => capture.Blocks.Select(b => b.Restore()).ToList();
-            var reading = RealtimeAutoLayout.Read(OcrService.FilterForRealtime(Raw(), capture.Height, profile), profile.Auto);
-            var asDialogue = OcrService.GroupRealtime(Raw(), capture.Height, passage);
-            var asPanel = OcrService.GroupRealtime(Raw(), capture.Height, items);
+            // The picture the cache was read from, as the session hands its frame to the grouper.
+            using var frame = File.Exists(capture.Image) ? new Bitmap(capture.Image) : null;
+            var edges = frame is null ? null : new PanelEdges(frame);
+            var reading = RealtimeAutoLayout.Read(OcrService.FilterForRealtime(Raw(), capture.Height, profile), profile.Auto, edges);
+            var asDialogue = OcrService.GroupRealtime(Raw(), capture.Height, passage, edges: edges);
+            var asPanel = OcrService.GroupRealtime(Raw(), capture.Height, items, edges: edges);
             // The mode's own grouping, as a session on it would group the frame: on 合併程度's two
             // ends the only one of these that runs them.
-            var asProfile = OcrService.GroupRealtime(Raw(), capture.Height, profile);
+            var asProfile = OcrService.GroupRealtime(Raw(), capture.Height, profile, edges: edges);
             bool sameAsDialogue = Same(reading.Groups, asDialogue);
             bool sameAsPanel = Same(reading.Groups, asPanel);
 

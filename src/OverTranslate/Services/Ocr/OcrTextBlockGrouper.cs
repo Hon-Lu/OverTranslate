@@ -43,12 +43,18 @@ internal static class OcrTextBlockGrouper
     /// verdicts and the groups were made of. Null everywhere but the harness, and read by no rule:
     /// a pass with one and a pass without reach the same verdicts on the same input.
     /// </param>
+    /// <param name="edges">
+    /// The live frame the blocks were read from, asked whether a panel's edge runs between two
+    /// boxes on one row before they are joined — see <see cref="PanelEdges"/>. Null where there is
+    /// no frame to ask, which joins exactly as before.
+    /// </param>
     /// <inheritdoc cref="Group(IReadOnlyList{OcrTextBlock}, GroupingProfile, List{NextLineDecision})"/>
     internal static List<OcrTextBlock> Group(
         IReadOnlyList<OcrTextBlock> blocks,
         GroupingProfile profile,
         List<NextLineDecision>? decisions,
-        GroupingTrace? trace)
+        GroupingTrace? trace,
+        PanelEdges? edges = null)
     {
         AssertLayoutGeometryFilled(blocks);
         trace?.RegisterBlocks(blocks);
@@ -63,7 +69,7 @@ internal static class OcrTextBlockGrouper
             return blocks.ToList();
         }
 
-        var sorted = LinesInReadingOrder(blocks, profile, decisions, trace);
+        var sorted = LinesInReadingOrder(blocks, profile, decisions, trace, edges);
 
         var groups = new List<List<OcrTextBlock>>();
         foreach (var block in sorted)
@@ -94,11 +100,12 @@ internal static class OcrTextBlockGrouper
         IReadOnlyList<OcrTextBlock> blocks,
         GroupingProfile profile,
         List<NextLineDecision>? decisions = null,
-        GroupingTrace? trace = null)
+        GroupingTrace? trace = null,
+        PanelEdges? edges = null)
     {
         AssertLayoutGeometryFilled(blocks);
         trace?.RegisterBlocks(blocks);
-        var lines = blocks.Count <= 1 ? Alone(blocks, trace) : LinesInReadingOrder(blocks, profile, decisions, trace);
+        var lines = blocks.Count <= 1 ? Alone(blocks, trace) : LinesInReadingOrder(blocks, profile, decisions, trace, edges);
         trace?.RegisterGroups(lines.Select(line => (IReadOnlyList<OcrTextBlock>)[line]).ToList());
         return lines;
     }
@@ -115,14 +122,14 @@ internal static class OcrTextBlockGrouper
     // The block's lines, pieces on one row joined, top to bottom and then left to right.
     private static List<OcrTextBlock> LinesInReadingOrder(
         IReadOnlyList<OcrTextBlock> blocks, GroupingProfile profile,
-        List<NextLineDecision>? decisions, GroupingTrace? trace)
+        List<NextLineDecision>? decisions, GroupingTrace? trace, PanelEdges? edges)
     {
         // The readings printed above the writing, out before anything measures a leading against
         // them: one sits in the gap between two lines of a paragraph, which is where
         // NothingLiesBetween looks. After the same-line merge, so that the several readings of one
         // line the detector framed separately are judged as the one box it hands on.
         var sameLineMerged = HorizontalRubyLines.Drop(
-            MergeSameLineFragments(blocks, decisions, trace, profile));
+            MergeSameLineFragments(blocks, decisions, trace, profile, edges));
         var sorted = sameLineMerged
             .OrderBy(block => block.LayoutBounds.Y)
             .ThenBy(block => block.LayoutBounds.X)
@@ -226,13 +233,13 @@ internal static class OcrTextBlockGrouper
 
     private static List<OcrTextBlock> MergeSameLineFragments(
         IReadOnlyList<OcrTextBlock> blocks, List<NextLineDecision>? decisions, GroupingTrace? trace,
-        GroupingProfile profile)
+        GroupingProfile profile, PanelEdges? edges)
     {
         var rows = BuildVisualRows(blocks);
         var gaps = rows.SelectMany(AdjacentGaps).ToList();
         var threshold = SameLineGapThreshold.Estimate(gaps);
 
-        return rows.SelectMany(row => SplitRowIntoLines(row, threshold.Value, decisions, trace, blocks, profile, rows)).ToList();
+        return rows.SelectMany(row => SplitRowIntoLines(row, threshold.Value, decisions, trace, blocks, profile, rows, edges)).ToList();
     }
 
     /// <summary>
@@ -331,7 +338,8 @@ internal static class OcrTextBlockGrouper
     /// </summary>
     private static IEnumerable<OcrTextBlock> SplitRowIntoLines(
         List<OcrTextBlock> row, double threshold, List<NextLineDecision>? decisions, GroupingTrace? trace,
-        IReadOnlyList<OcrTextBlock> blocks, GroupingProfile profile, IReadOnlyList<List<OcrTextBlock>> rows)
+        IReadOnlyList<OcrTextBlock> blocks, GroupingProfile profile, IReadOnlyList<List<OcrTextBlock>> rows,
+        PanelEdges? edges)
     {
         var lines = new List<OcrTextBlock>();
         var line = row[0];
@@ -354,6 +362,10 @@ internal static class OcrTextBlockGrouper
                 profile.TakesProseEvidence &&
                 HasParagraphRowEvidence(row, i, rows, threshold))
                 (joined, rule) = (true, "paragraph row evidence");
+            // Last, over every way of joining: whatever the spacing says, two boxes with a panel's
+            // frame between them belong to two panels.
+            if (joined && edges is not null && edges.Between(row[i - 1], row[i]))
+                (joined, rule) = (false, "panel edge");
             decisions?.Add(SameLineDecision(row[i - 1], row[i], joined, rule, trace));
 
             if (joined)
