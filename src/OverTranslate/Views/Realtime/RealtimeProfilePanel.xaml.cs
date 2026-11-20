@@ -54,6 +54,9 @@ internal partial class RealtimeProfilePanel : Window
     // edge cut the rest, which only a capsule pushed into a corner of a very small screen meets.
     private const double MinBodyHeight = 160;
 
+    // The most of the screen's height the body takes — see Place.
+    private const double MaxScreenShare = 0.55;
+
     private System.Drawing.Rectangle _bar;
     private readonly System.Drawing.Rectangle _screen;
 
@@ -220,7 +223,11 @@ internal partial class RealtimeProfilePanel : Window
         var margin = RootChrome.Margin;
         const double header = 40, frame = 2;
         double room = (_opensUp ? above : below) - Gap - header - frame - Body.Padding.Bottom - 8;
-        Body.MaxHeight = Math.Clamp(room, MinBodyHeight, MaxBodyHeight);
+        // And never more than a share of the screen, wherever the capsule is: the panel is beside the
+        // picture it tunes, and every row open measured 594 DIP — three quarters of a 768-high screen
+        // (the Win10 VM), with most of the game behind it. The rest scrolls.
+        double share = Dip(_screen.Height) * MaxScreenShare;
+        Body.MaxHeight = Math.Clamp(Math.Min(room, share), MinBodyHeight, MaxBodyHeight);
         UpdateLayout();
 
         double tallest = header + frame + Body.MaxHeight;
