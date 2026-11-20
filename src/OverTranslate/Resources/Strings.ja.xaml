@@ -381,6 +381,8 @@
     <sys:String x:Key="S.Realtime.CrosshairOff">範囲選択を止めて下のアプリを操作する</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">範囲選択を再開</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文対照</sys:String>
+    <sys:String x:Key="S.Realtime.ShortcutUnset">ショートカットキー未設定</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHotkeyTaken">原文対照のショートカットキー {0} は他のプログラムで使用中です</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">オン</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">オフ</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">原文対照：オフにすると、訳文を原文の画面に直接重ねて表示します</sys:String>
@@ -545,8 +547,8 @@
 
     <sys:String x:Key="S.Settings.Hotkeys">ショートカットキー</sys:String>
     <!-- The checkbox carries no text, so this is its ToolTip rather than a label -->
-    <sys:String x:Key="S.Settings.HotkeyEnable">このショートカットキーを有効にする</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyDisable">このショートカットキーを無効にする</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyUnset">未設定</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyClear">ショートカットキーをクリア</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">クリックしてショートカットキーを録り直す</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuide">使用できるキーの説明</sys:String>
@@ -572,6 +574,9 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">リアルタイム翻訳</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">ショートカットで[[ブロックを選択して翻訳]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">停止中にショートカットを押すとブロック選択を開始し、選択中にもう一度押すと翻訳を開始します。翻訳中は一時停止／再開できます。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文対照</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">ショートカットキーで[[原文対照]]を切り替え</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">リアルタイム翻訳中のみ有効です。訳文で原文を覆うか、対照エリアに表示するかを切り替えます。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">ショートカットキーで[[ポップアップ翻訳]]を開く</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">テキストを選択していると、ウィンドウを開いたときに自動で読み込んで翻訳します。</sys:String>

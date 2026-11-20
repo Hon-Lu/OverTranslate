@@ -146,10 +146,9 @@ public partial class RealtimeEditWindow : Window
     private static readonly SolidColorBrush CopyCloseFill = CopyLabelFill;
     private static readonly SolidColorBrush CopyCloseForeground = Freeze(Color.FromArgb(0xE6, 0x2A, 0x1A, 0x00));
 
-    // 對照顯示's glyph, the same path as RealtimeControlWindow's RealtimeCompareGlyph resource: the
+    // 對照顯示's glyph, the same path as the RealtimeCompareGlyph resource in SharedStyles: the
     // button that brings one block's copy back wears the bar button's face for that reason. Kept
-    // as a copy here because this layer is built in code and has no reach into that window's
-    // resources; change the two together.
+    // as a copy here because this layer is built in code; change the two together.
     private static readonly Geometry CompareGlyph = FreezeGeometry(Geometry.Parse(
         "M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 " +
         "M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 " +

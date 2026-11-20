@@ -19,9 +19,14 @@ public static class RealtimePauseHint
     /// This used to read the 截圖翻譯 shortcut, because pausing was a second meaning that key took on
     /// while a session was running. It has its own now: sharing meant the reader could not choose what
     /// to press for the thing they reach for most, and a session lasts hours.
+    ///
+    /// Empty when the shortcut is not set: a cleared shortcut keeps its old combination in the
+    /// settings file, and naming that would advertise a key that does nothing.
     /// </remarks>
     public static string CurrentHotkey =>
-        SettingsService.Instance.Current.RealtimePauseHotkeyDisplay;
+        SettingsService.Instance.Current is { RealtimePauseHotkeyEnabled: true } settings
+            ? settings.RealtimePauseHotkeyDisplay
+            : "";
 
     /// <summary>
     /// For the pause/resume icon in the translating control bar. The button already communicates the

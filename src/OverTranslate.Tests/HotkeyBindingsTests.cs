@@ -164,7 +164,8 @@ public class HotkeyBindingsTests
 
         var resolved = HotkeyBindings.Resolve(settings);
         Assert.All(
-            resolved.Where(b => b.Action != HotkeyAction.Capture),
+            // 原文對照 starts unset, so it holds nothing to clash with.
+            resolved.Where(b => b.Action is not (HotkeyAction.Capture or HotkeyAction.RealtimeCompare)),
             binding => Assert.True(binding.IsActive));
     }
 
@@ -300,5 +301,82 @@ public class HotkeyBindingsTests
         var replace = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.QuickTranslate);
 
         Assert.Equal(HotkeyAction.QuickLookup, replace.ShadowedBy);
+    }
+
+    [Fact]
+    public void TheCompareShortcutStartsUnset()
+    {
+        // #398: only the reader who flips between overlay and original needs it, so nobody is handed
+        // a combination they never asked for.
+        var compare = HotkeyBindings.Resolve(new AppSettings())
+            .Single(b => b.Action == HotkeyAction.RealtimeCompare);
+
+        Assert.False(compare.Enabled);
+        Assert.Empty(HotkeyBindings.KeysFor(new AppSettings(), HotkeyAction.RealtimeCompare));
+    }
+
+    [Fact]
+    public void TheCompareShortcutGivesWayToEveryOtherShortcut()
+    {
+        var settings = new AppSettings
+        {
+            RealtimeCompareHotkeyEnabled = true,
+            RealtimeCompareHotkeyModifiers = CtrlAlt,
+            RealtimeCompareHotkeyVirtualKey = 0x53,
+            RealtimeCompareHotkeyDisplay = "Ctrl+Alt+S",
+        };
+
+        var compare = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.RealtimeCompare);
+
+        Assert.Equal(HotkeyAction.RealtimePause, compare.ShadowedBy);
+    }
+
+    [Fact]
+    public void AnUnsetShortcutLeavesItsCombinationForTheNextOne()
+    {
+        // Clearing replaced the switch, with the same rule: what is not set holds nothing, and its
+        // combination stays stored but out of the way.
+        var settings = new AppSettings
+        {
+            RealtimePauseHotkeyEnabled = false,
+            RealtimeCompareHotkeyEnabled = true,
+            RealtimeCompareHotkeyModifiers = CtrlAlt,
+            RealtimeCompareHotkeyVirtualKey = 0x53,
+            RealtimeCompareHotkeyDisplay = "Ctrl+Alt+S",
+        };
+
+        var compare = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.RealtimeCompare);
+
+        Assert.True(compare.IsActive);
+        Assert.Equal("Ctrl+Alt+S", settings.RealtimePauseHotkeyDisplay);
+    }
+
+    [Fact]
+    public void KeysAreDrawnOneCapAtATime()
+    {
+        var settings = new AppSettings();
+
+        Assert.Equal(["Ctrl", "Alt", "S"], HotkeyBindings.KeysFor(settings, HotkeyAction.RealtimePause));
+        Assert.Equal(["Ctrl", "C", "C"], HotkeyBindings.KeysFor(settings, HotkeyAction.QuickLookup));
+    }
+
+    [Fact]
+    public void AnUnsetShortcutHasNoKeysEvenWithACombinationStored()
+    {
+        var settings = new AppSettings { RealtimePauseHotkeyEnabled = false };
+
+        Assert.Empty(HotkeyBindings.KeysFor(settings, HotkeyAction.RealtimePause));
+    }
+
+    [Fact]
+    public void AMouseButtonIsOneCapWithItsWholeName()
+    {
+        var settings = new AppSettings
+        {
+            RealtimePauseHotkeyInputKind = ShortcutInputKind.MouseX1,
+            RealtimePauseHotkeyDisplay = "滑鼠側鍵 1",
+        };
+
+        Assert.Equal(["滑鼠側鍵 1"], HotkeyBindings.KeysFor(settings, HotkeyAction.RealtimePause));
     }
 }

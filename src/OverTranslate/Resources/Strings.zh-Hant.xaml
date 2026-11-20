@@ -396,6 +396,8 @@
     <sys:String x:Key="S.Realtime.CrosshairOff">暫停框選，改為操作下方畫面</sys:String>
     <sys:String x:Key="S.Realtime.CrosshairOn">恢復框選</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplay">原文對照</sys:String>
+    <sys:String x:Key="S.Realtime.ShortcutUnset">未設定快捷鍵</sys:String>
+    <sys:String x:Key="S.Realtime.CompareHotkeyTaken">原文對照快捷鍵 {0} 已被其他程式占用</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">已開啟</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">已關閉</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">原文對照：關閉時將翻譯後譯文直接覆蓋原文畫面</sys:String>
@@ -563,8 +565,8 @@
 
     <sys:String x:Key="S.Settings.Hotkeys">快捷鍵</sys:String>
     <!-- 勾選框沒有文字，所以這是它的 ToolTip，不是標籤 -->
-    <sys:String x:Key="S.Settings.HotkeyEnable">啟用此快捷鍵</sys:String>
-    <sys:String x:Key="S.Settings.HotkeyDisable">停用此快捷鍵</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyUnset">未設定</sys:String>
+    <sys:String x:Key="S.Settings.HotkeyClear">清除快捷鍵</sys:String>
     <!-- The shortcut box has no label of its own; this is its ToolTip -->
     <sys:String x:Key="S.Settings.HotkeyRecordTip">點一下重新錄製快捷鍵</sys:String>
     <sys:String x:Key="S.Settings.HotkeyGuide">可用按鍵說明</sys:String>
@@ -590,6 +592,9 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkey">即時翻譯</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyHint">按下快捷鍵開始[[框選翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文對照</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyHint">按下快捷鍵切換[[原文對照]]</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">僅在即時翻譯期間有效，切換譯文覆蓋原文或顯示於對照區域。</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyHint">按下快捷鍵開啟[[取詞翻譯]]</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>

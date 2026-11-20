@@ -44,6 +44,9 @@
                                FontSize="12" Margin="0,2,0,0"
                                Foreground="{DynamicResource TooltipFgDim}"
                                TextWrapping="Wrap"/>
+                    <!-- The shortcut, as keycaps: filled in by FillShortcut, for the buttons that
+                         have one. Wraps rather than running off the card in the longer languages. -->
+                    <WrapPanel x:Name="LabelShortcut" Margin="0,6,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
         </Grid>

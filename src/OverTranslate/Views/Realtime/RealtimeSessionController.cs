@@ -971,6 +971,24 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
+    /// The 原文對照 shortcut (#398): the bar's button, pressed from wherever the user is.
+    /// </summary>
+    /// <remarks>
+    /// The same toggle as the button, so the two cannot drift apart. Nothing here takes the
+    /// foreground: the windows it rebuilds are shown without activation and the bar is only
+    /// re-stacked, so the game the key was pressed in keeps the keyboard.
+    /// </remarks>
+    public void ToggleCompareFromShortcut()
+    {
+        if (!IsActive) return;
+        ToggleCompareDisplay();
+    }
+
+    /// <summary>Says on the bar why a shortcut that belongs to the session did nothing.</summary>
+    public void ShowShortcutProblem(string message) =>
+        _control?.ShowMessage(message, RealtimeMessageKind.Failure);
+
+    /// <summary>
     /// Switches 對照顯示, from the bar or the capsule, without ending anything.
     /// </summary>
     /// <remarks>

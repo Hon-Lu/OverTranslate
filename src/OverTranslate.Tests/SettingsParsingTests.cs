@@ -958,6 +958,16 @@ public class SettingsParsingTests
         Assert.True(settings.RealtimePauseHotkeyEnabled);
     }
 
+    // #398's 原文對照 shortcut arrives unset, on an upgrade as on a new installation.
+    [Fact]
+    public void MissingCompareHotkey_StaysUnset()
+    {
+        var settings = SettingsService.Parse("""{"Theme":"Light"}""");
+
+        Assert.False(settings.RealtimeCompareHotkeyEnabled);
+        Assert.Equal("", settings.RealtimeCompareHotkeyDisplay);
+    }
+
     // Ctrl+Alt+S belonged to block framing until that shortcut was removed. A file written while it
     // did says nothing about 暫停 / 繼續, so that one arrives on its new default rather than on the
     // Ctrl+Alt+Q it used to have — and a user who had recorded their own keeps theirs.

@@ -353,6 +353,10 @@
         <Setter Property="VerticalAlignment"   Value="Center"/>
     </Style>
 
+    <!-- 原文對照: A over 文, each with lines of text beside it. Shared by the realtime bar's buttons
+         and the settings row for its shortcut. -->
+    <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
+
     <!-- 截圖翻譯: framing corners around a crosshair — the gesture the feature actually asks for
          (drag a region), not a camera, which would promise a photo rather than a translation. -->
     <Geometry x:Key="CaptureMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M8,5.4 V10.6 M5.4,8 H10.6</Geometry>

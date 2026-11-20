@@ -120,6 +120,25 @@
             <Setter Property="Cursor"            Value="Hand"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="ToolTip"           Value="{DynamicResource S.Settings.HotkeyRecordTip}"/>
+            <!-- Room on the right for the clear button that sits over the box's end. -->
+            <Setter Property="Padding"           Value="9,0,32,0"/>
+        </Style>
+        <!-- Clears the shortcut beside it, which is how a shortcut is turned off (#398). Over the end
+             of the box rather than beside it, so it reads as belonging to that box and the rows keep
+             their width. Not focusable: pressing it must not take the focus from a box that is
+             recording, and the keyboard has Backspace for the same thing while recording. -->
+        <Style x:Key="HotkeyClearButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width"               Value="26"/>
+            <Setter Property="Height"              Value="26"/>
+            <Setter Property="Margin"              Value="0,0,4,0"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+            <Setter Property="Focusable"           Value="False"/>
+            <Setter Property="FontFamily"          Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize"            Value="10"/>
+            <Setter Property="Content"             Value="&#xE8BB;"/>
+            <Setter Property="ToolTip"             Value="{DynamicResource S.Settings.HotkeyClear}"/>
+            <Setter Property="AutomationProperties.Name" Value="{DynamicResource S.Settings.HotkeyClear}"/>
         </Style>
         <!-- Under a row whose shortcut is listened for rather than registered: Ctrl+Ctrl, Ctrl+C+C and
              the mouse buttons. Windows keeps a program from seeing input meant for one running with
@@ -1199,16 +1218,9 @@
                                                  PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
-
-                                        <StackPanel Grid.Column="3"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Margin="12,0,0,0">
-                                            <CheckBox x:Name="QuickLookupHotkeyEnabledCheckBox"
-                                                      Style="{StaticResource ToggleSwitch}"
-                                                      Checked="HotkeyEnabled_Toggled"
-                                                      Unchecked="HotkeyEnabled_Toggled"/>
-                                        </StackPanel>
+                                        <Button Grid.Column="2" x:Name="QuickLookupHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
                                     </Grid>
 
                                     <!-- The one thing about this shortcut that the name does not say,
@@ -1309,16 +1321,9 @@
                                                  PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
-
-                                        <StackPanel Grid.Column="3"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Margin="12,0,0,0">
-                                            <CheckBox x:Name="QuickTranslateHotkeyEnabledCheckBox"
-                                                      Style="{StaticResource ToggleSwitch}"
-                                                      Checked="HotkeyEnabled_Toggled"
-                                                      Unchecked="HotkeyEnabled_Toggled"/>
-                                        </StackPanel>
+                                        <Button Grid.Column="2" x:Name="QuickTranslateHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
                                     </Grid>
 
                                     <!-- The note wraps within its column while the button keeps its width. -->
@@ -1436,16 +1441,9 @@
                                                  PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
-
-                                        <StackPanel Grid.Column="3"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Margin="12,0,0,0">
-                                            <CheckBox x:Name="WindowHotkeyEnabledCheckBox"
-                                                      Style="{StaticResource ToggleSwitch}"
-                                                      Checked="HotkeyEnabled_Toggled"
-                                                      Unchecked="HotkeyEnabled_Toggled"/>
-                                        </StackPanel>
+                                        <Button Grid.Column="2" x:Name="WindowHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
                                     </Grid>
 
                                     <ContentControl x:Name="WindowElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
@@ -1500,16 +1498,9 @@
                                                  PreviewKeyUp="HotkeyBox_PreviewKeyUp"
                                                  GotFocus="HotkeyBox_GotFocus"
                                                  LostFocus="HotkeyBox_LostFocus"/>
-
-                                        <StackPanel Grid.Column="3"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center"
-                                                    Margin="12,0,0,0">
-                                            <CheckBox x:Name="RealtimePauseHotkeyEnabledCheckBox"
-                                                      Style="{StaticResource ToggleSwitch}"
-                                                      Checked="HotkeyEnabled_Toggled"
-                                                      Unchecked="HotkeyEnabled_Toggled"/>
-                                        </StackPanel>
+                                        <Button Grid.Column="2" x:Name="RealtimePauseHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
                                     </Grid>
 
                                     <!-- When this shortcut does nothing, inside the row it is about
@@ -1539,6 +1530,77 @@
                                     </Grid>
 
                                     <ContentControl x:Name="RealtimePauseElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 原文對照 (#398). Beside the realtime row because it is the other key that
+                                 belongs to a session; unset until someone records one. -->
+                            <Border x:Name="RealtimeCompareHotkeyRow" Grid.Row="3" Grid.Column="1" Style="{StaticResource HotkeyRow}">
+                                <StackPanel>
+                                    <Grid>
+                                        <!-- The same columns as the rows above, so the boxes end in one place. -->
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="0.72*" MinWidth="140"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Style="{StaticResource HotkeyRowIcon}">
+                                            <Path Width="18" Height="18"
+                                                  Data="{StaticResource RealtimeCompareGlyph}"
+                                                  Stroke="{DynamicResource AppAccent}"
+                                                  StrokeThickness="1.05"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                            <TextBlock Text="{DynamicResource S.Settings.RealtimeCompareHotkey}"
+                                                       Style="{StaticResource OptionTitle}"/>
+                                            <TextBlock controls:HighlightedText.Source="{DynamicResource S.Settings.RealtimeCompareHotkeyHint}"
+                                                       Style="{StaticResource OptionDescription}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34"/>
+                                        </StackPanel>
+
+                                        <TextBox Grid.Column="2" x:Name="RealtimeCompareHotkeyBox"
+                                                 Style="{StaticResource HotkeyBox}"
+                                                 PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                 PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                 GotFocus="HotkeyBox_GotFocus"
+                                                 LostFocus="HotkeyBox_LostFocus"/>
+                                        <Button Grid.Column="2" x:Name="RealtimeCompareHotkeyClearBtn"
+                                                Style="{StaticResource HotkeyClearButton}"
+                                                Click="HotkeyClear_Click"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Path Grid.Column="0"
+                                              Data="{StaticResource InfoMarkGeometry}"
+                                              Stroke="{DynamicResource AppTextSecondary}"
+                                              StrokeThickness="1.1"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              Stretch="None"
+                                              Width="12" Height="12"
+                                              VerticalAlignment="Top"
+                                              Margin="0,1.7,8,0"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{DynamicResource S.Settings.RealtimeCompareHotkeyNote}"
+                                                   Style="{StaticResource FieldHint}"
+                                                   Margin="0"
+                                                   VerticalAlignment="Top"/>
+                                    </Grid>
+
+                                    <ContentControl x:Name="RealtimeCompareElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                 </StackPanel>
                             </Border>
                         </Grid>

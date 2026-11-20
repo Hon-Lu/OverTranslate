@@ -66,11 +66,12 @@ public partial class SettingsPage : UserControl
     /// read-only and starts recording when it is clicked, so a button beside it would have been a
     /// second way to do the one thing clicking the box already does.
     /// </remarks>
-    /// <param name="EnabledBox">
-    /// The tick that turns this shortcut off, or null for the capture one, which has no tick at all
-    /// and no setting behind it because that shortcut is the feature the application is for. Null
-    /// here is what says "this row cannot be turned off".
+    /// <param name="ClearButton">
+    /// The ✕ that clears this shortcut, which is how a shortcut is turned off (#398), or null for the
+    /// capture one, which cannot be cleared and has no setting behind it because that shortcut is the
+    /// feature the application is for. Null here is what says "this row cannot be turned off".
     /// </param>
+    /// <param name="IsSet">Whether the shortcut is set; false is shown as 未設定.</param>
     /// <remarks>
     /// A row shadowed by a higher-priority shortcut says nothing about it. Priority still decides
     /// which of two shortcuts sharing a combination is registered — see
@@ -86,8 +87,9 @@ public partial class SettingsPage : UserControl
         Func<AppSettings, ShortcutTrigger> Trigger,
         Action<AppSettings, ShortcutTrigger, string> Apply,
         bool AdvertisedInShell,
-        // Fully qualified: WinForms is also referenced here and has its own CheckBox.
-        System.Windows.Controls.CheckBox? EnabledBox = null,
+        // Fully qualified: WinForms is also referenced here and has its own Button.
+        System.Windows.Controls.Button? ClearButton = null,
+        Func<AppSettings, bool>? IsSet = null,
         Action<AppSettings, bool>? SetEnabled = null);
 
     private HotkeyField[] _hotkeyFields = [];
@@ -134,7 +136,8 @@ public partial class SettingsPage : UserControl
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.QuickLookup),
                 ApplyQuickLookupTrigger,
                 AdvertisedInShell: true,
-                QuickLookupHotkeyEnabledCheckBox,
+                QuickLookupHotkeyClearBtn,
+                s => s.QuickLookupHotkeyEnabled,
                 (s, on) => s.QuickLookupHotkeyEnabled = on),
             new HotkeyField(
                 HotkeyAction.QuickTranslate,
@@ -145,7 +148,8 @@ public partial class SettingsPage : UserControl
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.QuickTranslate),
                 ApplyQuickTranslateTrigger,
                 AdvertisedInShell: false,
-                QuickTranslateHotkeyEnabledCheckBox,
+                QuickTranslateHotkeyClearBtn,
+                s => s.QuickTranslateHotkeyEnabled,
                 (s, on) => s.QuickTranslateHotkeyEnabled = on),
             new HotkeyField(
                 HotkeyAction.TranslationWindow,
@@ -156,7 +160,8 @@ public partial class SettingsPage : UserControl
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.TranslationWindow),
                 ApplyWindowTrigger,
                 AdvertisedInShell: false,
-                WindowHotkeyEnabledCheckBox,
+                WindowHotkeyClearBtn,
+                s => s.TranslationWindowHotkeyEnabled,
                 (s, on) => s.TranslationWindowHotkeyEnabled = on),
             new HotkeyField(
                 HotkeyAction.RealtimePause,
@@ -167,8 +172,21 @@ public partial class SettingsPage : UserControl
                 s => HotkeyBindings.TriggerFor(s, HotkeyAction.RealtimePause),
                 ApplyRealtimePauseTrigger,
                 AdvertisedInShell: false,
-                RealtimePauseHotkeyEnabledCheckBox,
+                RealtimePauseHotkeyClearBtn,
+                s => s.RealtimePauseHotkeyEnabled,
                 (s, on) => s.RealtimePauseHotkeyEnabled = on),
+            new HotkeyField(
+                HotkeyAction.RealtimeCompare,
+                "S.Settings.RealtimeCompareHotkey",
+                RealtimeCompareHotkeyBox,
+                RealtimeCompareElevatedNote,
+                s => s.RealtimeCompareHotkeyDisplay,
+                s => HotkeyBindings.TriggerFor(s, HotkeyAction.RealtimeCompare),
+                ApplyRealtimeCompareTrigger,
+                AdvertisedInShell: false,
+                RealtimeCompareHotkeyClearBtn,
+                s => s.RealtimeCompareHotkeyEnabled,
+                (s, on) => s.RealtimeCompareHotkeyEnabled = on),
         ];
 
         _hotkeyGamepadRecordTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(45) };
@@ -225,15 +243,6 @@ public partial class SettingsPage : UserControl
             var s = SettingsService.Instance.Current;
 
             foreach (var field in _hotkeyFields) ShowStoredShortcut(field, s);
-
-            // The ticks, then the "a shortcut above took this" lines the ticks can change. The
-            // availability pass is explicit because the toggle handler ignores changes made while
-            // loading, so nothing else would grey these rows out on the way in.
-            foreach (var binding in HotkeyBindings.Resolve(s))
-                if (FieldFor(binding.Action)?.EnabledBox is { } box)
-                    box.IsChecked = binding.Enabled;
-
-            foreach (var field in _hotkeyFields) ApplyHotkeyRowAvailability(field);
 
             LightThemeRadio.IsChecked = s.Theme != ThemeService.Dark;
             DarkThemeRadio.IsChecked  = s.Theme == ThemeService.Dark;
@@ -1245,56 +1254,42 @@ public partial class SettingsPage : UserControl
     private HotkeyField? FieldFor(HotkeyAction action) =>
         _hotkeyFields.FirstOrDefault(field => field.Action == action);
 
-    /// <summary>
-    /// Greys out the box and the record button of a shortcut that is switched off.
-    /// </summary>
-    /// <remarks>
-    /// The tick is the whole row's switch, so leaving the rest of the row live invites the user to
-    /// record a combination for a shortcut that will not be registered — an edit that appears to work
-    /// and changes nothing.
-    ///
-    /// Only the tick does this. A row shadowed by a higher-priority shortcut stays editable on
-    /// purpose: re-recording it onto a free combination is exactly how that is fixed, and disabling
-    /// the row would take the fix away along with the problem.
-    /// </remarks>
-    private static void ApplyHotkeyRowAvailability(HotkeyField field)
+    /// <summary>The ✕ over a box: clears that shortcut.</summary>
+    private void HotkeyClear_Click(object sender, RoutedEventArgs e)
     {
-        // No tick means the row cannot be switched off at all — the capture shortcut.
-        var on = field.EnabledBox is not { } box || box.IsChecked == true;
-
-        field.Box.IsEnabled = on;
-
-        // Describe the next action on load and after each toggle.
-        if (field.EnabledBox is { } toggle)
-        {
-            toggle.SetResourceReference(ToolTipProperty,
-                on ? "S.Settings.HotkeyDisable" : "S.Settings.HotkeyEnable");
-            System.Windows.Automation.AutomationProperties.SetName(toggle, LocalizationService.Get(field.NameKey));
-        }
+        if (_hotkeyFields.FirstOrDefault(f => ReferenceEquals(f.ClearButton, sender)) is { } field)
+            ClearShortcut(field);
     }
 
-    private void HotkeyEnabled_Toggled(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Turns a shortcut off by leaving it unset, which replaced the switch each row used to have.
+    /// </summary>
+    /// <remarks>
+    /// Only the flag is written; the combination stays in the settings file and is simply not shown.
+    /// Nothing offers it back — the way out of 未設定 is recording, which is where a combination
+    /// another shortcut holds is refused. See <see cref="AppSettings.TranslationWindowHotkeyEnabled"/>.
+    /// </remarks>
+    private void ClearShortcut(HotkeyField field)
     {
-        if (_loading) return;
+        if (field.SetEnabled is not { } setEnabled) return;
 
-        var field = _hotkeyFields.FirstOrDefault(f => ReferenceEquals(f.EnabledBox, sender));
-        if (field?.SetEnabled is not { } setEnabled || field.EnabledBox is not { } box) return;
-
-        // Switching a row off while it is waiting for a key would leave it recording into a control
-        // about to be disabled, and the tick would look like it had done nothing.
         if (ReferenceEquals(_recording, field)) StopRecording();
 
-        Persist(s => setEnabled(s, box.IsChecked == true));
-        ApplyHotkeyRowAvailability(field);
+        Persist(s => setEnabled(s, false));
+        ShowStoredShortcut(field, SettingsService.Instance.Current);
+        AfterShortcutChanged(field);
+    }
 
-        // The global hooks are bound from these settings, so the tick means nothing until they are
-        // rebound — without this the shortcut keeps working until the application is restarted, and
-        // a switch that takes effect later is worse than no switch.
+    /// <summary>Rebinds the shortcuts and refreshes the rail after one of them changed.</summary>
+    private void AfterShortcutChanged(HotkeyField field)
+    {
+        // The global hook holds the old trigger until it is rebound.
         if (System.Windows.Application.Current.MainWindow is MainWindow main)
             main.ReRegisterHotkey();
 
-        // A row the rail advertises drops its combination when it is switched off, so the rail is
-        // as wrong after a tick as it is after a re-record.
+        // The nav rail advertises these beside 截圖翻譯 and 取詞翻譯 and is on screen right now, so it
+        // has to be told; nothing else re-reads them until the shell is next shown or activated. The
+        // other shortcuts are advertised nowhere, so there is nothing to refresh.
         if (field.AdvertisedInShell && Window.GetWindow(this) is Shell.ShellWindow shell)
             shell.RefreshHotkeyHints();
     }
@@ -1363,6 +1358,22 @@ public partial class SettingsPage : UserControl
         }
     }
 
+    private static void ApplyRealtimeCompareTrigger(AppSettings s, ShortcutTrigger trigger, string display)
+    {
+        s.RealtimeCompareHotkeyInputKind = trigger.Kind;
+        s.RealtimeCompareHotkeyDisplay = display;
+        if (trigger.Kind == ShortcutInputKind.Keyboard)
+        {
+            s.RealtimeCompareHotkeyModifiers = trigger.Modifiers;
+            s.RealtimeCompareHotkeyVirtualKey = trigger.VirtualKey;
+            s.RealtimeCompareHotkeyGamepadButton = GamepadShortcutButton.None;
+        }
+        else if (trigger.Kind == ShortcutInputKind.Gamepad)
+        {
+            s.RealtimeCompareHotkeyGamepadButton = trigger.GamepadButton;
+        }
+    }
+
     private static void ApplyQuickTranslateTrigger(AppSettings s, ShortcutTrigger trigger, string display)
     {
         s.QuickTranslateHotkeyInputKind = trigger.Kind;
@@ -1384,12 +1395,30 @@ public partial class SettingsPage : UserControl
     /// shortcut is one that is listened for rather than registered — see the HotkeyElevatedNote
     /// style for why.
     /// </summary>
+    /// <remarks>
+    /// A shortcut that is not set reads 未設定 in the secondary colour, with no ✕ to clear it and no
+    /// warning about a combination that is not in use.
+    /// </remarks>
     private static void ShowStoredShortcut(HotkeyField field, AppSettings settings)
     {
-        field.Box.Text = field.Display(settings);
+        var set = field.IsSet?.Invoke(settings) ?? true;
+
+        if (set)
+        {
+            field.Box.Text = field.Display(settings);
+            field.Box.ClearValue(System.Windows.Controls.Control.ForegroundProperty);
+        }
+        else
+        {
+            field.Box.Text = LocalizationService.Get("S.Settings.HotkeyUnset");
+            field.Box.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AppTextSecondary");
+        }
+
+        if (field.ClearButton is { } clear)
+            clear.Visibility = set ? Visibility.Visible : Visibility.Collapsed;
 
         var trigger = field.Trigger(settings);
-        field.ElevatedNote.Visibility = (trigger.IsMouse || trigger.IsKeySequence) && !RunsAsAdministrator
+        field.ElevatedNote.Visibility = set && (trigger.IsMouse || trigger.IsKeySequence) && !RunsAsAdministrator
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -1429,6 +1458,8 @@ public partial class SettingsPage : UserControl
 
         _recording = field;
         field.Box.Text = LocalizationService.Get("S.Settings.HotkeyPromptAnyInput");
+        field.Box.ClearValue(System.Windows.Controls.Control.ForegroundProperty);
+        if (field.ClearButton is { } clear) clear.Visibility = Visibility.Collapsed;
         field.Box.Focus();
 
         _recordSequences = new KeySequenceDetector(
@@ -1577,6 +1608,16 @@ public partial class SettingsPage : UserControl
         if (key == Key.Escape)
         {
             StopRecording();
+            return;
+        }
+
+        // Backspace or Delete on its own clears the shortcut — the keyboard's way to the ✕. Neither
+        // can be a shortcut by itself (HotkeyBindings.IsBindable), so nothing recordable is lost. The
+        // capture row cannot be cleared and just stops recording.
+        if ((key == Key.Back || key == Key.Delete) && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            if (recording.SetEnabled is null) StopRecording();
+            else ClearShortcut(recording);
             return;
         }
 
@@ -1745,9 +1786,10 @@ public partial class SettingsPage : UserControl
     /// Windows at all, but they go through the same refusal so that one button cannot silently do two
     /// different things.
     ///
-    /// A shortcut that is switched off does not hold its trigger — same rule as
+    /// A shortcut that is not set does not hold its trigger — same rule as
     /// <see cref="HotkeyBindings"/>, so what the page refuses and what actually gets registered
-    /// agree.
+    /// agree. Recording one sets it, and this is the only way back from 未設定, so a combination
+    /// another shortcut holds can never come back on through a side door.
     /// </remarks>
     private void CommitShortcut(HotkeyField recording, ShortcutTrigger trigger, string display)
     {
@@ -1770,19 +1812,14 @@ public partial class SettingsPage : UserControl
             return;
         }
 
-        Persist(s => recording.Apply(s, trigger, display));
+        Persist(s =>
+        {
+            recording.Apply(s, trigger, display);
+            recording.SetEnabled?.Invoke(s, true);
+        });
 
         // After the write, so the box picks the new trigger up out of the settings.
         StopRecording();
-
-        // The global hook holds the old trigger until it is rebound.
-        if (System.Windows.Application.Current.MainWindow is MainWindow main)
-            main.ReRegisterHotkey();
-
-        // The nav rail advertises these beside 截圖翻譯 and 取詞翻譯 and is on screen right now, so it
-        // has to be told; nothing else re-reads them until the shell is next shown or activated. The
-        // other shortcuts are advertised nowhere, so there is nothing to refresh.
-        if (recording.AdvertisedInShell && Window.GetWindow(this) is Shell.ShellWindow shell)
-            shell.RefreshHotkeyHints();
+        AfterShortcutChanged(recording);
     }
 }

@@ -34,7 +34,16 @@ public class GlobalHotkey : IDisposable
     /// <summary>The shortcut that replaces the selection with its translation.</summary>
     public const int QuickTranslateId = 9006;
 
+    /// <summary>The 原文對照 shortcut, held only while a realtime session is up (#398).</summary>
+    public const int RealtimeCompareId = 9007;
+
     public GlobalHotkey(int id) => _id = id;
+
+    /// <summary>
+    /// Whether Windows accepted the last <see cref="Register"/>. False when another program already
+    /// holds the combination, which RegisterHotKey reports by refusing and nothing else.
+    /// </summary>
+    public bool IsRegistered => _registered;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
