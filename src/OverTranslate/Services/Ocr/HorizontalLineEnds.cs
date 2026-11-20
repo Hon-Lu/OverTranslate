@@ -705,7 +705,7 @@ internal static class HorizontalLineEnds
     internal static double Solid = 0.42;
 
     /// <summary>The line's text colour, and the test for a pixel being more of it.</summary>
-    private readonly record struct Colour(bool Light, int Threshold, int Chroma)
+    internal readonly record struct Colour(bool Light, int Threshold, int Chroma)
     {
         internal bool Is(SKColor c)
         {

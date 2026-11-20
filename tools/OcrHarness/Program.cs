@@ -34,6 +34,17 @@ if (args.Contains("--no-ends"))
     HorizontalLineEnds.Enabled = false;
     args = [.. args.Where(argument => argument != "--no-ends")];
 }
+// The ―― put back inside a line (HorizontalInnerDashes): off, or traced.
+if (args.Contains("--no-inner-dash"))
+{
+    HorizontalInnerDashes.Enabled = false;
+    args = [.. args.Where(argument => argument != "--no-inner-dash")];
+}
+if (args.Contains("--inner-dash-trace"))
+{
+    HorizontalInnerDashes.Trace = s => Console.WriteLine("        inner-dash " + s);
+    args = [.. args.Where(argument => argument != "--inner-dash-trace")];
+}
 foreach (var (flag, set) in new (string, Action<double>)[]
 {
     ("--ends-gap", v => HorizontalLineEnds.GapLimit = v),

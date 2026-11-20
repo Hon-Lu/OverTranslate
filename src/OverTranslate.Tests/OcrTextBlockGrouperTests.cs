@@ -20,7 +20,7 @@ public class OcrTextBlockGrouperTests
 
         Assert.Single(grouped);
         Assert.Equal(2, grouped[0].Lines.Count);
-        Assert.Equal("寧夏夜市美食攻略 食尚玩家", grouped[0].Text);
+        Assert.Equal("寧夏夜市美食攻略食尚玩家", grouped[0].Text);
     }
 
     [Fact]

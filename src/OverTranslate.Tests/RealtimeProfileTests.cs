@@ -636,8 +636,8 @@ public class RealtimeProfileTests
         var passage = OcrService.GroupRealtime(DialogueWithAnArrow(), 292, ProfileAt(RealtimeMergeLevels.Passage));
         var merged = OcrService.GroupRealtime(DialogueWithAnArrow(), 292, ProfileAt(RealtimeMergeLevels.Max));
 
-        Assert.Equal(["オレのシゴトは、あの暗い墓場を 暗い目で見守るコトなのさ。", "》"], passage.Select(group => group.Text));
-        Assert.Equal(["オレのシゴトは、あの暗い墓場を 暗い目で見守るコトなのさ。", "》"], merged.Select(group => group.Text));
+        Assert.Equal(["オレのシゴトは、あの暗い墓場を暗い目で見守るコトなのさ。", "》"], passage.Select(group => group.Text));
+        Assert.Equal(["オレのシゴトは、あの暗い墓場を暗い目で見守るコトなのさ。", "》"], merged.Select(group => group.Text));
         Assert.All(merged, group => Assert.Null(group.ReadAs));
     }
 
