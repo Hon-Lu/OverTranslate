@@ -177,9 +177,19 @@
                 <TextBlock x:Name="CustomCount" Style="{StaticResource ProfileGroupCaption}" FontWeight="Normal"
                            Typography.NumeralAlignment="Tabular" Margin="8,0,0,0"/>
             </StackPanel>
+            <!-- Only the custom modes scroll, and only past a few rows (MaxHeight set from the rows
+                 themselves, see FitCustomScroll): ten of them made the card longer than the page
+                 around it. The presets, the count and the add stay outside, always in view. -->
             <Border x:Name="CustomList" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10"
                     Margin="0,0,0,6">
-                <StackPanel x:Name="CustomHost" SizeChanged="ListHost_SizeChanged"/>
+                <ScrollViewer x:Name="CustomScroll"
+                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Focusable="False"
+                              AutomationProperties.AutomationId="ProfileCustomScroll"
+                              SizeChanged="CustomScroll_SizeChanged"
+                              PreviewMouseWheel="CustomScroll_PreviewMouseWheel">
+                    <StackPanel x:Name="CustomHost" SizeChanged="CustomHost_SizeChanged"/>
+                </ScrollViewer>
             </Border>
             <Button x:Name="AddButton" Style="{StaticResource ProfileAddRow}"
                     AutomationProperties.AutomationId="ProfileAddRow"
