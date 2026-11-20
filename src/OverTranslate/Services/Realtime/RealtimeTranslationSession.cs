@@ -609,7 +609,7 @@ public sealed class RealtimeTranslationSession
         var state = new RealtimeRegionState(region.Orientation, region.Profile.ClearAfterEmptyReads);
         // Everything this region draws goes to the screen through here — see RealtimeScrollFollow.
         var follow = new RealtimeScrollFollow(
-            region.Id, (lines, generation) => RaiseRegionUpdated(new RealtimeRegionUpdate(region.Id, lines, generation)));
+            region.Id, (lines, generation) => RaiseRegionUpdated(new RealtimeRegionUpdate(region.Id, lines, generation) { Loop = token }));
         var pump = new RegionTranslationPump(this, region, follow, sourceLanguage, targetLanguage, token);
 
         try

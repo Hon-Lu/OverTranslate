@@ -1610,7 +1610,9 @@ internal sealed class RealtimeSessionController
     private void OnRegionUpdated(object? sender, RealtimeRegionUpdate update) =>
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.Normal, () =>
         {
-            if (update.Generation != Volatile.Read(ref _visibleGeneration)) return;
+            // Refused from a pass before a pause or a language change (the generation), and from a
+            // block's loop that a change of mode has since replaced — see RealtimeRegionUpdate.IsCurrent.
+            if (!update.IsCurrent(Volatile.Read(ref _visibleGeneration))) return;
 
             // The user may have gone back to edit mode while this pass was in flight; its window is
             // gone and the result belongs to a layout that no longer exists.

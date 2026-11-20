@@ -235,6 +235,71 @@ public class RealtimeProfileSwitchTests
         return all.IsCompleted;
     }
 
+    // A source the blocks have left: every loop clears its block after a few polls, which is a drawing
+    // a loop makes without a recogniser — enough to see whose drawings are still let through.
+    private sealed class LeftSource : IRealtimeCaptureBackend
+    {
+        public string Name => "left";
+        public Bitmap? GrabRegion(Rectangle screenBounds) => null;
+        public CaptureMiss DescribeMiss(Rectangle screenBounds) => CaptureMiss.NotOnSource;
+        public string DescribeActivity() => "";
+        public string DescribeSteps() => "";
+
+        public void Dispose()
+        {
+        }
+    }
+
+    /// <summary>
+    /// A drawing from a block's loop that a change of mode replaced is refused however late it is
+    /// handled — after the new loop has drawn too — while the new loop's and the other block's are
+    /// drawn. The generation does not change for a mode (the cache is kept), so this is the only
+    /// thing that tells them apart; without it an old grouping held up on its thread could land over
+    /// the new reading and stay, the new loop seeing the same words and not drawing again.
+    /// </summary>
+    [Fact]
+    public void Running_ADrawingFromTheLoopAModeChangeReplaced_IsRefused_EvenArrivingLate()
+    {
+        using var ocr = new OcrService();
+        var session = new RealtimeTranslationSession(ocr, new TranslationService());
+        var updates = new System.Collections.Concurrent.BlockingCollection<RealtimeRegionUpdate>();
+        session.RegionUpdated += (_, update) => updates.Add(update);
+        session.Start([Block(0, ResolvedProfile.Standard), Block(1, ResolvedProfile.Standard)],
+            Source, "ZH-HANT", TranslationProvider.Google, new LeftSource());
+        int generation = CacheGeneration(session);
+
+        // Each block's first drawing, kept aside, however the two loops interleave.
+        var firsts = new Dictionary<int, RealtimeRegionUpdate>();
+        RealtimeRegionUpdate Next(int region, CancellationToken? notFrom = null)
+        {
+            if (notFrom is null && firsts.TryGetValue(region, out var kept)) return kept;
+            while (updates.TryTake(out var update, TimeSpan.FromSeconds(10)))
+            {
+                firsts.TryAdd(update.RegionId, update);
+                if (update.RegionId == region && (notFrom is not { } old || update.Loop != old)) return update;
+            }
+            throw new TimeoutException($"no drawing from region {region}");
+        }
+
+        var held = Next(1);
+        var other = Next(0);
+        Assert.True(held.IsCurrent(generation));
+
+        Assert.True(session.ChangeProfiles([Block(0, ResolvedProfile.Standard), Block(1, Slow)]));
+        var fresh = Next(1, notFrom: held.Loop);
+
+        // Handled after the new loop's drawing, the old one is still refused; the new loop's and the
+        // untouched block's are drawn.
+        Assert.False(held.IsCurrent(generation));
+        Assert.True(fresh.IsCurrent(generation));
+        Assert.True(other.IsCurrent(generation));
+
+        // Ending the session refuses everything still queued.
+        session.Stop(releaseRecogniser: true);
+        Assert.False(fresh.IsCurrent(generation));
+        Assert.False(other.IsCurrent(generation));
+    }
+
     [Fact]
     public void Running_OnlyTheAlignChanged_RestartsNothing()
     {
