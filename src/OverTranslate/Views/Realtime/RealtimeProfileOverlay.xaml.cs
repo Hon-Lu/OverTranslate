@@ -472,11 +472,11 @@ public partial class RealtimeProfileOverlay : UserControl
     {
         switch (row.Param)
         {
-            case ProfileParam.MergeLevel:
+            case ProfileParam.SentenceMerge:
             {
-                int level = filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle;
-                row.Slider!.Value = level;
-                ShowMergeLevel(row, level);
+                var merge = filled.SentenceMerge ?? RealtimeSentenceMerge.Automatic;
+                row.Slider!.Value = (int)merge;
+                ShowSentenceMerge(row, merge);
                 return;
             }
             case ProfileParam.ClearAfterEmptyReads:
@@ -525,11 +525,11 @@ public partial class RealtimeProfileOverlay : UserControl
         row.Value.FontSize = automatic ? 13.5 : 13;
     }
 
-    private static void ShowMergeLevel(ParamRow row, int level)
+    private static void ShowSentenceMerge(ParamRow row, RealtimeSentenceMerge merge)
     {
-        row.Value.Text = RealtimeProfileEditing.MergeLevelName(level);
-        row.Description!.Text = RealtimeProfileEditing.MergeLevelDescription(level);
-        row.Scale!.Current = level;
+        row.Value.Text = RealtimeProfileEditing.SentenceMergeName(merge);
+        row.Description!.Text = RealtimeProfileEditing.SentenceMergeDescription(merge);
+        row.Scale!.Current = (int)merge;
     }
 
     // ── Building the rows ───────────────────────────────────────────────────────────────────────
@@ -625,22 +625,22 @@ public partial class RealtimeProfileOverlay : UserControl
     }
 
     /// <summary>
-    /// 語句合併: the name and the step's name on top, the slider the full width of the row under
-    /// them with its nine steps named, then what the step does and which way to move it.
+    /// 語句合併: the name and the value's name on top, the slider the full width of the row under
+    /// them with its five values named, then what the value does and which way to move it.
     /// </summary>
     private ParamRow BuildMergeRow()
     {
         var top = new Grid();
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var row = NewRow(ProfileParam.MergeLevel, "S.Realtime.ProfileMerge", top);
+        var row = NewRow(ProfileParam.SentenceMerge, "S.Realtime.ProfileMerge", top);
         row.Value.FontWeight = FontWeights.SemiBold;
         row.Value.TextWrapping = TextWrapping.NoWrap;
         row.Value.VerticalAlignment = VerticalAlignment.Top;
         Grid.SetColumn(row.Value, 1);
         top.Children.Add(row.Value);
 
-        var slider = NewSlider(row, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1, "S.Realtime.ProfileMerge", "MergeSlider");
+        var slider = NewSlider(row, (int)RealtimeSentenceMerge.None, (int)RealtimeSentenceMerge.All, 1, "S.Realtime.ProfileMerge", "MergeSlider");
         slider.HorizontalAlignment = HorizontalAlignment.Stretch;
         slider.Margin = new Thickness(0, 8, 0, 0);
         row.Root.Children.Add(slider);
@@ -863,7 +863,7 @@ public partial class RealtimeProfileOverlay : UserControl
         slider.ValueChanged += (_, _) =>
         {
             // The reading follows the thumb the whole way; the value is written when it is let go.
-            if (row.Param == ProfileParam.MergeLevel) ShowMergeLevel(row, (int)Math.Round(slider.Value));
+            if (row.Param == ProfileParam.SentenceMerge) ShowSentenceMerge(row, RealtimeProfileEditing.SentenceMergeAt(slider.Value));
             else row.Value.Text = SliderReading(row.Param, slider.Value);
             if (_syncing || dragging) return;
             // From the keyboard or a click on the track: written once the keys rest.
@@ -1311,63 +1311,42 @@ public partial class RealtimeProfileOverlay : UserControl
     }
 
     /// <summary>
-    /// The nine steps of 語句合併 named under its slider — 不合併, 逐項, 1–5, 整段, 合併 — with the
-    /// five 自動判斷 steps bracketed and the step the slider is on picked out.
+    /// The five values of 語句合併 named under its slider — 不合併, 逐項, 自動判斷, 整段, 合併 — with
+    /// the one the slider is on picked out.
     /// </summary>
     /// <remarks>
     /// <para>Each name is centred on its step, which a slider's thumb travels between half a thumb in
-    /// from either end; the two end names are held to the ends instead. Where names would touch — the
-    /// outer two pairs in Russian — the inner one gives way towards the middle, and the tick mark
+    /// from either end; the two end names are held to the ends instead. Where names would touch — a
+    /// long 逐項 or 整段 in Russian — the inner one gives way towards the middle, and the tick mark
     /// stays on the step.</para>
-    /// <para>The bracket was first a 1px line in the ticks' colour with its name in 10.5px secondary
-    /// text: drawn like the scale above it, it read as one more row of the scale, and users had to
-    /// look for it. It is now heavier and a text colour, and its name heavier and in primary text, so
-    /// it names the group rather than adding a sixth step. While the slider is on any of the five,
-    /// the bracket and its name take the accent with that step's number, so where the slider sits
-    /// answers "in 自動判斷 or not" without reading the number. A filled plate under the five was
-    /// tried first and turned down by the user in favour of this.</para>
+    /// <para>There were nine steps, 自動判斷's five bracketed under one name; 自動判斷 is one value
+    /// now (see <see cref="RealtimeSentenceMerge"/>), and with every step named the bracket has
+    /// nothing left to group.</para>
     /// </remarks>
     internal sealed class MergeScale : Panel
     {
         private const double ThumbHalf = 8;
         private const double Gap = 6;
-        private const int Steps = RealtimeMergeLevels.Max - RealtimeMergeLevels.Min + 1;
-
-        private const double BracketTop = 26;
-        private const double BracketHeight = 10;
-        private const double BracketLabelTop = 28;
+        private const int Steps = (int)RealtimeSentenceMerge.All - (int)RealtimeSentenceMerge.None + 1;
 
         private readonly TextBlock[] _labels = new TextBlock[Steps];
         private readonly Border[] _ticks = new Border[Steps];
-
-        // 1.5 rather than 2: at 2 the line outweighs the numbers it groups. Snapped, so it lands on
-        // whole device pixels — 2 of them at 125% — instead of a blurred 1.875.
-        private readonly Border _band = new()
-        {
-            BorderThickness = new Thickness(1.5, 0, 1.5, 1.5),
-            CornerRadius = new CornerRadius(0, 0, 5, 5),
-            SnapsToDevicePixels = true,
-        };
-
-        private readonly Border _bandLabel = new() { Padding = new Thickness(5, 0, 5, 0) };
-        private readonly TextBlock _bandText = new() { FontSize = 12, FontWeight = FontWeights.SemiBold };
         private int _current = -1;
 
         public MergeScale()
         {
-            Height = 46;
+            Height = 26;
             Margin = new Thickness(0, 2, 0, 0);
             string[] keys =
             [
-                "S.Realtime.ProfileMergeNone", "S.Realtime.ProfileMergeItems", "", "", "", "", "",
+                "S.Realtime.ProfileMergeNone", "S.Realtime.ProfileMergeItems", "S.Realtime.ProfileMergeAuto",
                 "S.Realtime.ProfileMergePassage", "S.Realtime.ProfileMergeBlock",
             ];
             for (int i = 0; i < Steps; i++)
             {
                 var label = new TextBlock { FontSize = 11 };
                 label.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
-                if (keys[i].Length > 0) label.SetResourceReference(TextBlock.TextProperty, keys[i]);
-                else label.Text = (i - 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                label.SetResourceReference(TextBlock.TextProperty, keys[i]);
                 _labels[i] = label;
                 Children.Add(label);
 
@@ -1376,31 +1355,12 @@ public partial class RealtimeProfileOverlay : UserControl
                 _ticks[i] = tick;
                 Children.Add(tick);
             }
-            Children.Add(_band);
-            _bandText.SetResourceReference(TextBlock.TextProperty, "S.Realtime.ProfileMergeAuto");
-            _bandText.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
-            _bandLabel.Child = _bandText;
-            // The card behind the name breaks the bracket's bottom line where the name sits on it.
-            _bandLabel.SetResourceReference(Border.BackgroundProperty, "AppCardBg");
-            Children.Add(_bandLabel);
-            Current = RealtimeMergeLevels.AutomaticMiddle;
+            Current = (int)RealtimeSentenceMerge.Automatic;
         }
-
-        /// <summary>The bracket under 1–5, laid out by the last arrange.</summary>
-        internal Border Bracket => _band;
-
-        /// <summary>The bracket's name, 自動判斷.</summary>
-        internal TextBlock BracketLabel => _bandText;
 
         internal TextBlock StepLabel(int step) => _labels[step];
 
-        /// <summary>Whether the slider is on one of 自動判斷's steps, which lights the bracket.</summary>
-        internal bool OnAutomatic => _current is >= RealtimeMergeLevels.AutomaticLowest and <= RealtimeMergeLevels.AutomaticHighest;
-
-        /// <summary>
-        /// The step the slider is on, named in the control colour and a step heavier; on 自動判斷's
-        /// steps, the bracket and its name in the control colour too.
-        /// </summary>
+        /// <summary>The value the slider is on, named in the control colour and a step heavier.</summary>
         public int Current
         {
             get => _current;
@@ -1411,13 +1371,9 @@ public partial class RealtimeProfileOverlay : UserControl
                 for (int i = 0; i < Steps; i++)
                 {
                     bool on = i == value;
-                    bool end = i is 0 or 1 or Steps - 2 or Steps - 1;
-                    _labels[i].SetResourceReference(TextBlock.ForegroundProperty,
-                        on ? "AppAccent" : end ? "AppTextPrimary" : "AppTextSecondary");
+                    _labels[i].SetResourceReference(TextBlock.ForegroundProperty, on ? "AppAccent" : "AppTextPrimary");
                     _labels[i].FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
                 }
-                _band.SetResourceReference(Border.BorderBrushProperty, OnAutomatic ? "AppAccent" : "AppTextSecondary");
-                _bandText.SetResourceReference(TextBlock.ForegroundProperty, OnAutomatic ? "AppAccent" : "AppTextPrimary");
                 InvalidateMeasure();
             }
         }
@@ -1446,15 +1402,6 @@ public partial class RealtimeProfileOverlay : UserControl
                 _ticks[i].Arrange(new Rect(Math.Round(StepX(i)), 0, 1, 5));
                 _labels[i].Arrange(new Rect(new Point(left[i], 7), _labels[i].DesiredSize));
             }
-
-            // Half a thumb out from the steps of 1 and 5, and out far enough to take in their names
-            // where a long 逐項 or 整段 (Russian) has pushed them off their steps.
-            const int low = RealtimeMergeLevels.AutomaticLowest, high = RealtimeMergeLevels.AutomaticHighest;
-            double bandLeft = Math.Min(StepX(low) - ThumbHalf, left[low] - 2);
-            double bandRight = Math.Max(StepX(high) + ThumbHalf, left[high] + size[high] + 2);
-            _band.Arrange(new Rect(bandLeft, BracketTop, Math.Max(0, bandRight - bandLeft), BracketHeight));
-            var bandSize = _bandLabel.DesiredSize;
-            _bandLabel.Arrange(new Rect(new Point((bandLeft + bandRight - bandSize.Width) / 2, BracketLabelTop), bandSize));
             return finalSize;
         }
     }

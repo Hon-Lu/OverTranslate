@@ -90,11 +90,11 @@ public class RealtimeProfileEditingTests
     public void AChangeOnASplitMode_IsKeptAsADifferenceFromItsPreset()
     {
         var split = RealtimeProfile.CreateCustom(RealtimePresets.SubtitleId, "Subtitles (custom)");
-        split.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
+        split.SentenceMerge = RealtimeSentenceMerge.Automatic;
         var stored = RealtimeProfileEditing.WithoutTemplateValues(split);
 
-        Assert.Equal(RealtimeMergeLevels.AutomaticMiddle, stored.MergeLevel);
-        Assert.True(RealtimeProfileEditing.IsModified(stored, ProfileParam.MergeLevel));
+        Assert.Equal(RealtimeSentenceMerge.Automatic, stored.SentenceMerge);
+        Assert.True(RealtimeProfileEditing.IsModified(stored, ProfileParam.SentenceMerge));
         Assert.Equal(1, RealtimeProfileEditing.ModifiedCount(stored));
     }
 
@@ -135,14 +135,14 @@ public class RealtimeProfileEditingTests
     public void AValueEqualToThePreset_IsStoredAsFollowingIt()
     {
         var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
-        mode.MergeLevel = RealtimeMergeLevels.Passage;  // what 字幕・漫畫 holds
+        mode.SentenceMerge = RealtimeSentenceMerge.Passage;  // what 字幕・漫畫 holds
         mode.ClearAfterEmptyReads = 2;                 // what every preset holds
         mode.SettleSeconds = 0.004;                     // 不等待, written oddly
         mode.DetectorPercent = 70;                      // really different
 
         var tidy = RealtimeProfileEditing.WithoutTemplateValues(mode);
 
-        Assert.Null(tidy.MergeLevel);
+        Assert.Null(tidy.SentenceMerge);
         Assert.Null(tidy.ClearAfterEmptyReads);
         Assert.Null(tidy.SettleSeconds);
         Assert.Equal(70, tidy.DetectorPercent);
@@ -153,11 +153,11 @@ public class RealtimeProfileEditingTests
     public void WithoutTemplateValues_LeavesTheStoredModeAlone()
     {
         var mode = Custom("a", "Mine");
-        mode.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
+        mode.SentenceMerge = RealtimeSentenceMerge.Automatic;
 
         RealtimeProfileEditing.WithoutTemplateValues(mode);
 
-        Assert.Equal(RealtimeMergeLevels.AutomaticMiddle, mode.MergeLevel);
+        Assert.Equal(RealtimeSentenceMerge.Automatic, mode.SentenceMerge);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class RealtimeProfileEditingTests
     public void AdvancedCount_OnlyCountsTheAdvancedValues()
     {
         var mode = Custom("a", "Mine");
-        mode.MergeLevel = RealtimeMergeLevels.Items;
+        mode.SentenceMerge = RealtimeSentenceMerge.Items;
         mode.IgnoreSmallPercent = 40;
 
         Assert.Equal(1, RealtimeProfileEditing.ModifiedCount(mode, RealtimeProfileEditing.Advanced));
@@ -196,7 +196,7 @@ public class RealtimeProfileEditingTests
     public void TheModifiedCount_CountsTheValuesThePageShows_ThatReallyDiffer()
     {
         var mode = Custom("a", "Mine", RealtimePresets.SubtitleId);
-        mode.MergeLevel = RealtimeMergeLevels.Passage;      // the preset's own: not a change
+        mode.SentenceMerge = RealtimeSentenceMerge.Passage;      // the preset's own: not a change
         mode.SettleSeconds = 0.6;
         mode.ConfidencePercent = 90;
         mode.IgnoreSmallPercent = 0;                        // the preset's own: not a change
@@ -206,22 +206,35 @@ public class RealtimeProfileEditingTests
         Assert.Equal(0, RealtimeProfileEditing.ModifiedCount(RealtimePresets.Create(RealtimePresets.InterfaceId)));
     }
 
+    // The slider's five positions are the values in their order, left to right; a position past
+    // either end is held to it.
     [Theory]
-    [InlineData(0, false)]
-    [InlineData(1, false)]
-    [InlineData(2, true)]
-    [InlineData(4, true)]
-    [InlineData(6, true)]
-    [InlineData(7, false)]
-    [InlineData(8, false)]
-    public void OnlyTheMiddleStepsDecideGroupByGroup(int level, bool automatic) =>
-        Assert.Equal(automatic, RealtimeMergeLevels.IsAutomatic(level));
+    [InlineData(-2.0, RealtimeSentenceMerge.None)]
+    [InlineData(0.0, RealtimeSentenceMerge.None)]
+    [InlineData(1.0, RealtimeSentenceMerge.Items)]
+    [InlineData(1.6, RealtimeSentenceMerge.Automatic)]
+    [InlineData(2.0, RealtimeSentenceMerge.Automatic)]
+    [InlineData(3.0, RealtimeSentenceMerge.Passage)]
+    [InlineData(4.0, RealtimeSentenceMerge.All)]
+    [InlineData(8.0, RealtimeSentenceMerge.All)]
+    public void ASliderPositionIsTheValueInThatPlace(double position, RealtimeSentenceMerge merge) =>
+        Assert.Equal(merge, RealtimeProfileEditing.SentenceMergeAt(position));
+
+    [Fact]
+    public void SettingTheSliderWritesTheValueByName()
+    {
+        var mode = Custom("a", "Mine");
+        RealtimeProfileDisplay.SetNumber(mode, ProfileParam.SentenceMerge, (int)RealtimeSentenceMerge.Passage);
+
+        Assert.Equal(RealtimeSentenceMerge.Passage, mode.SentenceMerge);
+        Assert.Contains("\"SentenceMerge\": \"Passage\"", System.Text.Json.JsonSerializer.Serialize(mode, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+    }
 
     [Fact]
     public void ResetAll_FollowsThePresetEverywhere_AndKeepsNameAndTemplate()
     {
         var mode = Custom("a", "Mine", RealtimePresets.InterfaceId);
-        mode.MergeLevel = RealtimeMergeLevels.AutomaticMiddle;
+        mode.SentenceMerge = RealtimeSentenceMerge.Automatic;
         mode.SettleSeconds = 1.2;
         mode.ConfidencePercent = 95;
 
@@ -236,12 +249,12 @@ public class RealtimeProfileEditingTests
     public void ClearPutsBackOneValueOnly()
     {
         var mode = Custom("a", "Mine");
-        mode.MergeLevel = RealtimeMergeLevels.Items;
+        mode.SentenceMerge = RealtimeSentenceMerge.Items;
         mode.ClearAfterEmptyReads = 1;
 
-        RealtimeProfileEditing.Clear(mode, ProfileParam.MergeLevel);
+        RealtimeProfileEditing.Clear(mode, ProfileParam.SentenceMerge);
 
-        Assert.Null(mode.MergeLevel);
+        Assert.Null(mode.SentenceMerge);
         Assert.Equal(1, mode.ClearAfterEmptyReads);
     }
 

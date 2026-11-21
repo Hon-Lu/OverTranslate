@@ -9,7 +9,7 @@ namespace OverTranslate.Views.Realtime;
 internal enum ProfileParam
 {
     /// <summary>語句合併.</summary>
-    MergeLevel,
+    SentenceMerge,
 
     /// <summary>譯文對齊.</summary>
     Align,
@@ -92,7 +92,7 @@ internal static class RealtimeProfileEditing
     /// </summary>
     public static bool IsSet(RealtimeProfile stored, ProfileParam param) => param switch
     {
-        ProfileParam.MergeLevel => stored.MergeLevel is not null,
+        ProfileParam.SentenceMerge => stored.SentenceMerge is not null,
         ProfileParam.Align => stored.Align is not null,
         ProfileParam.FilterNumbersAndAbbreviations => stored.FilterNumbersAndAbbreviations is not null,
         ProfileParam.SettleSeconds => stored.SettleAutomatic is not null || stored.SettleSeconds is not null,
@@ -108,7 +108,7 @@ internal static class RealtimeProfileEditing
     {
         switch (param)
         {
-            case ProfileParam.MergeLevel: stored.MergeLevel = null; break;
+            case ProfileParam.SentenceMerge: stored.SentenceMerge = null; break;
             case ProfileParam.Align: stored.Align = null; break;
             case ProfileParam.FilterNumbersAndAbbreviations: stored.FilterNumbersAndAbbreviations = null; break;
             case ProfileParam.SettleSeconds: stored.SettleAutomatic = null; stored.SettleSeconds = null; break;
@@ -201,7 +201,7 @@ internal static class RealtimeProfileEditing
     /// </summary>
     public static object? Value(RealtimeProfile filled, ProfileParam param) => param switch
     {
-        ProfileParam.MergeLevel => filled.MergeLevel,
+        ProfileParam.SentenceMerge => filled.SentenceMerge,
         ProfileParam.Align => filled.Align,
         ProfileParam.FilterNumbersAndAbbreviations => filled.FilterNumbersAndAbbreviations,
         ProfileParam.SettleSeconds => filled.SettleSeconds is { } seconds ? Math.Round(seconds, 2) : null,
@@ -371,25 +371,22 @@ internal static class RealtimeProfileEditing
         ? LocalizationService.Format("S.Realtime.ProfileBasedOnModified", PresetName(choice.BasedOn), choice.Modified)
         : LocalizationService.Format("S.Realtime.ProfileBasedOn", PresetName(choice.BasedOn));
 
-    /// <summary>
-    /// A step of 語句合併 by name: 不合併, 逐項, 自動判斷・偏逐項 … 自動判斷・偏整段, 整段, 合併.
-    /// </summary>
-    public static string MergeLevelName(int level) => level switch
+    /// <summary>A value of 語句合併 by name: 不合併, 逐項, 自動判斷, 整段, 合併.</summary>
+    public static string SentenceMergeName(RealtimeSentenceMerge merge) => LocalizationService.Get(merge switch
     {
-        <= RealtimeMergeLevels.Min => LocalizationService.Get("S.Realtime.ProfileMergeNone"),
-        RealtimeMergeLevels.Items => LocalizationService.Get("S.Realtime.ProfileMergeItems"),
-        RealtimeMergeLevels.Passage => LocalizationService.Get("S.Realtime.ProfileMergePassage"),
-        >= RealtimeMergeLevels.Max => LocalizationService.Get("S.Realtime.ProfileMergeBlock"),
-        _ => LocalizationService.Format("S.Realtime.ProfileMergeAutoLevel", LocalizationService.Get(
-            RealtimeMergeLevels.Tendency(level) switch
-            {
-                1 => "S.Realtime.ProfileMergeLean1",
-                2 => "S.Realtime.ProfileMergeLean2",
-                4 => "S.Realtime.ProfileMergeLean4",
-                5 => "S.Realtime.ProfileMergeLean5",
-                _ => "S.Realtime.ProfileGradeMid",
-            })),
-    };
+        RealtimeSentenceMerge.None => "S.Realtime.ProfileMergeNone",
+        RealtimeSentenceMerge.Items => "S.Realtime.ProfileMergeItems",
+        RealtimeSentenceMerge.Passage => "S.Realtime.ProfileMergePassage",
+        RealtimeSentenceMerge.All => "S.Realtime.ProfileMergeBlock",
+        _ => "S.Realtime.ProfileMergeAuto",
+    });
+
+    /// <summary>
+    /// The value of 語句合併 a slider position stands for: the values in their order, left to right,
+    /// held to the ends.
+    /// </summary>
+    public static RealtimeSentenceMerge SentenceMergeAt(double position) =>
+        (RealtimeSentenceMerge)Math.Clamp((int)Math.Round(position), (int)RealtimeSentenceMerge.None, (int)RealtimeSentenceMerge.All);
 
     /// <summary>A value of 譯文對齊 by name: 自動, 置中, 靠左.</summary>
     public static string AlignName(string? align) => LocalizationService.Get(RealtimeTextAligns.Normalize(align) switch
@@ -399,13 +396,13 @@ internal static class RealtimeProfileEditing
         _ => "S.Realtime.ProfileAuto",
     });
 
-    /// <summary>What a step of 語句合併 does, in a sentence; the five 自動判斷 steps share one.</summary>
-    public static string MergeLevelDescription(int level) => LocalizationService.Get(level switch
+    /// <summary>What a value of 語句合併 does, in a sentence.</summary>
+    public static string SentenceMergeDescription(RealtimeSentenceMerge merge) => LocalizationService.Get(merge switch
     {
-        <= RealtimeMergeLevels.Min => "S.Realtime.ProfileMergeNoneDesc",
-        RealtimeMergeLevels.Items => "S.Realtime.ProfileMergeItemsDesc",
-        RealtimeMergeLevels.Passage => "S.Realtime.ProfileMergePassageDesc",
-        >= RealtimeMergeLevels.Max => "S.Realtime.ProfileMergeBlockDesc",
+        RealtimeSentenceMerge.None => "S.Realtime.ProfileMergeNoneDesc",
+        RealtimeSentenceMerge.Items => "S.Realtime.ProfileMergeItemsDesc",
+        RealtimeSentenceMerge.Passage => "S.Realtime.ProfileMergePassageDesc",
+        RealtimeSentenceMerge.All => "S.Realtime.ProfileMergeBlockDesc",
         _ => "S.Realtime.ProfileMergeAutoDesc",
     });
 

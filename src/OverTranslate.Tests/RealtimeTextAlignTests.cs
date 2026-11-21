@@ -136,7 +136,7 @@ public class RealtimeTextAlignTests
     {
         var settings = SettingsService.Parse(
             """
-            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","MergeLevel":7},{"Id":"b","Name":"B","BasedOn":"subtitle","Align":"Left"}]}}
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","BasedOn":"interface","SentenceMerge":"Passage"},{"Id":"b","Name":"B","BasedOn":"subtitle","Align":"Left"}]}}
             """);
 
         Assert.Null(settings.Realtime.Profiles[0].Align);

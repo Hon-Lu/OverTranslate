@@ -497,20 +497,15 @@
     <sys:String x:Key="S.Realtime.ProfilePerGroup">依文字內容調整</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManual">手動</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMerge">語句合併</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeHint">上下語句被拆開時往右調，較容易合併；不相關的行被合在一起時往左調，較容易分開。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">當上下語句被誤拆開時，可往右調整，讓文字更容易合併；不相關的文字常被合在一起時，則可往左調整，讓文字更容易分開。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNone">不合併</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">逐項</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">自動判斷</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">自動判斷・{0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean1">偏逐項</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean2">稍偏逐項</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean4">稍偏整段</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean5">偏整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassage">整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">合併</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">每行獨立翻譯，不合併上下行。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">每行獨立翻譯，只有明顯是同一句時才會上下合併。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">依文字排版與內容判斷是否合併，往右較容易合併上下行。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">依照文字的排版與內容，自動選擇合適的合併方式。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大小與位置相近的上下多行語句，會優先合併成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">不受字級與對齊限制，位置相近的上下語句都會合併成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">譯文對齊</sys:String>
@@ -539,7 +534,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">短句辨識門檻</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">僅適用於未滿 10 字的文字。調高可減少誤判，但部分較短的文字可能無法辨識；調低則能辨識更多文字，但也可能增加誤判。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">關閉</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">即時翻譯已中止：{0}</sys:String>

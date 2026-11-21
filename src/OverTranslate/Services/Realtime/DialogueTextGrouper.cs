@@ -43,7 +43,7 @@ internal static class DialogueTextGrouper
     /// mode reads with (see <see cref="ResolvedProfile"/>).
     /// </param>
     /// <param name="merge">
-    /// 合併, 合併程度's last step: stacked lines join regardless of size and alignment, and across a
+    /// 合併, 語句合併's last value: stacked lines join regardless of size and alignment, and across a
     /// short item beside one of them — see <see cref="NextRowMerging"/> and <see cref="AsideOnly"/>.
     /// Pieces of one row are joined as always.
     /// </param>
@@ -430,7 +430,7 @@ internal static class DialogueTextGrouper
     }
 
     /// <summary>
-    /// 合併's stacking test (合併程度's last step): <see cref="NextRow"/> without the size and the
+    /// 合併's stacking test (語句合併's last value): <see cref="NextRow"/> without the size and the
     /// alignment tests. The gap, the overlap above and the shared column still part rows.
     /// </summary>
     /// <remarks>

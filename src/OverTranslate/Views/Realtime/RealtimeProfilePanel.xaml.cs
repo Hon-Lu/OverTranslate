@@ -512,8 +512,8 @@ internal partial class RealtimeProfilePanel : Window, IVisibleBounds
     {
         switch (row.Param)
         {
-            case ProfileParam.MergeLevel:
-                row.Slider!.Value = filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle;
+            case ProfileParam.SentenceMerge:
+                row.Slider!.Value = (int)(filled.SentenceMerge ?? RealtimeSentenceMerge.Automatic);
                 break;
             case ProfileParam.Align:
                 row.Switch!.SelectedIndex = AlignIndex(filled.Align);
@@ -552,7 +552,7 @@ internal partial class RealtimeProfilePanel : Window, IVisibleBounds
 
     private void BuildRows()
     {
-        Add(MainRows, SliderRow(ProfileParam.MergeLevel, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max, 1));
+        Add(MainRows, SliderRow(ProfileParam.SentenceMerge, (int)RealtimeSentenceMerge.None, (int)RealtimeSentenceMerge.All, 1));
         Add(MainRows, AlignRow());
         Add(MainRows, TickRow(ProfileParam.FilterNumbersAndAbbreviations));
         Add(MainRows, SliderRow(ProfileParam.SettleSeconds, 0, Math.Round(RealtimeProfile.MaxSettleSeconds / PollSeconds), 1, automatic: true));
