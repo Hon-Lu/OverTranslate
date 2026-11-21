@@ -429,7 +429,7 @@
     <sys:String x:Key="S.Realtime.ProfileStandard">标准</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitle">字幕・漫画</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterface">游戏界面・聊天室</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileStandardSummary">根据画面内容自动调整——满足日常使用需求，建议优先使用</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">根据画面自动调整——字幕、漫画、游戏界面均适用</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">连续阅读的文字——视频字幕、剧情对话、漫画对白</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">各自独立的文字——游戏菜单、状态栏、聊天室</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">适合大多数画面，会根据文字内容与排列决定是否合并。如果对话被拆开，或菜单文字被合在一起，可以改用其他模式。</sys:String>

@@ -433,7 +433,7 @@
     <sys:String x:Key="S.Realtime.ProfileStandard">표준</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitle">자막・만화</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterface">게임 UI・채팅</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileStandardSummary">화면 내용에 따라 자동 조정 — 일반적인 용도에 적합, 우선 사용 권장</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">화면에 맞춰 자동 조정 — 자막, 만화, 게임 UI 모두 사용 가능</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">이어서 읽는 글 — 영상 자막, 스토리 대사, 만화 대사</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">서로 독립된 텍스트 — 게임 메뉴, 상태 표시줄, 채팅</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">대부분의 화면에 적합하며, 텍스트의 내용과 배치를 보고 병합 여부를 결정합니다. 대사가 나뉘거나 메뉴 항목이 하나로 합쳐지면 다른 모드를 선택하세요.</sys:String>

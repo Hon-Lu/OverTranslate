@@ -426,7 +426,7 @@
     <sys:String x:Key="S.Realtime.ProfileStandard">Стандартный</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitle">Субтитры и манга</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterface">Игровой интерфейс и чат</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileStandardSummary">Подстраивается под содержимое экрана — подходит для повседневных задач, лучше начать с него</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileStandardSummary">Подстраивается под экран — подходит для субтитров, манги и игровых интерфейсов</sys:String>
     <sys:String x:Key="S.Realtime.ProfileSubtitleSummary">Связный текст — субтитры к видео, сюжетные диалоги, реплики в манге</sys:String>
     <sys:String x:Key="S.Realtime.ProfileInterfaceSummary">Отдельные надписи — игровые меню, строки состояния, чат</sys:String>
     <sys:String x:Key="S.Realtime.ProfileStandardGuidance">Подходит для большинства экранов: объединять ли строки, решается по содержанию и расположению текста. Если диалог разбивается или пункты меню сливаются, выберите другой режим.</sys:String>
