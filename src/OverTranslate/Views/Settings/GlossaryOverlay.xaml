@@ -365,10 +365,19 @@
                                             <TextBlock Text="{DynamicResource S.Glossary.OpenParen}" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
                                             <ComboBox x:Name="LanguageBox" Style="{StaticResource ModernComboBox}" Height="28" MinWidth="120"
                                                       ctl:ComboBoxSearch.IsEnabled="True"
-                                                      DisplayMemberPath="Display" SelectedValuePath="Code"
+                                                      SelectedValuePath="Code"
                                                       AutomationProperties.Name="{DynamicResource S.Glossary.TargetLanguage}"
                                                       AutomationProperties.AutomationId="GlossaryLanguageBox"
-                                                      SelectionChanged="LanguageBox_SelectionChanged"/>
+                                                      SelectionChanged="LanguageBox_SelectionChanged">
+                                                <!-- The interface's own name alone: a heading has room for one, and
+                                                     the style's two-language Display pushed the closing bracket off. -->
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding ShortName}" FontFamily="{DynamicResource AppFont}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
                                             <TextBlock Text="{DynamicResource S.Glossary.CloseParen}" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Grid>
