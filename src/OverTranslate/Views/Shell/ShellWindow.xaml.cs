@@ -145,6 +145,7 @@ public partial class ShellWindow : Window
         // Subscribed once here rather than per open, so the handler is not stacked up by a user who
         // opens the service panel more than once.
         ServiceSettings.Closed += (_, _) => _settingsPage.RefreshServiceTiles();
+        Glossary.Closed += (_, _) => _settingsPage.RefreshGlossaryRow();
         DiagnosticNote.Closed += (_, result) => _settingsPage.ReportDiagnosticUpload(result);
         _settingsPage.CurrentSectionChanged += (_, section) => MarkSettingsSection(section);
 
@@ -724,6 +725,9 @@ public partial class ShellWindow : Window
 
     /// <summary>Opens 替換翻譯's languages over the shell, for the same reason as the service panel.</summary>
     public void OpenQuickTranslateSettings() => QuickTranslateSettings.Open();
+
+    /// <summary>Opens 詞彙表 over the shell, from 管理 on its settings row.</summary>
+    public void OpenGlossary() => Glossary.Open();
 
     /// <summary>
     /// Opens 變更模型存放位置 over everything: from the settings page, and from the AI translation

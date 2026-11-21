@@ -261,6 +261,28 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
+    <!-- 詞彙表 (#228): LocalAiMarkImage's tile and gradient with an open book on it in white, so it
+         reads as part of the AI group it sits in and is drawn the way the marks beside it are - solid
+         shapes, no strokes, no font glyph (Windows 10's Segoe MDL2 Assets lacks some). -->
+    <DrawingImage x:Key="GlossaryMarkImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4FC3FF" Offset="0"/>
+                            <GradientStop Color="#7B61FF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,24,24" RadiusX="5.5" RadiusY="5.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="White"
+                                 Geometry="M5,7.3 C6.9,6.5 9.3,6.5 11.2,7.5 V17.5 C9.3,16.6 6.9,16.6 5,17.3 Z M19,7.3 C17.1,6.5 14.7,6.5 12.8,7.5 V17.5 C14.7,16.6 17.1,16.6 19,17.3 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
     <!-- 本機 AI 翻譯: drawn as outlines rather than set in a font, and with A and I cut to the
          same top and bottom, so the two letters read as one height at the size it is shown. -->
     <DrawingImage x:Key="LocalAiMarkImage">

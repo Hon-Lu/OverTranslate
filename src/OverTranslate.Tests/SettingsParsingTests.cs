@@ -911,7 +911,7 @@ public class SettingsParsingTests
             captureGroup > lastFlatKey,
             "grouped settings must be written after every flat one");
         Assert.Equal(
-            ["Capture", "QuickLookup", "QuickTranslate", "Realtime", "OcrDebug", "OpenAi", "LocalAi"], rootKeys.TakeLast(7));
+            ["Capture", "QuickLookup", "QuickTranslate", "Realtime", "OcrDebug", "OpenAi", "LocalAi", "Glossary"], rootKeys.TakeLast(8));
     }
 
     /// <summary>

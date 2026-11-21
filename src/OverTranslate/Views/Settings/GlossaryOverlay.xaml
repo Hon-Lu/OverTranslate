@@ -1,0 +1,479 @@
+<UserControl x:Class="OverTranslate.Views.Settings.GlossaryOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:OverTranslate.Controls"
+             Visibility="Collapsed"
+             Focusable="True">
+    <UserControl.Resources>
+        <!-- ModernTextBox with a grey line of its own while it is empty: the add row's example and the
+             paste box's two example lines. Taken from Tag. -->
+        <Style x:Key="HintBox" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <Grid>
+                                <TextBlock x:Name="Hint"
+                                           Text="{TemplateBinding Tag}"
+                                           Margin="{TemplateBinding Padding}"
+                                           Padding="2,0,0,0"
+                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           Foreground="{DynamicResource AppTextSecondary}"
+                                           Opacity="0.75"
+                                           IsHitTestVisible="False"
+                                           Visibility="Collapsed"/>
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
+                                              Focusable="False"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="Hint" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppInputFocusBorder}"/>
+                                <Setter TargetName="Root" Property="BorderThickness" Value="1.5"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- An entry's own two boxes: borderless until pointed at or focused, so a long list reads as
+             a table rather than as a column of fields. -->
+        <Style x:Key="CellBox" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+            <Setter Property="Height"          Value="30"/>
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="BorderBrush"     Value="Transparent"/>
+            <Setter Property="MaxLength"       Value="40"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppInputBorder}"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppInputBg}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="Arrow" TargetType="TextBlock">
+            <Setter Property="Text"                Value="→"/>
+            <Setter Property="FontFamily"          Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"            Value="13"/>
+            <Setter Property="Foreground"          Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+        </Style>
+
+        <Style x:Key="Small" TargetType="TextBlock" BasedOn="{StaticResource FieldHint}">
+            <Setter Property="FontSize"     Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- A row of the glossary list on the left: the one being edited is a raised card with the
+             accent at its edge, as the modes list beside the realtime page marks its own. -->
+        <Style x:Key="ListRow" TargetType="ListBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Row" Background="Transparent" BorderBrush="Transparent"
+                                BorderThickness="1" CornerRadius="6" Padding="10,7">
+                            <Grid>
+                                <Border x:Name="Edge" Width="3" CornerRadius="1.5" Margin="-10,2,0,2"
+                                        HorizontalAlignment="Left" Background="{DynamicResource AppAccent}"
+                                        Visibility="Collapsed"/>
+                                <ContentPresenter/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource AppSubtleBorder}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource AppSurfaceBg}"/>
+                                <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+                                <Setter TargetName="Edge" Property="Visibility" Value="Visible"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- An entry row: nothing of the list's own selection, the boxes are what is used. -->
+        <Style x:Key="EntryRow" TargetType="ListBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border BorderBrush="{DynamicResource AppSubtleBorder}" BorderThickness="0,0,0,1" Padding="6,3">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Pill" TargetType="Border">
+            <Setter Property="BorderBrush"     Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius"    Value="8"/>
+            <Setter Property="Padding"         Value="6,0"/>
+            <Setter Property="Margin"          Value="6,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid x:Name="Scrim" Background="#8C000000" MouseLeftButtonDown="Scrim_MouseLeftButtonDown">
+            <Border x:Name="Card"
+                    Width="900"
+                    Margin="24"
+                    UseLayoutRounding="True"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    CornerRadius="12"
+                    Background="{DynamicResource AppCardBg}"
+                    BorderBrush="{DynamicResource AppBorder}"
+                    BorderThickness="1"
+                    RenderTransformOrigin="0.5,0.5"
+                    MouseLeftButtonDown="Card_MouseLeftButtonDown">
+                <Border.RenderTransform>
+                    <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
+                </Border.Effect>
+                <Grid Margin="24,18,24,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image Source="{StaticResource GlossaryMarkImage}" Width="20" Height="20" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource S.Glossary.Title}"
+                                       FontFamily="{DynamicResource AppFont}" FontSize="17" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button x:Name="CloseBtn" Style="{StaticResource OverlayCloseButton}"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-8,0"
+                                ToolTip="{DynamicResource S.Common.Close}"
+                                AutomationProperties.AutomationId="GlossaryCloseBtn"
+                                Click="CloseBtn_Click"/>
+                    </Grid>
+
+                    <TextBlock Grid.Row="1" Text="{DynamicResource S.Glossary.Scope}" Style="{StaticResource Small}" Margin="0,8,0,14"/>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="18"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- The glossaries. -->
+                        <DockPanel Grid.Column="0">
+                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="NewBtn" Style="{StaticResource FlatButton}" Height="32" MinWidth="80"
+                                        Content="{DynamicResource S.Glossary.New}"
+                                        AutomationProperties.AutomationId="GlossaryNewBtn" Click="NewBtn_Click"/>
+                                <Button x:Name="ImportBtn" Style="{StaticResource FlatButton}" Height="32" MinWidth="80" Margin="8,0,0,0"
+                                        Content="{DynamicResource S.Glossary.Import}"
+                                        AutomationProperties.AutomationId="GlossaryImportBtn" Click="ImportBtn_Click"/>
+                            </StackPanel>
+                            <TextBlock x:Name="NoListsText" DockPanel.Dock="Top" Text="{DynamicResource S.Glossary.NoLists}"
+                                       Style="{StaticResource Small}" Margin="10,6,0,0" Visibility="Collapsed"/>
+                            <ListBox x:Name="ListsBox"
+                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ItemContainerStyle="{StaticResource ListRow}"
+                                     AutomationProperties.AutomationId="GlossaryLists"
+                                     SelectionChanged="ListsBox_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontFamily="{DynamicResource AppFont}" FontSize="14"
+                                                           Foreground="{DynamicResource AppTextPrimary}" TextTrimming="CharacterEllipsis" MaxWidth="130"/>
+                                                <TextBlock Text="{DynamicResource S.Glossary.InUse}" Visibility="{Binding InUseVisibility}"
+                                                           FontFamily="{DynamicResource AppFont}" FontSize="11" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource AppAccent}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <TextBlock Text="{Binding CountText}" Style="{StaticResource Small}" VerticalAlignment="Center"/>
+                                                <Border Style="{StaticResource Pill}">
+                                                    <TextBlock Text="{Binding LanguageName}" Style="{StaticResource Small}" FontSize="11"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+
+                        <!-- The glossary being edited. -->
+                        <Grid x:Name="Editor" Grid.Column="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Grid.Row="0">
+                                <TextBlock Text="{DynamicResource S.Glossary.Name}" Style="{StaticResource FieldLabel}"
+                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox x:Name="NameBox" Style="{StaticResource ModernTextBox}" MaxLength="40"
+                                         AutomationProperties.Name="{DynamicResource S.Glossary.Name}"
+                                         AutomationProperties.AutomationId="GlossaryNameBox"
+                                         TextChanged="NameBox_TextChanged"/>
+                            </DockPanel>
+
+                            <DockPanel Grid.Row="1" Margin="0,10,0,0">
+                                <Button x:Name="DeleteBtn" DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Height="34"
+                                        Margin="8,0,0,0" Padding="12,0" Foreground="{DynamicResource AppError}"
+                                        Content="{DynamicResource S.Glossary.Delete}"
+                                        AutomationProperties.AutomationId="GlossaryDeleteBtn" Click="DeleteBtn_Click"/>
+                                <Button x:Name="ExportBtn" DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Height="34"
+                                        Margin="8,0,0,0" MinWidth="80"
+                                        Content="{DynamicResource S.Glossary.Export}"
+                                        AutomationProperties.AutomationId="GlossaryExportBtn" Click="ExportBtn_Click"/>
+                                <Button x:Name="PasteBtn" DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Height="34"
+                                        Margin="8,0,0,0" MinWidth="80"
+                                        Content="{DynamicResource S.Glossary.PasteMany}"
+                                        AutomationProperties.AutomationId="GlossaryPasteBtn" Click="PasteBtn_Click"/>
+                                <TextBox x:Name="SearchBox" Style="{StaticResource HintBox}" Tag="{DynamicResource S.Glossary.Search}"
+                                         AutomationProperties.Name="{DynamicResource S.Glossary.Search}"
+                                         AutomationProperties.AutomationId="GlossarySearchBox"
+                                         TextChanged="SearchBox_TextChanged"/>
+                            </DockPanel>
+
+                            <!-- 貼上多筆: the text, what it is read as, then 加入. -->
+                            <Border x:Name="PastePanel" Grid.Row="2" Margin="0,10,0,0" Padding="12" CornerRadius="8"
+                                    Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}"
+                                    BorderThickness="1" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBox x:Name="PasteBox" Style="{StaticResource HintBox}"
+                                             Height="Auto" MinHeight="84" MaxHeight="160" Padding="9,7"
+                                             AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                                             VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
+                                             FontFamily="Cascadia Mono, Consolas, Microsoft JhengHei UI"
+                                             AutomationProperties.Name="{DynamicResource S.Glossary.PasteMany}"
+                                             AutomationProperties.AutomationId="GlossaryPasteBox"
+                                             TextChanged="PasteBox_TextChanged"/>
+                                    <TextBlock Text="{DynamicResource S.Glossary.PasteHelp}" Style="{StaticResource Small}" Margin="2,6,0,0"/>
+                                    <Border x:Name="PastePreview" Margin="0,8,0,0" CornerRadius="6" BorderThickness="1"
+                                            BorderBrush="{DynamicResource AppSubtleBorder}" Background="{DynamicResource AppCardBg}"
+                                            Visibility="Collapsed">
+                                        <DockPanel>
+                                            <Grid DockPanel.Dock="Top" Margin="8,5">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="36"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{DynamicResource S.Glossary.PasteLine}" Style="{StaticResource Small}"/>
+                                                <TextBlock Grid.Column="1" Text="{DynamicResource S.Glossary.Source}" Style="{StaticResource Small}"/>
+                                                <TextBlock Grid.Column="2" Text="{DynamicResource S.Glossary.Target}" Style="{StaticResource Small}"/>
+                                            </Grid>
+                                            <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl x:Name="PasteLines" AutomationProperties.AutomationId="GlossaryPasteLines">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border BorderBrush="{DynamicResource AppSubtleBorder}" BorderThickness="0,1,0,0"
+                                                                    Padding="8,4" Background="{Binding RowBackground}">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="36"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Text="{Binding Number}" Style="{StaticResource Small}" Foreground="{Binding NumberBrush}"/>
+                                                                    <TextBlock Grid.Column="1" Grid.ColumnSpan="{Binding SourceSpan}" Text="{Binding Source}"
+                                                                               FontFamily="{DynamicResource AppFont}" FontSize="12.5"
+                                                                               Foreground="{Binding SourceBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+                                                                    <TextBlock Grid.Column="2" FontFamily="{DynamicResource AppFont}" FontSize="12.5"
+                                                                               Foreground="{DynamicResource AppTextPrimary}" TextTrimming="CharacterEllipsis"
+                                                                               Visibility="{Binding TargetVisibility}">
+                                                                        <Run Text="{Binding Target, Mode=OneWay}"/><Run Text="{Binding Replaces, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                                                    </TextBlock>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DockPanel>
+                                    </Border>
+                                    <DockPanel Margin="0,8,0,0">
+                                        <Button x:Name="PasteAddBtn" DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Height="32"
+                                                MinWidth="80" Margin="8,0,0,0" Content="{DynamicResource S.Glossary.PasteAdd}" IsEnabled="False"
+                                                AutomationProperties.AutomationId="GlossaryPasteAddBtn" Click="PasteAddBtn_Click"/>
+                                        <Button x:Name="PasteCancelBtn" DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Height="32"
+                                                MinWidth="80" Content="{DynamicResource S.Common.Cancel}"
+                                                AutomationProperties.AutomationId="GlossaryPasteCancelBtn" Click="PasteCancelBtn_Click"/>
+                                        <TextBlock x:Name="PasteSummary" Style="{StaticResource Small}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock x:Name="AppliesText" Grid.Row="3" Style="{StaticResource Small}" Margin="2,12,0,6"
+                                       AutomationProperties.AutomationId="GlossaryAppliesText"/>
+
+                            <!-- The entries: 原文 → 譯文, the language the 譯文 column is written in picked on its
+                                 own heading - it describes that column, so it is not read as the work's language
+                                 or as the language translations go into. -->
+                            <Border Grid.Row="4" CornerRadius="8" BorderThickness="1" MinHeight="160"
+                                    BorderBrush="{DynamicResource AppSubtleBorder}" Background="{DynamicResource AppSurfaceBg}">
+                                <DockPanel>
+                                    <Grid DockPanel.Dock="Top" Margin="12,6,12,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="32"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource S.Glossary.Source}" Style="{StaticResource FieldLabel}"
+                                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource Arrow}"/>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="4,0,0,0">
+                                            <TextBlock Text="{DynamicResource S.Glossary.Target}" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource S.Glossary.OpenParen}" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="LanguageBox" Style="{StaticResource ModernComboBox}" Height="28" MinWidth="120"
+                                                      ctl:ComboBoxSearch.IsEnabled="True"
+                                                      DisplayMemberPath="Display" SelectedValuePath="Code"
+                                                      AutomationProperties.Name="{DynamicResource S.Glossary.TargetLanguage}"
+                                                      AutomationProperties.AutomationId="GlossaryLanguageBox"
+                                                      SelectionChanged="LanguageBox_SelectionChanged"/>
+                                            <TextBlock Text="{DynamicResource S.Glossary.CloseParen}" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid DockPanel.Dock="Top" Margin="6,0,6,0" Background="Transparent">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="32"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="AddSourceBox" Style="{StaticResource HintBox}" Height="30" MaxLength="40"
+                                                 AutomationProperties.Name="{DynamicResource S.Glossary.Source}"
+                                                 AutomationProperties.AutomationId="GlossaryAddSourceBox"
+                                                 PreviewKeyDown="AddSourceBox_PreviewKeyDown"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource Arrow}"/>
+                                        <TextBox x:Name="AddTargetBox" Grid.Column="2" Style="{StaticResource HintBox}" Height="30" MaxLength="40"
+                                                 AutomationProperties.Name="{DynamicResource S.Glossary.Target}"
+                                                 AutomationProperties.AutomationId="GlossaryAddTargetBox"
+                                                 PreviewKeyDown="AddTargetBox_PreviewKeyDown"/>
+                                    </Grid>
+                                    <TextBlock x:Name="EmptyText" DockPanel.Dock="Top" Text="{DynamicResource S.Glossary.Empty}"
+                                               Style="{StaticResource Small}" HorizontalAlignment="Center" Margin="0,18,0,12"
+                                               Visibility="Collapsed"/>
+                                    <ListBox x:Name="EntriesBox" Margin="0,6,0,4"
+                                             Background="Transparent" BorderThickness="0" Padding="0"
+                                             ItemContainerStyle="{StaticResource EntryRow}"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.CanContentScroll="True"
+                                             VirtualizingPanel.IsVirtualizing="True"
+                                             VirtualizingPanel.VirtualizationMode="Recycling"
+                                             KeyboardNavigation.TabNavigation="Continue"
+                                             AutomationProperties.AutomationId="GlossaryEntries">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="24"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="32"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Style="{StaticResource CellBox}" Text="{Binding Source, Mode=OneWay}" Tag="0"
+                                                             AutomationProperties.Name="{DynamicResource S.Glossary.Source}"
+                                                             LostKeyboardFocus="Cell_LostKeyboardFocus" PreviewKeyDown="Cell_PreviewKeyDown"/>
+                                                    <TextBlock Grid.Column="1" Style="{StaticResource Arrow}"/>
+                                                    <TextBox Grid.Column="2" Style="{StaticResource CellBox}" Text="{Binding Target, Mode=OneWay}" Tag="1"
+                                                             AutomationProperties.Name="{DynamicResource S.Glossary.Target}"
+                                                             LostKeyboardFocus="Cell_LostKeyboardFocus" PreviewKeyDown="Cell_PreviewKeyDown"/>
+                                                    <Button Grid.Column="3" Style="{StaticResource OverlayCloseButton}" Width="26" Height="26"
+                                                            Background="Transparent" HorizontalAlignment="Right"
+                                                            ToolTip="{DynamicResource S.Glossary.DeleteEntry}"
+                                                            AutomationProperties.Name="{DynamicResource S.Glossary.DeleteEntry}"
+                                                            Click="DeleteEntry_Click"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                        <TextBlock x:Name="CountText" DockPanel.Dock="Right" Style="{StaticResource Small}"
+                                   AutomationProperties.AutomationId="GlossaryCountText"/>
+                        <TextBlock x:Name="NoticeText" Style="{StaticResource Small}" Text="{DynamicResource S.Settings.AutoSaveHint}"/>
+                    </DockPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 刪除詞彙表 asks first, on the card the custom modes' overlay confirms deletion with. -->
+        <Grid x:Name="ConfirmLayer" Visibility="Collapsed" Background="#8C000000"
+              MouseLeftButtonDown="ConfirmScrim_MouseLeftButtonDown">
+            <Border Width="400" UseLayoutRounding="True" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    CornerRadius="12" Background="{DynamicResource AppCardBg}"
+                    BorderBrush="{DynamicResource AppBorder}" BorderThickness="1"
+                    MouseLeftButtonDown="Card_MouseLeftButtonDown">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel Margin="24,20,24,20">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18"
+                                   Foreground="{DynamicResource AppError}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Text="{DynamicResource S.Glossary.DeleteTitle}"
+                                   FontFamily="{DynamicResource AppFont}" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ConfirmMessage" FontFamily="{DynamicResource AppFont}"
+                               FontSize="{StaticResource AppFontSize}" Foreground="{DynamicResource AppTextSecondary}"
+                               LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,18"/>
+                    <!-- 取消 first and focused, so a key already held down does not land on 刪除. -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="ConfirmCancelBtn" Style="{StaticResource FlatButton}" Height="34" Padding="18,0"
+                                Content="{DynamicResource S.Common.Cancel}"
+                                AutomationProperties.AutomationId="GlossaryConfirmCancelBtn"
+                                Click="ConfirmCancel_Click"/>
+                        <Button Style="{StaticResource DangerButton}" Margin="10,0,0,0" Padding="18,0"
+                                Content="{DynamicResource S.Glossary.DeleteAction}"
+                                AutomationProperties.AutomationId="GlossaryConfirmDeleteBtn"
+                                Click="ConfirmDelete_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -269,6 +269,7 @@ public partial class SettingsPage : UserControl
 
             LoadProviderRows(s);
             RefreshServiceTiles();
+            RefreshGlossaryRow();
             UpdateScreenshotPathVisibility();
             UpdateDebugScopeAvailability();
             UpdateVerboseLoggingAvailability();
@@ -290,6 +291,68 @@ public partial class SettingsPage : UserControl
     {
         if (Window.GetWindow(this) is Shell.ShellWindow shell)
             shell.OpenQuickTranslateSettings();
+    }
+
+    // ── 詞彙表 (#228) ───────────────────────────────────────────────────────
+
+    private sealed record GlossaryChoice(string Id, string Display);
+
+    private bool _glossaryLoading;
+
+    /// <summary>
+    /// The glossary row: which one is in use, and a line when it is for a language nothing is
+    /// translated into.
+    /// </summary>
+    /// <remarks>
+    /// Public because the shell calls it when the glossary card closes. The line shows only when
+    /// neither 截圖翻譯's nor 即時翻譯's language is the glossary's: with one of them it is in use there,
+    /// and a warning that is true of one feature only would read as the glossary not working.
+    /// </remarks>
+    public void RefreshGlossaryRow()
+    {
+        var s = SettingsService.Instance.Current;
+        var glossary = s.Glossary;
+        _glossaryLoading = true;
+        try
+        {
+            GlossaryPicker.ItemsSource = new[] { new GlossaryChoice("", LocalizationService.Get("S.Glossary.None")) }
+                .Concat(glossary.Lists.Select(list => new GlossaryChoice(list.Id, LocalizationService.Format(
+                    "S.Glossary.ListItem",
+                    list.Name.Length > 0 ? list.Name : LocalizationService.Get("S.Glossary.Unnamed"),
+                    list.Entries.Count))))
+                .ToList();
+            GlossaryPicker.SelectedValue = glossary.Active?.Id ?? "";
+        }
+        finally
+        {
+            _glossaryLoading = false;
+        }
+
+        var active = glossary.Active;
+        var mismatch = active is not null
+            && !active.TargetLanguage.Equals(s.TargetLanguage, StringComparison.OrdinalIgnoreCase)
+            && !active.TargetLanguage.Equals(s.Realtime.TargetLanguage, StringComparison.OrdinalIgnoreCase);
+        GlossaryStatus.Visibility = mismatch ? Visibility.Visible : Visibility.Collapsed;
+        if (mismatch)
+            GlossaryStatus.Text = LocalizationService.Format("S.Glossary.Mismatch",
+                LanguageData.GetTargetDisplayName(active!.TargetLanguage),
+                LanguageData.GetTargetDisplayName(s.TargetLanguage));
+    }
+
+    private void GlossaryPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_glossaryLoading || GlossaryPicker.SelectedValue is not string id) return;
+        var copy = SettingsService.Instance.Current.Glossary.Clone();
+        copy.ActiveId = id;
+        SettingsService.Instance.Current.Glossary = copy;
+        SettingsService.Instance.Save();
+        RefreshGlossaryRow();
+    }
+
+    private void GlossaryManageBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is Shell.ShellWindow shell)
+            shell.OpenGlossary();
     }
 
     /// <summary>

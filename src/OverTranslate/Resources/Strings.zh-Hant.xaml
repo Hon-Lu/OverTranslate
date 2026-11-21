@@ -999,4 +999,54 @@
     <sys:String x:Key="S.Realtime.ProfileResetTitle">還原為範本？</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetConfirm">已修改的設定將還原為「{0}」範本的預設值。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">還原</sys:String>
+    <!-- 詞彙表 (#228) -->
+    <sys:String x:Key="S.Glossary.Title">詞彙表</sys:String>
+    <sys:String x:Key="S.Glossary.CardHint">翻譯時優先使用指定詞彙，讓專有名詞保持一致</sys:String>
+    <sys:String x:Key="S.Glossary.None">不使用</sys:String>
+    <sys:String x:Key="S.Glossary.ListItem">{0}（{1}）</sys:String>
+    <sys:String x:Key="S.Glossary.Manage">管理</sys:String>
+    <sys:String x:Key="S.Glossary.Mismatch">⚠ 譯文為{0}，目前翻譯成{1}，未套用</sys:String>
+    <sys:String x:Key="S.Glossary.Scope">該功能目前僅支援 AI 翻譯 (本地) 與 OpenAI 使用。</sys:String>
+    <sys:String x:Key="S.Glossary.New">新增</sys:String>
+    <sys:String x:Key="S.Glossary.Import">匯入</sys:String>
+    <sys:String x:Key="S.Glossary.NoLists">尚無詞彙表</sys:String>
+    <sys:String x:Key="S.Glossary.InUse">使用中</sys:String>
+    <sys:String x:Key="S.Glossary.Count">{0} 條</sys:String>
+    <sys:String x:Key="S.Glossary.Name">名稱</sys:String>
+    <sys:String x:Key="S.Glossary.Search">搜尋</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">貼上多筆</sys:String>
+    <sys:String x:Key="S.Glossary.Export">匯出</sys:String>
+    <sys:String x:Key="S.Glossary.Delete">刪除詞彙表</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">每行一條，原文與譯文以「=」分隔；試算表複製的兩欄可直接貼上。</sys:String>
+    <sys:String x:Key="S.Glossary.PasteLine">行</sys:String>
+    <sys:String x:Key="S.Glossary.Source">原文</sys:String>
+    <sys:String x:Key="S.Glossary.Target">譯文</sys:String>
+    <sys:String x:Key="S.Glossary.PasteAdd">加入</sys:String>
+    <sys:String x:Key="S.Glossary.Applies">此詞彙表僅在目標語言為「{0}」時套用。</sys:String>
+    <sys:String x:Key="S.Glossary.OpenParen">（</sys:String>
+    <sys:String x:Key="S.Glossary.CloseParen">）</sys:String>
+    <sys:String x:Key="S.Glossary.TargetLanguage">譯文語言</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">尚無條目。可逐條輸入，或以「貼上多筆」貼上兩欄表格。</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteEntry">刪除條目</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteTitle">刪除詞彙表</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteConfirm">確定刪除「{0}」詞彙表嗎？</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteAction">刪除</sys:String>
+    <sys:String x:Key="S.Glossary.Unnamed">未命名</sys:String>
+    <sys:String x:Key="S.Glossary.DefaultName">新詞彙表</sys:String>
+    <sys:String x:Key="S.Glossary.EntryCount">{0} / {1} 條</sys:String>
+    <sys:String x:Key="S.Glossary.Example">例：{0}</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFilter">詞彙表 (*.tsv;*.csv;*.txt)|*.tsv;*.csv;*.txt|所有檔案 (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFailed">無法讀取「{0}」。</sys:String>
+    <sys:String x:Key="S.Glossary.ImportNothing">「{0}」中沒有可加入的條目。</sys:String>
+    <sys:String x:Key="S.Glossary.Imported">已匯入「{0}」：{1} 條。</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFilter">詞彙表 (*.tsv)|*.tsv</sys:String>
+    <sys:String x:Key="S.Glossary.Exported">已匯出「{0}」。</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFailed">無法寫入「{0}」。</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">找不到「=」，不會加入</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">原文或譯文是空的，不會加入</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">超過 40 字，不會加入</sys:String>
+    <sys:String x:Key="S.Glossary.Replaces">取代「{0}」</sys:String>
+    <sys:String x:Key="S.Glossary.PasteCount">可加入 {0} 條</sys:String>
+    <sys:String x:Key="S.Glossary.PasteSeparator">；</sys:String>
+    <sys:String x:Key="S.Glossary.PasteBad">{0} 行無法解析</sys:String>
 </ResourceDictionary>

@@ -978,4 +978,54 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetTitle">Reset to template?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetConfirm">Changed settings will go back to the defaults of the “{0}” template.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">Reset</sys:String>
+    <!-- 詞彙表 (#228) -->
+    <sys:String x:Key="S.Glossary.Title">Glossary</sys:String>
+    <sys:String x:Key="S.Glossary.CardHint">Names and terms are translated as specified, so they stay consistent</sys:String>
+    <sys:String x:Key="S.Glossary.None">None</sys:String>
+    <sys:String x:Key="S.Glossary.ListItem">{0} ({1})</sys:String>
+    <sys:String x:Key="S.Glossary.Manage">Manage</sys:String>
+    <sys:String x:Key="S.Glossary.Mismatch">⚠ Translations are in {0}, but text is translated into {1}; not applied</sys:String>
+    <sys:String x:Key="S.Glossary.Scope">This feature currently works only with AI (Local) and OpenAI.</sys:String>
+    <sys:String x:Key="S.Glossary.New">New</sys:String>
+    <sys:String x:Key="S.Glossary.Import">Import</sys:String>
+    <sys:String x:Key="S.Glossary.NoLists">No glossaries yet</sys:String>
+    <sys:String x:Key="S.Glossary.InUse">In use</sys:String>
+    <sys:String x:Key="S.Glossary.Count">{0} entries</sys:String>
+    <sys:String x:Key="S.Glossary.Name">Name</sys:String>
+    <sys:String x:Key="S.Glossary.Search">Search</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">Paste multiple</sys:String>
+    <sys:String x:Key="S.Glossary.Export">Export</sys:String>
+    <sys:String x:Key="S.Glossary.Delete">Delete glossary</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">One entry per line, source and translation separated by “=”. Two columns copied from a spreadsheet can be pasted as they are.</sys:String>
+    <sys:String x:Key="S.Glossary.PasteLine">Line</sys:String>
+    <sys:String x:Key="S.Glossary.Source">Source</sys:String>
+    <sys:String x:Key="S.Glossary.Target">Translation</sys:String>
+    <sys:String x:Key="S.Glossary.PasteAdd">Add</sys:String>
+    <sys:String x:Key="S.Glossary.Applies">This glossary applies only when the target language is {0}.</sys:String>
+    <sys:String x:Key="S.Glossary.OpenParen" xml:space="preserve"> (</sys:String>
+    <sys:String x:Key="S.Glossary.CloseParen">)</sys:String>
+    <sys:String x:Key="S.Glossary.TargetLanguage">Translation language</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">No entries yet. Type them in one at a time, or paste a two-column table with Paste multiple.</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteEntry">Delete entry</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteTitle">Delete glossary</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteConfirm">Delete the glossary “{0}”?</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteAction">Delete</sys:String>
+    <sys:String x:Key="S.Glossary.Unnamed">Untitled</sys:String>
+    <sys:String x:Key="S.Glossary.DefaultName">New glossary</sys:String>
+    <sys:String x:Key="S.Glossary.EntryCount">{0} / {1} entries</sys:String>
+    <sys:String x:Key="S.Glossary.Example">e.g. {0}</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFilter">Glossary (*.tsv;*.csv;*.txt)|*.tsv;*.csv;*.txt|All files (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFailed">Couldn’t read “{0}”.</sys:String>
+    <sys:String x:Key="S.Glossary.ImportNothing">“{0}” has no entries to add.</sys:String>
+    <sys:String x:Key="S.Glossary.Imported">Imported “{0}”: {1} entries.</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFilter">Glossary (*.tsv)|*.tsv</sys:String>
+    <sys:String x:Key="S.Glossary.Exported">Exported “{0}”.</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFailed">Couldn’t write “{0}”.</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">No “=” found; not added</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">Source or translation is empty; not added</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">Longer than 40 characters; not added</sys:String>
+    <sys:String x:Key="S.Glossary.Replaces">replaces “{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.PasteCount">{0} can be added</sys:String>
+    <sys:String x:Key="S.Glossary.PasteSeparator" xml:space="preserve">; </sys:String>
+    <sys:String x:Key="S.Glossary.PasteBad">{0} lines can’t be read</sys:String>
 </ResourceDictionary>

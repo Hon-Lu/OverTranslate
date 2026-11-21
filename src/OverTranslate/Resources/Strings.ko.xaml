@@ -980,4 +980,54 @@
     <sys:String x:Key="S.Realtime.ProfileResetTitle">템플릿으로 되돌릴까요?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetConfirm">변경한 설정이 '{0}' 템플릿의 기본값으로 되돌아갑니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">되돌리기</sys:String>
+    <!-- 詞彙表 (#228) -->
+    <sys:String x:Key="S.Glossary.Title">용어집</sys:String>
+    <sys:String x:Key="S.Glossary.CardHint">지정한 번역어를 우선 사용해 고유명사 번역을 일관되게 유지합니다</sys:String>
+    <sys:String x:Key="S.Glossary.None">사용 안 함</sys:String>
+    <sys:String x:Key="S.Glossary.ListItem">{0} ({1})</sys:String>
+    <sys:String x:Key="S.Glossary.Manage">관리</sys:String>
+    <sys:String x:Key="S.Glossary.Mismatch">⚠ 번역문은 {0}이지만 현재 {1}(으)로 번역하고 있어 적용되지 않습니다</sys:String>
+    <sys:String x:Key="S.Glossary.Scope">이 기능은 현재 AI 번역 (로컬)과 OpenAI에서만 사용할 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.New">새로 만들기</sys:String>
+    <sys:String x:Key="S.Glossary.Import">가져오기</sys:String>
+    <sys:String x:Key="S.Glossary.NoLists">용어집이 없습니다</sys:String>
+    <sys:String x:Key="S.Glossary.InUse">사용 중</sys:String>
+    <sys:String x:Key="S.Glossary.Count">{0}개</sys:String>
+    <sys:String x:Key="S.Glossary.Name">이름</sys:String>
+    <sys:String x:Key="S.Glossary.Search">검색</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">여러 개 붙여넣기</sys:String>
+    <sys:String x:Key="S.Glossary.Export">내보내기</sys:String>
+    <sys:String x:Key="S.Glossary.Delete">용어집 삭제</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">한 줄에 하나씩, 원문과 번역문을 '='로 구분합니다. 스프레드시트에서 복사한 두 열은 그대로 붙여넣을 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.PasteLine">줄</sys:String>
+    <sys:String x:Key="S.Glossary.Source">원문</sys:String>
+    <sys:String x:Key="S.Glossary.Target">번역문</sys:String>
+    <sys:String x:Key="S.Glossary.PasteAdd">추가</sys:String>
+    <sys:String x:Key="S.Glossary.Applies">이 용어집은 대상 언어가 '{0}'일 때만 적용됩니다.</sys:String>
+    <sys:String x:Key="S.Glossary.OpenParen" xml:space="preserve"> (</sys:String>
+    <sys:String x:Key="S.Glossary.CloseParen">)</sys:String>
+    <sys:String x:Key="S.Glossary.TargetLanguage">번역문 언어</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">항목이 없습니다. 하나씩 입력하거나 '여러 개 붙여넣기'로 두 열짜리 표를 붙여넣을 수 있습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteEntry">항목 삭제</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteTitle">용어집 삭제</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteConfirm">'{0}' 용어집을 삭제할까요?</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteAction">삭제</sys:String>
+    <sys:String x:Key="S.Glossary.Unnamed">제목 없음</sys:String>
+    <sys:String x:Key="S.Glossary.DefaultName">새 용어집</sys:String>
+    <sys:String x:Key="S.Glossary.EntryCount">{0} / {1}개</sys:String>
+    <sys:String x:Key="S.Glossary.Example">예: {0}</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFilter">용어집 (*.tsv;*.csv;*.txt)|*.tsv;*.csv;*.txt|모든 파일 (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFailed">'{0}'을(를) 읽을 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.ImportNothing">'{0}'에 추가할 항목이 없습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.Imported">'{0}'을(를) 가져왔습니다: {1}개.</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFilter">용어집 (*.tsv)|*.tsv</sys:String>
+    <sys:String x:Key="S.Glossary.Exported">'{0}'을(를) 내보냈습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFailed">'{0}'에 쓸 수 없습니다.</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">'='가 없어 추가하지 않음</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">원문 또는 번역문이 비어 있어 추가하지 않음</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">40자를 넘어 추가하지 않음</sys:String>
+    <sys:String x:Key="S.Glossary.Replaces">'{0}' 대체</sys:String>
+    <sys:String x:Key="S.Glossary.PasteCount">{0}개 추가 가능</sys:String>
+    <sys:String x:Key="S.Glossary.PasteSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Glossary.PasteBad">{0}줄은 읽을 수 없음</sys:String>
 </ResourceDictionary>
