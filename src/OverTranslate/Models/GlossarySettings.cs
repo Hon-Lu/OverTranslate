@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OverTranslate.Models;
 
 /// <summary>The user's glossaries — names and terms with the translation to use — and which one is in use.</summary>
@@ -20,12 +22,20 @@ public class GlossarySettings
     public const int MaxNameLength = 40;
     public const int MaxTermLength = 40;
 
+    /// <summary>The glossaries themselves.</summary>
+    /// <remarks>
+    /// Kept in a file of their own, <c>glossaries.json</c>, not in the settings: they are what the
+    /// user typed and collected, and a settings file that goes bad, is reset or is handed over in a
+    /// problem report should not take them with it. See <see cref="Services.GlossaryStore"/>.
+    /// </remarks>
+    [JsonIgnore]
     public List<GlossaryList> Lists { get; set; } = [];
 
-    /// <summary>The <see cref="GlossaryList.Id"/> in use; empty for none.</summary>
+    /// <summary>The <see cref="GlossaryList.Id"/> in use; empty for none. The one part of this written to the settings.</summary>
     public string ActiveId { get; set; } = "";
 
     /// <summary>The glossary in use, or null.</summary>
+    [JsonIgnore]
     public GlossaryList? Active =>
         ActiveId.Length == 0 ? null : Lists.FirstOrDefault(list => list.Id == ActiveId);
 

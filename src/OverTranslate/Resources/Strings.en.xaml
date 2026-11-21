@@ -986,20 +986,18 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Glossary.InUse">In use</sys:String>
     <sys:String x:Key="S.Glossary.Count">{0} entries</sys:String>
     <sys:String x:Key="S.Glossary.Name">Name</sys:String>
-    <sys:String x:Key="S.Glossary.Search">Search</sys:String>
-    <sys:String x:Key="S.Glossary.PasteMany">Paste multiple</sys:String>
+    <sys:String x:Key="S.Glossary.Search">Search source or translation</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">Bulk add</sys:String>
     <sys:String x:Key="S.Glossary.Export">Export</sys:String>
     <sys:String x:Key="S.Glossary.Delete">Delete glossary</sys:String>
-    <sys:String x:Key="S.Glossary.PasteHelp">One entry per line, source and translation separated by “=”. Two columns copied from a spreadsheet can be pasted as they are.</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">One entry per line, source and translation separated by “=”. Rows copied from Excel or another table can also be pasted directly.</sys:String>
     <sys:String x:Key="S.Glossary.PasteLine">Line</sys:String>
     <sys:String x:Key="S.Glossary.Source">Source</sys:String>
     <sys:String x:Key="S.Glossary.Target">Translation</sys:String>
     <sys:String x:Key="S.Glossary.PasteAdd">Add</sys:String>
     <sys:String x:Key="S.Glossary.Applies">This glossary applies only when the target language is {0}.</sys:String>
-    <sys:String x:Key="S.Glossary.OpenParen" xml:space="preserve"> (</sys:String>
-    <sys:String x:Key="S.Glossary.CloseParen">)</sys:String>
     <sys:String x:Key="S.Glossary.TargetLanguage">Translation language</sys:String>
-    <sys:String x:Key="S.Glossary.Empty">No entries yet. Type them in one at a time, or paste a two-column table with Paste multiple.</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">No entries yet</sys:String>
     <sys:String x:Key="S.Glossary.DeleteEntry">Delete entry</sys:String>
     <sys:String x:Key="S.Glossary.DeleteTitle">Delete glossary</sys:String>
     <sys:String x:Key="S.Glossary.DeleteConfirm">Delete the glossary “{0}”?</sys:String>
@@ -1015,11 +1013,25 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Glossary.ExportFilter">Glossary (*.tsv)|*.tsv</sys:String>
     <sys:String x:Key="S.Glossary.Exported">Exported “{0}”.</sys:String>
     <sys:String x:Key="S.Glossary.ExportFailed">Couldn’t write “{0}”.</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemNoSeparator">No “=” found; not added</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemEmpty">Source or translation is empty; not added</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemTooLong">Longer than 40 characters; not added</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">Invalid format: no “=”</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">Invalid format: source or translation is empty</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">Invalid format: longer than 40 characters</sys:String>
     <sys:String x:Key="S.Glossary.Replaces">replaces “{0}”</sys:String>
     <sys:String x:Key="S.Glossary.PasteCount">{0} can be added</sys:String>
     <sys:String x:Key="S.Glossary.PasteSeparator" xml:space="preserve">; </sys:String>
     <sys:String x:Key="S.Glossary.PasteBad">{0} lines can’t be read</sys:String>
+    <sys:String x:Key="S.Glossary.EmptyHint">Type above and press Enter to add, or use Bulk add.</sys:String>
+    <sys:String x:Key="S.Glossary.NoMatch">No entries match “{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.MatchCount">{0} matching</sys:String>
+    <sys:String x:Key="S.Glossary.AddEntry">Add</sys:String>
+    <sys:String x:Key="S.Glossary.Updated">Updated “{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.Added">Added {0} entries</sys:String>
+    <sys:String x:Key="S.Glossary.Full">The {0}-entry limit has been reached</sys:String>
+    <sys:String x:Key="S.Glossary.BatchTarget">Adding to “{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.BatchPreviewEmpty">Type or paste to preview here.</sys:String>
+    <sys:String x:Key="S.Glossary.NewGlossary">New glossary</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteNamed">Delete “{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmTitle">Some lines have an invalid format</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmBody">{0} lines with an invalid format will be skipped. The other {1} entries will be added to the glossary.</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmBack">Go back</sys:String>
 </ResourceDictionary>

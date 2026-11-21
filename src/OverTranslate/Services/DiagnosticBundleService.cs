@@ -452,6 +452,8 @@ public static class DiagnosticBundleService
             $"logging   : verbose={SettingsService.Instance.Current.VerboseLogging} " +
             $"envOverride={LogLevelService.IsOverriddenByEnvironment}");
         sb.AppendLine($"settings  : {CollapseUserPaths(SettingsService.FilePath)}");
+        // The counts only: glossaries.json is the user's own names and is not put in the bundle.
+        sb.AppendLine($"glossary  : {SettingsService.Instance.DescribeGlossaries()}");
         sb.AppendLine($"logs      : {CollapseUserPaths(LogDirectory)}");
         sb.AppendLine($"exports   : {CollapseUserPaths(DefaultExportDirectory)}");
         // Written before any upload is attempted, so this says where it would go rather than where
