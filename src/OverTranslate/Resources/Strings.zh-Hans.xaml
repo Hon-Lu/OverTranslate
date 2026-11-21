@@ -477,7 +477,7 @@
     <sys:String x:Key="S.Realtime.ProfilePerGroup">依文字内容调整</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManual">手动</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMerge">语句合并</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeHint">上下语句被拆开时往右调，更容易合并；不相关的行被合在一起时往左调，更容易分开。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">当上下语句被误拆开时，可往右调整，让文字更容易合并；不相关的文字常被合在一起时，则可往左调整，让文字更容易分开。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNone">不合并</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">逐项</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">自动判断</sys:String>
@@ -485,7 +485,7 @@
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">合并</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">每行单独翻译，不合并上下行。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">每行单独翻译，只有明显是同一句时才会上下合并。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">根据文字排版与内容，逐组判断是否合并上下行。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">根据文字的排版与内容，自动选择合适的合并方式。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大小与位置相近的上下多行语句，会优先合并成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">不受字号与对齐限制，位置相近的上下语句都会合并成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">译文对齐</sys:String>

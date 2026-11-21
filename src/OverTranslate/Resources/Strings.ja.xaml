@@ -481,7 +481,7 @@
     <sys:String x:Key="S.Realtime.ProfilePerGroup">文字に合わせて調整</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManual">手動</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMerge">文の結合</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeHint">上下の文が分かれてしまうときは右へ動かすと結合しやすくなり、関係のない行がまとまってしまうときは左へ動かすと分かれやすくなります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">上下の文が誤って分かれてしまうときは右へ動かすと結合しやすくなり、関係のない文字がよくまとまってしまうときは左へ動かすと分かれやすくなります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNone">結合しない</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">項目ごと</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">自動判定</sys:String>
@@ -489,7 +489,7 @@
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">結合</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">1 行ずつ翻訳し、上下の行は結合しません。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">1 行ずつ翻訳し、明らかに同じ文のときだけ上下を結合します。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">文字の配置と内容から、グループごとに上下の行を結合するかを判断します。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">文字の配置と内容に合わせて、適切な結合方法を自動で選びます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大きさと位置が近い上下の複数行を、優先して 1 つの段落にまとめます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">文字サイズや揃え方に関係なく、位置が近い上下の文をすべて 1 つの段落にまとめます。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">訳文の揃え方</sys:String>

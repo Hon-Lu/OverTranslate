@@ -474,7 +474,7 @@
     <sys:String x:Key="S.Realtime.ProfilePerGroup">По содержимому</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManual">Вручную</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMerge">Объединение строк</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeHint">Сдвиньте вправо, если строки одной фразы разбиваются, — они будут объединяться охотнее; влево, если объединяются несвязанные строки, — они будут чаще разделяться.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">Если строки одной фразы ошибочно разбиваются, сдвиньте вправо — текст будет объединяться охотнее; если несвязанный текст часто объединяется, сдвиньте влево — он будет чаще разделяться.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNone">Без объединения</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">По пунктам</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">Авто</sys:String>
@@ -482,7 +482,7 @@
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">Объединять</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">Каждая строка переводится отдельно, строки не объединяются.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">Каждая строка переводится отдельно; объединяются только строки, которые явно составляют одну фразу.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Объединять ли строки, решается для каждой группы по расположению и содержанию текста.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Подходящий способ объединения выбирается автоматически по расположению и содержанию текста.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">Соседние строки похожего размера и положения в первую очередь объединяются в один фрагмент.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">Без учёта размера и выравнивания: все близко расположенные строки объединяются в один фрагмент.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">Выравнивание перевода</sys:String>

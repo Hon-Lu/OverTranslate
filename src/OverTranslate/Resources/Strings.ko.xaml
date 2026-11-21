@@ -481,7 +481,7 @@
     <sys:String x:Key="S.Realtime.ProfilePerGroup">텍스트 내용에 맞춤</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManual">수동</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMerge">문장 합치기</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeHint">위아래 문장이 나뉘면 오른쪽으로 옮겨 더 쉽게 합치고, 관련 없는 줄이 합쳐지면 왼쪽으로 옮겨 더 쉽게 나누세요.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeHint">위아래 문장이 잘못 나뉠 때는 오른쪽으로 옮기면 더 쉽게 합쳐지고, 관련 없는 텍스트가 자주 합쳐질 때는 왼쪽으로 옮기면 더 쉽게 나뉩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNone">합치지 않음</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">항목별</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">자동 판단</sys:String>
@@ -489,7 +489,7 @@
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">합치기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">줄마다 따로 번역하며 위아래 줄을 합치지 않습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">줄마다 따로 번역하고, 분명히 같은 문장일 때만 위아래를 합칩니다.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">텍스트 배치와 내용을 보고 그룹마다 위아래 줄을 합칠지 판단합니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">텍스트 배치와 내용에 맞춰 알맞은 합치기 방식을 자동으로 고릅니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">크기와 위치가 비슷한 위아래 여러 줄을 우선 하나의 문단으로 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">글자 크기와 정렬에 관계없이 위치가 가까운 위아래 문장을 모두 하나의 문단으로 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">번역문 정렬</sys:String>
