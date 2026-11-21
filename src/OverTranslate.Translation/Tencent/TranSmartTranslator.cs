@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using NLog;
 
 namespace OverTranslate.Translation.Tencent;
 
@@ -8,7 +9,7 @@ namespace OverTranslate.Translation.Tencent;
 /// 「騰訊翻譯」: Tencent's TranSmart (騰訊交互翻譯), many texts per request, no key and no signature.
 /// </summary>
 /// <remarks>
-/// <para>The endpoint the TranSmart site and browser extensions use (<c>transmart.qq.com/api/imt</c>),
+/// <para>The endpoint the TranSmart site and browser extensions use (<c>/api/imt</c>),
 /// added for users Google cannot reach. A list in, a list out, one answer per text — a line break
 /// inside a text stays inside its answer. Measured 2026-10-08 (<c>.ai/translation-service-analysis/
 /// youdao-transmart-handoff.md</c>): 4,250 characters in fifty texts was accepted and took 5.4 s,
@@ -21,11 +22,31 @@ namespace OverTranslate.Translation.Tencent;
 ///
 /// <para>A detected request is read as one language whatever is in it, so it is sent per script
 /// (<see cref="ScriptGroups"/>).</para>
+///
+/// <para>Served from two hosts, tried in turn when one cannot be reached — see <see cref="Hosts"/>.</para>
 /// </remarks>
 public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
 {
-    private const string Endpoint = "https://transmart.qq.com/api/imt";
-    private const string Referer = "https://transmart.qq.com/zh-CN/index";
+    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
+    /// <summary>The site's own host, then the one Tencent moved the site to.</summary>
+    /// <remarks>
+    /// <para>Measured 2026-11-21 (<c>.ai/endpoint-health/</c>): from Taiwan, and from anywhere public
+    /// DNS answers with the overseas server, transmart.qq.com has served a certificate that expired
+    /// on 2026-10-11, so every request failed the TLS handshake. Mainland China is answered with
+    /// another server whose certificate was renewed. yi.qq.com is the same site — its page names
+    /// itself TranSmart and posts to its own <c>/api/imt</c> — with the renewed certificate, and
+    /// answers the same request the same way, in the same 0.8 s.</para>
+    ///
+    /// <para>So the original host first, which keeps mainland users on the server that has always
+    /// worked for them, and the other only when a request cannot get through at all. Whichever
+    /// answered is remembered for the rest of the run, not saved: either host may be fixed or
+    /// retired without notice, and a fresh start asks the original again.</para>
+    /// </remarks>
+    internal static readonly string[] Hosts = ["transmart.qq.com", "yi.qq.com"];
+
+    // Index into Hosts of the one that last answered.
+    private int _host;
 
     /// <summary>How many times a request the server says it is too busy for is sent again.</summary>
     /// <remarks>1 in 22 requests answered <c>busy</c> when measured; the next one went through.</remarks>
@@ -112,13 +133,7 @@ public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
 
         for (var attempt = 0; ; attempt++)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, Endpoint)
-            {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json"),
-            };
-            request.Headers.Referrer = new Uri(Referer);
-
-            using var document = JsonDocument.Parse(await ReadAsync(request, cancellationToken));
+            using var document = JsonDocument.Parse(await PostAsync(payload, cancellationToken));
             var root = document.RootElement;
 
             var status = root.TryGetProperty("header", out var header) &&
@@ -149,6 +164,46 @@ public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
                     WithoutGloss(i < pieces.Count ? pieces[i] : "", RequireString(answer), targetLanguage), detected))
                 .ToList();
         }
+    }
+
+    /// <summary>
+    /// Sends to the host that last answered and, when it cannot be reached at all, once to the
+    /// other. Any answer, refusals included, is returned as it is, for the caller to read.
+    /// </summary>
+    /// <remarks>
+    /// Only a request that got no answer moves on: a handshake refused for an expired certificate,
+    /// a connection that failed. A status or an error inside a 200 came from TranSmart itself, and
+    /// the other host is the same service, so it would only say the same again.
+    /// </remarks>
+    private async Task<string> PostAsync(string payload, CancellationToken cancellationToken)
+    {
+        var first = Volatile.Read(ref _host);
+        try
+        {
+            return await PostAsync(Hosts[first], payload, cancellationToken);
+        }
+        catch (HttpRequestException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            var other = 1 - first;
+            var body = await PostAsync(Hosts[other], payload, cancellationToken);
+
+            // Only once the other host has answered, so a request that fails on both leaves the
+            // original in place for the next one.
+            if (Interlocked.CompareExchange(ref _host, other, first) == first)
+                Log.Info("{Engine}：{Host} 連不上（{Error}），改用 {Other}", Name, Hosts[first], ex.HttpRequestError, Hosts[other]);
+
+            return body;
+        }
+    }
+
+    private async Task<string> PostAsync(string host, string payload, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/api/imt")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Referrer = new Uri($"https://{host}/zh-CN/index");
+        return await ReadAsync(request, cancellationToken);
     }
 
     // 「攻擊力（Attack Force）」, 「Back（後退）」, 「장비 (Equipment)」: the whole answer is one
