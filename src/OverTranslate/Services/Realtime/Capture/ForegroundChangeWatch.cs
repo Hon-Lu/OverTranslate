@@ -6,8 +6,9 @@ namespace OverTranslate.Services.Realtime.Capture;
 
 /// <summary>
 /// Raises an action on the dispatcher each time another application's window comes to the
-/// foreground, so a 視窗擷取 session can put away the overlays of a source the user has just
-/// switched away from — see the session controller's UpdateBlockVisibility.
+/// foreground, so a session can put its layers back over a topmost window that has just come
+/// forward, and a 視窗擷取 session can put away the overlays of a source the user has just
+/// switched away from — see the session controller's OnForegroundChanged and UpdateBlockVisibility.
 /// </summary>
 /// <remarks>
 /// The stay-on-top tick asks the same question once a second, so on its own a covered source's

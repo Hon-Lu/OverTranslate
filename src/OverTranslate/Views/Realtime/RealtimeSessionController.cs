@@ -93,7 +93,7 @@ internal sealed class RealtimeSessionController
     // ending the session.
     private IRealtimeCaptureBackend? _capture;
     private GlobalEscapeHook? _escapeHook;
-    // 視窗擷取 only, for the whole session: see UpdateBlockVisibility.
+    // For the whole session: see OnForegroundChanged and UpdateBlockVisibility.
     private ForegroundChangeWatch? _foregroundWatch;
     private Window? _hiddenShell;
 
@@ -204,32 +204,67 @@ internal sealed class RealtimeSessionController
         _stayOnTop.Tick += (_, _) =>
         {
             LogStayOnTopStall();
-            UpdateBlockVisibility();
-
-            // Anything of ours opened over the session goes up first and the layers in under it —
-            // see RaiseCompanions for why they are not raised and then covered again.
-            var below = RaiseCompanions();
-            void Raise(Window window)
-            {
-                if (below == IntPtr.Zero || !AlwaysOnTop.PlaceBehind(window, below))
-                    AlwaysOnTop.Reassert(window);
-            }
-
-            // The control bar last, so it ends up above the block layers it may overlap. A block put
-            // away by UpdateBlockVisibility is left where it is: raising it is what used to keep it
-            // over the window that had covered its source.
-            foreach (var block in _blockWindows.Values)
-                if (block.IsVisible) Raise(block);
-            if (_edit is { } edit) Raise(edit);
-            if (_control is { } control) Raise(control);
-
-            // Every tooltip after every window: the control bar is owned by the edit layer, and
-            // raising it brings the layer up too — over any tooltip of the layer's raised before it.
-            if (_edit is { } editTips) AlwaysOnTop.ReassertToolTips(editTips);
-            if (_control is { } controlTips) AlwaysOnTop.ReassertToolTips(controlTips);
-
-            LogEditLayerCovered();
+            KeepLayersOnTop();
         };
+    }
+
+    /// <summary>
+    /// What the stay-on-top timer does each second, and what a switch of the foreground does at once:
+    /// settles which blocks belong on the screen, then puts the layers back at the front of the
+    /// topmost band.
+    /// </summary>
+    private void KeepLayersOnTop()
+    {
+        UpdateBlockVisibility();
+
+        // Anything of ours opened over the session goes up first and the layers in under it —
+        // see RaiseCompanions for why they are not raised and then covered again.
+        var below = RaiseCompanions();
+        void Raise(Window window)
+        {
+            if (below == IntPtr.Zero || !AlwaysOnTop.PlaceBehind(window, below))
+                AlwaysOnTop.Reassert(window);
+        }
+
+        // The control bar last, so it ends up above the block layers it may overlap. A block put
+        // away by UpdateBlockVisibility is left where it is: raising it is what used to keep it
+        // over the window that had covered its source.
+        foreach (var block in _blockWindows.Values)
+            if (block.IsVisible) Raise(block);
+        if (_edit is { } edit) Raise(edit);
+        if (_control is { } control) Raise(control);
+
+        // Every tooltip after every window: the control bar is owned by the edit layer, and
+        // raising it brings the layer up too — over any tooltip of the layer's raised before it.
+        if (_edit is { } editTips) AlwaysOnTop.ReassertToolTips(editTips);
+        if (_control is { } controlTips) AlwaysOnTop.ReassertToolTips(controlTips);
+
+        LogEditLayerCovered();
+    }
+
+    /// <summary>
+    /// Another application's window has come to the foreground: the layers go back on top now
+    /// rather than on the next tick.
+    /// </summary>
+    /// <remarks>
+    /// A topmost window that comes to the foreground — a game or player kept on top, clicked back
+    /// into — is put at the front of the topmost band, over the control bar. Left to the timer, the
+    /// bar stayed under it for up to a second, and a press on the bar in that time went to the
+    /// window over it: the bar's first press after clicking back into such a window did nothing,
+    /// about one time in three when the press came within a second (measured live: 13 of 36 with a
+    /// topmost full-screen window, each lost press with that window found over the button). Clicking
+    /// it again while it already has the foreground does not raise it again, which is why only the
+    /// first press was lost. The bar never takes the foreground (#358), so being raised is the only
+    /// way back over such a window, and this is the moment it is covered.
+    ///
+    /// Not while the layers are away: the timer is stopped then — for a capture standing on the
+    /// session, a pause of the stay-on-top work — and raising them would put them over the window
+    /// that asked them to leave.
+    /// </remarks>
+    private void OnForegroundChanged()
+    {
+        if (!_stayOnTop.IsEnabled) return;
+        KeepLayersOnTop();
     }
 
     /// <summary>
@@ -503,8 +538,7 @@ internal sealed class RealtimeSessionController
         _screenDeviceName = System.Windows.Forms.Screen.FromRectangle(request.ScreenBounds).DeviceName;
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
-        if (request.CaptureMode == Models.RealtimeCaptureMode.Window)
-            _foregroundWatch = ForegroundChangeWatch.Install(UpdateBlockVisibility);
+        _foregroundWatch = ForegroundChangeWatch.Install(OnForegroundChanged);
 
         EnterEditMode();
         StateChanged?.Invoke(this, EventArgs.Empty);
