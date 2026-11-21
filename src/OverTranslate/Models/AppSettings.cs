@@ -355,4 +355,7 @@ public class AppSettings
 
     /// <summary>What 本機 AI 翻譯 keeps, apart from the OpenAI-compatible service's own.</summary>
     public LocalAiSettings LocalAi { get; set; } = new();
+
+    /// <summary>The glossaries the two AI services translate names with — see <see cref="GlossarySettings"/>.</summary>
+    public GlossarySettings Glossary { get; set; } = new();
 }

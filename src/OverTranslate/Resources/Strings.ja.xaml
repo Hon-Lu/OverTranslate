@@ -974,4 +974,54 @@
     <sys:String x:Key="S.Realtime.ProfileResetTitle">テンプレートに戻しますか？</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetConfirm">変更した設定は「{0}」テンプレートの既定値に戻ります。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">戻す</sys:String>
+    <!-- 詞彙表 (#228) -->
+    <sys:String x:Key="S.Glossary.Title">用語集</sys:String>
+    <sys:String x:Key="S.Glossary.CardHint">指定した訳語を優先して使い、固有名詞の訳を統一します</sys:String>
+    <sys:String x:Key="S.Glossary.None">使用しない</sys:String>
+    <sys:String x:Key="S.Glossary.ListItem">{0}（{1}）</sys:String>
+    <sys:String x:Key="S.Glossary.Manage">管理</sys:String>
+    <sys:String x:Key="S.Glossary.Mismatch">⚠ 訳文は{0}ですが、現在の翻訳先は{1}のため適用されません</sys:String>
+    <sys:String x:Key="S.Glossary.Scope">この機能は現在 AI 翻訳 (ローカル) と OpenAI でのみ使用できます。</sys:String>
+    <sys:String x:Key="S.Glossary.New">新規</sys:String>
+    <sys:String x:Key="S.Glossary.Import">インポート</sys:String>
+    <sys:String x:Key="S.Glossary.NoLists">用語集はまだありません</sys:String>
+    <sys:String x:Key="S.Glossary.InUse">使用中</sys:String>
+    <sys:String x:Key="S.Glossary.Count">{0} 件</sys:String>
+    <sys:String x:Key="S.Glossary.Name">名前</sys:String>
+    <sys:String x:Key="S.Glossary.Search">検索</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">まとめて貼り付け</sys:String>
+    <sys:String x:Key="S.Glossary.Export">エクスポート</sys:String>
+    <sys:String x:Key="S.Glossary.Delete">用語集を削除</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">1 行に 1 件、原文と訳文を「=」で区切ります。表計算ソフトからコピーした 2 列はそのまま貼り付けられます。</sys:String>
+    <sys:String x:Key="S.Glossary.PasteLine">行</sys:String>
+    <sys:String x:Key="S.Glossary.Source">原文</sys:String>
+    <sys:String x:Key="S.Glossary.Target">訳文</sys:String>
+    <sys:String x:Key="S.Glossary.PasteAdd">追加</sys:String>
+    <sys:String x:Key="S.Glossary.Applies">この用語集は翻訳先が「{0}」のときのみ適用されます。</sys:String>
+    <sys:String x:Key="S.Glossary.OpenParen">（</sys:String>
+    <sys:String x:Key="S.Glossary.CloseParen">）</sys:String>
+    <sys:String x:Key="S.Glossary.TargetLanguage">訳文の言語</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">項目はまだありません。1 件ずつ入力するか、「まとめて貼り付け」で 2 列の表を貼り付けます。</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteEntry">項目を削除</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteTitle">用語集を削除</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteConfirm">用語集「{0}」を削除しますか？</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteAction">削除</sys:String>
+    <sys:String x:Key="S.Glossary.Unnamed">無題</sys:String>
+    <sys:String x:Key="S.Glossary.DefaultName">新しい用語集</sys:String>
+    <sys:String x:Key="S.Glossary.EntryCount">{0} / {1} 件</sys:String>
+    <sys:String x:Key="S.Glossary.Example">例：{0}</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFilter">用語集 (*.tsv;*.csv;*.txt)|*.tsv;*.csv;*.txt|すべてのファイル (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFailed">「{0}」を読み込めません。</sys:String>
+    <sys:String x:Key="S.Glossary.ImportNothing">「{0}」に追加できる項目がありません。</sys:String>
+    <sys:String x:Key="S.Glossary.Imported">「{0}」をインポートしました：{1} 件。</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFilter">用語集 (*.tsv)|*.tsv</sys:String>
+    <sys:String x:Key="S.Glossary.Exported">「{0}」をエクスポートしました。</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFailed">「{0}」に書き込めません。</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">「=」がないため追加しません</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">原文または訳文が空のため追加しません</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">40 文字を超えるため追加しません</sys:String>
+    <sys:String x:Key="S.Glossary.Replaces">「{0}」を置き換え</sys:String>
+    <sys:String x:Key="S.Glossary.PasteCount">{0} 件追加できます</sys:String>
+    <sys:String x:Key="S.Glossary.PasteSeparator">、</sys:String>
+    <sys:String x:Key="S.Glossary.PasteBad">{0} 行は読み取れません</sys:String>
 </ResourceDictionary>

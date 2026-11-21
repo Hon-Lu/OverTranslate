@@ -963,4 +963,54 @@
     <sys:String x:Key="S.Realtime.ProfileResetTitle">Вернуть к шаблону?</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetConfirm">Изменённые параметры вернутся к значениям шаблона «{0}» по умолчанию.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileResetAction">Вернуть</sys:String>
+    <!-- 詞彙表 (#228) -->
+    <sys:String x:Key="S.Glossary.Title">Глоссарий</sys:String>
+    <sys:String x:Key="S.Glossary.CardHint">Имена и термины переводятся так, как указано, и остаются единообразными</sys:String>
+    <sys:String x:Key="S.Glossary.None">Не использовать</sys:String>
+    <sys:String x:Key="S.Glossary.ListItem">{0} ({1})</sys:String>
+    <sys:String x:Key="S.Glossary.Manage">Управление</sys:String>
+    <sys:String x:Key="S.Glossary.Mismatch">⚠ Переводы на языке «{0}», а сейчас перевод на «{1}» — не применяется</sys:String>
+    <sys:String x:Key="S.Glossary.Scope">Функция пока работает только с ИИ (локальный) и OpenAI.</sys:String>
+    <sys:String x:Key="S.Glossary.New">Создать</sys:String>
+    <sys:String x:Key="S.Glossary.Import">Импорт</sys:String>
+    <sys:String x:Key="S.Glossary.NoLists">Глоссариев пока нет</sys:String>
+    <sys:String x:Key="S.Glossary.InUse">Используется</sys:String>
+    <sys:String x:Key="S.Glossary.Count">Записей: {0}</sys:String>
+    <sys:String x:Key="S.Glossary.Name">Название</sys:String>
+    <sys:String x:Key="S.Glossary.Search">Поиск</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">Вставить несколько</sys:String>
+    <sys:String x:Key="S.Glossary.Export">Экспорт</sys:String>
+    <sys:String x:Key="S.Glossary.Delete">Удалить глоссарий</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">По одной записи в строке, оригинал и перевод разделяются знаком «=». Два столбца, скопированные из таблицы, вставляются как есть.</sys:String>
+    <sys:String x:Key="S.Glossary.PasteLine">Стр.</sys:String>
+    <sys:String x:Key="S.Glossary.Source">Оригинал</sys:String>
+    <sys:String x:Key="S.Glossary.Target">Перевод</sys:String>
+    <sys:String x:Key="S.Glossary.PasteAdd">Добавить</sys:String>
+    <sys:String x:Key="S.Glossary.Applies">Этот глоссарий применяется, только когда язык перевода — «{0}».</sys:String>
+    <sys:String x:Key="S.Glossary.OpenParen" xml:space="preserve"> (</sys:String>
+    <sys:String x:Key="S.Glossary.CloseParen">)</sys:String>
+    <sys:String x:Key="S.Glossary.TargetLanguage">Язык перевода</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">Записей пока нет. Вводите по одной или вставьте таблицу из двух столбцов через «Вставить несколько».</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteEntry">Удалить запись</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteTitle">Удалить глоссарий</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteConfirm">Удалить глоссарий «{0}»?</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteAction">Удалить</sys:String>
+    <sys:String x:Key="S.Glossary.Unnamed">Без названия</sys:String>
+    <sys:String x:Key="S.Glossary.DefaultName">Новый глоссарий</sys:String>
+    <sys:String x:Key="S.Glossary.EntryCount">{0} / {1}</sys:String>
+    <sys:String x:Key="S.Glossary.Example">Пример: {0}</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFilter">Глоссарий (*.tsv;*.csv;*.txt)|*.tsv;*.csv;*.txt|Все файлы (*.*)|*.*</sys:String>
+    <sys:String x:Key="S.Glossary.ImportFailed">Не удалось прочитать «{0}».</sys:String>
+    <sys:String x:Key="S.Glossary.ImportNothing">В «{0}» нет записей для добавления.</sys:String>
+    <sys:String x:Key="S.Glossary.Imported">Импортировано из «{0}»: {1}.</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFilter">Глоссарий (*.tsv)|*.tsv</sys:String>
+    <sys:String x:Key="S.Glossary.Exported">Экспортировано: «{0}».</sys:String>
+    <sys:String x:Key="S.Glossary.ExportFailed">Не удалось записать «{0}».</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">Нет знака «=», не добавляется</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">Оригинал или перевод пуст, не добавляется</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">Длиннее 40 символов, не добавляется</sys:String>
+    <sys:String x:Key="S.Glossary.Replaces">заменит «{0}»</sys:String>
+    <sys:String x:Key="S.Glossary.PasteCount">Можно добавить: {0}</sys:String>
+    <sys:String x:Key="S.Glossary.PasteSeparator" xml:space="preserve">; </sys:String>
+    <sys:String x:Key="S.Glossary.PasteBad">Не распознано строк: {0}</sys:String>
 </ResourceDictionary>

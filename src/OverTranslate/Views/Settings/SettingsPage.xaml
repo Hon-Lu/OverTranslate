@@ -981,6 +981,50 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </CheckBox>
+
+                                    <!-- 詞彙表 (#228): under the two services it works for, so the group's own
+                                         title says where it applies. A card like theirs but not a switch:
+                                         it is not a service, and which glossary is picked here. -->
+                                    <Border x:Name="GlossaryRow"
+                                            Margin="4" MinHeight="62" Padding="14,10" CornerRadius="8" BorderThickness="1"
+                                            Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}"
+                                            AutomationProperties.AutomationId="GlossaryRow">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right"
+                                                    x:Name="GlossaryManageBtn"
+                                                    Content="{DynamicResource S.Glossary.Manage}"
+                                                    Style="{StaticResource FlatButton}"
+                                                    Height="30" MinWidth="96" Margin="10,0,0,0"
+                                                    VerticalAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.AutomationId="GlossaryManageBtn"
+                                                    Click="GlossaryManageBtn_Click"/>
+                                            <ComboBox DockPanel.Dock="Right"
+                                                      x:Name="GlossaryPicker"
+                                                      Style="{StaticResource ModernComboBox}"
+                                                      Width="200" Height="30" Margin="14,0,0,0"
+                                                      VerticalAlignment="Center"
+                                                      DisplayMemberPath="Display" SelectedValuePath="Id"
+                                                      AutomationProperties.Name="{DynamicResource S.Glossary.Title}"
+                                                      AutomationProperties.AutomationId="GlossaryPicker"
+                                                      SelectionChanged="GlossaryPicker_SelectionChanged"/>
+                                            <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
+                                                <Image Source="{StaticResource GlossaryMarkImage}" Width="28" Height="28"/>
+                                            </Grid>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Glossary.Title}"
+                                                           Style="{StaticResource ChoiceTileTitle}" FontSize="15"/>
+                                                <TextBlock Text="{DynamicResource S.Glossary.CardHint}"
+                                                           Style="{StaticResource FieldHint}" FontSize="12"
+                                                           Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="GlossaryStatus"
+                                                           Style="{StaticResource FieldHint}" FontSize="12"
+                                                           Margin="0,2,0,0" TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource AppWarning}"
+                                                           Visibility="Collapsed"
+                                                           AutomationProperties.AutomationId="GlossaryStatus"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
