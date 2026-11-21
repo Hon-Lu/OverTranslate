@@ -917,7 +917,8 @@ public partial class RealtimeEditWindow : Window
     //
     //   1. the block frames, which are also how a block is dragged;
     //   2. the 對照顯示 copies, with their lines, labels, corner handles and ✕;
-    //   3. every block's handles, remove buttons, and trays (the restore button is one of the trays).
+    //   3. every block's handles and trays (the restore button is one of the trays);
+    //   4. every block's remove button.
     //
     // A copy over its block is there because the user put it there, so a press on the overlap takes
     // the copy; the block is dragged by whatever of it is still showing. The controls that only the
@@ -926,7 +927,10 @@ public partial class RealtimeEditWindow : Window
     // frames, so a handle on the edge between two overlapping blocks stays grabbable whichever block
     // was drawn last. A copy's own corner handles sit under every block's for the same reason: where
     // a copy's corner lands on its block's, the press resizes the block, and the copy is still
-    // reachable from its other three.
+    // reachable from its other three. The remove buttons go above every block's trays: a block's own
+    // trays are kept off its button (see RemoveTop), but another block's trays tucked inside a block
+    // just above can still reach it, and a remove button that cannot be pressed leaves the block
+    // stuck on the screen.
     private void RebuildCanvas()
     {
         // A block added or removed puts the list away: it was opened for a layout that has changed.
@@ -951,10 +955,12 @@ public partial class RealtimeEditWindow : Window
         {
             foreach (var corner in block.Corners)
                 BlockCanvas.Children.Add(corner);
-            BlockCanvas.Children.Add(block.Remove);
             BlockCanvas.Children.Add(block.Marker);
             BlockCanvas.Children.Add(block.ModeControl);
         }
+
+        foreach (var block in _blocks)
+            BlockCanvas.Children.Add(block.Remove);
 
         foreach (var block in _blocks)
             Apply(block);
@@ -1193,11 +1199,11 @@ public partial class RealtimeEditWindow : Window
 
         // Outside the top-right corner by preference, so it never covers the content being framed;
         // tucked inside when the block is against the screen edge and there is no room out there.
+        // How high it sits depends on the trays, so its top is set once they are placed.
         double removeLeft = bounds.Right + _removeGap;
         if (removeLeft + _removeSize > BlockCanvas.ActualWidth)
             removeLeft = bounds.Right - _removeSize - _removeGap;
         Canvas.SetLeft(visual.Remove, removeLeft);
-        Canvas.SetTop(visual.Remove, Math.Max(0, bounds.Top));
 
         // At the end of the trays, shown only while there is a copy to bring back. Set before the
         // trays are placed, because it changes how wide they are.
@@ -1230,6 +1236,10 @@ public partial class RealtimeEditWindow : Window
         Canvas.SetTop(visual.Marker, top);
         Canvas.SetLeft(mode, SnapToPixels(lineLeft + markerWidth, _dpiX));
         Canvas.SetTop(mode, top);
+
+        // Placed after the trays, because where they went decides where it goes.
+        Canvas.SetTop(visual.Remove, RemoveTop(
+            bounds, top, mode.TotalHeight, _removeSize, BlockCanvas.ActualHeight, _removeGap));
     }
 
     // Canvas coordinates are this window's device-independent units; a device pixel is 1/dpi of one.
@@ -1274,6 +1284,28 @@ public partial class RealtimeEditWindow : Window
         // Strictly: Rect.IntersectsWith counts two rectangles that only touch.
         static bool Overlaps(Rect a, Rect b) =>
             a.Left < b.Right && b.Left < a.Right && a.Top < b.Bottom && b.Top < a.Bottom;
+    }
+
+    /// <summary>
+    /// Where a block's remove button goes vertically: level with the block's top edge, or just under
+    /// its trays when they are tucked inside.
+    /// </summary>
+    /// <remarks>
+    /// <para>Level with the top edge while the trays are above the block. Tucked inside, the trays
+    /// run along that same top edge, and for a block narrower than they are — a subtitle strip or a
+    /// menu against the top of the screen is the usual case — they reach across the button and cover
+    /// it, so the block cannot be removed at all. The button steps down below the trays then, one
+    /// row and a gap lower, still beside the block's right edge.</para>
+    ///
+    /// <para>Whenever the trays are tucked inside, not only when they would actually reach the
+    /// button: a wide block against the top edge moves it down too. One rule the user can see and
+    /// predict was chosen over a button that moves for some widths and not others.</para>
+    /// </remarks>
+    internal static double RemoveTop(
+        Rect block, double trayTop, double trayHeight, double removeSize, double screenHeight, double gap)
+    {
+        if (trayTop + trayHeight <= block.Top) return Math.Max(0, block.Top);
+        return Math.Max(0, Math.Min(trayTop + trayHeight + gap, screenHeight - removeSize));
     }
 
     /// <summary>
