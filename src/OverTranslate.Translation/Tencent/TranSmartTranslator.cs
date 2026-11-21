@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using NLog;
 
 namespace OverTranslate.Translation.Tencent;
 
@@ -23,30 +22,30 @@ namespace OverTranslate.Translation.Tencent;
 /// <para>A detected request is read as one language whatever is in it, so it is sent per script
 /// (<see cref="ScriptGroups"/>).</para>
 ///
-/// <para>Served from two hosts, tried in turn when one cannot be reached — see <see cref="Hosts"/>.</para>
+/// <para>Served under two names, moved between when one cannot be reached — see <see cref="Hosts"/>.</para>
 /// </remarks>
-public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
+/// <param name="loadHost">The host a previous run last reached, if it was kept.</param>
+/// <param name="saveHost">Told the host whenever a different one answers, to be handed back as <paramref name="loadHost"/>.</param>
+public sealed class TranSmartTranslator(
+    HttpClient http, Func<string>? loadHost = null, Action<string>? saveHost = null) : BatchTranslator(http)
 {
-    private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-
-    /// <summary>The site's own host, then the one Tencent moved the site to.</summary>
+    /// <summary>The two names Tencent serves TranSmart under, in the order a first run tries them.</summary>
     /// <remarks>
-    /// <para>Measured 2026-11-21 (<c>.ai/endpoint-health/</c>): from Taiwan, and from anywhere public
-    /// DNS answers with the overseas server, transmart.qq.com has served a certificate that expired
-    /// on 2026-10-11, so every request failed the TLS handshake. Mainland China is answered with
-    /// another server whose certificate was renewed. yi.qq.com is the same site — its page names
-    /// itself TranSmart and posts to its own <c>/api/imt</c> — with the renewed certificate, and
-    /// answers the same request the same way, in the same 0.8 s.</para>
+    /// <para>Both official and both long-standing: certificate transparency logs have yi.qq.com on
+    /// transmart.qq.com's certificate every year since 2020, and the site's page posts to
+    /// <c>/api/imt</c> on whichever of the two it was opened from, signing users in with an app id
+    /// for each. Neither redirects to the other.</para>
     ///
-    /// <para>So the original host first, which keeps mainland users on the server that has always
-    /// worked for them, and the other only when a request cannot get through at all. Whichever
-    /// answered is remembered for the rest of the run, not saved: either host may be fixed or
-    /// retired without notice, and a fresh start asks the original again.</para>
+    /// <para>Which one works depends on where the user is (measured 2026-11-21, <c>.ai/endpoint-health/</c>):
+    /// mainland DNS sends transmart.qq.com to a server with a valid certificate and everywhere else
+    /// to one whose certificate expired on 2026-10-11; yi.qq.com answers outside China with the
+    /// renewed certificate, and in Shanghai and Guangzhou resolves to an address that cannot be
+    /// reached from outside to check. transmart.qq.com is first because it is the one known to work
+    /// for the users TranSmart was added for.</para>
     /// </remarks>
     internal static readonly string[] Hosts = ["transmart.qq.com", "yi.qq.com"];
 
-    // Index into Hosts of the one that last answered.
-    private int _host;
+    private readonly EngineHosts _hosts = new("TranSmart", Hosts, loadHost?.Invoke(), saveHost);
 
     /// <summary>How many times a request the server says it is too busy for is sent again.</summary>
     /// <remarks>1 in 22 requests answered <c>busy</c> when measured; the next one went through.</remarks>
@@ -133,7 +132,8 @@ public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
 
         for (var attempt = 0; ; attempt++)
         {
-            using var document = JsonDocument.Parse(await PostAsync(payload, cancellationToken));
+            using var document = JsonDocument.Parse(
+                await _hosts.SendAsync(host => PostAsync(host, payload, cancellationToken), cancellationToken));
             var root = document.RootElement;
 
             var status = root.TryGetProperty("header", out var header) &&
@@ -166,36 +166,7 @@ public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
         }
     }
 
-    /// <summary>
-    /// Sends to the host that last answered and, when it cannot be reached at all, once to the
-    /// other. Any answer, refusals included, is returned as it is, for the caller to read.
-    /// </summary>
-    /// <remarks>
-    /// Only a request that got no answer moves on: a handshake refused for an expired certificate,
-    /// a connection that failed. A status or an error inside a 200 came from TranSmart itself, and
-    /// the other host is the same service, so it would only say the same again.
-    /// </remarks>
-    private async Task<string> PostAsync(string payload, CancellationToken cancellationToken)
-    {
-        var first = Volatile.Read(ref _host);
-        try
-        {
-            return await PostAsync(Hosts[first], payload, cancellationToken);
-        }
-        catch (HttpRequestException ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            var other = 1 - first;
-            var body = await PostAsync(Hosts[other], payload, cancellationToken);
-
-            // Only once the other host has answered, so a request that fails on both leaves the
-            // original in place for the next one.
-            if (Interlocked.CompareExchange(ref _host, other, first) == first)
-                Log.Info("{Engine}：{Host} 連不上（{Error}），改用 {Other}", Name, Hosts[first], ex.HttpRequestError, Hosts[other]);
-
-            return body;
-        }
-    }
-
+    /// <summary>One request to one host; the body whatever it says, for the caller to read.</summary>
     private async Task<string> PostAsync(string host, string payload, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/api/imt")

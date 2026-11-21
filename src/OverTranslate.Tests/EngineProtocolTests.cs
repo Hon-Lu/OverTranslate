@@ -638,12 +638,13 @@ public class EngineProtocolTests
     // transmart.qq.com's overseas server kept a certificate that expired on 2026-10-11, while
     // yi.qq.com, the same site, had the renewed one.
     [Fact]
-    public async Task TranSmart_AHostThatCannotBeReached_IsLeftForTheOther_ForTheRestOfTheRun()
+    public async Task TranSmart_AHostThatCannotBeReached_IsLeftForTheOther_AndTheOtherIsKept()
     {
         var handler = new Canned(request => request.Uri.StartsWith("https://transmart.qq.com/")
             ? throw new HttpRequestException(HttpRequestError.SecureConnectionError, "expired certificate")
             : Json(TranSmartAnswer));
-        var engine = new TranSmartTranslator(new HttpClient(handler));
+        var saved = new List<string>();
+        var engine = new TranSmartTranslator(new HttpClient(handler), () => "", saved.Add);
 
         var first = Assert.Single(await engine.TranslateAsync(["OK"], "zh-CN", "en"));
         var second = Assert.Single(await engine.TranslateAsync(["Yes"], "zh-CN", "en"));
@@ -652,23 +653,37 @@ public class EngineProtocolTests
         Assert.Equal(["transmart.qq.com", "yi.qq.com", "yi.qq.com"], handler.Requests.Select(r => new Uri(r.Uri).Host));
         Assert.Equal("https://yi.qq.com/api/imt", handler.Requests[^1].Uri);
         Assert.Equal("https://yi.qq.com/zh-CN/index", handler.Requests[^1].Headers["Referer"]);
+        Assert.Equal(["yi.qq.com"], saved);
     }
 
     [Fact]
-    public async Task TranSmart_WhenNeitherHostCanBeReached_TheNextRequestStartsWithTheOriginalAgain()
+    public async Task TranSmart_ARunStartsAtTheHostAPreviousRunKept()
     {
-        var reachable = false;
-        var handler = new Canned(_ => reachable
-            ? Json(TranSmartAnswer)
-            : throw new HttpRequestException(HttpRequestError.ConnectionError, "unreachable"));
-        var engine = new TranSmartTranslator(new HttpClient(handler));
+        var handler = new Canned(_ => Json(TranSmartAnswer));
+        var engine = new TranSmartTranslator(new HttpClient(handler), () => "yi.qq.com", _ => { });
 
-        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-CN", "en"));
-        reachable = true;
         await engine.TranslateAsync(["OK"], "zh-CN", "en");
 
-        Assert.Contains("ConnectionError", failure.Message);
-        Assert.Equal(["transmart.qq.com", "yi.qq.com", "transmart.qq.com"], handler.Requests.Select(r => new Uri(r.Uri).Host));
+        Assert.Equal("yi.qq.com", new Uri(Assert.Single(handler.Requests).Uri).Host);
+    }
+
+    // A detected request goes out as one per script; once one has found the first host unreachable,
+    // the next screen's never try it.
+    [Fact]
+    public async Task TranSmart_AfterOneRequestFindsAHostUnreachable_TheNextScreenNeverTriesIt()
+    {
+        var handler = new Canned(request => request.Uri.StartsWith("https://transmart.qq.com/")
+            ? throw new HttpRequestException(HttpRequestError.SecureConnectionError, "expired certificate")
+            : Json("""{"header":{"ret_code":"succ"},"auto_translation":["好"],"src_lang":"ja","tgt_lang":"zh"}"""));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        await engine.TranslateAsync(["こんにちは", "Hello", "안녕"], "zh-CN");
+        var before = handler.Requests.Count(r => r.Uri.StartsWith("https://transmart.qq.com/"));
+        await engine.TranslateAsync(["さようなら", "Bye", "잘 가"], "zh-CN");
+
+        Assert.InRange(before, 1, 3);
+        Assert.Equal(before, handler.Requests.Count(r => r.Uri.StartsWith("https://transmart.qq.com/")));
+        Assert.Equal(6, handler.Requests.Count(r => r.Uri.StartsWith("https://yi.qq.com/")));
     }
 
     // An answer, even an error, came from TranSmart itself; the other host is the same service.

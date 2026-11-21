@@ -233,6 +233,18 @@ public class AppSettings
     /// </remarks>
     public string GoogleChromeApiKey { get; set; } = "";
 
+    /// <summary>
+    /// The host 「騰訊翻譯」 last reached, of the two Tencent serves it under. Empty until a host other
+    /// than the first has answered.
+    /// </summary>
+    /// <remarks>
+    /// Kept so that a user the first host does not work for — outside mainland China, where its
+    /// server's certificate expired on 2026-10-11 — does not pay a failed handshake before the first
+    /// translation of every run. A host kept here that later stops working is moved on from like any
+    /// other; see <c>EngineHosts</c>.
+    /// </remarks>
+    public string TranSmartHost { get; set; } = "";
+
     public string Theme { get; set; } = "Dark";
 
     /// <summary>
