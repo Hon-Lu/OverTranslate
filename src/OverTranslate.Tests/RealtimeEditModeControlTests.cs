@@ -83,4 +83,62 @@ public class RealtimeEditModeControlTests
 
         Assert.Equal(ScreenHeight - 80, Top(block, copy));
     }
+
+    private const double RemoveSize = 22;
+
+    // The remove button's top, with the trays placed the way the layer places them.
+    private static double RemoveTop(Rect block, Rect? copy = null) =>
+        RealtimeEditWindow.RemoveTop(block, Top(block, copy), Control.Height, RemoveSize, ScreenHeight, Gap);
+
+    [Fact]
+    public void Remove_TraysAbove_StaysLevelWithTheTopEdge()
+    {
+        var block = new Rect(400, 800, 800, 100);
+
+        Assert.Equal(800, RemoveTop(block));
+    }
+
+    [Fact]
+    public void Remove_NarrowBlockAgainstTheTopEdge_StepsBelowTheTrays()
+    {
+        // Narrower than the trays: tucked inside they would cover the button.
+        var block = new Rect(400, 20, 200, 100);
+
+        Assert.Equal(20 + 6 + 80 + 6, RemoveTop(block));
+    }
+
+    [Fact]
+    public void Remove_WideBlockAgainstTheTopEdge_StepsBelowTheTraysToo()
+    {
+        var block = new Rect(400, 20, 1200, 100);
+
+        Assert.Equal(20 + 6 + 80 + 6, RemoveTop(block));
+    }
+
+    [Fact]
+    public void Remove_InTheTopRightCorner_StepsBelowTheTrays()
+    {
+        // Against the right edge the button is tucked inside as well; only its left changes.
+        var block = new Rect(1700, 0, 220, 100);
+
+        Assert.Equal(0 + 6 + 80 + 6, RemoveTop(block));
+    }
+
+    [Fact]
+    public void Remove_TraysTuckedForTheOwnCopy_StepsBelowTheTrays()
+    {
+        var block = new Rect(400, 800, 800, 100);
+        var copy = new Rect(400, 694, 800, 100);
+
+        Assert.Equal(800 + 6 + 80 + 6, RemoveTop(block, copy));
+    }
+
+    [Fact]
+    public void Remove_BelowTheTrays_IsKeptOnTheScreen()
+    {
+        var block = new Rect(400, 1040, 800, 40);
+        var copy = new Rect(400, 950, 800, 40);
+
+        Assert.Equal(ScreenHeight - RemoveSize, RemoveTop(block, copy));
+    }
 }
