@@ -74,7 +74,8 @@ public sealed class YoudaoTranslator(HttpClient http) : BatchTranslator(http)
         CancellationToken cancellationToken)
     {
         // Credentials that have stopped working look like any other refusal, so a refusal is asked
-        // again once with fresh ones before it is believed.
+        // again once with fresh ones before it is believed — all but the one about the languages,
+        // which fresh credentials would only be refused again for.
         for (var attempt = 0; ; attempt++)
         {
             var credentials = await _session.GetAsync(cancellationToken);
@@ -82,12 +83,26 @@ public sealed class YoudaoTranslator(HttpClient http) : BatchTranslator(http)
             {
                 return await SendWithAsync(credentials, pieces, targetLanguage, sourceLanguage, cancellationToken);
             }
-            catch (Exception ex) when (attempt == 0 && ex is TranslationEngineException { StatusCode: null } or CryptographicException or FormatException)
+            catch (Exception ex) when (attempt == 0 && !IsLanguageRefusal(ex) &&
+                                       ex is TranslationEngineException { StatusCode: null } or CryptographicException or FormatException)
             {
                 _session.Invalidate();
             }
         }
     }
+
+    /// <summary>The code Youdao answers when it has no translation between the languages.</summary>
+    /// <remarks>
+    /// Measured 2026-11-21 (<c>.ai/endpoint-health/</c>): 自動 on Hindi, Tagalog, Swahili or a garbled
+    /// line answers it every time, while the same Hindi sent as <c>from=hi</c> translates; Persian
+    /// answers it either way round. The credentials just refused answer the next request, so asking
+    /// again with fresh ones only cost a page, a script and a key before the backups were asked.
+    /// </remarks>
+    private const int LanguageRefused = 40;
+
+    private const string LanguageRefusal = "refused (code 40: language not detected or not supported)";
+
+    private bool IsLanguageRefusal(Exception ex) => ex.Message == $"{Name}: {LanguageRefusal}";
 
     private async Task<IReadOnlyList<TextTranslation?>> SendWithAsync(
         YoudaoCredentials credentials, IReadOnlyList<string> pieces, string targetLanguage, string? sourceLanguage,
@@ -115,6 +130,8 @@ public sealed class YoudaoTranslator(HttpClient http) : BatchTranslator(http)
         var root = document.RootElement;
 
         var code = root.TryGetProperty("code", out var c) && c.TryGetInt32(out var value) ? value : -1;
+        if (code == LanguageRefused)
+            throw new TranslationEngineException(Name, LanguageRefusal);
         if (code != 0)
             throw new TranslationEngineException(Name, $"refused (code {code})");
 

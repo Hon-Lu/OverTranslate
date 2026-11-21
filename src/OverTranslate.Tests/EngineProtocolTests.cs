@@ -1081,6 +1081,41 @@ public class EngineProtocolTests
         Assert.Equal(2, handler.Requests.Count(r => r.Uri.Contains("/webtranslate/key")));
     }
 
+    // Code 40 is about the languages — 自動 on Hindi or a garbled line — and fresh credentials are
+    // refused the same way, so the backups are asked at once.
+    [Fact]
+    public async Task Youdao_ALanguageRefusal_IsNotAskedAgainWithFreshCredentials()
+    {
+        var inner = YoudaoEndpoint();
+        var handler = new Canned(request => request.Uri == "https://dict.youdao.com/webtranslate"
+            ? Text(YoudaoEncrypt("""{"code":40}"""))
+            : inner.Answer(request));
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["नमस्ते"], "zh-TW"));
+
+        Assert.Contains("code 40", failure.Message);
+        Assert.Contains("language", failure.Message);
+        Assert.Single(handler.Requests, r => r.Uri == "https://dict.youdao.com/webtranslate");
+        Assert.Single(handler.Requests, r => r.Uri.Contains("/webtranslate/key"));
+    }
+
+    // A page where the encrypted answer should be — a verification or error page — is a failure for
+    // the backups to answer, never text to show.
+    [Fact]
+    public async Task Youdao_AnHtmlPageInsteadOfAnAnswer_IsAFailure()
+    {
+        var inner = YoudaoEndpoint();
+        var handler = new Canned(request => request.Uri == "https://dict.youdao.com/webtranslate"
+            ? Text("<!DOCTYPE html><html><body><p>&#x8BF7;&#x7A0D;&#x540E;&#x91CD;&#x8BD5;</p></body></html>")
+            : inner.Answer(request));
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["装備"], "zh-TW", "ja"));
+
+        Assert.Contains("unreadable", failure.Message);
+    }
+
     [Fact]
     public async Task Youdao_AScriptWithoutTheKeyGetter_SaysSo()
     {
