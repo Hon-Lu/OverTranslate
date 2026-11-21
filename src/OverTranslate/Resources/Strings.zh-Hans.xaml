@@ -969,4 +969,12 @@
     <sys:String x:Key="S.Assets.FailedTitle">无法移动模型</sys:String>
     <sys:String x:Key="S.Assets.FailedBody">写入 {0} 时发生错误，存放位置未更改。</sys:String>
     <sys:String x:Key="S.Assets.Ok">确定</sys:String>
+    <!-- 即時翻譯：翻譯中調整模式 -->
+    <sys:String x:Key="S.Realtime.ProfilePanelHint">调整各翻译区块的模式设置</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumber">区块 {0}</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">、</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSharedWith">与区块 {0} 共用此模式</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetTitle">还原为模板？</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">已修改的设置将还原为“{0}”模板的默认值。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetAction">还原</sys:String>
 </ResourceDictionary>

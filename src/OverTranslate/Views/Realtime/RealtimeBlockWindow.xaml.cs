@@ -361,6 +361,25 @@ public partial class RealtimeBlockWindow : Window
         Rebuild();
     }
 
+    /// <summary>
+    /// Outlines the block and names it in its corner — while the running bar's 模式 panel is open, so
+    /// the user can tell which block 區塊 2 is. The block being tuned is outlined in full, the others
+    /// faintly. Null takes the marker away.
+    /// </summary>
+    public void SetMarker(string? name, bool selected)
+    {
+        if (name is null)
+        {
+            Marker.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        MarkerText.Text = name;
+        Marker.Opacity = selected ? 1 : 0.5;
+        Marker.BorderThickness = new Thickness(selected ? 2 : 1);
+        Marker.Visibility = Visibility.Visible;
+    }
+
     public void SetLines(IReadOnlyList<TranslatedBlock> lines)
     {
         // A rebuild cross-fades, so repainting an unchanged overlay is a visible flicker for no

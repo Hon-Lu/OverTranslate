@@ -973,4 +973,12 @@
     <sys:String x:Key="S.Assets.FailedTitle">모델을 옮기지 못했습니다</sys:String>
     <sys:String x:Key="S.Assets.FailedBody">{0}에 쓰는 중 오류가 발생했습니다. 저장 위치는 변경되지 않았습니다.</sys:String>
     <sys:String x:Key="S.Assets.Ok">확인</sys:String>
+    <!-- 即時翻譯：翻譯中調整模式 -->
+    <sys:String x:Key="S.Realtime.ProfilePanelHint">번역 블록별 모드 설정 조정</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumber">블록 {0}</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">, </sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSharedWith">블록 {0}에서도 사용 중</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetTitle">템플릿으로 되돌릴까요?</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">변경한 설정이 '{0}' 템플릿의 기본값으로 되돌아갑니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetAction">되돌리기</sys:String>
 </ResourceDictionary>

@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using OverTranslate.Controls;
 using OverTranslate.Models;
 using OverTranslate.Services;
+using static OverTranslate.Views.Realtime.RealtimeProfileDisplay;
 using Brush = System.Windows.Media.Brush;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
@@ -154,6 +155,7 @@ public partial class RealtimeProfileOverlay : UserControl
         if (!_creating) CommitName(revertIfTaken: true);
         ConfirmLayer.Visibility = Visibility.Collapsed;
         LocalizationService.LanguageChanged -= OnLanguageChanged;
+        SettingsService.Instance.RealtimeProfilesChanged -= OnProfilesChangedElsewhere;
 
         var fade = new DoubleAnimation { From = 1, To = 0, Duration = FadeDuration };
         fade.Completed += (_, _) =>
@@ -172,6 +174,7 @@ public partial class RealtimeProfileOverlay : UserControl
         FitCard();
         if (wasOpen) return;
         LocalizationService.LanguageChanged += OnLanguageChanged;
+        SettingsService.Instance.RealtimeProfilesChanged += OnProfilesChangedElsewhere;
 
         // Cached as a bitmap for the length of the scale, as the other cards over the shell are, so
         // the text does not soften and re-sharpen on the way in — see AboutOverlay.Open.
@@ -265,14 +268,62 @@ public partial class RealtimeProfileOverlay : UserControl
             return;
         }
 
-        var list = Realtime.Profiles.Select(profile => profile.Clone()).ToList();
-        int index = list.FindIndex(profile => profile.Id == _profileId);
-        if (index < 0) return;
+        bool stored = false;
+        Write(() => stored = RealtimeProfileStore.Change(_profileId, change));
+        if (stored) Render();
+    }
 
-        change(list[index]);
-        list[index] = RealtimeProfileEditing.WithoutTemplateValues(list[index]);
-        SettingsService.Instance.UpdateRealtimeProfiles(list);
-        Render();
+    // Set while this card is the one writing the modes, so the change it raises is not taken for
+    // one made elsewhere — see OnProfilesChangedElsewhere.
+    private bool _writing;
+
+    private void Write(Action write)
+    {
+        _writing = true;
+        try
+        {
+            write();
+        }
+        finally
+        {
+            _writing = false;
+        }
+    }
+
+    // Shown again only once the pointer is let go: a slider being dragged here would otherwise jump
+    // back under the pointer to the value just stored.
+    private bool _renderWhenReleased;
+
+    /// <summary>
+    /// The modes were changed somewhere else — the running bar's 模式 panel, open beside this card
+    /// over a session — and what this card shows is stale. Shown again from the file; a mode deleted
+    /// there takes this card to 標準, as deleting it here would.
+    /// </summary>
+    private void OnProfilesChangedElsewhere(object? sender, EventArgs e)
+    {
+        if (_writing) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!IsOpen || _creating) return;
+            if (Mouse.LeftButton == MouseButtonState.Pressed && IsMouseCaptureWithin)
+            {
+                _renderWhenReleased = true;
+                return;
+            }
+            Render();
+        });
+    }
+
+    protected override void OnPreviewMouseLeftButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonUp(e);
+        if (!_renderWhenReleased) return;
+        _renderWhenReleased = false;
+        // After the release has been handled, so a slider let go writes before it is shown again.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (IsOpen && !_creating) Render();
+        });
     }
 
     // ── Rendering ───────────────────────────────────────────────────────────────────────────────
@@ -481,58 +532,6 @@ public partial class RealtimeProfileOverlay : UserControl
         row.Scale!.Current = level;
     }
 
-    private static double PollSeconds => Services.Realtime.RealtimeRegionState.PollInterval.TotalSeconds;
-
-    /// <summary>How a value reads on its row.</summary>
-    private static string Display(RealtimeProfile filled, ProfileParam param) => param switch
-    {
-        ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
-        ProfileParam.Align => RealtimeProfileEditing.AlignName(filled.Align),
-        ProfileParam.SettleSeconds => filled.SettleAutomatic == true
-            ? Services.Realtime.RealtimeActualValues.Of(filled).SettleSeconds is { } seconds
-                ? SecondsText(seconds)
-                : LocalizationService.Get("S.Realtime.ProfilePerGroup")
-            : SecondsText(filled.SettleSeconds!.Value),
-        ProfileParam.DetectorPercent => filled.DetectorAutomatic == true
-            ? Services.Realtime.RealtimeActualValues.Of(filled).DetectorPercent is { } percent
-                ? LocalizationService.Format("S.Realtime.ProfilePercent", percent)
-                : LocalizationService.Get("S.Realtime.ProfilePerGroup")
-            : LocalizationService.Format("S.Realtime.ProfilePercent", filled.DetectorPercent),
-        ProfileParam.IgnoreSmallPercent => filled.IgnoreSmallPercent is 0 or null
-            ? LocalizationService.Get("S.Realtime.ProfileOff")
-            : LocalizationService.Format("S.Realtime.ProfilePercent", filled.IgnoreSmallPercent),
-        ProfileParam.ConfidencePercent => LocalizationService.Format("S.Realtime.ProfilePercent", filled.ConfidencePercent),
-        _ => "",
-    };
-
-    /// <summary>
-    /// The preset's value as the 還原 tip names it: 自動 where the preset leaves a value to 自動,
-    /// rather than what 自動 happens to come to under this mode's 語句合併.
-    /// </summary>
-    private static string TemplateDisplay(RealtimeProfile template, ProfileParam param) => param switch
-    {
-        ProfileParam.SettleSeconds when template.SettleAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
-        ProfileParam.DetectorPercent when template.DetectorAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
-        _ => Display(template, param),
-    };
-
-    private static string SecondsText(double seconds) =>
-        seconds < 0.005 ? LocalizationService.Get("S.Realtime.ProfileSettleNone")
-        : LocalizationService.Format("S.Realtime.ProfileSeconds", RealtimeProfileEditing.Seconds(seconds));
-
-    /// <summary>What a slider's position reads as while it is being moved, before it is written.</summary>
-    private static string SliderReading(ProfileParam param, double value) => param switch
-    {
-        ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName((int)Math.Round(value)),
-        ProfileParam.SettleSeconds => SecondsText(Math.Round(value * PollSeconds, 2)),
-        ProfileParam.DetectorPercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
-        ProfileParam.IgnoreSmallPercent => value < 0.5
-            ? LocalizationService.Get("S.Realtime.ProfileOff")
-            : LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
-        ProfileParam.ConfidencePercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
-        _ => "",
-    };
-
     // ── Building the rows ───────────────────────────────────────────────────────────────────────
 
     private void BuildRows()
@@ -724,13 +723,6 @@ public partial class RealtimeProfileOverlay : UserControl
         return row;
     }
 
-    private static int AlignIndex(string? align) => RealtimeTextAligns.Normalize(align) switch
-    {
-        RealtimeTextAligns.Center => 1,
-        RealtimeTextAligns.Left => 2,
-        _ => 0,
-    };
-
     /// <summary>
     /// Every other value: name on the left; 自動｜手動 where the value can be left to 自動; a slot of
     /// <see cref="SlotWidth"/> for the slider; the value in a column of <see cref="ValueWidth"/> — or
@@ -843,17 +835,6 @@ public partial class RealtimeProfileOverlay : UserControl
         return row;
     }
 
-    /// <summary>
-    /// Turns a value to 自動 or 手動 and nothing else: the figure for 手動 stays as it was, so 手動
-    /// comes back where the user left it — or, never moved, at the preset's figure (on 標準, about
-    /// 0.15 seconds and 85%: see <see cref="RealtimePresets.Create"/>).
-    /// </summary>
-    private static void SetAutomatic(RealtimeProfile profile, ProfileParam param, bool automatic)
-    {
-        if (param == ProfileParam.SettleSeconds) profile.SettleAutomatic = automatic;
-        else profile.DetectorAutomatic = automatic;
-    }
-
     private Slider NewSlider(ParamRow row, double min, double max, double step, string nameKey, string automationId)
     {
         var slider = new Slider
@@ -905,28 +886,6 @@ public partial class RealtimeProfileOverlay : UserControl
 
         double value = slider.Value;
         Commit(profile => SetNumber(profile, row.Param, value), row.Param);
-    }
-
-    /// <summary>Writes a slider position as the value it stands for, in the user's units.</summary>
-    private static void SetNumber(RealtimeProfile profile, ProfileParam param, double position)
-    {
-        int whole = (int)Math.Round(position);
-        switch (param)
-        {
-            case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
-            case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
-            case ProfileParam.ConfidencePercent: profile.ConfidencePercent = whole; break;
-            // A slider is only shown on 手動; the switch is written with the figure, as the file
-            // keeps it whenever a figure is kept — see RealtimeProfile.SettleAutomatic.
-            case ProfileParam.DetectorPercent:
-                profile.DetectorAutomatic = false;
-                profile.DetectorPercent = whole;
-                break;
-            case ProfileParam.SettleSeconds:
-                profile.SettleAutomatic = false;
-                profile.SettleSeconds = Math.Round(whole * PollSeconds, 2);
-                break;
-        }
     }
 
     private static Border Rule(Thickness margin)
@@ -1047,21 +1006,44 @@ public partial class RealtimeProfileOverlay : UserControl
         Commit(profile => profile.Name = name);
     }
 
+    /// <summary>
+    /// 還原為範本 asks first: one press puts back every value the user has tuned, and a press meant
+    /// for the name box or 刪除 beside it landing here lost the lot (the user's call). The single
+    /// row's 還原 does not ask — it puts back one value, in sight.
+    /// </summary>
     private void ResetAllBtn_Click(object sender, RoutedEventArgs e)
     {
-        _settleTimer.Stop();
-        _pendingRow = null;
-        Commit(profile =>
-        {
-            foreach (var param in RealtimeProfileEditing.All)
-                RealtimeProfileEditing.Clear(profile, param);
-        });
+        FlushPending();
+        if (Shown().Modified == 0) return;
+        ShowConfirm(ConfirmKind.Reset, LocalizationService.Format(
+            "S.Realtime.ProfileResetConfirm", RealtimeProfileEditing.PresetName(Shown().BasedOn)));
     }
 
     private void DeleteBtn_Click(object sender, RoutedEventArgs e)
     {
         FlushPending();
-        ConfirmMessage.Text = LocalizationService.Format("S.Realtime.ProfileDeleteConfirm", Shown().Name);
+        ShowConfirm(ConfirmKind.Delete, LocalizationService.Format("S.Realtime.ProfileDeleteConfirm", Shown().Name));
+    }
+
+    private enum ConfirmKind { Delete, Reset }
+
+    private ConfirmKind _confirm;
+
+    /// <summary>The confirming card, dressed for <paramref name="kind"/>; 取消 has the focus.</summary>
+    private void ShowConfirm(ConfirmKind kind, string message)
+    {
+        _confirm = kind;
+        bool delete = kind == ConfirmKind.Delete;
+        ConfirmGlyph.Text = delete ? "" : "";
+        ConfirmGlyph.SetResourceReference(TextBlock.ForegroundProperty, delete ? "AppError" : "AppAccent");
+        ConfirmTitle.SetResourceReference(TextBlock.TextProperty,
+            delete ? "S.Realtime.ProfileDeleteTitle" : "S.Realtime.ProfileResetTitle");
+        ConfirmActionBtn.SetResourceReference(StyleProperty, delete ? "DangerButton" : "AccentButton");
+        ConfirmActionBtn.SetResourceReference(ContentProperty,
+            delete ? "S.Realtime.ProfileDelete" : "S.Realtime.ProfileResetAction");
+        System.Windows.Automation.AutomationProperties.SetAutomationId(ConfirmActionBtn,
+            delete ? "ProfileConfirmDeleteBtn" : "ProfileConfirmResetBtn");
+        ConfirmMessage.Text = message;
         ConfirmLayer.Visibility = Visibility.Visible;
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () => ConfirmCancelBtn.Focus());
     }
@@ -1076,11 +1058,29 @@ public partial class RealtimeProfileOverlay : UserControl
 
     private void ConfirmScrim_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => CloseConfirm();
 
+    private void ConfirmAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (_confirm == ConfirmKind.Delete)
+        {
+            ConfirmDelete();
+            return;
+        }
+
+        CloseConfirm();
+        _settleTimer.Stop();
+        _pendingRow = null;
+        Commit(profile =>
+        {
+            foreach (var param in RealtimeProfileEditing.All)
+                RealtimeProfileEditing.Clear(profile, param);
+        });
+    }
+
     /// <summary>
     /// Deletes the mode and closes the card. Blocks on it — and 新區塊 if it named it — go back to
     /// 標準, as a mode that names nothing always does.
     /// </summary>
-    private void ConfirmDelete_Click(object sender, RoutedEventArgs e)
+    private void ConfirmDelete()
     {
         _settleTimer.Stop();
         _pendingRow = null;
@@ -1091,7 +1091,7 @@ public partial class RealtimeProfileOverlay : UserControl
         NameBox.Text = Shown().Name;
         _syncing = false;
         _profileId = RealtimePresets.StandardId;
-        SettingsService.Instance.UpdateRealtimeProfiles(Realtime.Profiles.Where(profile => profile.Id != deleted).ToList());
+        Write(() => SettingsService.Instance.UpdateRealtimeProfiles(Realtime.Profiles.Where(profile => profile.Id != deleted).ToList()));
         Close();
     }
 
@@ -1142,7 +1142,7 @@ public partial class RealtimeProfileOverlay : UserControl
 
         var created = RealtimeProfile.CreateCustom(_templateId, name);
         list.Add(created);
-        SettingsService.Instance.UpdateRealtimeProfiles(list);
+        Write(() => SettingsService.Instance.UpdateRealtimeProfiles(list));
 
         _creating = false;
         _profileId = created.Id;
@@ -1172,13 +1172,13 @@ public partial class RealtimeProfileOverlay : UserControl
     /// </remarks>
     private void OfferFork(ProfileParam param, Action<RealtimeProfile> change)
     {
-        var trial = RealtimeProfile.CreateCustom(_profileId, "");
-        change(trial);
-        if (!RealtimeProfileEditing.IsModified(RealtimeProfileEditing.WithoutTemplateValues(trial), param))
+        if (!RealtimeProfileStore.WouldChangePreset(_profileId, param, change))
         {
             Render();
             return;
         }
+        var trial = RealtimeProfile.CreateCustom(_profileId, "");
+        change(trial);
 
         _forkParam = param;
         _forkChange = change;
@@ -1246,28 +1246,23 @@ public partial class RealtimeProfileOverlay : UserControl
     {
         if (!ShowsPreset || _creating) return;
         HideFork();
-        var list = Realtime.Profiles.Select(profile => profile.Clone()).ToList();
-        if (list.Count >= RealtimeSettings.MaxCustomProfiles)
+        if (RealtimeProfileStore.IsFull)
         {
             Render();
             return;
         }
 
-        string presetId = _profileId;
-        var created = RealtimeProfile.CreateCustom(presetId,
-            RealtimeProfileEditing.ForkName(presetId, Choices().Select(choice => choice.Name)));
-        change?.Invoke(created);
-        created = RealtimeProfileEditing.WithoutTemplateValues(created);
-        list.Add(created);
-
         // Where the row the change came from sits now, so the card's new head above it does not move it.
         FrameworkElement? anchor = param is { } p ? _rows[p].Root : null;
         double? before = anchor?.TranslatePoint(new Point(0, 0), BodyScroller).Y;
 
-        var realtime = Realtime;
-        if (realtime.NewBlockProfile == presetId) realtime.NewBlockProfile = created.Id;
-        SettingsService.Instance.UpdateRealtimeProfiles(list);
-        RealtimeSessionController.Instance.FollowProfile(presetId, created.Id);
+        RealtimeProfile? created = null;
+        Write(() => created = RealtimeProfileStore.Fork(_profileId, change));
+        if (created is null)
+        {
+            Render();
+            return;
+        }
 
         _profileId = created.Id;
         _syncing = true;
@@ -1289,31 +1284,6 @@ public partial class RealtimeProfileOverlay : UserControl
         if (SystemParameters.ClientAreaAnimation)
             BodyScroller.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { FillBehavior = FillBehavior.Stop });
     }
-
-    /// <summary>A value's row by name, as the card's line about the change names it.</summary>
-    private static string NameKey(ProfileParam param) => param switch
-    {
-        ProfileParam.MergeLevel => "S.Realtime.ProfileMerge",
-        ProfileParam.Align => "S.Realtime.ProfileAlign",
-        ProfileParam.FilterNumbersAndAbbreviations => "S.Realtime.ProfileFilterNumbers",
-        ProfileParam.SettleSeconds => "S.Realtime.ProfileSettle",
-        ProfileParam.ClearAfterEmptyReads => "S.Realtime.ProfileKeep",
-        ProfileParam.DetectorPercent => "S.Realtime.ProfileDetector",
-        ProfileParam.IgnoreSmallPercent => "S.Realtime.ProfileIgnoreSmall",
-        _ => "S.Realtime.ProfileConfidence",
-    };
-
-    /// <summary>A value as the card's line about the change gives it: 自動 for 自動, 開啟／關閉 for a switch.</summary>
-    private static string ValueName(RealtimeProfile filled, ProfileParam param) => param switch
-    {
-        ProfileParam.FilterNumbersAndAbbreviations => OnOff(filled.FilterNumbersAndAbbreviations != false),
-        ProfileParam.ClearAfterEmptyReads => OnOff(filled.ClearAfterEmptyReads == RealtimeProfile.MinClearAfterEmptyReads),
-        ProfileParam.SettleSeconds when filled.SettleAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
-        ProfileParam.DetectorPercent when filled.DetectorAutomatic == true => LocalizationService.Get("S.Realtime.ProfileAuto"),
-        _ => Display(filled, param),
-    };
-
-    private static string OnOff(bool on) => LocalizationService.Get(on ? "S.Realtime.ProfileOn" : "S.Realtime.ProfileOff");
 
     // Round the template list to the inside of its border, so a filled row does not square off the
     // corners — the service panel's list does the same.

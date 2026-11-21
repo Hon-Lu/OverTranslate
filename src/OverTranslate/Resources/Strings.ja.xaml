@@ -973,4 +973,12 @@
     <sys:String x:Key="S.Assets.FailedTitle">モデルを移動できませんでした</sys:String>
     <sys:String x:Key="S.Assets.FailedBody">{0} の書き込み中にエラーが発生しました。保存場所は変更されていません。</sys:String>
     <sys:String x:Key="S.Assets.Ok">OK</sys:String>
+    <!-- 即時翻譯：翻譯中調整模式 -->
+    <sys:String x:Key="S.Realtime.ProfilePanelHint">翻訳ブロックごとのモード設定を調整</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumber">ブロック {0}</sys:String>
+    <sys:String x:Key="S.Realtime.BlockNumberSeparator" xml:space="preserve">、</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileSharedWith">ブロック {0} と共用</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetTitle">テンプレートに戻しますか？</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetConfirm">変更した設定は「{0}」テンプレートの既定値に戻ります。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileResetAction">戻す</sys:String>
 </ResourceDictionary>

@@ -5,7 +5,11 @@ using OverTranslate.Services.Realtime.Capture;
 namespace OverTranslate.Services.Realtime;
 
 /// <summary>One region's poll loop, as the session that started it keeps track of it.</summary>
-internal sealed record RegionLoop(int RegionId, Task Task, StepMarker Step);
+internal sealed record RegionLoop(int RegionId, Task Task, StepMarker Step)
+{
+    /// <summary>Stops this loop alone — see RealtimeTranslationSession.ChangeProfiles.</summary>
+    public CancellationTokenSource? Stopper { get; init; }
+}
 
 /// <summary>
 /// Says so, at Warn, when region loops told to stop are still running a moment later.

@@ -168,8 +168,33 @@ internal sealed class RealtimeSessionController
     // 載入模型中… on the bar while a start's models load; null outside a sitting.
     private RealtimeModelLoadingHint? _loadingHint;
 
+    /// <summary>
+    /// How long the modes must rest before a running session reads again on them.
+    /// </summary>
+    /// <remarks>
+    /// Each change that reaches the session restarts the changed blocks' loops, and a recognition
+    /// already inside the recogniser's gate cannot be called back — so a few changes in quick
+    /// succession (switches flicked one after another on the 模式 panel, a slider stepped with the
+    /// keys) would stack abandoned recognitions behind the gate. The editors already write a slider
+    /// only once it is let go; this is the second line, for everything else. Long enough to take in
+    /// a quick run of presses, short enough to read as "it changed when I let go".
+    /// <para>A property, not a static field: <see cref="Instance"/> is built by a static initializer
+    /// above this line, and a field here would still be zero when its constructor read it — the
+    /// timer then fired at once and nothing was ever folded together (measured live: two presses
+    /// 21 ms apart restarted the blocks twice).</para>
+    /// </remarks>
+    internal static TimeSpan ProfilesSettle => TimeSpan.FromMilliseconds(400);
+    private readonly DispatcherTimer _profilesSettle = new() { Interval = ProfilesSettle };
+
+    // Which block the 模式 panel is tuning, while the panel has the blocks marked — see MarkBlocks.
+    // Kept here so overlays built again (a language change, 原文對照) are marked again.
+    private int? _markedBlock;
+    private bool _marking;
+
     private RealtimeSessionController()
     {
+        _profilesSettle.Tick += (_, _) => FlushProfiles();
+
         _displaySettle.Tick += (_, _) =>
         {
             _displaySettle.Stop();
@@ -537,6 +562,9 @@ internal sealed class RealtimeSessionController
         if (_interlude.HideLayers) return false;
         if (!IsTranslating || _session is null || _control is not { } control) return false;
 
+        // Modes changed a moment ago go to the session first: 繼續 starts on what it holds.
+        FlushProfiles();
+
         if (_session.IsPaused)
         {
             // Before the loops start, so the first result cannot arrive to a bar still saying 已暫停.
@@ -680,6 +708,10 @@ internal sealed class RealtimeSessionController
         _stayOnTop.Stop();
         _lastStayOnTopTick = 0;
         DisposeEscapeHook();
+        // Nothing is left to read on the modes, and a tick after this would find no blocks.
+        _profilesSettle.Stop();
+        _marking = false;
+        _markedBlock = null;
 
         // A static event: left subscribed, it would keep this session's handler alive and running.
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -737,6 +769,11 @@ internal sealed class RealtimeSessionController
     private void EnterEditMode()
     {
         if (_request is not { } request || _control is not { } control) return;
+
+        // 開始翻譯 reads every block on its mode as it is then; nothing is waiting to be handed over.
+        _profilesSettle.Stop();
+        _marking = false;
+        _markedBlock = null;
 
         // Before the block windows go: a backend built around a set of overlays is only valid while
         // those overlays are the ones on screen, and edit mode is where the user changes them.
@@ -944,6 +981,8 @@ internal sealed class RealtimeSessionController
             _blockWindows[region.Id] = window;
             window.Show();
         }
+        // Built again under an open 模式 panel (a language change, 原文對照): named again.
+        ShowMarkers();
     }
 
     /// <summary>
@@ -1090,6 +1129,10 @@ internal sealed class RealtimeSessionController
         if (string.Equals(source, request.SourceLanguage, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(target, request.TargetLanguage, StringComparison.OrdinalIgnoreCase)) return;
 
+        // The new pair starts the loops on what the session holds, so modes changed a moment ago
+        // go to it first.
+        FlushProfiles();
+
         var paused = session.IsPaused;
         var updated = request with { SourceLanguage = source, TargetLanguage = target };
         _request = updated;
@@ -1140,11 +1183,95 @@ internal sealed class RealtimeSessionController
             _remembered = kept with { Blocks = RealtimeProfileEditing.Follow(kept.Blocks, fromId, toId) };
         _edit?.SetProfileChoices(RealtimeProfileEditing.Choices(SettingsService.Instance.Current.Realtime.Profiles), (fromId, toId));
         ApplyProfiles();
+        // At once: the press made a mode and moved the blocks onto it, and the user is watching for
+        // the change it carried.
+        FlushProfiles();
     }
 
     // Raised by whoever saved the modes, on whatever thread that was; the work is the dispatcher's.
     private void OnRealtimeProfilesChanged(object? sender, EventArgs e) =>
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(ApplyProfiles);
+
+    /// <summary>
+    /// Raised on the dispatcher when which mode a translating block is on may have changed — chosen
+    /// on the 模式 panel, moved onto a mode just split off its preset, or put back on 標準 when its
+    /// mode was deleted — for the panel to show it.
+    /// </summary>
+    public event EventHandler? BlocksChanged;
+
+    /// <summary>The blocks being translated, in order: 區塊 1 is the first.</summary>
+    public IReadOnlyList<RealtimeBlockPlacement> TranslatingBlocks => IsTranslating ? _blocks : [];
+
+    /// <summary>
+    /// Puts block <paramref name="index"/> on <paramref name="profileId"/> from the running bar's
+    /// 模式 panel (翻譯中調整模式), without ending anything.
+    /// </summary>
+    /// <remarks>
+    /// The answer new blocks start on goes with it, as choosing a block's mode on the edit layer
+    /// does: either way it is the user telling this sitting what they are watching.
+    /// </remarks>
+    public void SetBlockProfile(int index, string profileId)
+    {
+        if (!IsTranslating || index < 0 || index >= _blocks.Count) return;
+
+        var settings = SettingsService.Instance;
+        var realtime = settings.Current.Realtime;
+        profileId = realtime.KnownProfileId(profileId);
+        if (_blocks[index].ProfileId == profileId) return;
+
+        Log.Info("Realtime block {Block} switched mode mid-session to {Profile:l}", index,
+            Models.RealtimePresets.IsPreset(profileId) ? profileId : "custom");
+        _blocks[index] = _blocks[index] with { ProfileId = profileId };
+        if (realtime.NewBlockProfile != profileId)
+        {
+            realtime.NewBlockProfile = profileId;
+            settings.Save();
+        }
+        ApplyProfiles();
+    }
+
+    /// <summary>
+    /// Names every block on screen and outlines <paramref name="selected"/> — while the 模式 panel is
+    /// open, so 區塊 2 on the panel is a block the user can find. Nothing is marked with one block:
+    /// there is no other to tell it from.
+    /// </summary>
+    public void MarkBlocks(int? selected)
+    {
+        _marking = true;
+        _markedBlock = selected;
+        ShowMarkers();
+    }
+
+    /// <summary>Takes the names off the blocks again.</summary>
+    public void UnmarkBlocks()
+    {
+        _marking = false;
+        _markedBlock = null;
+        ShowMarkers();
+    }
+
+    private void ShowMarkers()
+    {
+        bool shown = _marking && _blockWindows.Count > 1;
+        foreach (var (id, window) in _blockWindows)
+            window.SetMarker(
+                shown ? LocalizationService.Format("S.Realtime.BlockNumber", id + 1) : null,
+                id == _markedBlock);
+    }
+
+    /// <summary>
+    /// Hands the modes as they are now to the session — at once, rather than when they have rested
+    /// (<see cref="ProfilesSettle"/>). Called before anything that starts the loops again on what
+    /// the session holds (繼續, a language change), so they do not start on the modes from before.
+    /// </summary>
+    private void FlushProfiles()
+    {
+        _profilesSettle.Stop();
+        if (_session is not { } session || !IsActive) return;
+
+        if (session.ChangeProfiles(Regions()) && IsTranslating && !session.IsPaused)
+            _loadingHint?.Wait(session.ModelsLoading);
+    }
 
     /// <summary>
     /// Puts every block on what its mode says now, after the modes were changed on the page, without
@@ -1176,8 +1303,19 @@ internal sealed class RealtimeSessionController
             if (_blockWindows.TryGetValue(region.Id, out var window))
                 window.SetLayout(region.Profile.Layout, region.Profile.Align);
 
-        if (session.ChangeProfiles(regions) && IsTranslating && !session.IsPaused)
-            _loadingHint?.Wait(session.ModelsLoading);
+        BlocksChanged?.Invoke(this, EventArgs.Empty);
+
+        // A running session reads again once the modes have rested — see ProfilesSettle. Paused or
+        // framing, nothing is read, so the session only has to remember them, and does at once.
+        if (IsTranslating && !session.IsPaused)
+        {
+            _profilesSettle.Stop();
+            _profilesSettle.Start();
+        }
+        else
+        {
+            FlushProfiles();
+        }
     }
 
     /// <summary>
@@ -1472,7 +1610,9 @@ internal sealed class RealtimeSessionController
     private void OnRegionUpdated(object? sender, RealtimeRegionUpdate update) =>
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(DispatcherPriority.Normal, () =>
         {
-            if (update.Generation != Volatile.Read(ref _visibleGeneration)) return;
+            // Refused from a pass before a pause or a language change (the generation), and from a
+            // block's loop that a change of mode has since replaced — see RealtimeRegionUpdate.IsCurrent.
+            if (!update.IsCurrent(Volatile.Read(ref _visibleGeneration))) return;
 
             // The user may have gone back to edit mode while this pass was in flight; its window is
             // gone and the result belongs to a layout that no longer exists.

@@ -24,5 +24,17 @@
              darken a translation it covered. -->
         <Canvas x:Name="ScrimCanvas"/>
         <Canvas x:Name="TextCanvas"/>
+        <!-- Which block this is, while the running bar's 模式 panel is open — see SetMarker. Drawn
+             here rather than in a window of its own: a new window is a change to the capture's
+             exclusion list, which costs a poll (see the exclusion notes in RealtimeSessionController),
+             and this window is already left out of every frame, so the frame is never read with it. -->
+        <Border x:Name="Marker" Visibility="Collapsed" BorderThickness="2" CornerRadius="4"
+                BorderBrush="{DynamicResource AppAccent}">
+            <Border x:Name="MarkerTag" HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Background="{DynamicResource AppAccent}" CornerRadius="0,0,4,0" Padding="6,1,7,2">
+                <TextBlock x:Name="MarkerText" Foreground="White" FontSize="12" FontWeight="SemiBold"
+                           FontFamily="{DynamicResource AppFont}"/>
+            </Border>
+        </Border>
     </Grid>
 </Window>

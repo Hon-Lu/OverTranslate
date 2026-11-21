@@ -101,4 +101,29 @@ public sealed record RealtimeBlockPlacement(
 public sealed record RealtimeRegionUpdate(
     int RegionId,
     IReadOnlyList<TranslatedBlock> Lines,
-    int Generation);
+    int Generation)
+{
+    /// <summary>
+    /// The token of the region loop that drew these lines. Cancelled once that loop has been stopped —
+    /// its block's mode changed and a new loop reads it now (RealtimeTranslationSession.ChangeProfiles),
+    /// which leaves <see cref="Generation"/> as it was — so an update from the old loop that arrives
+    /// late is refused rather than painted over the new loop's reading. None (never cancelled) when
+    /// not drawn by a loop.
+    /// </summary>
+    public CancellationToken Loop { get; init; }
+
+    /// <summary>
+    /// Whether these lines may still be drawn: they belong to the screen as it is now
+    /// (<paramref name="visibleGeneration"/>), and the loop that drew them has not been stopped since.
+    /// </summary>
+    /// <remarks>
+    /// Read on the dispatcher, where every stop is made: a loop is cancelled there before the loop that
+    /// replaces it starts, so an update from the old loop handled after that — wherever it was queued
+    /// relative to the new loop's — finds its token cancelled. A check in the loop itself cannot
+    /// promise that: a pass that passed it can be held up on its thread before it raises the update,
+    /// and its old grouping would then land after the new loop's first reading, which the new loop,
+    /// seeing the same words, would not draw again.
+    /// </remarks>
+    public bool IsCurrent(int visibleGeneration) =>
+        Generation == visibleGeneration && !Loop.IsCancellationRequested;
+}

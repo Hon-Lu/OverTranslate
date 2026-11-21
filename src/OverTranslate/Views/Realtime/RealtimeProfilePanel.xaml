@@ -1,0 +1,324 @@
+<Window x:Class="OverTranslate.Views.Realtime.RealtimeProfilePanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:OverTranslate.Controls"
+        x:ClassModifier="internal"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        SizeToContent="Width"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Opacity="0">
+
+    <Window.Resources>
+        <!-- One setting, or the mode itself, on its own patch of the panel — 顯示外觀's RowCard. -->
+        <Style x:Key="RowCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+
+        <!-- The small tag after a preset's name: the mode card's ProfileTag, in the bar's colours. -->
+        <Style x:Key="ProfileTag" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarMenuBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="Padding" Value="7,0,7,1"/>
+        </Style>
+
+        <Style x:Key="SmallText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- A mode in the list the mode button opens, in place rather than in a popup: a popup is a
+             window of its own, and a window appearing or going changes the capture's exclusion list,
+             which costs the session a poll. -->
+        <Style x:Key="ModeItem" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="6" Padding="8,5">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Current">
+                                <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModeButton" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="{DynamicResource ToolbarBg}" CornerRadius="8"
+                                BorderBrush="{DynamicResource ToolbarMenuBorder}" BorderThickness="1" Padding="10,6">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A small card over the panel: splitting a preset, or confirming 還原為範本. -->
+        <Style x:Key="PanelCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarMenuBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Margin" Value="12,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- A card's answer: 取消's shape (ToolbarFlatButton - corner, height, padding, 1px edge) in
+             the bar's primary colour. The bar's own primary button is a glowing pill, which beside
+             取消 read as two kinds of button for one choice (the user's call). The edge is the fill's
+             colour, so the two come out the same size. -->
+        <Style x:Key="CardPrimaryButton" TargetType="Button" BasedOn="{StaticResource ToolbarFlatButton}">
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
+            <Setter Property="Background" Value="{DynamicResource ToolbarPrimaryBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarPrimaryBg}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- The margin is the room the shadow is drawn in, as on 顯示外觀; the LayoutTransform is set in
+         code for the same mixed-DPI reason. The window is as tall as the panel may ever get here
+         (see Place) and never resizes; the panel sits against the capsule's side of it. No
+         background: the rest of the window is fully transparent, which lets presses through. -->
+    <Border x:Name="RootChrome" Margin="18,16,18,22">
+        <Grid>
+            <Border Background="{DynamicResource ToolbarBg}" Margin="2" CornerRadius="14">
+                <Border.Effect>
+                    <DropShadowEffect x:Name="Shadow"
+                                      BlurRadius="24" ShadowDepth="4" Direction="270"
+                                      Opacity="0.45" Color="#000000"/>
+                </Border.Effect>
+            </Border>
+            <Border x:Name="Chrome"
+                    Width="360"
+                    Background="{DynamicResource ToolbarBg}"
+                    BorderBrush="{DynamicResource ToolbarMenuBorder}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    RenderOptions.ClearTypeHint="Enabled">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Height="36" Margin="18,4,8,0">
+                        <Button x:Name="ResetBtn"
+                                DockPanel.Dock="Right"
+                                Style="{StaticResource ToolbarIconButton}"
+                                Focusable="False"
+                                AutomationProperties.AutomationId="PanelResetBtn"
+                                AutomationProperties.Name="{DynamicResource S.Realtime.ProfileResetAll}"
+                                Click="ResetBtn_Click">
+                            <TextBlock Text="&#xE72C;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13"/>
+                        </Button>
+                        <TextBlock Text="{DynamicResource S.Realtime.ProfileMenu}"
+                                   VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="12.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppTextSecondary}"/>
+                    </DockPanel>
+
+                    <!-- Scrolls once the panel would be taller than the room beside the capsule — see
+                         Place. -->
+                    <ScrollViewer x:Name="Body" Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Focusable="False"
+                                  Padding="8,0,8,8">
+                        <StackPanel x:Name="BodyStack" Grid.IsSharedSizeScope="True">
+                            <ctl:SegmentedSwitch x:Name="BlockSwitch"
+                                                 HorizontalAlignment="Stretch"
+                                                 Margin="0,0,0,2"
+                                                 AutomationProperties.AutomationId="PanelBlockSwitch"/>
+
+                            <!-- The block's mode: what it is, the list to change it, and what it shares. -->
+                            <Border Style="{StaticResource RowCard}">
+                                <StackPanel>
+                                    <Button x:Name="ModeBtn" Style="{StaticResource ModeButton}"
+                                            AutomationProperties.AutomationId="PanelModeBtn"
+                                            Click="ModeBtn_Click">
+                                        <DockPanel>
+                                            <Path DockPanel.Dock="Right" Width="10" Height="10" Stretch="None"
+                                                  VerticalAlignment="Center" Margin="8,0,0,0"
+                                                  StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" Stroke="{DynamicResource AppTextSecondary}"
+                                                  Data="M2,3.5 L5,6.5 L8,3.5"/>
+                                            <Border x:Name="PresetTag" DockPanel.Dock="Right" Margin="8,0,0,0"
+                                                    Style="{StaticResource ProfileTag}" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource S.Realtime.ProfilePresetTag}"
+                                                           FontSize="11" FontFamily="{DynamicResource AppFont}"
+                                                           Foreground="{DynamicResource AppTextSecondary}"/>
+                                            </Border>
+                                            <TextBlock x:Name="ModeName" FontFamily="{DynamicResource AppFont}" FontSize="13.5"
+                                                       Foreground="{DynamicResource AppTextPrimary}"
+                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                    </Button>
+                                    <Border x:Name="ModeListFrame" Visibility="Collapsed" Margin="0,4,0,0" Padding="4"
+                                            Background="{DynamicResource ToolbarBg}" CornerRadius="8"
+                                            BorderBrush="{DynamicResource ToolbarMenuBorder}" BorderThickness="1">
+                                        <StackPanel x:Name="ModeList"/>
+                                    </Border>
+                                    <TextBlock x:Name="SharedText" Style="{StaticResource SmallText}" Margin="2,6,0,0"
+                                               Foreground="{DynamicResource AppAccent}" Visibility="Collapsed"/>
+                                    <DockPanel x:Name="LockRow" Margin="2,8,0,0" Visibility="Collapsed">
+                                        <Button x:Name="ForkBtn" DockPanel.Dock="Right"
+                                                Style="{StaticResource ToolbarPrimaryButton}"
+                                                Focusable="False" Height="26" Padding="10,0" FontSize="12"
+                                                Content="{DynamicResource S.Realtime.ProfileFork}"
+                                                AutomationProperties.AutomationId="PanelForkBtn"
+                                                Click="ForkBtn_Click"/>
+                                        <TextBlock Text="&#xE72E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
+                                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{DynamicResource S.Realtime.ProfilePresetReadOnly}"
+                                                   Style="{StaticResource SmallText}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource RowCard}">
+                                <StackPanel x:Name="MainRows"/>
+                            </Border>
+
+                            <Button x:Name="AdvancedToggle" Style="{StaticResource ModeItem}" Margin="0,4,0,0"
+                                    AutomationProperties.AutomationId="PanelAdvancedToggle"
+                                    Click="AdvancedToggle_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="AdvancedChevron" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                                               Foreground="{DynamicResource AppTextSecondary}"/>
+                                    <TextBlock x:Name="AdvancedText" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource AppTextSecondary}"/>
+                                </StackPanel>
+                            </Button>
+                            <Border x:Name="AdvancedCard" Style="{StaticResource RowCard}" Visibility="Collapsed">
+                                <StackPanel x:Name="AdvancedRows"/>
+                            </Border>
+
+                            <TextBlock Text="{DynamicResource S.Realtime.ProfileLiveApply}"
+                                       Style="{StaticResource SmallText}" FontSize="11" Margin="4,8,4,0"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Over everything: the change a preset was given, offered on a mode of the user's own. -->
+                    <Grid x:Name="ForkLayer" Grid.RowSpan="2" Visibility="Collapsed"
+                          Background="#8C000000" MouseLeftButtonDown="ForkScrim_MouseLeftButtonDown">
+                        <Border Style="{StaticResource PanelCard}" MouseLeftButtonDown="Card_MouseLeftButtonDown">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE72E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
+                                               Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{DynamicResource S.Realtime.ProfilePresetReadOnly}" FontSize="13.5"
+                                               FontWeight="SemiBold" FontFamily="{DynamicResource AppFont}"
+                                               Foreground="{DynamicResource AppTextPrimary}"/>
+                                </StackPanel>
+                                <TextBlock x:Name="ForkChangeText" Style="{StaticResource SmallText}" FontSize="12.5" Margin="0,6,0,10"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button x:Name="ForkCancelBtn" Style="{StaticResource ToolbarFlatButton}" Focusable="False"
+                                            Height="28" Padding="12,0" FontSize="12"
+                                            AutomationProperties.AutomationId="PanelForkCancelBtn"
+                                            Click="ForkCancel_Click"/>
+                                    <Button x:Name="ForkCreateBtn" Style="{StaticResource CardPrimaryButton}" Focusable="False"
+                                            Height="28" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+                                            Content="{DynamicResource S.Realtime.ProfileFork}"
+                                            AutomationProperties.AutomationId="PanelForkCreateBtn"
+                                            Click="ForkCreate_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- 還原為範本 asks first: it puts back every value the user tuned. -->
+                    <Grid x:Name="ConfirmLayer" Grid.RowSpan="2" Visibility="Collapsed"
+                          Background="#8C000000" MouseLeftButtonDown="ConfirmScrim_MouseLeftButtonDown">
+                        <Border Style="{StaticResource PanelCard}" MouseLeftButtonDown="Card_MouseLeftButtonDown">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource S.Realtime.ProfileResetTitle}" FontSize="13.5"
+                                           FontWeight="SemiBold" FontFamily="{DynamicResource AppFont}"
+                                           Foreground="{DynamicResource AppTextPrimary}"/>
+                                <TextBlock x:Name="ConfirmMessage" Style="{StaticResource SmallText}" FontSize="12.5" Margin="0,6,0,10"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Style="{StaticResource ToolbarFlatButton}" Focusable="False"
+                                            Height="28" Padding="12,0" FontSize="12"
+                                            Content="{DynamicResource S.Common.Cancel}"
+                                            AutomationProperties.AutomationId="PanelConfirmCancelBtn"
+                                            Click="ConfirmCancel_Click"/>
+                                    <Button Style="{StaticResource CardPrimaryButton}" Focusable="False"
+                                            Height="28" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+                                            Content="{DynamicResource S.Realtime.ProfileResetAction}"
+                                            AutomationProperties.AutomationId="PanelConfirmResetBtn"
+                                            Click="ConfirmReset_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

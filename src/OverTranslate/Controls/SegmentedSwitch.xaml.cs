@@ -84,6 +84,20 @@ public partial class SegmentedSwitch : UserControl
         ThirdRadio.Visibility = Visibility.Visible;
     }
 
+    /// <summary>
+    /// The words on two or three parts as text, for words made at run time — 區塊 1, 區塊 2 on the
+    /// 模式 panel, as many as there are blocks. Null for <paramref name="third"/> folds it away.
+    /// </summary>
+    public void SetTexts(string first, string second, string? third = null)
+    {
+        FirstRadio.Content = first;
+        SecondRadio.Content = second;
+        ThirdRadio.Content = third;
+        ThirdColumn.SharedSizeGroup = third is null ? null : "SegmentedSwitchHalf";
+        ThirdRadio.Visibility = third is null ? Visibility.Collapsed : Visibility.Visible;
+        if (third is null && ThirdRadio.IsChecked == true) SelectedIndex = 1;
+    }
+
     private void Radio_Checked(object sender, RoutedEventArgs e)
     {
         MoveThumb(animate: !_showing);
