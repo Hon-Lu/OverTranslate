@@ -988,20 +988,18 @@
     <sys:String x:Key="S.Glossary.InUse">使用中</sys:String>
     <sys:String x:Key="S.Glossary.Count">{0} 件</sys:String>
     <sys:String x:Key="S.Glossary.Name">名前</sys:String>
-    <sys:String x:Key="S.Glossary.Search">検索</sys:String>
-    <sys:String x:Key="S.Glossary.PasteMany">まとめて貼り付け</sys:String>
+    <sys:String x:Key="S.Glossary.Search">原文または訳文を検索</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">一括入力</sys:String>
     <sys:String x:Key="S.Glossary.Export">エクスポート</sys:String>
     <sys:String x:Key="S.Glossary.Delete">用語集を削除</sys:String>
-    <sys:String x:Key="S.Glossary.PasteHelp">1 行に 1 件、原文と訳文を「=」で区切ります。表計算ソフトからコピーした 2 列はそのまま貼り付けられます。</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">1 行に 1 件、原文と訳文を「=」で区切ります。Excel などの表からコピーしてそのまま貼り付けることもできます。</sys:String>
     <sys:String x:Key="S.Glossary.PasteLine">行</sys:String>
     <sys:String x:Key="S.Glossary.Source">原文</sys:String>
     <sys:String x:Key="S.Glossary.Target">訳文</sys:String>
     <sys:String x:Key="S.Glossary.PasteAdd">追加</sys:String>
     <sys:String x:Key="S.Glossary.Applies">この用語集は翻訳先が「{0}」のときのみ適用されます。</sys:String>
-    <sys:String x:Key="S.Glossary.OpenParen">（</sys:String>
-    <sys:String x:Key="S.Glossary.CloseParen">）</sys:String>
     <sys:String x:Key="S.Glossary.TargetLanguage">訳文の言語</sys:String>
-    <sys:String x:Key="S.Glossary.Empty">項目はまだありません。1 件ずつ入力するか、「まとめて貼り付け」で 2 列の表を貼り付けます。</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">項目はまだありません</sys:String>
     <sys:String x:Key="S.Glossary.DeleteEntry">項目を削除</sys:String>
     <sys:String x:Key="S.Glossary.DeleteTitle">用語集を削除</sys:String>
     <sys:String x:Key="S.Glossary.DeleteConfirm">用語集「{0}」を削除しますか？</sys:String>
@@ -1017,11 +1015,25 @@
     <sys:String x:Key="S.Glossary.ExportFilter">用語集 (*.tsv)|*.tsv</sys:String>
     <sys:String x:Key="S.Glossary.Exported">「{0}」をエクスポートしました。</sys:String>
     <sys:String x:Key="S.Glossary.ExportFailed">「{0}」に書き込めません。</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemNoSeparator">「=」がないため追加しません</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemEmpty">原文または訳文が空のため追加しません</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemTooLong">40 文字を超えるため追加しません</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">形式エラー：「=」がありません</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">形式エラー：原文または訳文が空です</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">形式エラー：40 文字を超えています</sys:String>
     <sys:String x:Key="S.Glossary.Replaces">「{0}」を置き換え</sys:String>
     <sys:String x:Key="S.Glossary.PasteCount">{0} 件追加できます</sys:String>
     <sys:String x:Key="S.Glossary.PasteSeparator">、</sys:String>
     <sys:String x:Key="S.Glossary.PasteBad">{0} 行は読み取れません</sys:String>
+    <sys:String x:Key="S.Glossary.EmptyHint">上の欄に入力して Enter キーで追加するか、「一括入力」を使います。</sys:String>
+    <sys:String x:Key="S.Glossary.NoMatch">「{0}」に一致する項目はありません</sys:String>
+    <sys:String x:Key="S.Glossary.MatchCount">{0} 件一致</sys:String>
+    <sys:String x:Key="S.Glossary.AddEntry">追加</sys:String>
+    <sys:String x:Key="S.Glossary.Updated">「{0}」を更新しました</sys:String>
+    <sys:String x:Key="S.Glossary.Added">{0} 件追加しました</sys:String>
+    <sys:String x:Key="S.Glossary.Full">上限の {0} 件に達しています</sys:String>
+    <sys:String x:Key="S.Glossary.BatchTarget">「{0}」に追加</sys:String>
+    <sys:String x:Key="S.Glossary.BatchPreviewEmpty">入力または貼り付けると、ここにプレビューが表示されます。</sys:String>
+    <sys:String x:Key="S.Glossary.NewGlossary">用語集を作成</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteNamed">「{0}」を削除</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmTitle">一部の形式が正しくありません</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmBody">形式が正しくない {0} 行は追加せずにスキップします。残りの {1} 件を用語集に追加します。</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmBack">戻って修正</sys:String>
 </ResourceDictionary>

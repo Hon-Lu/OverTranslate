@@ -984,20 +984,18 @@
     <sys:String x:Key="S.Glossary.InUse">使用中</sys:String>
     <sys:String x:Key="S.Glossary.Count">{0} 条</sys:String>
     <sys:String x:Key="S.Glossary.Name">名称</sys:String>
-    <sys:String x:Key="S.Glossary.Search">搜索</sys:String>
-    <sys:String x:Key="S.Glossary.PasteMany">粘贴多条</sys:String>
+    <sys:String x:Key="S.Glossary.Search">搜索原文或译文</sys:String>
+    <sys:String x:Key="S.Glossary.PasteMany">批量输入</sys:String>
     <sys:String x:Key="S.Glossary.Export">导出</sys:String>
     <sys:String x:Key="S.Glossary.Delete">删除词汇表</sys:String>
-    <sys:String x:Key="S.Glossary.PasteHelp">每行一条，原文与译文以“=”分隔；从表格软件复制的两列可直接粘贴。</sys:String>
+    <sys:String x:Key="S.Glossary.PasteHelp">每行一条，原文与译文以“=”分隔；也可直接从 Excel 等表格复制粘贴。</sys:String>
     <sys:String x:Key="S.Glossary.PasteLine">行</sys:String>
     <sys:String x:Key="S.Glossary.Source">原文</sys:String>
     <sys:String x:Key="S.Glossary.Target">译文</sys:String>
     <sys:String x:Key="S.Glossary.PasteAdd">添加</sys:String>
     <sys:String x:Key="S.Glossary.Applies">此词汇表仅在目标语言为“{0}”时应用。</sys:String>
-    <sys:String x:Key="S.Glossary.OpenParen">（</sys:String>
-    <sys:String x:Key="S.Glossary.CloseParen">）</sys:String>
     <sys:String x:Key="S.Glossary.TargetLanguage">译文语言</sys:String>
-    <sys:String x:Key="S.Glossary.Empty">暂无条目。可逐条输入，或通过“粘贴多条”粘贴两列表格。</sys:String>
+    <sys:String x:Key="S.Glossary.Empty">暂无条目</sys:String>
     <sys:String x:Key="S.Glossary.DeleteEntry">删除条目</sys:String>
     <sys:String x:Key="S.Glossary.DeleteTitle">删除词汇表</sys:String>
     <sys:String x:Key="S.Glossary.DeleteConfirm">确定删除“{0}”词汇表吗？</sys:String>
@@ -1013,11 +1011,25 @@
     <sys:String x:Key="S.Glossary.ExportFilter">词汇表 (*.tsv)|*.tsv</sys:String>
     <sys:String x:Key="S.Glossary.Exported">已导出“{0}”。</sys:String>
     <sys:String x:Key="S.Glossary.ExportFailed">无法写入“{0}”。</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemNoSeparator">找不到“=”，不会添加</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemEmpty">原文或译文为空，不会添加</sys:String>
-    <sys:String x:Key="S.Glossary.ProblemTooLong">超过 40 个字，不会添加</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemNoSeparator">格式错误：找不到“=”</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemEmpty">格式错误：原文或译文为空</sys:String>
+    <sys:String x:Key="S.Glossary.ProblemTooLong">格式错误：超过 40 个字</sys:String>
     <sys:String x:Key="S.Glossary.Replaces">替换“{0}”</sys:String>
     <sys:String x:Key="S.Glossary.PasteCount">可添加 {0} 条</sys:String>
     <sys:String x:Key="S.Glossary.PasteSeparator">；</sys:String>
     <sys:String x:Key="S.Glossary.PasteBad">{0} 行无法解析</sys:String>
+    <sys:String x:Key="S.Glossary.EmptyHint">在上方输入后按 Enter 添加，或使用“批量输入”。</sys:String>
+    <sys:String x:Key="S.Glossary.NoMatch">没有符合“{0}”的条目</sys:String>
+    <sys:String x:Key="S.Glossary.MatchCount">符合 {0} 条</sys:String>
+    <sys:String x:Key="S.Glossary.AddEntry">添加</sys:String>
+    <sys:String x:Key="S.Glossary.Updated">已更新“{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.Added">已添加 {0} 条</sys:String>
+    <sys:String x:Key="S.Glossary.Full">已达 {0} 条上限</sys:String>
+    <sys:String x:Key="S.Glossary.BatchTarget">添加到“{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.BatchPreviewEmpty">输入或粘贴后在此预览。</sys:String>
+    <sys:String x:Key="S.Glossary.NewGlossary">新建词汇表</sys:String>
+    <sys:String x:Key="S.Glossary.DeleteNamed">删除“{0}”</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmTitle">部分内容格式错误</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmBody">{0} 行格式错误，将跳过不添加；其余 {1} 条会添加到词汇表。</sys:String>
+    <sys:String x:Key="S.Glossary.BatchConfirmBack">返回修改</sys:String>
 </ResourceDictionary>
