@@ -166,6 +166,7 @@ public class SettingsService
 
         settings.Realtime.Profiles = RealtimeSettings.CleanProfiles(
             settings.Realtime.Profiles.Count > 0 ? settings.Realtime.Profiles : ReadProfilesOneByOne(root));
+        settings.Glossary = GlossarySettings.Clean(settings.Glossary);
         return settings;
     }
 

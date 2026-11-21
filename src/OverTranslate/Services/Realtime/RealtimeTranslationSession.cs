@@ -115,6 +115,10 @@ public sealed class RealtimeTranslationSession
     // application. Set by Start before any region loop begins.
     private Models.TranslationProvider _provider;
 
+    // The glossary the last pass was translated with — see GlossaryKey.
+    private string _glossaryKey = "";
+    private readonly object _glossaryGate = new();
+
     // What Resume needs to put the loops back the way Start left them. A paused session is still
     // the session the user framed: the blocks and the engine cannot change while it is paused,
     // because everything that could change them lives on a page a session has hidden. The languages
@@ -1388,6 +1392,34 @@ public sealed class RealtimeTranslationSession
     }
 
     /// <summary>
+    /// The part of a cache key that says which glossary a line was translated with into
+    /// <paramref name="targetLanguage"/> — empty with none — and when that has changed since the last
+    /// pass, the session's history emptied.
+    /// </summary>
+    /// <remarks>
+    /// <para>In the key so that a glossary switched, or an entry edited, while 即時翻譯 runs shows on the
+    /// next line rather than once the cache happens to lose the old one: a line on screen is asked for
+    /// once per key.</para>
+    ///
+    /// <para>The history goes with it because it is translations done before, sent as the way things
+    /// were translated: a name the old glossary gave, in the history, would contradict the entry
+    /// the new one sends beside it.</para>
+    /// </remarks>
+    private string GlossaryKey(string targetLanguage)
+    {
+        var key = GlossaryRuntime.For(SettingsService.Instance.Current.Glossary, targetLanguage)?.Key ?? "";
+        lock (_glossaryGate)
+        {
+            if (key == _glossaryKey) return key;
+            _glossaryKey = key;
+        }
+
+        _history.Clear();
+        Log.Info("Realtime session glossary changed; history cleared");
+        return key;
+    }
+
+    /// <summary>
     /// Translates only the lines the session has not seen before, then reassembles the full result
     /// in the original order so the overlay always receives every line it has to draw.
     /// </summary>
@@ -1418,8 +1450,9 @@ public sealed class RealtimeTranslationSession
 
         // The service is part of the key: it cannot change mid-session today, but a cache that
         // silently outlived a change of engine would serve the old engine's wording forever.
-        var cacheKeyPrefix = $"{_provider}|{sourceLanguage}|{targetLanguage}|";
         var withContext = _provider is Models.TranslationProvider.OpenAI or Models.TranslationProvider.LocalAI;
+        var cacheKeyPrefix = $"{_provider}|{sourceLanguage}|{targetLanguage}|" +
+                             (withContext ? GlossaryKey(targetLanguage) + "|" : "");
 
         // Every line this pass is waiting for, by key: the ones it sends and the ones another pass
         // already has on their way. One per key, so a line read twice in one region goes once.

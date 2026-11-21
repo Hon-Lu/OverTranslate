@@ -8,7 +8,7 @@ using OverTranslate.Translation.OpenAi;
 namespace OverTranslate.Services.Providers;
 
 /// <summary>The settings a translation is made with.</summary>
-internal sealed record LocalAiOptions(bool Batch, string Style, int TimeoutSeconds);
+internal sealed record LocalAiOptions(bool Batch, string Style, int TimeoutSeconds, GlossarySettings? Glossary = null);
 
 /// <summary>
 /// 本機 AI 翻譯: the same instruction and the same reading of the answer as the OpenAI-compatible
@@ -51,7 +51,10 @@ internal sealed class LocalAiProvider : ITranslationProvider
     internal LocalAiProvider(ILocalAiBackend? backend = null, Func<LocalAiOptions>? options = null, HttpClient? http = null)
     {
         _backend = backend ?? AppServices.LocalAi;
-        _options = options ?? (() => FromSettings(SettingsService.Instance.Current.LocalAi));
+        _options = options ?? (() => FromSettings(SettingsService.Instance.Current.LocalAi) with
+        {
+            Glossary = SettingsService.Instance.Current.Glossary,
+        });
         _http = http ?? DefaultHttp;
         _chat = new OpenAiChatTranslator(SendAsync);
     }
@@ -82,7 +85,9 @@ internal sealed class LocalAiProvider : ITranslationProvider
         }
 
         var options = _options();
-        var prompt = OpenAiCompatibleProvider.BuildPrompt(sourceLang, targetLang, "", options.Batch, options.Style);
+        var glossary = options.Glossary is { } glossaries ? GlossaryRuntime.For(glossaries, targetLang) : null;
+        var prompt = GlossaryRuntime.With(
+            OpenAiCompatibleProvider.BuildPrompt(sourceLang, targetLang, "", options.Batch, options.Style), glossary);
         var request = new OpenAiChatRequest(
             NoEndpoint, "", "", prompt,
             OpenAiModelProfile.DefaultTemperature,
@@ -94,7 +99,8 @@ internal sealed class LocalAiProvider : ITranslationProvider
         var cut = blocks.Select(block => TextPieces.Cut(block.Text, MaxPieceCharacters)).ToList();
         var pieces = cut.SelectMany(text => text.Pieces).ToList();
 
-        Log.Info("本機 AI 翻譯：{Count} 個區塊（{Pieces} 段），{Way:l}", blocks.Count, pieces.Count, options.Batch ? "批次" : "逐段");
+        Log.Info("本機 AI 翻譯：{Count} 個區塊（{Pieces} 段），{Way:l}，詞彙表 {Terms} 條",
+            blocks.Count, pieces.Count, options.Batch ? "批次" : "逐段", glossary?.Matcher.Count ?? 0);
 
         IReadOnlyList<OpenAiChatOutcome> outcomes;
         try

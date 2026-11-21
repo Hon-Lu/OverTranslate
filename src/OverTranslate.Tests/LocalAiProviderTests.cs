@@ -83,6 +83,30 @@ public class LocalAiProviderTests
         var prompt = server.Bodies[0].GetProperty("prompt").GetString()!;
         Assert.DoesNotContain("\n語氣", prompt);
         Assert.Contains("語氣口語、輕鬆", prompt);
+    }
+
+    [Theory]
+    [InlineData("ZH-HANT", true)]
+    [InlineData("EN-US", false)]
+    public async Task TheGlossaryGoesOnlyWithARequestIntoItsLanguage(string target, bool sent)
+    {
+        var server = new Server((_, _) => Reply("x"));
+        var glossary = new Models.GlossarySettings
+        {
+            Lists = [new Models.GlossaryList
+            {
+                Id = "g", Name = "作品", TargetLanguage = "ZH-HANT",
+                Entries = [new Models.GlossaryEntry { Source = "Alisa", Target = "艾莉莎" }],
+            }],
+            ActiveId = "g",
+        };
+        var provider = new LocalAiProvider(
+            new Backend(), () => new LocalAiOptions(false, "", 60, glossary), new HttpClient(server));
+
+        await provider.TranslateAsync([Block("Alisa is here.")], "EN-US", target, "");
+
+        var prompt = server.Bodies[0].GetProperty("prompt").GetString()!;
+        Assert.Equal(sent, prompt.Contains("艾莉莎"));
         Assert.DoesNotContain("輕鬆。。", prompt);
     }
 

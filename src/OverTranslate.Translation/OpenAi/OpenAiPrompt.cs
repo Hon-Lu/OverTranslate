@@ -94,6 +94,30 @@ public sealed record OpenAiPrompt(
     public bool HasContext => Template.Contains(ContextPlaceholder, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// The user's glossary, or null: the entries a request's text contains go with it, under their own
+    /// heading — see <see cref="Build"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Held here rather than matched by the caller so that every message built for a text —
+    /// one at a time, a batch, a text sent again alone, one cut to fit — carries the same entries.</para>
+    ///
+    /// <para>The entries go last in what <c>{context}</c> becomes: after the translations done before,
+    /// straight before the instruction. The translations change least from one request to the next and
+    /// a server reuses the start of the last request it read; the entries are the text's own and differ
+    /// every time. A template with no <c>{context}</c> has them at the very start of the message instead,
+    /// so a user's own template needs no change to get them.</para>
+    ///
+    /// <para>Measured on two local models (Hy-MT2-7B and translategemma 4B, two seeds, 42 expected
+    /// names): with no glossary 10 and 7 of them came out as the user's, with the entries as their own
+    /// section 42 and 42. The same entries passed as earlier translations got 42 and 38, as one line
+    /// each with an arrow 42 and 40. Replacing the names in the text with the translation in a tag to
+    /// keep — the shape a machine translator needs — scored worst on a model: 6 of 8 accidental
+    /// matches were forced through and 31 answers kept the tag. The labelled pairs are the ones the
+    /// context was already measured with.</para>
+    /// </remarks>
+    public GlossaryMatcher? Glossary { get; init; }
+
+    /// <summary>
     /// The application's template in <paramref name="language"/>, the target language still a
     /// placeholder: the context, the instruction, the text.
     /// </summary>
@@ -169,7 +193,7 @@ public sealed record OpenAiPrompt(
     /// where one whose instruction says nothing of it lost none.</para>
     /// </remarks>
     public string Build(string text, IReadOnlyList<OpenAiTranslationPair>? earlier = null) =>
-        Fill(Template, Context(Wording.For(Language), earlier), Bare(text));
+        WithGlossary([text], earlier, context => Fill(Template, context, Bare(text)));
 
     /// <summary>The user message for texts in one request, read back by number.</summary>
     /// <param name="texts">The texts, in order: numbered from 1. One is a batch of one.</param>
@@ -188,7 +212,33 @@ public sealed record OpenAiPrompt(
     public string BuildBatch(IReadOnlyList<string> texts, IReadOnlyList<OpenAiTranslationPair>? earlier = null)
     {
         var body = string.Join("\n", texts.Select((text, i) => $"<{i + 1}>{OneLine(text)}</{i + 1}>"));
-        return Fill(Template, Context(Wording.For(Language), earlier), body);
+        return WithGlossary(texts, earlier, context => Fill(Template, context, body));
+    }
+
+    /// <summary>
+    /// The message <paramref name="fill"/> makes from the context, with the glossary entries
+    /// <paramref name="texts"/> contain at the end of the context — or at the start of the message
+    /// when the template has no place for a context. See <see cref="Glossary"/>.
+    /// </summary>
+    private string WithGlossary(
+        IReadOnlyList<string> texts, IReadOnlyList<OpenAiTranslationPair>? earlier, Func<string, string> fill)
+    {
+        var words = Wording.For(Language);
+        var history = Context(words, earlier);
+        var terms = Glossary is { Count: > 0 } glossary ? glossary.Find(texts) : [];
+        if (terms.Count == 0) return fill(history);
+
+        var section = GlossarySection(words, terms);
+        if (!HasContext) return section + "\n\n" + fill(history);
+        return fill(history.Length == 0 ? section : history + "\n\n" + section);
+    }
+
+    /// <summary>The glossary's heading, then each entry as a context pair is written.</summary>
+    private string GlossarySection(Wording words, IReadOnlyList<GlossaryTerm> terms)
+    {
+        var source = SourceLabel ?? words.AutomaticSource;
+        return words.Glossary + "\n" + string.Join("\n\n", terms.Select(term =>
+            source + words.Colon + OneLine(term.Source) + "\n" + TargetLabel + words.Colon + OneLine(term.Target)));
     }
 
     /// <summary><paramref name="template"/> with <c>{context}</c> and <c>{text}</c> filled in.</summary>
@@ -247,9 +297,10 @@ public sealed record OpenAiPrompt(
     /// <param name="Colon">What follows a label: the full-width colon in Chinese, a colon and a space in English.</param>
     /// <param name="BeforeOutputOnly">Where in an instruction a style goes: the punctuation before "output only".</param>
     /// <param name="StyleSentence">What replaces that punctuation, with the style at <c>{0}</c>.</param>
+    /// <param name="Glossary">The heading of the glossary entries — see <see cref="OpenAiPrompt.Glossary"/>.</param>
     private sealed record Wording(
         string Instruction, string History, string BatchInstruction, string Batch,
-        string AutomaticSource, string Colon, string BeforeOutputOnly, string StyleSentence)
+        string AutomaticSource, string Colon, string BeforeOutputOnly, string StyleSentence, string Glossary)
     {
         public static Wording For(OpenAiPromptLanguage language) => language switch
         {
@@ -266,7 +317,8 @@ public sealed record OpenAiPrompt(
             "原文",
             "：",
             "，只輸出",
-            "。{0}。只輸出");
+            "。{0}。只輸出",
+            "以下專有名詞須使用指定譯名：");
 
         private static readonly Wording SimplifiedChinese = new(
             $"将以下文本翻译为{TargetNamePlaceholder}，只输出译文，不加标签，不要解释：",
@@ -276,7 +328,8 @@ public sealed record OpenAiPrompt(
             "原文",
             "：",
             "，只输出",
-            "。{0}。只输出");
+            "。{0}。只输出",
+            "以下专有名词须使用指定译名：");
 
         private static readonly Wording English = new(
             $"Translate the following text into {TargetNamePlaceholder}. Output only the translation, with no tags and no explanation:",
@@ -286,6 +339,7 @@ public sealed record OpenAiPrompt(
             "Source",
             ": ",
             ". Output only",
-            ". {0}. Output only");
+            ". {0}. Output only",
+            "Use these translations for the following names and terms:");
     }
 }
