@@ -446,11 +446,13 @@
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">モード</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilesHint">モードは翻訳ブロックごとに切り替えられます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesHint">モードは翻訳ブロックを選択した後に選びます。ブロックごとに異なるモードを使用できます。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesPreset">プリセット</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesCustom">カスタムモード</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">プリセット</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">テンプレート：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateModified">テンプレート：{0}・{1} 項目を変更</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileAdd">カスタムモードを追加（{0}/{1}）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdd">カスタムモードを追加</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">カスタムモードは {0} 個までです</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewTitle">カスタムモードを追加</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplate">テンプレート</sys:String>

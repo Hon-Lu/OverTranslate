@@ -442,11 +442,13 @@ Actually used this time: {2}</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">Modes</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilesHint">Each translation block can switch modes on its own.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesHint">Modes are chosen after selecting translation blocks. Each block can use a different mode.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesPreset">Presets</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesCustom">Custom modes</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">Preset</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">Template: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateModified">Template: {0} · {1} changed</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileAdd">New custom mode ({0}/{1})</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdd">New custom mode</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">Up to {0} custom modes</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewTitle">New custom mode</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplate">Template</sys:String>

@@ -462,11 +462,13 @@
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">模式</sys:String>
-    <sys:String x:Key="S.Realtime.ProfilesHint">模式可在每個翻譯區塊上獨立切換。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesHint">模式需於選取翻譯區塊後選擇，各區塊可分別使用不同模式。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesPreset">預設</sys:String>
+    <sys:String x:Key="S.Realtime.ProfilesCustom">自訂模式</sys:String>
     <sys:String x:Key="S.Realtime.ProfilePresetTag">預設</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateOf">範本：{0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplateModified">範本：{0}・已修改 {1} 項</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileAdd">新增自訂模式（{0}/{1}）</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileAdd">新增自訂模式</sys:String>
     <sys:String x:Key="S.Realtime.ProfileLimit">自訂模式最多 {0} 個</sys:String>
     <sys:String x:Key="S.Realtime.ProfileNewTitle">新增自訂模式</sys:String>
     <sys:String x:Key="S.Realtime.ProfileTemplate">範本</sys:String>
