@@ -173,11 +173,8 @@ internal static class AutoModeProbe
             cases.Add((name, stored));
         }
 
-        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
-        {
-            int merge = level;
-            Add($"merge-{level}", p => p.MergeLevel = merge);
-        }
+        foreach (var merge in Enum.GetValues<RealtimeSentenceMerge>())
+            Add($"merge-{merge}", p => p.SentenceMerge = merge);
         foreach (var percent in new[] { RealtimeProfile.MinConfidencePercent, RealtimeProfile.MaxConfidencePercent })
             Add($"confidence-{percent}", p => p.ConfidencePercent = percent);
         Add("settle-auto", p => p.SettleSeconds = RealtimePresets.Automatic);
@@ -188,25 +185,24 @@ internal static class AutoModeProbe
         Add("detector-min", p => p.DetectorPercent = RealtimeProfile.MinDetectorPercent);
         Add("detector-max", p => p.DetectorPercent = RealtimeProfile.MaxDetectorPercent);
         Add("small-max", p => p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent);
-        // Each grouping at the loosest and the tightest of everything else; 自動判斷 at the end of its
-        // own steps that goes the same way.
-        foreach (var (name, loosest, tightest) in new[]
+        // Each grouping at the loosest and the tightest of everything else.
+        foreach (var (name, merge) in new[]
         {
-            ("lines", RealtimeMergeLevels.Min, RealtimeMergeLevels.Min),
-            ("items", RealtimeMergeLevels.Items, RealtimeMergeLevels.Items),
-            ("auto", RealtimeMergeLevels.AutomaticHighest, RealtimeMergeLevels.AutomaticLowest),
-            ("passage", RealtimeMergeLevels.Passage, RealtimeMergeLevels.Passage),
-            ("merged", RealtimeMergeLevels.Max, RealtimeMergeLevels.Max),
+            ("lines", RealtimeSentenceMerge.None),
+            ("items", RealtimeSentenceMerge.Items),
+            ("auto", RealtimeSentenceMerge.Automatic),
+            ("passage", RealtimeSentenceMerge.Passage),
+            ("merged", RealtimeSentenceMerge.All),
         })
         {
             Add($"loosest-{name}", p =>
             {
-                p.MergeLevel = loosest;
+                p.SentenceMerge = merge;
                 p.ConfidencePercent = RealtimeProfile.MinConfidencePercent;
             });
             Add($"tightest-{name}", p =>
             {
-                p.MergeLevel = tightest;
+                p.SentenceMerge = merge;
                 p.ConfidencePercent = RealtimeProfile.MaxConfidencePercent;
                 p.IgnoreSmallPercent = RealtimeProfile.MaxIgnoreSmallPercent;
             });

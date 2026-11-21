@@ -25,8 +25,8 @@ internal static class MergeMaxProbe
     internal static int Run(AutoModeProbe.Capture[] cache, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var passage = ResolvedProfile.Resolve(new RealtimeProfile { Id = "p", MergeLevel = RealtimeMergeLevels.Passage });
-        var merged = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", MergeLevel = RealtimeMergeLevels.Max });
+        var passage = ResolvedProfile.Resolve(new RealtimeProfile { Id = "p", SentenceMerge = RealtimeSentenceMerge.Passage });
+        var merged = ResolvedProfile.Resolve(new RealtimeProfile { Id = "m", SentenceMerge = RealtimeSentenceMerge.All });
 
         var frames = new Dictionary<string, int>();
         var pairs7 = new Dictionary<string, long>();

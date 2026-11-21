@@ -7,7 +7,7 @@ namespace OverTranslate.Services.Realtime;
 /// what 自動 stands for where it does not. Display only — the pipeline reads
 /// <see cref="ResolvedProfile"/>, from which this is worked out by the same rules.
 /// </summary>
-/// <param name="MergeLevel">合併程度, held to its range.</param>
+/// <param name="SentenceMerge">語句合併, the preset's where the mode holds none it can read.</param>
 /// <param name="SettleIsAutomatic">畫面文字穩定後再讀取 is left on 自動.</param>
 /// <param name="SettleSeconds">
 /// 畫面文字穩定後再讀取 in seconds, rounded to the hundredth: as set, or what 自動 comes to — 0
@@ -20,7 +20,7 @@ namespace OverTranslate.Services.Realtime;
 /// Null for 依各組判斷 — 自動 on a 自動判斷 step.
 /// </param>
 internal sealed record RealtimeActualValues(
-    int MergeLevel,
+    RealtimeSentenceMerge SentenceMerge,
     bool SettleIsAutomatic,
     double? SettleSeconds,
     bool DetectorIsAutomatic,
@@ -60,7 +60,7 @@ internal sealed record RealtimeActualValues(
             };
 
         return new RealtimeActualValues(
-            filled.MergeLevel!.Value,
+            filled.SentenceMerge!.Value,
             resolved.SettlePolls is null,
             settle,
             resolved.DetectorFraction is null,

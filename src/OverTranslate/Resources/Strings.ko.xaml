@@ -485,16 +485,11 @@
     <sys:String x:Key="S.Realtime.ProfileMergeNone">합치지 않음</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">항목별</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">자동 판단</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">자동 판단・{0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean1">항목 쪽</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean2">약간 항목 쪽</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean4">약간 문단 쪽</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean5">문단 쪽</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassage">문단</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">합치기</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">줄마다 따로 번역하며 위아래 줄을 합치지 않습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">줄마다 따로 번역하고, 분명히 같은 문장일 때만 위아래를 합칩니다.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">텍스트 배치와 내용을 보고 합칠지 판단하며, 오른쪽으로 갈수록 위아래 줄을 더 쉽게 합칩니다.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">텍스트 배치와 내용을 보고 그룹마다 위아래 줄을 합칠지 판단합니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">크기와 위치가 비슷한 위아래 여러 줄을 우선 하나의 문단으로 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">글자 크기와 정렬에 관계없이 위치가 가까운 위아래 문장을 모두 하나의 문단으로 합칩니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">번역문 정렬</sys:String>
@@ -523,7 +518,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">짧은 글 인식 임계값</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">10자 미만의 텍스트에만 적용됩니다. 높이면 잘못된 인식이 줄지만 일부 짧은 텍스트는 인식되지 않을 수 있고, 낮추면 더 많은 텍스트를 인식하지만 잘못된 인식이 늘 수 있습니다.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">끔</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeMid">중간</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">실시간 번역을 중단했습니다: {0}</sys:String>

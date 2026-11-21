@@ -481,16 +481,11 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNone">No merging</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">Per item</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">Automatic</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">Automatic · {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean1">Favor items</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean2">Slightly favor items</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean4">Slightly favor passages</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean5">Favor passages</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassage">Passage</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">Merge</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">Each line is translated on its own; lines are never merged with the ones above or below.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">Each line is translated on its own; lines are merged only when they are clearly one sentence.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Decides from the layout and content of the text whether to merge; further right, lines merge more readily.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Decides for each group, from the layout and content of the text, whether to merge stacked lines.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">Lines of similar size and position, one above another, are merged into one passage first.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">Regardless of text size and alignment, lines close together above and below are all merged into one passage.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">Translation alignment</sys:String>
@@ -519,7 +514,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidence">Short-text recognition threshold</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Applies only to text under 10 characters. Raise it to reduce misreads, though some short text may go unrecognized; lower it to recognize more text, at the risk of more misreads.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Off</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeMid">Medium</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Realtime translation stopped: {0}</sys:String>

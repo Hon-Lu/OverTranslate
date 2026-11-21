@@ -20,8 +20,8 @@ internal enum RealtimeReadTiming
 }
 
 /// <summary>
-/// How a block's lines are put into groups — 合併程度 (<see cref="RealtimeMergeLevels"/>) as the
-/// pipeline runs it, the five 自動判斷 steps being one grouping with different rules.
+/// How a block's lines are put into groups — 語句合併 (<see cref="RealtimeSentenceMerge"/>) as the
+/// pipeline runs it.
 /// </summary>
 internal enum RealtimeMerge
 {
@@ -138,12 +138,12 @@ public sealed record ResolvedProfile
     //    1.5     1 / 10 / 2     41     also a menu joined; 逐項 moves on 4–6 frames only
     //
     // All it was for was prose set with readings between its lines (ja-ruby/novel.png, one passage
-    // from 1.25 up): too rare to be worth a value nobody could tell from 合併程度.
+    // from 1.25 up): too rare to be worth a value nobody could tell from 語句合併.
 
     /// <summary>The mode this was resolved from — a preset's id or a custom mode's.</summary>
     internal string Id { get; init; } = RealtimePresets.StandardId;
 
-    /// <summary>合併程度: how the lines are grouped. The 自動判斷 steps differ in <see cref="Auto"/>.</summary>
+    /// <summary>語句合併: how the lines are grouped.</summary>
     internal RealtimeMerge Merge { get; init; } = RealtimeMerge.Auto;
 
     /// <summary>
@@ -151,7 +151,7 @@ public sealed record ResolvedProfile
     /// (整段 and 合併) or Panel (逐項 and 不合併).
     /// </summary>
     /// <remarks>
-    /// The two ends of 合併程度 read as their neighbours: lines left apart are drawn as items, the
+    /// The two ends of 語句合併 read as their neighbours: lines left apart are drawn as items, the
     /// whole block as one passage, and each is read the way its neighbour is.
     /// </remarks>
     internal RealtimeBlockMode Layout => Merge switch
@@ -268,12 +268,11 @@ public sealed record ResolvedProfile
     public static ResolvedProfile Resolve(RealtimeProfile stored)
     {
         var filled = stored.Filled();
-        int level = filled.MergeLevel!.Value;
         var settle = filled.SettleAutomatic == true ? null : SettlePollsOf(filled.SettleSeconds!.Value);
         return new ResolvedProfile
         {
             Id = filled.Id,
-            Merge = MergeOf(level),
+            Merge = MergeOf(filled.SentenceMerge!.Value),
             Align = filled.Align switch
             {
                 RealtimeTextAligns.Center => RealtimeTextAlign.Center,
@@ -292,7 +291,7 @@ public sealed record ResolvedProfile
             SettlePolls = settle,
             ClearAfterEmptyReads = filled.ClearAfterEmptyReads!.Value,
             DetectorFraction = filled.DetectorAutomatic == true ? null : filled.DetectorPercent!.Value / 100.0,
-            Auto = RulesFor(RealtimeMergeLevels.Tendency(level)),
+            Auto = AutoRules.Default,
             IgnoreSmallFraction = filled.IgnoreSmallPercent!.Value / 100.0,
             ConfidenceFloor = filled.ConfidencePercent!.Value / 100.0,
         };
@@ -332,13 +331,13 @@ public sealed record ResolvedProfile
             $"leading={Auto.PassageLeading:0.###} stackGap={Auto.MaxStackGap:0.###} wrapAdvance={Auto.PanelGrouping.SolidLineAdvanceWhenWrapped:0.###} " +
             $"ignoreSmall={IgnoreSmallFraction:0.##} confidence={ConfidenceFloor:0.##}");
 
-    // Filled values only: RealtimeProfile.Filled has already held the level to its range.
-    private static RealtimeMerge MergeOf(int level) => level switch
+    // Filled values only: RealtimeProfile.Filled has already put an unknown value back to the preset's.
+    private static RealtimeMerge MergeOf(RealtimeSentenceMerge merge) => merge switch
     {
-        RealtimeMergeLevels.Min => RealtimeMerge.Lines,
-        RealtimeMergeLevels.Items => RealtimeMerge.Items,
-        RealtimeMergeLevels.Passage => RealtimeMerge.Passage,
-        RealtimeMergeLevels.Max => RealtimeMerge.Merged,
+        RealtimeSentenceMerge.None => RealtimeMerge.Lines,
+        RealtimeSentenceMerge.Items => RealtimeMerge.Items,
+        RealtimeSentenceMerge.Passage => RealtimeMerge.Passage,
+        RealtimeSentenceMerge.All => RealtimeMerge.Merged,
         _ => RealtimeMerge.Auto,
     };
 
@@ -346,37 +345,4 @@ public sealed record ResolvedProfile
     // one: 0 seconds is "do not wait", and must stay that.
     private static int? SettlePollsOf(double seconds) =>
         seconds < 0 ? null : (int)Math.Round(seconds / RealtimeRegionState.PollInterval.TotalSeconds);
-
-    // 自動判斷's five steps of 合併程度 (2–6, once 合併傾向 1–5 — the table's "step") bind three of
-    // 自動's thresholds into one scale. The middle step is the measured rules themselves — the
-    // instance, so a preset reads exactly as before.
-    //
-    // MEASURED with OcrHarness --auto-probe replay --profile over the 自動 corpus (591 captures:
-    // 270 of dialogue D, 179 of panels P, 142 of both M). Frames whose groups (not just how they are
-    // drawn) differ from 標準, and frames 自動 reads exactly as 字幕 on D / as 面板 on P:
-    //
-    //   step  sparse standsOut lettering   changed D/P/M   =字幕 on D   =面板 on P
-    //    1      2      1.6        2        13 / 21 / 10      247         176
-    //    2      3      1.45       3         4 / 15 /  4      256         170
-    //    3      5      1.3        4         — (標準) —        259         155
-    //    4      8      1.2        6         1 / 12 /  0      260         145
-    //    5     12      1.1        8         1 / 25 /  0      260         133
-    //
-    // The low end splits game dialogue from the name plate and buttons beside it, and titles from
-    // the text under them; the high end joins wrapped chat messages, reviews and item text. Step 5
-    // stops short of the draft's "every frame is sparse" and 1.0: with those, 3,993 of 4,279 groups
-    // on the panel captures were drawn as subtitles, and forum threads were joined across their
-    // comments. No dialogue capture held more than eleven clusters.
-    private static AutoRules RulesFor(int tendency)
-    {
-        var rules = AutoRules.Default;
-        return tendency switch
-        {
-            1 => rules with { SparseZones = 2, StandsOut = 1.6, LetteringZones = 2 },
-            2 => rules with { SparseZones = 3, StandsOut = 1.45, LetteringZones = 3 },
-            4 => rules with { SparseZones = 8, StandsOut = 1.2, LetteringZones = 6 },
-            5 => rules with { SparseZones = 12, StandsOut = 1.1, LetteringZones = 8 },
-            _ => rules,
-        };
-    }
 }

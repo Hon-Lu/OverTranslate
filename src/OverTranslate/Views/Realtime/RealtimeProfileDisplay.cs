@@ -16,7 +16,7 @@ internal static class RealtimeProfileDisplay
     /// <summary>How a value reads on its row.</summary>
     internal static string Display(RealtimeProfile filled, ProfileParam param) => param switch
     {
-        ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName(filled.MergeLevel ?? RealtimeMergeLevels.AutomaticMiddle),
+        ProfileParam.SentenceMerge => RealtimeProfileEditing.SentenceMergeName(filled.SentenceMerge ?? RealtimeSentenceMerge.Automatic),
         ProfileParam.Align => RealtimeProfileEditing.AlignName(filled.Align),
         ProfileParam.SettleSeconds => filled.SettleAutomatic == true
             ? Services.Realtime.RealtimeActualValues.Of(filled).SettleSeconds is { } seconds
@@ -53,7 +53,7 @@ internal static class RealtimeProfileDisplay
     /// <summary>What a slider's position reads as while it is being moved, before it is written.</summary>
     internal static string SliderReading(ProfileParam param, double value) => param switch
     {
-        ProfileParam.MergeLevel => RealtimeProfileEditing.MergeLevelName((int)Math.Round(value)),
+        ProfileParam.SentenceMerge => RealtimeProfileEditing.SentenceMergeName(RealtimeProfileEditing.SentenceMergeAt(value)),
         ProfileParam.SettleSeconds => SecondsText(Math.Round(value * PollSeconds, 2)),
         ProfileParam.DetectorPercent => LocalizationService.Format("S.Realtime.ProfilePercent", (int)value),
         ProfileParam.IgnoreSmallPercent => value < 0.5
@@ -87,7 +87,7 @@ internal static class RealtimeProfileDisplay
         int whole = (int)Math.Round(position);
         switch (param)
         {
-            case ProfileParam.MergeLevel: profile.MergeLevel = whole; break;
+            case ProfileParam.SentenceMerge: profile.SentenceMerge = RealtimeProfileEditing.SentenceMergeAt(position); break;
             case ProfileParam.IgnoreSmallPercent: profile.IgnoreSmallPercent = whole; break;
             case ProfileParam.ConfidencePercent: profile.ConfidencePercent = whole; break;
             // A slider is only shown on 手動; the switch is written with the figure, as the file
@@ -106,7 +106,7 @@ internal static class RealtimeProfileDisplay
     /// <summary>A value's row by name, as the card's line about the change names it.</summary>
     internal static string NameKey(ProfileParam param) => param switch
     {
-        ProfileParam.MergeLevel => "S.Realtime.ProfileMerge",
+        ProfileParam.SentenceMerge => "S.Realtime.ProfileMerge",
         ProfileParam.Align => "S.Realtime.ProfileAlign",
         ProfileParam.FilterNumbersAndAbbreviations => "S.Realtime.ProfileFilterNumbers",
         ProfileParam.SettleSeconds => "S.Realtime.ProfileSettle",

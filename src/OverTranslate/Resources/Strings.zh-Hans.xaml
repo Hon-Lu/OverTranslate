@@ -481,16 +481,11 @@
     <sys:String x:Key="S.Realtime.ProfileMergeNone">不合并</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">逐项</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">自动判断</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">自动判断・{0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean1">偏逐项</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean2">稍偏逐项</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean4">稍偏整段</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean5">偏整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassage">整段</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">合并</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">每行单独翻译，不合并上下行。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">每行单独翻译，只有明显是同一句时才会上下合并。</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">根据文字排版与内容判断是否合并，往右更容易合并上下行。</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">根据文字排版与内容，逐组判断是否合并上下行。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">大小与位置相近的上下多行语句，会优先合并成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">不受字号与对齐限制，位置相近的上下语句都会合并成一段。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">译文对齐</sys:String>
@@ -519,7 +514,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">短句识别阈值</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">仅适用于不足 10 个字的文字。调高可减少误识别，但部分较短的文字可能无法识别；调低能识别更多文字，但也可能增加误识别。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">关闭</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeMid">中</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">实时翻译已中止：{0}</sys:String>

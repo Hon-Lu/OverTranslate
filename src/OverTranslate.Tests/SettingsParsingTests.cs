@@ -386,7 +386,7 @@ public class SettingsParsingTests
         mine.SettleSeconds = 0.45;
         mine.DetectorPercent = RealtimePresets.Automatic;
         var chat = RealtimeProfile.CreateCustom(RealtimePresets.InterfaceId, "Chat");
-        chat.MergeLevel = RealtimeMergeLevels.Min;
+        chat.SentenceMerge = RealtimeSentenceMerge.None;
         written.Realtime.Profiles = [mine, chat];
         written.Realtime.NewBlockProfile = mine.Id;
 
@@ -400,17 +400,17 @@ public class SettingsParsingTests
         Assert.Equal(0.45, read.SettleSeconds);
         Assert.Equal(RealtimePresets.Automatic, read.DetectorPercent);
         // Unset stays unset — it follows the preset rather than a copy of what the preset was.
-        Assert.Null(read.MergeLevel);
+        Assert.Null(read.SentenceMerge);
         Assert.Null(read.ConfidencePercent);
         Assert.Equal(mine.Id, reloaded.NewBlockProfileOrStandard());
         Assert.Equal("Chat", reloaded.Profiles[1].Name);
-        Assert.Equal(RealtimeMergeLevels.Min, reloaded.Profiles[1].MergeLevel);
+        Assert.Equal(RealtimeSentenceMerge.None, reloaded.Profiles[1].SentenceMerge);
         Assert.Equal(RealtimeMerge.Lines, reloaded.ResolveProfile(chat.Id).Merge);
     }
 
     /// <summary>
-    /// 分行處理 and 合併傾向, which 合併程度 replaced before any build with modes was released, are
-    /// not read: a mode written with them follows its preset's 合併程度.
+    /// 分行處理 and 合併傾向, which 語句合併 replaced before any build with modes was released, are
+    /// not read: a mode written with them follows its preset's 語句合併.
     /// </summary>
     [Fact]
     public void TheReplacedLayoutValues_AreNotRead()
@@ -421,7 +421,7 @@ public class SettingsParsingTests
             """);
 
         var stored = settings.Realtime.Profiles.Single();
-        Assert.Null(stored.MergeLevel);
+        Assert.Null(stored.SentenceMerge);
         Assert.Equal(1, stored.ClearAfterEmptyReads);
         Assert.Equal(ResolvedProfile.Standard with { Id = "a", ClearAfterEmptyReads = 1 }, settings.Realtime.ResolveProfile("a"));
     }
@@ -471,7 +471,7 @@ public class SettingsParsingTests
     {
         var settings = SettingsService.Parse(
             """
-            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","MergeLevel":"lots"},
+            {"Realtime":{"Profiles":[{"Id":"a","Name":"A","SettleSeconds":"lots"},
                                      {"Id":"b","Name":"B","SettleSeconds":0.3},
                                      42,
                                      null]}}
@@ -491,15 +491,14 @@ public class SettingsParsingTests
         var settings = SettingsService.Parse(
             """
             {"Realtime":{"Profiles":[{"Id":"a","SettleSeconds":9,"ClearAfterEmptyReads":0,"DetectorPercent":20,
-                                      "IgnoreSmallPercent":300,"MergeLevel":-4,"LineSpacing":12,"ConfidencePercent":120},
-                                     {"Id":"b","MergeLevel":12}]}}
+                                      "IgnoreSmallPercent":300,"SentenceMerge":"None","LineSpacing":12,"ConfidencePercent":120},
+                                     {"Id":"b","SentenceMerge":" all "}]}}
             """);
 
         var stored = settings.Realtime.Profiles[0];
         Assert.Equal(9, stored.SettleSeconds);
-        Assert.Equal(-4, stored.MergeLevel);
-        Assert.Equal(12, settings.Realtime.Profiles[1].MergeLevel);
-        Assert.Equal(RealtimeMergeLevels.Max, settings.Realtime.Profiles[1].Filled().MergeLevel);
+        // A name in any case, spaces round it, is that value.
+        Assert.Equal(RealtimeSentenceMerge.All, settings.Realtime.Profiles[1].SentenceMerge);
         Assert.Equal(RealtimeMerge.Merged, settings.Realtime.ResolveProfile("b").Merge);
         Assert.Equal(0, stored.ClearAfterEmptyReads);
 
@@ -508,7 +507,7 @@ public class SettingsParsingTests
         Assert.Equal(RealtimeProfile.MinClearAfterEmptyReads, filled.ClearAfterEmptyReads);
         Assert.Equal(RealtimeProfile.MinDetectorPercent, filled.DetectorPercent);
         Assert.Equal(RealtimeProfile.MaxIgnoreSmallPercent, filled.IgnoreSmallPercent);
-        Assert.Equal(RealtimeMergeLevels.Min, filled.MergeLevel);
+        Assert.Equal(RealtimeSentenceMerge.None, filled.SentenceMerge);
         Assert.Equal(RealtimeProfile.MaxConfidencePercent, filled.ConfidencePercent);
 
         var resolved = settings.Realtime.ResolveProfile("a");
@@ -999,6 +998,83 @@ public class SettingsParsingTests
             ShortcutTrigger.Keyboard(3, 0x51),
             HotkeyBindings.TriggerFor(existing, HotkeyAction.QuickLookup));
         Assert.Equal("Ctrl+Alt+Q", existing.QuickLookupHotkeyDisplay);
+    }
+
+    /// <summary>
+    /// 語句合併 this build cannot read — a name it does not know, a number, any other type — is left
+    /// unset: the mode follows its preset there, keeps every other value, and nothing else in the file
+    /// is lost. A converter that threw would have cost the whole mode.
+    /// </summary>
+    [Theory]
+    [InlineData("\"Bogus\"")]
+    [InlineData("3")]
+    [InlineData("\"3\"")]
+    [InlineData("true")]
+    [InlineData("null")]
+    [InlineData("{\"Name\":\"Passage\"}")]
+    [InlineData("[\"Passage\"]")]
+    [InlineData("\"None,Items\"")]
+    [InlineData("\"\"")]
+    public void ASentenceMergeThisBuildCannotRead_FollowsThePresetAndCostsNothingElse(string value)
+    {
+        var settings = SettingsService.Parse(
+            "{\"Theme\":\"Light\",\"ApiKey\":\"secret\",\"Realtime\":{\"TargetLanguage\":\"JA\",\"Profiles\":[" +
+            "{\"Id\":\"a\",\"Name\":\"A\",\"BasedOn\":\"interface\",\"SentenceMerge\":" + value +
+            ",\"ClearAfterEmptyReads\":1,\"ConfidencePercent\":90}," +
+            "{\"Id\":\"b\",\"Name\":\"B\",\"BasedOn\":\"subtitle\",\"SentenceMerge\":\"None\"}]}}");
+
+        Assert.Equal("Light", settings.Theme);
+        Assert.Equal("secret", settings.ApiKey);
+        Assert.Equal("JA", settings.Realtime.TargetLanguage);
+        Assert.Equal(["a", "b"], settings.Realtime.Profiles.Select(profile => profile.Id));
+        var mode = settings.Realtime.Profiles[0];
+        Assert.Equal("A", mode.Name);
+        Assert.Null(mode.SentenceMerge);
+        Assert.Equal(RealtimeSentenceMerge.Items, mode.Filled().SentenceMerge);
+        Assert.Equal(1, mode.ClearAfterEmptyReads);
+        Assert.Equal(90, mode.ConfidencePercent);
+        Assert.Equal(RealtimeSentenceMerge.None, settings.Realtime.Profiles[1].SentenceMerge);
+    }
+
+    /// <summary>
+    /// The nine-step 合併程度 (MergeLevel, 0–8) a beta build wrote is read past and not written back:
+    /// the mode's 語句合併 goes back to its preset's, and every other value it holds stays.
+    /// </summary>
+    [Theory]
+    [InlineData("2")]
+    [InlineData("7")]
+    [InlineData("\"lots\"")]
+    public void TheMergeLevelABetaWrote_IsReadPastAndDropped(string level)
+    {
+        var settings = SettingsService.Parse(
+            "{\"Theme\":\"Light\",\"Realtime\":{\"TargetLanguage\":\"JA\",\"Profiles\":[" +
+            "{\"Id\":\"a\",\"Name\":\"A\",\"BasedOn\":\"subtitle\",\"MergeLevel\":" + level +
+            ",\"ClearAfterEmptyReads\":1,\"IgnoreSmallPercent\":40}]}}");
+
+        Assert.Equal("Light", settings.Theme);
+        Assert.Equal("JA", settings.Realtime.TargetLanguage);
+        var mode = Assert.Single(settings.Realtime.Profiles);
+        Assert.Equal("A", mode.Name);
+        Assert.Null(mode.SentenceMerge);
+        Assert.Equal(RealtimeSentenceMerge.Passage, mode.Filled().SentenceMerge);
+        Assert.Equal(1, mode.ClearAfterEmptyReads);
+        Assert.Equal(40, mode.IgnoreSmallPercent);
+        Assert.DoesNotContain("MergeLevel", SettingsService.Serialize(settings));
+    }
+
+    /// <summary>語句合併 is written by name, and reads back as written.</summary>
+    [Fact]
+    public void SentenceMergeIsWrittenByName()
+    {
+        var written = new AppSettings();
+        var mine = RealtimeProfile.CreateCustom(RealtimePresets.StandardId, "Mine");
+        mine.SentenceMerge = RealtimeSentenceMerge.All;
+        written.Realtime.Profiles = [mine];
+
+        var json = SettingsService.Serialize(written);
+
+        Assert.Contains("\"SentenceMerge\": \"All\"", json);
+        Assert.Equal(RealtimeSentenceMerge.All, SettingsService.Parse(json).Realtime.Profiles.Single().SentenceMerge);
     }
 
     // 2.12.0 wrote whether the edit layer's guidance plate was folded away. The plate is gone; a file

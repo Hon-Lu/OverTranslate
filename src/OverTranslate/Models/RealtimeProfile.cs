@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace OverTranslate.Models;
 
 /// <summary>
@@ -17,12 +20,14 @@ namespace OverTranslate.Models;
 /// clamped: what a value means is decided as the mode is resolved, and a value out of range there is
 /// held to the range rather than refused.</para>
 ///
-/// <para>The choices are strings, not enums. The settings file reads a list in one piece, and one
-/// enum name a build does not know would throw the whole list away; an unknown string is only that
-/// one value falling back to the preset's.</para>
+/// <para>The choices are strings, or an enum read through a converter that never throws
+/// (<see cref="RealtimeSentenceMergeConverter"/>). The settings file reads a list in one piece, and
+/// one enum name a build does not know would throw the whole list away; an unknown value is only
+/// that one value falling back to the preset's.</para>
 ///
 /// <para>A value no longer offered is dropped from here rather than kept unread: 行距容許
-/// (LineSpacing) and 沒有標點也合併 (MergeUnpunctuated) were, and a file that still holds them
+/// (LineSpacing), 沒有標點也合併 (MergeUnpunctuated) and the nine-step 合併程度 (MergeLevel, 0–8,
+/// never released; <see cref="SentenceMerge"/> replaced it) were, and a file that still holds them
 /// reads as if it did not, since a member this class does not have is skipped as the file is
 /// read.</para>
 /// </remarks>
@@ -45,9 +50,13 @@ public sealed class RealtimeProfile
     /// <remarks>Always a preset: a custom mode is never made from another custom one.</remarks>
     public string BasedOn { get; set; } = RealtimePresets.StandardId;
 
-    /// <summary>合併程度, 0–8 — see <see cref="RealtimeMergeLevels"/>.</summary>
-    /// <remarks>Horizontal text only.</remarks>
-    public int? MergeLevel { get; set; }
+    /// <summary>語句合併 — see <see cref="RealtimeSentenceMerge"/>.</summary>
+    /// <remarks>
+    /// Horizontal text only. Stored by name; a name, number or anything else this build cannot read
+    /// is left unset and follows the preset (<see cref="RealtimeSentenceMergeConverter"/>).
+    /// </remarks>
+    [JsonConverter(typeof(RealtimeSentenceMergeConverter))]
+    public RealtimeSentenceMerge? SentenceMerge { get; set; }
 
     /// <summary>譯文對齊: one of <see cref="RealtimeTextAligns"/>' values.</summary>
     /// <remarks>
@@ -180,7 +189,7 @@ public sealed class RealtimeProfile
             Id = Id,
             Name = Name ?? "",
             BasedOn = template.Id,
-            MergeLevel = Math.Clamp(MergeLevel ?? template.MergeLevel!.Value, RealtimeMergeLevels.Min, RealtimeMergeLevels.Max),
+            SentenceMerge = SentenceMerge is { } merge && Enum.IsDefined(merge) ? merge : template.SentenceMerge,
             Align = RealtimeTextAligns.Normalize(Align) ?? template.Align,
             FilterNumbersAndAbbreviations = FilterNumbersAndAbbreviations ?? template.FilterNumbersAndAbbreviations,
             SettleAutomatic = StoredSettleAutomatic ?? template.SettleAutomatic,
@@ -230,15 +239,6 @@ public sealed class RealtimeProfile
         DetectorAutomatic ?? (OwnDetectorPercent is not null ? false : DetectorPercent < 0 ? true : null);
 
     // ── Ranges ──────────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>The steps of 自動判斷's place on 合併程度, which was the 1–5 scale of 合併傾向.</summary>
-    public const int MinStep = 1;
-
-    /// <inheritdoc cref="MinStep"/>
-    public const int MaxStep = 5;
-
-    /// <summary>The middle step, which every preset holds and which is the measured rules themselves.</summary>
-    public const int MiddleStep = 3;
 
     /// <summary>等文字停下's range, in seconds, from 0.</summary>
     /// <remarks>
@@ -291,7 +291,7 @@ public sealed class RealtimeProfile
 /// for good once released: renaming one would put everybody on it back on 標準 without a word.</para>
 ///
 /// <para>Every preset reads exactly as 即時翻譯 did before modes existed: the middle step of each
-/// scale, and the presets differ in 合併程度, on the three places of it the layouts they replace
+/// scale, and the presets differ in 語句合併, on the three places of it the layouts they replace
 /// stood for. 標準 leaves the wait and the detector size to 自動, because they follow what each
 /// reading turns out to hold; the other two read one way only, so they carry the figures that way
 /// had written out — 不等待 and 85% for 字幕・漫畫, one poll and 68% for 遊戲介面・聊天室 — which is
@@ -353,11 +353,11 @@ public static class RealtimePresets
         {
             Id = id,
             BasedOn = id,
-            MergeLevel = id switch
+            SentenceMerge = id switch
             {
-                SubtitleId => RealtimeMergeLevels.Passage,
-                InterfaceId => RealtimeMergeLevels.Items,
-                _ => RealtimeMergeLevels.AutomaticMiddle,
+                SubtitleId => RealtimeSentenceMerge.Passage,
+                InterfaceId => RealtimeSentenceMerge.Items,
+                _ => RealtimeSentenceMerge.Automatic,
             },
             // What each preset's groups were drawn as before 譯文對齊 existed, on the two that read
             // one way only, so they look exactly as they did; 標準 follows the source.
@@ -408,57 +408,89 @@ public static class RealtimeTextAligns
 }
 
 /// <summary>
-/// 合併程度: one scale from reading every line on its own to joining all but what is clearly apart, which
-/// is what the old 分行處理 and 合併傾向 became.
+/// 語句合併: one scale from reading every line on its own to joining all but what is clearly apart,
+/// which is what the old 分行處理 and 合併傾向 became. The settings file stores the name.
 /// </summary>
 /// <remarks>
-/// <para>Each step names how stacked lines are joined. Pieces side by side on one line are joined by
-/// the same rules on every step, 不合併 included: a sentence the detector framed in two
+/// <para>Each value names how stacked lines are joined. Pieces side by side on one line are joined by
+/// the same rules on every value, <see cref="None"/> included: a sentence the detector framed in two
 /// pieces is still one line.</para>
 ///
-/// <list type="table">
-/// <item><term>0 不合併</term><description>Every line on its own; drawn as items.</description></item>
-/// <item><term>1 逐項</term><description>The panel grouper — 遊戲介面・聊天室.</description></item>
-/// <item><term>2–6 自動判斷</term><description>Group by group, 1–5 of what was 合併傾向; 4 is 標準.</description></item>
-/// <item><term>7 整段</term><description>The dialogue grouper — 字幕・漫畫.</description></item>
-/// <item><term>8 合併</term><description>整段 joining past size, alignment and a short item beside the dialogue; still parts what is clearly apart.</description></item>
-/// </list>
+/// <para>The order is the slider's, left to right, and only that: what a value means is its name.
+/// Every value but <see cref="None"/> and <see cref="All"/> is exactly what a layout before modes read
+/// as. MEASURED (OcrHarness --auto-probe slider, 591 captures: 270 dialogue, 179 panels, 142 both)
+/// a value parts what the one before it joined only on 2 panel frames from 逐項 to 自動判斷 and on
+/// 62 frames, 59 of them panels, from 自動判斷 to 整段, where the two groupers break a paragraph at
+/// different places: the scale mostly joins more the further right it goes.</para>
 ///
-/// <para>Steps 1–7 are exactly what the layouts and the tendency they replace read as. MEASURED
-/// (OcrHarness --auto-probe slider, 591 captures): no step parts what the one before it joined,
-/// but for a few frames between 自動判斷 5 and 整段 — the two groupers break a paragraph at
-/// different places — so the scale only mostly joins more the further right it goes.</para>
+/// <para><see cref="Automatic"/> was five steps (偏逐項 … 偏整段, the 1–5 of 合併傾向) and is one.
+/// MEASURED (--auto-probe replay --profile, same 591 captures; frames whose groups differ from the
+/// step before, dialogue+mixed / panels): 中→稍偏整段 1/12, 稍偏整段→偏整段 0/14 — a dialogue frame
+/// almost never changed on the right half. Every group 偏逐項 split off from 中 was split exactly as
+/// 逐項 splits it (128 of 128), and 42 of the 43 groups 偏整段 joined beyond 中 整段 joins too: each
+/// step only handed a few more groups to a neighbour's answer, and which ones could not be told from
+/// the screen. Of the 26 frames 偏整段 changed, 11 read better and 13 worse.</para>
 /// </remarks>
-public static class RealtimeMergeLevels
+public enum RealtimeSentenceMerge
 {
-    /// <summary>不合併: no line joined to the one under it.</summary>
-    public const int Min = 0;
+    /// <summary>不合併: every line on its own, drawn as items.</summary>
+    None,
 
-    /// <summary>逐項.</summary>
-    public const int Items = 1;
+    /// <summary>逐項: the panel grouper — 遊戲介面・聊天室.</summary>
+    Items,
 
-    /// <summary>The first of 自動判斷's steps, which was 合併傾向 1.</summary>
-    public const int AutomaticLowest = 2;
+    /// <summary>自動判斷: group by group, on 自動's measured rules — 標準.</summary>
+    Automatic,
 
-    /// <summary>自動判斷 on the measured rules themselves — 標準, and what 合併傾向 3 was.</summary>
-    public const int AutomaticMiddle = 4;
-
-    /// <summary>The last of 自動判斷's steps, which was 合併傾向 5.</summary>
-    public const int AutomaticHighest = 6;
-
-    /// <summary>整段.</summary>
-    public const int Passage = 7;
-
-    /// <summary>合併: more than 整段, short of joining what is clearly apart.</summary>
-    public const int Max = 8;
-
-    /// <summary>Whether this step decides group by group.</summary>
-    public static bool IsAutomatic(int level) => level is >= AutomaticLowest and <= AutomaticHighest;
+    /// <summary>整段: the dialogue grouper — 字幕・漫畫.</summary>
+    Passage,
 
     /// <summary>
-    /// The step's place on the old 1–5 合併傾向 scale; the middle one off 自動判斷, where the
-    /// thresholds are not read.
+    /// 合併: 整段 joining past size, alignment and a short item beside the dialogue; still parts what
+    /// is clearly apart.
     /// </summary>
-    public static int Tendency(int level) =>
-        IsAutomatic(level) ? level - AutomaticLowest + RealtimeProfile.MinStep : RealtimeProfile.MiddleStep;
+    All,
+}
+
+/// <summary>
+/// Reads <see cref="RealtimeProfile.SentenceMerge"/> by name and never throws: a name this build does
+/// not know, a number, true, an object — anything but one of the names — reads as unset, so the mode
+/// follows its preset there and keeps every other value it holds.
+/// </summary>
+/// <remarks>
+/// <see cref="JsonStringEnumConverter"/> throws on an unknown name, and a mode that throws is dropped
+/// whole (SettingsService reads the modes one by one for that reason). Numbers are refused rather
+/// than taken as positions: the file has only ever held names here, and the 0–8 of the field before it
+/// would otherwise read as values they never meant.
+/// </remarks>
+public sealed class RealtimeSentenceMergeConverter : JsonConverter<RealtimeSentenceMerge?>
+{
+    public override bool HandleNull => true;
+
+    public override RealtimeSentenceMerge? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+        {
+            // Past the whole value, whatever it is, so the properties after it still read.
+            reader.Skip();
+            return null;
+        }
+        var name = reader.GetString();
+        return Parse(name);
+    }
+
+    public override void Write(Utf8JsonWriter writer, RealtimeSentenceMerge? value, JsonSerializerOptions options)
+    {
+        if (value is { } merge && Enum.IsDefined(merge)) writer.WriteStringValue(merge.ToString());
+        else writer.WriteNullValue();
+    }
+
+    /// <summary>One of the names, in any case; null for anything else — digits and lists of names included.</summary>
+    internal static RealtimeSentenceMerge? Parse(string? name)
+    {
+        var text = name?.Trim();
+        foreach (var merge in Enum.GetValues<RealtimeSentenceMerge>())
+            if (string.Equals(text, merge.ToString(), StringComparison.OrdinalIgnoreCase)) return merge;
+        return null;
+    }
 }

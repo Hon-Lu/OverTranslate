@@ -7,14 +7,14 @@ using OverTranslate.Services.Ocr;
 using OverTranslate.Services.Realtime;
 
 /// <summary>
-/// The nine steps of a single "how much to join" slider — 不合併, 逐項, 自動 1–5, 整段, 合併 —
+/// The five values of a single "how much to join" slider — 不合併, 逐項, 自動判斷, 整段, 合併 —
 /// replayed over the cache, to see whether each step joins everything the one before it did.
 /// </summary>
 /// <remarks>
 /// <para><c>--auto-probe slider cache.json out-dir</c>. Each step is the app's own grouping at that
-/// 合併程度 (<see cref="RealtimeMergeLevels"/>). The two ends were first simulated here before the
+/// 語句合併 (<see cref="RealtimeSentenceMerge"/>). The two ends were first simulated here before the
 /// app had them: 不合併 as the panel grouper's lines, 整個區塊 as every line of the frame in one
-/// group.</para>
+/// group. 自動判斷 had five steps (合併傾向 1–5) when this was first run; it is one now.</para>
 ///
 /// <para>Steps are compared as join relations: for each frame, the set of detected-block pairs a
 /// step put in one group. Step i is monotone over step i−1 when its set holds the other's. Blocks
@@ -22,9 +22,9 @@ using OverTranslate.Services.Realtime;
 /// preferring one whose text holds the block's), so every step is judged on the same blocks
 /// whatever its own filters did; a block a step dropped takes no part in that comparison.</para>
 ///
-/// <para>Three candidate fixes for 整段 are measured beside the plain steps: 整段 ∪ 自動 5 and
-/// 整段 ∪ 逐項 (the join relations united, closed transitively), and 自動 with every passage limit
-/// let go. Each is compared with its neighbours and with plain 整段 both ways. Writes summary.txt,
+/// <para>Two candidate fixes for 整段 are measured beside the plain steps: 整段 ∪ 自動判斷 and
+/// 整段 ∪ 逐項 (the join relations united, closed transitively). Each is compared with its
+/// neighbours and with plain 整段 both ways. Writes summary.txt,
 /// instances.tsv (every group a step parted that the step before joined), joins.tsv and
 /// splits.tsv (the same-row decisions every step shares). SLIDER_EXPLAIN=name prints the dialogue
 /// grouper's verdicts on the frames whose file name holds it.</para>
@@ -33,37 +33,25 @@ internal static class MergeSliderProbe
 {
     private static readonly string[] Names =
     [
-        "none", "items", "auto1", "auto2", "auto3", "auto4", "auto5", "passage", "merged",
+        "none", "items", "auto", "passage", "merged",
         // Candidate fixes for 整段, measured beside it.
-        "passage+auto5", "passage+items", "auto-max",
+        "passage+auto", "passage+items",
     ];
 
     // Each step against the next, then each fix against its neighbours and against plain 整段.
     private static readonly (int Left, int Right)[] Comparisons =
     [
-        (0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8),
-        (6, 9), (9, 8), (7, 9), (9, 7),
-        (6, 10), (10, 8), (7, 10), (10, 7),
-        (6, 11), (11, 8), (7, 11), (11, 7),
+        (0, 1), (1, 2), (2, 3), (3, 4),
+        (2, 5), (5, 4), (3, 5), (5, 3),
+        (2, 6), (6, 4), (3, 6), (6, 3),
     ];
 
     internal static int Run(AutoModeProbe.Capture[] cache, string outDir)
     {
         Directory.CreateDirectory(outDir);
         var profiles = new ResolvedProfile?[Names.Length];
-        for (int level = RealtimeMergeLevels.Min; level <= RealtimeMergeLevels.Max; level++)
-            profiles[level] = Profile(level);
-        // 自動 with every limit on a passage let go: as near as its rules come to taking every group
-        // the dialogue grouper joined for a passage, while keeping the panel grouper's own joins.
-        var loosest = Profile(RealtimeMergeLevels.AutomaticHighest);
-        profiles[11] = loosest with
-        {
-            Auto = loosest.Auto with
-            {
-                SparseZones = 1_000_000, StandsOut = 0, LetteringZones = 1_000_000,
-                LetteringAspect = 1e9, PassageLeading = 1e9,
-            },
-        };
+        foreach (var merge in Enum.GetValues<RealtimeSentenceMerge>())
+            profiles[(int)merge] = Profile(merge);
 
         var images = Comparisons.Select(_ => new Dictionary<string, int>()).ToArray();
         var pairs = Comparisons.Select(_ => new Dictionary<string, int>()).ToArray();
@@ -92,9 +80,9 @@ internal static class MergeSliderProbe
             var groupTexts = new List<string>[Names.Length];
             for (int s = 0; s < Names.Length; s++)
             {
-                if (s is 9 or 10)
+                if (s is 5 or 6)
                 {
-                    assigned[s] = Union(assigned[s == 9 ? 6 : 1], assigned[7]);
+                    assigned[s] = Union(assigned[s == 5 ? 2 : 1], assigned[3]);
                     groupTexts[s] = Enumerable.Range(0, raw.Count)
                         .Select(root => Flat(string.Join(" ", raw.Where((_, i) => assigned[s][i] == root).Select(b => b.Text))))
                         .ToList();
@@ -133,7 +121,7 @@ internal static class MergeSliderProbe
             if (Environment.GetEnvironmentVariable("SLIDER_EXPLAIN") is { Length: > 0 } explain && file.Contains(explain))
             {
                 var decisions = new List<OcrTextBlockGrouper.NextLineDecision>();
-                OcrService.GroupRealtime(Raw(), capture.Height, profiles[7]!, null, decisions);
+                OcrService.GroupRealtime(Raw(), capture.Height, profiles[(int)RealtimeSentenceMerge.Passage]!, null, decisions);
                 Console.WriteLine($"--- {label} {set}/{file} size={capture.Size}");
                 foreach (var d in decisions.Where(d => d.Kind != "row"))
                     Console.WriteLine($"  {(d.Joined ? "JOIN" : "part")} {d.Rule,-24} gap={d.VerticalGap:0.00} size={d.TextSizeRatio:0.00} " +
@@ -162,8 +150,8 @@ internal static class MergeSliderProbe
         return 0;
     }
 
-    private static ResolvedProfile Profile(int level) =>
-        ResolvedProfile.Resolve(new RealtimeProfile { Id = "slider", MergeLevel = level });
+    private static ResolvedProfile Profile(RealtimeSentenceMerge merge) =>
+        ResolvedProfile.Resolve(new RealtimeProfile { Id = "slider", SentenceMerge = merge });
 
     internal static int[] Assign(List<OcrTextBlock> raw, bool[] inUniverse, List<OcrTextBlock> groups)
     {

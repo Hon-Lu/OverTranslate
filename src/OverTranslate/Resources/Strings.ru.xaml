@@ -478,16 +478,11 @@
     <sys:String x:Key="S.Realtime.ProfileMergeNone">Без объединения</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItems">По пунктам</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeAuto">Авто</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoLevel">Авто · {0}</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean1">к пунктам</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean2">слегка к пунктам</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean4">слегка к абзацу</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeLean5">к абзацу</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassage">Абзац</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlock">Объединять</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeNoneDesc">Каждая строка переводится отдельно, строки не объединяются.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeItemsDesc">Каждая строка переводится отдельно; объединяются только строки, которые явно составляют одну фразу.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Объединять ли строки, решается по расположению и содержанию текста; чем правее, тем охотнее строки объединяются.</sys:String>
+    <sys:String x:Key="S.Realtime.ProfileMergeAutoDesc">Объединять ли строки, решается для каждой группы по расположению и содержанию текста.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergePassageDesc">Соседние строки похожего размера и положения в первую очередь объединяются в один фрагмент.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileMergeBlockDesc">Без учёта размера и выравнивания: все близко расположенные строки объединяются в один фрагмент.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileAlign">Выравнивание перевода</sys:String>
@@ -516,7 +511,6 @@
     <sys:String x:Key="S.Realtime.ProfileConfidence">Порог распознавания коротких строк</sys:String>
     <sys:String x:Key="S.Realtime.ProfileConfidenceHint">Действует только на текст короче 10 символов. Повысьте, чтобы было меньше ошибок распознавания, но часть коротких строк может не распознаться; понизьте, чтобы распознавалось больше текста, но ошибок может стать больше.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileOff">Выкл.</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileGradeMid">Средний</sys:String>
 
     <!-- Session failures -->
     <sys:String x:Key="S.Realtime.SessionAborted">Перевод в реальном времени остановлен: {0}</sys:String>
