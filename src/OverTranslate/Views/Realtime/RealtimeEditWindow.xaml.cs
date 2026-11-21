@@ -45,6 +45,12 @@ public partial class RealtimeEditWindow : Window
     private const double BaseRemoveGap = 6;
 
     /// <summary>
+    /// A block's frame, and the frame of the one the 模式 panel is showing — see <see cref="SetMarkers"/>.
+    /// </summary>
+    private const double FrameThickness = 2;
+    private const double SelectedFrameThickness = 3.5;
+
+    /// <summary>
     /// The narrowest and widest the mode button is, before the widest name it may have to show is
     /// measured into it — see <see cref="ModeSegments"/>.
     /// </summary>
@@ -219,6 +225,14 @@ public partial class RealtimeEditWindow : Window
     /// </summary>
     private IReadOnlyList<ProfileChoice> _choices;
 
+    /// <summary>
+    /// Whether the blocks carry their 區塊 N names, and which one is outlined — while the 模式 panel
+    /// is open over this layer. See <see cref="SetMarkers"/>.
+    /// </summary>
+    private bool _markersShown;
+    private int? _markedBlock;
+    private string? _markerWording;
+
     /// <summary>The list of modes while it is open, and the block it was opened from.</summary>
     private ModeMenu? _menu;
     private BlockVisual? _menuOwner;
@@ -351,12 +365,72 @@ public partial class RealtimeEditWindow : Window
         BlockDefaultsChanged;
 
     /// <summary>
-    /// Raised with the mode of the block whose list asked for 管理模式…: the caller ends the sitting
-    /// and opens the page on that mode. Nothing on the block changes.
+    /// Raised with the position of the block whose list asked for 模式設定…: the caller opens the 模式
+    /// panel on that block, over this layer. Nothing on the block changes.
     /// </summary>
-    public event EventHandler<string>? ManageProfilesRequested;
+    public event EventHandler<int>? ProfilePanelRequested;
+
+    /// <summary>
+    /// Raised with a block's position when the user lays hands on it — a press on its frame, a
+    /// handle, its trays or its copy — or has just drawn it: the 模式 panel, if open, turns to it.
+    /// </summary>
+    public event EventHandler<int>? BlockFocused;
+
+    /// <summary>
+    /// Raised with the position a block had, just before <see cref="BlocksChanged"/> reports it gone:
+    /// the 模式 panel keeps its place among the blocks that are left.
+    /// </summary>
+    public event EventHandler<int>? BlockRemoved;
 
     public int BlockCount => _blocks.Count;
+
+    /// <summary>
+    /// Puts block <paramref name="index"/> on <paramref name="profileId"/> from the 模式 panel, the way
+    /// a pick from its own list does — so the next block starts on it too (<see cref="BlockDefaultsChanged"/>).
+    /// </summary>
+    public void SetBlockProfile(int index, string profileId)
+    {
+        if (index < 0 || index >= _blocks.Count) return;
+        if (ReferenceEquals(_menuOwner, _blocks[index])) CloseMenu(animate: false);
+        _blocks[index].ModeControl.Pick(profileId);
+    }
+
+    /// <summary>
+    /// Names every block 區塊 N in front of its trays and draws <paramref name="selected"/>'s frame
+    /// heavier, while the 模式 panel is open — so 區塊 2 on the panel is a block the user can find.
+    /// </summary>
+    /// <remarks>
+    /// Called on every redraw of the panel, which a block being dragged causes many times a second,
+    /// so it changes nothing when nothing changed. The frame is made heavier through its thickness
+    /// rather than by changing its template: the press that selects a block is also the start of
+    /// dragging it, and a template swapped under the pointer would drop the drag.
+    /// </remarks>
+    public void SetMarkers(bool shown, int? selected)
+    {
+        if (!shown) selected = null;
+        // The name's wording too, so a change of language reaches names already shown.
+        var wording = LocalizationService.Get("S.Realtime.BlockNumber");
+        if (shown == _markersShown && selected == _markedBlock && wording == _markerWording) return;
+        _markersShown = shown;
+        _markedBlock = selected;
+        _markerWording = wording;
+        for (int i = 0; i < _blocks.Count; i++)
+        {
+            ShowMarker(_blocks[i], i);
+            Apply(_blocks[i]);
+        }
+    }
+
+    /// <summary>The 區塊 N name and frame weight of one block, as <see cref="SetMarkers"/> left them.</summary>
+    private void ShowMarker(BlockVisual visual, int index)
+    {
+        bool selected = _markersShown && index == _markedBlock;
+        visual.Marker.Visibility = _markersShown ? Visibility.Visible : Visibility.Collapsed;
+        visual.MarkerText.Text = LocalizationService.Format("S.Realtime.BlockNumber", index + 1);
+        visual.Marker.Background = selected ? RestoreFill : ModeTrack;
+        visual.MarkerText.Foreground = selected ? RemoveForeground : ModeIdleForeground;
+        visual.Body.BorderThickness = new Thickness((selected ? SelectedFrameThickness : FrameThickness) * _uiScale);
+    }
 
     /// <summary>
     /// Puts every block on the modes as they are now — after one was added, renamed or deleted on
@@ -517,6 +591,9 @@ public partial class RealtimeEditWindow : Window
         // the first of the next one, should not make them say it again. What these start at when
         // nobody has said anything yet is RealtimeSettings.NewBlockProfile, which keeps the reasoning.
         AddBlock(box, _blockProfile, _textOrientation, notify: true);
+
+        // The block just drawn is the one the user is about to set up.
+        BlockFocused?.Invoke(this, _blocks.Count - 1);
     }
 
     // Capture lost to something else entirely (an Alt+Tab, another window taking it). The drag is
@@ -564,7 +641,7 @@ public partial class RealtimeEditWindow : Window
         profileId = KnownProfile(profileId);
         var visual = new BlockVisual(
             bounds, BuildModeControl(profileId, orientation), _handleSize, _removeSize,
-            _uiScale)
+            _modeHeight, _uiScale)
         {
             ProfileId = profileId,
             CompareOffset = compareOffset,
@@ -602,11 +679,30 @@ public partial class RealtimeEditWindow : Window
             visual.CopyCorners[index].DragDelta += (_, e) => ScaleCopy(visual, index, e.HorizontalChange, e.VerticalChange);
         }
 
+        // Preview, so the block is named the moment it is pressed, ahead of the drag the press
+        // starts — and the remove button left out: that press is about to take the block away.
+        foreach (var part in new UIElement[] { visual.Body, visual.Copy, visual.CopyGrip }
+                     .Concat(visual.Corners).Concat(visual.CopyCorners))
+            part.PreviewMouseLeftButtonDown += (_, _) => RaiseFocused(visual);
+        visual.Marker.MouseLeftButtonDown += (_, e) =>
+        {
+            // Must not fall through and start drawing a new block underneath.
+            e.Handled = true;
+            RaiseFocused(visual);
+        };
+
         _blocks.Add(visual);
+        ShowMarker(visual, _blocks.Count - 1);
         RebuildCanvas();
         Apply(visual);
 
         if (notify) RaiseBlocksChanged();
+    }
+
+    private void RaiseFocused(BlockVisual visual)
+    {
+        int index = _blocks.IndexOf(visual);
+        if (index >= 0) BlockFocused?.Invoke(this, index);
     }
 
     /// <summary>
@@ -644,11 +740,19 @@ public partial class RealtimeEditWindow : Window
             if (ReferenceEquals(_menuOwner, visual)) CloseMenu(animate: true);
             else OpenMenu(visual);
         };
+        mode.PreviewMouseLeftButtonDown += (_, _) => RaiseFocused(visual);
     }
 
     private void RemoveBlock(BlockVisual visual)
     {
+        int index = _blocks.IndexOf(visual);
         _blocks.Remove(visual);
+        if (index >= 0) BlockRemoved?.Invoke(this, index);
+
+        // The names after it move up one: 區塊 3 is 區塊 2 now.
+        for (int i = 0; i < _blocks.Count; i++)
+            ShowMarker(_blocks[i], i);
+
         RebuildCanvas();
         RaiseBlocksChanged();
     }
@@ -656,13 +760,33 @@ public partial class RealtimeEditWindow : Window
     // ── The list of modes ────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Where the windows this layer owns — the control bar — are, in canvas coordinates.
+    /// Where the windows this layer owns — the control bar, and the 模式 panel the bar owns in turn —
+    /// are, in canvas coordinates.
     /// </summary>
+    /// <remarks>
+    /// The panel by what it shows rather than its window (<see cref="IVisibleBounds"/>): its window is
+    /// made as tall as the panel may ever get and is mostly empty, and taken whole it walled off most
+    /// of the room either side of a block's list.
+    /// </remarks>
     private IEnumerable<Rect> OwnedWindowBounds()
     {
+        var windows = new List<Window>();
         foreach (Window owned in OwnedWindows)
         {
+            windows.Add(owned);
+            windows.AddRange(owned.OwnedWindows.Cast<Window>());
+        }
+
+        foreach (var owned in windows)
+        {
             if (!owned.IsVisible || owned.ActualWidth <= 0 || owned.ActualHeight <= 0) continue;
+            if (owned is IVisibleBounds shown)
+            {
+                if (shown.VisibleScreenBounds() is not { } screen) continue;
+                yield return new Rect(
+                    BlockCanvas.PointFromScreen(screen.TopLeft), BlockCanvas.PointFromScreen(screen.BottomRight));
+                continue;
+            }
             var topLeft = BlockCanvas.PointFromScreen(owned.PointToScreen(new Point(0, 0)));
             var bottomRight = BlockCanvas.PointFromScreen(
                 owned.PointToScreen(new Point(owned.ActualWidth, owned.ActualHeight)));
@@ -759,7 +883,8 @@ public partial class RealtimeEditWindow : Window
         menu.ManageRequested += (_, _) =>
         {
             CloseMenu(animate: false);
-            ManageProfilesRequested?.Invoke(this, visual.ModeControl.ProfileId);
+            int index = _blocks.IndexOf(visual);
+            if (index >= 0) ProfilePanelRequested?.Invoke(this, index);
         };
 
         BlockCanvas.Children.Add(catcher);
@@ -827,6 +952,7 @@ public partial class RealtimeEditWindow : Window
             foreach (var corner in block.Corners)
                 BlockCanvas.Children.Add(corner);
             BlockCanvas.Children.Add(block.Remove);
+            BlockCanvas.Children.Add(block.Marker);
             BlockCanvas.Children.Add(block.ModeControl);
         }
 
@@ -1079,19 +1205,31 @@ public partial class RealtimeEditWindow : Window
 
         // Kept whole rather than allowed to run off the side: this is the control that says what the
         // block is and how to draw it, and half of it off-screen says neither.
+        // The block's name, while it has one, goes in front of the trays and the two are placed as
+        // one line — see SetMarkers.
         var mode = visual.ModeControl;
-        double modeLeft = Math.Clamp(
-            bounds.Left, 0, Math.Max(0, BlockCanvas.ActualWidth - mode.TotalWidth));
+        double markerWidth = 0;
+        if (visual.Marker.Visibility == Visibility.Visible)
+        {
+            visual.Marker.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            markerWidth = Math.Ceiling(visual.Marker.DesiredSize.Width) + _removeGap;
+        }
+        double lineWidth = markerWidth + mode.TotalWidth;
+        double lineLeft = Math.Clamp(
+            bounds.Left, 0, Math.Max(0, BlockCanvas.ActualWidth - lineWidth));
         double modeTop = ModeControlTop(
-            bounds, new Size(mode.TotalWidth, mode.TotalHeight), modeLeft, copy,
+            bounds, new Size(lineWidth, mode.TotalHeight), lineLeft, copy,
             BlockCanvas.ActualHeight, _removeGap);
 
         // Snapped to whole device pixels, because this one carries text. The block itself is placed
         // wherever the pointer left it and is right to be; a plate of 13-point CJK starting half way
         // across a pixel is soft for the whole time it is on screen, and UseLayoutRounding inside the
         // control cannot correct an origin that is already on a half pixel.
-        Canvas.SetLeft(mode, SnapToPixels(modeLeft, _dpiX));
-        Canvas.SetTop(mode, SnapToPixels(Math.Max(0, modeTop), _dpiY));
+        double top = SnapToPixels(Math.Max(0, modeTop), _dpiY);
+        Canvas.SetLeft(visual.Marker, SnapToPixels(lineLeft, _dpiX));
+        Canvas.SetTop(visual.Marker, top);
+        Canvas.SetLeft(mode, SnapToPixels(lineLeft + markerWidth, _dpiX));
+        Canvas.SetTop(mode, top);
     }
 
     // Canvas coordinates are this window's device-independent units; a device pixel is 1/dpi of one.
@@ -1329,14 +1467,33 @@ public partial class RealtimeEditWindow : Window
             ModeSegments modeControl,
             double handleSize,
             double removeSize,
+            double markerHeight,
             double uiScale)
         {
             ModeControl = modeControl;
             Bounds = bounds;
 
+            // In front of the trays and as tall as them, a plate of the trays' own: the block's name
+            // reads as the first word of the line that says what the block is.
+            MarkerText = ModeSegments.BuildLabel("", uiScale);
+            MarkerText.Margin = new Thickness(10 * uiScale, 0, 10 * uiScale, 0);
+            Marker = new Border
+            {
+                Height = markerHeight,
+                CornerRadius = new CornerRadius(markerHeight / 2),
+                Background = ModeTrack,
+                BorderBrush = ModeTrackEdge,
+                BorderThickness = new Thickness(0, 1 * uiScale, 0, 0),
+                UseLayoutRounding = true,
+                Cursor = Cursors.Arrow,
+                Visibility = Visibility.Collapsed,
+                Child = MarkerText,
+            };
+
             Body = new Thumb
             {
                 Cursor = Cursors.SizeAll,
+                BorderThickness = new Thickness(FrameThickness * uiScale),
                 Template = BuildFrameTemplate(uiScale),
             };
 
@@ -1505,6 +1662,12 @@ public partial class RealtimeEditWindow : Window
         /// </summary>
         public ModeSegments ModeControl { get; set; }
 
+        /// <summary>The block's 區塊 N name, shown while the 模式 panel is open — see <see cref="SetMarkers"/>.</summary>
+        public Border Marker { get; }
+
+        /// <inheritdoc cref="Marker"/>
+        public TextBlock MarkerText { get; }
+
         /// <summary>The mode this block is on, by id — see <see cref="RealtimeBlockPlacement.ProfileId"/>.</summary>
         public string ProfileId { get; set; } = Models.RealtimePresets.StandardId;
 
@@ -1512,7 +1675,9 @@ public partial class RealtimeEditWindow : Window
         {
             var frame = new FrameworkElementFactory(typeof(Border));
             frame.SetValue(Border.BorderBrushProperty, FrameStroke);
-            frame.SetValue(Border.BorderThicknessProperty, new Thickness(2 * uiScale));
+            // The thumb's own thickness, so the frame of the block the 模式 panel shows can be made
+            // heavier mid-drag without swapping the template — see SetMarkers.
+            frame.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(System.Windows.Controls.Control.BorderThicknessProperty));
             frame.SetValue(Border.CornerRadiusProperty, new CornerRadius(3 * uiScale));
             frame.SetValue(Border.BackgroundProperty, FrameFill);
             // The frame floats over unpredictable content — a shadow is what keeps the edge legible
@@ -2514,7 +2679,6 @@ public partial class RealtimeEditWindow : Window
             rows.Children.Add(Separator());
             var (manage, _) = Row(LocalizationService.Get("S.Realtime.ProfileManage"), null,
                 selected: false, () => ManageRequested?.Invoke(this, EventArgs.Empty), texts);
-            manage.ToolTip = LocalizationService.Get("S.Realtime.ProfileManageTip");
             rows.Children.Add(manage);
 
             // As wide as the button at least, and as its longest name or summary at most up to the
@@ -2553,7 +2717,7 @@ public partial class RealtimeEditWindow : Window
         /// <summary>Raised with the id of the mode picked.</summary>
         public event EventHandler<string>? Picked;
 
-        /// <summary>Raised when 管理模式… is picked.</summary>
+        /// <summary>Raised when 模式設定… is picked.</summary>
         public event EventHandler? ManageRequested;
 
         /// <summary>

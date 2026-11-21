@@ -183,6 +183,19 @@
                                   StrokeLineJoin="Round"/>
                         </Button>
 
+                        <!-- 模式, the same button as on the running capsule and after 對照顯示 as there,
+                             so the panel is found in one place whether framing or translating. Framed
+                             blocks can be set up before anything is read. -->
+                        <Button x:Name="ProfilesEditBtn"
+                                Style="{StaticResource ToolbarIconButton}"
+                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                FontSize="14"
+                                Content="&#xE9E9;"
+                                Margin="0,0,6,0"
+                                AutomationProperties.AutomationId="RealtimeProfilesEditBtn"
+                                AutomationProperties.Name="{DynamicResource S.Realtime.ProfileMenu}"
+                                Click="ProfilesBtn_Click"/>
+
                         <!-- The two buttons the user chooses between while framing, in a tray of their
                              own: whether to keep drawing or to start translating is one decision, and
                              set loose on the bar they read as two more pieces of furniture next to ✕.

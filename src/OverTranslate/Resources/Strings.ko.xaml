@@ -442,7 +442,6 @@
     <sys:String x:Key="S.Realtime.ProfileBasedOn">템플릿: {0}</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">템플릿: {0} · 변경된 항목: {1}개</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">모드 설정…</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileManageTip">현재 실시간 번역을 끝내고 모드 설정을 엽니다</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">모드</sys:String>

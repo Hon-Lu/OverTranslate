@@ -837,9 +837,17 @@ internal sealed class RealtimeSessionController
             _compareDisplay);
         edit.BlocksChanged += (_, _) =>
         {
+            var before = _blocks;
             _blocks = [.. edit.GetPhysicalBlocks()];
             control.SetBlockCount(_blocks.Count, Models.RealtimeSettings.MaxBlockCount);
+
+            // The 模式 panel shows which blocks there are and what each is set to, not where they
+            // are: a block being dragged reports itself many times a second, and redrawing the
+            // panel for each of those would be all cost.
+            if (!SameBlocksForPanel(before, _blocks)) BlocksChanged?.Invoke(this, EventArgs.Empty);
         };
+        edit.BlockFocused += (_, index) => BlockFocused?.Invoke(this, index);
+        edit.BlockRemoved += (_, index) => BlockRemoved?.Invoke(this, index);
         // Written on the press rather than at the end of the session: a session over a full-screen
         // game is as likely to end with the machine being shut down as with 結束即時翻譯. The pair
         // together because they arrive together: one tray being pressed is the user telling this
@@ -855,13 +863,13 @@ internal sealed class RealtimeSessionController
         };
         edit.LimitReached += (_, _) =>
             control.ShowMessage(LocalizationService.Format("S.Realtime.TooManyBlocks", Models.RealtimeSettings.MaxBlockCount));
-        // 管理模式… ends the sitting rather than opening the page over it: the layer covers the whole
-        // screen at the top of the topmost band, and the window would open underneath it looking as
-        // if nothing had happened. The blocks and their modes are kept (RememberedBlocks), so the
-        // way back is one press. Deferred, because the press arrives inside the layer's own input
-        // handling and this closes that layer.
-        edit.ManageProfilesRequested += (_, profileId) =>
-            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => OpenProfiles(profileId));
+        // 模式設定… opens the 模式 panel on that block, over this layer, and nothing ends: it used to
+        // end the sitting and open the page, because the page's window would open underneath a layer
+        // that covers the whole screen. The panel is owned by the bar, which this layer owns, so it
+        // is above the layer for as long as both are up. Deferred, because the press arrives inside
+        // the layer's own input handling, which closes the list it came from.
+        edit.ProfilePanelRequested += (_, index) =>
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => _control?.OpenProfiles(index));
         _edit = edit;
         edit.Show();
         RefreshOverlayHandles();
@@ -889,24 +897,25 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// Esc while framing: puts away a block's open list of modes if there is one, and only
-    /// otherwise ends the sitting — a press meant for the list must not cost the user every block.
+    /// Esc while framing puts away one thing at a time: a block's open list of modes, then what is
+    /// open on the 模式 panel, then the panel — and only otherwise ends the sitting. A press meant
+    /// for any of those must not cost the user every block.
     /// </summary>
     private void OnEscapeWhileFraming()
     {
         if (_edit?.TryDismissMenu() == true) return;
+        if (_control?.TryDismissProfiles() == true) return;
         Stop();
     }
 
     /// <summary>
-    /// 模式設定… on the edit layer: ends the sitting and opens the 即時翻譯 page with
-    /// <paramref name="profileId"/> — the block's mode — open over it.
+    /// Whether the 模式 panel would show <paramref name="b"/> just as it shows <paramref name="a"/>:
+    /// the same number of blocks, each on the same mode and direction. Where they are is not shown.
     /// </summary>
-    private void OpenProfiles(string profileId)
-    {
-        Stop();
-        Shell.ShellWindow.ShowOrActivate(Shell.ShellPage.Realtime).ShowRealtimeProfile(profileId);
-    }
+    internal static bool SameBlocksForPanel(
+        IReadOnlyList<RealtimeBlockPlacement> a, IReadOnlyList<RealtimeBlockPlacement> b) =>
+        a.Count == b.Count && a.Zip(b).All(pair =>
+            pair.First.ProfileId == pair.Second.ProfileId && pair.First.Orientation == pair.Second.Orientation);
 
     /// <summary>
     /// The 即時翻譯 shortcut pressed while blocks are being framed: the edit bar's 開始翻譯 (#324).
@@ -1227,25 +1236,53 @@ internal sealed class RealtimeSessionController
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(ApplyProfiles);
 
     /// <summary>
-    /// Raised on the dispatcher when which mode a translating block is on may have changed — chosen
-    /// on the 模式 panel, moved onto a mode just split off its preset, or put back on 標準 when its
-    /// mode was deleted — for the panel to show it.
+    /// Raised on the dispatcher when which blocks there are, or which mode one is on, may have
+    /// changed — chosen on the 模式 panel or a block's own list, moved onto a mode just split off its
+    /// preset, put back on 標準 when its mode was deleted, or a block drawn or removed while framing —
+    /// for the panel to show it.
     /// </summary>
     public event EventHandler? BlocksChanged;
 
-    /// <summary>The blocks being translated, in order: 區塊 1 is the first.</summary>
-    public IReadOnlyList<RealtimeBlockPlacement> TranslatingBlocks => IsTranslating ? _blocks : [];
+    /// <summary>
+    /// Raised with a block's position when the user presses it on the edit layer, or has just drawn
+    /// it: the 模式 panel turns to that block.
+    /// </summary>
+    public event EventHandler<int>? BlockFocused;
 
     /// <summary>
-    /// Puts block <paramref name="index"/> on <paramref name="profileId"/> from the running bar's
-    /// 模式 panel (翻譯中調整模式), without ending anything.
+    /// Raised with the position a block had on the edit layer, before <see cref="BlocksChanged"/>
+    /// reports it gone: the 模式 panel keeps its place among the blocks left.
+    /// </summary>
+    public event EventHandler<int>? BlockRemoved;
+
+    /// <summary>Whether blocks are being framed on the edit layer.</summary>
+    public bool IsFraming => _edit is not null;
+
+    /// <summary>
+    /// The blocks the 模式 panel tunes, in order — being translated, or being framed; 區塊 1 is the
+    /// first. Empty otherwise.
+    /// </summary>
+    public IReadOnlyList<RealtimeBlockPlacement> PanelBlocks => IsTranslating || IsFraming ? _blocks : [];
+
+    /// <summary>
+    /// Puts block <paramref name="index"/> on <paramref name="profileId"/> from the 模式 panel,
+    /// without ending anything.
     /// </summary>
     /// <remarks>
     /// The answer new blocks start on goes with it, as choosing a block's mode on the edit layer
-    /// does: either way it is the user telling this sitting what they are watching.
+    /// does: either way it is the user telling this sitting what they are watching. While framing,
+    /// the edit layer makes the change itself, as a pick from the block's own list — that is where
+    /// the blocks live until translation starts, and the one path keeps the two from disagreeing.
     /// </remarks>
     public void SetBlockProfile(int index, string profileId)
     {
+        if (_edit is { } edit)
+        {
+            Log.Info("Realtime block {Block} switched mode from the mode panel while framing", index);
+            edit.SetBlockProfile(index, profileId);
+            return;
+        }
+
         if (!IsTranslating || index < 0 || index >= _blocks.Count) return;
 
         var settings = SettingsService.Instance;
@@ -1284,8 +1321,18 @@ internal sealed class RealtimeSessionController
         ShowMarkers();
     }
 
+    /// <summary>Puts away a block's open list of modes on the edit layer, if there is one.</summary>
+    public void DismissFramingMenu() => _edit?.TryDismissMenu();
+
     private void ShowMarkers()
     {
+        // While framing the blocks are the edit layer's, and so are their names.
+        if (_edit is { } edit)
+        {
+            edit.SetMarkers(_marking && _blocks.Count > 1, _markedBlock);
+            return;
+        }
+
         bool shown = _marking && _blockWindows.Count > 1;
         foreach (var (id, window) in _blockWindows)
             window.SetMarker(
@@ -1683,6 +1730,10 @@ internal sealed class RealtimeSessionController
 
     private void CloseEditWindow()
     {
+        // The 模式 panel first, while the layer whose blocks it names is still here to take the
+        // names off: it was opened for these blocks, and the bar is about to change its mode anyway.
+        if (_edit is not null) _control?.CloseProfiles();
+
         // Before the close, always: WPF closes owned windows with their owner, so leaving this set
         // would take the control bar down with the edit layer.
         if (_control is { } control && ReferenceEquals(control.Owner, _edit))
