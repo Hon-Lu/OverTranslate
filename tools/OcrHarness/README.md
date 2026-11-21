@@ -329,6 +329,18 @@ $h = 'tools/OcrHarness/bin/Release/net8.0-windows10.0.26100.0/win-x64/OcrHarness
 
 重播比不到的：畫面文字穩定後再讀取、原文消失後立即清除譯文（作用在輪與輪之間）、辨識解析度（快取是用預設尺寸讀的），這些看單元測試、`detector` 或實機。
 
+## 橫排日文小字（#412）
+
+`SmallKanaReread`：日文橫排行若有可能是小字的大字（つ や イ …），補上下背景再讀一次，只採用「大字→小字」的差異。
+全域旗標 `--no-small-kana` 關掉它，任何模式都能做開／關對照（例如兩次 `--auto-probe capture`）。
+
+```powershell
+# 每張圖每個偵測尺寸（字幕 85%、fallback 68%／100%、60%、截圖）只偵測一次，同一批框分別以關（base）與開（k0.15）辨識
+& $h --small-kana JA list.txt out.tsv [--variants base,k0.10,k0.15] [--workloads sub,fb68,fb100,f60,shot] [--shift 3]
+```
+
+輸出每行一筆讀數，`ms` 是該次整個辨識的耗時。清單每行一張圖，可加 Tab 與 `X,Y,W,H` 指定框選；`--shift N` 另讀框選往右下平移 1..N px 的版本。
+
 ## 產生測試截圖
 
 `capture.ps1` — 用 .NET `CopyFromScreen` 把螢幕區域存成 PNG（模擬使用者框選）：
