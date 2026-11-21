@@ -38,7 +38,7 @@ namespace OverTranslate.Views.Realtime;
 /// press, not the application — an exception on the dispatcher outside a screenshot capture ends the
 /// process (App.DispatcherUnhandledException).</para>
 /// </remarks>
-internal partial class RealtimeProfilePanel : Window
+internal partial class RealtimeProfilePanel : Window, IVisibleBounds
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
@@ -89,26 +89,37 @@ internal partial class RealtimeProfilePanel : Window
 
     /// <param name="bar">The capsule's visible surface, in physical pixels: the panel opens clear of it.</param>
     /// <param name="screen">The session's screen, which the panel has to stay on.</param>
-    public RealtimeProfilePanel(System.Drawing.Rectangle bar, System.Drawing.Rectangle screen)
+    /// <param name="block">The block to open on, by position; held to the blocks there are.</param>
+    public RealtimeProfilePanel(System.Drawing.Rectangle bar, System.Drawing.Rectangle screen, int block = 0)
     {
         InitializeComponent();
 
         _bar = bar;
         _screen = screen;
+        _block = Math.Max(0, block);
 
         BuildRows();
         BlockSwitch.IndexChanged += (_, index) => Guard("block switch", () => SelectBlock(index));
 
         SettingsService.Instance.RealtimeProfilesChanged += OnProfilesChanged;
         Session.BlocksChanged += OnBlocksChanged;
+        Session.BlockFocused += OnBlockFocused;
+        Session.BlockRemoved += OnBlockRemoved;
         LocalizationService.LanguageChanged += OnLanguageChanged;
         Closed += (_, _) =>
         {
             SettingsService.Instance.RealtimeProfilesChanged -= OnProfilesChanged;
             Session.BlocksChanged -= OnBlocksChanged;
+            Session.BlockFocused -= OnBlockFocused;
+            Session.BlockRemoved -= OnBlockRemoved;
             LocalizationService.LanguageChanged -= OnLanguageChanged;
             Session.UnmarkBlocks();
         };
+
+        // While framing, a block's list of modes is drawn on the edit layer under a catcher that a
+        // press on this window never reaches; left open beside the panel, the two could show the
+        // same block on different modes.
+        PreviewMouseDown += (_, _) => Guard("framing list", Session.DismissFramingMenu);
 
         PreviewMouseLeftButtonUp += (_, _) =>
         {
@@ -154,6 +165,42 @@ internal partial class RealtimeProfilePanel : Window
         if (_closing) return;
         _closing = true;
         Close();
+    }
+
+    /// <summary>The block shown, by position: 區塊 1 is 0.</summary>
+    public int SelectedBlock => _block;
+
+    /// <summary>
+    /// Puts away what is open on the panel — a card, or the list of modes — for Esc while framing.
+    /// </summary>
+    /// <returns>Whether there was anything; when not, Esc is for the panel itself.</returns>
+    public bool TryDismissInner()
+    {
+        if (ConfirmLayer.Visibility == Visibility.Visible)
+        {
+            ConfirmLayer.Visibility = Visibility.Collapsed;
+            return true;
+        }
+        if (ForkLayer.Visibility == Visibility.Visible)
+        {
+            Guard("fork cancelled", CancelFork);
+            return true;
+        }
+        if (ModeListFrame.Visibility == Visibility.Visible)
+        {
+            CloseModeList();
+            return true;
+        }
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public Rect? VisibleScreenBounds()
+    {
+        if (!IsLoaded || Opacity <= 0 || Chrome.ActualWidth <= 0) return null;
+        return new Rect(
+            Chrome.PointToScreen(new System.Windows.Point(0, 0)),
+            Chrome.PointToScreen(new System.Windows.Point(Chrome.ActualWidth, Chrome.ActualHeight)));
     }
 
     /// <summary>
@@ -259,20 +306,45 @@ internal partial class RealtimeProfilePanel : Window
 
     private string ShownProfileId()
     {
-        var blocks = Session.TranslatingBlocks;
-        return blocks.Count == 0 ? RealtimePresets.StandardId : Realtime.KnownProfileId(blocks[_block].ProfileId);
+        var blocks = Session.PanelBlocks;
+        return blocks.Count == 0
+            ? RealtimePresets.StandardId
+            : Realtime.KnownProfileId(blocks[Math.Clamp(_block, 0, blocks.Count - 1)].ProfileId);
     }
 
     private bool ShowsPreset => RealtimePresets.IsPreset(ShownProfileId());
 
-    private void SelectBlock(int index)
+    /// <summary>
+    /// Turns the panel to block <paramref name="index"/> — chosen on the panel's own switch, pressed
+    /// on the edit layer, or asked for by the block's 模式設定….
+    /// </summary>
+    public void SelectBlock(int index)
     {
-        if (_showing) return;
+        if (_showing || _closing || index == _block) return;
         _block = index;
         CancelFork();
         CloseModeList();
         Render();
     }
+
+    // Deferred like the other changes from outside: the press it reports is still being handled on
+    // the edit layer, and the drag it starts must not wait on the panel drawing.
+    private void OnBlockFocused(object? sender, int index) =>
+        Dispatcher.BeginInvoke(() => Guard("block focused", () => SelectBlock(index)));
+
+    /// <summary>
+    /// A block removed while framing: the panel stays on the block it showed, now one place up, or
+    /// on the one before when that was the block removed.
+    /// </summary>
+    /// <remarks>
+    /// At once rather than deferred, because the redraw that follows the removal is deferred and
+    /// has to find the place already kept.
+    /// </remarks>
+    private void OnBlockRemoved(object? sender, int index) => _block = KeptBlock(_block, index);
+
+    /// <summary>The block shown after block <paramref name="removed"/> goes, by position — see <see cref="OnBlockRemoved"/>.</summary>
+    internal static int KeptBlock(int shown, int removed) =>
+        shown > removed || (shown == removed && shown > 0) ? shown - 1 : shown;
 
     private void OnProfilesChanged(object? sender, EventArgs e)
     {
@@ -281,7 +353,16 @@ internal partial class RealtimeProfilePanel : Window
     }
 
     private void OnBlocksChanged(object? sender, EventArgs e) =>
-        Dispatcher.BeginInvoke(() => Guard("blocks changed", RenderUnlessDragging));
+        Dispatcher.BeginInvoke(() => Guard("blocks changed", () =>
+        {
+            // The last block removed while framing: there is nothing left to tune.
+            if (Session.PanelBlocks.Count == 0)
+            {
+                Dismiss();
+                return;
+            }
+            RenderUnlessDragging();
+        }));
 
     private void OnLanguageChanged(object? sender, EventArgs e) =>
         Dispatcher.BeginInvoke(() => Guard("language changed", () =>
@@ -352,9 +433,13 @@ internal partial class RealtimeProfilePanel : Window
 
     private void RenderCore()
     {
-        var blocks = Session.TranslatingBlocks;
+        var blocks = Session.PanelBlocks;
         if (blocks.Count == 0) return;
         _block = Math.Clamp(_block, 0, blocks.Count - 1);
+
+        // Said only where it is true: while framing, nothing is being translated yet, and a change
+        // is kept for when it starts.
+        LiveApplyText.Visibility = Session.IsTranslating ? Visibility.Visible : Visibility.Collapsed;
 
         // The switch only where there is a choice of block.
         BlockSwitch.Visibility = blocks.Count > 1 ? Visibility.Visible : Visibility.Collapsed;

@@ -29,6 +29,9 @@ public partial class RealtimeControlWindow
 
         // Edit mode.
         Labels.Add(CompareEditBtn, CompareName, CompareDescription(CompareEditBtn), CompareKeys);
+        Labels.Add(ProfilesEditBtn,
+            () => LocalizationService.Get("S.Realtime.ProfileMenu"),
+            () => LocalizationService.Get("S.Realtime.ProfilePanelHint"));
         Labels.Add(CrosshairBtn, () => LocalizationService.Get(
             _crosshairEnabled ? "S.Realtime.CrosshairOff" : "S.Realtime.CrosshairOn"));
         Labels.Add(StartBtn, () => LocalizationService.Get("S.Realtime.StartTranslating"));

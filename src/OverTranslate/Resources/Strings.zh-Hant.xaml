@@ -458,7 +458,6 @@
     <sys:String x:Key="S.Realtime.ProfileBasedOn">以「{0}」為範本。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">以「{0}」為範本，已修改 {1} 項。</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">模式設定…</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileManageTip">結束目前的即時翻譯並開啟模式設定畫面</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">模式</sys:String>

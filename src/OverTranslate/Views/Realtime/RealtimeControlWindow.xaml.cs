@@ -112,6 +112,9 @@ public partial class RealtimeControlWindow : Window
     private RealtimeAppearancePanel? _appearance;
     // 模式, while it is open (翻譯中調整模式). Never open together with 顯示外觀 or a language list.
     private RealtimeProfilePanel? _profiles;
+    // The block 模式 showed last, so it opens on it again — from framing into translating too. This
+    // bar lasts for one sitting, and so does this.
+    private int _profileBlock;
     private bool _isPaused;
     private bool _isLoadingModels;
     // What the session last said through SetBusy; the dot also pulses while the models load.
@@ -976,11 +979,15 @@ public partial class RealtimeControlWindow : Window
 
     // ── 模式 (翻譯中調整模式) ────────────────────────────────────────────────────────────────────
 
+    // The 模式 button on the bar showing now: the running capsule's, or the framing bar's.
+    private System.Windows.Controls.Button ProfilesButton =>
+        _mode == RealtimeControlMode.Edit ? ProfilesEditBtn : ProfilesBtn;
+
     private void ProfilesBtn_Click(object sender, RoutedEventArgs e)
     {
         // Human-paced, and the first thing to look at if the panel is reported as not opening, as the
         // language lists log theirs (#358).
-        Log.Info("Realtime mode panel button pressed, open={Open}", _profiles is not null);
+        Log.Info("Realtime mode panel button pressed, mode={Mode} open={Open}", _mode, _profiles is not null);
 
         // Pressing it again is how the panel is put away, as 顯示外觀's is: it stays open otherwise,
         // so one value after another can be tried against the translation.
@@ -990,14 +997,47 @@ public partial class RealtimeControlWindow : Window
             return;
         }
 
+        OpenProfiles(null);
+    }
+
+    /// <summary>
+    /// Opens the 模式 panel on block <paramref name="block"/> — or on the block it last showed this
+    /// sitting — or, when it is open already, turns it to that block.
+    /// </summary>
+    /// <remarks>
+    /// From the running capsule's 模式, and while framing from the bar's 模式 and from a block's own
+    /// 模式設定…. With no block framed there is nothing to tune, and the bar says so the way 開始翻譯
+    /// does.
+    /// </remarks>
+    public void OpenProfiles(int? block)
+    {
+        if (_profiles is { } open)
+        {
+            if (block is { } index) open.SelectBlock(index);
+            return;
+        }
+
+        if (RealtimeSessionController.Instance.PanelBlocks.Count == 0)
+        {
+            ShowMessage(LocalizationService.Get("S.Realtime.NeedOneBlock"));
+            return;
+        }
+
         // One thing open over the capsule at a time: they open into the same space.
         CloseMenu("mode panel opening");
         CloseAppearance();
 
+        var button = ProfilesButton;
         RealtimeProfilePanel panel;
         try
         {
-            panel = new RealtimeProfilePanel(PhysicalRect(Chrome), _screenBounds);
+            panel = new RealtimeProfilePanel(PhysicalRect(Chrome), _screenBounds, block ?? _profileBlock);
+
+            // While framing, owned by this bar, which the edit layer owns: a window owned is kept
+            // above its owner, so the panel is above a layer that covers the whole screen at the top
+            // of the topmost band, as the bar is. Unowned, it opened underneath and looked as if the
+            // press had done nothing. Not while running, where it stands alone as 顯示外觀 does.
+            if (Owner is not null) panel.Owner = this;
         }
         catch (Exception ex)
         {
@@ -1007,22 +1047,44 @@ public partial class RealtimeControlWindow : Window
         }
         panel.Closed += (_, _) =>
         {
+            _profileBlock = panel.SelectedBlock;
             if (!ReferenceEquals(_profiles, panel)) return;
             _profiles = null;
-            SetHeldDown(ProfilesBtn, false);
+            SetHeldDown(button, false);
         };
 
         _profiles = panel;
-        SetHeldDown(ProfilesBtn, true);
-        panel.Show();
+        SetHeldDown(button, true);
+        try
+        {
+            panel.Show();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Realtime mode panel could not be shown");
+            CloseProfiles();
+        }
     }
 
-    private void CloseProfiles()
+    /// <summary>
+    /// Esc while framing, after a block's list: puts away what is open on the 模式 panel, or else the
+    /// panel itself.
+    /// </summary>
+    /// <returns>Whether there was a panel to take Esc.</returns>
+    public bool TryDismissProfiles()
+    {
+        if (_profiles is not { } panel) return false;
+        if (!panel.TryDismissInner()) CloseProfiles();
+        return true;
+    }
+
+    public void CloseProfiles()
     {
         var panel = _profiles;
         if (panel is null) return;
         _profiles = null;
         SetHeldDown(ProfilesBtn, false);
+        SetHeldDown(ProfilesEditBtn, false);
         panel.Dismiss();
     }
 

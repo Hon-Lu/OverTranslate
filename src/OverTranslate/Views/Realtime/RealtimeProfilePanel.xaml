@@ -260,7 +260,7 @@
                                 <StackPanel x:Name="AdvancedRows"/>
                             </Border>
 
-                            <TextBlock Text="{DynamicResource S.Realtime.ProfileLiveApply}"
+                            <TextBlock x:Name="LiveApplyText" Text="{DynamicResource S.Realtime.ProfileLiveApply}"
                                        Style="{StaticResource SmallText}" FontSize="11" Margin="4,8,4,0"/>
                         </StackPanel>
                     </ScrollViewer>

@@ -435,7 +435,6 @@
     <sys:String x:Key="S.Realtime.ProfileBasedOn">На основе «{0}».</sys:String>
     <sys:String x:Key="S.Realtime.ProfileBasedOnModified">На основе «{0}», изменено параметров: {1}.</sys:String>
     <sys:String x:Key="S.Realtime.ProfileManage">Настройки режимов…</sys:String>
-    <sys:String x:Key="S.Realtime.ProfileManageTip">Завершает текущий перевод в реальном времени и открывает настройки режимов</sys:String>
 
     <!-- 模式 card on the 即時翻譯 page: the list of modes and the values of the one selected. -->
     <sys:String x:Key="S.Realtime.Profiles">Режимы</sys:String>
