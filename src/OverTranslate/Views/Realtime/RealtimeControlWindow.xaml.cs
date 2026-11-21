@@ -112,6 +112,8 @@ public partial class RealtimeControlWindow : Window
     private RealtimeAppearancePanel? _appearance;
     // 模式, while it is open (翻譯中調整模式). Never open together with 顯示外觀 or a language list.
     private RealtimeProfilePanel? _profiles;
+    // 翻譯區域預設, while it is open over the framing bar. One panel at a time with 模式.
+    private RealtimeFramingPanel? _framings;
     // The block 模式 showed last, so it opens on it again — from framing into translating too. This
     // bar lasts for one sitting, and so does this.
     private int _profileBlock;
@@ -191,16 +193,18 @@ public partial class RealtimeControlWindow : Window
             CloseMenu("bar closed");
             CloseAppearance();
             CloseProfiles();
+            CloseFramings();
         };
 
         // A list left open over a capsule that has gone away — a capture standing the session down —
-        // would be a menu for a bar that is not there. The same for 顯示外觀.
+        // would be a menu for a bar that is not there. The same for 顯示外觀 and 翻譯區域預設.
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible) return;
             CloseMenu("bar hidden");
             CloseAppearance();
             CloseProfiles();
+            CloseFramings();
         };
 
         // 顯示外觀 is set against the capsule, so it goes wherever the capsule goes: pushed along by
@@ -271,6 +275,19 @@ public partial class RealtimeControlWindow : Window
     /// <see cref="SetLanguages"/>.
     /// </summary>
     public event EventHandler<(string Source, string Target)>? LanguagesChangeRequested;
+
+    /// <summary>
+    /// Raised when a framing is picked from 翻譯區域預設, by its id: the session puts that arrangement
+    /// on the screen being framed. The list is this window's to open and close; what a framing means
+    /// is not.
+    /// </summary>
+    public event EventHandler<string>? FramingChosen;
+
+    /// <summary>
+    /// Raised when the framing bar's 儲存框選 is pressed: keep the blocks framed now as this screen's
+    /// or window's 即時翻譯 framing. Kept by the session, which knows what the blocks belong to.
+    /// </summary>
+    public event EventHandler? SaveFramingRequested;
 
     /// <summary>
     /// Raised when the 顯示外觀 panel has written a change to the settings file (#355), for the
@@ -514,6 +531,7 @@ public partial class RealtimeControlWindow : Window
         CloseMenu($"mode {mode}");
         CloseAppearance();
         CloseProfiles();
+        CloseFramings();
         Labels.Hide();
         EditPanel.Visibility = mode == RealtimeControlMode.Edit ? Visibility.Visible : Visibility.Collapsed;
         RunPanel.Visibility = mode == RealtimeControlMode.Running ? Visibility.Visible : Visibility.Collapsed;
@@ -631,6 +649,7 @@ public partial class RealtimeControlWindow : Window
         {
             CloseAppearance();
             CloseProfiles();
+            CloseFramings();
         }
     }
 
@@ -840,6 +859,7 @@ public partial class RealtimeControlWindow : Window
         // One thing open over the capsule at a time: the two would open into the same space.
         CloseAppearance();
         CloseProfiles();
+        CloseFramings();
 
         var menu = new RealtimeLanguageMenu(
             kind,
@@ -946,6 +966,7 @@ public partial class RealtimeControlWindow : Window
 
         CloseMenu("appearance panel opening");
         CloseProfiles();
+        CloseFramings();
 
         var panel = new RealtimeAppearancePanel(PhysicalRect(Chrome), _screenBounds);
         panel.AppearanceChanged += (_, _) => AppearanceChanged?.Invoke(this, EventArgs.Empty);
@@ -975,6 +996,112 @@ public partial class RealtimeControlWindow : Window
         if (!IsLoaded) return;
         if (_appearance is { } panel) panel.UpdateAnchor(PhysicalRect(Chrome));
         if (_profiles is { } profiles) profiles.UpdateAnchor(PhysicalRect(Chrome));
+        if (_framings is { } framings) framings.UpdateAnchor(PhysicalRect(Chrome));
+    }
+
+    // ── 翻譯區域預設 ────────────────────────────────────────────────────────────────────────────
+
+    // The 翻譯區域預設 button on the bar showing now: the running capsule's, or the framing bar's.
+    private System.Windows.Controls.Button FramingsButton =>
+        _mode == RealtimeControlMode.Edit ? FramingsEditBtn : FramingsRunBtn;
+
+    private void FramingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        // Pressing it again is how the list is put away, as 模式's is: it stays open otherwise.
+        if (_framings is not null)
+        {
+            CloseFramings();
+            return;
+        }
+
+        var presets = RealtimeSessionController.Instance.FramingPresets;
+        if (presets.Count == 0)
+        {
+            ShowMessage(LocalizationService.Get("S.Realtime.FramingSwitchEmpty"));
+            return;
+        }
+
+        // One framing is one answer: pressing it applies it, and the bar says what it applied. A
+        // list of one is more steps for no choice.
+        if (presets.Count == 1)
+        {
+            FramingChosen?.Invoke(this, presets[0].Id);
+            return;
+        }
+
+        OpenFramings(presets);
+    }
+
+    /// <summary>
+    /// Opens the list of the framings kept for this screen or window, the selected one marked.
+    /// </summary>
+    /// <remarks>
+    /// Owned by the bar while framing, as the 模式 panel is, so it stays above the layer that covers
+    /// the whole screen; a window that only had Topmost would slide under it. It never takes the
+    /// foreground — every row is picked with the mouse — so opening it cannot cost a full-screen game
+    /// its focus.
+    /// </remarks>
+    public void OpenFramings(IReadOnlyList<Models.RealtimeFramingPreset> presets)
+    {
+        CloseMenu("framing list opening");
+        CloseAppearance();
+        CloseProfiles();
+
+        RealtimeFramingPanel panel;
+        try
+        {
+            panel = new RealtimeFramingPanel(PhysicalRect(Chrome), _screenBounds, presets);
+            if (Owner is not null) panel.Owner = this;
+        }
+        catch (Exception ex)
+        {
+            // A press that cannot open the list costs the press, not the session.
+            Log.Error(ex, "Realtime framing list could not be opened");
+            return;
+        }
+
+        panel.Picked += (_, id) =>
+        {
+            CloseFramings();
+            FramingChosen?.Invoke(this, id);
+        };
+        panel.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_framings, panel)) return;
+            _framings = null;
+            SetHeldDown(FramingsButton, false);
+        };
+
+        _framings = panel;
+        SetHeldDown(FramingsButton, true);
+        try
+        {
+            panel.Show();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Realtime framing list could not be shown");
+            CloseFramings();
+        }
+    }
+
+    public void CloseFramings()
+    {
+        var panel = _framings;
+        if (panel is null) return;
+        _framings = null;
+        SetHeldDown(FramingsEditBtn, false);
+        SetHeldDown(FramingsRunBtn, false);
+        panel.Dismiss();
+    }
+
+    /// <summary>Esc while framing: puts the framing list away, if it is the thing that is open.</summary>
+    /// <returns>Whether there was a list to take Esc.</returns>
+    public bool TryDismissFramings()
+    {
+        if (_framings is null) return false;
+        CloseFramings();
+        return true;
     }
 
     // ── 模式 (翻譯中調整模式) ────────────────────────────────────────────────────────────────────
@@ -1026,6 +1153,7 @@ public partial class RealtimeControlWindow : Window
         // One thing open over the capsule at a time: they open into the same space.
         CloseMenu("mode panel opening");
         CloseAppearance();
+        CloseFramings();
 
         var button = ProfilesButton;
         RealtimeProfilePanel panel;
@@ -1263,6 +1391,9 @@ public partial class RealtimeControlWindow : Window
     }
 
     private void StartBtn_Click(object sender, RoutedEventArgs e) => StartRequested?.Invoke(this, EventArgs.Empty);
+
+    private void SaveFramingBtn_Click(object sender, RoutedEventArgs e) =>
+        SaveFramingRequested?.Invoke(this, EventArgs.Empty);
 
     private void EditBtn_Click(object sender, RoutedEventArgs e) => EditRequested?.Invoke(this, EventArgs.Empty);
 

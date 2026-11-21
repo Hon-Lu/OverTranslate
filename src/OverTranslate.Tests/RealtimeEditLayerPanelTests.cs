@@ -76,6 +76,35 @@ public class RealtimeEditLayerPanelTests
     }
 
     [Fact]
+    public void PickingASavedFraming_ReplacesEveryBlockInPlace()
+    {
+        OnStaThread(() =>
+        {
+            var layer = Layer(out var add);
+            add(RealtimePresets.StandardId);
+            add(RealtimePresets.SubtitleId);
+            int changed = 0;
+            layer.BlocksChanged += (_, _) => changed++;
+
+            var picked = new[]
+            {
+                new RealtimeBlockPlacement(new Rectangle(10, 20, 300, 40), RealtimePresets.SubtitleId),
+                new RealtimeBlockPlacement(
+                    new Rectangle(500, 600, 200, 50), RealtimePresets.InterfaceId,
+                    RealtimeTextOrientation.Vertical, new System.Drawing.Point(5, 6), 0.75, true),
+            };
+
+            layer.SetBlocks(picked);
+
+            // The layer is the session's answer to "where is the text": what it reports back is what
+            // the picked framing said, block for block, and the blocks it had are gone.
+            Assert.Equal(picked, layer.GetPhysicalBlocks());
+            Assert.Equal(1, changed);
+            layer.Close();
+        });
+    }
+
+    [Fact]
     public void ABlockRemoved_IsReportedByPosition_AndTheNamesAfterItMoveUp()
     {
         OnStaThread(() =>

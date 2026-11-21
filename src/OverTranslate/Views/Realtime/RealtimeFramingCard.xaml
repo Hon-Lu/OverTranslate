@@ -1,0 +1,161 @@
+<UserControl x:Class="OverTranslate.Views.Realtime.RealtimeFramingCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <!-- The name on a row, edited in place: a field that shows as text until the pointer is over
+             it, then underlines, and takes the accent while it has the keyboard. Renaming is the only
+             thing a preset has to be changed by hand, and it is one word — a button and a dialog for
+             it would be more furniture than the row is worth. The template removes the text box's
+             own chrome, which at this weight and in this column reads as an input form rather than as
+             the row's own name. -->
+        <Style x:Key="FramingNameBox" TargetType="TextBox">
+            <Setter Property="FontFamily"  Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize"    Value="{StaticResource AppFontSize}"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="Foreground"  Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="CaretBrush"  Value="{DynamicResource AppTextPrimary}"/>
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"     Value="0,1,0,2"/>
+            <Setter Property="Cursor"      Value="IBeam"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Root" Background="Transparent" BorderThickness="0,0,0,1"
+                                BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The square at a row's left, which is also how a framing is picked: the blocks' glyph on
+             the one in use, a check on the one selected. A button rather than a radio so that the
+             row's own click and this one mean the same thing and both are a tab stop. -->
+        <Style x:Key="FramingSelectButton" TargetType="Button">
+            <Setter Property="Width"  Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" CornerRadius="8" Background="{DynamicResource AppAccentSubtle}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppAccentSubtleHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
+                                <Setter TargetName="Root" Property="BorderThickness" Value="1.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 不再保留, at the row's right. Quiet until the pointer is on it, like the copy's ✕ on the
+             edit layer: forgetting a framing is an errand, not something to be invited to. -->
+        <Style x:Key="FramingForgetButton" TargetType="Button">
+            <Setter Property="Width"  Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="8,0,2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The row's own surface: a hover tint over the list's background, and the rule between rows
+             that stops at the last one. Clicking anywhere but the name or 不再保留 picks the framing,
+             which is why the whole row is a hit target rather than only the square. -->
+        <Style x:Key="FramingRow" TargetType="Border">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="16,9,10,9"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The one selected: an accent edge on the left, said in the same place a list says "this
+             row is the one". The edge is on the border the row already has, so nothing moves. -->
+        <Style x:Key="FramingRowSelected" TargetType="Border" BasedOn="{StaticResource FramingRow}">
+            <Setter Property="Background" Value="{DynamicResource AppAccentSubtle}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
+            <Setter Property="BorderThickness" Value="2,0,0,1"/>
+            <Setter Property="Padding" Value="14,9,10,9"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource CardBorder}">
+        <StackPanel>
+            <!-- The heading as on the rest of the page (RealtimeCardTitle), with its hint close under
+                 it as 模式's is: the two cards are read the same way. -->
+            <TextBlock Text="{DynamicResource S.Realtime.Framings}" Style="{StaticResource RealtimeCardTitle}"
+                       Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource S.Realtime.FramingsHint}" Style="{StaticResource FieldHint}"
+                       LineHeight="16" Margin="0,0,0,10"/>
+
+            <!-- The list: one row per framing kept, several per screen or window. Filled in code
+                 (see RealtimeFramingCard), because each row is a selection square, a name, a detail
+                 line and a forget button. It scrolls inside the card past a screenful of rows: the
+                 page around it keeps the controls the user came for in view, and the wheel is handed
+                 on to the page once this list can go no further. -->
+            <Border x:Name="ListBorder" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10"
+                    SizeChanged="ListBorder_SizeChanged">
+                <ScrollViewer x:Name="ListScroll" MaxHeight="360"
+                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Focusable="False"
+                              AutomationProperties.AutomationId="FramingPresetScroll"
+                              PreviewMouseWheel="ListScroll_PreviewMouseWheel">
+                    <StackPanel x:Name="ListHost"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Said in place of the list when nothing has been kept: the card must not read as an
+                 empty box the user is supposed to fill in from here. -->
+            <TextBlock x:Name="EmptyText" Text="{DynamicResource S.Realtime.FramingsEmpty}"
+                       Style="{StaticResource FieldHint}" TextWrapping="Wrap" LineHeight="16" Margin="2,0,0,0"/>
+        </StackPanel>
+    </Border>
+</UserControl>
