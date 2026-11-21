@@ -489,6 +489,35 @@ public partial class RealtimeEditWindow : Window
             ToPhysical(block.Bounds), block.ProfileId, block.ModeControl.TextOrientation,
             ToPhysical(block.CompareOffset), block.CompareScale, block.CompareHidden))];
 
+    /// <summary>
+    /// Replaces every block with <paramref name="blocks"/> — a framing picked from the bar's
+    /// 翻譯區域預設, put on the screen to be looked at before it starts.
+    /// </summary>
+    /// <remarks>
+    /// Added as if drawn, one at a time, and reported once at the end: the session reads this
+    /// layer's blocks, and swapping the whole set is one change to them, not one per block. Whatever
+    /// was open is put away first — a block's list of modes was opened on a block that is gone.
+    /// </remarks>
+    public void SetBlocks(IReadOnlyList<RealtimeBlockPlacement> blocks)
+    {
+        CloseMenu(animate: false);
+        _blocks.Clear();
+
+        foreach (var block in blocks.Take(_maxBlocks))
+        {
+            AddBlock(
+                ToCanvas(block.Bounds), block.ProfileId, block.Orientation,
+                notify: false,
+                block.CompareOffset is { } offset
+                    ? new Vector(offset.X / _dpiX, offset.Y / _dpiY)
+                    : null,
+                block.CompareScale,
+                block.CompareHidden);
+        }
+
+        RaiseBlocksChanged();
+    }
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);

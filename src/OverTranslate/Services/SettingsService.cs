@@ -166,8 +166,38 @@ public class SettingsService
 
         settings.Realtime.Profiles = RealtimeSettings.CleanProfiles(
             settings.Realtime.Profiles.Count > 0 ? settings.Realtime.Profiles : ReadProfilesOneByOne(root));
+
+        // Same treatment for the kept framings: a list that would not read in one piece is read one
+        // entry at a time, so a damaged block costs that preset rather than every one.
+        settings.Realtime.FramingPresets = RealtimeSettings.CleanFramingPresets(
+            settings.Realtime.FramingPresets.Count > 0
+                ? settings.Realtime.FramingPresets
+                : ReadFramingPresetsOneByOne(root));
         settings.Glossary = GlossarySettings.Clean(settings.Glossary);
         return settings;
+    }
+
+    /// <summary>
+    /// The kept 即時翻譯 framings one at a time, for a list that would not read in one piece.
+    /// </summary>
+    private static IEnumerable<RealtimeFramingPreset?> ReadFramingPresetsOneByOne(JsonObject root)
+    {
+        var read = new List<RealtimeFramingPreset?>();
+        if (root[nameof(AppSettings.Realtime)] is not JsonObject realtime ||
+            realtime[nameof(RealtimeSettings.FramingPresets)] is not JsonArray entries) return read;
+
+        foreach (var entry in entries)
+        {
+            try
+            {
+                read.Add(entry?.Deserialize<RealtimeFramingPreset>());
+            }
+            catch (JsonException ex)
+            {
+                Log.Warn(ex, "Ignoring an unreadable realtime framing preset; keeping the others");
+            }
+        }
+        return read;
     }
 
     /// <summary>
@@ -360,6 +390,30 @@ public class SettingsService
         if (!Current.Realtime.SetProfiles(profiles)) return false;
         Save();
         RealtimeProfilesChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    /// Raised when the kept 即時翻譯 framings change — saved from the floating bar, renamed or
+    /// forgotten on the page. The page's list follows it wherever the change was made.
+    /// </summary>
+    public event EventHandler? RealtimeFramingChanged;
+
+    /// <summary>
+    /// Stores the kept 即時翻譯 framings: the whole list as it should now be. Saving a framing,
+    /// renaming one and forgetting one are all this one call with a changed list — see
+    /// <see cref="RealtimeFramingPreset"/>.
+    /// </summary>
+    /// <remarks>
+    /// Stored as <see cref="RealtimeSettings.SetFramingPresets"/> says: copies, tidied, newest first
+    /// and one per target.
+    /// </remarks>
+    /// <returns>Whether anything changed, and so was saved and announced.</returns>
+    public bool UpdateRealtimeFramingPresets(IEnumerable<RealtimeFramingPreset> presets)
+    {
+        if (!Current.Realtime.SetFramingPresets(presets)) return false;
+        Save();
+        RealtimeFramingChanged?.Invoke(this, EventArgs.Empty);
         return true;
     }
 
