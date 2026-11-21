@@ -696,8 +696,10 @@
                         <Button x:Name="PasteCancelBtn" DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Height="32"
                                 MinWidth="80" Content="{DynamicResource S.Common.Cancel}"
                                 AutomationProperties.AutomationId="GlossaryPasteCancelBtn" Click="PasteCancelBtn_Click"/>
-                        <TextBlock x:Name="PasteSummary" Style="{StaticResource Small}" FontSize="12.5" VerticalAlignment="Center"
-                                   AutomationProperties.AutomationId="GlossaryPasteSummary"/>
+                        <!-- Not the Small style: FieldHint collapses a TextBlock whose Text is "", and Runs added from code leave Text "". -->
+                        <TextBlock x:Name="PasteSummary" FontFamily="{DynamicResource AppFont}" FontSize="12.5"
+                                   Foreground="{DynamicResource AppTextSecondary}" TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" AutomationProperties.AutomationId="GlossaryPasteSummary"/>
                     </DockPanel>
                 </Grid>
             </Border>

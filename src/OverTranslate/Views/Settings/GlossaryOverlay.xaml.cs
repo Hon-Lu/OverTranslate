@@ -850,16 +850,20 @@ public partial class GlossaryOverlay : UserControl
         PasteAddBtn.IsEnabled = ok > 0;
 
         PasteSummary.Inlines.Clear();
+        System.Windows.Automation.AutomationProperties.SetName(PasteSummary, "");
         if (lines.Count == 0) return;
-        PasteSummary.Inlines.Add(new System.Windows.Documents.Run(LocalizationService.Format("S.Glossary.PasteCount", ok)));
+        var count = LocalizationService.Format("S.Glossary.PasteCount", ok);
+        PasteSummary.Inlines.Add(new System.Windows.Documents.Run(count));
         if (bad > 0)
         {
-            PasteSummary.Inlines.Add(new System.Windows.Documents.Run(LocalizationService.Get("S.Glossary.PasteSeparator")));
-            PasteSummary.Inlines.Add(new System.Windows.Documents.Run(LocalizationService.Format("S.Glossary.PasteBad", bad))
-            {
-                Foreground = error,
-            });
+            var separator = LocalizationService.Get("S.Glossary.PasteSeparator");
+            var badText = LocalizationService.Format("S.Glossary.PasteBad", bad);
+            PasteSummary.Inlines.Add(new System.Windows.Documents.Run(separator));
+            PasteSummary.Inlines.Add(new System.Windows.Documents.Run(badText) { Foreground = error });
+            count += separator + badText;
         }
+        // Runs set from code are not read by UI Automation; the name carries the same text.
+        System.Windows.Automation.AutomationProperties.SetName(PasteSummary, count);
     }
 
     /// <summary>
