@@ -633,6 +633,72 @@ public class EngineProtocolTests
         Assert.Single(handler.Requests);
     }
 
+    private const string TranSmartAnswer = """{"header":{"ret_code":"succ"},"auto_translation":["好"],"src_lang":"en","tgt_lang":"zh"}""";
+
+    // transmart.qq.com's overseas server kept a certificate that expired on 2026-10-11, while
+    // yi.qq.com, the same site, had the renewed one.
+    [Fact]
+    public async Task TranSmart_AHostThatCannotBeReached_IsLeftForTheOther_AndTheOtherIsKept()
+    {
+        var handler = new Canned(request => request.Uri.StartsWith("https://transmart.qq.com/")
+            ? throw new HttpRequestException(HttpRequestError.SecureConnectionError, "expired certificate")
+            : Json(TranSmartAnswer));
+        var saved = new List<string>();
+        var engine = new TranSmartTranslator(new HttpClient(handler), () => "", saved.Add);
+
+        var first = Assert.Single(await engine.TranslateAsync(["OK"], "zh-CN", "en"));
+        var second = Assert.Single(await engine.TranslateAsync(["Yes"], "zh-CN", "en"));
+
+        Assert.Equal(("好", "好"), (first.Text, second.Text));
+        Assert.Equal(["transmart.qq.com", "yi.qq.com", "yi.qq.com"], handler.Requests.Select(r => new Uri(r.Uri).Host));
+        Assert.Equal("https://yi.qq.com/api/imt", handler.Requests[^1].Uri);
+        Assert.Equal("https://yi.qq.com/zh-CN/index", handler.Requests[^1].Headers["Referer"]);
+        Assert.Equal(["yi.qq.com"], saved);
+    }
+
+    [Fact]
+    public async Task TranSmart_ARunStartsAtTheHostAPreviousRunKept()
+    {
+        var handler = new Canned(_ => Json(TranSmartAnswer));
+        var engine = new TranSmartTranslator(new HttpClient(handler), () => "yi.qq.com", _ => { });
+
+        await engine.TranslateAsync(["OK"], "zh-CN", "en");
+
+        Assert.Equal("yi.qq.com", new Uri(Assert.Single(handler.Requests).Uri).Host);
+    }
+
+    // A detected request goes out as one per script; once one has found the first host unreachable,
+    // the next screen's never try it.
+    [Fact]
+    public async Task TranSmart_AfterOneRequestFindsAHostUnreachable_TheNextScreenNeverTriesIt()
+    {
+        var handler = new Canned(request => request.Uri.StartsWith("https://transmart.qq.com/")
+            ? throw new HttpRequestException(HttpRequestError.SecureConnectionError, "expired certificate")
+            : Json("""{"header":{"ret_code":"succ"},"auto_translation":["好"],"src_lang":"ja","tgt_lang":"zh"}"""));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        await engine.TranslateAsync(["こんにちは", "Hello", "안녕"], "zh-CN");
+        var before = handler.Requests.Count(r => r.Uri.StartsWith("https://transmart.qq.com/"));
+        await engine.TranslateAsync(["さようなら", "Bye", "잘 가"], "zh-CN");
+
+        Assert.InRange(before, 1, 3);
+        Assert.Equal(before, handler.Requests.Count(r => r.Uri.StartsWith("https://transmart.qq.com/")));
+        Assert.Equal(6, handler.Requests.Count(r => r.Uri.StartsWith("https://yi.qq.com/")));
+    }
+
+    // An answer, even an error, came from TranSmart itself; the other host is the same service.
+    [Fact]
+    public async Task TranSmart_AnAnswerThatIsAnError_IsNotTriedOnTheOtherHost()
+    {
+        var handler = new Canned(_ => new HttpResponseMessage(HttpStatusCode.BadGateway));
+        var engine = new TranSmartTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["OK"], "zh-CN", "en"));
+
+        Assert.Equal(HttpStatusCode.BadGateway, failure.StatusCode);
+        Assert.Equal("transmart.qq.com", new Uri(Assert.Single(handler.Requests).Uri).Host);
+    }
+
     // Youdao answers code 40 for Persian either way round, which looks like stale credentials and
     // would cost a fresh key and a second try before the backups were asked; refused before anything
     // is sent instead.
@@ -1028,6 +1094,41 @@ public class EngineProtocolTests
 
         Assert.Equal("<装備>", answer.Text);
         Assert.Equal(2, handler.Requests.Count(r => r.Uri.Contains("/webtranslate/key")));
+    }
+
+    // Code 40 is about the languages — 自動 on Hindi or a garbled line — and fresh credentials are
+    // refused the same way, so the backups are asked at once.
+    [Fact]
+    public async Task Youdao_ALanguageRefusal_IsNotAskedAgainWithFreshCredentials()
+    {
+        var inner = YoudaoEndpoint();
+        var handler = new Canned(request => request.Uri == "https://dict.youdao.com/webtranslate"
+            ? Text(YoudaoEncrypt("""{"code":40}"""))
+            : inner.Answer(request));
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["नमस्ते"], "zh-TW"));
+
+        Assert.Contains("code 40", failure.Message);
+        Assert.Contains("language", failure.Message);
+        Assert.Single(handler.Requests, r => r.Uri == "https://dict.youdao.com/webtranslate");
+        Assert.Single(handler.Requests, r => r.Uri.Contains("/webtranslate/key"));
+    }
+
+    // A page where the encrypted answer should be — a verification or error page — is a failure for
+    // the backups to answer, never text to show.
+    [Fact]
+    public async Task Youdao_AnHtmlPageInsteadOfAnAnswer_IsAFailure()
+    {
+        var inner = YoudaoEndpoint();
+        var handler = new Canned(request => request.Uri == "https://dict.youdao.com/webtranslate"
+            ? Text("<!DOCTYPE html><html><body><p>&#x8BF7;&#x7A0D;&#x540E;&#x91CD;&#x8BD5;</p></body></html>")
+            : inner.Answer(request));
+        var engine = new YoudaoTranslator(new HttpClient(handler));
+
+        var failure = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.TranslateAsync(["装備"], "zh-TW", "ja"));
+
+        Assert.Contains("unreadable", failure.Message);
     }
 
     [Fact]

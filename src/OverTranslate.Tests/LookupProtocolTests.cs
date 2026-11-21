@@ -301,6 +301,29 @@ public class LookupProtocolTests
         Assert.Equal(["房屋，房子", "住宅", "家，家庭"], french.Groups[0].Entries.Select(e => e.Text));
     }
 
+    // 「hello」 as Youdao answered it on 2026-11-21: register and region in angle brackets, which on
+    // the card read as an HTML tag left in.
+    [Fact]
+    public void Youdao_UsageLabelsAreShownInLabelBrackets_AndOnlyThey()
+    {
+        Assert.Equal(
+            ["喂，你好（用于问候或打招呼）", "〔非正式〕喂，嘿 (认为别人说了蠢话或分心)", "〔英，旧〕嘿（表示惊讶）", "〔苏格兰〕通路，入口"],
+            YoudaoDictionary.Senses("喂，你好（用于问候或打招呼）；<非正式>喂，嘿 (认为别人说了蠢话或分心)；<英，旧>嘿（表示惊讶）；<苏格兰>通路，入口"));
+
+        // Not a label: nothing Chinese inside, or more than a label's length.
+        Assert.Equal(["小于号 <", "<b>粗体</b>", "<x>"], YoudaoDictionary.Senses("小于号 <；<b>粗体</b>；<x>"));
+    }
+
+    // A page where the JSON should be — a verification or error page — is a failure for the next
+    // dictionary to answer, never entries to show.
+    [Fact]
+    public async Task Youdao_AnHtmlPageInsteadOfAnAnswer_IsAFailure()
+    {
+        var engine = new YoudaoDictionary(new HttpClient(new Canned(_ => Text("<!DOCTYPE html><html><body>验证</body></html>"))));
+
+        await Assert.ThrowsAsync<TranslationEngineException>(() => engine.LookupAsync("run", "zh-CN", "en"));
+    }
+
     [Fact]
     public async Task Youdao_AWordItDoesNotKnow_HasNoGroups()
     {

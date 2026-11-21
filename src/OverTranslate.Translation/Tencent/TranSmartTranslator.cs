@@ -8,7 +8,7 @@ namespace OverTranslate.Translation.Tencent;
 /// 「騰訊翻譯」: Tencent's TranSmart (騰訊交互翻譯), many texts per request, no key and no signature.
 /// </summary>
 /// <remarks>
-/// <para>The endpoint the TranSmart site and browser extensions use (<c>transmart.qq.com/api/imt</c>),
+/// <para>The endpoint the TranSmart site and browser extensions use (<c>/api/imt</c>),
 /// added for users Google cannot reach. A list in, a list out, one answer per text — a line break
 /// inside a text stays inside its answer. Measured 2026-10-08 (<c>.ai/translation-service-analysis/
 /// youdao-transmart-handoff.md</c>): 4,250 characters in fifty texts was accepted and took 5.4 s,
@@ -21,11 +21,31 @@ namespace OverTranslate.Translation.Tencent;
 ///
 /// <para>A detected request is read as one language whatever is in it, so it is sent per script
 /// (<see cref="ScriptGroups"/>).</para>
+///
+/// <para>Served under two names, moved between when one cannot be reached — see <see cref="Hosts"/>.</para>
 /// </remarks>
-public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
+/// <param name="loadHost">The host a previous run last reached, if it was kept.</param>
+/// <param name="saveHost">Told the host whenever a different one answers, to be handed back as <paramref name="loadHost"/>.</param>
+public sealed class TranSmartTranslator(
+    HttpClient http, Func<string>? loadHost = null, Action<string>? saveHost = null) : BatchTranslator(http)
 {
-    private const string Endpoint = "https://transmart.qq.com/api/imt";
-    private const string Referer = "https://transmart.qq.com/zh-CN/index";
+    /// <summary>The two names Tencent serves TranSmart under, in the order a first run tries them.</summary>
+    /// <remarks>
+    /// <para>Both official and both long-standing: certificate transparency logs have yi.qq.com on
+    /// transmart.qq.com's certificate every year since 2020, and the site's page posts to
+    /// <c>/api/imt</c> on whichever of the two it was opened from, signing users in with an app id
+    /// for each. Neither redirects to the other.</para>
+    ///
+    /// <para>Which one works depends on where the user is (measured 2026-11-21, <c>.ai/endpoint-health/</c>):
+    /// mainland DNS sends transmart.qq.com to a server with a valid certificate and everywhere else
+    /// to one whose certificate expired on 2026-10-11; yi.qq.com answers outside China with the
+    /// renewed certificate, and in Shanghai and Guangzhou resolves to an address that cannot be
+    /// reached from outside to check. transmart.qq.com is first because it is the one known to work
+    /// for the users TranSmart was added for.</para>
+    /// </remarks>
+    internal static readonly string[] Hosts = ["transmart.qq.com", "yi.qq.com"];
+
+    private readonly EngineHosts _hosts = new("TranSmart", Hosts, loadHost?.Invoke(), saveHost);
 
     /// <summary>How many times a request the server says it is too busy for is sent again.</summary>
     /// <remarks>1 in 22 requests answered <c>busy</c> when measured; the next one went through.</remarks>
@@ -112,13 +132,8 @@ public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
 
         for (var attempt = 0; ; attempt++)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, Endpoint)
-            {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json"),
-            };
-            request.Headers.Referrer = new Uri(Referer);
-
-            using var document = JsonDocument.Parse(await ReadAsync(request, cancellationToken));
+            using var document = JsonDocument.Parse(
+                await _hosts.SendAsync(host => PostAsync(host, payload, cancellationToken), cancellationToken));
             var root = document.RootElement;
 
             var status = root.TryGetProperty("header", out var header) &&
@@ -149,6 +164,17 @@ public sealed class TranSmartTranslator(HttpClient http) : BatchTranslator(http)
                     WithoutGloss(i < pieces.Count ? pieces[i] : "", RequireString(answer), targetLanguage), detected))
                 .ToList();
         }
+    }
+
+    /// <summary>One request to one host; the body whatever it says, for the caller to read.</summary>
+    private async Task<string> PostAsync(string host, string payload, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"https://{host}/api/imt")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Referrer = new Uri($"https://{host}/zh-CN/index");
+        return await ReadAsync(request, cancellationToken);
     }
 
     // 「攻擊力（Attack Force）」, 「Back（後退）」, 「장비 (Equipment)」: the whole answer is one

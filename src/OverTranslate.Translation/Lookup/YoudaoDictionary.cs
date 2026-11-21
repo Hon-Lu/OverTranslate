@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using static OverTranslate.Translation.Lookup.LookupJson;
 
 namespace OverTranslate.Translation.Lookup;
@@ -164,12 +165,25 @@ public sealed class YoudaoDictionary(HttpClient http) : DictionaryEngine(http)
             : default;
 
     /// <summary>One gloss as its senses: Youdao separates senses with 「；」 and synonyms within one with 「，」.</summary>
-    private static IEnumerable<string> Senses(string? gloss) =>
+    internal static IEnumerable<string> Senses(string? gloss) =>
         gloss is null
             ? []
             : gloss.Split('；', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .Select(sense => sense.TrimEnd('。', ' ', '\n'))
+                .Select(sense => UsageLabel.Replace(sense.TrimEnd('。', ' ', '\n'), "〔$1〕"))
                 .Where(sense => sense.Length > 0);
+
+    /// <summary>A usage label as Youdao writes it: 「&lt;非正式&gt;喂，嘿」, 「&lt;英，旧&gt;嘿」, 「&lt;美&gt;警徽」.</summary>
+    /// <remarks>
+    /// <para>English glosses mark register and region in angle brackets — 非正式, 正式, 英, 美, 文, 旧,
+    /// 苏格兰 — 11 of 112 words looked up on 2026-11-21 had one. Youdao's own page shows them as they
+    /// are, but on the card they read as an HTML tag left in, so they are shown in the brackets
+    /// Chinese dictionaries mark labels with.</para>
+    ///
+    /// <para>Only Chinese inside, so a gloss that really says 「x &lt; y」 is left alone. No gloss
+    /// came with HTML of any kind: the <c>&lt;b&gt;</c> Youdao puts in the Japanese dictionary is in
+    /// its example sentences, which are not read.</para>
+    /// </remarks>
+    private static readonly Regex UsageLabel = new(@"<([\p{IsCJKUnifiedIdeographs}，、]{1,10})>", RegexOptions.Compiled);
 
     /// <summary>Translations gathered by part of speech, in the order each first appears.</summary>
     /// <remarks>Without a part of speech there is no group to put them in: the card shows none such.</remarks>

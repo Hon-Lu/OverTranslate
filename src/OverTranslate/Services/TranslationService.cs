@@ -95,7 +95,13 @@ public class TranslationService
     private readonly BingTranslator         _bing         = new(Http);
     private readonly MicrosoftTranslator    _microsoft    = new(Http);
     private readonly YoudaoTranslator       _youdao       = new(Http);
-    private readonly TranSmartTranslator    _tranSmart    = new(Http);
+    private readonly TranSmartTranslator    _tranSmart    = new(Http,
+        loadHost: () => SettingsService.Instance.Current.TranSmartHost,
+        saveHost: host =>
+        {
+            SettingsService.Instance.Current.TranSmartHost = host;
+            SettingsService.Instance.Save();
+        });
     private readonly YandexTranslator       _yandex       = new(Http);
     // DeepL's own, because it is an official API spoken to with the user's key and has no reason to
     // introduce itself as a browser. Its clock is everyone's: see TranslationTiming.
