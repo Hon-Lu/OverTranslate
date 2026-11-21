@@ -32,15 +32,41 @@ namespace OverTranslate.Views.Realtime;
 /// </remarks>
 public partial class RealtimeProfilesCard : UserControl
 {
-    // Points both Segoe Fluent Icons and Windows 10's Segoe MDL2 Assets have: 標準 the gears of
-    // working it out on its own, 字幕・漫畫 the caption frame, 遊戲介面・聊天室 the panels of an
-    // interface; a custom mode the sliders of values set by hand. Not the sparkle (F4A5), which
-    // reads better as "automatic" but is missing from Windows 10's MDL2 (checked against 19045's
-    // segmdl2.ttf), so the row would show an empty square there.
-    private const string StandardGlyph = "";
-    private const string SubtitleGlyph = "";
-    private const string InterfaceGlyph = "";
-    private const string CustomGlyph = "";
+    // The icons as line drawings on a 16 grid, stroked 1.2 wide (ProfileIconPath): 標準 a sparkle
+    // for working it out on its own, 字幕・漫畫 a frame with two caption lines, 遊戲介面・聊天室
+    // the panels of an interface, a custom mode the sliders of values set by hand. Drawn rather
+    // than font glyphs so the four share one weight and look, and because the sparkle (F4A5) is
+    // missing from Windows 10's Segoe MDL2 Assets (19045's segmdl2.ttf), which showed an empty
+    // square there. The sparkle is a stroked star and a small filled one.
+    private static readonly Geometry StandardStroke = Freeze(Geometry.Parse(
+        "M7,1.8 L8.3,5.2 11.7,6.5 8.3,7.8 7,11.2 5.7,7.8 2.3,6.5 5.7,5.2 Z"));
+    private static readonly Geometry StandardFill = Freeze(Geometry.Parse(
+        "M12.3,10.2 L12.9,11.7 14.4,12.3 12.9,12.9 12.3,14.4 11.7,12.9 10.2,12.3 11.7,11.7 Z"));
+    private static readonly Geometry SubtitleStroke = Freeze(Group(
+        new RectangleGeometry(new Rect(1.8, 3, 12.4, 10), 2, 2),
+        Geometry.Parse("M4.5,8.6 H11.5 M5.8,10.8 H10.2")));
+    private static readonly Geometry InterfaceStroke = Freeze(Group(
+        new RectangleGeometry(new Rect(2, 2, 5.2, 5.2), 1.2, 1.2),
+        new RectangleGeometry(new Rect(8.8, 2, 5.2, 5.2), 1.2, 1.2),
+        new RectangleGeometry(new Rect(2, 8.8, 12, 5.2), 1.2, 1.2)));
+    private static readonly Geometry CustomStroke = Freeze(Group(
+        Geometry.Parse("M2.5,4.5 H3.7 M7.3,4.5 H13.5 M2.5,11.5 H8.7 M12.3,11.5 H13.5"),
+        new EllipseGeometry(new Point(5.5, 4.5), 1.8, 1.8),
+        new EllipseGeometry(new Point(10.5, 11.5), 1.8, 1.8)));
+
+    private static Geometry Group(params Geometry[] parts)
+    {
+        var group = new GeometryGroup();
+        foreach (var part in parts)
+            group.Children.Add(part);
+        return group;
+    }
+
+    private static Geometry Freeze(Geometry geometry)
+    {
+        geometry.Freeze();
+        return geometry;
+    }
 
     private static readonly FontFamily IconFont = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
@@ -105,6 +131,8 @@ public partial class RealtimeProfilesCard : UserControl
         AddButtonText.Text = full
             ? LocalizationService.Format("S.Realtime.ProfileLimit", max)
             : LocalizationService.Get("S.Realtime.ProfileAdd");
+        // At the cap the text is the limit, not an action, so the + goes with it.
+        AddButtonGlyph.Visibility = full ? Visibility.Collapsed : Visibility.Visible;
         AddButton.IsEnabled = !full;
         System.Windows.Automation.AutomationProperties.SetName(AddButton, AddButtonText.Text);
     }
@@ -128,16 +156,7 @@ public partial class RealtimeProfilesCard : UserControl
     /// </remarks>
     private Button ListRow(ProfileChoice choice)
     {
-        var glyph = new TextBlock
-        {
-            Text = choice.IsPreset ? PresetGlyph(choice.Id) : CustomGlyph,
-            FontFamily = IconFont,
-            FontSize = 16,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        glyph.SetResourceReference(TextBlock.ForegroundProperty, choice.IsPreset ? "AppAccent" : "AppTextSecondary");
-        var tile = new Border { Child = glyph };
+        var tile = new Border { Child = Icon(choice) };
         tile.SetResourceReference(StyleProperty, choice.IsPreset ? "ProfileIconTile" : "ProfileIconTileCustom");
 
         var name = new TextBlock
@@ -194,12 +213,32 @@ public partial class RealtimeProfilesCard : UserControl
         return row;
     }
 
-    private static string PresetGlyph(string id) => id switch
+    /// <summary>The mode's icon, in the accent for a preset and the secondary text colour for a custom mode.</summary>
+    private static FrameworkElement Icon(ProfileChoice choice)
     {
-        RealtimePresets.SubtitleId => SubtitleGlyph,
-        RealtimePresets.InterfaceId => InterfaceGlyph,
-        _ => StandardGlyph,
-    };
+        string brush = choice.IsPreset ? "AppAccent" : "AppTextSecondary";
+        var (stroke, fill) = !choice.IsPreset ? (CustomStroke, null)
+            : choice.Id switch
+            {
+                RealtimePresets.SubtitleId => (SubtitleStroke, null),
+                RealtimePresets.InterfaceId => (InterfaceStroke, null),
+                _ => (StandardStroke, (Geometry?)StandardFill),
+            };
+
+        var icon = new Grid();
+        var outline = new System.Windows.Shapes.Path { Data = stroke };
+        outline.SetResourceReference(StyleProperty, "ProfileIconPath");
+        outline.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, brush);
+        icon.Children.Add(outline);
+        if (fill is not null)
+        {
+            var solid = new System.Windows.Shapes.Path { Data = fill };
+            solid.SetResourceReference(StyleProperty, "ProfileIconPath");
+            solid.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brush);
+            icon.Children.Add(solid);
+        }
+        return icon;
+    }
 
     private Shell.ShellWindow? Shell() => Window.GetWindow(this) as Shell.ShellWindow;
 

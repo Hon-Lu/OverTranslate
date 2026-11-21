@@ -91,67 +91,20 @@
             <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
         </Style>
 
-        <Style x:Key="ProfileAddFocus">
-            <Setter Property="Control.Template">
-                <Setter.Value>
-                    <ControlTemplate>
-                        <Border BorderBrush="{DynamicResource AppAccent}" BorderThickness="2" CornerRadius="10"/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- The add, as the custom group's last place: a dashed outline of a row, its + in a dashed
-             square in the same column as the icons above it. Dashed because a Border cannot be —
-             the outline is a Rectangle. Solid in the accent while pointed at; at the cap all of it
-             greys and the text says why, rather than the row going away. -->
-        <Style x:Key="ProfileAddRow" TargetType="Button">
-            <Setter Property="FontFamily"       Value="{DynamicResource AppFont}"/>
-            <Setter Property="FontSize"         Value="{StaticResource AppFontSize}"/>
-            <Setter Property="Foreground"       Value="{DynamicResource AppAccent}"/>
-            <Setter Property="Cursor"           Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{StaticResource ProfileAddFocus}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Grid MinHeight="50">
-                            <Border x:Name="Fill" CornerRadius="10" Background="Transparent"/>
-                            <Rectangle x:Name="Outline" RadiusX="10" RadiusY="10" StrokeThickness="1"
-                                       StrokeDashArray="4,3" Stroke="{DynamicResource AppTextSecondary}" Opacity="0.5"
-                                       SnapsToDevicePixels="True"/>
-                            <StackPanel Orientation="Horizontal" Margin="16,0" VerticalAlignment="Center">
-                                <Grid Width="30" Height="30" Margin="0,0,12,0">
-                                    <Rectangle x:Name="IconOutline" RadiusX="8" RadiusY="8" StrokeThickness="1"
-                                               StrokeDashArray="3,2" Stroke="{TemplateBinding Foreground}"
-                                               SnapsToDevicePixels="True"/>
-                                    <TextBlock Text="&#xE710;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
-                                <ContentPresenter VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Fill"        Property="Background"      Value="{DynamicResource AppAccentSubtle}"/>
-                                <Setter TargetName="Outline"     Property="Stroke"          Value="{DynamicResource AppAccent}"/>
-                                <Setter TargetName="Outline"     Property="StrokeDashArray" Value="{x:Null}"/>
-                                <Setter TargetName="Outline"     Property="Opacity"         Value="1"/>
-                                <Setter TargetName="IconOutline" Property="StrokeDashArray" Value="{x:Null}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Fill" Property="Background" Value="{DynamicResource AppAccentSubtlePressed}"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-                                <Setter Property="Cursor"     Value="Arrow"/>
-                                <Setter TargetName="Outline"     Property="Stroke"  Value="{DynamicResource AppBorder}"/>
-                                <Setter TargetName="Outline"     Property="Opacity" Value="1"/>
-                                <Setter TargetName="IconOutline" Property="Stroke"  Value="{DynamicResource AppBorder}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+        <!-- A mode's icon, drawn rather than a font glyph: a line drawing on a 16 grid, the same
+             in every icon, and on Windows 10 too, whose MDL2 font lacks a sparkle. The brush is
+             set per row (accent for a preset, secondary for a custom mode). Round caps and joins
+             because the shapes are small and a square end reads as a stray pixel at 1.2 wide. -->
+        <Style x:Key="ProfileIconPath" TargetType="Path">
+            <Setter Property="Width"              Value="16"/>
+            <Setter Property="Height"             Value="16"/>
+            <Setter Property="StrokeThickness"    Value="1.2"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap"   Value="Round"/>
+            <Setter Property="StrokeLineJoin"     Value="Round"/>
+            <Setter Property="Stretch"            Value="None"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment"  Value="Center"/>
         </Style>
     </UserControl.Resources>
 
@@ -191,10 +144,19 @@
                     <StackPanel x:Name="CustomHost" SizeChanged="CustomHost_SizeChanged"/>
                 </ScrollViewer>
             </Border>
-            <Button x:Name="AddButton" Style="{StaticResource ProfileAddRow}"
+            <!-- The add, as the app's other buttons are (FlatButton, as 開啟記錄資料夾), under the
+                 custom list at its left. At the cap it greys and its text says why, rather than
+                 going away. -->
+            <Button x:Name="AddButton" Style="{StaticResource FlatButton}"
+                    Height="32" Padding="14,0" Margin="0,2,0,0" HorizontalAlignment="Left"
                     AutomationProperties.AutomationId="ProfileAddRow"
                     Click="AddButton_Click">
-                <TextBlock x:Name="AddButtonText" TextTrimming="CharacterEllipsis"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="AddButtonGlyph" Text="&#xE710;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock x:Name="AddButtonText" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                </StackPanel>
             </Button>
         </StackPanel>
     </Border>
