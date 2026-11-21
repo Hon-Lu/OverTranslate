@@ -84,7 +84,14 @@ public sealed record WindowItem(IntPtr Hwnd, string Display, string Detail, stri
 /// forget in the two cases that change the question — the block count moving, and this window
 /// closing.</para>
 ///
-/// Anything added later belongs to one of these three groups; if it is not obvious which, it is a
+/// <para><b>Kept in the settings file, per target</b> — the framing the user explicitly kept with
+/// the floating bar's 儲存框選, listed by 翻譯區域預設 on this page. It is the blocks above for a user
+/// who said so: the same minutes of dragging, kept across launches instead of until this window
+/// closes. Stored with the screen and window it was drawn on rather than offered everywhere, because
+/// those rectangles mean nothing on another monitor or over another application's window — see
+/// <see cref="Models.RealtimeFramingPreset"/>.</para>
+///
+/// Anything added later belongs to one of these four groups; if it is not obvious which, it is a
 /// preference only when the user would be annoyed to set it twice, and a parameter only when
 /// offering it back could be wrong rather than merely stale.
 /// </remarks>
@@ -184,6 +191,10 @@ public partial class RealtimePage : UserControl
         RealtimeSessionController.Instance.StateChanged += OnSessionStateChanged;
         RealtimeSessionController.Instance.LanguagesChanged += OnSessionLanguagesChanged;
         RealtimeSessionController.Instance.AppearanceChanged += OnSessionAppearanceChanged;
+
+        // A framing picked in 翻譯區域預設 turns this page's capture source to the screen or window it
+        // was drawn on, so 選取翻譯區塊 opens right onto it.
+        FramingCard.Selected += OnFramingSelected;
 
         // The direction is set on the edit layer, which says so through MangaModelOptions.
         MangaModelOptions.Changed += OnMangaModelOptionsChanged;
@@ -323,6 +334,7 @@ public partial class RealtimePage : UserControl
         RenderColours();
         RenderPauseHint();
         ProfilesCard.Reload();
+        FramingCard.Reload();
         RenderState();
     }
 
@@ -357,6 +369,8 @@ public partial class RealtimePage : UserControl
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
         ProfilesCard.Teardown();
+        FramingCard.Selected -= OnFramingSelected;
+        FramingCard.Teardown();
     }
 
     /// <summary>
@@ -607,15 +621,7 @@ public partial class RealtimePage : UserControl
     }
 
     /// <summary>The same wording the screen picker uses, so the two name a monitor identically.</summary>
-    private static string ScreenLabel(Screen screen)
-    {
-        var screens = Screen.AllScreens;
-        var index = Array.FindIndex(screens, candidate => candidate.DeviceName == screen.DeviceName);
-
-        return LocalizationService.Format(
-            screen.Primary ? "S.Realtime.ScreenItemPrimary" : "S.Realtime.ScreenItem",
-            index + 1, screen.Bounds.Width, screen.Bounds.Height);
-    }
+    private static string ScreenLabel(Screen screen) => RealtimeFramingDisplay.ScreenLabel(screen);
 
     private void LoadScreens()
     {
@@ -661,6 +667,88 @@ public partial class RealtimePage : UserControl
 
         SaveTranslationPreference(settings => settings.Realtime.CaptureScreenDeviceName = deviceName);
     }
+
+    /// <summary>
+    /// A 翻譯區域預設 picked in the card: turns this page's capture source to the screen or window the
+    /// framing was drawn on, so 選取翻譯區塊 opens onto those blocks, and says why when it cannot.
+    /// </summary>
+    /// <remarks>
+    /// The pick is already in the settings file by the time this runs, whether or not the source can
+    /// be turned to it: a monitor that is unplugged now may be back next time, and the choice is the
+    /// user's. What is refused here is only the immediate switch, with the reason — the alternative
+    /// would be a page that looks ready and a session that opens without the framing just picked.
+    ///
+    /// Both branches go through the page's own controls rather than writing the settings directly, so
+    /// the picker shows what it is about to use and the same three stored values (capture mode, screen
+    /// device, window process and title) are written the way a pick by hand writes them.
+    /// </remarks>
+    private void OnFramingSelected(object? sender, RealtimeFramingPreset preset)
+    {
+        if (RealtimeSessionController.Instance.IsActive) return;
+
+        if (preset.IsForWindow)
+        {
+            if (CaptureWindowList.FindStored(
+                    CaptureWindowList.Enumerate(), preset.WindowProcess, preset.WindowTitle) is not { } window ||
+                ScreenOf(window.Hwnd) is not { } windowScreen)
+            {
+                SetStatus(LocalizationService.Get("S.Realtime.WindowCaptureGone"), isError: true);
+                return;
+            }
+
+            if (windowScreen.Bounds != preset.Screen.ToRectangle())
+            {
+                ShowFramingScreenChanged(preset);
+                return;
+            }
+
+            WindowModeRadio.IsChecked = true;
+            // Always a fresh list: the window may have opened since the picker last looked, and this
+            // is the moment the user is asking for that window by name.
+            LoadWindows();
+            if ((WindowBox.ItemsSource as IReadOnlyList<WindowItem>)
+                    ?.FirstOrDefault(item => item.Hwnd == window.Hwnd) is not { } picked)
+            {
+                SetStatus(LocalizationService.Get("S.Realtime.WindowCaptureGone"), isError: true);
+                return;
+            }
+
+            WindowBox.SelectedItem = picked;
+        }
+        else
+        {
+            var screen = Array.Find(Screen.AllScreens,
+                candidate => candidate.DeviceName == preset.ScreenDeviceName);
+            if (screen is null)
+            {
+                SetStatus(LocalizationService.Get("S.Realtime.FramingScreenGone"), isError: true);
+                return;
+            }
+
+            if (screen.Bounds != preset.Screen.ToRectangle())
+            {
+                ShowFramingScreenChanged(preset);
+                return;
+            }
+
+            ScreenModeRadio.IsChecked = true;
+            ScreenBox.SelectedValue = screen.DeviceName;
+        }
+
+        SetStatus(
+            LocalizationService.Format("S.Realtime.FramingChosen", RealtimeFramingDisplay.Name(preset)),
+            isError: false);
+    }
+
+    /// <summary>
+    /// Says a framing was drawn at another size than the screen it is being picked on — the blocks
+    /// are physical pixels, so that layout means nothing here.
+    /// </summary>
+    private void ShowFramingScreenChanged(RealtimeFramingPreset preset) =>
+        SetStatus(
+            LocalizationService.Format(
+                "S.Realtime.FramingScreenChanged", preset.Screen.Width, preset.Screen.Height),
+            isError: true);
 
     private string? CurrentScreenDeviceName(IReadOnlyList<ScreenItem> items)
     {

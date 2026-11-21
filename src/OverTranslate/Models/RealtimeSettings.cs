@@ -240,6 +240,26 @@ public class RealtimeSettings
     /// <summary>The most custom modes the list keeps.</summary>
     public const int MaxCustomProfiles = 10;
 
+    /// <summary>The most framings the list keeps — a few per screen and window the user has framed.</summary>
+    /// <remarks>
+    /// One target may hold several: a game's subtitle strip and its dialogue box are two framings of
+    /// one screen, and a reader who switches between them should not have to draw either again. The
+    /// cap is over the whole list rather than per target, because it is the page's list that has to
+    /// stay readable: past twenty entries the oldest is dropped as a new one is saved.
+    /// </remarks>
+    public const int MaxFramingPresets = 20;
+
+    /// <summary>
+    /// The framings kept for next time, newest first — see <see cref="RealtimeFramingPreset"/>.
+    /// </summary>
+    /// <remarks>
+    /// Several per target, one of them selected — the one a session on that target opens on. Read in
+    /// one piece, then one entry at a time if the piece will not read, as <see cref="Profiles"/> is;
+    /// then tidied by <see cref="CleanFramingPresets"/>. Changed through
+    /// <c>SettingsService.UpdateRealtimeFramingPresets</c>.
+    /// </remarks>
+    public List<RealtimeFramingPreset> FramingPresets { get; set; } = [];
+
     /// <summary>
     /// The user's own modes, in the order they were made. The presets are not here: they are built
     /// in — see <see cref="RealtimePresets"/>.
@@ -312,6 +332,31 @@ public class RealtimeSettings
         }
         return clean;
     }
+
+    /// <summary>
+    /// Replaces the kept framings with <paramref name="presets"/>: copies of them, so the caller may
+    /// go on editing what it passed, tidied as a file's list is (see <see cref="CleanFramingPresets"/>).
+    /// </summary>
+    /// <returns>Whether anything changed.</returns>
+    internal bool SetFramingPresets(IEnumerable<RealtimeFramingPreset> presets)
+    {
+        var stored = CleanFramingPresets(presets.Select(preset => preset?.Clone()));
+
+        if (System.Text.Json.JsonSerializer.Serialize(stored) ==
+            System.Text.Json.JsonSerializer.Serialize(FramingPresets))
+            return false;
+
+        FramingPresets = stored;
+        return true;
+    }
+
+    /// <summary>
+    /// The framings as the list can hold them — newest first, several per target, each with at least
+    /// one block, no more than <see cref="MaxBlockCount"/> and a number of its own, and at most one of
+    /// a target's selected — see <see cref="RealtimeFramingPreset.Clean"/>.
+    /// </summary>
+    public static List<RealtimeFramingPreset> CleanFramingPresets(IEnumerable<RealtimeFramingPreset?>? presets) =>
+        RealtimeFramingPreset.Clean(presets, MaxBlockCount, MaxFramingPresets);
 
     /// <summary>
     /// Whether 對照顯示 is on: the source is left showing and each translation is drawn in a copy of

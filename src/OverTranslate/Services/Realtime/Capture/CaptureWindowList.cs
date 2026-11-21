@@ -47,7 +47,7 @@ public static class CaptureWindowList
         {
             EnumWindows((hwnd, _) =>
             {
-                if (Describe(hwnd) is { } window) found.Add(window);
+                if (DescribeWindow(hwnd) is { } window) found.Add(window);
                 return true;
             }, IntPtr.Zero);
         }
@@ -104,6 +104,27 @@ public static class CaptureWindowList
         hwnd != IntPtr.Zero && IsWindow(hwnd) && IsWindowVisible(hwnd) && !IsIconic(hwnd);
 
     /// <summary>
+    /// One window by handle — the same pair the list offers, for a caller that holds a live handle
+    /// and has no list: a running session naming what it is reading, so that its framing can be kept
+    /// against that window rather than against the whole screen.
+    /// </summary>
+    /// <returns>The window, or null when it is gone, minimised, or not something the list would offer.</returns>
+    public static CaptureWindow? Of(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return null;
+        try
+        {
+            return DescribeWindow(hwnd);
+        }
+        catch (Exception)
+        {
+            // A window that died between the handle being held and being asked about. Its owner has
+            // nothing to name, which the callers already handle.
+            return null;
+        }
+    }
+
+    /// <summary>
     /// One window, or null when it is not something to offer.
     /// </summary>
     /// <remarks>
@@ -124,7 +145,7 @@ public static class CaptureWindowList
     /// 螢幕擷取.</item>
     /// </list>
     /// </remarks>
-    private static CaptureWindow? Describe(IntPtr hwnd)
+    private static CaptureWindow? DescribeWindow(IntPtr hwnd)
     {
         if (!IsWindowVisible(hwnd) || IsIconic(hwnd)) return null;
 

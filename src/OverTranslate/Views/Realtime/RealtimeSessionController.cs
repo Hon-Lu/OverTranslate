@@ -123,22 +123,31 @@ internal sealed class RealtimeSessionController
     /// The layout the last sitting ended with, offered back to the next one.
     /// </summary>
     /// <remarks>
-    /// Ending a session is not usually the user finishing — it is them going back to change the
+    /// <para>Ending a session is not usually the user finishing — it is them going back to change the
     /// language, the engine or a colour, all of which live on a page a running session has hidden.
     /// Redrawing three blocks by hand every time they touch one of those is the tax that made this
     /// worth keeping, and the modes go with the rectangles because re-answering 字幕 / 對話 vs 遊戲 / UI for
-    /// each block is the same tax again. The writing direction rides along for the same reason.
+    /// each block is the same tax again. The writing direction rides along for the same reason.</para>
     ///
-    /// Held here and not written to the settings file, which is the line RealtimePage draws for
-    /// everything else about a sitting: this survives 結束即時翻譯 and nothing more. The screen it
-    /// was drawn on is kept alongside it because these are physical pixels on one monitor — offered
-    /// back for a different screen, or the same one at a different resolution, they would be blocks
-    /// the user never drew, in places nothing is.
+    /// <para>Held here and not written to the settings file, which is the line RealtimePage draws for
+    /// everything else about a sitting: this survives 結束即時翻譯 and nothing more. What the settings
+    /// file keeps instead is what the user asked it to keep — a 翻譯區域預設, see
+    /// <see cref="Models.RealtimeFramingPreset"/>. The target — the screen, and the window when there
+    /// is one — is kept alongside the blocks because these are physical pixels on one monitor and one
+    /// window: offered back for a different screen or another application's window, they would be
+    /// blocks the user never drew, in places nothing is.</para>
     /// </remarks>
     private RememberedBlocks? _remembered;
 
     private sealed record RememberedBlocks(
-        System.Drawing.Rectangle Screen, IReadOnlyList<RealtimeBlockPlacement> Blocks);
+        RealtimeFramingStore.Target Target, IReadOnlyList<RealtimeBlockPlacement> Blocks);
+
+    /// <summary>
+    /// What this sitting's blocks belong to, worked out once as the session starts: the screen, and
+    /// the window when the source is one. Used to save the framing, to seed the next one and to decide
+    /// whether last sitting's blocks may be offered back — see <see cref="Target"/>.
+    /// </summary>
+    private RealtimeFramingStore.Target _target;
 
     /// <summary>
     /// Keeps the layers at the front of the topmost band — see <see cref="AlwaysOnTop"/> for why
@@ -484,9 +493,6 @@ internal sealed class RealtimeSessionController
             request.ScreenBounds, request.SourceLanguage, request.TargetLanguage);
 
         _request = request;
-        _blocks = _remembered is { } kept && kept.Screen == request.ScreenBounds
-            ? [.. kept.Blocks]
-            : [];
         _hiddenShell = shellToHide;
         _hiddenShell?.Hide();
         _compareDisplay = SettingsService.Instance.Current.Realtime.CompareDisplay;
@@ -517,6 +523,12 @@ internal sealed class RealtimeSessionController
         // Wired once for the same reason, and unlike the crosshair it is live in both modes — the
         // button is on the bar and on the capsule, and both are this one state.
         control.CompareDisplayToggleRequested += (_, _) => ToggleCompareDisplay();
+        // The framing bar's 儲存框選: the blocks on screen now are kept for this screen or window, so
+        // the next sitting opens on them instead of on empty space — see RealtimeFramingPreset.
+        control.SaveFramingRequested += (_, _) => SaveFraming();
+        // …and 翻譯區域預設, which puts one of those kept framings back on the screen: the layer swaps
+        // its blocks in place, so the same sitting can be framed for subtitles and then for a menu.
+        control.FramingChosen += (_, id) => ApplyFraming(id);
         control.SetCompareDisplay(_compareDisplay);
         control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
@@ -540,8 +552,201 @@ internal sealed class RealtimeSessionController
 
         _foregroundWatch = ForegroundChangeWatch.Install(OnForegroundChanged);
 
+        // The framing this sitting opens on: the blocks it remembers from an earlier sitting on this
+        // screen or window, or else the preset kept for this screen or window — see InitialBlocks.
+        // Before the layer, which draws them.
+        _target = Target(request);
+        _blocks = InitialBlocks(out var applied);
+
         EnterEditMode();
+
+        // Said on the bar rather than left to be noticed: blocks already on screen when the session
+        // opens are the one part of this feature that happens without the user doing anything.
+        if (applied is { } preset)
+        {
+            control.ShowMessage(LocalizationService.Format(
+                "S.Realtime.FramingApplied", RealtimeFramingDisplay.Name(preset)));
+        }
+
         StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// The blocks a session opens with, and which kept framing they came from — null when they came
+    /// from the sitting before or from nowhere.
+    /// </summary>
+    /// <remarks>
+    /// The remembered blocks win over a preset: they are the user's own last answer, including the
+    /// nudges they made to it after saving, and they were drawn on this same screen and window. A
+    /// preset is what is left when nothing is remembered, which is every launch after the one it was
+    /// saved in — the one the user picked for that target, or the newest it has — see
+    /// <see cref="RealtimeFramingStore.Match"/>.
+    /// </remarks>
+    private List<RealtimeBlockPlacement> InitialBlocks(out Models.RealtimeFramingPreset? applied)
+    {
+        applied = null;
+
+        if (_remembered is { } kept && RealtimeFramingStore.SameTarget(kept.Target, _target))
+            return [.. kept.Blocks];
+
+        if (RealtimeFramingStore.Match(_target) is not { } preset) return [];
+
+        var blocks = RealtimeFramingStore.Placements(preset, _target.Screen);
+        if (blocks.Count == 0) return [];
+
+        applied = preset;
+        return [.. blocks];
+    }
+
+    /// <summary>
+    /// What a framing belongs to: this session's screen, and its window when it is reading one — see
+    /// <see cref="RealtimeFramingStore.Target"/>.
+    /// </summary>
+    /// <remarks>
+    /// The window is named from its live handle rather than from the picker's stored pair, because
+    /// the two can differ by the time a session runs — the page lets the title be refreshed, and a
+    /// window retitles itself as it plays. The stored pair is the fallback for a handle that has
+    /// stopped describing a window the list would offer, which is the case a title is being saved
+    /// for anyway.
+    /// </remarks>
+    private RealtimeFramingStore.Target Target(RealtimeStartRequest request)
+    {
+        bool window = request.CaptureMode == Models.RealtimeCaptureMode.Window;
+        var named = window ? CaptureWindowList.Of(request.SourceWindow) : null;
+        var stored = SettingsService.Instance.Current.Realtime;
+
+        // A handle that has stopped describing a window the list would offer names nothing here, and
+        // neither does a description that could not read the process; the stored pair is what the
+        // session was started from, and is the better half to save under.
+        string Process(string live) =>
+            live.Length > 0 || !window ? live : stored.CaptureWindowProcess;
+        string Title(string live) =>
+            live.Length > 0 || !window ? live : stored.CaptureWindowTitle;
+
+        return new RealtimeFramingStore.Target(
+            request.CaptureMode,
+            request.ScreenBounds,
+            _screenDeviceName,
+            Process(named?.ProcessName ?? ""),
+            Title(named?.Title ?? ""));
+    }
+
+    /// <summary>
+    /// Saves the blocks on screen as a framing for this screen or window, from the framing bar's
+    /// 儲存框選: a target may keep several, and this one is selected by being saved — unless the same
+    /// arrangement is already kept, which is selected instead of saved twice.
+    /// </summary>
+    /// <remarks>
+    /// A press that cannot save costs the press, not the session: the settings write already logs and
+    /// swallows a disk error, and anything else here is a fault that must not reach the dispatcher,
+    /// where it would end the application over a button.
+    /// </remarks>
+    public void SaveFraming()
+    {
+        if (_request is null || _control is not { } control) return;
+
+        if (_blocks.Count == 0)
+        {
+            control.ShowMessage(LocalizationService.Get("S.Realtime.NeedOneBlock"));
+            return;
+        }
+
+        try
+        {
+            var preset = RealtimeFramingStore.Save(_target, _blocks);
+            control.ShowMessage(LocalizationService.Format(
+                "S.Realtime.FramingSaved", RealtimeFramingDisplay.Name(preset)));
+            Log.Info("Realtime framing saved for {Target} ({Count} blocks)",
+                preset.TargetKey, preset.Blocks.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not save the realtime framing");
+            control.ShowMessage(LocalizationService.Get("S.Realtime.FramingSaveFailed"), RealtimeMessageKind.Failure);
+        }
+    }
+
+    /// <summary>
+    /// The framings the framing bar offers: those kept for this session's own screen or window,
+    /// newest first — see <see cref="RealtimeFramingStore.ForTarget"/>. Empty while no session is
+    /// framing.
+    /// </summary>
+    public IReadOnlyList<Models.RealtimeFramingPreset> FramingPresets =>
+        IsActive ? RealtimeFramingStore.ForTarget(_target) : [];
+
+    /// <summary>
+    /// Puts the framing <paramref name="id"/> names on the screen — a saved arrangement picked from
+    /// the bar's 翻譯區域預設 — and marks it as this target's.
+    /// </summary>
+    /// <remarks>
+    /// <para>While framing, the layer swaps its blocks in place and the next 開始翻譯 reads the new
+    /// ones.</para>
+    ///
+    /// <para>While translating, the overlays and the capture backend are built around the regions the
+    /// session started with, so a new framing is a new session on it: the sitting is taken back into
+    /// framing and started again straight away, which is the same two steps the bar's 編輯 and 開始翻譯
+    /// are, run together. A session that was paused comes back paused — 暫停 is the user's own switch,
+    /// and a layout change is not a reason to start reading the screen again. A framing that is
+    /// already the one on the screen is not a change at all, so it costs no restart. If the restart
+    /// cannot start at all, its own refusal stands (the bar is left saying why, in framing) rather
+    /// than being replaced by "applied".</para>
+    ///
+    /// <para>A press that cannot switch costs the press, not the session: anything that goes wrong is
+    /// logged rather than raised to the dispatcher, where it would end the application over a menu
+    /// row.</para>
+    /// </remarks>
+    public void ApplyFraming(string id)
+    {
+        if (_control is not { } control) return;
+        if (RealtimeFramingStore.ForId(id) is not { } preset) return;
+
+        var blocks = RealtimeFramingStore.Placements(preset, _target.Screen);
+        if (blocks.Count == 0) return;
+
+        // This framing is the one already on the screen — the button pressed again, or the only one
+        // kept and already in use. Nothing to rebuild, and while translating nothing worth taking the
+        // session down for.
+        if (_blocks.SequenceEqual(blocks))
+        {
+            RealtimeFramingStore.Select(id);
+            control.ShowMessage(LocalizationService.Format(
+                "S.Realtime.FramingApplied", RealtimeFramingDisplay.Name(preset)));
+            return;
+        }
+
+        try
+        {
+            if (_edit is { } edit)
+            {
+                edit.SetBlocks(blocks);
+            }
+            else if (IsTranslating)
+            {
+                bool wasPaused = _session?.IsPaused == true;
+
+                _blocks = [.. blocks];
+                EnterEditMode();
+                StartTranslating();
+
+                // A restart that could not start has put the bar back into framing and said why; that
+                // message is the one worth keeping.
+                if (!IsTranslating) return;
+                if (wasPaused) TogglePause();
+            }
+            else
+            {
+                return;
+            }
+
+            RealtimeFramingStore.Select(id);
+            control.ShowMessage(LocalizationService.Format(
+                "S.Realtime.FramingApplied", RealtimeFramingDisplay.Name(preset)));
+            Log.Info("Realtime framing switched to {Preset} ({Count} blocks)", preset.Id, blocks.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not switch the realtime framing");
+        }
     }
 
     /// <summary>
@@ -782,9 +987,7 @@ internal sealed class RealtimeSessionController
 
         // Kept before the working copy is dropped — see RememberedBlocks for why this one thing
         // outlives the session while everything else here is torn down.
-        _remembered = _request is { } ended && _blocks.Count > 0
-            ? new RememberedBlocks(ended.ScreenBounds, _blocks)
-            : null;
+        _remembered = _blocks.Count > 0 ? new RememberedBlocks(_target, _blocks) : null;
 
         _blocks = [];
         _request = null;
@@ -898,12 +1101,13 @@ internal sealed class RealtimeSessionController
 
     /// <summary>
     /// Esc while framing puts away one thing at a time: a block's open list of modes, then what is
-    /// open on the 模式 panel, then the panel — and only otherwise ends the sitting. A press meant
-    /// for any of those must not cost the user every block.
+    /// open on the bar's 翻譯區域預設 or 模式 panel, then the panel — and only otherwise ends the
+    /// sitting. A press meant for any of those must not cost the user every block.
     /// </summary>
     private void OnEscapeWhileFraming()
     {
         if (_edit?.TryDismissMenu() == true) return;
+        if (_control?.TryDismissFramings() == true) return;
         if (_control?.TryDismissProfiles() == true) return;
         Stop();
     }
