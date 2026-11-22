@@ -165,6 +165,7 @@ otLocale('ja', {
   'realtime.cap.story2': 'ゲーム画面の出典：<a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">『魔法少女ノ魔女裁判』</a>',
   'realtime.cap.game': 'ゲーム画面の出典：<a href="https://game.watch.impress.co.jp/docs/news/417727.html" target="_blank" rel="noopener">『ファイナルファンタジーIV コンプリートコレクション』</a>',
   'realtime.cap.side': '動画の出典：<a href="https://www.youtube.com/watch?v=nPv1dBYawZQ" target="_blank" rel="noopener">millsage「everscape」</a>',
+  'realtime.cap.look': 'ゲーム画面の出典：<a href="https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png" target="_blank" rel="noopener">『ポケットモンスター ファイアレッド・リーフグリーン』</a>',
   'realtime.cap.chat': 'ゲーム画面の出典：<a href="https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/" target="_blank" rel="noopener">Phantasy Star Online 2 New Genesis</a>',
   'a11y.theme': 'ライト / ダークの切り替え',
   'shot.hero.after': 'Godot のブログを繁体字中国語に翻訳した画面',

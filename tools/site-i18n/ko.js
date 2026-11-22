@@ -165,6 +165,7 @@ otLocale('ko', {
   'realtime.cap.story2': '게임 화면 출처: <a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《마법소녀의 마녀재판》</a>',
   'realtime.cap.game': '게임 화면 출처: <a href="https://game.watch.impress.co.jp/docs/news/417727.html" target="_blank" rel="noopener">FINAL FANTASY IV Complete Collection</a>',
   'realtime.cap.side': '영상 출처: <a href="https://www.youtube.com/watch?v=nPv1dBYawZQ" target="_blank" rel="noopener">millsage「everscape」</a>',
+  'realtime.cap.look': '게임 화면 출처: <a href="https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png" target="_blank" rel="noopener">《포켓몬스터 파이어레드·리프그린》</a>',
   'realtime.cap.chat': '게임 화면 출처: <a href="https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/" target="_blank" rel="noopener">Phantasy Star Online 2 New Genesis</a>',
   'a11y.theme': '밝은 / 어두운 테마 전환',
   'shot.hero.after': 'Godot 블로그를 번체 중국어로 번역한 화면',

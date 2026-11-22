@@ -165,6 +165,7 @@ otLocale('zh-Hans', {
   'realtime.cap.story2': '游戏画面来源：<a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《魔法少女的魔女审判》</a>',
   'realtime.cap.game': '游戏画面来源：<a href="https://game.watch.impress.co.jp/docs/news/417727.html" target="_blank" rel="noopener">FINAL FANTASY IV Complete Collection</a>',
   'realtime.cap.side': '视频来源：<a href="https://www.youtube.com/watch?v=nPv1dBYawZQ" target="_blank" rel="noopener">millsage「everscape」</a>',
+  'realtime.cap.look': '游戏画面来源：<a href="https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png" target="_blank" rel="noopener">《宝可梦 火红/叶绿》</a>',
   'realtime.cap.chat': '游戏画面来源：<a href="https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/" target="_blank" rel="noopener">Phantasy Star Online 2 New Genesis</a>',
   'a11y.theme': '切换浅色 / 深色',
   'shot.hero.after': 'Godot 博客翻译成繁体中文后的画面',

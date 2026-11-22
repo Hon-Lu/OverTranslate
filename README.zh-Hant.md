@@ -101,6 +101,7 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 螢幕擷取需 Windows 11 24H2 以上，視窗擷取需 Windows 10 1903 以上。
 
 ![即時翻譯功能預覽.png](docs/images/即時翻譯功能預覽.png)
+> 遊戲畫面來源：[《寶可夢 火紅/葉綠》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### 翻譯區塊 (框選)
 
