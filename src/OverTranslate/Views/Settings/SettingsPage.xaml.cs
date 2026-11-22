@@ -299,19 +299,18 @@ public partial class SettingsPage : UserControl
 
     private bool _glossaryLoading;
 
-    /// <summary>
-    /// The glossary row: which one is in use, and a line when it is for a language nothing is
-    /// translated into.
-    /// </summary>
+    /// <summary>The glossary row: which one is in use.</summary>
     /// <remarks>
-    /// Public because the shell calls it when the glossary card closes. The line shows only when
-    /// neither 截圖翻譯's nor 即時翻譯's language is the glossary's: with one of them it is in use there,
-    /// and a warning that is true of one feature only would read as the glossary not working.
+    /// Public because the shell calls it when the glossary card closes.
+    ///
+    /// <para>No warning when the glossary's language is not one being translated into. 截圖翻譯,
+    /// 即時翻譯 and 替換翻譯 each have a target language of their own, and a glossary that applies to
+    /// only one of them is ordinary use; one line here cannot say which of them it applies to. The
+    /// card says, above the entries, which language it applies to.</para>
     /// </remarks>
     public void RefreshGlossaryRow()
     {
-        var s = SettingsService.Instance.Current;
-        var glossary = s.Glossary;
+        var glossary = SettingsService.Instance.Current.Glossary;
         _glossaryLoading = true;
         try
         {
@@ -327,16 +326,6 @@ public partial class SettingsPage : UserControl
         {
             _glossaryLoading = false;
         }
-
-        var active = glossary.Active;
-        var mismatch = active is not null
-            && !active.TargetLanguage.Equals(s.TargetLanguage, StringComparison.OrdinalIgnoreCase)
-            && !active.TargetLanguage.Equals(s.Realtime.TargetLanguage, StringComparison.OrdinalIgnoreCase);
-        GlossaryStatus.Visibility = mismatch ? Visibility.Visible : Visibility.Collapsed;
-        if (mismatch)
-            GlossaryStatus.Text = LocalizationService.Format("S.Glossary.Mismatch",
-                LanguageData.GetTargetDisplayName(active!.TargetLanguage),
-                LanguageData.GetTargetDisplayName(s.TargetLanguage));
     }
 
     private void GlossaryPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)

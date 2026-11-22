@@ -656,6 +656,7 @@
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">범용 언어 모델 · 140개 이상의 언어 지원</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">일반 번역</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 번역</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupAids">번역 보조</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">설정 필요</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">설정됨</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">기본값 사용</sys:String>
@@ -980,7 +981,6 @@
     <sys:String x:Key="S.Glossary.None">사용 안 함</sys:String>
     <sys:String x:Key="S.Glossary.ListItem">{0} ({1})</sys:String>
     <sys:String x:Key="S.Glossary.Manage">관리</sys:String>
-    <sys:String x:Key="S.Glossary.Mismatch">⚠ 번역문은 {0}이지만 현재 {1}(으)로 번역하고 있어 적용되지 않습니다</sys:String>
     <sys:String x:Key="S.Glossary.Scope">이 기능은 현재 AI 번역 (로컬)과 OpenAI에서만 사용할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Glossary.New">새로 만들기</sys:String>
     <sys:String x:Key="S.Glossary.Import">가져오기</sys:String>

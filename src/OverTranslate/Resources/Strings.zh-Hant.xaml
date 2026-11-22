@@ -676,6 +676,7 @@
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">通用語言模型 · 涵蓋 140 多種語言</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻譯</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻譯</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupAids">翻譯輔助</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">需設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">已設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">使用預設</sys:String>
@@ -999,7 +1000,6 @@
     <sys:String x:Key="S.Glossary.None">不使用</sys:String>
     <sys:String x:Key="S.Glossary.ListItem">{0}（{1}）</sys:String>
     <sys:String x:Key="S.Glossary.Manage">管理</sys:String>
-    <sys:String x:Key="S.Glossary.Mismatch">⚠ 譯文為{0}，目前翻譯成{1}，未套用</sys:String>
     <sys:String x:Key="S.Glossary.Scope">該功能目前僅支援 AI 翻譯 (本地) 與 OpenAI 使用。</sys:String>
     <sys:String x:Key="S.Glossary.New">新增</sys:String>
     <sys:String x:Key="S.Glossary.Import">匯入</sys:String>

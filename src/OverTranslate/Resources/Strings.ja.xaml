@@ -656,6 +656,7 @@
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">汎用言語モデル · 140 以上の言語に対応</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻訳</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻訳</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupAids">翻訳支援</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">要設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">設定済み</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">既定値を使用</sys:String>
@@ -980,7 +981,6 @@
     <sys:String x:Key="S.Glossary.None">使用しない</sys:String>
     <sys:String x:Key="S.Glossary.ListItem">{0}（{1}）</sys:String>
     <sys:String x:Key="S.Glossary.Manage">管理</sys:String>
-    <sys:String x:Key="S.Glossary.Mismatch">⚠ 訳文は{0}ですが、現在の翻訳先は{1}のため適用されません</sys:String>
     <sys:String x:Key="S.Glossary.Scope">この機能は現在 AI 翻訳 (ローカル) と OpenAI でのみ使用できます。</sys:String>
     <sys:String x:Key="S.Glossary.New">新規</sys:String>
     <sys:String x:Key="S.Glossary.Import">インポート</sys:String>
