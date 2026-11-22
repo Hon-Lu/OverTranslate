@@ -1,6 +1,6 @@
 ﻿# README／官網用的 app 截圖：主螢幕置中、五種介面語言。用法見同資料夾的 README.md。
 param(
-    [ValidateSet('all', 'main', 'backup')][string]$Phase = 'all',
+    [ValidateSet('all', 'main', 'backup', 'realtime')][string]$Phase = 'all',
     [string[]]$Langs = @('zh-Hant', 'zh-Hans', 'en', 'ja', 'ko'),
     [switch]$Build,
     [switch]$CopyToOriginals
@@ -46,6 +46,8 @@ $SettingsName = -join ([char[]](0x8A2D, 0x5B9A, 0x9801))                        
 $RealtimeName = -join ([char[]](0x5373, 0x6642, 0x7FFB, 0x8B6F, 0x8996, 0x7A97, 0x9810, 0x89BD)) # 即時翻譯視窗預覽
 $BackupName = -join ([char[]](0x5099, 0x63F4))                                              # 備援
 $AiName = 'AI' + (-join ([char[]](0x7FFB, 0x8B6F)))                                          # AI翻譯
+$SceneBg = '30,30,32'                                                                        # viewer.ps1 的底色
+$SceneName = -join ([char[]](0x5373, 0x6642, 0x7FFB, 0x8B6F, 0x529F, 0x80FD, 0x9810, 0x89BD)) # 即時翻譯功能預覽
 
 function Mark([string]$t) { $l = "$(Get-Date -Format 'HH:mm:ss') $t"; Add-Content "$Out\run.log" $l -Encoding UTF8; Write-Host $l }
 # Off the primary monitor, so no hover state lands in a picture.
@@ -121,6 +123,20 @@ function Select-Nav([string]$Id) {
     $e = Find-El $Id; if (-not $e) { throw "not found: $Id" }
     $e.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Start-Sleep -Milliseconds 1500
+}
+function Press([int[]]$Keys) {
+    foreach ($k in $Keys) { [RS.W]::keybd_event([byte]$k, 0, 0, [UIntPtr]::Zero) }
+    [array]::Reverse($Keys); foreach ($k in $Keys) { [RS.W]::keybd_event([byte]$k, 0, 2, [UIntPtr]::Zero) }
+}
+function Drag([int]$x1, [int]$y1, [int]$x2, [int]$y2) {
+    [void][RS.W]::SetCursorPos($x1, $y1); Start-Sleep -Milliseconds 300
+    [RS.W]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 150
+    for ($i = 1; $i -le 20; $i++) { [void][RS.W]::SetCursorPos([int]($x1 + ($x2 - $x1) * $i / 20), [int]($y1 + ($y2 - $y1) * $i / 20)); Start-Sleep -Milliseconds 25 }
+    [RS.W]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+}
+function Invoke-El([string]$Id) {
+    $e = Find-El $Id; if (-not $e) { throw "not found: $Id" }
+    $e.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
 }
 function Str([string]$Lang, [string]$Key) {
     $t = [IO.File]::ReadAllText("$Root\src\OverTranslate\Resources\Strings.$Lang.xaml")
@@ -256,6 +272,72 @@ try {
         } finally {
             try { $viewer.Kill() } catch {}
             $env:OT_SHOT_BACKUP = $null
+        }
+    }
+    if ($Phase -eq 'realtime') {
+        # 即時翻譯執行中的兩張：開著模式面板一張、開著外觀面板一張，合成交給 compose-realtime.py。
+        # 各語系只換介面語言，翻譯一律英文→繁中。圖放大 133%，對話框兩行才會併成一段。
+        # 模式用 app 當下新區塊會用的那個（RealtimeSettings.NewBlockProfile），不在這裡指定。
+        foreach ($lang in $Langs) {
+        Mark "== realtime panels $lang"
+        $j = Get-Content $Settings -Raw -Encoding UTF8 | ConvertFrom-Json
+        Set-Prop $j 'UiLanguage' $lang
+        Set-Prop $j.Realtime 'SourceLanguage' 'EN'; Set-Prop $j.Realtime 'TargetLanguage' 'ZH-HANT'; Set-Prop $j.Realtime 'Provider' 'Bing'
+        [IO.File]::WriteAllText($Settings, ($j | ConvertTo-Json -Depth 20), (New-Object System.Text.UTF8Encoding($false)))
+        Remove-Item "$Out\viewer.txt" -ErrorAction SilentlyContinue
+        $viewer = Start-Process powershell.exe -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\viewer.ps1`"", '-Out', "`"$Out\viewer.txt`"", '-Image', "`"$PSScriptRoot\realtime-scene.png`"", '-Scale', '1.3333'
+        try {
+            $app = Start-App
+            if ($Sec) { [void][RS.W]::SetWindowPos($app.MainWindowHandle, [IntPtr]::Zero, $Sec.X + 20, $Sec.Y + 20, 0, 0, 0x15) }
+            else { [void]$app.CloseMainWindow() }
+            for ($i = 0; $i -lt 100 -and -not (Test-Path "$Out\viewer.txt"); $i++) { Start-Sleep -Milliseconds 100 }
+            Start-Sleep 1
+            $v = (Get-Content "$Out\viewer.txt").Split(','); $vx = [int]$v[0]; $vy = [int]$v[1]; $vw = [int]$v[2]; $vh = [int]$v[3]
+            # Ctrl+Alt+S opens the edit layer; the block is the whole picture, one pixel in.
+            [void][RS.W]::SetCursorPos($PCX, $PCY); Press 0x11, 0x12, 0x53; Start-Sleep 3
+            Drag ($vx + 1) ($vy + 1) ($vx + $vw - 1) ($vy + $vh - 1); Park; Start-Sleep 2
+            Press 0x11, 0x12, 0x53; Park; Start-Sleep 12
+            # The bar opens under the block and its panels open over the bar, on top of the game: move
+            # the bar right so the 模式 panel (about 360 DIPs wide, right edge with the bar's) clears it,
+            # and up to just under the game, so the 顯示外觀 panel set under the game reaches below the bar.
+            $pbtn = Find-El 'RealtimeProfilesBtn'; if (-not $pbtn) { throw 'no realtime bar' }
+            $tw = [System.Windows.Automation.TreeWalker]::ControlViewWalker; $top = $pbtn
+            while (($up = $tw.GetParent($top)) -and -not [System.Windows.Automation.Automation]::Compare($up, $A::RootElement)) { $top = $up }
+            $bh = [IntPtr]$top.Current.NativeWindowHandle
+            $s = [RS.W]::GetDpiForWindow($bh) / 96.0
+            $wr = New-Object RS.W+RECT; [void][RS.W]::GetWindowRect($bh, [ref]$wr)
+            # Far enough that the widest 顯示外觀 panel (English, about 540 DIPs with its shadow) clears the
+            # game too; compose-realtime.py sets the groups' spacing itself, so the gap left here is not seen.
+            $right = $vx + $vw + [int]((40 + 580) * $s)
+            [void][RS.W]::SetWindowPos($bh, [IntPtr]::Zero, $right - ($wr.R - $wr.L), $vy + $vh + [int](16 * $s), 0, 0, 0x15); Start-Sleep 1
+            $ab = (Find-El 'AppearanceBtn').Current.BoundingRectangle
+            $icon = "$([int]($ab.Left - $Pri.X)),$([int]($ab.Top - $Pri.Y)),$([int]$ab.Width),$([int]$ab.Height)"
+            Invoke-El 'RealtimeProfilesBtn'; Park; Start-Sleep 3
+            Shot "$Out\realtime-profiles-full.png" $Pri.X $Pri.Y $Pri.Width $Pri.Height
+            Invoke-El 'AppearanceBtn'; Park; Start-Sleep 3
+            # The 顯示外觀 panel's own window, shadow margin included, found by its heading.
+            $hc = New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, (Str $lang 'S.Realtime.Appearance'))
+            $hdr = $null; foreach ($w in Windows-Of) { if ($w.Current.NativeWindowHandle -eq $bh) { continue }; $hdr = $w.FindFirst('Descendants', $hc); if ($hdr) { $pw = $w; break } }
+            if (-not $hdr) { throw 'no appearance panel' }
+            $pr = New-Object RS.W+RECT; [void][RS.W]::GetWindowRect([IntPtr]$pw.Current.NativeWindowHandle, [ref]$pr)
+            $panel = "$($pr.L - $Pri.X),$($pr.T - $Pri.Y),$($pr.R - $pr.L),$($pr.B - $pr.T)"
+            Shot "$Out\realtime-appearance-full.png" $Pri.X $Pri.Y $Pri.Width $Pri.Height
+            $scene = "$($vx - $Pri.X),$($vy - $Pri.Y),$vw,$vh"
+            try { Invoke-El 'RunCloseBtn' } catch { Mark "  close: $_" }
+            Start-Sleep 1
+        } finally {
+            try { $viewer.Kill() } catch {}
+        }
+        $f = "$Out\$SceneName$($Suffix[$lang]).png"
+        # Logged so the picture can be composed again from the two shots without shooting again.
+        Mark "  compose-realtime.py $Out $SceneBg $scene $f $icon $panel"
+        python "$PSScriptRoot\compose-realtime.py" $Out $SceneBg $scene $f $icon $panel
+        if ($LASTEXITCODE) { throw 'compose-realtime.py failed' }
+        # Each language's two shots kept, so its picture can be composed again without shooting.
+        $keep = if ($Suffix[$lang]) { $Suffix[$lang] } else { '_zh-Hant' }
+        foreach ($n in 'profiles', 'appearance') { Copy-Item "$Out\realtime-$n-full.png" "$Out\realtime-$n-full$keep.png" -Force }
+        $made += $f
+        Stop-App
         }
     }
 } finally {

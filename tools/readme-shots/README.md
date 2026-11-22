@@ -6,7 +6,8 @@
 |------|------|
 | `設定頁{,_zh-Hans,_en,_jp,_ko}.png` | 設定頁，捲在最上面 |
 | `AI翻譯{,_zh-Hans,_en,_jp,_ko}.png` | 設定頁「AI 翻譯」分組（兩張服務卡片）連同下方「翻譯輔助」的詞彙表列，從畫面裁下；卡片上的模型與「已設定」狀態是當下這台電腦的 |
-| `即時翻譯視窗預覽{,_zh-Hans,_en,_jp,_ko}.png` | 即時翻譯頁，捲到「顯示外觀」card 在最上面 |
+| `即時翻譯視窗預覽{,_zh-Hans,_en,_jp,_ko}.png` | 即時翻譯頁，捲到「顯示外觀」card 在最上面（README／官網已改用下一列，這張先留著） |
+| `即時翻譯功能預覽{,_zh-Hans,_en,_jp,_ko}.png` | 即時翻譯執行中：框選的遊戲畫面、模式面板與浮動視窗列，左下補上顯示外觀面板與指向外觀鈕的虛線箭頭。只有 `-Phase realtime` 會拍，見下方 |
 | `備援.png` | 截圖工具列的 ⚡備援 標籤與它的 ToolTip |
 
 主視窗拍 DWM 外框（不含看不見的縮放邊框），所以圓角外是背後的東西。
@@ -26,7 +27,7 @@ powershell -ExecutionPolicy Bypass -File tools\readme-shots\shoot.ps1 -Build
 | 參數 | 說明 |
 |------|------|
 | `-Build` | 重新建置拍照用的 app。第一次、或程式改過之後要加；沒建過也會自動建 |
-| `-Phase main` / `backup` | 只拍主視窗那十五張，或只拍備援那張；預設 `all` |
+| `-Phase main` / `backup` / `realtime` | 只拍主視窗那十五張、只拍備援那張，或只拍即時翻譯功能預覽；預設 `all`（不含 `realtime`） |
 | `-Langs zh-Hant,en` | 只拍這幾種介面語言；預設五種 |
 | `-CopyToOriginals` | 拍完直接覆蓋 `docs/images/originals/` 裡的同名檔 |
 
@@ -49,3 +50,15 @@ powershell -ExecutionPolicy Bypass -File tools\readme-shots\shoot.ps1 -Build
 - 視窗大小用程式預設的 1280×760 DIP，在 125% 的螢幕上是 1600×950 px。換了縮放比例，圖的大小會跟著變，官網 `<img>` 的 `width`／`height` 要一起改。
 - 「顯示外觀」card 的捲動位置，是用 UI Automation 找到該語言的標題字串（`S.Realtime.Appearance`）來對齊的。改了這個字串或頁面結構，要回來看 `Scroll-ToAppearance`。
 - 備援那張的裁切範圍，是從翻譯服務下拉框往右的固定 DIP 範圍，依照目前繁中工具列的寬度定的。工具列改過版面，就要對著 `backup-full.png` 重新調 `shoot.ps1` 裡的數字。
+
+## 即時翻譯功能預覽（`-Phase realtime`）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\readme-shots\shoot.ps1 -Phase realtime
+```
+
+- **素材**：`realtime-scene.png`（720×480 的遊戲畫面），`viewer.ps1` 以 133% 最近鄰放大，畫在主螢幕中央偏左，底色 30,30,32。放大是為了讓對話框兩行併成一段。
+- **流程**：Ctrl+Alt+S 框選整張圖、開始翻譯、等 12 秒；把浮動視窗列移到遊戲右下（面板才不會蓋住遊戲）；開模式面板拍一張、開顯示外觀面板拍一張；`compose-realtime.py` 合成。
+- **各語系只換介面語言**，翻譯一律英文→繁中、Bing；模式用 app 當下新區塊會用的那個，不在腳本裡指定。
+- **重新合成不必重拍**：每個語系的兩張全螢幕截圖存成 `realtime-{profiles,appearance}-full_<語系>.png`，`run.log` 記著當次的 `compose-realtime.py` 參數，換成對應的兩張後照著跑即可。
+- 合成的畫布底色與 `viewer.ps1` 的底色要一致（`shoot.ps1` 的 `$SceneBg`）。
