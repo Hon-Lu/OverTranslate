@@ -102,28 +102,29 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 
 ![실시간 번역 미리 보기](docs/images/即時翻譯視窗預覽_ko.png)
 
-### 번역 블록 모드(영역 선택)
+### 번역 블록(영역 선택)
 
 > 실시간 번역 단축키(기본 Ctrl + Alt + S)는 중지 상태에서 누르면 블록 선택을 시작하고, 선택 중에 다시 누르면 번역을 시작합니다. 번역 중에는 일시 정지·재개할 수 있습니다.  
 > 번역이 필요 없는 장면이거나 원문을 그대로 보고 싶을 때 잠시 멈췄다가 다시 시작하면 되므로, 실시간 번역을 종료할 필요가 없습니다.
 
-번역 블록에는 여러 가지 모드와 배치 방식이 있습니다.
-#### 자막 / 만화
-영상 자막, 게임 스토리 대사, 만화 글자 등에 적합합니다. 이어서 읽는 문장이 중심이라면 이 모드를 사용하세요.
+화면 유형별로 소개합니다.
+#### 자막·만화
+영상 자막, 게임 스토리 대사, 만화 글자 등 이어서 읽는 문장.
 
 | 영역 선택 | 번역 결과 |
 |------|----------|
 | ![실시간 번역-만화 영역](docs/images/即時翻譯-漫畫框.png) | ![실시간 번역-만화 번역문](docs/images/即時翻譯-漫畫翻譯.png) |
 | ![실시간 번역1-만화 영역](docs/images/即時翻譯1-漫畫框.png) | ![실시간 번역1-만화 번역문](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![실시간 번역-영상 영역](docs/images/即時翻譯-影片框.png) | ![실시간 번역-영상 번역문](docs/images/即時翻譯-影片翻譯.png) |
+| ![실시간 번역1-대사 영역](docs/images/即時翻譯1-對話遊戲框.png) | ![실시간 번역1-대사 번역문](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![실시간 번역2-대사 영역](docs/images/即時翻譯2-對話遊戲框.png) | ![실시간 번역2-대사 번역문](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > 위 번역 비교는 모두 OverTranslate를 실제로 실행한 결과입니다.
 
-> 이미지 출처: 첫 번째 만화의 원본 그림은 AI 생성 이미지, 두 번째 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) 님의 작품, 세 번째 영상은 [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw), 네 번째 게임 화면은 [《마법소녀의 마녀재판》](https://store.steampowered.com/app/3101040)입니다.
+> 이미지 출처: 첫 번째 만화의 원본 그림은 AI 생성 이미지, 두 번째 4컷 만화는 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) 님의 작품, 세 번째 영상은 [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw), 네 번째 게임 화면은 [Hades](https://store.steampowered.com/app/1145360/), 다섯 번째 게임 화면은 [《마법소녀의 마녀재판》](https://store.steampowered.com/app/3101040)입니다.
 
-#### 게임 / UI
-게임 화면, 채팅창, 메뉴와 인터페이스 글자 등에 적합합니다. 자막이나 스토리 대사, 만화 글자가 아니라면 이 모드를 사용하세요.
+#### 게임·UI
+게임 화면, 채팅창, 메뉴와 인터페이스 글자.
 
 ![실시간 번역-채팅 비교](docs/images/即時翻譯-聊天室比對圖.png)
 
@@ -131,6 +132,8 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 |------|----------|
 | ![실시간 번역-게임 채팅 영역](docs/images/即時翻譯1-遊戲翻譯框.png) | ![실시간 번역-게임 채팅 번역문](docs/images/即時翻譯1-遊戲翻譯.png) |
 | ![실시간 번역-게임 영역](docs/images/即時翻譯-遊戲翻譯框.png) | ![실시간 번역-게임 번역문](docs/images/即時翻譯-遊戲翻譯.png) |
+
+> 이미지 출처: 채팅 게임 화면은 [Phantasy Star Online 2 New Genesis](https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/), 메뉴 게임 화면은 [FINAL FANTASY IV Complete Collection](https://game.watch.impress.co.jp/docs/news/417727.html)입니다.
 
 ### 원문 대조
 
@@ -219,6 +222,7 @@ AI 모델로 번역하며, 앞서 번역한 내용을 참고하므로 이어지�
 
 - **AI 번역 (로컬)**: OverTranslate에 내장된 번역 기능으로, 외장 그래픽 카드에서 실행됩니다. 처음 사용할 때 모델만 다운로드하면 되며, 다른 도구를 설치하거나 API 키를 발급받을 필요가 없고 번역 과정에서 네트워크를 거치지 않습니다. 필요에 따라 번역 전용 모델이나 범용 언어 모델을 고를 수 있고, 번역 스타일도 지정할 수 있습니다.
 - **OpenAI**: OpenAI 호환 API에 연결해 Ollama, LM Studio 같은 로컬 도구나 OpenRouter 같은 클라우드 서비스를 사용할 수 있으며, 모델과 프롬프트도 직접 설정할 수 있습니다. 로컬 환경 구축 방법은 [로컬 LLM 설치 안내](docs/guides/OLLAMA_GUIDE.ko.md)를 참고하세요.
+- **용어집**: 지정한 번역어를 우선 사용해 고유명사 번역을 일관되게 유지합니다.
 
 ### 인식 언어(OCR)
 

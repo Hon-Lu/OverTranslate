@@ -27,7 +27,7 @@
 <link rel="icon" type="image/svg+xml" href="../images/icon.svg" />
 <link rel="apple-touch-icon" sizes="180x180" href="../images/icon/apple-touch-icon.png" />
 <link rel="preconnect" href="https://img.shields.io" />
-<link rel="stylesheet" href="../site/styles.css?v=1de09f44a3" />
+<link rel="stylesheet" href="../site/styles.css?v=fbbbef5f59" />
 <script>
   (function () {
     var d = document.documentElement;
@@ -322,26 +322,56 @@
     </div>
 
     <div class="tabs__float" data-tabs-float>
-      <span class="tabs__float-label" data-i18n="realtime.mode.float">모드</span>
-      <button type="button" data-tab-go="tab-prose" tabindex="-1" data-i18n="realtime.mode.prose">자막 / 만화</button>
-      <button type="button" data-tab-go="tab-ui" tabindex="-1" data-i18n="realtime.mode.ui">게임 / UI</button>
+      <span class="tabs__float-label" data-i18n="realtime.mode.float">유형</span>
+      <button type="button" data-tab-go="tab-prose" tabindex="-1" data-i18n="realtime.mode.prose">자막·만화</button>
+      <button type="button" data-tab-go="tab-ui" tabindex="-1" data-i18n="realtime.mode.ui">게임·UI</button>
     </div>
 
     <div class="tabs reveal" data-tabs>
-      <h3 class="tabs__title" data-i18n="realtime.mode.title">화면 내용에 맞는 모드를 선택하세요</h3>
-      <div class="tabs__bar" role="tablist" aria-label="실시간 번역 모드" data-i18n-attr="aria-label|a11y.tabs">
+      <h3 class="tabs__title" data-i18n="realtime.mode.title">화면 유형별 예시</h3>
+      <div class="tabs__bar" role="tablist" aria-label="화면 유형" data-i18n-attr="aria-label|a11y.tabs">
         <span class="tabs__ink" data-tabs-ink aria-hidden="true"></span>
-        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.prose">자막 / 만화</span><span class="tabs__hint" data-i18n="realtime.mode.prose.hint">영상 자막, 스토리 대사, 만화</span></button>
-        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.ui">게임 / UI</span><span class="tabs__hint" data-i18n="realtime.mode.ui.hint">게임 UI, 채팅창, 메뉴</span></button>
+        <button type="button" role="tab" id="tab-prose" aria-controls="panel-prose" aria-selected="true" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.prose">자막·만화</span><span class="tabs__hint" data-i18n="realtime.mode.prose.hint">영상 자막, 스토리 대사, 만화</span></button>
+        <button type="button" role="tab" id="tab-ui" aria-controls="panel-ui" aria-selected="false" tabindex="-1" data-tab><span class="tabs__radio" aria-hidden="true"></span><span class="tabs__name" data-i18n="realtime.mode.ui">게임·UI</span><span class="tabs__hint" data-i18n="realtime.mode.ui.hint">게임 UI, 채팅창, 메뉴</span></button>
       </div>
 
       <div class="tabs__panel" id="panel-prose" role="tabpanel" aria-labelledby="tab-prose" data-tabpanel>
+        <div class="grid2 prose__screens">
+          <figure class="shot">
+            <div class="compare compare--video" data-compare>
+              <img class="compare__img" src="../images/即時翻譯1-對話遊戲翻譯.png" width="1920" height="1081" alt="게임 캐릭터 대사를 실시간 번역한 화면" data-i18n-attr="alt|shot.story1.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="../images/即時翻譯1-對話遊戲框.png" width="1920" height="1081" alt="게임 캐릭터 대사 영역을 지정한 화면" data-i18n-attr="alt|shot.story1.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="끌어서 원문과 번역문 비교하기" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.story1">게임 화면 출처: <a href="https://store.steampowered.com/app/1145360/" target="_blank" rel="noopener">Hades</a></figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="compare compare--video" data-compare>
+              <img class="compare__img" src="../images/即時翻譯2-對話遊戲翻譯.png" width="2560" height="1440" alt="게임 스토리 대사를 실시간 번역한 화면" data-i18n-attr="alt|shot.story2.after" loading="lazy" decoding="async" />
+              <div class="compare__clip">
+                <img class="compare__img" src="../images/即時翻譯2-對話遊戲框.png" width="2560" height="1440" alt="게임 스토리 대사 영역을 지정한 화면" data-i18n-attr="alt|shot.story2.before" loading="lazy" decoding="async" />
+              </div>
+              <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
+              <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
+              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="끌어서 원문과 번역문 비교하기" data-i18n-attr="aria-label|a11y.compare">
+                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
+              </div>
+            </div>
+            <figcaption class="src" data-i18n-html="realtime.cap.story2">게임 화면 출처: <a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《마법소녀의 마녀재판》</a></figcaption>
+          </figure>
+        </div>
         <div class="grid2 prose__comics">
           <figure class="shot">
             <div class="compare compare--comicai" data-compare>
-              <img class="compare__img" src="../images/即時翻譯-漫畫翻譯.png" width="786" height="1291" alt="AI 생성 만화를 실시간 번역한 화면" data-i18n-attr="alt|shot.comicai.after" loading="lazy" decoding="async" />
+              <img class="compare__img" src="../images/即時翻譯-漫畫翻譯.png" width="860" height="1293" alt="AI 생성 만화를 실시간 번역한 화면" data-i18n-attr="alt|shot.comicai.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="../images/即時翻譯-漫畫框.png" width="786" height="1291" alt="AI 생성 만화 영역을 지정한 화면" data-i18n-attr="alt|shot.comicai.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="../images/即時翻譯-漫畫框.png" width="860" height="1293" alt="AI 생성 만화 영역을 지정한 화면" data-i18n-attr="alt|shot.comicai.before" loading="lazy" decoding="async" />
               </div>
               <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
@@ -353,9 +383,9 @@
           </figure>
           <figure class="shot">
             <div class="compare compare--tall" data-compare>
-              <img class="compare__img" src="../images/即時翻譯1-漫畫翻譯.png" width="919" height="1363" alt="만화를 실시간 번역한 화면" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
+              <img class="compare__img" src="../images/即時翻譯1-漫畫翻譯.png" width="960" height="1394" alt="만화를 실시간 번역한 화면" data-i18n-attr="alt|shot.comic.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="../images/即時翻譯1-漫畫框.png" width="919" height="1363" alt="번역 전 일본어 만화" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="../images/即時翻譯1-漫畫框.png" width="960" height="1394" alt="번역 전 일본어 만화" data-i18n-attr="alt|shot.comic.before" loading="lazy" decoding="async" />
               </div>
               <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
@@ -364,36 +394,6 @@
               </div>
             </div>
             <figcaption class="src" data-i18n-html="realtime.cap.comic">만화 출처: <a href="https://x.com/kiyo_mariari/status/2101991547877429535?s=20" target="_blank" rel="noopener">@kiyo_mariari</a></figcaption>
-          </figure>
-        </div>
-        <div class="grid2 prose__screens">
-          <figure class="shot">
-            <div class="compare compare--video" data-compare>
-              <img class="compare__img" src="../images/即時翻譯-影片翻譯.png" width="1920" height="1080" alt="영상 자막을 실시간 번역한 화면" data-i18n-attr="alt|shot.video.after" loading="lazy" decoding="async" />
-              <div class="compare__clip">
-                <img class="compare__img" src="../images/即時翻譯-影片框.png" width="1920" height="1080" alt="영상 자막 영역을 지정한 화면" data-i18n-attr="alt|shot.video.before" loading="lazy" decoding="async" />
-              </div>
-              <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
-              <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
-              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="끌어서 원문과 번역문 비교하기" data-i18n-attr="aria-label|a11y.compare">
-                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
-              </div>
-            </div>
-            <figcaption class="src" data-i18n-html="realtime.cap.video">영상 출처: <a href="https://www.youtube.com/watch?v=Tsmf4dkigbw" target="_blank" rel="noopener">BanG Dream! Girls Band Party!☆PICO～OHMORI～</a></figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="compare compare--video" data-compare>
-              <img class="compare__img" src="../images/即時翻譯2-對話遊戲翻譯.png" width="2557" height="1437" alt="게임 스토리 대사를 실시간 번역한 화면" data-i18n-attr="alt|shot.story2.after" loading="lazy" decoding="async" />
-              <div class="compare__clip">
-                <img class="compare__img" src="../images/即時翻譯2-對話遊戲框.png" width="2557" height="1437" alt="게임 스토리 대사 영역을 지정한 화면" data-i18n-attr="alt|shot.story2.before" loading="lazy" decoding="async" />
-              </div>
-              <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
-              <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
-              <div class="compare__handle" data-compare-handle role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="끌어서 원문과 번역문 비교하기" data-i18n-attr="aria-label|a11y.compare">
-                <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
-              </div>
-            </div>
-            <figcaption class="src" data-i18n-html="realtime.cap.story2">게임 화면 출처: <a href="https://store.steampowered.com/app/3101040" target="_blank" rel="noopener">《마법소녀의 마녀재판》</a></figcaption>
           </figure>
         </div>
       </div>
@@ -419,10 +419,10 @@
             <figcaption class="src" data-i18n-html="realtime.cap.chat">게임 화면 출처: <a href="https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/" target="_blank" rel="noopener">Phantasy Star Online 2 New Genesis</a></figcaption>
           </figure>
           <figure class="shot">
-            <div class="compare" data-compare>
-              <img class="compare__img" src="../images/即時翻譯-遊戲翻譯.png" width="2557" height="1437" alt="게임 UI를 실시간 번역한 화면" data-i18n-attr="alt|shot.game.after" loading="lazy" decoding="async" />
+            <div class="compare compare--menu" data-compare>
+              <img class="compare__img" src="../images/即時翻譯-遊戲翻譯.png" width="989" height="679" alt="게임 UI를 실시간 번역한 화면" data-i18n-attr="alt|shot.game.after" loading="lazy" decoding="async" />
               <div class="compare__clip">
-                <img class="compare__img" src="../images/即時翻譯-遊戲翻譯框.png" width="2557" height="1437" alt="게임 UI 영역을 지정한 화면" data-i18n-attr="alt|shot.game.before" loading="lazy" decoding="async" />
+                <img class="compare__img" src="../images/即時翻譯-遊戲翻譯框.png" width="989" height="679" alt="게임 UI 영역을 지정한 화면" data-i18n-attr="alt|shot.game.before" loading="lazy" decoding="async" />
               </div>
               <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
               <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
@@ -430,7 +430,7 @@
                 <span class="compare__grip" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 8.5 6.5 12l3.5 3.5M14 8.5l3.5 3.5L14 15.5"/></svg></span>
               </div>
             </div>
-            <figcaption class="src" data-i18n-html="realtime.cap.game">게임 화면 출처: <a href="https://store.steampowered.com/app/774801/Crab_Champions/" target="_blank" rel="noopener">Crab Champions</a></figcaption>
+            <figcaption class="src" data-i18n-html="realtime.cap.game">게임 화면 출처: <a href="https://game.watch.impress.co.jp/docs/news/417727.html" target="_blank" rel="noopener">FINAL FANTASY IV Complete Collection</a></figcaption>
           </figure>
         </div>
       </div>
@@ -448,9 +448,9 @@
       <div class="split__media">
         <figure class="shot">
           <div class="compare compare--video" data-compare>
-            <img class="compare__img" src="../images/即時翻譯-原文對照0-後.png" width="1773" height="996" alt="원문은 그대로 두고 번역문을 아래 대조 상자에 표시한 화면" data-i18n-attr="alt|shot.side.after" loading="lazy" decoding="async" />
+            <img class="compare__img" src="../images/即時翻譯-原文對照0-後.png" width="1919" height="1079" alt="원문은 그대로 두고 번역문을 아래 대조 상자에 표시한 화면" data-i18n-attr="alt|shot.side.after" loading="lazy" decoding="async" />
             <div class="compare__clip">
-              <img class="compare__img" src="../images/即時翻譯-原文對照0-前.png" width="1773" height="996" alt="읽기 영역과 원문 대조 상자를 지정하는 화면" data-i18n-attr="alt|shot.side.before" loading="lazy" decoding="async" />
+              <img class="compare__img" src="../images/即時翻譯-原文對照0-前.png" width="1919" height="1079" alt="읽기 영역과 원문 대조 상자를 지정하는 화면" data-i18n-attr="alt|shot.side.before" loading="lazy" decoding="async" />
             </div>
             <span class="compare__tag compare__tag--before" data-i18n="compare.select">영역 지정</span>
             <span class="compare__tag compare__tag--after" data-i18n="compare.after">번역문</span>
@@ -585,6 +585,7 @@
             <li data-i18n="engines.localai.chip1">외장 GPU에서 실행</li>
             <li data-i18n="engines.localai.chip2">오프라인 번역</li>
             <li data-i18n="engines.localai.chip3">문맥 참고</li>
+            <li data-i18n="engines.localai.chip4">용어집</li>
           </ul>
         </div>
       </div>
@@ -602,6 +603,7 @@
           <ul class="chips">
             <li data-i18n="engines.openai.chip1">로컬 또는 클라우드</li>
             <li data-i18n="engines.openai.chip2">모델·프롬프트 직접 설정</li>
+            <li data-i18n="engines.openai.chip3">용어집</li>
           </ul>
         </div>
       </div>

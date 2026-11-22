@@ -102,28 +102,29 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 
 ![Real-time translation window preview](docs/images/即時翻譯視窗預覽_en.png)
 
-### Translation Block Modes (area selection)
+### Translation Blocks (area selection)
 
 > The real-time translation hotkey (default Ctrl + Alt + S) starts selecting blocks when it isn't running, and starts translating when pressed again during selection; while translating, it pauses / resumes,  
 > When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
 
-Translation blocks come with several modes and layouts:
-#### Subtitles / Comics
-For video subtitles, game story dialogue and comic lettering; use this mode when the content is writing meant to be read straight through.
+Examples by screen type:
+#### Subtitles & Comics
+Video subtitles, game story dialogue, comic lettering and other text meant to be read straight through.
 
 | Selection | Translation result |
 |-----------|--------------------|
 | ![Real-time translation - comic selection](docs/images/即時翻譯-漫畫框.png) | ![Real-time translation - comic result](docs/images/即時翻譯-漫畫翻譯.png) |
 | ![Real-time translation1 - comic selection](docs/images/即時翻譯1-漫畫框.png) | ![Real-time translation1 - comic result](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![Real-time translation - video selection](docs/images/即時翻譯-影片框.png) | ![Real-time translation - video result](docs/images/即時翻譯-影片翻譯.png) |
+| ![Real-time translation1 - dialogue game selection](docs/images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](docs/images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > All translation comparisons above are real results from running OverTranslate.
 
-> Image sources: the first comic's original artwork is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third video is from [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw); the fourth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
+> Image sources: the first comic's original artwork is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third video is from [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw); the fourth game screen is from [Hades](https://store.steampowered.com/app/1145360/); the fifth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
 
-#### Game / UI
-For game screens, chat windows, menus and interface text; use this mode when the content is not subtitles, story dialogue or comic lettering.
+#### Games & UI
+Game screens, chat windows, menus and interface text.
 
 ![Real-time translation - chat comparison](docs/images/即時翻譯-聊天室比對圖.png)
 
@@ -131,6 +132,8 @@ For game screens, chat windows, menus and interface text; use this mode when the
 |-----------|--------------------|
 | ![Real-time translation - game chat selection](docs/images/即時翻譯1-遊戲翻譯框.png) | ![Real-time translation - game chat result](docs/images/即時翻譯1-遊戲翻譯.png) |
 | ![Real-time translation - game selection](docs/images/即時翻譯-遊戲翻譯框.png) | ![Real-time translation - game result](docs/images/即時翻譯-遊戲翻譯.png) |
+
+> Image sources: the chat game screen is from [Phantasy Star Online 2 New Genesis](https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/); the menu game screen is from [FINAL FANTASY IV Complete Collection](https://game.watch.impress.co.jp/docs/news/417727.html).
 
 ### Compare with Original
 
@@ -217,6 +220,7 @@ Translates with an AI model that takes earlier translations into account, so nam
 
 - **AI (Local)**: built into OverTranslate and runs on a dedicated graphics card. Just download a model the first time you use it — no other tools to install, no API key to apply for, and nothing goes over the network while translating. Pick a dedicated translation model or a general-purpose language model to suit your needs, and set a translation style if you like.
 - **OpenAI**: connects to any OpenAI-compatible API, whether a local tool such as Ollama or LM Studio or a cloud service such as OpenRouter, with your own choice of model and prompt; for a local setup, see the [local LLM setup guide](docs/guides/OLLAMA_GUIDE.en.md).
+- **Glossary**: specified terms are used first when translating, so names and terms stay consistent.
 
 ### Recognition languages (OCR)
 

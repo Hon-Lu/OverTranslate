@@ -102,28 +102,29 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 ![实时翻译窗口预览.png](docs/images/即時翻譯視窗預覽_zh-Hans.png)
 
-### 翻译区块模式（框选）
+### 翻译区块（框选）
 
 > 实时翻译快捷键（默认 Ctrl + Alt + S）：未启动时按下开始框选，框选时再按一次开始翻译；翻译进行中可暂停 / 继续，  
 > 遇到不需要翻译的画面、或想直接看原文时可先暂停，之后再恢复，不必关闭实时翻译。
 
-翻译区块提供多种模式与排列方式：
-#### 字幕 / 漫画：
-适合影音字幕、游戏剧情对话、漫画文字等情境；若内容以连续阅读的文字为主，建议使用此模式。
+以下按画面类型展示：
+#### 字幕・漫画
+影音字幕、游戏剧情对话、漫画文字等连续阅读的内容。
 
 | 框选 | 翻译结果 |
 |------|----------|
 | ![实时翻译-漫画框.png](docs/images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](docs/images/即時翻譯-漫畫翻譯.png) |
 | ![实时翻译1-漫画框.png](docs/images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![实时翻译-视频框.png](docs/images/即時翻譯-影片框.png) | ![实时翻译-视频翻译.png](docs/images/即時翻譯-影片翻譯.png) |
+| ![实时翻译1-对话游戏框.png](docs/images/即時翻譯1-對話遊戲框.png) | ![实时翻译1-对话游戏翻译.png](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![实时翻译2-对话游戏框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > 以上翻译对比均为 OverTranslate 实机运行结果。
 
-> 图片来源：第一组漫画原图为 AI 生成；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组视频来源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
+> 图片来源：第一组漫画原图为 AI 生成；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组视频来源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四组游戏画面来源：[Hades](https://store.steampowered.com/app/1145360/)；第五组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
 
-#### 游戏 / 界面：
-适合游戏画面、聊天室、菜单与界面文字等情境；若内容不是字幕、剧情对话或漫画文字，建议使用此模式。
+#### 游戏・界面
+游戏画面、聊天室、菜单与界面文字。
 
 ![实时翻译-聊天室对比图.png](docs/images/即時翻譯-聊天室比對圖.png)
 
@@ -131,6 +132,8 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 |------|----------|
 | ![实时翻译1-游戏翻译框.png](docs/images/即時翻譯1-遊戲翻譯框.png) | ![实时翻译1-游戏翻译.png](docs/images/即時翻譯1-遊戲翻譯.png) |
 | ![实时翻译-游戏翻译框.png](docs/images/即時翻譯-遊戲翻譯框.png) | ![实时翻译-游戏翻译.png](docs/images/即時翻譯-遊戲翻譯.png) |
+
+> 图片来源：聊天室游戏画面来源：[Phantasy Star Online 2 New Genesis](https://store.steampowered.com/app/1056640/Phantasy_Star_Online_2_New_Genesis/)；菜单游戏画面来源：[FINAL FANTASY IV Complete Collection](https://game.watch.impress.co.jp/docs/news/417727.html)。
 
 ### 原文对照
 
@@ -219,6 +222,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 - **AI 翻译 (本地)**：翻译功能内置于 OverTranslate，在独立显卡上运行，首次使用时下载模型即可，无需安装其他工具或申请密钥，翻译过程不经过网络。可按需选择专用翻译模型或通用语言模型，也能指定翻译风格。
 - **OpenAI**：可连接 OpenAI 兼容 API，使用 Ollama、LM Studio 等本地工具，或 OpenRouter 等云端服务，并自行选择模型与设置提示词；本地搭建方式可参考 [本地 LLM 搭建教程](docs/guides/OLLAMA_GUIDE.zh-Hans.md)。
+- **词汇表**：翻译时优先使用指定词汇，让专有名词保持一致。
 
 ### 识别语言（OCR）
 
