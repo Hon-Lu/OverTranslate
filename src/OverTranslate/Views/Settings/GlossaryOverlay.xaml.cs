@@ -59,7 +59,7 @@ public partial class GlossaryOverlay : UserControl
     /// How much narrower than the page's own card this one stays on each side, so it reads as a layer
     /// over the page rather than as the page itself.
     /// </summary>
-    internal const double PageInset = 28;
+    internal const double PageInset = 96;
 
     /// <summary>The narrowest the card gets, for a window kept narrower than the shell allows.</summary>
     internal const double CardMinWidth = 320;

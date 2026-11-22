@@ -74,9 +74,9 @@ public class GlossaryOverlayLayoutTests
     }
 
     [Theory]
+    [InlineData(2560)]
     [InlineData(2048)]
     [InlineData(1920)]
-    [InlineData(1600)]
     public void InAWideWindowTheCardIsThePageLessAMargin(double window)
     {
         var page = Page(window);
@@ -108,9 +108,9 @@ public class GlossaryOverlayLayoutTests
     private static double PageCenter(double window, bool rail = true) => (rail ? 248 : 0) + 16 + Page(window, rail) / 2;
 
     [Theory]
+    [InlineData(2560)]
     [InlineData(2048)]
     [InlineData(1920)]
-    [InlineData(1600)]
     public void InAWideWindowTheCardSitsOverThePage(double window)
     {
         var card = GlossaryOverlay.CardWidthFor(window, Page(window));
