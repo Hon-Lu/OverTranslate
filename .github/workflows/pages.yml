@@ -20,17 +20,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: 部署網站
+  # 打包與部署分成兩個 job：同一個 job 裡上傳完馬上部署，deploy-pages 有時還查不到剛上傳的
+  # artifact（「No artifacts named "github-pages"」，2026-11-22 連兩次）；分開後部署 job 要等
+  # 新的 runner 起來才開始，查得到。重跑也只重跑失敗的部署，不會再上傳一份同名 artifact
+  # （同一個 job 重跑會變兩份，deploy-pages 拒絕：「Multiple artifacts named "github-pages"」）。
+  build:
+    name: 打包網站
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs
+
+  deploy:
+    name: 部署網站
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
