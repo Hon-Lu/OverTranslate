@@ -115,14 +115,14 @@ Video subtitles, game story dialogue, comic lettering and other text meant to be
 
 | Selection | Translation result |
 |-----------|--------------------|
-| ![Real-time translation - comic selection](docs/images/即時翻譯-漫畫框.png) | ![Real-time translation - comic result](docs/images/即時翻譯-漫畫翻譯.png) |
-| ![Real-time translation1 - comic selection](docs/images/即時翻譯1-漫畫框.png) | ![Real-time translation1 - comic result](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![Real-time translation1 - dialogue game selection](docs/images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](docs/images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](docs/images/即時翻譯2-對話遊戲翻譯.png) |
+| ![Real-time translation1 - comic selection](docs/images/即時翻譯1-漫畫框.png) | ![Real-time translation1 - comic result](docs/images/即時翻譯1-漫畫翻譯.png) |
+| ![Real-time translation - comic selection](docs/images/即時翻譯-漫畫框.png) | ![Real-time translation - comic result](docs/images/即時翻譯-漫畫翻譯.png) |
 
 > All translation comparisons above are real results from running OverTranslate.
 
-> Image sources: the first comic's original artwork is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third game screen is from [Hades](https://store.steampowered.com/app/1145360/); the fourth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
+> Image sources: the first game screen is from [Hades](https://store.steampowered.com/app/1145360/); the second game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040); the third, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the fourth comic's original artwork is AI-generated.
 
 #### Games & UI
 Game screens, chat windows, menus and interface text.

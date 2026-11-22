@@ -115,14 +115,14 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 
 | 範囲選択 | 翻訳結果 |
 |------|----------|
-| ![リアルタイム翻訳-マンガの範囲](docs/images/即時翻譯-漫畫框.png) | ![リアルタイム翻訳-マンガの訳文](docs/images/即時翻譯-漫畫翻譯.png) |
-| ![リアルタイム翻訳1-マンガの範囲](docs/images/即時翻譯1-漫畫框.png) | ![リアルタイム翻訳1-マンガの訳文](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![リアルタイム翻訳1-セリフの範囲](docs/images/即時翻譯1-對話遊戲框.png) | ![リアルタイム翻訳1-セリフの訳文](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![リアルタイム翻訳2-セリフの範囲](docs/images/即時翻譯2-對話遊戲框.png) | ![リアルタイム翻訳2-セリフの訳文](docs/images/即時翻譯2-對話遊戲翻譯.png) |
+| ![リアルタイム翻訳1-マンガの範囲](docs/images/即時翻譯1-漫畫框.png) | ![リアルタイム翻訳1-マンガの訳文](docs/images/即時翻譯1-漫畫翻譯.png) |
+| ![リアルタイム翻訳-マンガの範囲](docs/images/即時翻譯-漫畫框.png) | ![リアルタイム翻訳-マンガの訳文](docs/images/即時翻譯-漫畫翻譯.png) |
 
 > 上記の翻訳比較はすべて、OverTranslate を実際に動かした結果です。
 
-> 画像の出典：1 組目のマンガの原画は AI 生成画像、2 組目の 4 コマ漫画は [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) さんの作品、3 組目のゲーム画面は [Hades](https://store.steampowered.com/app/1145360/)、4 組目のゲーム画面は [『魔法少女ノ魔女裁判』](https://store.steampowered.com/app/3101040) です。
+> 画像の出典：1 組目のゲーム画面は [Hades](https://store.steampowered.com/app/1145360/)、2 組目のゲーム画面は [『魔法少女ノ魔女裁判』](https://store.steampowered.com/app/3101040)、3 組目の 4 コマ漫画は [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20) さんの作品、4 組目のマンガの原画は AI 生成画像です。
 
 #### ゲーム・UI
 ゲーム画面、チャット、メニューや UI の文字。

@@ -115,14 +115,14 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 | 框选 | 翻译结果 |
 |------|----------|
-| ![实时翻译-漫画框.png](docs/images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](docs/images/即時翻譯-漫畫翻譯.png) |
-| ![实时翻译1-漫画框.png](docs/images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](docs/images/即時翻譯1-漫畫翻譯.png) |
 | ![实时翻译1-对话游戏框.png](docs/images/即時翻譯1-對話遊戲框.png) | ![实时翻译1-对话游戏翻译.png](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![实时翻译2-对话游戏框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
+| ![实时翻译1-漫画框.png](docs/images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](docs/images/即時翻譯1-漫畫翻譯.png) |
+| ![实时翻译-漫画框.png](docs/images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](docs/images/即時翻譯-漫畫翻譯.png) |
 
 > 以上翻译对比均为 OverTranslate 实机运行结果。
 
-> 图片来源：第一组漫画原图为 AI 生成；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组游戏画面来源：[Hades](https://store.steampowered.com/app/1145360/)；第四组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
+> 图片来源：第一组游戏画面来源：[Hades](https://store.steampowered.com/app/1145360/)；第二组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)；第三组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第四组漫画原图为 AI 生成。
 
 #### 游戏・界面
 游戏画面、聊天室、菜单与界面文字。
