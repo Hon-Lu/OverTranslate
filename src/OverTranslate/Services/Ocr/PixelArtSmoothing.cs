@@ -4,8 +4,8 @@ namespace OverTranslate.Services.Ocr;
 
 /// <summary>
 /// Finds a picture that is an integer nearest-neighbour enlargement — a retro game shown at 2x,
-/// 3x or 4x — and redraws it with smooth interpolation, same size, same coordinates, for the text
-/// detector to look at.
+/// 3x or 4x — and redraws it with smooth interpolation at a fixed number of pixels per block, for
+/// the text to be detected and recognised on.
 /// </summary>
 /// <remarks>
 /// <para>The detector is not shift-invariant on pixel art. Its convolutions step by 2 to 32 pixels,
@@ -35,11 +35,19 @@ namespace OverTranslate.Services.Ocr;
 /// offset from 3927 to 4342. The two Mother and Golden Sun screens read their party's names, and
 /// the Dragon Warrior III dialogue that came back as single words reads as its four lines.</para>
 ///
-/// <para>Only the detector sees the redraw. Recognition still crops from the pixels as captured,
-/// at the boxes the detector found in the redraw (the two have the same geometry). Recognising
-/// the redraw as well was measured too and came out level — it fixed some readings (MARIO,
-/// "Wild PIKACHU appeared!", "For next level:") and broke others ("used EMBER" as "usedEMBER", HP
-/// as MP) — so the step that had no problem was left alone.</para>
+/// <para>The redraw first kept the captured size, so a game at 2x was still detected at 2 pixels a
+/// block and one at 6x at 6, and only the detector saw it; recognition cropped from the pixels as
+/// captured. That left Japanese reading badly, and differently by window size: a pixel font's
+/// kana and kanji fill their 8–12 pixel cell edge to edge with a pixel or two between lines, and
+/// at 2 or 3 pixels a block the detector joins a menu's stacked lines into one box (ドグ, マグ and
+/// ラグ came back as one glyph, スプラッシャー vanished under フラッドウォー) or cuts a line into
+/// single glyphs. A picture is therefore read at <see cref="ReadingBlock"/> pixels per block
+/// whatever it was captured at — enlarged from a small window, reduced from a large one — and
+/// recognition crops from that same redraw, so the two need no mapping between them and the
+/// reading no longer depends on the window's size either. Recognising the redraw rather than the
+/// captured pixels costs some spaces in English ("used EMBER" as "usedEMBER"), as it did when it
+/// was first measured, and recognising the captured pixels at the redraw's boxes read 545 rather
+/// than 564 of the 711 Japanese readings in <see cref="ReadingBlock"/>'s table.</para>
 ///
 /// <para>What is left out on purpose: columns of vertical text (the comic path, measured on other
 /// grounds and never pixel art in the corpora) and any picture without a single clean grid on both
@@ -82,8 +90,9 @@ internal static class PixelArtSmoothing
     }
 
     /// <summary>
-    /// The picture for the detector to look at, or null when it is not pixel art and the captured
-    /// pixels are the answer.
+    /// The redraw at the captured size, or null when it is not pixel art and the captured pixels
+    /// are the answer. For a look with the detector alone, where the caller has chosen the size to
+    /// look at; a read goes through <see cref="ForReading"/>.
     /// </summary>
     internal static SKBitmap? ForDetection(SKBitmap source) =>
         Smooth(source, new SKSamplingOptions(SKFilterMode.Linear));
@@ -94,9 +103,59 @@ internal static class PixelArtSmoothing
         return Redraw(source, grid, sampling);
     }
 
+    /// <summary>
+    /// Pixels per block the picture is read at, detection and recognition alike, whatever the
+    /// block size it was captured at.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on the Japanese pixel-art screens (screen-rpg-ja: 17 screens, 79 transcribed lines,
+    /// each framed as its own windows and the frame moved 0–2px in both axes, 711 readings in all):
+    ///
+    /// <code>
+    ///   pixels per block   lines read right
+    ///   as captured (2–3)   499/711  70%
+    ///   2                   505/711
+    ///   3                   535/711
+    ///   4                   564/711  79%
+    ///   5                   554/711
+    ///   6                   547/711
+    /// </code>
+    ///
+    /// The same screens enlarged twice over first (4x and 6x, as a 1080p window shows them) read
+    /// 231/316 as captured and 251/316 at 4 — the same 79%, since at a fixed reading scale the
+    /// picture handed over no longer depends on the window's size. Bicubic in place of bilinear
+    /// for the redraw read 551.
+    /// </remarks>
+    internal const int ReadingBlock = 4;
+
+    /// <summary>
+    /// The picture to read pixel art from — detection and recognition both — redrawn smooth at
+    /// <see cref="ReadingBlock"/> pixels per block, or null when it is not pixel art and the
+    /// captured pixels are the answer. A point in it is the point divided by the scale on each
+    /// axis in the captured picture.
+    /// </summary>
+    internal static Reading? ForReading(SKBitmap source)
+    {
+        if (Find(source) is not { } grid) return null;
+        return new Reading(
+            RedrawAt(source, grid, ReadingBlock, ReadingBlock, new SKSamplingOptions(SKFilterMode.Linear)),
+            (double)ReadingBlock / grid.BlockX,
+            (double)ReadingBlock / grid.BlockY);
+    }
+
+    internal sealed record Reading(SKBitmap Bitmap, double ScaleX, double ScaleY) : IDisposable
+    {
+        public void Dispose() => Bitmap.Dispose();
+    }
+
     // One pixel per block, sampled in the block's middle, enlarged back over the same area. A block
     // the frame cut through is completed rather than dropped, so the edge keeps its pixels.
-    internal static SKBitmap Redraw(SKBitmap source, Grid grid, SKSamplingOptions sampling)
+    internal static SKBitmap Redraw(SKBitmap source, Grid grid, SKSamplingOptions sampling) =>
+        RedrawAt(source, grid, grid.BlockX, grid.BlockY, sampling);
+
+    // The same at perX by perY pixels per block: the captured picture scaled by perX / BlockX
+    // across and perY / BlockY down, with no offset, so its own pixels need no other mapping.
+    internal static SKBitmap RedrawAt(SKBitmap source, Grid grid, int perX, int perY, SKSamplingOptions sampling)
     {
         int w = source.Width, h = source.Height;
         // Blocks start at the phase; a partial block before it is completed by padding.
@@ -119,13 +178,19 @@ internal static class PixelArtSmoothing
             }
         }
 
-        var smooth = new SKBitmap(w, h, source.ColorType, source.AlphaType);
+        // In blocks of the target size: the captured picture's left edge is dx / BlockX of a block
+        // into the first one.
+        var smooth = new SKBitmap(
+            (w * perX + grid.BlockX - 1) / grid.BlockX,
+            (h * perY + grid.BlockY - 1) / grid.BlockY,
+            source.ColorType, source.AlphaType);
         using var canvas = new SKCanvas(smooth);
         canvas.Clear(SKColors.Transparent);
         using var image = SKImage.FromBitmap(native);
+        float left = -(float)dx * perX / grid.BlockX, top = -(float)dy * perY / grid.BlockY;
         canvas.DrawImage(
             image,
-            new SKRect(-dx, -dy, nw * grid.BlockX - dx, nh * grid.BlockY - dy),
+            new SKRect(left, top, left + nw * perX, top + nh * perY),
             sampling);
         return smooth;
     }
