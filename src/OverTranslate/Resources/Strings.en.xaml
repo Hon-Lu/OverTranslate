@@ -652,6 +652,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">General-purpose model · Covers 140+ languages</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">General translation</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI translation</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupAids">Translation aids</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Setup needed</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Configured</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">Using defaults</sys:String>
@@ -978,7 +979,6 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Glossary.None">None</sys:String>
     <sys:String x:Key="S.Glossary.ListItem">{0} ({1})</sys:String>
     <sys:String x:Key="S.Glossary.Manage">Manage</sys:String>
-    <sys:String x:Key="S.Glossary.Mismatch">⚠ Translations are in {0}, but text is translated into {1}; not applied</sys:String>
     <sys:String x:Key="S.Glossary.Scope">This feature currently works only with AI (Local) and OpenAI.</sys:String>
     <sys:String x:Key="S.Glossary.New">New</sys:String>
     <sys:String x:Key="S.Glossary.Import">Import</sys:String>

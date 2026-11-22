@@ -647,6 +647,7 @@
     <sys:String x:Key="S.LocalAi.ModelDescGemmaE4B">Универсальная модель · Более 140 языков</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">Обычный перевод</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">ИИ-перевод</sys:String>
+    <sys:String x:Key="S.Settings.ProviderGroupAids">Инструменты перевода</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Требует настройки</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Настроено</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">По умолчанию</sys:String>
@@ -969,7 +970,6 @@
     <sys:String x:Key="S.Glossary.None">Не использовать</sys:String>
     <sys:String x:Key="S.Glossary.ListItem">{0} ({1})</sys:String>
     <sys:String x:Key="S.Glossary.Manage">Управление</sys:String>
-    <sys:String x:Key="S.Glossary.Mismatch">⚠ Переводы на языке «{0}», а сейчас перевод на «{1}» — не применяется</sys:String>
     <sys:String x:Key="S.Glossary.Scope">Функция пока работает только с ИИ (локальный) и OpenAI.</sys:String>
     <sys:String x:Key="S.Glossary.New">Создать</sys:String>
     <sys:String x:Key="S.Glossary.Import">Импорт</sys:String>
