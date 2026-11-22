@@ -985,16 +985,17 @@
                             </StackPanel>
                         </Grid>
                         <!-- 翻譯輔助: the glossary (#228), parted from the services above by a rule and a heading
-                             of its own. It used to sit as a third card under the AI 翻譯 group, which put a
-                             feature among a list of services (the user's objection, 2026-11-22). So it is a
-                             settings row like 進階設定's rather than a card, and its heading has no visible
-                             ProviderGroupRule, the line that marks a list of services. Which services it
+                             of its own. It used to sit as a third card in the AI 翻譯 group, which put a feature
+                             among a list of services (the user's objection, 2026-11-22), so its heading has no
+                             visible ProviderGroupRule, the line that marks a list of services. Which services it
                              works for is in the tooltip on the info glyph beside its name, so the row keeps to
                              one line of hint.
 
-                             Inset to the services' content: 15 is a card's border and padding, so the mark and
-                             name line up with theirs, and 73 is the card's padding, switch and gap, so 管理 ends
-                             where their 設定 buttons end. -->
+                             The row itself is the services' card (fill, border, corners, padding): a bare row
+                             under a stack of cards read as unfinished, and 管理 held back to end under their 設定
+                             buttons left the room of a switch this card does not have (user, on the screen).
+                             So 管理 ends at the card's padding. No hover border: the services' cards are switches
+                             and answer the whole card; this one is not pressed anywhere but its controls. -->
                         <Border BorderBrush="{DynamicResource AppSubtleBorder}"
                                 BorderThickness="0,1,0,0"
                                 Margin="0,18,0,0"
@@ -1010,65 +1011,69 @@
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{DynamicResource S.Settings.ProviderGroupAids}"
                                                Style="{StaticResource ProviderGroupTitle}"/>
-                                    <DockPanel x:Name="GlossaryRow"
-                                               Margin="15,4,73,0" MinHeight="40"
-                                               AutomationProperties.AutomationId="GlossaryRow">
-                                        <Button DockPanel.Dock="Right"
-                                                x:Name="GlossaryManageBtn"
-                                                Content="{DynamicResource S.Glossary.Manage}"
-                                                Style="{StaticResource FlatButton}"
-                                                Height="30" MinWidth="96" Margin="10,0,0,0"
-                                                VerticalAlignment="Center" Cursor="Hand"
-                                                AutomationProperties.AutomationId="GlossaryManageBtn"
-                                                Click="GlossaryManageBtn_Click"/>
-                                        <!-- The scope is in HelpText here as well as on the info glyph: the glyph
-                                             answers the pointer only (HoverToolTip), so this is where a keyboard
-                                             user hears it. -->
-                                        <ComboBox DockPanel.Dock="Right"
-                                                  x:Name="GlossaryPicker"
-                                                  Style="{StaticResource ModernComboBox}"
-                                                  Width="200" Height="30" Margin="14,0,0,0"
-                                                  VerticalAlignment="Center"
-                                                  DisplayMemberPath="Display" SelectedValuePath="Id"
-                                                  AutomationProperties.Name="{DynamicResource S.Glossary.Title}"
-                                                  AutomationProperties.HelpText="{DynamicResource S.Glossary.Scope}"
-                                                  AutomationProperties.AutomationId="GlossaryPicker"
-                                                  SelectionChanged="GlossaryPicker_SelectionChanged"/>
-                                        <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
-                                            <Image Source="{StaticResource GlossaryMarkImage}" Width="28" Height="28"/>
-                                        </Grid>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <!-- The info glyph is built as 模型存放位置's in 進階設定, so the page has one kind. -->
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{DynamicResource S.Glossary.Title}"
-                                                           Style="{StaticResource ChoiceTileTitle}" FontSize="15"/>
-                                                <TextBlock Text="&#xE946;"
-                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                           FontSize="14"
-                                                           Foreground="{DynamicResource AppTextSecondary}"
-                                                           Background="Transparent"
-                                                           Padding="4,2"
-                                                           Margin="4,-2,0,-2"
-                                                           VerticalAlignment="Center"
-                                                           Cursor="Help"
-                                                           AutomationProperties.Name="{DynamicResource S.Toolbar.InfoIcon}"
-                                                           AutomationProperties.HelpText="{DynamicResource S.Glossary.Scope}"
-                                                           AutomationProperties.AutomationId="GlossaryScopeInfo">
-                                                    <controls:HoverToolTip.Content>
-                                                        <TextBlock Text="{DynamicResource S.Glossary.Scope}"
-                                                                   MaxWidth="420"
-                                                                   FontFamily="{DynamicResource AppFont}"
-                                                                   FontSize="{StaticResource AppFontSize}"
-                                                                   TextWrapping="Wrap"
-                                                                   LineHeight="18"/>
-                                                    </controls:HoverToolTip.Content>
-                                                </TextBlock>
+                                    <Border x:Name="GlossaryRow"
+                                            Margin="0,4,0,0" MinHeight="62" Padding="14,10" CornerRadius="8" BorderThickness="1"
+                                            Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}"
+                                            SnapsToDevicePixels="True"
+                                            AutomationProperties.AutomationId="GlossaryRow">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right"
+                                                    x:Name="GlossaryManageBtn"
+                                                    Content="{DynamicResource S.Glossary.Manage}"
+                                                    Style="{StaticResource FlatButton}"
+                                                    Height="30" MinWidth="96" Margin="10,0,0,0"
+                                                    VerticalAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.AutomationId="GlossaryManageBtn"
+                                                    Click="GlossaryManageBtn_Click"/>
+                                            <!-- The scope is in HelpText here as well as on the info glyph: the glyph
+                                                 answers the pointer only (HoverToolTip), so this is where a keyboard
+                                                 user hears it. -->
+                                            <ComboBox DockPanel.Dock="Right"
+                                                      x:Name="GlossaryPicker"
+                                                      Style="{StaticResource ModernComboBox}"
+                                                      Width="200" Height="30" Margin="14,0,0,0"
+                                                      VerticalAlignment="Center"
+                                                      DisplayMemberPath="Display" SelectedValuePath="Id"
+                                                      AutomationProperties.Name="{DynamicResource S.Glossary.Title}"
+                                                      AutomationProperties.HelpText="{DynamicResource S.Glossary.Scope}"
+                                                      AutomationProperties.AutomationId="GlossaryPicker"
+                                                      SelectionChanged="GlossaryPicker_SelectionChanged"/>
+                                            <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
+                                                <Image Source="{StaticResource GlossaryMarkImage}" Width="28" Height="28"/>
+                                            </Grid>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <!-- The info glyph is built as 模型存放位置's in 進階設定, so the page has one kind. -->
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{DynamicResource S.Glossary.Title}"
+                                                               Style="{StaticResource ChoiceTileTitle}" FontSize="15"/>
+                                                    <TextBlock Text="&#xE946;"
+                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                               FontSize="14"
+                                                               Foreground="{DynamicResource AppTextSecondary}"
+                                                               Background="Transparent"
+                                                               Padding="4,2"
+                                                               Margin="4,-2,0,-2"
+                                                               VerticalAlignment="Center"
+                                                               Cursor="Help"
+                                                               AutomationProperties.Name="{DynamicResource S.Toolbar.InfoIcon}"
+                                                               AutomationProperties.HelpText="{DynamicResource S.Glossary.Scope}"
+                                                               AutomationProperties.AutomationId="GlossaryScopeInfo">
+                                                        <controls:HoverToolTip.Content>
+                                                            <TextBlock Text="{DynamicResource S.Glossary.Scope}"
+                                                                       MaxWidth="420"
+                                                                       FontFamily="{DynamicResource AppFont}"
+                                                                       FontSize="{StaticResource AppFontSize}"
+                                                                       TextWrapping="Wrap"
+                                                                       LineHeight="18"/>
+                                                        </controls:HoverToolTip.Content>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Text="{DynamicResource S.Glossary.CardHint}"
+                                                           Style="{StaticResource FieldHint}" FontSize="12"
+                                                           Margin="0,2,0,0" TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <TextBlock Text="{DynamicResource S.Glossary.CardHint}"
-                                                       Style="{StaticResource FieldHint}" FontSize="12"
-                                                       Margin="0,2,0,0" TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                    </DockPanel>
+                                        </DockPanel>
+                                    </Border>
                                 </StackPanel>
                             </Grid>
                         </Border>
