@@ -199,6 +199,25 @@ public class PixelArtSmoothingTests
         Assert.InRange(bounds.Bottom, 52 * block - cutY - block, 52 * block - cutY + block);
     }
 
+    // A live read is polled over and over, and enlarging is what costs: it grows a block by one
+    // pixel at most, so a 2x window is read at 3 rather than 4. A still capture reads at 4 always.
+    [Theory]
+    [InlineData(2, false, 4)]
+    [InlineData(2, true, 3)]
+    [InlineData(3, true, 4)]
+    [InlineData(4, true, 4)]
+    [InlineData(6, true, 4)]
+    public void ALiveReadEnlargesByOnePixelABlockAtMost(int block, bool live, int expected)
+    {
+        using var capture = Upscaled(NativePicture(60, 40, seed: 19), block);
+        using var reading = PixelArtSmoothing.ForReading(capture, live);
+
+        Assert.NotNull(reading);
+        Assert.Equal(60 * expected, reading.Bitmap.Width);
+        Assert.Equal(40 * expected, reading.Bitmap.Height);
+        Assert.Equal((double)expected / block, reading.ScaleX);
+    }
+
     [Fact]
     public void ThereIsNoReadingOfAPictureThatIsNotPixelArt()
     {
