@@ -49,8 +49,22 @@ public partial class GlossaryOverlay : UserControl
     private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(140));
     private static readonly Duration FreshDuration = new(TimeSpan.FromMilliseconds(1400));
 
-    private const double CardWidth = 900;
-    private const double CardMaxHeight = 900;
+    /// <summary>
+    /// The widest the card gets. Beyond it the two columns of a 40-character entry only grow apart:
+    /// at 1200 each column is about 420 wide, room for the longest entry the table takes.
+    /// </summary>
+    internal const double CardMaxWidth = 1200;
+
+    /// <summary>The narrowest the card gets, for a window kept narrower than the shell allows.</summary>
+    internal const double CardMinWidth = 320;
+
+    internal const double CardMaxHeight = 900;
+
+    /// <summary>
+    /// The batch layer does not grow with the window: its lines are short, the preview trims a long
+    /// one and shows it whole on pointing, and a wider dialog would only move 取消 and 加入 away
+    /// from the text.
+    /// </summary>
     private const double BatchWidth = 640;
     private const double BatchMaxHeight = 540;
 
@@ -87,6 +101,9 @@ public partial class GlossaryOverlay : UserControl
     /// row must not take it as a choice of that glossary.
     /// </summary>
     private bool _listDeletePressed;
+
+    /// <summary>A preview redraw is queued for the batch box (see PasteBox_TextChanged).</summary>
+    private bool _pastePending;
 
     /// <summary>The source of the entry just added, lit up once the table has been rebuilt with it.</summary>
     private string? _freshSource;
@@ -171,20 +188,27 @@ public partial class GlossaryOverlay : UserControl
     }
 
     /// <summary>
-    /// As <c>RealtimeProfileOverlay.FitCard</c>: <see cref="CardWidth"/> wide where the window
-    /// allows, and nine tenths of its height up to <see cref="CardMaxHeight"/> whatever it holds, so
-    /// switching glossaries, searching or an empty table never move the card. The batch layer keeps
-    /// to a fixed height of its own for the same reason: a long paste scrolls its preview.
+    /// Nine tenths of the window each way, up to <see cref="CardMaxWidth"/> by
+    /// <see cref="CardMaxHeight"/>, whatever the card holds: switching glossaries, searching or an
+    /// empty table never move it, and a bigger window gives the table more room. The sidebar keeps
+    /// its width; the editor and its two columns take what is left. The batch layer keeps a size of
+    /// its own (see <see cref="BatchWidth"/>): a long paste scrolls its preview.
     /// </summary>
     private void FitCard()
     {
         if (ActualWidth <= 0 || ActualHeight <= 0) return;
-        Card.Width = Math.Max(320, Math.Min(CardWidth, ActualWidth - 32));
+        Card.Width = CardWidthFor(ActualWidth);
         Card.MaxHeight = ActualHeight * 0.9;
-        Card.Height = Math.Min(ActualHeight * 0.9, CardMaxHeight);
+        Card.Height = CardHeightFor(ActualHeight);
         BatchCard.Width = Math.Max(320, Math.Min(BatchWidth, ActualWidth - 64));
         BatchCard.Height = Math.Min(ActualHeight * 0.9, Math.Max(360, Math.Min(BatchMaxHeight, ActualHeight * 0.9 - 40)));
     }
+
+    /// <summary>The card's width in an overlay <paramref name="width"/> wide.</summary>
+    internal static double CardWidthFor(double width) => Math.Max(CardMinWidth, Math.Min(width * 0.9, CardMaxWidth));
+
+    /// <summary>The card's height in an overlay <paramref name="height"/> tall.</summary>
+    internal static double CardHeightFor(double height) => Math.Min(height * 0.9, CardMaxHeight);
 
     private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -805,7 +829,26 @@ public partial class GlossaryOverlay : UserControl
 
     private void BatchScrim_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => CloseBatch();
 
-    private void PasteBox_TextChanged(object sender, TextChangedEventArgs e) => RenderPaste();
+    /// <summary>
+    /// The preview is redrawn once typing pauses for the dispatcher, not under every key.
+    /// </summary>
+    /// <remarks>
+    /// Redrawn under each key, a long paste held every key up for as long as its whole preview took
+    /// to rebuild — a tenth of a second at a hundred lines, a second at a thousand. Keys typed ahead,
+    /// and the clicks and arrows that went with them, then landed on a box that had already moved on
+    /// from what was on screen: an Enter or a click put the caret on another line. At background
+    /// priority every key queued is handled first, and a run of them costs one redraw.
+    /// </remarks>
+    private void PasteBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_pastePending) return;
+        _pastePending = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            _pastePending = false;
+            if (BatchLayer.Visibility == Visibility.Visible) RenderPaste();
+        });
+    }
 
     /// <summary>One line of the preview under the batch box.</summary>
     private sealed record PasteRow(

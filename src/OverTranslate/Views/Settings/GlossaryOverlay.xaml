@@ -659,8 +659,24 @@
                                 </Grid>
                             </Border>
                             <Grid>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl x:Name="PasteLines" AutomationProperties.AutomationId="GlossaryPasteLines">
+                                <!-- Virtualized: a paste of a thousand lines builds only the rows in view, so
+                                     the preview keeps up with typing (see RenderPaste). -->
+                                <ItemsControl x:Name="PasteLines" AutomationProperties.AutomationId="GlossaryPasteLines"
+                                              VirtualizingPanel.IsVirtualizing="True"
+                                              VirtualizingPanel.VirtualizationMode="Recycling"
+                                              ScrollViewer.CanContentScroll="True">
+                                        <ItemsControl.Template>
+                                            <ControlTemplate TargetType="ItemsControl">
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto" CanContentScroll="True" Focusable="False">
+                                                    <ItemsPresenter/>
+                                                </ScrollViewer>
+                                            </ControlTemplate>
+                                        </ItemsControl.Template>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <VirtualizingStackPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Border BorderBrush="{DynamicResource AppSubtleBorder}" BorderThickness="0,0,0,1"
@@ -686,8 +702,7 @@
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                </ItemsControl>
                                 <TextBlock x:Name="PasteEmptyText" Text="{DynamicResource S.Glossary.BatchPreviewEmpty}"
                                            Style="{StaticResource Small}" FontSize="12.5"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
