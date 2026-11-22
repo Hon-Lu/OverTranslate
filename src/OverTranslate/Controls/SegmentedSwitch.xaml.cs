@@ -51,7 +51,7 @@ public partial class SegmentedSwitch : UserControl
         get => ThirdRadio.IsChecked == true ? 2 : SecondRadio.IsChecked == true ? 1 : 0;
         set
         {
-            int index = Math.Clamp(value, 0, ThirdRadio.Visibility == Visibility.Visible ? 2 : 1);
+            int index = Math.Clamp(value, 0, LastIndex);
             if (SelectedIndex == index) return;
             _showing = true;
             (index switch { 2 => ThirdRadio, 1 => SecondRadio, _ => FirstRadio }).IsChecked = true;
@@ -84,18 +84,25 @@ public partial class SegmentedSwitch : UserControl
         ThirdRadio.Visibility = Visibility.Visible;
     }
 
+    private int LastIndex =>
+        ThirdRadio.Visibility == Visibility.Visible ? 2 : SecondRadio.Visibility == Visibility.Visible ? 1 : 0;
+
     /// <summary>
-    /// The words on two or three parts as text, for words made at run time — 區塊 1, 區塊 2 on the
-    /// 模式 panel, as many as there are blocks. Null for <paramref name="third"/> folds it away.
+    /// The words on one to three parts as text, for words made at run time — 區塊 1, 區塊 2 on the
+    /// 模式 panel, as many as there are blocks. A null part folds away with every part after it; one
+    /// part alone is shown chosen, so a single block is still named the way several are.
     /// </summary>
-    public void SetTexts(string first, string second, string? third = null)
+    public void SetTexts(string first, string? second = null, string? third = null)
     {
+        if (second is null) third = null;
         FirstRadio.Content = first;
         SecondRadio.Content = second;
         ThirdRadio.Content = third;
+        SecondColumn.SharedSizeGroup = second is null ? null : "SegmentedSwitchHalf";
+        SecondRadio.Visibility = second is null ? Visibility.Collapsed : Visibility.Visible;
         ThirdColumn.SharedSizeGroup = third is null ? null : "SegmentedSwitchHalf";
         ThirdRadio.Visibility = third is null ? Visibility.Collapsed : Visibility.Visible;
-        if (third is null && ThirdRadio.IsChecked == true) SelectedIndex = 1;
+        if (SelectedIndex > LastIndex) SelectedIndex = LastIndex;
     }
 
     private void Radio_Checked(object sender, RoutedEventArgs e)

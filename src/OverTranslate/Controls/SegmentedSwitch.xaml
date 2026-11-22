@@ -17,7 +17,7 @@
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
-                <ColumnDefinition Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
+                <ColumnDefinition x:Name="SecondColumn" Width="Auto" SharedSizeGroup="SegmentedSwitchHalf"/>
                 <ColumnDefinition x:Name="ThirdColumn" Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Border x:Name="Thumb"

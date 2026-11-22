@@ -441,14 +441,13 @@ internal partial class RealtimeProfilePanel : Window, IVisibleBounds
         // is kept for when it starts.
         LiveApplyText.Visibility = Session.IsTranslating ? Visibility.Visible : Visibility.Collapsed;
 
-        // The switch only where there is a choice of block.
-        BlockSwitch.Visibility = blocks.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        if (blocks.Count > 1)
-        {
-            string Name(int i) => LocalizationService.Format("S.Realtime.BlockNumber", i + 1);
-            BlockSwitch.SetTexts(Name(0), Name(1), blocks.Count > 2 ? Name(2) : null);
-            BlockSwitch.SelectedIndex = _block;
-        }
+        // Shown with one block too: the panel says which block it is tuning, and the block on screen
+        // carries the same name (MarkBlocks), however many there are.
+        string Name(int i) => LocalizationService.Format("S.Realtime.BlockNumber", i + 1);
+        BlockSwitch.SetTexts(Name(0), blocks.Count > 1 ? Name(1) : null, blocks.Count > 2 ? Name(2) : null);
+        // One part alone keeps to its own width: stretched, the tray was mostly empty beside it.
+        BlockSwitch.HorizontalAlignment = blocks.Count > 1 ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
+        BlockSwitch.SelectedIndex = _block;
         Session.MarkBlocks(_block);
 
         var id = ShownProfileId();

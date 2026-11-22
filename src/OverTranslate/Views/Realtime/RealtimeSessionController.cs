@@ -1303,8 +1303,8 @@ internal sealed class RealtimeSessionController
 
     /// <summary>
     /// Names every block on screen and outlines <paramref name="selected"/> — while the 模式 panel is
-    /// open, so 區塊 2 on the panel is a block the user can find. Nothing is marked with one block:
-    /// there is no other to tell it from.
+    /// open, so 區塊 2 on the panel is a block the user can find. One block is marked as well, so the
+    /// panel and the screen read the same however many blocks there are.
     /// </summary>
     public void MarkBlocks(int? selected)
     {
@@ -1329,11 +1329,11 @@ internal sealed class RealtimeSessionController
         // While framing the blocks are the edit layer's, and so are their names.
         if (_edit is { } edit)
         {
-            edit.SetMarkers(_marking && _blocks.Count > 1, _markedBlock);
+            edit.SetMarkers(_marking && _blocks.Count > 0, _markedBlock);
             return;
         }
 
-        bool shown = _marking && _blockWindows.Count > 1;
+        bool shown = _marking && _blockWindows.Count > 0;
         foreach (var (id, window) in _blockWindows)
             window.SetMarker(
                 shown ? LocalizationService.Format("S.Realtime.BlockNumber", id + 1) : null,

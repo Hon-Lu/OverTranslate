@@ -427,7 +427,8 @@ public partial class RealtimeEditWindow : Window
         bool selected = _markersShown && index == _markedBlock;
         visual.Marker.Visibility = _markersShown ? Visibility.Visible : Visibility.Collapsed;
         visual.MarkerText.Text = LocalizationService.Format("S.Realtime.BlockNumber", index + 1);
-        visual.Marker.Background = selected ? RestoreFill : ModeTrack;
+        // The mode button's own blue pill, so the chosen block reads like a chosen tray.
+        visual.MarkerPill.Background = selected ? FrameStroke : null;
         visual.MarkerText.Foreground = selected ? RemoveForeground : ModeIdleForeground;
         visual.Body.BorderThickness = new Thickness((selected ? SelectedFrameThickness : FrameThickness) * _uiScale);
     }
@@ -641,7 +642,7 @@ public partial class RealtimeEditWindow : Window
         profileId = KnownProfile(profileId);
         var visual = new BlockVisual(
             bounds, BuildModeControl(profileId, orientation), _handleSize, _removeSize,
-            _modeHeight, _uiScale)
+            _modeHeight, _modeInset, _uiScale)
         {
             ProfileId = profileId,
             CompareOffset = compareOffset,
@@ -1500,26 +1501,39 @@ public partial class RealtimeEditWindow : Window
             double handleSize,
             double removeSize,
             double markerHeight,
+            double markerInset,
             double uiScale)
         {
             ModeControl = modeControl;
             Bounds = bounds;
 
-            // In front of the trays and as tall as them, a plate of the trays' own: the block's name
-            // reads as the first word of the line that says what the block is.
+            // In front of the trays and built as they are — a dark tray, and for the block the panel
+            // is showing the blue pill inside it — so the block's name reads as the first part of
+            // the line that says what the block is.
             MarkerText = ModeSegments.BuildLabel("", uiScale);
             MarkerText.Margin = new Thickness(10 * uiScale, 0, 10 * uiScale, 0);
+            double pillHeight = markerHeight - markerInset * 2;
+            MarkerPill = new Border
+            {
+                Height = pillHeight,
+                Margin = new Thickness(markerInset),
+                VerticalAlignment = VerticalAlignment.Center,
+                CornerRadius = new CornerRadius(pillHeight / 2),
+                Child = MarkerText,
+            };
+            var markerCorner = new CornerRadius(markerHeight / 2);
             Marker = new Border
             {
                 Height = markerHeight,
-                CornerRadius = new CornerRadius(markerHeight / 2),
-                Background = ModeTrack,
-                BorderBrush = ModeTrackEdge,
-                BorderThickness = new Thickness(0, 1 * uiScale, 0, 0),
                 UseLayoutRounding = true,
                 Cursor = Cursors.Arrow,
                 Visibility = Visibility.Collapsed,
-                Child = MarkerText,
+                Child = new Border
+                {
+                    CornerRadius = markerCorner,
+                    Background = ModeTrack,
+                    Child = new Grid { Children = { MarkerPill, ModeSegments.Hairline(markerCorner, uiScale) } },
+                },
             };
 
             Body = new Thumb
@@ -1699,6 +1713,9 @@ public partial class RealtimeEditWindow : Window
 
         /// <inheritdoc cref="Marker"/>
         public TextBlock MarkerText { get; }
+
+        /// <summary>The pill inside <see cref="Marker"/>: blue for the block the panel is showing.</summary>
+        public Border MarkerPill { get; }
 
         /// <summary>The mode this block is on, by id — see <see cref="RealtimeBlockPlacement.ProfileId"/>.</summary>
         public string ProfileId { get; set; } = Models.RealtimePresets.StandardId;
@@ -2420,8 +2437,10 @@ public partial class RealtimeEditWindow : Window
         ///
         /// <para>The hairline is a border nested inside the fill rather than the fill's own border:
         /// a Border paints its background inside its border, so on one element the hairline would
-        /// sit over whatever is behind the plate instead of over the plate. The fill is itself inside
-        /// the Border returned, which carries no fill of its own: callers size and style that
+        /// sit over whatever is behind the plate instead of over the plate. It is laid over the
+        /// content rather than round it: as a border round it, it took its pixel off the top of the
+        /// content's room and every pill centred in a tray sat that much low. The fill is itself
+        /// inside the Border returned, which carries no fill of its own: callers size and style that
         /// one.</para>
         /// </remarks>
         internal static Border Plate(double width, CornerRadius corner, UIElement content, double uiScale) => new()
@@ -2431,14 +2450,17 @@ public partial class RealtimeEditWindow : Window
             {
                 CornerRadius = corner,
                 Background = ModeTrack,
-                Child = new Border
-                {
-                    CornerRadius = corner,
-                    BorderBrush = ModeTrackEdge,
-                    BorderThickness = new Thickness(0, 1 * uiScale, 0, 0),
-                    Child = content,
-                },
+                Child = new Grid { Children = { content, Hairline(corner, uiScale) } },
             },
+        };
+
+        /// <summary>The light along a plate's top edge, over its content and taking no room from it.</summary>
+        internal static Border Hairline(CornerRadius corner, double uiScale) => new()
+        {
+            CornerRadius = corner,
+            BorderBrush = ModeTrackEdge,
+            BorderThickness = new Thickness(0, 1 * uiScale, 0, 0),
+            IsHitTestVisible = false,
         };
 
         /// <summary>
