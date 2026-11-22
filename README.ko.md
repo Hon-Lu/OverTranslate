@@ -102,7 +102,7 @@ OverTranslate은 다섯 가지 번역 기능을 제공하며, 상황에 맞는 �
 
 ![실시간 번역 기능 미리 보기](docs/images/即時翻譯功能預覽_ko.png)
 
-> 이미지 출처: [《포켓몬스터 파이어레드·리프그린》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
+> 게임 화면 출처: [《포켓몬스터 파이어레드·리프그린》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### 번역 블록(영역 선택)
 

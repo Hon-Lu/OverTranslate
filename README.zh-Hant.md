@@ -102,7 +102,7 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 ![即時翻譯功能預覽.png](docs/images/即時翻譯功能預覽.png)
 
-> 圖片來源：[《寶可夢 火紅/葉綠》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
+> 遊戲畫面來源：[《寶可夢 火紅/葉綠》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### 翻譯區塊 (框選)
 

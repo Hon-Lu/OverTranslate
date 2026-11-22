@@ -102,7 +102,7 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 
 ![Real-time translation feature preview](docs/images/即時翻譯功能預覽_en.png)
 
-> Image source: [Pokémon FireRed / LeafGreen](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
+> Game screen source: [Pokémon FireRed / LeafGreen](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### Translation Blocks (area selection)
 
