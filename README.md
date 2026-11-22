@@ -100,7 +100,7 @@ Ideal for **video subtitles, game screens and comics**, and other situations tha
 There are two capture modes, **screen capture** and **window capture**:  
 screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1903 or later.
 
-![Real-time translation window preview](docs/images/即時翻譯視窗預覽_en.png)
+![Real-time translation feature preview](docs/images/即時翻譯功能預覽_en.png)
 
 ### Translation Blocks (area selection)
 
@@ -115,13 +115,12 @@ Video subtitles, game story dialogue, comic lettering and other text meant to be
 |-----------|--------------------|
 | ![Real-time translation - comic selection](docs/images/即時翻譯-漫畫框.png) | ![Real-time translation - comic result](docs/images/即時翻譯-漫畫翻譯.png) |
 | ![Real-time translation1 - comic selection](docs/images/即時翻譯1-漫畫框.png) | ![Real-time translation1 - comic result](docs/images/即時翻譯1-漫畫翻譯.png) |
-| ![Real-time translation - video selection](docs/images/即時翻譯-影片框.png) | ![Real-time translation - video result](docs/images/即時翻譯-影片翻譯.png) |
 | ![Real-time translation1 - dialogue game selection](docs/images/即時翻譯1-對話遊戲框.png) | ![Real-time translation1 - dialogue game result](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![Real-time translation2 - dialogue game selection](docs/images/即時翻譯2-對話遊戲框.png) | ![Real-time translation2 - dialogue game result](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > All translation comparisons above are real results from running OverTranslate.
 
-> Image sources: the first comic's original artwork is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third video is from [BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw); the fourth game screen is from [Hades](https://store.steampowered.com/app/1145360/); the fifth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
+> Image sources: the first comic's original artwork is AI-generated; the second, a four-panel comic, is by [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20); the third game screen is from [Hades](https://store.steampowered.com/app/1145360/); the fourth game screen is from [Magical Girl Witch Trials](https://store.steampowered.com/app/3101040).
 
 #### Games & UI
 Game screens, chat windows, menus and interface text.

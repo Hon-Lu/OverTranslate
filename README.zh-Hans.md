@@ -100,7 +100,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 画面来源分为 **屏幕捕获** 与 **窗口捕获** 两种模式：  
 屏幕捕获需 Windows 11 24H2 以上，窗口捕获需 Windows 10 1903 以上。
 
-![实时翻译窗口预览.png](docs/images/即時翻譯視窗預覽_zh-Hans.png)
+![实时翻译功能预览.png](docs/images/即時翻譯功能預覽_zh-Hans.png)
 
 ### 翻译区块（框选）
 
@@ -115,13 +115,12 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 |------|----------|
 | ![实时翻译-漫画框.png](docs/images/即時翻譯-漫畫框.png) | ![实时翻译-漫画翻译.png](docs/images/即時翻譯-漫畫翻譯.png) |
 | ![实时翻译1-漫画框.png](docs/images/即時翻譯1-漫畫框.png) | ![实时翻译1-漫画翻译.png](docs/images/即時翻譯1-漫畫翻譯.png) |
-| ![实时翻译-视频框.png](docs/images/即時翻譯-影片框.png) | ![实时翻译-视频翻译.png](docs/images/即時翻譯-影片翻譯.png) |
 | ![实时翻译1-对话游戏框.png](docs/images/即時翻譯1-對話遊戲框.png) | ![实时翻译1-对话游戏翻译.png](docs/images/即時翻譯1-對話遊戲翻譯.png) |
 | ![实时翻译2-对话游戏框.png](docs/images/即時翻譯2-對話遊戲框.png) | ![实时翻译2-对话游戏翻译.png](docs/images/即時翻譯2-對話遊戲翻譯.png) |
 
 > 以上翻译对比均为 OverTranslate 实机运行结果。
 
-> 图片来源：第一组漫画原图为 AI 生成；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组视频来源：[BanG Dream! Girls Band Party!☆PICO～OHMORI～](https://www.youtube.com/watch?v=Tsmf4dkigbw)；第四组游戏画面来源：[Hades](https://store.steampowered.com/app/1145360/)；第五组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
+> 图片来源：第一组漫画原图为 AI 生成；第二组四格漫画原作出自 [@kiyo_mariari](https://x.com/kiyo_mariari/status/2101991547877429535?s=20)；第三组游戏画面来源：[Hades](https://store.steampowered.com/app/1145360/)；第四组游戏画面来源：[《魔法少女的魔女审判》](https://store.steampowered.com/app/3101040)。
 
 #### 游戏・界面
 游戏画面、聊天室、菜单与界面文字。
@@ -137,7 +136,7 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 
 ### 原文对照
 
-通过浮动栏的「原文对照」功能，可保留原始画面，并将译文显示在独立的对照框中，方便比对原文与翻译结果。
+通过浮动窗口栏的「原文对照」功能，可保留原始画面，并将译文显示在独立的对照框中，方便比对原文与翻译结果。
 > 对照框可自由拖动、缩放或单独关闭。
 
 | 框选 | 翻译结果 |
