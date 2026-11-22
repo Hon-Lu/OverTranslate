@@ -640,6 +640,7 @@
                              VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
                              FontFamily="Cascadia Mono, Consolas, Microsoft JhengHei UI" FontSize="13"
                              AutomationProperties.Name="{DynamicResource S.Glossary.PasteMany}"
+                             ctl:LineStartCaret.IsEnabled="True"
                              AutomationProperties.AutomationId="GlossaryPasteBox"
                              TextChanged="PasteBox_TextChanged"/>
                     <TextBlock Grid.Row="3" Text="{DynamicResource S.Glossary.PasteHelp}" Style="{StaticResource Small}" Margin="2,6,0,12"/>
@@ -730,7 +731,7 @@
              set for each in ShowConfirm. Over the batch layer, so going back leaves it as it was. -->
         <Grid x:Name="ConfirmLayer" Visibility="Collapsed" Background="#8C000000"
               MouseLeftButtonDown="ConfirmScrim_MouseLeftButtonDown">
-            <Border Width="400" UseLayoutRounding="True" HorizontalAlignment="Center" VerticalAlignment="Center"
+            <Border x:Name="ConfirmCard" Width="400" UseLayoutRounding="True" HorizontalAlignment="Center" VerticalAlignment="Center"
                     CornerRadius="12" Background="{DynamicResource AppCardBg}"
                     BorderBrush="{DynamicResource AppBorder}" BorderThickness="1"
                     MouseLeftButtonDown="Card_MouseLeftButtonDown">

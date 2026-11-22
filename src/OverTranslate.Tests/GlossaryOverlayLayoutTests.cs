@@ -46,15 +46,126 @@ public class GlossaryOverlayLayoutTests
     [Theory]
     [InlineData(1920)]
     [InlineData(3840)]
-    public void AWideWindowStopsAtTheMaximumSoTheTableIsNotLeftEmpty(double window)
+    public void WithoutThePageAWideWindowStopsAtTheWindowMaximum(double window)
     {
         Assert.Equal(GlossaryOverlay.CardMaxWidth, GlossaryOverlay.CardWidthFor(window));
+    }
+
+    /// <summary>The page's card in a window <paramref name="window"/> wide: the window less the rail and the card's margins.</summary>
+    private static double Page(double window, bool rail = true) => window - (rail ? 248 : 0) - 32;
+
+    [Fact]
+    public void ThePageWidthUsedHereIsTheShells()
+    {
+        var shell = XDocument.Load(Path.Combine(StringsParityTests.ProjectDirectory(), "Views", "Shell", "ShellWindow.xaml"));
+        var rail = shell.Descendants(Wpf + "ColumnDefinition").First(c => (string?)c.Attribute(X + "Name") == "SidebarColumn");
+        var host = shell.Descendants(Wpf + "Border").First(b => (string?)b.Attribute(X + "Name") == "ContentHost");
+
+        Assert.Equal("248", (string?)rail.Attribute("Width"));
+        Assert.Equal("16,4,16,16", (string?)host.Attribute("Margin"));
+    }
+
+    [Fact]
+    public void TheShellHandsTheCardItsPage()
+    {
+        var code = File.ReadAllText(Path.Combine(StringsParityTests.ProjectDirectory(), "Views", "Shell", "ShellWindow.xaml.cs"));
+
+        Assert.Contains("Glossary.WidthReference = ContentHost;", code);
+    }
+
+    [Theory]
+    [InlineData(2048)]
+    [InlineData(1920)]
+    [InlineData(1600)]
+    public void InAWideWindowTheCardIsThePageLessAMargin(double window)
+    {
+        var page = Page(window);
+
+        Assert.Equal(page - 2 * GlossaryOverlay.PageInset, GlossaryOverlay.CardWidthFor(window, page), 3);
+    }
+
+    [Fact]
+    public void WithTheRailPutAwayTheCardStillStaysInsideTheWindow()
+    {
+        foreach (var window in new[] { 1024.0, 1280, 2048, 3840 })
+        {
+            var card = GlossaryOverlay.CardWidthFor(window, Page(window, rail: false));
+            Assert.True(card <= window - 32, $"{card} in a {window} window");
+            Assert.True(card < Page(window, rail: false), $"{card} is not narrower than the page in a {window} window");
+        }
+    }
+
+    [Theory]
+    [InlineData(1024)]
+    [InlineData(1100)]
+    [InlineData(1280)]
+    public void ASmallWindowKeepsTheCardItHadBefore(double window)
+    {
+        Assert.Equal(GlossaryOverlay.CardWidthFor(window), GlossaryOverlay.CardWidthFor(window, Page(window)), 3);
+    }
+
+    /// <summary>The middle of the page's card, from the overlay's left edge (the overlay spans the rail too).</summary>
+    private static double PageCenter(double window, bool rail = true) => (rail ? 248 : 0) + 16 + Page(window, rail) / 2;
+
+    [Theory]
+    [InlineData(2048)]
+    [InlineData(1920)]
+    [InlineData(1600)]
+    public void InAWideWindowTheCardSitsOverThePage(double window)
+    {
+        var card = GlossaryOverlay.CardWidthFor(window, Page(window));
+        var center = window / 2 + GlossaryOverlay.CardShiftFor(window, card, PageCenter(window));
+
+        Assert.Equal(PageCenter(window), center, 3);
+        // So it covers the page and leaves the rail alone, PageInset in from the page on both sides.
+        Assert.Equal(248 + 16 + GlossaryOverlay.PageInset, center - card / 2, 3);
+        Assert.Equal(window - 16 - GlossaryOverlay.PageInset, center + card / 2, 3);
+    }
+
+    [Fact]
+    public void TheCardIsNeverPushedPastTheWindowsEdges()
+    {
+        foreach (var window in Enumerable.Range(1024, 3000).Select(w => (double)w))
+        {
+            foreach (var rail in new[] { true, false })
+            {
+                var card = GlossaryOverlay.CardWidthFor(window, Page(window, rail));
+                var center = window / 2 + GlossaryOverlay.CardShiftFor(window, card, PageCenter(window, rail));
+                Assert.True(center - card / 2 >= 16 - 1e-9 && center + card / 2 <= window - 16 + 1e-9, $"{card} at {center} in {window} (rail {rail})");
+            }
+        }
+    }
+
+    [Fact]
+    public void ItSlidesRatherThanJumpsAsTheWindowIsResized()
+    {
+        var lefts = Enumerable.Range(1024, 2000).Select(w =>
+        {
+            var card = GlossaryOverlay.CardWidthFor(w, Page(w));
+            return w / 2.0 + GlossaryOverlay.CardShiftFor(w, card, PageCenter(w)) - card / 2;
+        }).ToList();
+
+        Assert.True(lefts.Zip(lefts.Skip(1)).All(pair => Math.Abs(pair.Second - pair.First) <= 1.0));
+    }
+
+    [Fact]
+    public void WithoutThePageItStaysInTheMiddle()
+    {
+        Assert.Equal(0, GlossaryOverlay.CardShiftFor(1280, 1152, 640));
+    }
+
+    [Fact]
+    public void TheLayersAboveTheCardMoveWithIt()
+    {
+        var code = File.ReadAllText(Path.Combine(Dir, "GlossaryOverlay.xaml.cs"));
+
+        Assert.Contains("Card.Margin = BatchCard.Margin = ConfirmCard.Margin = margin;", code);
     }
 
     [Fact]
     public void TheCardNeverGrowsNarrowerAsTheWindowWidens()
     {
-        var widths = Enumerable.Range(300, 3000).Select(w => GlossaryOverlay.CardWidthFor(w)).ToList();
+        var widths = Enumerable.Range(300, 3000).Select(w => GlossaryOverlay.CardWidthFor(w, Page(w))).ToList();
 
         Assert.True(widths.Zip(widths.Skip(1)).All(pair => pair.Second >= pair.First));
         Assert.True(widths.All(w => w >= GlossaryOverlay.CardMinWidth));

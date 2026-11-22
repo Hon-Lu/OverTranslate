@@ -50,10 +50,16 @@ public partial class GlossaryOverlay : UserControl
     private static readonly Duration FreshDuration = new(TimeSpan.FromMilliseconds(1400));
 
     /// <summary>
-    /// The widest the card gets. Beyond it the two columns of a 40-character entry only grow apart:
-    /// at 1200 each column is about 420 wide, room for the longest entry the table takes.
+    /// How wide the card gets from the window alone: nine tenths of it up to this. In a small window
+    /// that is what sizes the card; in a wide one the page beside it does (see <see cref="CardWidthFor"/>).
     /// </summary>
     internal const double CardMaxWidth = 1200;
+
+    /// <summary>
+    /// How much narrower than the page's own card this one stays on each side, so it reads as a layer
+    /// over the page rather than as the page itself.
+    /// </summary>
+    internal const double PageInset = 28;
 
     /// <summary>The narrowest the card gets, for a window kept narrower than the shell allows.</summary>
     internal const double CardMinWidth = 320;
@@ -188,24 +194,82 @@ public partial class GlossaryOverlay : UserControl
     }
 
     /// <summary>
-    /// Nine tenths of the window each way, up to <see cref="CardMaxWidth"/> by
-    /// <see cref="CardMaxHeight"/>, whatever the card holds: switching glossaries, searching or an
-    /// empty table never move it, and a bigger window gives the table more room. The sidebar keeps
-    /// its width; the editor and its two columns take what is left. The batch layer keeps a size of
-    /// its own (see <see cref="BatchWidth"/>): a long paste scrolls its preview.
+    /// The page's own card — the shell's content area — which this card follows in a wide window.
+    /// Set by the shell; without it the card goes by the window alone.
+    /// </summary>
+    public FrameworkElement? WidthReference
+    {
+        get => _widthReference;
+        set
+        {
+            if (_widthReference is not null) _widthReference.SizeChanged -= OnReferenceSizeChanged;
+            _widthReference = value;
+            if (value is not null) value.SizeChanged += OnReferenceSizeChanged;
+        }
+    }
+
+    private FrameworkElement? _widthReference;
+
+    // The rail opening or closing changes the page's width and not the window's.
+    private void OnReferenceSizeChanged(object sender, SizeChangedEventArgs e) => FitCard();
+
+    /// <summary>
+    /// A fixed size whatever the card holds: switching glossaries, searching or an empty table never
+    /// move it. Its width is set by <see cref="CardWidthFor"/>, its height by
+    /// <see cref="CardHeightFor"/>. The sidebar keeps its width; the editor and its two columns take
+    /// what is left. The batch layer keeps a size of its own (see <see cref="BatchWidth"/>): a long
+    /// paste scrolls its preview.
     /// </summary>
     private void FitCard()
     {
         if (ActualWidth <= 0 || ActualHeight <= 0) return;
-        Card.Width = CardWidthFor(ActualWidth);
+        var page = _widthReference is { IsLoaded: true, ActualWidth: > 0 } reference
+            ? (Width: reference.ActualWidth, Center: reference.TranslatePoint(new System.Windows.Point(reference.ActualWidth / 2, 0), this).X)
+            : (Width: 0d, Center: ActualWidth / 2);
+        Card.Width = CardWidthFor(ActualWidth, page.Width);
+        // Over the page rather than over the window, and the two layers above it with it. A margin on
+        // one side moves a centred card by half of it.
+        var shift = CardShiftFor(ActualWidth, Card.Width, page.Center);
+        var margin = new Thickness(Math.Max(0, 2 * shift), 0, Math.Max(0, -2 * shift), 0);
+        Card.Margin = BatchCard.Margin = ConfirmCard.Margin = margin;
         Card.MaxHeight = ActualHeight * 0.9;
         Card.Height = CardHeightFor(ActualHeight);
         BatchCard.Width = Math.Max(320, Math.Min(BatchWidth, ActualWidth - 64));
         BatchCard.Height = Math.Min(ActualHeight * 0.9, Math.Max(360, Math.Min(BatchMaxHeight, ActualHeight * 0.9 - 40)));
     }
 
-    /// <summary>The card's width in an overlay <paramref name="width"/> wide.</summary>
-    internal static double CardWidthFor(double width) => Math.Max(CardMinWidth, Math.Min(width * 0.9, CardMaxWidth));
+    /// <summary>
+    /// The card's width in an overlay <paramref name="width"/> wide, over a page whose own card is
+    /// <paramref name="page"/> wide (0 when unknown).
+    /// </summary>
+    /// <remarks>
+    /// Whichever is wider of nine tenths of the window up to <see cref="CardMaxWidth"/>, and the
+    /// page's card less <see cref="PageInset"/> each side. In a small window the first one wins and
+    /// the card is what it always was; in a wide one the card nearly covers the page instead of
+    /// stopping at a width that leaves both sides empty. Never closer than 16 to the window's edges.
+    /// </remarks>
+    internal static double CardWidthFor(double width, double page = 0)
+    {
+        var byWindow = Math.Min(width * 0.9, CardMaxWidth);
+        var byPage = page - 2 * PageInset;
+        return Math.Max(CardMinWidth, Math.Min(Math.Max(byWindow, byPage), width - 32));
+    }
+
+    /// <summary>
+    /// How far right of the overlay's middle the card sits: over the middle of the page at
+    /// <paramref name="pageCenter"/>, as far as that keeps it 16 from both window edges.
+    /// </summary>
+    /// <remarks>
+    /// The overlay spans the rail as well as the page. Centred on the window, a card as wide as the
+    /// page would hang over the rail and leave the page's far side bare. Held in from the edges rather
+    /// than switched between window and page, so resizing slides it instead of making it jump.
+    /// </remarks>
+    internal static double CardShiftFor(double width, double card, double pageCenter)
+    {
+        var half = card / 2 + 16;
+        if (width < 2 * half) return 0;
+        return Math.Clamp(pageCenter, half, width - half) - width / 2;
+    }
 
     /// <summary>The card's height in an overlay <paramref name="height"/> tall.</summary>
     internal static double CardHeightFor(double height) => Math.Min(height * 0.9, CardMaxHeight);
