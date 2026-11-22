@@ -183,26 +183,25 @@ internal partial class RealtimeAppearancePanel : Window
 
         int Physical(double dip) => (int)Math.Round(dip * screenScale);
 
-        // Decided once, on the first placement: a panel that flipped sides as a picker opened would
-        // move out from under the pointer that opened it.
-        if (!_placed) _opensUp = _bar.Top - _screen.Top >= _screen.Bottom - _bar.Bottom;
-
         // The window is made as tall as the panel with a picker open, and never resizes after: a
         // picker opening or closing only lays the panel out again inside it, against the capsule's
         // side. Resizing it with the panel showed a frame of the old layout in the new size — the
         // panel cut off — before the new layout was drawn.
         var margin = RootChrome.Margin;
         double tallest = TallestChromeHeight();
-        RootChrome.VerticalAlignment = _opensUp ? VerticalAlignment.Bottom : VerticalAlignment.Top;
-        Height = tallest * relative + margin.Top + margin.Bottom;
 
         int chromeWidth = Physical(Chrome.ActualWidth);
         int chromeHeight = Physical(tallest);
         int gap = Physical(Gap);
 
-        int chromeTop = _opensUp
-            ? Math.Max(_screen.Top, _bar.Top - gap - chromeHeight)
-            : Math.Min(_bar.Bottom + gap, Math.Max(_screen.Top, _screen.Bottom - chromeHeight));
+        // Decided once, on the first placement: a panel that flipped sides as a picker opened would
+        // move out from under the pointer that opened it.
+        (_opensUp, int chromeTop) = PlaceVertically(
+            _bar.Top, _bar.Bottom, _screen.Top, _screen.Bottom, chromeHeight, gap, _placed ? _opensUp : null);
+
+        RootChrome.VerticalAlignment = _opensUp ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+        Height = tallest * relative + margin.Top + margin.Bottom;
+
         int chromeLeft = Math.Clamp(
             _bar.Right - chromeWidth, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
 
@@ -213,6 +212,26 @@ internal partial class RealtimeAppearancePanel : Window
         _placed = true;
 
         Opacity = 1;
+    }
+
+    /// <summary>
+    /// Which side of the capsule the panel opens on, and the top of the window's panel area, in
+    /// physical pixels. <paramref name="height"/> is the panel with a picker open, the window's height.
+    /// </summary>
+    /// <remarks>
+    /// The side where that height fits, above first; where neither does, the side with more room. The
+    /// window is always set against the capsule and never pushed back onto the screen: the panel sits at
+    /// the window's capsule end, so a window pushed down from the top edge put the panel over the
+    /// capsule (a bar moved near the top of the screen). Past the far edge goes only the room a picker
+    /// would need, as the language menu does.
+    /// </remarks>
+    internal static (bool OpensUp, int ChromeTop) PlaceVertically(
+        int barTop, int barBottom, int screenTop, int screenBottom, int height, int gap, bool? decided)
+    {
+        int above = barTop - gap - screenTop;
+        int below = screenBottom - barBottom - gap;
+        bool up = decided ?? (above >= height || (below < height && above >= below));
+        return (up, up ? barTop - gap - height : barBottom + gap);
     }
 
     /// <summary>
