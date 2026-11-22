@@ -173,8 +173,8 @@ internal partial class RealtimeLanguageMenu : Window
     }
 
     /// <summary>
-    /// Sizes the menu for the session's screen, drops it below the capsule — or above it, when the
-    /// capsule sits too low for the list to fit underneath — and only then shows it.
+    /// Sizes the menu for the session's screen, opens it above the capsule — or below it, when the
+    /// capsule sits too high for the list to fit over it — and only then shows it.
     /// </summary>
     private void Place()
     {
@@ -207,7 +207,9 @@ internal partial class RealtimeLanguageMenu : Window
 
         int below = _bar.Bottom + gap;
         int above = _bar.Top - gap - chromeHeight;
-        bool opensUp = below + chromeHeight > _screen.Bottom && above >= _screen.Top;
+        // Above, as the bar's other panels open (模式, 顯示外觀); below only when it does not fit above
+        // and does below.
+        bool opensUp = above >= _screen.Top || below + chromeHeight > _screen.Bottom;
         int chromeTop = opensUp ? above : below;
 
         int chromeLeft = ChromeLeft(_anchor.Left, Physical(TextAlignmentOffset), chromeWidth, _screen);
