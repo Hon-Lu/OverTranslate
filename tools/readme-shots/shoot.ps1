@@ -148,8 +148,8 @@ function Scroll-ToAppearance([IntPtr]$h, [string]$Lang) {
     Mark "  scroll pct=$([math]::Round($pct, 2))"
     $sp.SetScrollPercent(-1, $pct); Start-Sleep -Milliseconds 800
 }
-# The settings page's AI 翻譯 group, cut from the screen: its title down to the OpenAI card, with the
-# group's rule on the left and a margin of page background around it.
+# The settings page's AI 翻譯 group, cut from the screen: its title down to the 翻譯輔助 group's 詞彙表
+# row under it, with the group's rule on the left and a margin of page background around it.
 function Shot-AiGroup([IntPtr]$h, [string]$Lang, [string]$Path) {
     $win = $A::FromHandle($h)
     $svs = $win.FindAll('Descendants', (New-Object System.Windows.Automation.PropertyCondition($A::IsScrollPatternAvailableProperty, $true)))
@@ -172,11 +172,16 @@ function Shot-AiGroup([IntPtr]$h, [string]$Lang, [string]$Path) {
         (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, (Str $Lang 'S.Provider.OpenAI'))),
         (New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::CheckBox)))))
     if (-not $card) { throw 'no OpenAI card' }
-    $t = $hdr.Current.BoundingRectangle; $c = $card.Current.BoundingRectangle
+    # The 詞彙表 row is a Border, which UI Automation does not see: its 管理 button, centred in the
+    # 62-DIP row, stands for it.
+    $manage = $sv.FindFirst('Descendants', (New-Object System.Windows.Automation.PropertyCondition($A::AutomationIdProperty, 'GlossaryManageBtn')))
+    if (-not $manage) { throw 'no glossary row' }
+    $t = $hdr.Current.BoundingRectangle; $c = $card.Current.BoundingRectangle; $g = $manage.Current.BoundingRectangle
     # 22 DIPs left of the title takes the rule and stops short of the section card's own border, and
-    # 10 under the last card stops short of that card's bottom edge: the group is the section's last.
+    # 16 under the button is the row's bottom edge, 10 more a margin above the section card's own edge:
+    # 翻譯輔助 is the section's last group.
     $x = [int]($t.Left - 22 * $scale); $y = [int]($t.Top - 12 * $scale)
-    Shot $Path $x $y ([int]($c.Right + 12 * $scale) - $x) ([int]($c.Bottom + 10 * $scale) - $y)
+    Shot $Path $x $y ([int]($c.Right + 12 * $scale) - $x) ([int]($g.Bottom + 26 * $scale) - $y)
 }
 
 # Only one OverTranslate can run: whatever is open is closed first, the user's own copy included.
