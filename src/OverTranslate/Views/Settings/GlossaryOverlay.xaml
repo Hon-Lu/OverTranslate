@@ -60,7 +60,7 @@
             <Setter Property="Background"      Value="Transparent"/>
             <Setter Property="BorderBrush"     Value="Transparent"/>
             <Setter Property="MaxLength"       Value="40"/>
-            <Setter Property="ToolTip"         Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+            <Setter Property="ctl:TrimmedToolTip.IsEnabled" Value="True"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource AppInputBorder}"/>
@@ -80,6 +80,7 @@
             <Setter Property="Background"      Value="Transparent"/>
             <Setter Property="BorderBrush"     Value="Transparent"/>
             <Setter Property="MaxLength"       Value="40"/>
+            <Setter Property="ctl:TrimmedToolTip.IsEnabled" Value="True"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource AppInputBorder}"/>
@@ -348,13 +349,15 @@
                                                 <StackPanel VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="{Binding Name}" FontFamily="{DynamicResource AppFont}" FontSize="14"
-                                                                   Foreground="{DynamicResource AppTextPrimary}" TextTrimming="CharacterEllipsis" MaxWidth="120"/>
+                                                                   Foreground="{DynamicResource AppTextPrimary}" TextTrimming="CharacterEllipsis" MaxWidth="120"
+                                                                   ctl:TrimmedToolTip.IsEnabled="True"/>
                                                         <TextBlock Text="{DynamicResource S.Glossary.InUse}" Visibility="{Binding InUseVisibility}"
                                                                    FontFamily="{DynamicResource AppFont}" FontSize="11" FontWeight="SemiBold"
                                                                    Foreground="{DynamicResource AppAccent}" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Detail}" Style="{StaticResource Small}" Margin="0,1,0,0"
-                                                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                               ctl:TrimmedToolTip.IsEnabled="True"/>
                                                 </StackPanel>
                                                 <!-- Deletes this glossary only, after asking; it does not
                                                      change which one is being edited (see ListDelete_Click). -->
@@ -671,10 +674,12 @@
                                                         <TextBlock Text="{Binding Number}" Style="{StaticResource Small}" Foreground="{Binding NumberBrush}"/>
                                                         <TextBlock Grid.Column="1" Grid.ColumnSpan="{Binding SourceSpan}" Text="{Binding Source}"
                                                                    FontFamily="{DynamicResource AppFont}" FontSize="13"
-                                                                   Foreground="{Binding SourceBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+                                                                   Foreground="{Binding SourceBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"
+                                                                   ctl:TrimmedToolTip.IsEnabled="True"/>
                                                         <TextBlock Grid.Column="2" FontFamily="{DynamicResource AppFont}" FontSize="13"
                                                                    Foreground="{DynamicResource AppTextPrimary}" TextTrimming="CharacterEllipsis"
-                                                                   Visibility="{Binding TargetVisibility}">
+                                                                   Visibility="{Binding TargetVisibility}"
+                                                                   ctl:TrimmedToolTip.IsEnabled="True">
                                                             <Run Text="{Binding Target, Mode=OneWay}"/><Run Text="{Binding Replaces, Mode=OneWay}" FontSize="11.5" Foreground="{DynamicResource AppTextSecondary}"/>
                                                         </TextBlock>
                                                     </Grid>
