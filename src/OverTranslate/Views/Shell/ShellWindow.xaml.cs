@@ -146,6 +146,8 @@ public partial class ShellWindow : Window
         // opens the service panel more than once.
         ServiceSettings.Closed += (_, _) => _settingsPage.RefreshServiceTiles();
         Glossary.Closed += (_, _) => _settingsPage.RefreshGlossaryRow();
+        // In a wide window the glossary card follows the page's width rather than the window's.
+        Glossary.WidthReference = ContentHost;
         DiagnosticNote.Closed += (_, result) => _settingsPage.ReportDiagnosticUpload(result);
         _settingsPage.CurrentSectionChanged += (_, section) => MarkSettingsSection(section);
 
