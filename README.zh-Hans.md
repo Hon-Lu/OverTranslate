@@ -101,7 +101,8 @@ OverTranslate 目前提供了五种翻译功能，可依不同使用场景快速
 屏幕捕获需 Windows 11 24H2 以上，窗口捕获需 Windows 10 1903 以上。
 
 ![实时翻译功能预览.png](docs/images/即時翻譯功能預覽_zh-Hans.png)
-> 游戏画面来源：[《宝可梦 火红/叶绿》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
+
+> 图片来源：[《宝可梦 火红/叶绿》](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### 翻译区块（框选）
 

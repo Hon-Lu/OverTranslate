@@ -101,7 +101,8 @@ OverTranslate には 5 つの翻訳機能があり、その場に合ったもの
 画面全体は Windows 11 24H2 以降、ウィンドウ指定は Windows 10 1903 以降が必要です。
 
 ![リアルタイム翻訳の機能プレビュー](docs/images/即時翻譯功能預覽_jp.png)
-> ゲーム画面の出典：[『ポケットモンスター ファイアレッド・リーフグリーン』](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
+
+> 画像の出典：[『ポケットモンスター ファイアレッド・リーフグリーン』](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### 翻訳ブロック（範囲選択）
 

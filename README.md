@@ -101,7 +101,8 @@ There are two capture modes, **screen capture** and **window capture**:
 screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1903 or later.
 
 ![Real-time translation feature preview](docs/images/即時翻譯功能預覽_en.png)
-> Game screen from [Pokémon FireRed / LeafGreen](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
+
+> Image source: [Pokémon FireRed / LeafGreen](https://pokemon.fandom.com/wiki/File:Thunderbolt_FRLG.png)
 
 ### Translation Blocks (area selection)
 
