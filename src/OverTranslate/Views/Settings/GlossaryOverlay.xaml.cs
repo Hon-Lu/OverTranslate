@@ -223,15 +223,10 @@ public partial class GlossaryOverlay : UserControl
     private void FitCard()
     {
         if (ActualWidth <= 0 || ActualHeight <= 0) return;
-        var page = _widthReference is { IsLoaded: true, ActualWidth: > 0 } reference
-            ? (Width: reference.ActualWidth, Center: reference.TranslatePoint(new System.Windows.Point(reference.ActualWidth / 2, 0), this).X)
-            : (Width: 0d, Center: ActualWidth / 2);
-        Card.Width = CardWidthFor(ActualWidth, page.Width);
-        // Over the page rather than over the window, and the two layers above it with it. A margin on
-        // one side moves a centred card by half of it.
-        var shift = CardShiftFor(ActualWidth, Card.Width, page.Center);
-        var margin = new Thickness(Math.Max(0, 2 * shift), 0, Math.Max(0, -2 * shift), 0);
-        Card.Margin = BatchCard.Margin = ConfirmCard.Margin = margin;
+        // Sized by the page but centred on the window, as the shell's other cards are: centred on the
+        // page it read as off-centre in the window.
+        var page = _widthReference is { IsLoaded: true, ActualWidth: > 0 } reference ? reference.ActualWidth : 0;
+        Card.Width = CardWidthFor(ActualWidth, page);
         Card.MaxHeight = ActualHeight * 0.9;
         Card.Height = CardHeightFor(ActualHeight);
         BatchCard.Width = Math.Max(320, Math.Min(BatchWidth, ActualWidth - 64));
@@ -253,22 +248,6 @@ public partial class GlossaryOverlay : UserControl
         var byWindow = Math.Min(width * 0.9, CardMaxWidth);
         var byPage = page - 2 * PageInset;
         return Math.Max(CardMinWidth, Math.Min(Math.Max(byWindow, byPage), width - 32));
-    }
-
-    /// <summary>
-    /// How far right of the overlay's middle the card sits: over the middle of the page at
-    /// <paramref name="pageCenter"/>, as far as that keeps it 16 from both window edges.
-    /// </summary>
-    /// <remarks>
-    /// The overlay spans the rail as well as the page. Centred on the window, a card as wide as the
-    /// page would hang over the rail and leave the page's far side bare. Held in from the edges rather
-    /// than switched between window and page, so resizing slides it instead of making it jump.
-    /// </remarks>
-    internal static double CardShiftFor(double width, double card, double pageCenter)
-    {
-        var half = card / 2 + 16;
-        if (width < 2 * half) return 0;
-        return Math.Clamp(pageCenter, half, width - half) - width / 2;
     }
 
     /// <summary>The card's height in an overlay <paramref name="height"/> tall.</summary>

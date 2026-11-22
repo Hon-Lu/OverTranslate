@@ -104,62 +104,20 @@ public class GlossaryOverlayLayoutTests
         Assert.Equal(GlossaryOverlay.CardWidthFor(window), GlossaryOverlay.CardWidthFor(window, Page(window)), 3);
     }
 
-    /// <summary>The middle of the page's card, from the overlay's left edge (the overlay spans the rail too).</summary>
-    private static double PageCenter(double window, bool rail = true) => (rail ? 248 : 0) + 16 + Page(window, rail) / 2;
-
-    [Theory]
-    [InlineData(2560)]
-    [InlineData(2048)]
-    [InlineData(1920)]
-    public void InAWideWindowTheCardSitsOverThePage(double window)
-    {
-        var card = GlossaryOverlay.CardWidthFor(window, Page(window));
-        var center = window / 2 + GlossaryOverlay.CardShiftFor(window, card, PageCenter(window));
-
-        Assert.Equal(PageCenter(window), center, 3);
-        // So it covers the page and leaves the rail alone, PageInset in from the page on both sides.
-        Assert.Equal(248 + 16 + GlossaryOverlay.PageInset, center - card / 2, 3);
-        Assert.Equal(window - 16 - GlossaryOverlay.PageInset, center + card / 2, 3);
-    }
-
     [Fact]
-    public void TheCardIsNeverPushedPastTheWindowsEdges()
+    public void TheCardsAreCentredOnTheWindow()
     {
-        foreach (var window in Enumerable.Range(1024, 3000).Select(w => (double)w))
+        var doc = Overlay();
+        foreach (var name in new[] { "Card", "BatchCard", "ConfirmCard" })
         {
-            foreach (var rail in new[] { true, false })
-            {
-                var card = GlossaryOverlay.CardWidthFor(window, Page(window, rail));
-                var center = window / 2 + GlossaryOverlay.CardShiftFor(window, card, PageCenter(window, rail));
-                Assert.True(center - card / 2 >= 16 - 1e-9 && center + card / 2 <= window - 16 + 1e-9, $"{card} at {center} in {window} (rail {rail})");
-            }
+            var card = Named(doc, name);
+            Assert.Equal("Center", (string?)card.Attribute("HorizontalAlignment"));
+            Assert.Null(card.Attribute("Margin"));
         }
-    }
 
-    [Fact]
-    public void ItSlidesRatherThanJumpsAsTheWindowIsResized()
-    {
-        var lefts = Enumerable.Range(1024, 2000).Select(w =>
-        {
-            var card = GlossaryOverlay.CardWidthFor(w, Page(w));
-            return w / 2.0 + GlossaryOverlay.CardShiftFor(w, card, PageCenter(w)) - card / 2;
-        }).ToList();
-
-        Assert.True(lefts.Zip(lefts.Skip(1)).All(pair => Math.Abs(pair.Second - pair.First) <= 1.0));
-    }
-
-    [Fact]
-    public void WithoutThePageItStaysInTheMiddle()
-    {
-        Assert.Equal(0, GlossaryOverlay.CardShiftFor(1280, 1152, 640));
-    }
-
-    [Fact]
-    public void TheLayersAboveTheCardMoveWithIt()
-    {
+        // Nothing moves them off the middle at run time either.
         var code = File.ReadAllText(Path.Combine(Dir, "GlossaryOverlay.xaml.cs"));
-
-        Assert.Contains("Card.Margin = BatchCard.Margin = ConfirmCard.Margin = margin;", code);
+        Assert.DoesNotContain("Card.Margin", code);
     }
 
     [Fact]
