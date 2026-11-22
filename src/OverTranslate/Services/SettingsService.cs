@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using NLog;
 using OverTranslate.Models;
 
@@ -64,6 +65,9 @@ public class SettingsService
 
     public AppSettings Current { get; private set; } = new();
 
+    /// <summary>Where the glossaries' entries are — see <see cref="GlossaryStore"/>.</summary>
+    private readonly GlossaryStore _glossaries = new(AppDataPaths.GlossariesFile);
+
     private SettingsService()
     {
         Load();
@@ -71,11 +75,14 @@ public class SettingsService
 
     public void Load()
     {
+        // Read before the settings: loading them can save them, and a save has to know what the
+        // glossaries file holds so as not to write the empty lists over it.
+        var glossaries = _glossaries.Read();
         Current = Load(SettingsPath, LegacySettingsPath, SettingsBackup.CurrentVersion, settings =>
         {
             Current = settings;
             Save();
-        });
+        }, glossaries);
     }
 
     /// <summary>
@@ -85,17 +92,22 @@ public class SettingsService
     /// <remarks>
     /// The backup comes before every save: once anything is saved, the file it would copy is gone.
     /// </remarks>
-    internal static AppSettings Load(string path, string legacyPath, string version, Action<AppSettings> save)
+    /// <param name="glossaries">The glossaries read from their own file, put together with the one in use the settings name.</param>
+    internal static AppSettings Load(
+        string path, string legacyPath, string version, Action<AppSettings> save,
+        List<GlossaryList>? glossaries = null)
     {
         var (json, readFrom) = ReadFirstAvailable(path, legacyPath);
         if (json is null)
         {
             var fresh = new AppSettings { LastRunVersion = version };
+            fresh.Glossary = WithLists(fresh.Glossary, glossaries);
             save(fresh);
             return fresh;
         }
 
         var settings = Parse(json);
+        settings.Glossary = WithLists(settings.Glossary, glossaries);
         if (settings.LastRunVersion != version)
         {
             // The first start after an update (or after 2.9.0 or earlier, which never wrote a
@@ -166,9 +178,19 @@ public class SettingsService
 
         settings.Realtime.Profiles = RealtimeSettings.CleanProfiles(
             settings.Realtime.Profiles.Count > 0 ? settings.Realtime.Profiles : ReadProfilesOneByOne(root));
-        settings.Glossary = GlossarySettings.Clean(settings.Glossary);
+        // The lists are not in this file (see GlossaryStore): a Glossary section with lists in it,
+        // written by a build between #228 and the store, is read past and dropped, and the one in
+        // use is checked against the lists once they are read (WithLists).
+        settings.Glossary = new GlossarySettings { ActiveId = (settings.Glossary.ActiveId ?? "").Trim() };
         return settings;
     }
+
+    /// <summary>
+    /// <paramref name="read"/>'s choice of glossary with <paramref name="lists"/> under it, cleaned:
+    /// a choice naming no list is no choice.
+    /// </summary>
+    private static GlossarySettings WithLists(GlossarySettings read, List<GlossaryList>? lists) =>
+        GlossarySettings.Clean(new GlossarySettings { Lists = lists ?? [], ActiveId = read.ActiveId });
 
     /// <summary>
     /// The custom 即時翻譯 modes one at a time, for a list that would not read in one piece: a
@@ -210,7 +232,9 @@ public class SettingsService
     {
         foreach (var property in target.GetType().GetProperties())
         {
-            if (!property.CanWrite)
+            // Not written to the file, so not read from it either: what an older build left under
+            // that name (GlossarySettings.Lists) is read past.
+            if (!property.CanWrite || property.IsDefined(typeof(JsonIgnoreAttribute), inherit: true))
                 continue;
 
             // Absent and explicitly-null both leave the property on its initialiser, which keeps a
@@ -397,6 +421,22 @@ public class SettingsService
         {
             Log.Error(ex, "Failed to save settings to {0}", SettingsPath);
         }
+
+        // Only when the lists were edited: anything else saved leaves the file alone.
+        _glossaries.SaveIfChanged(Current.Glossary.Lists);
+    }
+
+    /// <summary>
+    /// How many glossaries there are, how many entries each holds and how many the one in use
+    /// holds, for a problem report — which carries the counts and never the entries.
+    /// </summary>
+    public string DescribeGlossaries() => Describe(Current.Glossary);
+
+    internal static string Describe(GlossarySettings glossary)
+    {
+        var counts = string.Join(",", glossary.Lists.Select(list => list.Entries.Count));
+        var active = glossary.Active is { } list ? list.Entries.Count.ToString() : "none";
+        return $"lists={glossary.Lists.Count} entries=[{counts}] active={active}";
     }
 
     private void Write()

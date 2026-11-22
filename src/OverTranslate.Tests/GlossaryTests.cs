@@ -258,42 +258,7 @@ public class GlossaryTests
 
     // ── Settings ─────────────────────────────────────────────────────────────
 
-    [Fact]
-    public void ReadFromAFile_TheListsAreCleaned()
-    {
-        var json = """
-            {"Glossary":{"ActiveId":"b","Lists":[
-              {"Id":"a","Name":"一","TargetLanguage":"zh-hant","Entries":[{"Source":" アリサ ","Target":"艾莉莎"},{"Source":"","Target":"x"},{"Source":"アリサ","Target":"亞莉莎"}]},
-              {"Id":"a","Name":"二","TargetLanguage":"XX","Entries":[]}
-            ]}}
-            """;
-
-        var glossary = SettingsService.Parse(json).Glossary;
-
-        Assert.Equal(2, glossary.Lists.Count);
-        Assert.NotEqual(glossary.Lists[0].Id, glossary.Lists[1].Id);
-        Assert.Equal("ZH-HANT", glossary.Lists[0].TargetLanguage);
-        Assert.Equal(LanguageData.DefaultTargetLanguage, glossary.Lists[1].TargetLanguage);
-        Assert.Equal([("アリサ", "亞莉莎")], glossary.Lists[0].Entries.Select(entry => (entry.Source, entry.Target)));
-        Assert.Equal("", glossary.ActiveId);
-    }
-
-    [Fact]
-    public void ASavedGlossary_ReadsBack()
-    {
-        var settings = new AppSettings();
-        settings.Glossary.Lists.Add(new GlossaryList
-        {
-            Id = "g1", Name = "星環旅記", TargetLanguage = "EN-US",
-            Entries = [new() { Source = "アリサ", Target = "Alisa" }],
-        });
-        settings.Glossary.ActiveId = "g1";
-
-        var read = SettingsService.Parse(SettingsService.Serialize(settings)).Glossary;
-
-        Assert.Equal("g1", read.ActiveId);
-        Assert.Equal("Alisa", read.Active!.Entries[0].Target);
-    }
+    // Reading and writing glossaries.json: GlossaryStoreTests.
 
     [Fact]
     public void TheLimitsHold()

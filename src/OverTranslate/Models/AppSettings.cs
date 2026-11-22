@@ -357,5 +357,10 @@ public class AppSettings
     public LocalAiSettings LocalAi { get; set; } = new();
 
     /// <summary>The glossaries the two AI services translate names with — see <see cref="GlossarySettings"/>.</summary>
+    /// <remarks>
+    /// Only <see cref="GlossarySettings.ActiveId"/> is written to this file. The lists are the user's
+    /// own data rather than settings and live in <c>glossaries.json</c> beside it — see
+    /// <see cref="Services.GlossaryStore"/>.
+    /// </remarks>
     public GlossarySettings Glossary { get; set; } = new();
 }

@@ -40,6 +40,9 @@ internal static class AppDataPaths
     /// </summary>
     internal static string SettingsFile => Path.Combine(Root, "appsettings.json");
 
+    /// <summary>The glossaries' entries, kept apart from the settings — see <see cref="GlossaryStore"/>.</summary>
+    internal static string GlossariesFile => Path.Combine(Root, "glossaries.json");
+
     internal static string Logs => Path.Combine(Root, "logs");
 
     internal static string Diagnostics => Path.Combine(Root, "diagnostics");
