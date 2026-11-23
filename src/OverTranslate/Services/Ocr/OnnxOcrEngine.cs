@@ -609,7 +609,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             _skBitmap = ConvertToSkBitmap(bitmap);
             // Pixel art is read from a smooth redraw at a fixed number of pixels per block, detected
             // and recognised alike; see PixelArtSmoothing.ReadingBlock.
-            using var pixelArt = verticalText ? null : PixelArtSmoothing.ForReading(_skBitmap, live: maxDetectSize is not null);
+            using var pixelArt = verticalText ? null : PixelArtSmoothing.ForReading(_skBitmap);
             _frame = pixelArt is null
                 ? CreateDetectorFrame(_skBitmap, maxDetectSize)
                 : CreatePixelArtFrame(pixelArt);

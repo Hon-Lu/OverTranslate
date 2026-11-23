@@ -42,8 +42,7 @@ namespace OverTranslate.Services.Ocr;
 /// at 2 or 3 pixels a block the detector joins a menu's stacked lines into one box (ドグ, マグ and
 /// ラグ came back as one glyph, スプラッシャー vanished under フラッドウォー) or cuts a line into
 /// single glyphs. A picture is therefore read at <see cref="ReadingBlock"/> pixels per block
-/// whatever it was captured at — enlarged from a small window (by one pixel a block at most on the
-/// live path; see <see cref="PixelsPerBlock"/>), reduced from a large one — and
+/// whatever it was captured at — enlarged from a small window, reduced from a large one — and
 /// recognition crops from that same redraw, so the two need no mapping between them and the
 /// reading no longer depends on the window's size either. Recognising the redraw rather than the
 /// captured pixels costs some spaces in English ("used EMBER" as "usedEMBER"), as it did when it
@@ -126,43 +125,30 @@ internal static class PixelArtSmoothing
     /// 231/316 as captured and 251/316 at 4 — the same 79%, since at a fixed reading scale the
     /// picture handed over no longer depends on the window's size. Bicubic in place of bilinear
     /// for the redraw read 551.
+    ///
+    /// <para>The same for realtime translation, which costs more on a small window: the detector's
+    /// work grows with the picture's area. MEASURED live (primary monitor, a dialogue box's text
+    /// swapped every 3 seconds, 17 passes each), the median recognition time per pass went 129 →
+    /// 235ms on a FFIV PSP box at 2x (890x167), 212 → 193ms on a DQ6 box at 3x and 288 → 237ms at
+    /// 6x. Reading a 2x window at 3 instead would have cost 186ms and read 530 rather than 556 of
+    /// the 711 realtime readings; one scale for both flows was chosen over that.</para>
     /// </remarks>
     internal const int ReadingBlock = 4;
 
     /// <summary>
     /// The picture to read pixel art from — detection and recognition both — redrawn smooth at
-    /// <see cref="PixelsPerBlock"/> pixels per block, or null when it is not pixel art and the
+    /// <see cref="ReadingBlock"/> pixels per block, or null when it is not pixel art and the
     /// captured pixels are the answer. A point in it is the point divided by the scale on each
     /// axis in the captured picture.
     /// </summary>
-    /// <param name="live">A realtime read, polled again and again, rather than a still capture.</param>
-    internal static Reading? ForReading(SKBitmap source, bool live = false)
+    internal static Reading? ForReading(SKBitmap source)
     {
         if (Find(source) is not { } grid) return null;
-        int perX = PixelsPerBlock(grid.BlockX, live), perY = PixelsPerBlock(grid.BlockY, live);
         return new Reading(
-            RedrawAt(source, grid, perX, perY, new SKSamplingOptions(SKFilterMode.Linear)),
-            (double)perX / grid.BlockX,
-            (double)perY / grid.BlockY);
+            RedrawAt(source, grid, ReadingBlock, ReadingBlock, new SKSamplingOptions(SKFilterMode.Linear)),
+            (double)ReadingBlock / grid.BlockX,
+            (double)ReadingBlock / grid.BlockY);
     }
-
-    /// <summary>
-    /// <see cref="ReadingBlock"/>, except that a live read enlarges by at most one pixel a block:
-    /// a 2x capture is read at 3.
-    /// </summary>
-    /// <remarks>
-    /// Enlarging is what costs: the detector's work grows with the picture's area, and a 2x window
-    /// read at 4 is four times the pixels. MEASURED on the live path (realtime translation on the
-    /// primary monitor, a FFIV PSP dialogue box at 2x, 890x167, two lines swapped every 3 seconds,
-    /// 17 passes each): recognition took a median 129ms as captured, 235ms at 4 and 186ms at 3. At
-    /// 3x and above nothing grows — 212→193ms at 3x, 288→237ms at 6x, where 4 is a reduction. A
-    /// poll is 150ms and the live path is held to no delay anyone would notice, so the 2x window
-    /// keeps the smaller step and gives up some of the gain: the Japanese corpus's realtime
-    /// readings went 489 → 530 of 711 with it, against 556 at 4. A still capture has nobody
-    /// polling it and reads at 4.
-    /// </remarks>
-    internal static int PixelsPerBlock(int block, bool live) =>
-        live ? Math.Min(ReadingBlock, block + 1) : ReadingBlock;
 
     internal sealed record Reading(SKBitmap Bitmap, double ScaleX, double ScaleY) : IDisposable
     {
