@@ -556,24 +556,29 @@ internal sealed class RealtimeSessionController
         // screen or window, or else the preset kept for this screen or window — see InitialBlocks.
         // Before the layer, which draws them.
         _target = Target(request);
-        _blocks = InitialBlocks(out var applied);
+        _blocks = InitialBlocks(out var applied, out var missed);
 
         EnterEditMode();
 
         // Said on the bar rather than left to be noticed: blocks already on screen when the session
-        // opens are the one part of this feature that happens without the user doing anything.
+        // opens are the one part of this feature that happens without the user doing anything — and
+        // a preset kept for this screen or window but not placed says why here too, in the same slot.
         if (applied is { } preset)
         {
             control.ShowMessage(LocalizationService.Format(
                 "S.Realtime.FramingApplied", RealtimeFramingDisplay.Name(preset)));
+        }
+        else if (missed is { } near)
+        {
+            control.ShowMessage(FramingMissMessage(near));
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
-    /// The blocks a session opens with, and which kept framing they came from — null when they came
-    /// from the sitting before or from nowhere.
+    /// The blocks a session opens with, which kept framing they came from, and — when one was kept
+    /// but could not be placed — that preset, so the bar can say why.
     /// </summary>
     /// <remarks>
     /// The remembered blocks win over a preset: they are the user's own last answer, including the
@@ -582,21 +587,44 @@ internal sealed class RealtimeSessionController
     /// saved in — the one the user picked for that target, or the newest it has — see
     /// <see cref="RealtimeFramingStore.Match"/>.
     /// </remarks>
-    private List<RealtimeBlockPlacement> InitialBlocks(out Models.RealtimeFramingPreset? applied)
+    private List<RealtimeBlockPlacement> InitialBlocks(
+        out Models.RealtimeFramingPreset? applied, out Models.RealtimeFramingPreset? missed)
     {
         applied = null;
+        missed = null;
 
         if (_remembered is { } kept && RealtimeFramingStore.SameTarget(kept.Target, _target))
             return [.. kept.Blocks];
 
-        if (RealtimeFramingStore.Match(_target) is not { } preset) return [];
+        if (RealtimeFramingStore.Match(_target) is { } preset)
+        {
+            var blocks = RealtimeFramingStore.Placements(preset, _target);
+            if (blocks.Count > 0)
+            {
+                applied = preset;
+                return [.. blocks];
+            }
+        }
 
-        var blocks = RealtimeFramingStore.Placements(preset, _target.Screen);
-        if (blocks.Count == 0) return [];
+        // A preset is kept for this screen or window, but not for its size: the layer opens empty,
+        // and the bar says which size the preset was drawn for rather than opening on nothing with
+        // no explanation.
+        if (RealtimeFramingStore.Explain(_target, out var nearest) != RealtimeFramingStore.Miss.None)
+            missed = nearest;
 
-        applied = preset;
-        return [.. blocks];
+        return [];
     }
+
+    /// <summary>
+    /// What the bar says about a preset that is kept for this target but could not be placed: the
+    /// size it was drawn for, against the size the screen or window has now.
+    /// </summary>
+    private static string FramingMissMessage(Models.RealtimeFramingPreset preset) =>
+        preset.IsForWindow
+            ? LocalizationService.Format(
+                "S.Realtime.FramingWindowChanged", preset.WindowSize.Width, preset.WindowSize.Height)
+            : LocalizationService.Format(
+                "S.Realtime.FramingScreenChanged", preset.Screen.Width, preset.Screen.Height);
 
     /// <summary>
     /// What a framing belongs to: this session's screen, and its window when it is reading one — see
@@ -605,9 +633,11 @@ internal sealed class RealtimeSessionController
     /// <remarks>
     /// The window is named from its live handle rather than from the picker's stored pair, because
     /// the two can differ by the time a session runs — the page lets the title be refreshed, and a
-    /// window retitles itself as it plays. The stored pair is the fallback for a handle that has
-    /// stopped describing a window the list would offer, which is the case a title is being saved
-    /// for anyway.
+    /// window retitles itself as it plays. Its rectangle is measured now too, in the same form window
+    /// capture reads it at, because a window preset's blocks are kept relative to that rectangle: a
+    /// window that has moved since the session started must be saved and placed at where it is now.
+    /// The stored pair is the fallback for a handle that has stopped describing a window the list
+    /// would offer, which is the case a title is being saved for anyway.
     /// </remarks>
     private RealtimeFramingStore.Target Target(RealtimeStartRequest request)
     {
@@ -623,12 +653,18 @@ internal sealed class RealtimeSessionController
         string Title(string live) =>
             live.Length > 0 || !window ? live : stored.CaptureWindowTitle;
 
+        var bounds = window
+            ? RealtimeFramingStore.WindowBoundsOf(request.SourceWindow)
+            : System.Drawing.Rectangle.Empty;
+        if (window && bounds.Width <= 0 && _target.IsWindow) bounds = _target.WindowBounds;
+
         return new RealtimeFramingStore.Target(
             request.CaptureMode,
             request.ScreenBounds,
             _screenDeviceName,
             Process(named?.ProcessName ?? ""),
-            Title(named?.Title ?? ""));
+            Title(named?.Title ?? ""),
+            bounds);
     }
 
     /// <summary>
@@ -643,7 +679,7 @@ internal sealed class RealtimeSessionController
     /// </remarks>
     public void SaveFraming()
     {
-        if (_request is null || _control is not { } control) return;
+        if (_request is not { } request || _control is not { } control) return;
 
         if (_blocks.Count == 0)
         {
@@ -653,7 +689,24 @@ internal sealed class RealtimeSessionController
 
         try
         {
-            var preset = RealtimeFramingStore.Save(_target, _blocks);
+            var target = Target(request);
+            if (!target.HasWindow)
+            {
+                control.ShowMessage(LocalizationService.Get("S.Realtime.FramingSaveFailed"), RealtimeMessageKind.Failure);
+                return;
+            }
+
+            var preset = RealtimeFramingStore.Save(target, _blocks);
+            if (preset is null)
+            {
+                control.ShowMessage(LocalizationService.Format(
+                    "S.Realtime.FramingLimitReached", Models.RealtimeSettings.MaxFramingPresets));
+                return;
+            }
+
+            // The window may have moved while this was being framed: what follows (the bar's list,
+            // the next save) is about where it is now.
+            _target = target;
             control.ShowMessage(LocalizationService.Format(
                 "S.Realtime.FramingSaved", RealtimeFramingDisplay.Name(preset)));
             Log.Info("Realtime framing saved for {Target} ({Count} blocks)",
@@ -672,7 +725,31 @@ internal sealed class RealtimeSessionController
     /// framing.
     /// </summary>
     public IReadOnlyList<Models.RealtimeFramingPreset> FramingPresets =>
-        IsActive ? RealtimeFramingStore.ForTarget(_target) : [];
+        IsActive ? RealtimeFramingStore.ForTarget(SessionTarget) : [];
+
+    /// <summary>
+    /// Why a preset kept for this target cannot be placed — its screen or window is another size —
+    /// or null when that is not what is in the way. The bar's 翻譯區域預設 says this instead of
+    /// "nothing kept" when the list is empty for that reason, the same sentence a start says.
+    /// </summary>
+    public string? FramingMissReason
+    {
+        get
+        {
+            if (!IsActive) return null;
+            return RealtimeFramingStore.Explain(SessionTarget, out var nearest) == RealtimeFramingStore.Miss.None
+                ? null
+                : FramingMissMessage(nearest!);
+        }
+    }
+
+    /// <summary>
+    /// The target as it is now, for work done while framing rather than at start: the window may have
+    /// been moved — or resized — since the session opened, and its rectangle decides where a window
+    /// preset's blocks go.
+    /// </summary>
+    private RealtimeFramingStore.Target SessionTarget =>
+        _request is { } request ? Target(request) : _target;
 
     /// <summary>
     /// Puts the framing <paramref name="id"/> names on the screen — a saved arrangement picked from
@@ -700,8 +777,21 @@ internal sealed class RealtimeSessionController
         if (_control is not { } control) return;
         if (RealtimeFramingStore.ForId(id) is not { } preset) return;
 
-        var blocks = RealtimeFramingStore.Placements(preset, _target.Screen);
-        if (blocks.Count == 0) return;
+        var target = SessionTarget;
+        if (preset.IsForWindow && !target.HasWindow)
+        {
+            control.ShowMessage(LocalizationService.Get("S.Realtime.WindowCaptureGone"), RealtimeMessageKind.Failure);
+            return;
+        }
+
+        var blocks = RealtimeFramingStore.Placements(preset, target);
+        if (blocks.Count == 0)
+        {
+            // Kept for this screen or window but drawn for another size: say which, in the place a
+            // successful switch says "applied".
+            control.ShowMessage(FramingMissMessage(preset));
+            return;
+        }
 
         // This framing is the one already on the screen — the button pressed again, or the only one
         // kept and already in use. Nothing to rebuild, and while translating nothing worth taking the
@@ -716,6 +806,10 @@ internal sealed class RealtimeSessionController
 
         try
         {
+            // Where the window is now is what the blocks were placed against; keep it, so the next
+            // save or list is about the same rectangle.
+            _target = target;
+
             if (_edit is { } edit)
             {
                 edit.SetBlocks(blocks);

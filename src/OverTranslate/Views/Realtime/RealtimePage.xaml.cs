@@ -689,16 +689,19 @@ public partial class RealtimePage : UserControl
         if (preset.IsForWindow)
         {
             if (CaptureWindowList.FindStored(
-                    CaptureWindowList.Enumerate(), preset.WindowProcess, preset.WindowTitle) is not { } window ||
-                ScreenOf(window.Hwnd) is not { } windowScreen)
+                    CaptureWindowList.Enumerate(), preset.WindowProcess, preset.WindowTitle) is not { } window)
             {
                 SetStatus(LocalizationService.Get("S.Realtime.WindowCaptureGone"), isError: true);
                 return;
             }
 
-            if (windowScreen.Bounds != preset.Screen.ToRectangle())
+            // A window preset's blocks are relative to the window, so where it is and which screen it
+            // is on do not matter; the size does, and a window of another size is not its target.
+            var bounds = CaptureWindowList.CaptureBounds(window.Hwnd);
+            if (bounds.Width <= 0 || bounds.Height <= 0 ||
+                preset.WindowSize.Width != bounds.Width || preset.WindowSize.Height != bounds.Height)
             {
-                ShowFramingScreenChanged(preset);
+                ShowFramingWindowChanged(preset);
                 return;
             }
 
@@ -748,6 +751,16 @@ public partial class RealtimePage : UserControl
         SetStatus(
             LocalizationService.Format(
                 "S.Realtime.FramingScreenChanged", preset.Screen.Width, preset.Screen.Height),
+            isError: true);
+
+    /// <summary>
+    /// Says a window framing was drawn for a window of another size — its blocks are relative to the
+    /// window, so a resize changes what they cover.
+    /// </summary>
+    private void ShowFramingWindowChanged(RealtimeFramingPreset preset) =>
+        SetStatus(
+            LocalizationService.Format(
+                "S.Realtime.FramingWindowChanged", preset.WindowSize.Width, preset.WindowSize.Height),
             isError: true);
 
     private string? CurrentScreenDeviceName(IReadOnlyList<ScreenItem> items)

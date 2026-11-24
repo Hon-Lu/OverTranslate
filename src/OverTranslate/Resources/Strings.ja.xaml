@@ -338,6 +338,8 @@
     <sys:String x:Key="S.Realtime.FramingForget">この翻訳範囲を保存しない</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchHint">この画面またはウィンドウで使う翻訳範囲のプリセットを切り替えます。</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchEmpty">この画面またはウィンドウにはまだ翻訳範囲が保存されていません。範囲を選んでフローティングバーの「範囲を保存」を押すと保存できます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingLimitReached">保存できる翻訳範囲は {0} 個までです。先に既存の項目を削除してください</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowChanged">このプリセットは {0}×{1} のウィンドウで保存されたため、現在のウィンドウサイズでは適用できません</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">表示スタイル</sys:String>
     <sys:String x:Key="S.Realtime.Preview">プレビュー</sys:String>

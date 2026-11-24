@@ -344,6 +344,8 @@
     <sys:String x:Key="S.Realtime.FramingForget">不再保留此翻譯區域</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchHint">切換這個螢幕或視窗的翻譯區域預設。</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchEmpty">這個螢幕或視窗還沒有保留翻譯區域；框選後按浮動視窗列的「儲存框選」即可保留。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingLimitReached">已達 {0} 組上限，請先刪除現有項目。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowChanged">此預設是在 {0}×{1} 的視窗儲存的，與目前視窗大小不同，無法套用</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">顯示外觀</sys:String>
     <sys:String x:Key="S.Realtime.Preview">預覽</sys:String>

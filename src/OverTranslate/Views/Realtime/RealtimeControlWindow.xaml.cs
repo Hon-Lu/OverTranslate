@@ -1017,7 +1017,10 @@ public partial class RealtimeControlWindow : Window
         var presets = RealtimeSessionController.Instance.FramingPresets;
         if (presets.Count == 0)
         {
-            ShowMessage(LocalizationService.Get("S.Realtime.FramingSwitchEmpty"));
+            // Nothing to offer — but when presets are kept for this screen or window at another
+            // size, say that rather than "nothing kept": it is the reason the list is empty.
+            ShowMessage(RealtimeSessionController.Instance.FramingMissReason
+                        ?? LocalizationService.Get("S.Realtime.FramingSwitchEmpty"));
             return;
         }
 
@@ -1218,6 +1221,12 @@ public partial class RealtimeControlWindow : Window
 
     private static void SetHeldDown(System.Windows.Controls.Button button, bool open)
     {
+        // A button held down while a panel is open must not explain itself over the panel a press
+        // later: the pointer is still on it, and the tooltip would come up on the list it opened.
+        // Switched off with the hold and back with it — see the panel's own close, which always
+        // passes false.
+        System.Windows.Controls.ToolTipService.SetIsEnabled(button, !open);
+
         if (open)
         {
             button.SetResourceReference(ForegroundProperty, "AppAccent");
@@ -1233,6 +1242,10 @@ public partial class RealtimeControlWindow : Window
     /// <summary>The button held down while its panel is open, in 原文對照's way of showing a state.</summary>
     private void SetAppearanceOpen(bool open)
     {
+        // The same rule as SetHeldDown: the pointer stays on the button that opened the panel, and
+        // its tooltip would come up over the panel if it stayed enabled.
+        System.Windows.Controls.ToolTipService.SetIsEnabled(AppearanceBtn, !open);
+
         if (open)
         {
             AppearanceBtn.SetResourceReference(ForegroundProperty, "AppAccent");

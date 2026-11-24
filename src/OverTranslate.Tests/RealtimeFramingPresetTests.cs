@@ -9,12 +9,15 @@ namespace OverTranslate.Tests;
 
 /// <summary>
 /// The framings kept between sittings: the file's shape, the rules that decide what the list can
-/// hold, which of a target's presets a session opens on, and what a stored rectangle turns back into.
+/// hold, which of a target's presets a session opens on, where a window's blocks go when the window
+/// moves, and what a stored rectangle turns back into.
 /// </summary>
 public class RealtimeFramingPresetTests
 {
     private static readonly Rectangle Screen1080 = new(0, 0, 1920, 1080);
+    private static readonly Rectangle WindowAt = new(100, 200, 1280, 720);
     private const string Display1 = @"\\.\DISPLAY1";
+    private const string Display2 = @"\\.\DISPLAY2";
 
     // ── The file ────────────────────────────────────────────────────────────────────────────────
 
@@ -35,6 +38,7 @@ public class RealtimeFramingPresetTests
                 Screen = new RealtimeFramingRect { X = 0, Y = 0, Width = 1920, Height = 1080 },
                 WindowProcess = "game",
                 WindowTitle = "Game — Chapter 3",
+                WindowSize = new RealtimeFramingRect { Width = 1280, Height = 720 },
                 SavedAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc),
                 Blocks =
                 [
@@ -62,6 +66,7 @@ public class RealtimeFramingPresetTests
         Assert.Equal(new Rectangle(0, 0, 1920, 1080), preset.Screen.ToRectangle());
         Assert.Equal("game", preset.WindowProcess);
         Assert.Equal("Game — Chapter 3", preset.WindowTitle);
+        Assert.Equal(new Rectangle(0, 0, 1280, 720), preset.WindowSize.ToRectangle());
         Assert.Equal(new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc), preset.SavedAt);
 
         var block = Assert.Single(preset.Blocks);
@@ -91,6 +96,28 @@ public class RealtimeFramingPresetTests
         // second time; nothing in a preset's rectangles is written that way.
         Assert.DoesNotContain("\"Location\": {", json);
         Assert.DoesNotContain("IsEmpty", json);
+    }
+
+    /// <summary>
+    /// The properties worked out from the others — the target's key above all, which carries
+    /// separators — are a view of the preset, not part of it, and must not reach the settings file.
+    /// </summary>
+    [Fact]
+    public void DerivedProperties_AreNotWrittenToTheFile()
+    {
+        var settings = new AppSettings();
+        settings.Realtime.FramingPresets =
+        [
+            Make("a", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+                windowSize: new Size(1280, 720)),
+        ];
+
+        var json = SettingsService.Serialize(settings);
+
+        Assert.DoesNotContain("IsForWindow", json);
+        Assert.DoesNotContain("TargetKey", json);
+        Assert.DoesNotContain("IsUsable", json);
+        Assert.DoesNotContain("\\u001f", json);
     }
 
     [Fact]
@@ -127,6 +154,21 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
+    public void AWindowPresetWithNoWindowSize_IsDropped()
+    {
+        // Its blocks are relative to a window this build cannot ask about, so there is nowhere to
+        // put them.
+        const string json = """
+            {"Realtime":{"FramingPresets":[
+              {"Id":"a","CaptureMode":"Window","WindowProcess":"game","WindowTitle":"Game",
+               "Blocks":[{"X":0,"Y":0,"Width":10,"Height":10}]}
+            ]}}
+            """;
+
+        Assert.Empty(SettingsService.Parse(json).Realtime.FramingPresets);
+    }
+
+    [Fact]
     public void MissingOrEmptyList_ReadsAsNoFramings()
     {
         Assert.Empty(SettingsService.Parse("{}").Realtime.FramingPresets);
@@ -140,7 +182,7 @@ public class RealtimeFramingPresetTests
     {
         var older = Make("older", savedAt: new DateTime(2026, 1, 1));
         var newer = Make("newer", savedAt: new DateTime(2026, 2, 1));
-        var other = Make("other", device: @"\\.\DISPLAY2", savedAt: new DateTime(2026, 3, 1));
+        var other = Make("other", device: Display2, savedAt: new DateTime(2026, 3, 1));
 
         var clean = RealtimeSettings.CleanFramingPresets([older, newer, other]);
 
@@ -153,7 +195,7 @@ public class RealtimeFramingPresetTests
     {
         var older = Make("older", savedAt: new DateTime(2026, 1, 1));
         var newer = Make("newer", savedAt: new DateTime(2026, 2, 1));
-        var other = Make("other", device: @"\\.\DISPLAY2", savedAt: new DateTime(2026, 3, 1));
+        var other = Make("other", device: Display2, savedAt: new DateTime(2026, 3, 1));
 
         var clean = RealtimeSettings.CleanFramingPresets([older, newer, other]);
         var byId = clean.ToDictionary(preset => preset.Id);
@@ -187,7 +229,7 @@ public class RealtimeFramingPresetTests
     {
         var newer = Make("newer", selected: true, savedAt: new DateTime(2026, 2, 1));
         var older = Make("older", selected: true, savedAt: new DateTime(2026, 1, 1));
-        var other = Make("other", device: @"\\.\DISPLAY2", selected: true, savedAt: new DateTime(2026, 1, 15));
+        var other = Make("other", device: Display2, selected: true, savedAt: new DateTime(2026, 1, 15));
 
         var byId = RealtimeSettings.CleanFramingPresets([newer, older, other])
             .ToDictionary(preset => preset.Id);
@@ -241,7 +283,7 @@ public class RealtimeFramingPresetTests
     public void TheListStopsAtItsCap()
     {
         var many = Enumerable.Range(0, RealtimeSettings.MaxFramingPresets + 5)
-            .Select(index => Make("p" + index, device: @"\\.\DISPLAY" + index, savedAt: new DateTime(2026, 1, 1).AddDays(index)))
+            .Select(index => Make("p" + index, device: Display2 + index, savedAt: new DateTime(2026, 1, 1).AddDays(index)))
             .ToList();
 
         var clean = RealtimeSettings.CleanFramingPresets(many);
@@ -282,20 +324,16 @@ public class RealtimeFramingPresetTests
     public void AScreen_MatchesItsOwnDeviceAndRectangleOnly()
     {
         var presets = new[] { Make("a") };
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1);
+        var target = ScreenTarget();
 
         Assert.Same(presets[0], RealtimeFramingStore.Match(presets, target));
 
         // Same resolution, a different monitor: physical pixels on one monitor mean nothing on the
         // other, so this is not the same target.
-        Assert.Null(RealtimeFramingStore.Match(presets, target with { DeviceName = @"\\.\DISPLAY2" }));
+        Assert.Null(RealtimeFramingStore.Match(presets, target with { DeviceName = Display2 }));
 
         // The same monitor at another resolution: the blocks would be in the wrong place.
         Assert.Null(RealtimeFramingStore.Match(presets, target with { Screen = new Rectangle(0, 0, 2560, 1440) }));
-
-        // A window is not a screen, however alike the rectangles.
-        Assert.Null(RealtimeFramingStore.Match(
-            presets, target with { Mode = RealtimeCaptureMode.Window, WindowProcess = "game" }));
     }
 
     [Fact]
@@ -303,7 +341,7 @@ public class RealtimeFramingPresetTests
     {
         var newer = Make("newer", savedAt: new DateTime(2026, 2, 1));
         var older = Make("older", selected: true, savedAt: new DateTime(2026, 1, 1));
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1);
+        var target = ScreenTarget();
 
         Assert.Equal("older", RealtimeFramingStore.Match([newer, older], target)!.Id);
 
@@ -319,8 +357,7 @@ public class RealtimeFramingPresetTests
         var chat = Make("chat", mode: RealtimeCaptureMode.Window, process: "browser", title: "Chat",
             savedAt: new DateTime(2026, 1, 1));
         var presets = new[] { video, chat };
-        var target = new RealtimeFramingStore.Target(
-            RealtimeCaptureMode.Window, Screen1080, Display1, "browser", "Video");
+        var target = WindowTarget("browser", "Video");
 
         // The title decides: this is the Video window, whatever was selected.
         Assert.Equal("video", RealtimeFramingStore.Match(presets, target)!.Id);
@@ -336,6 +373,58 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
+    public void AWindow_OnAnotherScreenOrInAnotherPlace_IsStillTheSameTarget()
+    {
+        // A window preset belongs to its application and size, not to a monitor or a position: its
+        // blocks are relative, so the window can be moved anywhere and still get them.
+        var preset = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+            windowSize: new Size(1280, 720));
+        var moved = WindowTarget("game", "Game", new Rectangle(600, 700, 1280, 720));
+        var elsewhere = WindowTarget("game", "Game", new Rectangle(100, 200, 1280, 720)) with
+        {
+            Screen = new Rectangle(1920, 0, 1920, 1080),
+            DeviceName = Display2,
+        };
+
+        Assert.Same(preset, RealtimeFramingStore.Match([preset], moved));
+        Assert.Same(preset, RealtimeFramingStore.Match([preset], elsewhere));
+    }
+
+    [Fact]
+    public void AWindowOfAnotherSize_IsAnotherTarget()
+    {
+        var preset = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+            windowSize: new Size(1280, 720));
+        var target = WindowTarget("game", "Game", new Rectangle(100, 200, 1600, 900));
+
+        Assert.Null(RealtimeFramingStore.Match([preset], target));
+        Assert.Equal(
+            RealtimeFramingStore.Miss.WindowSize,
+            RealtimeFramingStore.Explain([preset], target, out var nearest));
+        Assert.Same(preset, nearest);
+    }
+
+    [Fact]
+    public void TwoWindowsOfOneApplication_AreAmbiguous_NotASizeProblem()
+    {
+        // Both fit the window's size; what Match cannot do is tell the two windows apart without a
+        // title. That is not a resize, and saying it was would send the user to resize a window that
+        // is the right size already.
+        var presets = new[]
+        {
+            Make("video", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video"),
+            Make("chat", mode: RealtimeCaptureMode.Window, process: "browser", title: "Chat"),
+        };
+        var target = WindowTarget("browser", "Something");
+
+        Assert.Null(RealtimeFramingStore.Match(presets, target));
+        Assert.Equal(
+            RealtimeFramingStore.Miss.None,
+            RealtimeFramingStore.Explain(presets, target, out var nearest));
+        Assert.Null(nearest);
+    }
+
+    [Fact]
     public void ARetitledWindow_KeepsItsOnlyTitle()
     {
         // A browser retitles itself as it plays. One title among this target's presets can only be
@@ -347,8 +436,7 @@ public class RealtimeFramingPresetTests
                 savedAt: new DateTime(2026, 2, 1)),
             Make("one", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video — 1"),
         };
-        var target = new RealtimeFramingStore.Target(
-            RealtimeCaptureMode.Window, Screen1080, Display1, "browser", "Video — 2");
+        var target = WindowTarget("browser", "Video — 2");
 
         Assert.Equal("two", RealtimeFramingStore.Match(presets, target)!.Id);
     }
@@ -357,10 +445,43 @@ public class RealtimeFramingPresetTests
     public void AnotherApplication_OnTheSameScreen_IsAnotherTarget()
     {
         var presets = new[] { Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game") };
-        var target = new RealtimeFramingStore.Target(
-            RealtimeCaptureMode.Window, Screen1080, Display1, "browser", "Video");
+        var target = WindowTarget("browser", "Video");
 
         Assert.Null(RealtimeFramingStore.Match(presets, target));
+        Assert.Equal(RealtimeFramingStore.Miss.None, RealtimeFramingStore.Explain(presets, target, out _));
+    }
+
+    [Fact]
+    public void AScreenAtAnotherResolution_SaysWhichSizeItWants()
+    {
+        var preset = Make("a", screen: new Rectangle(0, 0, 1920, 1080));
+        var target = ScreenTarget() with { Screen = new Rectangle(0, 0, 2560, 1440) };
+
+        Assert.Null(RealtimeFramingStore.Match([preset], target));
+        Assert.Equal(
+            RealtimeFramingStore.Miss.ScreenSize,
+            RealtimeFramingStore.Explain([preset], target, out var nearest));
+        Assert.Same(preset, nearest);
+    }
+
+    [Fact]
+    public void TheFramingRememberedFromTheSittingBefore_ComesBackForTheSameTargetOnly()
+    {
+        var target = WindowTarget("game", "Game — Chapter 1", new Rectangle(100, 200, 1280, 720));
+
+        // A window that retitled itself, moved, or landed on another screen between two sittings is
+        // still the window the blocks were drawn on; the size is what makes it the same target.
+        Assert.True(RealtimeFramingStore.SameTarget(target, target with { WindowTitle = "Game — Chapter 2" }));
+        Assert.True(RealtimeFramingStore.SameTarget(target, target with { WindowBounds = new Rectangle(400, 50, 1280, 720) }));
+        Assert.True(RealtimeFramingStore.SameTarget(target, target with { DeviceName = Display2, Screen = new Rectangle(1920, 0, 1920, 1080) }));
+
+        Assert.True(RealtimeFramingStore.SameTarget(ScreenTarget(), ScreenTarget()));
+        Assert.False(RealtimeFramingStore.SameTarget(target, target with { WindowProcess = "browser" }));
+        Assert.False(RealtimeFramingStore.SameTarget(target, target with { WindowBounds = new Rectangle(100, 200, 1600, 900) }));
+        Assert.False(RealtimeFramingStore.SameTarget(target, ScreenTarget()));
+        Assert.False(RealtimeFramingStore.SameTarget(ScreenTarget(), ScreenTarget() with { DeviceName = Display2 }));
+        Assert.False(RealtimeFramingStore.SameTarget(
+            ScreenTarget(), ScreenTarget() with { Screen = new Rectangle(0, 0, 2560, 1440) }));
     }
 
     [Fact]
@@ -371,53 +492,74 @@ public class RealtimeFramingPresetTests
             savedAt: new DateTime(2026, 1, 2));
         var browser = Make("browser", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video",
             savedAt: new DateTime(2026, 1, 1));
-        var elsewhere = Make("elsewhere", device: @"\\.\DISPLAY2", savedAt: new DateTime(2026, 1, 3));
+        var elsewhere = Make("elsewhere", device: Display2, savedAt: new DateTime(2026, 1, 3));
+        var resized = Make("resized", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+            windowSize: new Size(1600, 900), savedAt: new DateTime(2026, 1, 4));
 
-        var target = new RealtimeFramingStore.Target(
-            RealtimeCaptureMode.Window, Screen1080, Display1, "game", "Game");
+        var target = WindowTarget("game", "Game");
 
-        // Only the game window's own: not the screen's, not another application's, not another
-        // monitor's — and in the order the settings list holds them.
+        // Only the game window's own, at its size: not the screen's, not another application's, not
+        // another monitor's, and not the same application at a size this window does not have.
         Assert.Equal(
             new[] { "game" },
-            RealtimeFramingStore.ForTarget([screen, game, browser, elsewhere], target)
+            RealtimeFramingStore.ForTarget([screen, game, browser, elsewhere, resized], target)
                 .Select(preset => preset.Id));
-    }
-
-    [Fact]
-    public void TheFramingRememberedFromTheSittingBefore_ComesBackForTheSameTargetOnly()
-    {
-        var target = new RealtimeFramingStore.Target(
-            RealtimeCaptureMode.Window, Screen1080, Display1, "game", "Game — Chapter 1");
-
-        // A window that retitled itself between two sittings is still the window the blocks were
-        // drawn on: there is only one candidate, and it is this one.
-        Assert.True(RealtimeFramingStore.SameTarget(target, target with { WindowTitle = "Game — Chapter 2" }));
-
-        Assert.True(RealtimeFramingStore.SameTarget(
-            target with { Mode = RealtimeCaptureMode.Screen },
-            target with { Mode = RealtimeCaptureMode.Screen }));
-
-        Assert.False(RealtimeFramingStore.SameTarget(target, target with { WindowProcess = "browser" }));
-        Assert.False(RealtimeFramingStore.SameTarget(target, target with { Mode = RealtimeCaptureMode.Screen }));
-        Assert.False(RealtimeFramingStore.SameTarget(target, target with { DeviceName = @"\\.\DISPLAY2" }));
-        Assert.False(RealtimeFramingStore.SameTarget(
-            target, target with { Screen = new Rectangle(0, 0, 2560, 1440) }));
     }
 
     // ── Saving ──────────────────────────────────────────────────────────────────────────────────
 
     [Fact]
+    public void AWindowPreset_KeepsItsBlocksRelativeToTheWindow_AndItsSize()
+    {
+        var target = WindowTarget(bounds: new Rectangle(300, 400, 1280, 720));
+
+        var (_, saved) = RealtimeFramingStore.SaveInto(
+            [], target, [Block(350, 450, 100, 20)], new DateTime(2026, 5, 1));
+
+        var stored = Assert.Single(saved!.Blocks);
+        Assert.Equal(50, stored.X);
+        Assert.Equal(50, stored.Y);
+        Assert.Equal(new Rectangle(0, 0, 1280, 720), saved.WindowSize.ToRectangle());
+    }
+
+    [Fact]
+    public void AWindowPreset_PlacesItsBlocksWhereTheWindowIsNow()
+    {
+        var savedAt = new DateTime(2026, 5, 1);
+        var (_, saved) = RealtimeFramingStore.SaveInto(
+            [], WindowTarget(bounds: new Rectangle(300, 400, 1280, 720)),
+            [Block(350, 450, 100, 20)], savedAt);
+
+        // The same window, moved; the blocks go with it.
+        var moved = WindowTarget(bounds: new Rectangle(900, 600, 1280, 720));
+        var placements = RealtimeFramingStore.Placements(saved!, moved);
+
+        Assert.Equal(new Rectangle(950, 650, 100, 20), Assert.Single(placements).Bounds);
+    }
+
+    [Fact]
+    public void AWindowPreset_IsNotPlacedOnAWindowOfAnotherSize()
+    {
+        var (_, saved) = RealtimeFramingStore.SaveInto(
+            [], WindowTarget(bounds: new Rectangle(300, 400, 1280, 720)),
+            [Block(350, 450, 100, 20)], new DateTime(2026, 5, 1));
+
+        var resized = WindowTarget(bounds: new Rectangle(300, 400, 1600, 900));
+
+        Assert.Empty(RealtimeFramingStore.Placements(saved!, resized));
+    }
+
+    [Fact]
     public void AnotherLayoutForTheSameTarget_IsASecondPreset_AndTheSelectedOne()
     {
         var existing = Make("a", name: "我的漫畫", ordinal: 1, blocks: [new Rectangle(0, 0, 100, 20)]);
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1);
+        var target = ScreenTarget();
 
         var (presets, saved) = RealtimeFramingStore.SaveInto(
             [existing], target, [Block(50, 60, 400, 80)], new DateTime(2026, 5, 1));
 
         Assert.Equal(2, presets.Count);
-        Assert.NotEqual(existing.Id, saved.Id);
+        Assert.NotEqual(existing.Id, saved!.Id);
         // The new one leads the list and is what this target now opens on.
         Assert.Same(saved.Id, presets[0].Id);
         Assert.True(saved.Selected);
@@ -434,12 +576,12 @@ public class RealtimeFramingPresetTests
     public void TheSameLayoutSavedAgain_IsThatPresetSelected_NotACopy()
     {
         var existing = Make("a", ordinal: 1, savedAt: new DateTime(2026, 4, 1), blocks: [new Rectangle(0, 0, 100, 20)]);
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1);
+        var target = ScreenTarget();
 
         var (presets, saved) = RealtimeFramingStore.SaveInto(
             [existing], target, [Block(0, 0, 100, 20)], new DateTime(2026, 5, 1));
 
-        Assert.Same(existing.Id, saved.Id);
+        Assert.Same(existing.Id, saved!.Id);
         Assert.Single(presets);
         Assert.True(presets[0].Selected);
         // Its time is when it was made: nothing was added to move.
@@ -450,78 +592,106 @@ public class RealtimeFramingPresetTests
     public void ALayoutThatDiffersInAsmallWay_IsANewPreset()
     {
         var existing = Make("a", ordinal: 1, blocks: [new Rectangle(0, 0, 100, 20)]);
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1);
+        var target = ScreenTarget();
 
         // One block one pixel wider: a variant the user kept on purpose.
         var (presets, saved) = RealtimeFramingStore.SaveInto(
             [existing], target, [Block(0, 0, 101, 20)], new DateTime(2026, 5, 1));
 
         Assert.Equal(2, presets.Count);
-        Assert.NotEqual(existing.Id, saved.Id);
+        Assert.NotEqual(existing.Id, saved!.Id);
     }
 
     [Fact]
     public void Saving_ATargetNothingIsKeptFor_AddsAPresetAtTheFront()
     {
-        var existing = Make("old", device: @"\\.\DISPLAY2", savedAt: new DateTime(2026, 1, 1));
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1);
+        var existing = Make("old", device: Display2, savedAt: new DateTime(2026, 1, 1));
+        var target = ScreenTarget();
 
         var (presets, saved) = RealtimeFramingStore.SaveInto(
             [existing], target, [Block(0, 0, 100, 20)], new DateTime(2026, 5, 1));
 
         Assert.Equal(2, presets.Count);
-        Assert.Same(saved.Id, presets[0].Id);
+        Assert.Same(saved!.Id, presets[0].Id);
         Assert.Equal("", saved.Name);
         Assert.Equal(1, saved.Ordinal);
         Assert.True(saved.Selected);
         Assert.Matches("^[0-9a-f]{32}$", saved.Id);
     }
 
+    /// <summary>
+    /// The list is full: nothing is saved, and — the point of the rule — nothing already there is
+    /// taken away to make room. A preset the user named, or the one a target opens on, is not the
+    /// program's to throw away.
+    /// </summary>
     [Fact]
-    public void SavingPastTheCap_DropsTheOldest()
+    public void WhenTheListIsFull_NothingIsSaved_AndNothingIsDropped()
     {
         var full = Enumerable.Range(0, RealtimeSettings.MaxFramingPresets)
-            .Select(index => Make("p" + index, device: @"\\.\DISPLAY" + index, savedAt: new DateTime(2026, 1, 1).AddDays(index)))
-            .Reverse()
+            .Select(index => Make("p" + index, device: Display2 + index,
+                savedAt: new DateTime(2026, 1, 1).AddDays(index), name: index == 0 ? "留著的" : ""))
             .ToList();
-        var target = new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, @"\\.\DISPLAY-NEW");
+        var before = full.Select(preset => preset.Id).Order().ToList();
+        var target = ScreenTarget() with { DeviceName = @"\\.\DISPLAY-NEW" };
 
-        var (presets, _) = RealtimeFramingStore.SaveInto(
+        var (presets, saved) = RealtimeFramingStore.SaveInto(
             full, target, [Block(0, 0, 100, 20)], new DateTime(2026, 6, 1));
 
+        Assert.Null(saved);
         Assert.Equal(RealtimeSettings.MaxFramingPresets, presets.Count);
-        Assert.DoesNotContain(presets, preset => preset.Id == "p0");
+        Assert.Equal(before, presets.Select(preset => preset.Id).Order());
+        Assert.Contains(presets, preset => preset.Name == "留著的");
+    }
+
+    /// <summary>At the cap, re-saving a layout that is already kept selects it rather than refusing.</summary>
+    [Fact]
+    public void WhenTheListIsFull_TheSameLayoutCanStillBeSelected()
+    {
+        var full = Enumerable.Range(0, RealtimeSettings.MaxFramingPresets)
+            .Select(index => Make("p" + index, device: Display2 + index, savedAt: new DateTime(2026, 1, 1).AddDays(index)))
+            .ToList();
+        var target = ScreenTarget() with { DeviceName = Display2 + "0" };
+        var existing = full.Single(preset => preset.Id == "p0");
+        var blocks = existing.Blocks.Select(block => block.ToPlacement()).ToList();
+
+        var (presets, saved) = RealtimeFramingStore.SaveInto(
+            full, target, blocks, new DateTime(2026, 6, 1));
+
+        Assert.Same(existing.Id, saved!.Id);
+        Assert.True(saved.Selected);
+        Assert.Equal(RealtimeSettings.MaxFramingPresets, presets.Count);
     }
 
     [Fact]
     public void AScreenSave_CarriesNoWindowIdentity_AndAWindowSaveDoes()
     {
         var screen = RealtimeFramingStore.SaveInto(
-            [], new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, Screen1080, Display1),
-            [Block(0, 0, 100, 20)], DateTime.UtcNow).Saved;
-        Assert.Equal("", screen.WindowProcess);
+            [], ScreenTarget(), [Block(0, 0, 100, 20)], DateTime.UtcNow).Saved;
+        Assert.Equal("", screen!.WindowProcess);
         Assert.Equal("", screen.WindowTitle);
+        Assert.Equal(0, screen.WindowSize.Width);
 
         var window = RealtimeFramingStore.SaveInto(
-            [], new RealtimeFramingStore.Target(RealtimeCaptureMode.Window, Screen1080, Display1, "game", "Game"),
-            [Block(0, 0, 100, 20)], DateTime.UtcNow).Saved;
-        Assert.Equal("game", window.WindowProcess);
+            [], WindowTarget("game", "Game"), [Block(0, 0, 100, 20)], DateTime.UtcNow).Saved;
+        Assert.Equal("game", window!.WindowProcess);
         Assert.Equal("Game", window.WindowTitle);
+        Assert.Equal(new Rectangle(0, 0, 1280, 720), window.WindowSize.ToRectangle());
     }
 
     [Fact]
-    public void SavingUnderARetitledWindow_UpdatesThatWindowsPresetRatherThanAddingAnother()
+    public void SavingAnotherSizeOfTheSameWindow_IsAnotherTarget()
     {
-        var existing = Make("a", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video — 1");
-        var target = new RealtimeFramingStore.Target(
-            RealtimeCaptureMode.Window, Screen1080, Display1, "browser", "Video — 2");
+        var small = Make("small", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+            windowSize: new Size(1280, 720), ordinal: 1, savedAt: new DateTime(2026, 1, 1));
+        var target = WindowTarget("game", "Game", new Rectangle(100, 200, 1600, 900));
 
         var (presets, saved) = RealtimeFramingStore.SaveInto(
-            [existing], target, [Block(0, 0, 100, 20)], new DateTime(2026, 5, 1));
+            [small], target, [Block(120, 220, 100, 20)], new DateTime(2026, 5, 1));
 
-        Assert.Same(existing.Id, saved.Id);
-        Assert.Equal("Video — 2", saved.WindowTitle);
-        Assert.Single(presets);
+        Assert.Equal(2, presets.Count);
+        Assert.Equal(1, saved!.Ordinal);
+        Assert.Equal(1600, saved.WindowSize.Width);
+        Assert.False(presets.Single(preset => preset.Id == "small").Selected);
     }
 
     // ── Picking one by hand ────────────────────────────────────────────────────────────────────
@@ -531,7 +701,7 @@ public class RealtimeFramingPresetTests
     {
         var first = Make("first", ordinal: 1, savedAt: new DateTime(2026, 1, 1));
         var second = Make("second", ordinal: 2, selected: true, savedAt: new DateTime(2026, 2, 1));
-        var elsewhere = Make("elsewhere", device: @"\\.\DISPLAY2", selected: true, savedAt: new DateTime(2026, 3, 1));
+        var elsewhere = Make("elsewhere", device: Display2, selected: true, savedAt: new DateTime(2026, 3, 1));
 
         var byId = RealtimeFramingStore.SelectInto([second, first, elsewhere], "first")
             .ToDictionary(preset => preset.Id);
@@ -579,7 +749,7 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
-    public void Placements_AreClampedToTheScreen_AndDroppedWhenNothingIsLeft()
+    public void ScreenPlacements_AreClampedToTheScreen_AndDroppedWhenNothingIsLeft()
     {
         var preset = Make("a", blocks:
         [
@@ -588,7 +758,7 @@ public class RealtimeFramingPresetTests
             new Rectangle(5000, 100, 100, 40),
         ]);
 
-        var placements = RealtimeFramingStore.Placements(preset, Screen1080);
+        var placements = RealtimeFramingStore.Placements(preset, ScreenTarget());
 
         Assert.Equal(2, placements.Count);
         Assert.Equal(new Rectangle(100, 100, 300, 40), placements[0].Bounds);
@@ -606,7 +776,7 @@ public class RealtimeFramingPresetTests
             new Rectangle(60, 0, 10, 10),
         ]);
 
-        Assert.Equal(RealtimeSettings.MaxBlockCount, RealtimeFramingStore.Placements(preset, Screen1080).Count);
+        Assert.Equal(RealtimeSettings.MaxBlockCount, RealtimeFramingStore.Placements(preset, ScreenTarget()).Count);
     }
 
     // ── The name a preset is listed under ─────────────────────────────────────────────────────
@@ -653,6 +823,14 @@ public class RealtimeFramingPresetTests
     private static RealtimeBlockPlacement Block(int x, int y, int width, int height) =>
         new(new Rectangle(x, y, width, height), RealtimePresets.StandardId);
 
+    private static RealtimeFramingStore.Target ScreenTarget() =>
+        new(RealtimeCaptureMode.Screen, Screen1080, Display1);
+
+    private static RealtimeFramingStore.Target WindowTarget(
+        string process = "game", string title = "Game", Rectangle? bounds = null) =>
+        new(RealtimeCaptureMode.Window, Screen1080, Display1, process, title,
+            bounds ?? WindowAt);
+
     private static RealtimeFramingPreset Make(
         string id,
         RealtimeCaptureMode mode = RealtimeCaptureMode.Screen,
@@ -664,6 +842,7 @@ public class RealtimeFramingPresetTests
         string? name = null,
         int ordinal = 0,
         bool selected = false,
+        Size? windowSize = null,
         params Rectangle[] blocks) => new()
     {
         Id = id,
@@ -675,6 +854,9 @@ public class RealtimeFramingPresetTests
         Screen = RealtimeFramingRect.From(screen ?? Screen1080),
         WindowProcess = process,
         WindowTitle = title,
+        WindowSize = mode == RealtimeCaptureMode.Window
+            ? RealtimeFramingRect.From(new Rectangle(0, 0, windowSize?.Width ?? 1280, windowSize?.Height ?? 720))
+            : new RealtimeFramingRect(),
         SavedAt = savedAt ?? new DateTime(2026, 1, 1),
         Blocks = [.. (blocks.Length == 0 ? [new Rectangle(0, 0, 100, 20)] : blocks)
             .Select(bounds => new RealtimeFramingBlock

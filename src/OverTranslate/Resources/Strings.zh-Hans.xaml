@@ -334,6 +334,8 @@
     <sys:String x:Key="S.Realtime.FramingForget">不再保存此翻译区域</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchHint">切换这个屏幕或窗口的翻译区域预设。</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchEmpty">这个屏幕或窗口还没有保存翻译区域；框选后按浮动窗口栏的“保存框选”即可保存。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingLimitReached">已达 {0} 组上限，请先删除现有项目。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowChanged">此预设是在 {0}×{1} 的窗口保存的，与目前窗口大小不同，无法套用</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">显示外观</sys:String>
     <sys:String x:Key="S.Realtime.Preview">预览</sys:String>

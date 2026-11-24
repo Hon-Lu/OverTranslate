@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Text.Json.Serialization;
 using OverTranslate.Services.Realtime;
 
 namespace OverTranslate.Models;
@@ -16,12 +17,13 @@ namespace OverTranslate.Models;
 /// to the settings file.</para>
 ///
 /// <para>A preset belongs to a <b>target</b>: the screen it was drawn on (device name, position and
-/// size) or the application window (process and title), never a bare set of rectangles. Blocks are
-/// physical pixels on one monitor, so offering them back over a different screen, or the same screen
-/// at a different resolution, would be blocks the user never drew in places nothing is — the same
-/// rule <c>RealtimeSessionController</c> already applies to the blocks it keeps in memory. One target
-/// may hold several presets — the subtitle strip and the dialogue box of one game are two framings
-/// of the same screen — and the one marked <see cref="Selected"/> is the one a session opens on.</para>
+/// size), or the application window (process and size), never a bare set of rectangles. A screen
+/// preset's blocks are physical pixels on that monitor, so offering them back for a different screen,
+/// or the same one at a different resolution, would be blocks the user never drew in places nothing
+/// is. A window preset's blocks are kept relative to the window's top-left, so they follow a window
+/// that has moved — but only a window of the same size. One target may hold several presets — the
+/// subtitle strip and the dialogue box of one game are two framings of the same content — and the one
+/// marked <see cref="Selected"/> is the one a session opens on.</para>
 ///
 /// <para>Stored apart from the custom modes (<see cref="RealtimeProfile"/>), which say <em>how</em> a
 /// block is read; a preset says <em>where</em> the blocks are and which mode each one is on. A mode
@@ -60,10 +62,15 @@ public sealed class RealtimeFramingPreset
     public string ScreenDeviceName { get; set; } = "";
 
     /// <summary>
-    /// The monitor's rectangle in physical pixels when the framing was saved — position as well as
-    /// size, because blocks are absolute screen coordinates: the same resolution in another place of
-    /// the virtual desktop is a different target.
+    /// The monitor's rectangle in physical pixels when the framing was saved.
     /// </summary>
+    /// <remarks>
+    /// A screen preset's blocks live in this rectangle, so its position as well as its size is part
+    /// of what the preset belongs to: the same resolution somewhere else in the virtual desktop is
+    /// another target. On a window preset it is only what the screen was at the time — a window
+    /// preset belongs to its application and size, not to a monitor, and follows the window across
+    /// screens.
+    /// </remarks>
     public RealtimeFramingRect Screen { get; set; } = new();
 
     /// <summary>The application of the captured window, by process name, as <see cref="RealtimeSettings.CaptureWindowProcess"/> names it.</summary>
@@ -81,6 +88,18 @@ public sealed class RealtimeFramingPreset
     /// is saved again.
     /// </remarks>
     public string WindowTitle { get; set; } = "";
+
+    /// <summary>
+    /// The size the captured window had when the framing was saved, in physical pixels; empty on a
+    /// screen preset.
+    /// </summary>
+    /// <remarks>
+    /// A window preset's blocks are relative to the window's top-left (see <see cref="Blocks"/>), so
+    /// the same arrangement goes back wherever the window has moved to. What it cannot survive is a
+    /// different size — the blocks would cover a different part of the window — so a window preset
+    /// matches only a window of exactly this size, and a resize is reported rather than applied.
+    /// </remarks>
+    public RealtimeFramingRect WindowSize { get; set; } = new();
 
     /// <summary>
     /// Which of the target's presets this is, from 1: 螢幕 1 · 2560×1440, then
@@ -107,6 +126,12 @@ public sealed class RealtimeFramingPreset
     public bool Selected { get; set; }
 
     /// <summary>Every block, in the order they were drawn — the order the edit layer gives them back.</summary>
+    /// <remarks>
+    /// A screen preset's blocks are in the screen's physical pixels. A window preset's are relative
+    /// to the captured window's top-left — the DWM extended frame bounds window capture reads — with
+    /// <see cref="WindowSize"/> saying what size they were drawn for. Relative rather than absolute
+    /// so that a window that has moved still gets its blocks over the right place.
+    /// </remarks>
     public List<RealtimeFramingBlock> Blocks { get; set; } = [];
 
     /// <summary>
@@ -116,30 +141,36 @@ public sealed class RealtimeFramingPreset
     public DateTime SavedAt { get; set; }
 
     /// <summary>Whether this preset was drawn over a window rather than over a whole screen.</summary>
+    /// <remarks>Derived from <see cref="CaptureMode"/>; not written to the file.</remarks>
+    [JsonIgnore]
     public bool IsForWindow => CaptureMode == RealtimeCaptureMode.Window;
 
     /// <summary>
-    /// What makes two presets belong to the same target: the mode, the screen and — for a window —
-    /// the application, in one string. Used to number a target's presets, to keep one of them
-    /// selected, and to tell which ones a session may open on.
+    /// What makes two presets belong to the same target: the mode and the screen, or the mode and the
+    /// application with the size its window had, in one string. Used to number a target's presets, to
+    /// keep one of them selected, and to tell which ones a session may open on.
     /// </summary>
     /// <remarks>
-    /// The window's title is deliberately not part of it. It identifies one window among an
+    /// <para>The window's title is deliberately not part of it. It identifies one window among an
     /// application's others, but it also changes while the window stays the same — a browser retitles
     /// itself with every video — and a preset saved before the change is still that window's. The
-    /// title is compared where it can narrow the field, in <c>RealtimeFramingStore.Match</c>.
+    /// title is compared where it can narrow the field, in <c>RealtimeFramingStore.Match</c>.</para>
+    ///
+    /// <para>The window's position and the screen it is on are not part of it either: a window
+    /// preset's blocks are relative, so the same application at the same size is the same target
+    /// wherever the window has moved to.</para>
     /// </remarks>
+    [JsonIgnore]
     public string TargetKey
     {
         get
         {
             var screen = Screen ?? new RealtimeFramingRect();
-            return string.Join(
-                '\u001f',
-                IsForWindow ? "window" : "screen",
-                ScreenDeviceName ?? "",
-                screen.X, screen.Y, screen.Width, screen.Height,
-                IsForWindow ? WindowProcess ?? "" : "");
+            var window = WindowSize ?? new RealtimeFramingRect();
+            return IsForWindow
+                ? string.Join('\u001f', "window", WindowProcess ?? "", window.Width, window.Height)
+                : string.Join('\u001f', "screen", ScreenDeviceName ?? "",
+                    screen.X, screen.Y, screen.Width, screen.Height);
         }
     }
 
@@ -155,20 +186,23 @@ public sealed class RealtimeFramingPreset
         Screen = (Screen ?? new RealtimeFramingRect()).Clone(),
         WindowProcess = WindowProcess,
         WindowTitle = WindowTitle,
+        WindowSize = (WindowSize ?? new RealtimeFramingRect()).Clone(),
         Blocks = [.. Blocks.Select(block => block.Clone())],
         SavedAt = SavedAt,
     };
 
     /// <summary>
     /// The presets as the settings file can hold them: newest first, each with an id of its own, a
-    /// usable screen, at least one block and no more than <paramref name="maxBlocks"/> of them, a
-    /// number of its own among its target's presets, and at most one of a target's selected.
+    /// target this build can place it on, at least one block and no more than <paramref name="maxBlocks"/>
+    /// of them, a number of its own among its target's presets, and at most one of a target's selected.
     /// </summary>
     /// <remarks>
     /// <para>Values are not otherwise touched: a mode id this build does not know, an orientation it
-    /// cannot place, a rectangle clear off the screen — each is dealt with where it is used, so that a
+    /// cannot place, a block clear off the target — each is dealt with where it is used, so that a
     /// later version can make sense of what this one stored. What is dropped here could not be made
-    /// sense of by this build at all.</para>
+    /// sense of by this build at all. A window preset with no window size is one of those: its
+    /// blocks are relative to a window this build cannot ask about, so there is nowhere to put them
+    /// and it is dropped.</para>
     ///
     /// <para>The numbers are repaired rather than trusted: a file written before several presets per
     /// target existed has none, and a hand-edited one may repeat a number. A missing or repeated
@@ -200,6 +234,7 @@ public sealed class RealtimeFramingPreset
             // A hand-edited "Screen": null reads as a preset with no screen, which is dropped below;
             // without this the check itself would throw on the way to reading every other setting.
             preset.Screen ??= new RealtimeFramingRect();
+            preset.WindowSize ??= new RealtimeFramingRect();
             if (preset.CaptureMode != RealtimeCaptureMode.Window)
                 preset.CaptureMode = RealtimeCaptureMode.Screen;
 
@@ -207,7 +242,15 @@ public sealed class RealtimeFramingPreset
                 .Where(block => block.Width > 0 && block.Height > 0)
                 .Take(maxBlocks)];
 
-            if (preset.Screen.Width <= 0 || preset.Screen.Height <= 0 || preset.Blocks.Count == 0) continue;
+            if (preset.Blocks.Count == 0) continue;
+            if (preset.IsForWindow)
+            {
+                if (preset.WindowSize.Width <= 0 || preset.WindowSize.Height <= 0) continue;
+            }
+            else if (preset.Screen.Width <= 0 || preset.Screen.Height <= 0)
+            {
+                continue;
+            }
 
             var target = preset.TargetKey;
             if (!ordinals.TryGetValue(target, out var used))
@@ -354,7 +397,16 @@ public sealed class RealtimeFramingRect : IEquatable<RealtimeFramingRect>
         Height = bounds.Height,
     };
 
+    /// <summary>A size, with no position — what a window's <see cref="RealtimeFramingPreset.WindowSize"/> holds.</summary>
+    public static RealtimeFramingRect From(Size size) => new()
+    {
+        Width = size.Width,
+        Height = size.Height,
+    };
+
     /// <summary>Whether this rectangle is on the screen at all — the one check cleaning makes.</summary>
+    /// <remarks>Derived from the four numbers; not written to the file.</remarks>
+    [JsonIgnore]
     public bool IsUsable => Width > 0 && Height > 0;
 
     /// <summary>A copy to edit without touching this one.</summary>

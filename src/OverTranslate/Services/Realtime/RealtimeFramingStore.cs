@@ -12,19 +12,18 @@ namespace OverTranslate.Services.Realtime;
 /// the session, which thinks in <see cref="RealtimeBlockPlacement"/>. The controller never reads the
 /// file's shape and the card never sees a session's: the two meet here.</para>
 ///
-/// <para>A <b>target</b> is what a framing belongs to, not what it contains: the monitor's device
-/// name and rectangle for 螢幕擷取, the application's process and window title for 視窗擷取. One
-/// target may hold several presets, and which of them a session opens on is the one marked
-/// <see cref="RealtimeFramingPreset.Selected"/> — saving a framing and picking one in the page's list
-/// both set it — or the newest it has when nothing is marked.</para>
+/// <para>A <b>target</b> is what a framing belongs to, not what it contains. A screen target is the
+/// monitor's device and rectangle: its blocks are absolute pixels there, so a different screen, or
+/// the same one at another resolution, is another target. A window target is the application and the
+/// size its window has: its blocks are relative to the window's top-left, so the same arrangement
+/// follows the window to another place on the screen, or to another screen, and only a window of the
+/// same size is the same target.</para>
 ///
-/// <para>For a window the title decides first: a preset saved under the window's current title is
-/// that window's, and among those the selected one wins. Only when no title matches — the window has
-/// retitled itself since, or these presets belong to other windows of the same application — does the
-/// selection speak for all of them, and then a second window cannot be told from the first: with
-/// several titles and none selected the honest answer is no framing rather than a guess that would
-/// put blocks over the wrong window. The same answer <see cref="Capture.CaptureWindowList.FindStored"/>
-/// gives for the same question.</para>
+/// <para>One target may hold several presets, and which of them a session opens on is the one marked
+/// <see cref="RealtimeFramingPreset.Selected"/> — saving a framing and picking one in the page's list
+/// both set it — or the newest it has when nothing is marked. For a window the title narrows the
+/// candidates first (a preset saved under the window's current title is that window's); the title is
+/// a preference, not part of the target: a browser retitles itself with every video.</para>
 /// </remarks>
 internal static class RealtimeFramingStore
 {
@@ -35,34 +34,62 @@ internal static class RealtimeFramingStore
     /// <param name="DeviceName">The monitor's device name, which survives a rectangle that matches.</param>
     /// <param name="WindowProcess">The application's process name, empty in 螢幕擷取.</param>
     /// <param name="WindowTitle">The window's title as it is now, empty in 螢幕擷取.</param>
+    /// <param name="WindowBounds">
+    /// The window capture reads the window at, in physical pixels — the DWM extended frame bounds,
+    /// the same rectangle <see cref="WindowBoundsOf"/> returns and the frame a region is cut from.
+    /// Empty in 螢幕擷取, and when the window has gone.
+    /// </param>
     public readonly record struct Target(
         RealtimeCaptureMode Mode,
         Rectangle Screen,
         string DeviceName,
         string WindowProcess = "",
-        string WindowTitle = "")
+        string WindowTitle = "",
+        Rectangle WindowBounds = default)
     {
         /// <summary>Whether this target is a window rather than a whole screen.</summary>
         public bool IsWindow => Mode == RealtimeCaptureMode.Window;
+
+        /// <summary>The size the window had when the target was made; empty in 螢幕擷取.</summary>
+        public Size WindowSize => WindowBounds.Size;
+
+        /// <summary>
+        /// Whether the window is there to be read at all: a handle that has gone, or a window that
+        /// cannot be measured, is not a target a framing can be placed on.
+        /// </summary>
+        public bool HasWindow => !IsWindow || (WindowBounds.Width > 0 && WindowBounds.Height > 0);
     }
 
     private static RealtimeSettings Realtime => SettingsService.Instance.Current.Realtime;
 
     /// <summary>
-    /// Whether two targets are the same target for the purpose of offering a framing back: the same
-    /// mode, monitor and rectangle, and for a window the same application.
+    /// The rectangle window capture reads <paramref name="hwnd"/> at: its DWM extended frame bounds,
+    /// or its window rectangle where those are unavailable.
     /// </summary>
     /// <remarks>
-    /// Looser than <see cref="Match(IReadOnlyList{RealtimeFramingPreset}, Target)"/> in one place: the
-    /// title is ignored, because this is asked of the one framing the session remembers from the
-    /// sitting before — a window retitling itself between one sitting and the next is still that
-    /// window, and there is no second candidate it could be confused with.
+    /// The same pair <c>WgcWindowCaptureBackend.TryGetWindowBounds</c> takes its frame origin from —
+    /// a frame of the extended rectangle — so a block placed relative to this rectangle lands on the
+    /// pixels it was drawn over. Kept here rather than asked of that class because this is needed
+    /// while only framing, before any capture exists.
+    /// </remarks>
+    public static Rectangle WindowBoundsOf(IntPtr hwnd) =>
+        Capture.CaptureWindowList.CaptureBounds(hwnd);
+
+    /// <summary>
+    /// Whether two targets are the same target for the purpose of offering a framing back: the same
+    /// screen, or the same application with a window of the same size.
+    /// </summary>
+    /// <remarks>
+    /// The position of a window and the screen it is on are not compared: a window preset's blocks
+    /// are relative, so the same application at the same size is the same target wherever the window
+    /// has been moved to. The title is not compared either, because a window retitles itself between
+    /// sittings while staying the same window.
     /// </remarks>
     public static bool SameTarget(Target a, Target b) =>
         a.Mode == b.Mode &&
-        a.DeviceName == b.DeviceName &&
-        a.Screen == b.Screen &&
-        (!a.IsWindow || a.WindowProcess == b.WindowProcess);
+        (a.IsWindow
+            ? a.WindowProcess == b.WindowProcess && a.WindowSize == b.WindowSize
+            : a.DeviceName == b.DeviceName && a.Screen == b.Screen);
 
     /// <summary>The preset kept for <paramref name="target"/>, or null when nothing is kept for it.</summary>
     public static RealtimeFramingPreset? Match(Target target) => Match(Realtime.FramingPresets, target);
@@ -107,34 +134,106 @@ internal static class RealtimeFramingStore
         return candidates.FirstOrDefault(preset => preset.Selected) ?? candidates[0];
     }
 
+    /// <summary>Why no preset was applied to a target that has some kept for it.</summary>
+    internal enum Miss
+    {
+        /// <summary>Nothing is kept for this target at all; there is nothing to explain.</summary>
+        None,
+
+        /// <summary>Presets are kept for this application, but at another window size.</summary>
+        WindowSize,
+
+        /// <summary>Presets are kept for this monitor, but at another resolution.</summary>
+        ScreenSize,
+    }
+
     /// <summary>
-    /// The blocks <paramref name="preset"/> is to be started with, held to <paramref name="screen"/>:
-    /// a copy of each, clamped to the screen and dropped when nothing of it is left. Never more than
-    /// the session can frame at once.
+    /// Why <paramref name="target"/> opens on no preset, when presets are kept for it in every way
+    /// but the size — the reason a session that was started with a preset in reach says on the bar.
+    /// </summary>
+    /// <param name="nearest">
+    /// The preset the reason is about: the selected one for this target, or the newest, so its size
+    /// can be named. Null when nothing is kept.
+    /// </param>
+    public static Miss Explain(Target target, out RealtimeFramingPreset? nearest) =>
+        Explain(Realtime.FramingPresets, target, out nearest);
+
+    /// <summary><see cref="Explain(Target, out RealtimeFramingPreset?)"/> over a list.</summary>
+    public static Miss Explain(
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target, out RealtimeFramingPreset? nearest)
+    {
+        nearest = null;
+
+        // A preset of the right size is a candidate Match may still have declined — two windows of
+        // one title-less application, say; the size is not what stood in the way, so it is not the
+        // reason to give.
+        if (presets.Any(preset => IsFor(preset, target))) return Miss.None;
+
+        if (target.IsWindow)
+        {
+            if (!target.HasWindow) return Miss.None;
+
+            var near = presets.Where(preset =>
+                preset.IsForWindow && preset.WindowProcess == target.WindowProcess).ToList();
+            if (near.Count == 0) return Miss.None;
+
+            nearest = near.FirstOrDefault(preset => preset.Selected) ?? near[0];
+            return Miss.WindowSize;
+        }
+
+        var sameMonitor = presets.Where(preset =>
+            !preset.IsForWindow && preset.ScreenDeviceName == target.DeviceName).ToList();
+        if (sameMonitor.Count == 0) return Miss.None;
+
+        nearest = sameMonitor.FirstOrDefault(preset => preset.Selected) ?? sameMonitor[0];
+        return Miss.ScreenSize;
+    }
+
+    /// <summary>
+    /// The blocks <paramref name="preset"/> is to be started with, placed on
+    /// <paramref name="target"/>: a copy of each, offset by the window's current top-left on a window
+    /// preset, clamped to the screen or window it belongs to and dropped when nothing of it is left.
+    /// Never more than the session can frame at once.
     /// </summary>
     /// <remarks>
-    /// A preset is only offered for the screen it was drawn on — see <see cref="Match(Target)"/> — so
-    /// nothing here should ever clamp in practice. It is here because this is the one place that
-    /// turns stored numbers into rectangles the session reads pixels through, and a settings file is
-    /// something a user may edit.
+    /// A window preset whose stored window size is not the size the window has now is not placed at
+    /// all: the blocks would cover a different part of the window. <see cref="Explain"/> is what says
+    /// so; this returns nothing rather than a guess.
     /// </remarks>
     public static IReadOnlyList<RealtimeBlockPlacement> Placements(
-        RealtimeFramingPreset preset, Rectangle screen) =>
-        [.. (preset.Blocks ?? []).OfType<RealtimeFramingBlock>()
+        RealtimeFramingPreset preset, Target target)
+    {
+        var area = preset.IsForWindow ? target.WindowBounds : target.Screen;
+        if (area.Width <= 0 || area.Height <= 0) return [];
+
+        if (preset.IsForWindow)
+        {
+            var size = preset.WindowSize ?? new RealtimeFramingRect();
+            if (size.Width != area.Width || size.Height != area.Height) return [];
+        }
+
+        return [.. (preset.Blocks ?? []).OfType<RealtimeFramingBlock>()
             .Select(block => block.ToPlacement())
-            .Select(placement => placement with { Bounds = ClampInto(placement.Bounds, screen) })
+            .Select(placement => placement with
+            {
+                Bounds = Offset(placement.Bounds, area, preset.IsForWindow),
+            })
+            .Select(placement => placement with { Bounds = ClampInto(placement.Bounds, area) })
             .Where(placement => placement.Bounds.Width > 0 && placement.Bounds.Height > 0)
             .Take(RealtimeSettings.MaxBlockCount)];
+    }
 
     /// <summary>
     /// Saves <paramref name="blocks"/> as a framing for <paramref name="target"/>, and selects it —
     /// unless the same arrangement is already kept for that target, which is then selected instead of
-    /// saved twice.
+    /// saved twice, or the list is full, in which case nothing is saved and nothing is taken away.
     /// </summary>
-    /// <returns>The preset as stored — the one already kept, or the new one.</returns>
-    public static RealtimeFramingPreset Save(Target target, IReadOnlyList<RealtimeBlockPlacement> blocks)
+    /// <returns>The preset as stored, or null when the list is full.</returns>
+    public static RealtimeFramingPreset? Save(Target target, IReadOnlyList<RealtimeBlockPlacement> blocks)
     {
         var (presets, saved) = SaveInto(Realtime.FramingPresets, target, blocks, DateTime.UtcNow);
+        if (saved is null) return null;
+
         SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
         return saved;
     }
@@ -144,21 +243,28 @@ internal static class RealtimeFramingStore
     /// for a test that has no settings file.
     /// </summary>
     /// <remarks>
-    /// A framing whose blocks are the same as one already kept for this target is that preset
+    /// <para>A framing whose blocks are the same as one already kept for this target is that preset
     /// selected again, not a copy: pressing 儲存框選 twice on an unchanged screen is one decision. A
     /// layout that differs in any block — moved, resized, another mode, another compare offset — is a
-    /// new preset, which is the whole point of keeping several for one target.
+    /// new preset, which is the whole point of keeping several for one target.</para>
+    ///
+    /// <para>At <see cref="RealtimeSettings.MaxFramingPresets"/> a new framing is refused: the list
+    /// is returned exactly as it came and <c>Saved</c> is null. Nothing is dropped to make room — a
+    /// preset the user named, or the one a target opens on, is not the program's to throw away.</para>
     /// </remarks>
-    public static (List<RealtimeFramingPreset> Presets, RealtimeFramingPreset Saved) SaveInto(
+    public static (List<RealtimeFramingPreset> Presets, RealtimeFramingPreset? Saved) SaveInto(
         IReadOnlyList<RealtimeFramingPreset> current, Target target,
         IReadOnlyList<RealtimeBlockPlacement> blocks, DateTime savedAt)
     {
         var presets = current.Select(preset => preset.Clone()).ToList();
         var targetPresets = presets.Where(preset => IsFor(preset, target)).ToList();
+        var stored = Stored(blocks, target);
 
-        var saved = targetPresets.FirstOrDefault(preset => SameBlocks(preset, blocks));
+        var saved = targetPresets.FirstOrDefault(preset => SameBlocks(preset, stored));
         if (saved is null)
         {
+            if (presets.Count >= RealtimeSettings.MaxFramingPresets) return (presets, null);
+
             saved = new RealtimeFramingPreset
             {
                 Id = Guid.NewGuid().ToString("N"),
@@ -174,15 +280,15 @@ internal static class RealtimeFramingStore
         saved.Screen = RealtimeFramingRect.From(target.Screen);
         saved.WindowProcess = target.IsWindow ? target.WindowProcess ?? "" : "";
         saved.WindowTitle = target.IsWindow ? target.WindowTitle ?? "" : "";
-        saved.Blocks = [.. blocks.Take(RealtimeSettings.MaxBlockCount).Select(RealtimeFramingBlock.From)];
+        saved.WindowSize = target.IsWindow
+            ? RealtimeFramingRect.From(target.WindowBounds.Size)
+            : new RealtimeFramingRect();
+        saved.Blocks = stored;
 
         // One selected preset per target, and this is it: a saved framing is the one the user wants
         // the next session on this target to open on.
-        foreach (var other in presets.Where(preset => IsFor(preset, target)))
+        foreach (var other in presets.Where(preset => preset.TargetKey == saved.TargetKey))
             other.Selected = other.Id == saved.Id;
-
-        if (presets.Count > RealtimeSettings.MaxFramingPresets)
-            presets.RemoveRange(RealtimeSettings.MaxFramingPresets, presets.Count - RealtimeSettings.MaxFramingPresets);
 
         return (presets, saved);
     }
@@ -247,45 +353,79 @@ internal static class RealtimeFramingStore
         Realtime.FramingPresets.FirstOrDefault(preset => preset.Id == id);
 
     /// <summary>
-    /// Whether <paramref name="preset"/> was drawn on <paramref name="target"/>'s screen — and, for a
-    /// window, over the same application. The window's title is compared only where it can narrow the
-    /// field; see <see cref="Match(IReadOnlyList{RealtimeFramingPreset}, Target)"/>.
+    /// Whether <paramref name="preset"/> belongs to <paramref name="target"/>: the same screen and
+    /// rectangle, or the same application with a window of the same size.
     /// </summary>
-    private static bool IsFor(RealtimeFramingPreset preset, Target target) =>
-        preset.CaptureMode == target.Mode &&
-        preset.ScreenDeviceName == target.DeviceName &&
-        (!target.IsWindow || preset.WindowProcess == target.WindowProcess) &&
-        preset.Screen is { } screen &&
-        screen.Equals(RealtimeFramingRect.From(target.Screen));
-
-    /// <summary>Whether <paramref name="preset"/> holds exactly these blocks.</summary>
-    private static bool SameBlocks(
-        RealtimeFramingPreset preset, IReadOnlyList<RealtimeBlockPlacement> blocks)
+    private static bool IsFor(RealtimeFramingPreset preset, Target target)
     {
-        var stored = preset.Blocks ?? [];
-        int count = Math.Min(blocks.Count, RealtimeSettings.MaxBlockCount);
-        if (stored.Count != count) return false;
+        if (preset.CaptureMode != target.Mode) return false;
 
-        for (int index = 0; index < count; index++)
+        if (!target.IsWindow)
         {
-            if (stored[index] is not { } kept) return false;
-            var now = RealtimeFramingBlock.From(blocks[index]);
-            if (kept.X != now.X || kept.Y != now.Y || kept.Width != now.Width || kept.Height != now.Height ||
-                kept.Profile != now.Profile || kept.Orientation != now.Orientation ||
-                kept.CompareOffsetX != now.CompareOffsetX || kept.CompareOffsetY != now.CompareOffsetY ||
-                kept.CompareScale != now.CompareScale || kept.CompareHidden != now.CompareHidden)
+            return preset.ScreenDeviceName == target.DeviceName &&
+                   preset.Screen is { } screen &&
+                   screen.Equals(RealtimeFramingRect.From(target.Screen));
+        }
+
+        if (!target.HasWindow) return false;
+
+        var size = preset.WindowSize ?? new RealtimeFramingRect();
+        return preset.WindowProcess == target.WindowProcess &&
+               size.Width == target.WindowBounds.Width &&
+               size.Height == target.WindowBounds.Height;
+    }
+
+    /// <summary>
+    /// <paramref name="blocks"/> as the file keeps them: absolute for a screen preset, and relative
+    /// to the window's top-left for a window one.
+    /// </summary>
+    private static List<RealtimeFramingBlock> Stored(
+        IReadOnlyList<RealtimeBlockPlacement> blocks, Target target)
+    {
+        var origin = target.IsWindow ? target.WindowBounds.Location : Point.Empty;
+        return [.. blocks.Take(RealtimeSettings.MaxBlockCount).Select(block =>
+            RealtimeFramingBlock.From(target.IsWindow
+                ? block with
+                {
+                    Bounds = new Rectangle(
+                        block.Bounds.X - origin.X, block.Bounds.Y - origin.Y,
+                        block.Bounds.Width, block.Bounds.Height),
+                }
+                : block))];
+    }
+
+    /// <summary>Whether <paramref name="preset"/> holds exactly these stored blocks.</summary>
+    private static bool SameBlocks(
+        RealtimeFramingPreset preset, IReadOnlyList<RealtimeFramingBlock> stored)
+    {
+        var kept = preset.Blocks ?? [];
+        if (kept.Count != stored.Count) return false;
+
+        for (int index = 0; index < kept.Count; index++)
+        {
+            if (kept[index] is not { } a) return false;
+            var b = stored[index];
+            if (a.X != b.X || a.Y != b.Y || a.Width != b.Width || a.Height != b.Height ||
+                a.Profile != b.Profile || a.Orientation != b.Orientation ||
+                a.CompareOffsetX != b.CompareOffsetX || a.CompareOffsetY != b.CompareOffsetY ||
+                a.CompareScale != b.CompareScale || a.CompareHidden != b.CompareHidden)
                 return false;
         }
 
         return true;
     }
 
-    private static Rectangle ClampInto(Rectangle box, Rectangle screen)
+    private static Rectangle Offset(Rectangle bounds, Rectangle area, bool relative) =>
+        relative
+            ? new Rectangle(bounds.X + area.X, bounds.Y + area.Y, bounds.Width, bounds.Height)
+            : bounds;
+
+    private static Rectangle ClampInto(Rectangle box, Rectangle area)
     {
-        int left = Math.Max(box.Left, screen.Left);
-        int top = Math.Max(box.Top, screen.Top);
-        int right = Math.Min(box.Right, screen.Right);
-        int bottom = Math.Min(box.Bottom, screen.Bottom);
+        int left = Math.Max(box.Left, area.Left);
+        int top = Math.Max(box.Top, area.Top);
+        int right = Math.Min(box.Right, area.Right);
+        int bottom = Math.Min(box.Bottom, area.Bottom);
         return right <= left || bottom <= top ? Rectangle.Empty : Rectangle.FromLTRB(left, top, right, bottom);
     }
 }

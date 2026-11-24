@@ -245,7 +245,8 @@ public class RealtimeSettings
     /// One target may hold several: a game's subtitle strip and its dialogue box are two framings of
     /// one screen, and a reader who switches between them should not have to draw either again. The
     /// cap is over the whole list rather than per target, because it is the page's list that has to
-    /// stay readable: past twenty entries the oldest is dropped as a new one is saved.
+    /// stay readable. Reaching it does not take an entry away: 儲存框選 refuses the new one and says
+    /// why, so a named or selected preset is never dropped to make room.
     /// </remarks>
     public const int MaxFramingPresets = 20;
 
