@@ -384,6 +384,165 @@ internal static class RealtimeFramingStore
     }
 
     /// <summary>
+    /// Puts <paramref name="blocks"/> into the preset <paramref name="id"/> in place of its own — the
+    /// list's 更新 on a preset that was applied and then changed. Its name, number, selection and
+    /// place in the list stay as they were.
+    /// </summary>
+    /// <returns>The preset as stored, or null when no preset goes by that id any more.</returns>
+    public static RealtimeFramingPreset? Update(
+        string id, Target target, IReadOnlyList<RealtimeBlockPlacement> blocks)
+    {
+        var (presets, updated) = UpdateInto(Realtime.FramingPresets, id, target, blocks);
+        if (updated is null) return null;
+
+        SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
+        return updated;
+    }
+
+    /// <summary><see cref="Update"/> as a list in and a list out, for a test that has no settings file.</summary>
+    /// <remarks>
+    /// Never refused at <see cref="RealtimeSettings.MaxFramingPresets"/>: an update adds nothing.
+    /// The window's size, title and screen are taken from <paramref name="target"/> as a save
+    /// takes them, so the preset describes where its blocks were last drawn.
+    /// </remarks>
+    public static (List<RealtimeFramingPreset> Presets, RealtimeFramingPreset? Updated) UpdateInto(
+        IReadOnlyList<RealtimeFramingPreset> current, string id, Target target,
+        IReadOnlyList<RealtimeBlockPlacement> blocks)
+    {
+        var presets = current.Select(preset => preset.Clone()).ToList();
+        var updated = presets.FirstOrDefault(preset => preset.Id == id);
+        if (updated is null || blocks.Count == 0) return (presets, null);
+
+        updated.CaptureMode = target.Mode;
+        updated.ScreenDeviceName = target.DeviceName ?? "";
+        updated.Screen = RealtimeFramingRect.From(target.Screen);
+        updated.WindowProcess = target.IsWindow ? target.WindowProcess ?? "" : "";
+        updated.WindowTitle = target.IsWindow ? target.WindowTitle ?? "" : "";
+        updated.WindowSize = target.IsWindow
+            ? RealtimeFramingRect.From(target.WindowBounds.Size)
+            : new RealtimeFramingRect();
+        updated.Blocks = Stored(blocks, target);
+        return (presets, updated);
+    }
+
+    /// <summary>What one row of the bar's 翻譯區域預設 list is.</summary>
+    internal enum RowState
+    {
+        /// <summary>Another framing for this target: pressing it puts it on the screen.</summary>
+        Ready,
+
+        /// <summary>The framing on the screen now, exactly as kept: ticked, and pressing it does nothing.</summary>
+        Current,
+
+        /// <summary>The framing applied last and changed since: 還原 and 更新 instead of a tick.</summary>
+        Modified,
+
+        /// <summary>Kept for this monitor or application, but it cannot be placed now: greyed, with the reason.</summary>
+        Unusable,
+    }
+
+    /// <summary>What the 儲存目前框選 row at the bottom of the list can do now.</summary>
+    internal enum SaveState
+    {
+        /// <summary>The blocks on screen can be kept as a new preset.</summary>
+        Ready,
+
+        /// <summary>They are already kept, as <see cref="FramingList.SameAs"/>: nothing to save.</summary>
+        Same,
+
+        /// <summary>The list is at <see cref="RealtimeSettings.MaxFramingPresets"/>.</summary>
+        Full,
+
+        /// <summary>No block is drawn.</summary>
+        NoBlocks,
+    }
+
+    /// <summary>One row: the preset, what it is now, and — when it cannot be placed — why.</summary>
+    internal sealed record FramingRow(RealtimeFramingPreset Preset, RowState State, Miss Why);
+
+    /// <summary>The whole list the bar opens: its rows, and its 儲存目前框選 row.</summary>
+    internal sealed record FramingList(
+        IReadOnlyList<FramingRow> Rows, SaveState Save, RealtimeFramingPreset? SameAs);
+
+    /// <summary>
+    /// The bar's 翻譯區域預設 for <paramref name="target"/>, with <paramref name="blocks"/> on the
+    /// screen and <paramref name="appliedId"/> the preset they were last put there from (null when
+    /// the user drew them, or that preset has been deleted since).
+    /// </summary>
+    /// <remarks>
+    /// <para>Every preset of this monitor, or of this application, is listed — those that can be
+    /// placed first, newest first, then those that cannot, greyed with the reason. A preset that is
+    /// kept but not listed reads as lost; one listed and greyed says what to change.</para>
+    ///
+    /// <para>A row is <see cref="RowState.Current"/> when the blocks on the screen are exactly its
+    /// own, whoever put them there, and <see cref="RowState.Modified"/> when it was the one applied
+    /// and they have changed since. The save row says <see cref="SaveState.Same"/> for the same
+    /// match: a second preset with the same blocks is never kept.</para>
+    /// </remarks>
+    public static FramingList ListFor(
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target,
+        IReadOnlyList<RealtimeBlockPlacement> blocks, string? appliedId)
+    {
+        var stored = Stored(blocks, target);
+        var usable = new List<FramingRow>();
+        var unusable = new List<FramingRow>();
+        RealtimeFramingPreset? sameAs = null;
+
+        foreach (var preset in presets.Where(preset => IsRelated(preset, target)))
+        {
+            var fit = FitOf(preset, target);
+            if (fit != Miss.None)
+            {
+                unusable.Add(new FramingRow(preset, RowState.Unusable, fit));
+                continue;
+            }
+
+            bool same = stored.Count > 0 && SameBlocks(preset, stored);
+            if (same) sameAs ??= preset;
+
+            var state = same ? RowState.Current
+                : preset.Id == appliedId ? RowState.Modified
+                : RowState.Ready;
+            usable.Add(new FramingRow(preset, state, Miss.None));
+        }
+
+        var save = blocks.Count == 0 ? SaveState.NoBlocks
+            : sameAs is not null ? SaveState.Same
+            : presets.Count >= RealtimeSettings.MaxFramingPresets ? SaveState.Full
+            : SaveState.Ready;
+
+        return new FramingList([.. usable, .. unusable], save, sameAs);
+    }
+
+    /// <summary>
+    /// Whether switching away from <paramref name="blocks"/> loses work: there are blocks on the
+    /// screen and no preset of <paramref name="target"/> keeps exactly them — a preset changed after
+    /// it was applied, or blocks the user drew and never saved.
+    /// </summary>
+    public static bool HasUnsavedChanges(
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target,
+        IReadOnlyList<RealtimeBlockPlacement> blocks)
+    {
+        if (blocks.Count == 0) return false;
+
+        var stored = Stored(blocks, target);
+        return !presets.Any(preset => IsFor(preset, target) && SameBlocks(preset, stored));
+    }
+
+    /// <summary>
+    /// Whether <paramref name="preset"/> is about this monitor or this application at all, at any
+    /// size — what the list shows, usable or not.
+    /// </summary>
+    private static bool IsRelated(RealtimeFramingPreset preset, Target target)
+    {
+        if (preset.CaptureMode != target.Mode) return false;
+
+        return target.IsWindow
+            ? target.HasWindow && preset.WindowProcess == target.WindowProcess
+            : preset.ScreenDeviceName == target.DeviceName;
+    }
+
+    /// <summary>
     /// Picks <paramref name="id"/> as its target's preset, unmarking whatever else that target had
     /// selected.
     /// </summary>

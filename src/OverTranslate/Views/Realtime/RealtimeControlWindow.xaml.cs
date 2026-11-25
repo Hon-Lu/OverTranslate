@@ -284,10 +284,17 @@ public partial class RealtimeControlWindow : Window
     public event EventHandler<string>? FramingChosen;
 
     /// <summary>
-    /// Raised when the framing bar's 儲存框選 is pressed: keep the blocks framed now as this screen's
-    /// or window's 即時翻譯 framing. Kept by the session, which knows what the blocks belong to.
+    /// Raised when 儲存目前框選 is pressed in 翻譯區域預設: keep the blocks on the screen now as
+    /// this screen's or window's 即時翻譯 framing. Kept by the session, which knows what the blocks
+    /// belong to.
     /// </summary>
     public event EventHandler? SaveFramingRequested;
+
+    /// <summary>Raised with the id of a changed framing whose 更新 was pressed in 翻譯區域預設.</summary>
+    public event EventHandler<string>? FramingUpdateRequested;
+
+    /// <summary>Raised with the id of a changed framing whose 還原 was pressed in 翻譯區域預設.</summary>
+    public event EventHandler<string>? FramingRestoreRequested;
 
     /// <summary>
     /// Raised when the 顯示外觀 panel has written a change to the settings file (#355), for the
@@ -1052,29 +1059,14 @@ public partial class RealtimeControlWindow : Window
             return;
         }
 
-        var presets = RealtimeSessionController.Instance.FramingPresets;
-        if (presets.Count == 0)
-        {
-            // Nothing to offer — but when presets are kept for this screen or window at another
-            // size, say that rather than "nothing kept": it is the reason the list is empty.
-            ShowMessage(RealtimeSessionController.Instance.FramingMissReason
-                        ?? LocalizationService.Get("S.Realtime.FramingSwitchEmpty"));
-            return;
-        }
-
-        // One framing is one answer: pressing it applies it, and the bar says what it applied. A
-        // list of one is more steps for no choice.
-        if (presets.Count == 1)
-        {
-            FramingChosen?.Invoke(this, presets[0].Id);
-            return;
-        }
-
-        OpenFramings(presets);
+        // Always the list, even with nothing kept or one framing: saving lives in it too, and a press
+        // that sometimes opens a list and sometimes switches the screen's blocks is not one action.
+        OpenFramings();
     }
 
     /// <summary>
-    /// Opens the list of the framings kept for this screen or window, the selected one marked.
+    /// Opens the list of the framings kept for this monitor or application, with 儲存目前框選 at
+    /// the bottom — see <see cref="RealtimeFramingPanel"/>.
     /// </summary>
     /// <remarks>
     /// Owned by the bar while framing, as the 模式 panel is, so it stays above the layer that covers
@@ -1082,7 +1074,7 @@ public partial class RealtimeControlWindow : Window
     /// foreground — every row is picked with the mouse — so opening it cannot cost a full-screen game
     /// its focus.
     /// </remarks>
-    public void OpenFramings(IReadOnlyList<Models.RealtimeFramingPreset> presets)
+    public void OpenFramings()
     {
         CloseMenu("framing list opening");
         CloseAppearance();
@@ -1091,7 +1083,8 @@ public partial class RealtimeControlWindow : Window
         RealtimeFramingPanel panel;
         try
         {
-            panel = new RealtimeFramingPanel(PhysicalRect(Chrome), _screenBounds, presets);
+            var (list, target) = RealtimeSessionController.Instance.FramingList();
+            panel = new RealtimeFramingPanel(PhysicalRect(Chrome), _screenBounds, list, target);
             if (Owner is not null) panel.Owner = this;
         }
         catch (Exception ex)
@@ -1105,6 +1098,21 @@ public partial class RealtimeControlWindow : Window
         {
             CloseFramings();
             FramingChosen?.Invoke(this, id);
+        };
+        panel.SaveRequested += (_, _) =>
+        {
+            CloseFramings();
+            SaveFramingRequested?.Invoke(this, EventArgs.Empty);
+        };
+        panel.UpdateRequested += (_, id) =>
+        {
+            CloseFramings();
+            FramingUpdateRequested?.Invoke(this, id);
+        };
+        panel.RestoreRequested += (_, id) =>
+        {
+            CloseFramings();
+            FramingRestoreRequested?.Invoke(this, id);
         };
         panel.Closed += (_, _) =>
         {
@@ -1125,6 +1133,38 @@ public partial class RealtimeControlWindow : Window
             CloseFramings();
         }
     }
+
+    /// <summary>
+    /// Redraws an open 翻譯區域預設 for the blocks as they are now: a block was moved, drawn or
+    /// removed with the list open, or the kept framings changed on the page.
+    /// </summary>
+    /// <remarks>
+    /// Coalesced to one redraw per dispatcher pass: a block being dragged reports itself many times a
+    /// second, and the list only needs to be right once the pointer stops.
+    /// </remarks>
+    public void RefreshFramings()
+    {
+        if (_framings is null || _framingsRefreshQueued) return;
+        _framingsRefreshQueued = true;
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _framingsRefreshQueued = false;
+            if (_framings is not { } panel) return;
+
+            try
+            {
+                var (list, target) = RealtimeSessionController.Instance.FramingList();
+                panel.Rebuild(list, target);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Realtime framing list could not be refreshed");
+            }
+        }), DispatcherPriority.Background);
+    }
+
+    private bool _framingsRefreshQueued;
 
     public void CloseFramings()
     {
@@ -1442,9 +1482,6 @@ public partial class RealtimeControlWindow : Window
     }
 
     private void StartBtn_Click(object sender, RoutedEventArgs e) => StartRequested?.Invoke(this, EventArgs.Empty);
-
-    private void SaveFramingBtn_Click(object sender, RoutedEventArgs e) =>
-        SaveFramingRequested?.Invoke(this, EventArgs.Empty);
 
     private void EditBtn_Click(object sender, RoutedEventArgs e) => EditRequested?.Invoke(this, EventArgs.Empty);
 

@@ -324,8 +324,8 @@
     <!-- 翻譯區域預設 card on the 即時翻譯 page: the framings kept per screen and window. Saved from
          the floating bar's 儲存框選, listed here — where a name can also be given to one. -->
     <sys:String x:Key="S.Realtime.Framings">翻譯區域預設</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsHint">選取一個預設後，開始即時翻譯時會直接套用它的區域；同一個螢幕或視窗可以保留多組，並各自記住選取的那一組。框選後按浮動視窗列的「儲存框選」可再保留一組。</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsEmpty">還沒有保留的翻譯區域。框選後按浮動視窗列的儲存圖示即可保留，下次開啟會自動套用。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsHint">選取一個預設後，開始即時翻譯時會直接套用它的區域；同一個螢幕或視窗可以保留多組，並各自記住選取的那一組。框選後在浮動視窗列的「翻譯區域預設」按「儲存目前框選」可再保留一組。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsEmpty">還沒有保留的翻譯區域。框選後在浮動視窗列的「翻譯區域預設」按「儲存目前框選」即可保留，下次開啟會自動套用。</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">螢幕 · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">已保留的視窗</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">已保留 {0} 個翻譯區塊</sys:String>
@@ -333,19 +333,28 @@
     <sys:String x:Key="S.Realtime.FramingUse">使用「{0}」</sys:String>
     <sys:String x:Key="S.Realtime.FramingChosen">已選擇「{0}」，按「選取翻譯區塊」即可套用</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenGone">此預設的螢幕目前未連接，無法套用</sys:String>
-    <sys:String x:Key="S.Realtime.FramingScreenChanged">此預設是在 {0}×{1} 儲存的，與目前螢幕不同，無法套用</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSave">儲存框選</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSaveHint">將目前的翻譯區塊保存為新的預設；同一個螢幕或視窗可以保留多組。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenChanged">預設是在 {0}×{1} 儲存的，與目前螢幕不同，未套用</sys:String>
     <sys:String x:Key="S.Realtime.FramingSaved">已保留「{0}」，下次會自動套用</sys:String>
     <sys:String x:Key="S.Realtime.FramingSaveFailed">無法儲存翻譯區域，請稍後再試</sys:String>
     <sys:String x:Key="S.Realtime.FramingApplied">已套用「{0}」</sys:String>
     <sys:String x:Key="S.Realtime.FramingName">翻譯區域名稱</sys:String>
     <sys:String x:Key="S.Realtime.FramingRename">按一下可重新命名</sys:String>
     <sys:String x:Key="S.Realtime.FramingForget">不再保留此翻譯區域</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSwitchHint">切換這個螢幕或視窗的翻譯區域預設。</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSwitchEmpty">這個螢幕或視窗還沒有保留翻譯區域；框選後按浮動視窗列的「儲存框選」即可保留。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSwitchHint">切換或儲存這個螢幕或視窗的翻譯區域預設。</sys:String>
     <sys:String x:Key="S.Realtime.FramingLimitReached">已達 {0} 組上限，請先刪除現有項目。</sys:String>
-    <sys:String x:Key="S.Realtime.FramingWindowChanged">此預設是在 {0}×{1} 的視窗儲存的，與目前視窗大小不同，無法套用</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowChanged">視窗大小與預設不同，未套用</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaveCurrent">儲存目前框選</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSameAs">與「{0}」相同</sys:String>
+    <sys:String x:Key="S.Realtime.FramingModified">已修改</sys:String>
+    <sys:String x:Key="S.Realtime.FramingRestore">還原</sys:String>
+    <sys:String x:Key="S.Realtime.FramingUpdate">更新</sys:String>
+    <sys:String x:Key="S.Realtime.FramingUpdated">已更新「{0}」</sys:String>
+    <sys:String x:Key="S.Realtime.FramingRestored">已還原「{0}」</sys:String>
+    <sys:String x:Key="S.Realtime.FramingAppliedDiscarded">已套用「{0}」，未儲存的修改已捨棄</sys:String>
+    <sys:String x:Key="S.Realtime.FramingBlocksShort">{0} 個區塊</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenSizeDiffers">與目前螢幕大小不同（{0}×{1}）</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowSizeDiffers">與目前視窗大小不同（{0}×{1}）</sys:String>
+    <sys:String x:Key="S.Realtime.FramingOffScreenShort">部分區塊在另一個螢幕上</sys:String>
     <sys:String x:Key="S.Realtime.FramingOffScreen">部分區塊在另一個螢幕上，未套用</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">顯示外觀</sys:String>
