@@ -594,7 +594,7 @@ internal sealed class RealtimeSessionController
         missed = null;
 
         if (_remembered is { } kept && RealtimeFramingStore.SameTarget(kept.Target, _target))
-            return [.. kept.Blocks];
+            return [.. RealtimeFramingStore.FollowWindow(kept.Target, _target, kept.Blocks)];
 
         if (RealtimeFramingStore.Match(_target) is { } preset)
         {
