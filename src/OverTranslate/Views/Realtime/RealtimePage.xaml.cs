@@ -728,7 +728,7 @@ public partial class RealtimePage : UserControl
                 return;
             }
 
-            if (screen.Bounds != preset.Screen.ToRectangle())
+            if (screen.Bounds.Width != preset.Screen.Width || screen.Bounds.Height != preset.Screen.Height)
             {
                 ShowFramingScreenChanged(preset);
                 return;

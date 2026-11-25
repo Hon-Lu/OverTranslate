@@ -337,6 +337,36 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
+    public void AScreenPreset_FollowsItsMonitor_WhereverItSitsInTheVirtualDesktop()
+    {
+        // Saved with the monitor at the left of the desktop; a second monitor has since been placed
+        // to its left, so the same monitor now starts at x = 2560.
+        var savedOn = ScreenTarget() with { Screen = new Rectangle(0, 0, 1920, 1080) };
+        var (_, saved) = RealtimeFramingStore.SaveInto(
+            [], savedOn, [Block(100, 900, 800, 120)], new DateTime(2026, 5, 1));
+
+        var stored = Assert.Single(saved!.Blocks);
+        Assert.Equal(new Rectangle(100, 900, 800, 120), stored.ToPlacement().Bounds);
+
+        var moved = ScreenTarget() with { Screen = new Rectangle(2560, -200, 1920, 1080) };
+
+        Assert.Same(saved, RealtimeFramingStore.Match([saved], moved));
+        Assert.Equal(RealtimeFramingStore.Miss.None, RealtimeFramingStore.FitOf(saved, moved));
+        Assert.Equal(
+            new Rectangle(2660, 700, 800, 120),
+            Assert.Single(RealtimeFramingStore.Placements(saved, moved)).Bounds);
+
+        // Saving there again is the same arrangement, not a second preset.
+        var (again, resaved) = RealtimeFramingStore.SaveInto(
+            [saved], moved, [Block(2660, 700, 800, 120)], new DateTime(2026, 5, 2));
+        Assert.Single(again);
+        Assert.Equal(saved.Id, resaved!.Id);
+
+        // Another monitor of the same resolution is still another target, wherever it is.
+        Assert.Null(RealtimeFramingStore.Match([saved], moved with { DeviceName = Display2 }));
+    }
+
+    [Fact]
     public void AScreensSelectedPreset_WinsOverTheNewerOne()
     {
         var newer = Make("newer", savedAt: new DateTime(2026, 2, 1));

@@ -13,8 +13,10 @@ namespace OverTranslate.Services.Realtime;
 /// file's shape and the card never sees a session's: the two meet here.</para>
 ///
 /// <para>A <b>target</b> is what a framing belongs to, not what it contains. A screen target is the
-/// monitor's device and rectangle: its blocks are absolute pixels there, so a different screen, or
-/// the same one at another resolution, is another target. A window target is the application and the
+/// monitor's device and resolution: its blocks are relative to the monitor's top-left, so the same
+/// monitor moved elsewhere in the virtual desktop — another monitor plugged in to its left, the
+/// arrangement changed in Windows' settings — is still the same target, while a different monitor,
+/// or the same one at another resolution, is another. A window target is the application and the
 /// size its window has: its blocks are relative to the window's top-left, so the same arrangement
 /// follows the window to another place on the screen, or to another screen, and only a window of the
 /// same size is the same target.</para>
@@ -200,7 +202,9 @@ internal static class RealtimeFramingStore
         if (!preset.IsForWindow)
         {
             var screen = preset.Screen ?? new RealtimeFramingRect();
-            return screen.Equals(RealtimeFramingRect.From(target.Screen)) ? Miss.None : Miss.ScreenSize;
+            return screen.Width == target.Screen.Width && screen.Height == target.Screen.Height
+                ? Miss.None
+                : Miss.ScreenSize;
         }
 
         var size = preset.WindowSize ?? new RealtimeFramingRect();
@@ -270,8 +274,8 @@ internal static class RealtimeFramingStore
 
     /// <summary>
     /// The blocks <paramref name="preset"/> is to be started with, placed on
-    /// <paramref name="target"/>: a copy of each, offset by the window's current top-left on a window
-    /// preset, clamped to the screen or window it belongs to and dropped when nothing of it is left.
+    /// <paramref name="target"/>: a copy of each, offset by the screen's or the window's current
+    /// top-left, clamped to the screen or window it belongs to and dropped when nothing of it is left.
     /// Never more than the session can frame at once.
     /// </summary>
     /// <remarks>
@@ -296,15 +300,17 @@ internal static class RealtimeFramingStore
 
     /// <summary>
     /// <paramref name="preset"/>'s blocks as the session takes them, moved onto
-    /// <paramref name="area"/> — the window's rectangle for a window preset, whose blocks are
-    /// relative to it — and not yet clamped to anything.
+    /// <paramref name="area"/> — the screen's or the window's rectangle, which the blocks are kept
+    /// relative to — and not yet clamped to anything.
     /// </summary>
     private static IEnumerable<RealtimeBlockPlacement> Offsets(RealtimeFramingPreset preset, Rectangle area) =>
         (preset.Blocks ?? []).OfType<RealtimeFramingBlock>()
             .Select(block => block.ToPlacement())
             .Select(placement => placement with
             {
-                Bounds = Offset(placement.Bounds, area, preset.IsForWindow),
+                Bounds = new Rectangle(
+                    placement.Bounds.X + area.X, placement.Bounds.Y + area.Y,
+                    placement.Bounds.Width, placement.Bounds.Height),
             });
 
     /// <summary>
@@ -437,8 +443,9 @@ internal static class RealtimeFramingStore
         Realtime.FramingPresets.FirstOrDefault(preset => preset.Id == id);
 
     /// <summary>
-    /// Whether <paramref name="preset"/> belongs to <paramref name="target"/>: the same screen and
-    /// rectangle, or the same application with a window of the same size.
+    /// Whether <paramref name="preset"/> belongs to <paramref name="target"/>: the same monitor at the
+    /// same resolution — wherever it sits in the virtual desktop — or the same application with a
+    /// window of the same size.
     /// </summary>
     private static bool IsFor(RealtimeFramingPreset preset, Target target)
     {
@@ -448,7 +455,7 @@ internal static class RealtimeFramingStore
         {
             return preset.ScreenDeviceName == target.DeviceName &&
                    preset.Screen is { } screen &&
-                   screen.Equals(RealtimeFramingRect.From(target.Screen));
+                   screen.Width == target.Screen.Width && screen.Height == target.Screen.Height;
         }
 
         if (!target.HasWindow) return false;
@@ -460,22 +467,20 @@ internal static class RealtimeFramingStore
     }
 
     /// <summary>
-    /// <paramref name="blocks"/> as the file keeps them: absolute for a screen preset, and relative
-    /// to the window's top-left for a window one.
+    /// <paramref name="blocks"/> as the file keeps them: relative to the monitor's top-left for a
+    /// screen preset, and to the window's for a window one.
     /// </summary>
     private static List<RealtimeFramingBlock> Stored(
         IReadOnlyList<RealtimeBlockPlacement> blocks, Target target)
     {
-        var origin = target.IsWindow ? target.WindowBounds.Location : Point.Empty;
+        var origin = target.IsWindow ? target.WindowBounds.Location : target.Screen.Location;
         return [.. blocks.Take(RealtimeSettings.MaxBlockCount).Select(block =>
-            RealtimeFramingBlock.From(target.IsWindow
-                ? block with
-                {
-                    Bounds = new Rectangle(
-                        block.Bounds.X - origin.X, block.Bounds.Y - origin.Y,
-                        block.Bounds.Width, block.Bounds.Height),
-                }
-                : block))];
+            RealtimeFramingBlock.From(block with
+            {
+                Bounds = new Rectangle(
+                    block.Bounds.X - origin.X, block.Bounds.Y - origin.Y,
+                    block.Bounds.Width, block.Bounds.Height),
+            }))];
     }
 
     /// <summary>Whether <paramref name="preset"/> holds exactly these stored blocks.</summary>
@@ -498,11 +503,6 @@ internal static class RealtimeFramingStore
 
         return true;
     }
-
-    private static Rectangle Offset(Rectangle bounds, Rectangle area, bool relative) =>
-        relative
-            ? new Rectangle(bounds.X + area.X, bounds.Y + area.Y, bounds.Width, bounds.Height)
-            : bounds;
 
     private static Rectangle ClampInto(Rectangle box, Rectangle area)
     {
