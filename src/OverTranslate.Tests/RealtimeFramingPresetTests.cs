@@ -485,6 +485,24 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
+    public void TheFramingRememberedFromTheSittingBefore_FollowsAWindowThatHasMoved()
+    {
+        var before = WindowTarget("game", "Game", new Rectangle(100, 200, 1280, 720));
+        var moved = before with
+        {
+            DeviceName = Display2,
+            Screen = new Rectangle(1920, 0, 1920, 1080),
+            WindowBounds = new Rectangle(2000, 50, 1280, 720),
+        };
+        RealtimeBlockPlacement[] kept = [Block(350, 450, 100, 20)];
+
+        var blocks = RealtimeFramingStore.FollowWindow(before, moved, kept);
+
+        Assert.Equal(new Rectangle(2250, 300, 100, 20), Assert.Single(blocks).Bounds);
+        Assert.Same(kept, RealtimeFramingStore.FollowWindow(ScreenTarget(), ScreenTarget(), kept));
+    }
+
+    [Fact]
     public void TheBarListsEveryPresetOfItsOwnTarget()
     {
         var screen = Make("screen", savedAt: new DateTime(2026, 2, 1));

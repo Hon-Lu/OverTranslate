@@ -91,6 +91,34 @@ internal static class RealtimeFramingStore
             ? a.WindowProcess == b.WindowProcess && a.WindowSize == b.WindowSize
             : a.DeviceName == b.DeviceName && a.Screen == b.Screen);
 
+    /// <summary>
+    /// The blocks remembered from <paramref name="from"/>, moved to where <paramref name="to"/>'s
+    /// window is now — for a target <see cref="SameTarget"/> says is the same one.
+    /// </summary>
+    /// <remarks>
+    /// Remembered blocks are absolute screen pixels, but a window target ignores where the window is,
+    /// so a window moved between sittings would get its blocks over the place it was. They are moved
+    /// by as much as the window was. A screen target, or a window either side could not measure, is
+    /// left as it is.
+    /// </remarks>
+    public static IReadOnlyList<RealtimeBlockPlacement> FollowWindow(
+        Target from, Target to, IReadOnlyList<RealtimeBlockPlacement> blocks)
+    {
+        if (!from.IsWindow || !to.IsWindow ||
+            from.WindowBounds.IsEmpty || to.WindowBounds.IsEmpty)
+            return blocks;
+
+        int dx = to.WindowBounds.X - from.WindowBounds.X;
+        int dy = to.WindowBounds.Y - from.WindowBounds.Y;
+        if (dx == 0 && dy == 0) return blocks;
+
+        return [.. blocks.Select(block => block with
+        {
+            Bounds = new Rectangle(
+                block.Bounds.X + dx, block.Bounds.Y + dy, block.Bounds.Width, block.Bounds.Height),
+        })];
+    }
+
     /// <summary>The preset kept for <paramref name="target"/>, or null when nothing is kept for it.</summary>
     public static RealtimeFramingPreset? Match(Target target) => Match(Realtime.FramingPresets, target);
 
