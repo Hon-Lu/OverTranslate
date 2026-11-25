@@ -819,6 +819,44 @@ public partial class RealtimeControlWindow : Window
     }
 
     /// <summary>
+    /// The tooltip of the bar's message slot, decided as it opens: the whole sentence when the slot
+    /// had to cut it, and on the capsule the click-to-dismiss hint under it while a message is up.
+    /// Nothing at all for the bar's own sentence shown in full.
+    /// </summary>
+    private void MessageText_ToolTipOpening(object sender, System.Windows.Controls.ToolTipEventArgs e)
+    {
+        var text = (System.Windows.Controls.TextBlock)sender;
+        var full = IsCut(text) ? text.Text : null;
+        var dismiss = ReferenceEquals(text, RunStatusText) && _messageShowing
+            ? LocalizationService.Get("S.Realtime.DismissMessage")
+            : null;
+
+        if (full is null && dismiss is null)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        text.ToolTip = full is not null && dismiss is not null ? $"{full}\n{dismiss}" : full ?? dismiss;
+    }
+
+    /// <summary>Whether <paramref name="text"/> is showing less than its whole text — cut with … at its width.</summary>
+    private static bool IsCut(System.Windows.Controls.TextBlock text)
+    {
+        if (string.IsNullOrEmpty(text.Text)) return false;
+
+        var formatted = new FormattedText(
+            text.Text,
+            System.Globalization.CultureInfo.CurrentUICulture,
+            text.FlowDirection,
+            new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch),
+            text.FontSize,
+            System.Windows.Media.Brushes.Black,
+            VisualTreeHelper.GetDpi(text).PixelsPerDip);
+        return formatted.WidthIncludingTrailingWhitespace > text.ActualWidth + 0.5;
+    }
+
+    /// <summary>
     /// Takes a message off the pair's place on a click. The one that matters is the failure being
     /// retried, which otherwise stays until it clears — and when it is a service refusing the
     /// language pair, it never does, while covering the pair the user would change to fix it.
