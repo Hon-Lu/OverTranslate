@@ -4,7 +4,8 @@
 
     <UserControl.Resources>
         <!-- The name on a row, edited in place: a field that shows as text until the pointer is over
-             it, then underlines, and takes the accent while it has the keyboard. Renaming is the only
+             it, then underlines (with a pencil after it — see RealtimeFramingCard.NameCell), and takes
+             the accent while it has the keyboard. Renaming is the only
              thing a preset has to be changed by hand, and it is one word — a button and a dialog for
              it would be more furniture than the row is worth. The template removes the text box's
              own chrome, which at this weight and in this column reads as an input form rather than as
@@ -41,19 +42,22 @@
             </Setter>
         </Style>
 
-        <!-- The square at a row's left, which is also how a framing is picked: the blocks' glyph on
-             the one in use, a check on the one selected. A button rather than a radio so that the
-             row's own click and this one mean the same thing and both are a tab stop. -->
+        <!-- The thumbnail at a row's left, which is also how a framing is picked: the blocks drawn
+             where they sit, the same picture the bar's list shows. A button rather than a radio so
+             that the row's own click and this one mean the same thing and both are a tab stop.
+             Disabled while a session runs: the pick turns the capture source, which a running
+             session cannot follow. -->
         <Style x:Key="FramingSelectButton" TargetType="Button">
-            <Setter Property="Width"  Value="30"/>
-            <Setter Property="Height" Value="30"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinWidth" Value="34"/>
             <Setter Property="Margin" Value="0,0,12,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root" CornerRadius="8" Background="{DynamicResource AppAccentSubtle}">
+                        <Border x:Name="Root" CornerRadius="7" Padding="4" Background="Transparent"
+                                BorderBrush="Transparent" BorderThickness="1.5">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -65,7 +69,9 @@
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
-                                <Setter TargetName="Root" Property="BorderThickness" Value="1.5"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

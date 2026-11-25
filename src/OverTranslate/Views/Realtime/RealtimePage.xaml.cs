@@ -1244,6 +1244,9 @@ public partial class RealtimePage : UserControl
         TgtLangBox.IsEnabled = !active;
         ProviderBox.IsEnabled = !active;
         ScreenBox.IsEnabled = !active;
+        // Picking a framing turns the capture source to it, which a running session cannot follow;
+        // renaming and deleting stay open.
+        FramingCard.SetSelectionLocked(active);
 
         // Nothing can start without a source language, so the button says so by being unavailable
         // rather than by refusing after the fact, and the field keeps its prompt until answered.

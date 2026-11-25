@@ -3,7 +3,6 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
@@ -33,25 +32,16 @@ namespace OverTranslate.Views.Realtime;
 /// </remarks>
 public partial class RealtimeFramingCard : UserControl
 {
-    // The row's icon: two blocks, the wide one over the small one, drawn rather than a font glyph so
-    // it matches the mode card's icons and has no font fallback to lose. Round joins because the
-    // shape is small and a square corner reads as a stray pixel at 1.2 wide.
-    private static readonly Geometry BlocksGlyph = Freeze(Geometry.Parse(
-        "M1.8,2.4 H14.2 V7.4 H1.8 Z M1.8,9.9 H9.4 V13.6 H1.8 Z"));
-
-    // The check a selected row's square carries instead: the square is the control, and what it says
-    // has to be readable at 16px, so it is one bold stroke rather than a tinted state.
-    private static readonly Geometry CheckGlyph = Freeze(Geometry.Parse("M3,8.6 L6.4,12 L13,4.6"));
-
-    private static Geometry Freeze(Geometry geometry)
-    {
-        geometry.Freeze();
-        return geometry;
-    }
+    // How tall a row's thumbnail is drawn, in DIP.
+    private const double ThumbnailHeight = 24;
 
     // True while a rename is being written, so the settings event that follows does not commit the
     // same name again through the box it is re-rendering.
     private bool _committing;
+
+    // True while a session runs: picking a framing turns the capture source, which a running session
+    // cannot follow, so the rows cannot be picked. Renaming and deleting stay open.
+    private bool _selectionLocked;
 
     public RealtimeFramingCard()
     {
@@ -69,6 +59,21 @@ public partial class RealtimeFramingCard : UserControl
 
     /// <summary>Re-reads the kept framings and lists them, after the page itself was reloaded.</summary>
     public void Reload() => Render();
+
+    /// <summary>
+    /// Locks picking a framing while a session runs, as the page locks its languages, service and
+    /// screen; renaming and deleting stay open. Picking used to go through and move the tick while
+    /// nothing on the screen changed.
+    /// </summary>
+    public void SetSelectionLocked(bool locked)
+    {
+        if (_selectionLocked == locked) return;
+        _selectionLocked = locked;
+
+        // A rename in progress keeps its box: redrawing the rows would throw the typing away.
+        if (ListHost.IsKeyboardFocusWithin) return;
+        Render();
+    }
 
     /// <summary>Lets go of the static events, when the window holding the page goes.</summary>
     public void Teardown()
@@ -115,6 +120,7 @@ public partial class RealtimeFramingCard : UserControl
         };
         name.SetResourceReference(StyleProperty, "FramingNameBox");
         AutomationProperties.SetName(name, LocalizationService.Get("S.Realtime.FramingName"));
+        var nameCell = NameCell(name);
 
         var detail = new TextBlock
         {
@@ -148,8 +154,9 @@ public partial class RealtimeFramingCard : UserControl
 
         var select = new Button
         {
-            Content = preset.Selected ? Glyph(CheckGlyph, 1.7) : Glyph(BlocksGlyph, 1.2),
+            Content = RealtimeFramingThumbnail.Create(preset, ThumbnailHeight),
             ToolTip = LocalizationService.Format("S.Realtime.FramingUse", RealtimeFramingDisplay.Name(preset)),
+            IsEnabled = !_selectionLocked,
         };
         select.SetResourceReference(StyleProperty, "FramingSelectButton");
         AutomationProperties.SetName(select, select.ToolTip as string ?? "");
@@ -170,7 +177,7 @@ public partial class RealtimeFramingCard : UserControl
         forget.Click += (_, _) => RealtimeFramingStore.Forget(id);
 
         var text = new StackPanel { VerticalAlignment = System.Windows.VerticalAlignment.Center };
-        text.Children.Add(name);
+        text.Children.Add(nameCell);
         text.Children.Add(detail);
 
         var grid = new Grid();
@@ -190,39 +197,92 @@ public partial class RealtimeFramingCard : UserControl
         row.MouseLeftButtonUp += (_, e) =>
         {
             var source = e.OriginalSource as DependencyObject;
-            if (IsWithin(source, name) || IsWithin(source, select) || IsWithin(source, forget)) return;
+            if (IsWithin(source, nameCell) || IsWithin(source, select) || IsWithin(source, forget)) return;
 
             Choose(preset);
         };
         return row;
     }
 
-    /// <summary>The glyph inside a row's square, in the accent — the blocks' outline, or a check.</summary>
-    private static FrameworkElement Glyph(Geometry data, double thickness)
+    /// <summary>
+    /// The name, edited in place: one line cut with … while it is only being read, the whole name
+    /// in the box once it is clicked into, and an underline with a pencil while the pointer is on it
+    /// — the box has no frame, so without those nothing says it can be typed into.
+    /// </summary>
+    /// <remarks>
+    /// A text box cannot cut its own text with …, so a text block that can lies over it while it is
+    /// not being edited, and the box's own text is drawn transparent underneath; the block takes no
+    /// presses, so a click lands in the box. The cell sizes to the name and gives way to the row's
+    /// width (a star column in a left-aligned grid), so the pencil sits right after the name rather
+    /// than at the far side of the row.
+    /// </remarks>
+    private static FrameworkElement NameCell(TextBox box)
     {
-        var glyph = new Path
+        box.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+
+        var shown = new TextBlock
         {
-            Data = data,
-            Width = 16,
-            Height = 16,
-            Stretch = Stretch.None,
-            StrokeThickness = thickness,
-            StrokeStartLineCap = PenLineCap.Round,
-            StrokeEndLineCap = PenLineCap.Round,
-            StrokeLineJoin = PenLineJoin.Round,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            Text = box.Text,
+            FontWeight = FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            IsHitTestVisible = false,
             VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            // The box's own padding and border, so the two lines of text sit on each other.
+            Margin = new Thickness(0, 1, 0, 3),
         };
-        glyph.SetResourceReference(Shape.StrokeProperty, "AppAccent");
-        return glyph;
+        shown.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+        shown.SetResourceReference(TextBlock.FontSizeProperty, "AppFontSize");
+        shown.SetResourceReference(TextBlock.ForegroundProperty, "AppTextPrimary");
+
+        var pencil = new TextBlock
+        {
+            Text = "",
+            FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 11,
+            Margin = new Thickness(6, 0, 0, 0),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            IsHitTestVisible = false,
+            Visibility = Visibility.Hidden,
+        };
+        pencil.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
+
+        var field = new Grid();
+        field.Children.Add(box);
+        field.Children.Add(shown);
+
+        var cell = new Grid { HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
+        cell.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        cell.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        cell.Children.Add(field);
+        Grid.SetColumn(pencil, 1);
+        cell.Children.Add(pencil);
+
+        void Update()
+        {
+            bool editing = box.IsKeyboardFocusWithin;
+            shown.Visibility = editing ? Visibility.Collapsed : Visibility.Visible;
+            if (editing) box.ClearValue(ForegroundProperty);
+            else box.Foreground = System.Windows.Media.Brushes.Transparent;
+            pencil.Visibility = !editing && box.IsMouseOver ? Visibility.Visible : Visibility.Hidden;
+        }
+
+        box.TextChanged += (_, _) => { if (!box.IsKeyboardFocusWithin) shown.Text = box.Text; };
+        box.IsKeyboardFocusWithinChanged += (_, _) => { shown.Text = box.Text; Update(); };
+        box.MouseEnter += (_, _) => Update();
+        box.MouseLeave += (_, _) => Update();
+        Update();
+        return cell;
     }
 
     /// <summary>
     /// Marks <paramref name="preset"/> as its target's and tells the page, which turns its capture
-    /// source to it. Written before the page is told so the list already shows the pick.
+    /// source to it. Written before the page is told so the list already shows the pick. Nothing
+    /// while a session runs — see <see cref="SetSelectionLocked"/>.
     /// </summary>
     private void Choose(RealtimeFramingPreset preset)
     {
+        if (_selectionLocked) return;
+
         RealtimeFramingStore.Select(preset.Id);
         Selected?.Invoke(this, preset);
     }
