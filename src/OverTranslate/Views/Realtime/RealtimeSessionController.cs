@@ -570,7 +570,7 @@ internal sealed class RealtimeSessionController
         }
         else if (missed is { } near)
         {
-            control.ShowMessage(FramingMissMessage(near));
+            control.ShowMessage(FramingMissMessage(near.Why, near.Preset));
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -588,13 +588,19 @@ internal sealed class RealtimeSessionController
     /// <see cref="RealtimeFramingStore.Match"/>.
     /// </remarks>
     private List<RealtimeBlockPlacement> InitialBlocks(
-        out Models.RealtimeFramingPreset? applied, out Models.RealtimeFramingPreset? missed)
+        out Models.RealtimeFramingPreset? applied,
+        out (RealtimeFramingStore.Miss Why, Models.RealtimeFramingPreset Preset)? missed)
     {
         applied = null;
         missed = null;
 
+        // Remembered blocks that followed their window partly off this session's screen are not
+        // offered back: the framing layer covers this screen only, so they could not be reached.
         if (_remembered is { } kept && RealtimeFramingStore.SameTarget(kept.Target, _target))
-            return [.. RealtimeFramingStore.FollowWindow(kept.Target, _target, kept.Blocks)];
+        {
+            var followed = RealtimeFramingStore.FollowWindow(kept.Target, _target, kept.Blocks);
+            if (RealtimeFramingStore.OnScreen(followed, _target.Screen)) return [.. followed];
+        }
 
         if (RealtimeFramingStore.Match(_target) is { } preset)
         {
@@ -606,25 +612,29 @@ internal sealed class RealtimeSessionController
             }
         }
 
-        // A preset is kept for this screen or window, but not for its size: the layer opens empty,
-        // and the bar says which size the preset was drawn for rather than opening on nothing with
-        // no explanation.
-        if (RealtimeFramingStore.Explain(_target, out var nearest) != RealtimeFramingStore.Miss.None)
-            missed = nearest;
+        // A preset is kept for this screen or window, but not for its size, or its window reaches
+        // past this screen: the layer opens empty, and the bar says why rather than opening on
+        // nothing with no explanation.
+        var why = RealtimeFramingStore.Explain(_target, out var nearest);
+        if (why != RealtimeFramingStore.Miss.None && nearest is not null) missed = (why, nearest);
 
         return [];
     }
 
     /// <summary>
     /// What the bar says about a preset that is kept for this target but could not be placed: the
-    /// size it was drawn for, against the size the screen or window has now.
+    /// size it was drawn for, against the size the screen or window has now — or that its window
+    /// reaches past the screen being framed.
     /// </summary>
-    private static string FramingMissMessage(Models.RealtimeFramingPreset preset) =>
-        preset.IsForWindow
-            ? LocalizationService.Format(
-                "S.Realtime.FramingWindowChanged", preset.WindowSize.Width, preset.WindowSize.Height)
-            : LocalizationService.Format(
-                "S.Realtime.FramingScreenChanged", preset.Screen.Width, preset.Screen.Height);
+    private static string FramingMissMessage(RealtimeFramingStore.Miss why, Models.RealtimeFramingPreset preset) =>
+        why switch
+        {
+            RealtimeFramingStore.Miss.OffScreen => LocalizationService.Get("S.Realtime.FramingOffScreen"),
+            _ when preset.IsForWindow => LocalizationService.Format(
+                "S.Realtime.FramingWindowChanged", preset.WindowSize.Width, preset.WindowSize.Height),
+            _ => LocalizationService.Format(
+                "S.Realtime.FramingScreenChanged", preset.Screen.Width, preset.Screen.Height),
+        };
 
     /// <summary>
     /// What a framing belongs to: this session's screen, and its window when it is reading one — see
@@ -737,9 +747,10 @@ internal sealed class RealtimeSessionController
         get
         {
             if (!IsActive) return null;
-            return RealtimeFramingStore.Explain(SessionTarget, out var nearest) == RealtimeFramingStore.Miss.None
+            var why = RealtimeFramingStore.Explain(SessionTarget, out var nearest);
+            return why == RealtimeFramingStore.Miss.None || nearest is null
                 ? null
-                : FramingMissMessage(nearest!);
+                : FramingMissMessage(why, nearest);
         }
     }
 
@@ -787,9 +798,11 @@ internal sealed class RealtimeSessionController
         var blocks = RealtimeFramingStore.Placements(preset, target);
         if (blocks.Count == 0)
         {
-            // Kept for this screen or window but drawn for another size: say which, in the place a
-            // successful switch says "applied".
-            control.ShowMessage(FramingMissMessage(preset));
+            // Kept for this screen or window but drawn for another size, or its window reaches past
+            // this screen: say which, in the place a successful switch says "applied".
+            var why = RealtimeFramingStore.FitOf(preset, target);
+            control.ShowMessage(FramingMissMessage(
+                why == RealtimeFramingStore.Miss.None ? RealtimeFramingStore.Miss.ScreenSize : why, preset));
             return;
         }
 

@@ -173,7 +173,50 @@ internal static class RealtimeFramingStore
 
         /// <summary>Presets are kept for this monitor, but at another resolution.</summary>
         ScreenSize,
+
+        /// <summary>
+        /// The preset fits the window, but the window reaches past the session's screen and some of
+        /// the blocks would land on the part of it that is on another monitor.
+        /// </summary>
+        OffScreen,
     }
+
+    /// <summary>
+    /// Whether <paramref name="preset"/>, kept for <paramref name="target"/>, can be put on the
+    /// screen now — <see cref="Miss.None"/> — or what stands in the way.
+    /// </summary>
+    /// <remarks>
+    /// <para>A preset of another target is not this question's: the caller has already matched it.
+    /// Only the size and the screen are checked here.</para>
+    ///
+    /// <para>A window preset follows its window, and the window may reach past the screen the
+    /// session frames on: a session takes the monitor the window covers most of, and the framing
+    /// layer and its bar cover that monitor alone. A block that lands even partly on another monitor
+    /// cannot be seen whole, moved or removed there, so the preset is not placed at all rather than
+    /// cut to the part that shows — the same answer a window of another size gets.</para>
+    /// </remarks>
+    public static Miss FitOf(RealtimeFramingPreset preset, Target target)
+    {
+        if (!preset.IsForWindow)
+        {
+            var screen = preset.Screen ?? new RealtimeFramingRect();
+            return screen.Equals(RealtimeFramingRect.From(target.Screen)) ? Miss.None : Miss.ScreenSize;
+        }
+
+        var size = preset.WindowSize ?? new RealtimeFramingRect();
+        if (!target.HasWindow ||
+            size.Width != target.WindowBounds.Width || size.Height != target.WindowBounds.Height)
+            return Miss.WindowSize;
+
+        return OnScreen(Offsets(preset, target.WindowBounds), target.Screen) ? Miss.None : Miss.OffScreen;
+    }
+
+    /// <summary>
+    /// Whether every one of <paramref name="blocks"/> lies wholly on <paramref name="screen"/> — the
+    /// one monitor the framing layer covers.
+    /// </summary>
+    public static bool OnScreen(IEnumerable<RealtimeBlockPlacement> blocks, Rectangle screen) =>
+        blocks.All(block => screen.Contains(block.Bounds));
 
     /// <summary>
     /// Why <paramref name="target"/> opens on no preset, when presets are kept for it in every way
@@ -191,6 +234,14 @@ internal static class RealtimeFramingStore
         IReadOnlyList<RealtimeFramingPreset> presets, Target target, out RealtimeFramingPreset? nearest)
     {
         nearest = null;
+
+        // The preset this target opens on fits its size but not the screen: that is the reason.
+        if (Match(presets, target) is { } matched)
+        {
+            var fit = FitOf(matched, target);
+            if (fit != Miss.None) nearest = matched;
+            return fit;
+        }
 
         // A preset of the right size is a candidate Match may still have declined — two windows of
         // one title-less application, say; the size is not what stood in the way, so it is not the
@@ -225,7 +276,8 @@ internal static class RealtimeFramingStore
     /// </summary>
     /// <remarks>
     /// A window preset whose stored window size is not the size the window has now is not placed at
-    /// all: the blocks would cover a different part of the window. <see cref="Explain"/> is what says
+    /// all: the blocks would cover a different part of the window. Nor is one whose blocks would
+    /// reach past the session's screen — see <see cref="FitOf"/>. <see cref="Explain"/> is what says
     /// so; this returns nothing rather than a guess.
     /// </remarks>
     public static IReadOnlyList<RealtimeBlockPlacement> Placements(
@@ -234,22 +286,26 @@ internal static class RealtimeFramingStore
         var area = preset.IsForWindow ? target.WindowBounds : target.Screen;
         if (area.Width <= 0 || area.Height <= 0) return [];
 
-        if (preset.IsForWindow)
-        {
-            var size = preset.WindowSize ?? new RealtimeFramingRect();
-            if (size.Width != area.Width || size.Height != area.Height) return [];
-        }
+        if (preset.IsForWindow && FitOf(preset, target) != Miss.None) return [];
 
-        return [.. (preset.Blocks ?? []).OfType<RealtimeFramingBlock>()
-            .Select(block => block.ToPlacement())
-            .Select(placement => placement with
-            {
-                Bounds = Offset(placement.Bounds, area, preset.IsForWindow),
-            })
+        return [.. Offsets(preset, area)
             .Select(placement => placement with { Bounds = ClampInto(placement.Bounds, area) })
             .Where(placement => placement.Bounds.Width > 0 && placement.Bounds.Height > 0)
             .Take(RealtimeSettings.MaxBlockCount)];
     }
+
+    /// <summary>
+    /// <paramref name="preset"/>'s blocks as the session takes them, moved onto
+    /// <paramref name="area"/> — the window's rectangle for a window preset, whose blocks are
+    /// relative to it — and not yet clamped to anything.
+    /// </summary>
+    private static IEnumerable<RealtimeBlockPlacement> Offsets(RealtimeFramingPreset preset, Rectangle area) =>
+        (preset.Blocks ?? []).OfType<RealtimeFramingBlock>()
+            .Select(block => block.ToPlacement())
+            .Select(placement => placement with
+            {
+                Bounds = Offset(placement.Bounds, area, preset.IsForWindow),
+            });
 
     /// <summary>
     /// Saves <paramref name="blocks"/> as a framing for <paramref name="target"/>, and selects it —

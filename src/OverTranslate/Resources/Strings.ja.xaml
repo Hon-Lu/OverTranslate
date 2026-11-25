@@ -340,6 +340,7 @@
     <sys:String x:Key="S.Realtime.FramingSwitchEmpty">この画面またはウィンドウにはまだ翻訳範囲が保存されていません。範囲を選んでフローティングバーの「範囲を保存」を押すと保存できます。</sys:String>
     <sys:String x:Key="S.Realtime.FramingLimitReached">保存できる翻訳範囲は {0} 個までです。先に既存の項目を削除してください</sys:String>
     <sys:String x:Key="S.Realtime.FramingWindowChanged">このプリセットは {0}×{1} のウィンドウで保存されたため、現在のウィンドウサイズでは適用できません</sys:String>
+    <sys:String x:Key="S.Realtime.FramingOffScreen">一部の範囲が別の画面にあるため、適用していません</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">表示スタイル</sys:String>
     <sys:String x:Key="S.Realtime.Preview">プレビュー</sys:String>

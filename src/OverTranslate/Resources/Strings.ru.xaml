@@ -333,6 +333,7 @@
     <sys:String x:Key="S.Realtime.FramingSwitchEmpty">Для этого экрана или окна области перевода ещё не сохранены. Выделите блоки и нажмите кнопку сохранения на плавающей панели.</sys:String>
     <sys:String x:Key="S.Realtime.FramingLimitReached">Достигнут предел в {0} сохранённых областей — сначала удалите одну.</sys:String>
     <sys:String x:Key="S.Realtime.FramingWindowChanged">Область сохранена для окна {0}×{1}, а размер окна сейчас другой.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingOffScreen">Часть областей на другом экране — не применено.</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">Внешний вид</sys:String>
     <sys:String x:Key="S.Realtime.Preview">Предпросмотр</sys:String>

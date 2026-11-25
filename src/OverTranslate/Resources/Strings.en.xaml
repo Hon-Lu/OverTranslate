@@ -336,6 +336,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.FramingSwitchEmpty">No block layout kept for this screen or window yet. Frame the blocks, then press Save blocks on the floating bar.</sys:String>
     <sys:String x:Key="S.Realtime.FramingLimitReached">Reached the limit of {0} saved layouts — delete one first.</sys:String>
     <sys:String x:Key="S.Realtime.FramingWindowChanged">This layout was saved for a {0}×{1} window; the window is a different size now.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingOffScreen">Some blocks fall on another screen; not applied.</sys:String>
 
     <sys:String x:Key="S.Realtime.Appearance">Appearance</sys:String>
     <sys:String x:Key="S.Realtime.Preview">Preview</sys:String>

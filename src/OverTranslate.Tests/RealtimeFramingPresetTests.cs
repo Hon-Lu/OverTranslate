@@ -568,6 +568,46 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
+    public void AWindowPreset_WhoseBlocksWouldReachAnotherScreen_IsNotPlaced_AndSaysWhy()
+    {
+        // Saved with the window wholly on the left monitor; the window has since moved so that most
+        // of it is on the right one — the session's screen — and its left edge is still on the left.
+        var right = new Rectangle(1920, 0, 1920, 1080);
+        var preset = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+            windowSize: new Size(1280, 720), blocks: new Rectangle(100, 600, 400, 60));
+        var straddling = WindowTarget(bounds: new Rectangle(1700, 200, 1280, 720)) with
+        {
+            Screen = right,
+            DeviceName = Display2,
+        };
+
+        // Still the window's own preset — only where it would land is wrong.
+        Assert.Same(preset, RealtimeFramingStore.Match([preset], straddling));
+        Assert.Equal(RealtimeFramingStore.Miss.OffScreen, RealtimeFramingStore.FitOf(preset, straddling));
+        Assert.Empty(RealtimeFramingStore.Placements(preset, straddling));
+        Assert.Equal(
+            RealtimeFramingStore.Miss.OffScreen,
+            RealtimeFramingStore.Explain([preset], straddling, out var nearest));
+        Assert.Same(preset, nearest);
+
+        // The same window reaching past the screen, but with every block on it, is placed.
+        var reaching = straddling with { WindowBounds = new Rectangle(1700 + 150, 200, 1280, 720) };
+        Assert.Equal(RealtimeFramingStore.Miss.None, RealtimeFramingStore.FitOf(preset, reaching));
+        Assert.Equal(
+            new Rectangle(1950, 800, 400, 60),
+            Assert.Single(RealtimeFramingStore.Placements(preset, reaching)).Bounds);
+    }
+
+    [Fact]
+    public void BlocksOnTheScreen_AreTheOnesWhollyOnIt()
+    {
+        Assert.True(RealtimeFramingStore.OnScreen([Block(0, 0, 1920, 1080)], Screen1080));
+        Assert.False(RealtimeFramingStore.OnScreen([Block(-1, 10, 100, 20)], Screen1080));
+        Assert.False(RealtimeFramingStore.OnScreen(
+            [Block(10, 10, 100, 20), Block(1900, 10, 100, 20)], Screen1080));
+    }
+
+    [Fact]
     public void AnotherLayoutForTheSameTarget_IsASecondPreset_AndTheSelectedOne()
     {
         var existing = Make("a", name: "我的漫畫", ordinal: 1, blocks: [new Rectangle(0, 0, 100, 20)]);
