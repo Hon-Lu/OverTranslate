@@ -384,6 +384,12 @@
                     </Grid>
                 </Border>
 
+                <!-- ── 翻譯區域預設 ── -->
+                <!-- The one card about a sitting's framing that outlives the application: the blocks
+                     the user framed, kept per screen or window. Saved from the floating bar, which is
+                     where the blocks are; listed here, which is where they are looked at. -->
+                <local:RealtimeFramingCard x:Name="FramingCard"/>
+
                 <!-- ── 顯示外觀 ── -->
                 <!-- The one card on this page whose values are kept — see the class remarks for the
                      rule that separates these from the session parameters above. -->

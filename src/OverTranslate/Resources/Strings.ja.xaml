@@ -315,6 +315,32 @@
     <sys:String x:Key="S.Realtime.ScreenHint">リアルタイム翻訳は現在、一度に 1 つの画面のみ対応しています。</sys:String>
     <sys:String x:Key="S.Realtime.BlockCountProgress">ブロック {0} / {1}</sys:String>
 
+    <!-- 翻譯區域預設 card on the 即時翻譯 page: the block layouts kept per screen and window. Saved from
+         the floating bar's save button, listed here — where a name can also be given to one. -->
+    <sys:String x:Key="S.Realtime.Framings">保存した翻訳範囲</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsHint">使うプリセットを選ぶと、次にリアルタイム翻訳を始めるときにその範囲が適用され、描き直す必要がありません。画面やウィンドウごとに選んだ範囲を覚え、同じ画面やウィンドウに複数保存できます。フローティングバーの「範囲を保存」で別の範囲も保存できます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsEmpty">保存した翻訳範囲はまだありません。範囲を選んでフローティングバーの保存ボタンを押すと、次回から自動で適用されます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenName">画面 · {0}×{1}</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsWindowUnknown">保存したウィンドウ</sys:String>
+    <sys:String x:Key="S.Realtime.FramingBlockCount">翻訳ブロックを {0} 個保存</sys:String>
+    <sys:String x:Key="S.Realtime.FramingNumbered">{0}（{1}）</sys:String>
+    <sys:String x:Key="S.Realtime.FramingUse">「{0}」を使う</sys:String>
+    <sys:String x:Key="S.Realtime.FramingChosen">「{0}」を選択しました。「ブロックを選択」を押すと適用されます</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenGone">このプリセットの画面が接続されていないため、適用できません</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenChanged">このプリセットは {0}×{1} で保存されたため、現在の画面では適用できません</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSave">範囲を保存</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaveHint">今の翻訳ブロックを新しいプリセットとして保存します。同じ画面やウィンドウに複数保存できます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaved">「{0}」を保存しました。次回から自動で適用されます</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaveFailed">翻訳範囲を保存できませんでした。しばらくしてからもう一度お試しください</sys:String>
+    <sys:String x:Key="S.Realtime.FramingApplied">「{0}」を適用しました</sys:String>
+    <sys:String x:Key="S.Realtime.FramingName">翻訳範囲の名前</sys:String>
+    <sys:String x:Key="S.Realtime.FramingRename">クリックして名前を変更</sys:String>
+    <sys:String x:Key="S.Realtime.FramingForget">この翻訳範囲を保存しない</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSwitchHint">この画面またはウィンドウで使う翻訳範囲のプリセットを切り替えます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSwitchEmpty">この画面またはウィンドウにはまだ翻訳範囲が保存されていません。範囲を選んでフローティングバーの「範囲を保存」を押すと保存できます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingLimitReached">保存できる翻訳範囲は {0} 個までです。先に既存の項目を削除してください</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowChanged">このプリセットは {0}×{1} のウィンドウで保存されたため、現在のウィンドウサイズでは適用できません</sys:String>
+
     <sys:String x:Key="S.Realtime.Appearance">表示スタイル</sys:String>
     <sys:String x:Key="S.Realtime.Preview">プレビュー</sys:String>
     <sys:String x:Key="S.Realtime.PreviewText">テキストはこのように画面に表示されます</sys:String>

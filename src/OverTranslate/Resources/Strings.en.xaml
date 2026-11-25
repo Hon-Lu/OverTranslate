@@ -311,6 +311,32 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.ScreenHint">Realtime translation currently covers one screen at a time.</sys:String>
     <sys:String x:Key="S.Realtime.BlockCountProgress">Blocks {0} / {1}</sys:String>
 
+    <!-- The 翻譯區域預設 card on the real-time page: the block layouts kept per screen and window.
+         Saved from the floating bar's save button, listed here — where a name can also be given. -->
+    <sys:String x:Key="S.Realtime.Framings">Saved block layouts</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsHint">Pick a layout and the next real-time session starts with its blocks — the capture source follows it, so Select blocks opens right onto them. Each screen or window keeps its own pick and can hold several; Save blocks on the floating bar keeps another.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsEmpty">No block layout saved yet. Frame the blocks, then press the save button on the floating bar, and the next session starts with them in place.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenName">Screen · {0}×{1}</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsWindowUnknown">Saved window</sys:String>
+    <sys:String x:Key="S.Realtime.FramingBlockCount">{0} translation blocks kept</sys:String>
+    <sys:String x:Key="S.Realtime.FramingNumbered">{0} ({1})</sys:String>
+    <sys:String x:Key="S.Realtime.FramingUse">Use “{0}”</sys:String>
+    <sys:String x:Key="S.Realtime.FramingChosen">“{0}” selected — press Select blocks to start with it</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenGone">The screen this layout was saved on is not connected, so it cannot be used now.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingScreenChanged">This layout was saved at {0}×{1}, which does not match the current screen.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSave">Save blocks</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaveHint">Keep the blocks framed now as a new layout; one screen or window can hold several.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaved">Kept “{0}” — used next time</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSaveFailed">Could not save the translation blocks. Please try again.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingApplied">Using “{0}”</sys:String>
+    <sys:String x:Key="S.Realtime.FramingName">Name of the saved blocks</sys:String>
+    <sys:String x:Key="S.Realtime.FramingRename">Click to rename</sys:String>
+    <sys:String x:Key="S.Realtime.FramingForget">Forget these translation blocks</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSwitchHint">Switch the block layout used for this screen or window.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSwitchEmpty">No block layout kept for this screen or window yet. Frame the blocks, then press Save blocks on the floating bar.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingLimitReached">Reached the limit of {0} saved layouts — delete one first.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingWindowChanged">This layout was saved for a {0}×{1} window; the window is a different size now.</sys:String>
+
     <sys:String x:Key="S.Realtime.Appearance">Appearance</sys:String>
     <sys:String x:Key="S.Realtime.Preview">Preview</sys:String>
     <sys:String x:Key="S.Realtime.PreviewText">Text will look like this on screen</sys:String>

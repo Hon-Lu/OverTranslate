@@ -47,7 +47,7 @@ public static class CaptureWindowList
         {
             EnumWindows((hwnd, _) =>
             {
-                if (Describe(hwnd) is { } window) found.Add(window);
+                if (DescribeWindow(hwnd) is { } window) found.Add(window);
                 return true;
             }, IntPtr.Zero);
         }
@@ -104,6 +104,47 @@ public static class CaptureWindowList
         hwnd != IntPtr.Zero && IsWindow(hwnd) && IsWindowVisible(hwnd) && !IsIconic(hwnd);
 
     /// <summary>
+    /// The rectangle window capture reads <paramref name="hwnd"/> at, in physical pixels: its DWM
+    /// extended frame bounds, or its window rectangle where those are unavailable — the same pair
+    /// <c>WgcWindowCaptureBackend.TryGetWindowBounds</c> takes its frame origin from, and the frame a
+    /// region is cut from is that rectangle.
+    /// </summary>
+    /// <remarks>
+    /// A window preset's blocks are kept relative to this rectangle's top-left, so that they follow a
+    /// window that has moved. Empty when the handle is gone or the window cannot be measured.
+    /// </remarks>
+    public static Rectangle CaptureBounds(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || !GetWindowRect(hwnd, out var rect)) return Rectangle.Empty;
+
+        var window = Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        return DwmGetWindowAttributeRect(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var frame, Marshal.SizeOf<RECT>()) == 0
+            ? Rectangle.FromLTRB(frame.Left, frame.Top, frame.Right, frame.Bottom)
+            : window;
+    }
+
+    /// <summary>
+    /// One window by handle — the same pair the list offers, for a caller that holds a live handle
+    /// and has no list: a running session naming what it is reading, so that its framing can be kept
+    /// against that window rather than against the whole screen.
+    /// </summary>
+    /// <returns>The window, or null when it is gone, minimised, or not something the list would offer.</returns>
+    public static CaptureWindow? Of(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return null;
+        try
+        {
+            return DescribeWindow(hwnd);
+        }
+        catch (Exception)
+        {
+            // A window that died between the handle being held and being asked about. Its owner has
+            // nothing to name, which the callers already handle.
+            return null;
+        }
+    }
+
+    /// <summary>
     /// One window, or null when it is not something to offer.
     /// </summary>
     /// <remarks>
@@ -124,7 +165,7 @@ public static class CaptureWindowList
     /// 螢幕擷取.</item>
     /// </list>
     /// </remarks>
-    private static CaptureWindow? Describe(IntPtr hwnd)
+    private static CaptureWindow? DescribeWindow(IntPtr hwnd)
     {
         if (!IsWindowVisible(hwnd) || IsIconic(hwnd)) return null;
 
@@ -176,6 +217,7 @@ public static class CaptureWindowList
     private const int GWL_EXSTYLE = -20;
     private const long WS_EX_TOOLWINDOW = 0x00000080;
     private const int DWMWA_CLOAKED = 14;
+    private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
@@ -223,4 +265,8 @@ public static class CaptureWindowList
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(
         IntPtr hwnd, int attribute, out int value, int size);
+
+    [DllImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
+    private static extern int DwmGetWindowAttributeRect(
+        IntPtr hwnd, int attribute, out RECT value, int size);
 }
