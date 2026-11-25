@@ -21,6 +21,9 @@ internal static class GoogleVoices
 
     public static bool Has(string language) => Languages.Contains(language);
 
+    /// <summary>Where both Google speech endpoints are, so a network that blocks one blocks both.</summary>
+    public const string Host = "translate.google.com";
+
     /// <summary>The most characters one Google speech request reads.</summary>
     public const int MaxCharacters = 200;
 }
@@ -32,6 +35,8 @@ internal static class GoogleVoices
 public sealed class GoogleWebSpeech(HttpClient http) : SpeechEngine(http)
 {
     public override string Name => "GoogleWebSpeech";
+
+    public override string Host => GoogleVoices.Host;
 
     public override bool Supports(string language) => GoogleVoices.Has(language);
 
@@ -68,6 +73,8 @@ public sealed class GoogleRpcSpeech(HttpClient http) : SpeechEngine(http)
     private const string RpcId = "jQ1olc";
 
     public override string Name => "GoogleRpcSpeech";
+
+    public override string Host => GoogleVoices.Host;
 
     public override bool Supports(string language) => GoogleVoices.Has(language);
 

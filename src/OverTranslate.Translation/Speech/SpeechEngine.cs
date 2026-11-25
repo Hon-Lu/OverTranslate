@@ -9,6 +9,8 @@ public abstract class SpeechEngine(HttpClient http) : ISpeechEngine
 
     public abstract string Name { get; }
 
+    public abstract string Host { get; }
+
     public abstract bool Supports(string language);
 
     /// <summary>Sends the requests for one text and returns the MP3 they add up to.</summary>

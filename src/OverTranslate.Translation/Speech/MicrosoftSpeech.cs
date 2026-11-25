@@ -88,6 +88,9 @@ public sealed class MicrosoftSpeech(HttpClient http) : SpeechEngine(http)
 
     public override string Name => "MicrosoftSpeech";
 
+    // The token comes from here; the speech itself from a regional Azure host the token names.
+    public override string Host => "dev.microsofttranslator.com";
+
     public override bool Supports(string language) => MicrosoftVoices.Has(language);
 
     protected override async Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken)
@@ -177,6 +180,8 @@ public sealed class BingSpeech : SpeechEngine
     public BingSpeech(HttpClient http) : base(http) => _session = new BingSession(http, "BingSpeech");
 
     public override string Name => "BingSpeech";
+
+    public override string Host => new Uri(BingSession.Host).Host;
 
     public override bool Supports(string language) => MicrosoftVoices.Has(language);
 

@@ -261,6 +261,7 @@ public class SpeechProtocolTests
     private sealed class Fake(string name, params string[] languages) : ISpeechEngine
     {
         public string Name => name;
+        public string Host => name;
         public int Calls { get; private set; }
         public bool Fails { get; init; }
         public bool Hangs { get; init; }

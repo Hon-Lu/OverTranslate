@@ -16,6 +16,12 @@ public interface ISpeechEngine
     string Name { get; }
 
     /// <summary>
+    /// Where the engine's requests go. Engines that share one are reachable or not together, so
+    /// when one cannot reach it, <see cref="SpeechSynthesizer"/> does not send the others there.
+    /// </summary>
+    string Host { get; }
+
+    /// <summary>
     /// Whether this engine has a voice for <paramref name="language"/>. Asked before anything is
     /// sent, so a language it cannot speak goes to the next engine instead of being read aloud by
     /// whichever voice the engine falls back to — an English voice reading Swedish, as it used to.

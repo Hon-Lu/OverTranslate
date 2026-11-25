@@ -16,12 +16,22 @@ public class TtsService : IDisposable
     // and the Microsoft token are fetched once rather than once per window. The request timeout is
     // translation's (TranslationTiming): one slow engine hands over to the next after ten seconds,
     // where GTranslate's own clients waited a hundred.
-    private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request);
+    //
+    // Reaching a host gets three seconds of that (#436). Where Google's packets are dropped — mainland
+    // China, some office networks — a request otherwise waited the whole ten before the next engine,
+    // and with both Google engines first, every press took twenty. Ordinary connections from Taiwan,
+    // handshake included, took 65–300 ms. A connection that is made and then answers slowly still
+    // has the ten. (Declared first: static fields are set in the order they are written.)
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
+
+    private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request, ConnectTimeout);
 
     // Google first, as before; RPC ahead of the old translate_tts address, which is the order the old
     // service used. Microsoft and Bing are the same Azure voices by two routes, and between them
     // cover the one language the application offers that Google has no voice for (Slovenian).
     // Yandex, the old fifth, was dropped: nothing reached it that the four above could not read.
+    // A host that cannot be reached is skipped for a while (SpeechSynthesizer), so a network that
+    // blocks Google pays the connection timeout once, not on every press.
     private static readonly SpeechSynthesizer Synthesizer = new(
     [
         new GoogleRpcSpeech(Http),
