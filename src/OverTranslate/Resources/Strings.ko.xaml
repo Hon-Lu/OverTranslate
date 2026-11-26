@@ -604,6 +604,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">중지 상태에서 단축키를 누르면 블록 선택을 시작하고, 선택 중에 다시 누르면 번역을 시작합니다. 번역 중에는 일시 정지·재개할 수 있습니다.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">원문 대조</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">실시간 번역 중에만 작동합니다. 번역문으로 원문을 덮을지, 대조 영역에 표시할지 전환합니다.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">팝업 번역</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">텍스트를 선택해 두면 창이 열릴 때 자동으로 불러와 번역합니다.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">대치 번역</sys:String>

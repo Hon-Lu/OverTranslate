@@ -595,6 +595,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Если перевод не запущен, первое нажатие выбирает области, второе запускает перевод; во время перевода — пауза и продолжение.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Сравнение с оригиналом</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Работает только во время перевода в реальном времени. Переключает перевод поверх оригинала и показ в области сравнения.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Всплывающий перевод</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">Если выделен текст, он сразу подставляется и переводится при открытии окна.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">Перевод с заменой</sys:String>

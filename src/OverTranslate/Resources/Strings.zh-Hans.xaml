@@ -600,6 +600,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未启动时按下快捷键开始框选，框选时再按一次开始翻译；翻译中可暂停或继续。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文对照</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">仅在实时翻译期间有效，切换译文覆盖原文或显示在对照区域。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取词翻译</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若已选中文字，打开窗口时会自动带入并翻译。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">替换翻译</sys:String>

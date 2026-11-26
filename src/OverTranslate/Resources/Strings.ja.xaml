@@ -604,6 +604,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">停止中にショートカットを押すとブロック選択を開始し、選択中にもう一度押すと翻訳を開始します。翻訳中は一時停止／再開できます。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文対照</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">リアルタイム翻訳中のみ有効です。訳文で原文を覆うか、対照エリアに表示するかを切り替えます。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">テキストを選択していると、ウィンドウを開いたときに自動で読み込んで翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">置換翻訳</sys:String>

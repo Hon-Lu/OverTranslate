@@ -600,6 +600,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Compare with original</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Works only during realtime translation. Switches between the translation covering the original and showing it in the compare area.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始/暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">In-place translation</sys:String>

@@ -622,6 +622,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文對照</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">僅在即時翻譯期間有效，切換譯文覆蓋原文或顯示於對照區域。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">替換翻譯</sys:String>
