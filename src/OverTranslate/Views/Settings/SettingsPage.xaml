@@ -1086,15 +1086,23 @@
                                             AutomationProperties.AutomationId="SpeechServiceRow">
                                         <StackPanel>
                                             <DockPanel MinHeight="40">
-                                                <ComboBox DockPanel.Dock="Right"
-                                                          x:Name="SpeechProviderPicker"
-                                                          Style="{StaticResource ModernComboBox}"
-                                                          Width="200" Height="30" Margin="14,0,0,0"
-                                                          VerticalAlignment="Center"
-                                                          DisplayMemberPath="Display" SelectedValuePath="Provider"
-                                                          AutomationProperties.Name="{DynamicResource S.Settings.SpeechProvider}"
-                                                          AutomationProperties.AutomationId="SpeechProviderPicker"
-                                                          SelectionChanged="SpeechProviderPicker_SelectionChanged"/>
+                                                <!-- Under the picker while the switch is on: the service that
+                                                     actually reads, which the picker then may not be (#436). -->
+                                                <StackPanel DockPanel.Dock="Right" Margin="14,0,0,0" VerticalAlignment="Center">
+                                                    <ComboBox x:Name="SpeechProviderPicker"
+                                                              Style="{StaticResource ModernComboBox}"
+                                                              Width="200" Height="30"
+                                                              HorizontalAlignment="Right"
+                                                              DisplayMemberPath="Display" SelectedValuePath="Provider"
+                                                              AutomationProperties.Name="{DynamicResource S.Settings.SpeechProvider}"
+                                                              AutomationProperties.AutomationId="SpeechProviderPicker"
+                                                              SelectionChanged="SpeechProviderPicker_SelectionChanged"/>
+                                                    <TextBlock x:Name="SpeechInUseText"
+                                                               Style="{StaticResource FieldHint}" FontSize="12"
+                                                               HorizontalAlignment="Right" Margin="0,4,0,0"
+                                                               Visibility="Collapsed"
+                                                               AutomationProperties.AutomationId="SpeechInUseText"/>
+                                                </StackPanel>
                                                 <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
                                                     <TextBlock Text="&#xE767;"
                                                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"

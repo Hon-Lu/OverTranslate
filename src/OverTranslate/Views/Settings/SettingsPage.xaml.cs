@@ -210,7 +210,11 @@ public partial class SettingsPage : UserControl
             LocalizationService.LanguageChanged += OnLanguageChanged;
             SettingsService.Instance.OcrDebugChanged += OnOcrDebugChanged;
             SettingsService.Instance.CaptureOptionsChanged += OnCaptureOptionsChanged;
+            SettingsService.Instance.ProviderChanged += OnProviderChanged;
             OnOcrDebugChanged(this, EventArgs.Empty);
+            // The translation service may have changed while this page was not showing (文字翻譯
+            // shares its place in the shell).
+            RenderSpeechInUse();
             OnCaptureOptionsChanged(this, EventArgs.Empty);
             SubscribeModels();
             SubscribeAssets();
@@ -220,6 +224,7 @@ public partial class SettingsPage : UserControl
             LocalizationService.LanguageChanged -= OnLanguageChanged;
             SettingsService.Instance.OcrDebugChanged -= OnOcrDebugChanged;
             SettingsService.Instance.CaptureOptionsChanged -= OnCaptureOptionsChanged;
+            SettingsService.Instance.ProviderChanged -= OnProviderChanged;
             UnsubscribeModels();
             UnsubscribeAssets();
             StopRecording();
@@ -274,6 +279,7 @@ public partial class SettingsPage : UserControl
                 .Select(provider => new SpeechChoice(provider, SpeechProviders.Display(provider))).ToList();
             SpeechProviderPicker.SelectedValue = s.SpeechProvider;
             SpeechFollowsSwitch.IsChecked = s.SpeechFollowsProvider;
+            RenderSpeechInUse();
             UpdateScreenshotPathVisibility();
             UpdateDebugScopeAvailability();
             UpdateVerboseLoggingAvailability();
@@ -305,10 +311,29 @@ public partial class SettingsPage : UserControl
     {
         if (SpeechProviderPicker.SelectedValue is SpeechProvider provider)
             Persist(s => s.SpeechProvider = provider);
+        RenderSpeechInUse();
     }
 
-    private void SpeechFollowsSwitch_Toggled(object sender, RoutedEventArgs e) =>
+    private void SpeechFollowsSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
         Persist(s => s.SpeechFollowsProvider = SpeechFollowsSwitch.IsChecked == true);
+        RenderSpeechInUse();
+    }
+
+    // Changed in 文字翻譯, on the capture toolbar or in 取詞翻譯 while this page is open.
+    private void OnProviderChanged(object? sender, EventArgs e) => RenderSpeechInUse();
+
+    /// <summary>
+    /// 「目前使用：…（跟隨翻譯服務）」 under the picker while the switch is on — the picker is still
+    /// a choice then, for the translation services with no voice of their own, but not always the
+    /// one that reads, and without this line changing it looked like it did nothing (#436).
+    /// </summary>
+    private void RenderSpeechInUse()
+    {
+        var settings = SettingsService.Instance.Current;
+        SpeechInUseText.Text = SpeechProviders.InUseLine(settings);
+        SpeechInUseText.Visibility = SpeechInUseText.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     // ── 詞彙表 (#228) ───────────────────────────────────────────────────────
 

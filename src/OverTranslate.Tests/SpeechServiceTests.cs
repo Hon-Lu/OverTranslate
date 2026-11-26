@@ -74,6 +74,41 @@ public class SpeechServiceTests
         Assert.False(settings.SpeechFollowsProvider);
     }
 
+    // The line under the settings page's picker: the service that reads while following.
+    [Theory]
+    [InlineData(TranslationProvider.Microsoft, SpeechProvider.Google, "Microsoft")]
+    [InlineData(TranslationProvider.Google2, SpeechProvider.Bing, "Google")]
+    [InlineData(TranslationProvider.DeepL, SpeechProvider.Google, "Google")]
+    [InlineData(TranslationProvider.Youdao, SpeechProvider.Bing, "Bing")]
+    public void Following_TheLineNamesTheServiceThatReads(TranslationProvider translation, SpeechProvider picked, string reads)
+    {
+        var settings = new AppSettings { Provider = translation, SpeechProvider = picked, SpeechFollowsProvider = true };
+
+        Assert.Equal(LocalizationService.Format("S.Settings.SpeechInUse", reads), SpeechProviders.InUseLine(settings));
+    }
+
+    [Fact]
+    public void NotFollowing_ThereIsNoLine()
+    {
+        var settings = new AppSettings { Provider = TranslationProvider.Microsoft, SpeechProvider = SpeechProvider.Google, SpeechFollowsProvider = false };
+
+        Assert.Equal("", SpeechProviders.InUseLine(settings));
+    }
+
+    // The line follows a translation service changed in 文字翻譯, on the toolbar or in 取詞翻譯
+    // through SettingsService.ProviderChanged; a view that writes the setting itself goes unheard.
+    [Fact]
+    public void EveryViewChangesTheTranslationService_ThroughSettingsService()
+    {
+        var views = Path.Combine(StringsParityTests.ProjectDirectory(), "Views");
+        var writers = Directory.EnumerateFiles(views, "*.cs", SearchOption.AllDirectories)
+            .Where(file => System.Text.RegularExpressions.Regex.IsMatch(File.ReadAllText(file), @"(?<!Realtime)\.Provider\s*=\s*(?!=)"))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        Assert.Empty(writers);
+    }
+
     // ---- One service's engines --------------------------------------------------------------
 
     [Fact]

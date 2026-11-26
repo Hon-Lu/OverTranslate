@@ -646,10 +646,6 @@ public partial class TranslationPage : UserControl
         SettingsService.Instance.Save();
     }
 
-    private static void SaveProviderSelection(TranslationProvider provider)
-    {
-        var settings = SettingsService.Instance.Current;
-        settings.Provider = provider;
-        SettingsService.Instance.Save();
-    }
+    private static void SaveProviderSelection(TranslationProvider provider) =>
+        SettingsService.Instance.UpdateProvider(provider);
 }

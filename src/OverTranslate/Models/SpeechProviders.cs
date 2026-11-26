@@ -15,6 +15,15 @@ public static class SpeechProviders
     /// <summary>The service's name as the user sees it, which is the same in every language.</summary>
     public static string Display(SpeechProvider provider) => provider.ToString();
 
+    /// <summary>
+    /// The line the settings page shows under the picker: which service reads while following the
+    /// translation service, or empty when not following, where the picker says it already.
+    /// </summary>
+    public static string InUseLine(AppSettings settings) =>
+        settings.SpeechFollowsProvider
+            ? Services.LocalizationService.Format("S.Settings.SpeechInUse", Display(Resolve(settings)))
+            : "";
+
     /// <summary>The service that reads aloud for <paramref name="settings"/>.</summary>
     public static SpeechProvider Resolve(AppSettings settings) =>
         Resolve(settings.Provider, settings.SpeechFollowsProvider, settings.SpeechProvider);
