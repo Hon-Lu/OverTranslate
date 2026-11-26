@@ -40,14 +40,14 @@
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">Идет перевод в реальном времени — остановите его, чтобы воспользоваться всплывающим переводом</sys:String>
     <sys:String x:Key="S.Shell.UpdateAvailable">Обновить до {0}</sys:String>
     <sys:String x:Key="S.Shell.UpdateCard">Версия и обновления</sys:String>
-    <sys:String x:Key="S.UpdateCard.AutoCheck">Проверка каждый час</sys:String>
-    <sys:String x:Key="S.UpdateCard.LastChecked">Проверка каждый час · последняя: {0}</sys:String>
+    <sys:String x:Key="S.UpdateCard.AutoCheck">Проверка раз в час</sys:String>
+    <sys:String x:Key="S.UpdateCard.LastChecked">Проверка раз в час · последняя: {0}</sys:String>
     <sys:String x:Key="S.UpdateCard.DatePattern">dd.MM</sys:String>
     <sys:String x:Key="S.UpdateCard.Checking">Проверка…</sys:String>
     <sys:String x:Key="S.UpdateCard.UpToDate">✓ Установлена последняя версия</sys:String>
     <sys:String x:Key="S.UpdateCard.Failed">Нет связи с сервером обновлений</sys:String>
     <sys:String x:Key="S.UpdateCard.Found">Доступна версия {0}</sys:String>
-    <sys:String x:Key="S.UpdateCard.Check">Проверить обновления</sys:String>
+    <sys:String x:Key="S.UpdateCard.Check">Проверить</sys:String>
 
     <!-- ── Tray menu ── -->
     <sys:String x:Key="S.Tray.OpenWindow">Открыть окно перевода</sys:String>
