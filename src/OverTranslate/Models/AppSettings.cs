@@ -195,6 +195,16 @@ public class AppSettings
     /// </remarks>
     public List<string> HiddenProviders { get; set; } = [];
 
+    /// <summary>The service that reads aloud, unless <see cref="SpeechFollowsProvider"/> names another.</summary>
+    /// <remarks>Read through <see cref="SpeechProviders.Resolve"/>, which settles the two together.</remarks>
+    public SpeechProvider SpeechProvider { get; set; } = SpeechProvider.Google;
+
+    /// <summary>
+    /// Whether the translation service's own voice reads aloud, where it has one, rather than
+    /// <see cref="SpeechProvider"/>.
+    /// </summary>
+    public bool SpeechFollowsProvider { get; set; } = true;
+
     public string ApiKey { get; set; } = "";
     /// <summary>
     /// The OpenAI-compatible server to talk to, or empty for

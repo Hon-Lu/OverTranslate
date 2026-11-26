@@ -1707,9 +1707,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Log.Warn(ex, "Toolbar text-to-speech failed");
-            ShowNotice(
-                LocalizationService.Get("S.Main.SpeakFailedTitle"),
-                LocalizationService.Format("S.Main.SpeakFailedBody", ex.Message));
+            ShowNotice(LocalizationService.Get("S.Main.SpeakFailedTitle"), TtsService.FailureText(ex, lang));
         }
     }
 

@@ -862,12 +862,8 @@ public partial class ToolbarWindow : Window
         SettingsService.Instance.Save();
     }
 
-    private static void SaveProviderSelection(TranslationProvider provider)
-    {
-        var settings = SettingsService.Instance.Current;
-        settings.Provider = provider;
-        SettingsService.Instance.Save();
-    }
+    private static void SaveProviderSelection(TranslationProvider provider) =>
+        SettingsService.Instance.UpdateProvider(provider);
 
     private void SaveTextDirectionSelection()
     {

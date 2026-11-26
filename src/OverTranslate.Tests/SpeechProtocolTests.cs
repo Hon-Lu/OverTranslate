@@ -10,7 +10,7 @@ using Xunit;
 
 namespace OverTranslate.Tests;
 
-// What each speech engine puts on the wire and how the fallback picks one, against canned answers.
+// What each speech engine puts on the wire and how a service picks one of its engines, against canned answers.
 // No network: the real endpoints were checked by hand (.ai/translation-service-analysis/implementation/).
 public class SpeechProtocolTests
 {
@@ -121,6 +121,39 @@ public class SpeechProtocolTests
         Assert.Contains("你好 &amp; &lt;再見&gt;", speech[0].Body);
     }
 
+    // #436: two pieces to a host that does not answer took two connection timeouts, one after the
+    // other. The first failure ends the text and cancels the pieces still going.
+    [Fact]
+    public async Task APieceThatFails_CancelsTheOthers_AndIsTheFailure()
+    {
+        var handler = new FirstFailsRestHang();
+        var engine = new GoogleWebSpeech(new HttpClient(handler));
+        var text = string.Concat(Enumerable.Repeat("これは長い文章です。", 50));   // 500 characters, three pieces
+
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var ex = await Assert.ThrowsAsync<TranslationEngineException>(() => engine.SynthesizeAsync(text, "ja"));
+
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(5));
+        Assert.IsType<HttpRequestException>(ex.InnerException);
+        Assert.Equal(2, handler.Cancelled);
+    }
+
+    // #436: one long request ran past the request timeout; pieces, a few at a time, joined in order.
+    [Fact]
+    public async Task Microsoft_ReadsALongText_InPieces_AFewAtATime_JoinedInOrder()
+    {
+        var handler = new Pieces();
+        var engine = new MicrosoftSpeech(new HttpClient(handler));
+        var text = string.Concat(Enumerable.Range(1, 80).Select(i => $"S{i}. Some words to read aloud here. "));
+
+        var audio = await engine.SynthesizeAsync(text, "en");
+
+        Assert.True(handler.Count > 1);
+        Assert.Equal(handler.Count, audio.Length);
+        Assert.InRange(handler.Most, 2, MicrosoftVoices.Parallel);
+        Assert.Equal(audio.OrderBy(b => b), audio);
+    }
+
     [Fact]
     public void Microsoft_ReadsTheExpiryFromTheToken()
     {
@@ -157,65 +190,58 @@ public class SpeechProtocolTests
     [Fact]
     public async Task Synthesizer_SkipsEnginesWithNoVoice_WithoutAskingThem()
     {
-        var google = new Fake("Google", "ja");
-        var microsoft = new Fake("Microsoft", "ja", "sl");
-        var synthesizer = new SpeechSynthesizer([google, microsoft]);
+        var narrow = new Fake("Narrow", "ja");
+        var wide = new Fake("Wide", "ja", "sl");
+        var synthesizer = new SpeechSynthesizer("Test", [narrow, wide]);
 
         var (_, engine) = await synthesizer.SynthesizeAsync("Dober dan", "sl");
 
-        Assert.Equal("Microsoft", engine);
-        Assert.Equal(0, google.Calls);
+        Assert.Equal("Wide", engine);
+        Assert.Equal(0, narrow.Calls);
     }
 
     [Fact]
     public async Task Synthesizer_FallsBackWhenAnEngineFails()
     {
-        var failing = new Fake("Google", "ja") { Fails = true };
-        var synthesizer = new SpeechSynthesizer([failing, new Fake("Microsoft", "ja")]);
+        var failing = new Fake("Rpc", "ja") { Fails = true };
+        var synthesizer = new SpeechSynthesizer("Test", [failing, new Fake("Web", "ja")]);
 
         var (_, engine) = await synthesizer.SynthesizeAsync("こんにちは", "ja");
 
-        Assert.Equal("Microsoft", engine);
+        Assert.Equal("Web", engine);
         Assert.Equal(1, failing.Calls);
     }
 
     [Fact]
     public async Task Synthesizer_ALanguageNobodySpeaks_IsAFailure()
     {
-        var synthesizer = new SpeechSynthesizer([new Fake("Google", "ja")]);
+        var synthesizer = new SpeechSynthesizer("Test", [new Fake("Rpc", "ja")]);
 
-        await Assert.ThrowsAsync<TranslationEngineException>(() => synthesizer.SynthesizeAsync("x", "xx"));
+        var ex = await Assert.ThrowsAsync<SpeechFailedException>(() => synthesizer.SynthesizeAsync("x", "xx"));
+        Assert.Equal(SpeechFailure.Unsupported, ex.Reason);
     }
 
-    // Stopping has to abort the download, and must not be mistaken for a failure that moves on to
-    // the next engine.
+    // The old service knew fifteen languages and read the rest with an English voice. Microsoft and
+    // Bing read every language the pickers offer; Google every one but Slovenian and Persian, which
+    // both its addresses refuse.
     [Fact]
-    public async Task Synthesizer_Cancelled_StopsAndAsksNobodyElse()
-    {
-        var hanging = new Fake("Google", "ja") { Hangs = true };
-        var next = new Fake("Microsoft", "ja");
-        var synthesizer = new SpeechSynthesizer([hanging, next]);
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => synthesizer.SynthesizeAsync("こんにちは", "ja", cts.Token));
-
-        Assert.Equal(0, next.Calls);
-    }
-
-    // The old service knew fifteen languages and read the rest with an English voice.
-    [Fact]
-    public void EveryLanguageThePickersOffer_HasAVoice()
+    public void EveryLanguageThePickersOffer_HasAVoice_ExceptTwoOnGoogle()
     {
         var http = new HttpClient(new Canned());
-        var synthesizer = new SpeechSynthesizer(
-            [new GoogleRpcSpeech(http), new GoogleWebSpeech(http), new MicrosoftSpeech(http), new BingSpeech(http)]);
+        var google = new SpeechSynthesizer("Google", [new GoogleRpcSpeech(http), new GoogleWebSpeech(http)]);
+        var microsoft = new SpeechSynthesizer("Microsoft", [new MicrosoftSpeech(http)]);
+        var bing = new SpeechSynthesizer("Bing", [new BingSpeech(http)]);
 
         var codes = LanguageData.SourceLanguages.Concat(LanguageData.TargetLanguages)
             .Select(language => language.Code)
             .Where(code => !LanguageData.IsAutomaticSource(code))
-            .Distinct();
+            .Select(EngineLanguage.ToEngine)
+            .Distinct()
+            .ToList();
 
-        Assert.All(codes, code => Assert.True(synthesizer.Supports(EngineLanguage.ToEngine(code)), code));
+        Assert.All(codes, code => Assert.True(microsoft.Supports(code), code));
+        Assert.All(codes, code => Assert.True(bing.Supports(code), code));
+        Assert.Equal(["fa", "sl"], codes.Where(code => !google.Supports(code)).Order());
     }
 
     // ---- Helpers ----------------------------------------------------------------------------
@@ -257,20 +283,68 @@ public class SpeechProtocolTests
         }
     }
 
-    /// <summary>An engine with the voices it is told to have, that answers, fails or hangs on cue.</summary>
+    /// <summary>
+    /// Microsoft's token, then speech that takes a moment: each piece answered with the number of
+    /// its first sentence, counting how many were being answered at once.
+    /// </summary>
+    private sealed class Pieces : HttpMessageHandler
+    {
+        private int _running, _most, _count;
+
+        public int Most => Volatile.Read(ref _most);
+        public int Count => Volatile.Read(ref _count);
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
+            if (request.RequestUri!.ToString().Contains("/apps/endpoint"))
+                return Json("""{"t":"header.eyJleHAiOjQxMDI0NDQ4MDB9.sig","r":"eastasia"}""");
+
+            Interlocked.Increment(ref _count);
+            var now = Interlocked.Increment(ref _running);
+            lock (this) _most = Math.Max(_most, now);
+            await Task.Delay(50, cancellationToken);
+            Interlocked.Decrement(ref _running);
+
+            var number = int.Parse(System.Text.RegularExpressions.Regex.Match(body, @"S(\d+)\.").Groups[1].Value);
+            return Audio([(byte)number]);
+        }
+    }
+
+    /// <summary>The first piece (idx=0) cannot connect; every other one waits until it is cancelled.</summary>
+    private sealed class FirstFailsRestHang : HttpMessageHandler
+    {
+        private int _cancelled;
+
+        public int Cancelled => Volatile.Read(ref _cancelled);
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.Query.Contains("&idx=0&"))
+            {
+                await Task.Delay(50, cancellationToken);
+                throw new HttpRequestException(HttpRequestError.ConnectionError, "unreachable");
+            }
+
+            try { await Task.Delay(Timeout.Infinite, cancellationToken); }
+            catch (OperationCanceledException) { Interlocked.Increment(ref _cancelled); throw; }
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        }
+    }
+
+    /// <summary>An engine with the voices it is told to have, that answers or fails on cue.</summary>
     private sealed class Fake(string name, params string[] languages) : ISpeechEngine
     {
         public string Name => name;
         public int Calls { get; private set; }
         public bool Fails { get; init; }
-        public bool Hangs { get; init; }
 
         public bool Supports(string language) => languages.Contains(language);
 
         public async Task<byte[]> SynthesizeAsync(string text, string language, CancellationToken cancellationToken = default)
         {
             Calls++;
-            if (Hangs) await Task.Delay(Timeout.Infinite, cancellationToken);
+            await Task.Yield();
             if (Fails) throw new TranslationEngineException(name, "down");
             return [0xFF];
         }

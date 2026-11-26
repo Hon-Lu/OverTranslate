@@ -296,7 +296,9 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Main.CopyFailedBody">Could not copy the screenshot: {0}</sys:String>
     <sys:String x:Key="S.Main.CopyTextFailedBody">The clipboard is unavailable right now. Try again in a moment.</sys:String>
     <sys:String x:Key="S.Main.SpeakFailedTitle">Could not read aloud</sys:String>
-    <sys:String x:Key="S.Main.SpeakFailedBody">This text could not be read aloud: {0}</sys:String>
+    <sys:String x:Key="S.Tts.Unreachable">Could not connect to the {0} read-aloud service. Another service can be chosen in Settings.</sys:String>
+    <sys:String x:Key="S.Tts.Unsupported">The {0} read-aloud service does not support {1}. Another service can be chosen in Settings.</sys:String>
+    <sys:String x:Key="S.Tts.Unavailable">The {0} read-aloud service is unavailable right now. Try again later or choose another service in Settings.</sys:String>
 
     <!-- ── Realtime translation ── -->
     <sys:String x:Key="S.Realtime.Title">Realtime translation</sys:String>
@@ -598,6 +600,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">When it is not running, press the shortcut to select blocks, then press it again to start translating; while translating, it pauses and resumes.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Compare with original</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Works only during realtime translation. Switches between the translation covering the original and showing it in the compare area.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">Start / pause and compare with original</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">In-place translation</sys:String>
@@ -679,6 +682,11 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">General translation</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI translation</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupAids">Translation aids</sys:String>
+    <sys:String x:Key="S.Settings.SpeechProvider">Read-aloud service</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProvider">Follow translation service</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">Uses the current translation service's own voice first, and the read-aloud service chosen above when it has none.</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUse">In use: {0} (following translation service)</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUsePlain">In use: {0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Setup needed</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Configured</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">Using defaults</sys:String>

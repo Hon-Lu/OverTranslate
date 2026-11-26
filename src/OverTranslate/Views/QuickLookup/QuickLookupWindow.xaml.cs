@@ -1424,7 +1424,7 @@ public partial class QuickLookupWindow : Window
         catch (Exception ex)
         {
             Log.Warn(ex, "取詞翻譯 could not read the text aloud");
-            ShowStatus(LocalizationService.Format("S.Translation.SpeakFailed", ex.Message), isError: true);
+            ShowStatus(LocalizationService.Format("S.Translation.SpeakFailed", TtsService.FailureText(ex, language)), isError: true);
         }
     }
 
@@ -1997,8 +1997,7 @@ public partial class QuickLookupWindow : Window
     {
         if (_suppressAuto || ProviderBox.SelectedValue is not TranslationProvider provider) return;
 
-        SettingsService.Instance.Current.Provider = provider;
-        SettingsService.Instance.Save();
+        SettingsService.Instance.UpdateProvider(provider);
 
         // The engine's answer belongs to the engine that gave it, and the new one may not answer at
         // all — see RenderSourceTtsAvailability.

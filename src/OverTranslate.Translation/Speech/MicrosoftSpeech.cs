@@ -58,6 +58,20 @@ internal static class MicrosoftVoices
 
     public static bool Has(string language) => Voices.ContainsKey(language);
 
+    /// <summary>The most characters one request reads, and how many requests go at once.</summary>
+    /// <remarks>
+    /// Both services take a whole text in one request but answer slower the longer it is: 2000
+    /// characters of Japanese in one request took Bing 20–26 s and Microsoft 5–11 s, past or near
+    /// the request timeout (TranslationTiming.Request, 10 s), so every long text would have failed.
+    /// In pieces of 200, six at a time, no request of 5000 characters took over 6 s (measured from
+    /// Taiwan, 2026-11-26), and three at a time no less, at twice the wait. All of them at once,
+    /// Microsoft refused with 429 and Bing's slowest piece took 8.6 s.
+    /// </remarks>
+    public const int MaxCharacters = 200;
+
+    /// <inheritdoc cref="MaxCharacters"/>
+    public const int Parallel = 6;
+
     /// <summary>The SSML that asks for <paramref name="text"/> in the voice for <paramref name="language"/>.</summary>
     public static string Ssml(string text, string language)
     {
@@ -90,7 +104,11 @@ public sealed class MicrosoftSpeech(HttpClient http) : SpeechEngine(http)
 
     public override bool Supports(string language) => MicrosoftVoices.Has(language);
 
-    protected override async Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken)
+    protected override Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken) =>
+        SpeakInPiecesAsync(text, MicrosoftVoices.MaxCharacters, MicrosoftVoices.Parallel,
+            (piece, token) => SpeakPieceAsync(piece, language, token), cancellationToken);
+
+    private async Task<byte[]> SpeakPieceAsync(string text, string language, CancellationToken cancellationToken)
     {
         var (token, region) = await GetTokenAsync(cancellationToken);
 
@@ -180,7 +198,11 @@ public sealed class BingSpeech : SpeechEngine
 
     public override bool Supports(string language) => MicrosoftVoices.Has(language);
 
-    protected override async Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken)
+    protected override Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken) =>
+        SpeakInPiecesAsync(text, MicrosoftVoices.MaxCharacters, MicrosoftVoices.Parallel,
+            (piece, token) => SpeakPieceAsync(piece, language, token), cancellationToken);
+
+    private async Task<byte[]> SpeakPieceAsync(string text, string language, CancellationToken cancellationToken)
     {
         var credentials = await _session.GetAsync(cancellationToken);
 

@@ -514,7 +514,10 @@ public partial class TranslationPage : UserControl
         _ttsActiveBtn = btn;
         UpdateTtsIcons();           // show ⏹ immediately on click (don't wait for the fetch)
         try { await _tts.SpeakAsync(text, lang); }
-        catch (Exception ex) { SetStatus(LocalizationService.Format("S.Translation.SpeakFailed", ex.Message), isError: true); }
+        catch (Exception ex)
+        {
+            SetStatus(LocalizationService.Format("S.Translation.SpeakFailed", TtsService.FailureText(ex, lang)), isError: true);
+        }
     }
 
     // StateChanged only needs to handle "stopped/ended/failed" — start is reflected on click.
@@ -643,10 +646,6 @@ public partial class TranslationPage : UserControl
         SettingsService.Instance.Save();
     }
 
-    private static void SaveProviderSelection(TranslationProvider provider)
-    {
-        var settings = SettingsService.Instance.Current;
-        settings.Provider = provider;
-        SettingsService.Instance.Save();
-    }
+    private static void SaveProviderSelection(TranslationProvider provider) =>
+        SettingsService.Instance.UpdateProvider(provider);
 }

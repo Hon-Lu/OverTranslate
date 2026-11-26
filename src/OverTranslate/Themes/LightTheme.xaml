@@ -8,6 +8,8 @@
     <SolidColorBrush x:Key="AppCardBg"         Color="#FFFFFF"/>
     <SolidColorBrush x:Key="AppBorder"         Color="#E0E0E0"/>
     <SolidColorBrush x:Key="AppSubtleBorder"   Color="#EBEBEB"/>
+    <!-- The 1px between the rows of a group (Controls/AttachedRows): the section and its cards are both white here, so the seam is drawn in AppBorder's grey. -->
+    <SolidColorBrush x:Key="AppRowSeam"        Color="#E0E0E0"/>
 
     <!-- The light-theme half of AppInfoBg — see DarkTheme.xaml. Tinted rather than lifted here,
          because the card underneath is already white and there is nothing above it to lift to. -->
