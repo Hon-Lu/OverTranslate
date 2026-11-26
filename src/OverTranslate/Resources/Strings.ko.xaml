@@ -36,7 +36,16 @@
     <sys:String x:Key="S.Shell.Unpin">고정 해제</sys:String>
     <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">블록을 지정하는 중입니다. ‘시작’을 누른 뒤 캡처 번역을 사용하세요</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">실시간 번역이 실행 중입니다. 종료한 뒤 팝업 번역을 사용하세요</sys:String>
-    <sys:String x:Key="S.Shell.UpdateAvailable">v{0}(으)로 업데이트</sys:String>
+    <sys:String x:Key="S.Shell.UpdateAvailable">{0}(으)로 업데이트</sys:String>
+    <sys:String x:Key="S.Shell.UpdateCard">버전 및 업데이트</sys:String>
+    <sys:String x:Key="S.UpdateCard.AutoCheck">1시간마다 자동 확인</sys:String>
+    <sys:String x:Key="S.UpdateCard.LastChecked">1시간마다 자동 확인 · 마지막 {0}</sys:String>
+    <sys:String x:Key="S.UpdateCard.DatePattern">M/d</sys:String>
+    <sys:String x:Key="S.UpdateCard.Checking">확인 중…</sys:String>
+    <sys:String x:Key="S.UpdateCard.UpToDate">✓ 최신 버전입니다</sys:String>
+    <sys:String x:Key="S.UpdateCard.Failed">업데이트 서버에 연결할 수 없습니다</sys:String>
+    <sys:String x:Key="S.UpdateCard.Found">새 버전 {0}이(가) 있습니다</sys:String>
+    <sys:String x:Key="S.UpdateCard.Check">업데이트 확인</sys:String>
 
     <!-- ── Tray menu ── -->
     <sys:String x:Key="S.Tray.OpenWindow">번역 창 열기</sys:String>

@@ -43,8 +43,8 @@ public partial class UpdateWindow : Window
     /// Opens the update window, or brings the open one forward.
     /// </summary>
     /// <remarks>
-    /// Two entry points reach this now — the startup check and the nav rail's 有新版本 — and the
-    /// rail's is a button the user can press while the window it opens is already on screen behind
+    /// Two entry points reach this now — the startup check and the title bar's update card — and the
+    /// card's is a button the user can press while the window it opens is already on screen behind
     /// the shell. A second instance would be a second download button for the same release.
     /// </remarks>
     public static void ShowOrActivate(UpdateInfo info) =>
@@ -653,7 +653,7 @@ public partial class UpdateWindow : Window
     /// Silences the startup dialog for this release and anything older, then closes.
     /// </summary>
     /// <remarks>
-    /// Deliberately not a refusal of the update: the nav rail keeps offering it, so a user who
+    /// Deliberately not a refusal of the update: the title bar keeps offering it, so a user who
     /// skips a release in the morning and changes their mind that evening has somewhere to go. What
     /// this turns off is the interruption, which is the part they actually objected to.
     /// </remarks>

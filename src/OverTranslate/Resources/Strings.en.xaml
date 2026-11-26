@@ -35,7 +35,16 @@
     <sys:String x:Key="S.Shell.Unpin">Unpin</sys:String>
     <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">Realtime blocks are being framed — click "Start" before using screen capture</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">Realtime translation is running — stop it before using quick lookup</sys:String>
-    <sys:String x:Key="S.Shell.UpdateAvailable">Update to v{0}</sys:String>
+    <sys:String x:Key="S.Shell.UpdateAvailable">Update to {0}</sys:String>
+    <sys:String x:Key="S.Shell.UpdateCard">Version and updates</sys:String>
+    <sys:String x:Key="S.UpdateCard.AutoCheck">Checks hourly</sys:String>
+    <sys:String x:Key="S.UpdateCard.LastChecked">Checks hourly · Last checked {0}</sys:String>
+    <sys:String x:Key="S.UpdateCard.DatePattern">M/d</sys:String>
+    <sys:String x:Key="S.UpdateCard.Checking">Checking...</sys:String>
+    <sys:String x:Key="S.UpdateCard.UpToDate">✓ Up to date</sys:String>
+    <sys:String x:Key="S.UpdateCard.Failed">Can't reach the update server</sys:String>
+    <sys:String x:Key="S.UpdateCard.Found">New version {0} available</sys:String>
+    <sys:String x:Key="S.UpdateCard.Check">Check for updates</sys:String>
 
     <!-- ── Tray menu ── -->
     <sys:String x:Key="S.Tray.OpenWindow">Open translation window</sys:String>
