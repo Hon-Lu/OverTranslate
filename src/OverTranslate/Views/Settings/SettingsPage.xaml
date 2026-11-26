@@ -1104,11 +1104,7 @@
                                                                AutomationProperties.AutomationId="SpeechInUseText"/>
                                                 </StackPanel>
                                                 <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="&#xE767;"
-                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                               FontSize="22"
-                                                               Foreground="{DynamicResource AppTextSecondary}"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Source="{StaticResource SpeechMarkImage}" Width="28" Height="28"/>
                                                 </Grid>
                                                 <TextBlock Text="{DynamicResource S.Settings.SpeechProvider}"
                                                            Style="{StaticResource ChoiceTileTitle}" FontSize="15"
