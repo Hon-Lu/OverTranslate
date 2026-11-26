@@ -1,5 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+// UseWindowsForms puts System.Drawing in the implicit usings, so these names collide
+using Brush = System.Windows.Media.Brush;
+using Point = System.Windows.Point;
 
 namespace OverTranslate.Controls;
 
@@ -27,12 +31,41 @@ public class AttachedRows : StackPanel
         set => SetValue(CornerRadiusProperty, value);
     }
 
+    public static readonly DependencyProperty SeamBrushProperty = DependencyProperty.Register(
+        nameof(SeamBrush), typeof(Brush), typeof(AttachedRows),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    /// <summary>
+    /// What the 1px between rows shows; AppRowSeam by default. The section's own fill would do where it
+    /// differs from the rows', but in the light theme both are white and the rows would run together.
+    /// </summary>
+    public Brush? SeamBrush
+    {
+        get => (Brush?)GetValue(SeamBrushProperty);
+        set => SetValue(SeamBrushProperty, value);
+    }
+
     public AttachedRows()
     {
         // A 1px seam drawn at 125% would otherwise land between device pixels and blur.
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
+        SetResourceReference(SeamBrushProperty, "AppRowSeam");
     }
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        base.OnRender(dc);
+        if (SeamBrush is not { } brush) return;
+
+        // Behind the rows, in the pixel each row past the first leaves above itself.
+        foreach (var row in Children.OfType<Border>().Skip(1).Where(r => r.IsVisible))
+        {
+            var top = row.TranslatePoint(new Point(0, 0), this).Y;
+            dc.DrawRectangle(brush, null, new Rect(0, top - row.Margin.Top, ActualWidth, row.Margin.Top));
+        }
+    }
+
 
     protected override void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved)
     {
