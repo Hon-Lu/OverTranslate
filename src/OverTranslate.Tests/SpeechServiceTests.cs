@@ -74,25 +74,47 @@ public class SpeechServiceTests
         Assert.False(settings.SpeechFollowsProvider);
     }
 
-    // The line under the settings page's picker: the service that reads while following.
+    // The settings page's status line: says 跟隨翻譯服務 only while the translation service's own
+    // voice is the one reading.
     [Theory]
     [InlineData(TranslationProvider.Microsoft, SpeechProvider.Google, "Microsoft")]
     [InlineData(TranslationProvider.Google2, SpeechProvider.Bing, "Google")]
-    [InlineData(TranslationProvider.DeepL, SpeechProvider.Google, "Google")]
-    [InlineData(TranslationProvider.Youdao, SpeechProvider.Bing, "Bing")]
-    public void Following_TheLineNamesTheServiceThatReads(TranslationProvider translation, SpeechProvider picked, string reads)
+    [InlineData(TranslationProvider.Bing, SpeechProvider.Google, "Bing")]
+    public void Following_TheLineSaysSo(TranslationProvider translation, SpeechProvider picked, string reads)
     {
         var settings = new AppSettings { Provider = translation, SpeechProvider = picked, SpeechFollowsProvider = true };
 
         Assert.Equal(LocalizationService.Format("S.Settings.SpeechInUse", reads), SpeechProviders.InUseLine(settings));
     }
 
+    // A translation service with no voice falls back to the picker, so the line names it plainly.
+    [Theory]
+    [InlineData(TranslationProvider.DeepL, SpeechProvider.Google, "Google")]
+    [InlineData(TranslationProvider.Youdao, SpeechProvider.Bing, "Bing")]
+    public void FollowingAServiceWithNoVoice_TheLineNamesThePicker(TranslationProvider translation, SpeechProvider picked, string reads)
+    {
+        var settings = new AppSettings { Provider = translation, SpeechProvider = picked, SpeechFollowsProvider = true };
+
+        Assert.Equal(LocalizationService.Format("S.Settings.SpeechInUsePlain", reads), SpeechProviders.InUseLine(settings));
+    }
+
     [Fact]
-    public void NotFollowing_ThereIsNoLine()
+    public void NotFollowing_TheLineNamesThePicker()
     {
         var settings = new AppSettings { Provider = TranslationProvider.Microsoft, SpeechProvider = SpeechProvider.Google, SpeechFollowsProvider = false };
 
-        Assert.Equal("", SpeechProviders.InUseLine(settings));
+        Assert.Equal(LocalizationService.Format("S.Settings.SpeechInUsePlain", "Google"), SpeechProviders.InUseLine(settings));
+    }
+
+    [Fact]
+    public void TheNameIsSetApart_FromTheRestOfTheLine()
+    {
+        var settings = new AppSettings { Provider = TranslationProvider.Microsoft, SpeechFollowsProvider = true };
+
+        var (before, name, after) = SpeechProviders.InUseParts(settings);
+
+        Assert.Equal("Microsoft", name);
+        Assert.Equal(SpeechProviders.InUseLine(settings), before + name + after);
     }
 
     // The line follows a translation service changed in 文字翻譯, on the toolbar or in 取詞翻譯

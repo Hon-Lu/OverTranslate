@@ -16,13 +16,34 @@ public static class SpeechProviders
     public static string Display(SpeechProvider provider) => provider.ToString();
 
     /// <summary>
-    /// The line the settings page shows under the picker: which service reads while following the
-    /// translation service, or empty when not following, where the picker says it already.
+    /// The settings page's status line: the service that reads, and whether it is the translation
+    /// service's own voice. Always a line, so the card does not change height as settings change.
     /// </summary>
-    public static string InUseLine(AppSettings settings) =>
-        settings.SpeechFollowsProvider
-            ? Services.LocalizationService.Format("S.Settings.SpeechInUse", Display(Resolve(settings)))
-            : "";
+    public static string InUseLine(AppSettings settings)
+    {
+        var (before, name, after) = InUseParts(settings);
+        return before + name + after;
+    }
+
+    /// <summary>
+    /// <see cref="InUseLine"/> split around the service's name, which the page sets apart from the
+    /// rest of the line.
+    /// </summary>
+    public static (string Before, string Name, string After) InUseParts(AppSettings settings)
+    {
+        var key = FollowsTranslation(settings) ? "S.Settings.SpeechInUse" : "S.Settings.SpeechInUsePlain";
+        var format = Services.LocalizationService.Get(key);
+        var at = format.IndexOf("{0}", StringComparison.Ordinal);
+        var name = Display(Resolve(settings));
+        return at < 0 ? (format, "", "") : (format[..at], name, format[(at + 3)..]);
+    }
+
+    /// <summary>
+    /// Whether the translation service's own voice reads: the switch is on and that service has one.
+    /// Otherwise the picker's choice does, whatever the switch says.
+    /// </summary>
+    public static bool FollowsTranslation(AppSettings settings) =>
+        settings.SpeechFollowsProvider && OwnVoice(settings.Provider) is not null;
 
     /// <summary>The service that reads aloud for <paramref name="settings"/>.</summary>
     public static SpeechProvider Resolve(AppSettings settings) =>
@@ -34,14 +55,15 @@ public static class SpeechProviders
     /// </summary>
     public static SpeechProvider Resolve(TranslationProvider translation, bool follow, SpeechProvider chosen)
     {
-        if (!follow) return chosen;
-
-        return translation switch
-        {
-            TranslationProvider.Google or TranslationProvider.Google2 or TranslationProvider.GoogleChrome => SpeechProvider.Google,
-            TranslationProvider.Microsoft => SpeechProvider.Microsoft,
-            TranslationProvider.Bing => SpeechProvider.Bing,
-            _ => chosen,
-        };
+        return follow ? OwnVoice(translation) ?? chosen : chosen;
     }
+
+    /// <summary>The translation service's own voice, or null for a service that has none.</summary>
+    private static SpeechProvider? OwnVoice(TranslationProvider translation) => translation switch
+    {
+        TranslationProvider.Google or TranslationProvider.Google2 or TranslationProvider.GoogleChrome => SpeechProvider.Google,
+        TranslationProvider.Microsoft => SpeechProvider.Microsoft,
+        TranslationProvider.Bing => SpeechProvider.Bing,
+        _ => null,
+    };
 }

@@ -680,6 +680,7 @@
     <sys:String x:Key="S.Settings.SpeechFollowsProvider">跟隨翻譯服務</sys:String>
     <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">優先使用目前翻譯服務提供的朗讀功能，若不支援朗讀，則使用上方選擇的朗讀服務。</sys:String>
     <sys:String x:Key="S.Settings.SpeechInUse">目前使用：{0}（跟隨翻譯服務）</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUsePlain">目前使用：{0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Требует настройки</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Настроено</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">По умолчанию</sys:String>

@@ -1075,71 +1075,75 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <!-- 朗讀服務 (#436): the service that reads aloud, and under it whether the
-                                         translation service's own voice goes first. One card, as the glossary's:
-                                         the switch only means something beside the picker it overrides, and its
-                                         line refers to the picker above it. -->
-                                    <Border x:Name="SpeechServiceRow"
-                                            Margin="0,8,0,0" Padding="14,10" CornerRadius="8" BorderThickness="1"
-                                            Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}"
-                                            SnapsToDevicePixels="True"
-                                            AutomationProperties.AutomationId="SpeechServiceRow">
-                                        <StackPanel>
+                                    <!-- 朗讀服務 (#436): the service that reads aloud, and joined under it whether
+                                         the translation service's own voice goes first - the switch only
+                                         means something beside the picker it overrides. The status line is
+                                         always there, so the card keeps its height as settings change. -->
+                                    <ctl:AttachedRows x:Name="SpeechServiceRow" Margin="0,8,0,0" CornerRadius="8">
+                                        <Border Padding="14,10"
+                                                Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}">
                                             <DockPanel MinHeight="40">
-                                                <!-- Under the picker while the switch is on: the service that
-                                                     actually reads, which the picker then may not be (#436). -->
-                                                <StackPanel DockPanel.Dock="Right" Margin="14,0,0,0" VerticalAlignment="Center">
-                                                    <ComboBox x:Name="SpeechProviderPicker"
-                                                              Style="{StaticResource ModernComboBox}"
-                                                              Width="200" Height="30"
-                                                              HorizontalAlignment="Right"
-                                                              DisplayMemberPath="Display" SelectedValuePath="Provider"
-                                                              AutomationProperties.Name="{DynamicResource S.Settings.SpeechProvider}"
-                                                              AutomationProperties.AutomationId="SpeechProviderPicker"
-                                                              SelectionChanged="SpeechProviderPicker_SelectionChanged"/>
+                                                <ComboBox DockPanel.Dock="Right"
+                                                          x:Name="SpeechProviderPicker"
+                                                          Style="{StaticResource ModernComboBox}"
+                                                          Width="200" Height="30" Margin="14,0,0,0"
+                                                          VerticalAlignment="Center"
+                                                          DisplayMemberPath="Display" SelectedValuePath="Provider"
+                                                          AutomationProperties.Name="{DynamicResource S.Settings.SpeechProvider}"
+                                                          AutomationProperties.AutomationId="SpeechProviderPicker"
+                                                          SelectionChanged="SpeechProviderPicker_SelectionChanged"/>
+                                                <!-- The app's own feature tile, as 快捷鍵's 截圖翻譯 and 取詞翻譯
+                                                     (HotkeyRowIcon), at the glossary mark's size beside it. -->
+                                                <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
+                                                    <Border Width="28" Height="28" CornerRadius="6.5" BorderThickness="1"
+                                                            Background="{DynamicResource AppAccentSubtle}"
+                                                            BorderBrush="{DynamicResource AppAccentSubtleHover}"/>
+                                                    <Viewbox Width="28" Height="28">
+                                                        <Path Data="{StaticResource SpeechMarkGeometry}"
+                                                              Fill="{DynamicResource AppAccent}"
+                                                              Stretch="None" Width="24" Height="24"/>
+                                                    </Viewbox>
+                                                </Grid>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{DynamicResource S.Settings.SpeechProvider}"
+                                                               Style="{StaticResource ChoiceTileTitle}" FontSize="15"/>
+                                                    <!-- The service that actually reads, which the picker may not be
+                                                         while the switch is on; its name set apart (#436). -->
                                                     <TextBlock x:Name="SpeechInUseText"
                                                                Style="{StaticResource FieldHint}" FontSize="12"
-                                                               HorizontalAlignment="Right" Margin="0,4,0,0"
-                                                               Visibility="Collapsed"
-                                                               AutomationProperties.AutomationId="SpeechInUseText"/>
+                                                               Margin="0,2,0,0"
+                                                               Visibility="Visible"
+                                                               AutomationProperties.AutomationId="SpeechInUseText"><Run x:Name="SpeechInUseBefore"/><Run x:Name="SpeechInUseName" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimary}"/><Run x:Name="SpeechInUseAfter"/></TextBlock>
                                                 </StackPanel>
-                                                <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
-                                                    <Image Source="{StaticResource SpeechMarkImage}" Width="28" Height="28"/>
-                                                </Grid>
-                                                <TextBlock Text="{DynamicResource S.Settings.SpeechProvider}"
-                                                           Style="{StaticResource ChoiceTileTitle}" FontSize="15"
-                                                           VerticalAlignment="Center"/>
                                             </DockPanel>
-                                            <Border BorderBrush="{DynamicResource AppSubtleBorder}"
-                                                    BorderThickness="0,1,0,0"
-                                                    Margin="46,10,0,0"
-                                                    Padding="0,10,0,0">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                        <TextBlock Text="{DynamicResource S.Settings.SpeechFollowsProvider}"
-                                                                   Style="{StaticResource OptionTitle}"/>
-                                                        <TextBlock Text="{DynamicResource S.Settings.SpeechFollowsProviderHint}"
-                                                                   Style="{StaticResource FieldHint}" FontSize="12"
-                                                                   Margin="0,2,0,0" TextWrapping="Wrap"/>
-                                                    </StackPanel>
-                                                    <CheckBox Grid.Column="1"
-                                                              x:Name="SpeechFollowsSwitch"
-                                                              Style="{StaticResource ToggleSwitch}"
-                                                              Margin="14,0,0,0"
-                                                              VerticalAlignment="Center"
-                                                              AutomationProperties.Name="{DynamicResource S.Settings.SpeechFollowsProvider}"
-                                                              AutomationProperties.HelpText="{DynamicResource S.Settings.SpeechFollowsProviderHint}"
-                                                              AutomationProperties.AutomationId="SpeechFollowsSwitch"
-                                                              Checked="SpeechFollowsSwitch_Toggled"
-                                                              Unchecked="SpeechFollowsSwitch_Toggled"/>
-                                                </Grid>
-                                            </Border>
-                                        </StackPanel>
-                                    </Border>
+                                        </Border>
+                                        <Border Padding="14,10"
+                                                Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{DynamicResource S.Settings.SpeechFollowsProvider}"
+                                                               Style="{StaticResource OptionTitle}"/>
+                                                    <TextBlock Text="{DynamicResource S.Settings.SpeechFollowsProviderHint}"
+                                                               Style="{StaticResource FieldHint}" FontSize="12"
+                                                               Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <CheckBox Grid.Column="1"
+                                                          x:Name="SpeechFollowsSwitch"
+                                                          Style="{StaticResource ToggleSwitch}"
+                                                          Margin="14,0,0,0"
+                                                          VerticalAlignment="Center"
+                                                          AutomationProperties.Name="{DynamicResource S.Settings.SpeechFollowsProvider}"
+                                                          AutomationProperties.HelpText="{DynamicResource S.Settings.SpeechFollowsProviderHint}"
+                                                          AutomationProperties.AutomationId="SpeechFollowsSwitch"
+                                                          Checked="SpeechFollowsSwitch_Toggled"
+                                                          Unchecked="SpeechFollowsSwitch_Toggled"/>
+                                            </Grid>
+                                        </Border>
+                                    </ctl:AttachedRows>
                                 </StackPanel>
                             </Grid>
                         </Border>

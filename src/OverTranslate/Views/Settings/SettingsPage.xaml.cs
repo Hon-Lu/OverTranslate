@@ -324,15 +324,20 @@ public partial class SettingsPage : UserControl
     private void OnProviderChanged(object? sender, EventArgs e) => RenderSpeechInUse();
 
     /// <summary>
-    /// 「目前使用：…（跟隨翻譯服務）」 under the picker while the switch is on — the picker is still
-    /// a choice then, for the translation services with no voice of their own, but not always the
-    /// one that reads, and without this line changing it looked like it did nothing (#436).
+    /// 「目前使用：…」 under the card's title, with 「（跟隨翻譯服務）」 while the translation service's
+    /// own voice reads — the picker is still a choice then, for the translation services with no
+    /// voice of their own, but not always the one that reads, and without this line changing it
+    /// looked like it did nothing (#436).
     /// </summary>
     private void RenderSpeechInUse()
     {
-        var settings = SettingsService.Instance.Current;
-        SpeechInUseText.Text = SpeechProviders.InUseLine(settings);
-        SpeechInUseText.Visibility = SpeechInUseText.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        var (before, name, after) = SpeechProviders.InUseParts(SettingsService.Instance.Current);
+        SpeechInUseBefore.Text = before;
+        SpeechInUseName.Text = name;
+        SpeechInUseAfter.Text = after;
+        // Runs leave Text empty: FieldHint's empty-text trigger is overridden in the XAML, and the
+        // line is named here for UI Automation.
+        System.Windows.Automation.AutomationProperties.SetName(SpeechInUseText, before + name + after);
     }
 
     // ── 詞彙表 (#228) ───────────────────────────────────────────────────────
