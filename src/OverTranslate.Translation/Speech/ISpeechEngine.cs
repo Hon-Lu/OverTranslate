@@ -5,7 +5,8 @@ namespace OverTranslate.Translation.Speech;
 /// <para>Nothing like <see cref="ITextTranslator"/> apart from the endpoints behind it. There is
 /// no list to pack, no group to fall back per, no answer to line up with its question: a user
 /// presses the speaker for one text and waits for one sound. So none of the batching machinery
-/// applies, and the fallback (<see cref="SpeechSynthesizer"/>) is a plain "next one, please".</para>
+/// applies, and moving between one service's engines (<see cref="SpeechSynthesizer"/>) is a plain
+/// "next one, please".</para>
 ///
 /// <para>Language codes are Google's, as everywhere in this library: <c>en</c>, <c>ja</c>,
 /// <c>zh-CN</c>, <c>zh-TW</c>, <c>no</c>, <c>pt</c>.</para>
@@ -16,14 +17,8 @@ public interface ISpeechEngine
     string Name { get; }
 
     /// <summary>
-    /// Where the engine's requests go. Engines that share one are reachable or not together, so
-    /// when one cannot reach it, <see cref="SpeechSynthesizer"/> does not send the others there.
-    /// </summary>
-    string Host { get; }
-
-    /// <summary>
     /// Whether this engine has a voice for <paramref name="language"/>. Asked before anything is
-    /// sent, so a language it cannot speak goes to the next engine instead of being read aloud by
+    /// sent, so a language it cannot speak is said to be one instead of being read aloud by
     /// whichever voice the engine falls back to — an English voice reading Swedish, as it used to.
     /// </summary>
     bool Supports(string language);

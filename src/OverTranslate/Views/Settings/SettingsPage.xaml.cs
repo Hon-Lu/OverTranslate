@@ -270,6 +270,10 @@ public partial class SettingsPage : UserControl
             LoadProviderRows(s);
             RefreshServiceTiles();
             RefreshGlossaryRow();
+            SpeechProviderPicker.ItemsSource = SpeechProviders.All
+                .Select(provider => new SpeechChoice(provider, SpeechProviders.Display(provider))).ToList();
+            SpeechProviderPicker.SelectedValue = s.SpeechProvider;
+            SpeechFollowsSwitch.IsChecked = s.SpeechFollowsProvider;
             UpdateScreenshotPathVisibility();
             UpdateDebugScopeAvailability();
             UpdateVerboseLoggingAvailability();
@@ -292,6 +296,19 @@ public partial class SettingsPage : UserControl
         if (Window.GetWindow(this) is Shell.ShellWindow shell)
             shell.OpenQuickTranslateSettings();
     }
+
+    // ── 朗讀服務 (#436) ─────────────────────────────────────────────────────
+
+    private sealed record SpeechChoice(SpeechProvider Provider, string Display);
+
+    private void SpeechProviderPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (SpeechProviderPicker.SelectedValue is SpeechProvider provider)
+            Persist(s => s.SpeechProvider = provider);
+    }
+
+    private void SpeechFollowsSwitch_Toggled(object sender, RoutedEventArgs e) =>
+        Persist(s => s.SpeechFollowsProvider = SpeechFollowsSwitch.IsChecked == true);
 
     // ── 詞彙表 (#228) ───────────────────────────────────────────────────────
 

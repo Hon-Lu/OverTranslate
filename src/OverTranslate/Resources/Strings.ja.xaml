@@ -300,7 +300,9 @@
     <sys:String x:Key="S.Main.CopyFailedBody">スクリーンショットをコピーできませんでした：{0}</sys:String>
     <sys:String x:Key="S.Main.CopyTextFailedBody">クリップボードを使用できません。しばらくしてからお試しください。</sys:String>
     <sys:String x:Key="S.Main.SpeakFailedTitle">読み上げに失敗しました</sys:String>
-    <sys:String x:Key="S.Main.SpeakFailedBody">このテキストは読み上げられませんでした：{0}</sys:String>
+    <sys:String x:Key="S.Tts.Unreachable">無法連線至 {0} 朗讀服務，可在設定中更換服務。</sys:String>
+    <sys:String x:Key="S.Tts.Unsupported">{0} 朗讀服務不支援{1}，可在設定中更換服務。</sys:String>
+    <sys:String x:Key="S.Tts.Unavailable">{0} 朗讀服務暫時無法使用，請稍後再試或在設定中更換服務。</sys:String>
 
     <!-- ── Realtime translation ── -->
     <sys:String x:Key="S.Realtime.Title">リアルタイム翻訳</sys:String>
@@ -683,6 +685,9 @@
     <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻訳</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻訳</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupAids">翻訳支援</sys:String>
+    <sys:String x:Key="S.Settings.SpeechProvider">朗讀服務</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProvider">跟隨翻譯服務</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">優先使用目前翻譯服務提供的朗讀功能，若不支援朗讀，則使用上方選擇的朗讀服務。</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">要設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">設定済み</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">既定値を使用</sys:String>

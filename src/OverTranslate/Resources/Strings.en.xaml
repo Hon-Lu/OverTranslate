@@ -296,7 +296,9 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Main.CopyFailedBody">Could not copy the screenshot: {0}</sys:String>
     <sys:String x:Key="S.Main.CopyTextFailedBody">The clipboard is unavailable right now. Try again in a moment.</sys:String>
     <sys:String x:Key="S.Main.SpeakFailedTitle">Could not read aloud</sys:String>
-    <sys:String x:Key="S.Main.SpeakFailedBody">This text could not be read aloud: {0}</sys:String>
+    <sys:String x:Key="S.Tts.Unreachable">無法連線至 {0} 朗讀服務, 可在設定中更換服務.</sys:String>
+    <sys:String x:Key="S.Tts.Unsupported">{0} 朗讀服務不支援{1}, 可在設定中更換服務.</sys:String>
+    <sys:String x:Key="S.Tts.Unavailable">{0} 朗讀服務暫時無法使用, 請稍後再試或在設定中更換服務.</sys:String>
 
     <!-- ── Realtime translation ── -->
     <sys:String x:Key="S.Realtime.Title">Realtime translation</sys:String>
@@ -679,6 +681,9 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupFree">General translation</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI translation</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupAids">Translation aids</sys:String>
+    <sys:String x:Key="S.Settings.SpeechProvider">朗讀服務</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProvider">跟隨翻譯服務</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">優先使用目前翻譯服務提供的朗讀功能, 若不支援朗讀, 則使用上方選擇的朗讀服務.</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Setup needed</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Configured</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">Using defaults</sys:String>

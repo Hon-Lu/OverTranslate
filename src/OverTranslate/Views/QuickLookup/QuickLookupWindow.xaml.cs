@@ -1424,7 +1424,7 @@ public partial class QuickLookupWindow : Window
         catch (Exception ex)
         {
             Log.Warn(ex, "取詞翻譯 could not read the text aloud");
-            ShowStatus(LocalizationService.Format("S.Translation.SpeakFailed", ex.Message), isError: true);
+            ShowStatus(LocalizationService.Format("S.Translation.SpeakFailed", TtsService.FailureText(ex, language)), isError: true);
         }
     }
 

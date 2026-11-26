@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using System.Windows.Media;
+using OverTranslate.Models;
 using OverTranslate.Services.Providers;
 using OverTranslate.Translation;
 using OverTranslate.Translation.Speech;
@@ -14,31 +15,29 @@ public class TtsService : IDisposable
 
     // Every speaker in the application reads through one set of engines, so the Bing credentials
     // and the Microsoft token are fetched once rather than once per window. The request timeout is
-    // translation's (TranslationTiming): one slow engine hands over to the next after ten seconds,
-    // where GTranslate's own clients waited a hundred.
+    // translation's (TranslationTiming), where GTranslate's own clients waited a hundred seconds.
     //
-    // Reaching a host gets three seconds of that (#436). Where Google's packets are dropped — mainland
-    // China, some office networks — a request otherwise waited the whole ten before the next engine,
-    // and with both Google engines first, every press took twenty. Ordinary connections from Taiwan,
-    // handshake included, took 65–300 ms. A connection that is made and then answers slowly still
-    // has the ten. (Declared first: static fields are set in the order they are written.)
+    // Reaching a host gets three seconds of that (#436): where Google's packets are dropped —
+    // mainland China, some office networks — a press otherwise waited the whole ten to be told so.
+    // Ordinary connections from Taiwan, handshake included, took 65–300 ms. A connection that is
+    // made and then answers slowly still has the ten. (Declared first: static fields are set in
+    // the order they are written.)
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
 
     private static readonly HttpClient Http = EngineHttp.CreateClient(TranslationTiming.Request, ConnectTimeout);
 
-    // Google first, as before; RPC ahead of the old translate_tts address, which is the order the old
-    // service used. Microsoft and Bing are the same Azure voices by two routes, and between them
-    // cover the one language the application offers that Google has no voice for (Slovenian).
-    // Yandex, the old fifth, was dropped: nothing reached it that the four above could not read.
-    // A host that cannot be reached is skipped for a while (SpeechSynthesizer), so a network that
-    // blocks Google pays the connection timeout once, not on every press.
-    private static readonly SpeechSynthesizer Synthesizer = new(
-    [
-        new GoogleRpcSpeech(Http),
-        new GoogleWebSpeech(Http),
-        new MicrosoftSpeech(Http),
-        new BingSpeech(Http),
-    ]);
+    // Only the service the settings name reads (SpeechProviders.Resolve); a failure is shown as that
+    // service's rather than read in another voice. Google's RPC address ahead of the old
+    // translate_tts one, which is the order the old service used; both are the same voices.
+    // Microsoft and Bing are the same Azure voices by two routes, and read every language the
+    // application offers; Google has none for Slovenian or Persian.
+    private static readonly Dictionary<SpeechProvider, SpeechSynthesizer> Synthesizers = new()
+    {
+        [SpeechProvider.Google] = new(SpeechProviders.Display(SpeechProvider.Google),
+            [new GoogleRpcSpeech(Http), new GoogleWebSpeech(Http)]),
+        [SpeechProvider.Microsoft] = new(SpeechProviders.Display(SpeechProvider.Microsoft), [new MicrosoftSpeech(Http)]),
+        [SpeechProvider.Bing] = new(SpeechProviders.Display(SpeechProvider.Bing), [new BingSpeech(Http)]),
+    };
 
     private MediaPlayer? _player;
     private string? _currentFile;
@@ -151,6 +150,9 @@ public class TtsService : IDisposable
         SetActive(false);
     }
 
+    /// <exception cref="SpeechFailedException">
+    /// The service could not read it; <see cref="FailureText"/> says why, for the user.
+    /// </exception>
     public async Task SpeakAsync(string text, string langCode)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
@@ -176,11 +178,12 @@ public class TtsService : IDisposable
             return;
         }
 
+        var provider = SpeechProviders.Resolve(SettingsService.Instance.Current);
         try
         {
             // The token reaches the request itself, so 停止 aborts the download rather than only
             // discarding it when it arrives.
-            var (audio, _) = await Synthesizer.SynthesizeAsync(text, language, token);
+            var (audio, _) = await Synthesizers[provider].SynthesizeAsync(text, language, token);
 
             var file = NewTempFile();
             await File.WriteAllBytesAsync(file, audio, token);
@@ -198,13 +201,43 @@ public class TtsService : IDisposable
         {
             // Stopped, or replaced by a newer press — which owns the button state now.
         }
-        catch
+        catch (SpeechFailedException)
         {
-            // Every engine failed — clear state so the button resets, and let the caller say so.
+            // Clear state so the button resets, and let the caller say so.
             SetActive(false);
             throw;
         }
+        catch (Exception ex)
+        {
+            // Writing the file, or the player: not the service's doing, but the same to the user.
+            SetActive(false);
+            throw new SpeechFailedException(SpeechProviders.Display(provider), SpeechFailure.Unavailable, ex.Message, ex);
+        }
     }
+
+    /// <summary>
+    /// What to tell the user about a failure <see cref="SpeakAsync"/> threw, reading
+    /// <paramref name="langCode"/>.
+    /// </summary>
+    public static string FailureText(Exception ex, string langCode)
+    {
+        var failure = ex as SpeechFailedException;
+        var service = failure?.Service ?? SpeechProviders.Display(SpeechProviders.Resolve(SettingsService.Instance.Current));
+
+        return failure?.Reason switch
+        {
+            SpeechFailure.Unreachable => LocalizationService.Format("S.Tts.Unreachable", service),
+            SpeechFailure.Unsupported => LocalizationService.Format("S.Tts.Unsupported", service, LanguageName(langCode)),
+            _ => LocalizationService.Format("S.Tts.Unavailable", service),
+        };
+    }
+
+    // Source and target lists both, since either side's speaker reads: their codes differ (ZH beside
+    // ZH-HANS, EN beside EN-US), their names do not.
+    private static string LanguageName(string code) =>
+        LanguageData.SourceLanguages.Concat(LanguageData.TargetLanguages)
+            .FirstOrDefault(language => language.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.ShortName
+        ?? code;
 
     public void Dispose()
     {

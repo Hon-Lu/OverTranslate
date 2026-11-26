@@ -9,8 +9,6 @@ public abstract class SpeechEngine(HttpClient http) : ISpeechEngine
 
     public abstract string Name { get; }
 
-    public abstract string Host { get; }
-
     public abstract bool Supports(string language);
 
     /// <summary>Sends the requests for one text and returns the MP3 they add up to.</summary>
@@ -69,6 +67,59 @@ public abstract class SpeechEngine(HttpClient http) : ISpeechEngine
             throw new TranslationEngineException(Name, $"HTTP {(int)response.StatusCode}", response.StatusCode);
 
         return await response.Content.ReadAsStringAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads <paramref name="text"/> in pieces of at most <paramref name="limit"/> characters, at
+    /// most <paramref name="parallel"/> of them at a time, and joins what comes back in order.
+    /// </summary>
+    /// <remarks>
+    /// <para>The first piece to fail ends the text: the rest are cancelled and that failure is
+    /// thrown. Left running, the pieces behind it on a host that does not answer each waited out a
+    /// connection timeout of their own — six seconds for two pieces where one took three.</para>
+    ///
+    /// <para>A limit on how many go at once is for the services that answer the pieces of one text
+    /// slower, or refuse them, the more arrive together.</para>
+    /// </remarks>
+    protected static Task<byte[]> SpeakInPiecesAsync(
+        string text, int limit, int parallel,
+        Func<string, CancellationToken, Task<byte[]>> speak, CancellationToken cancellationToken)
+    {
+        var pieces = SpeechText.Split(text, limit);
+        return SpeakInPiecesAsync(pieces, parallel, (i, token) => speak(pieces[i], token), cancellationToken);
+    }
+
+    /// <inheritdoc cref="SpeakInPiecesAsync(string, int, int, Func{string, CancellationToken, Task{byte[]}}, CancellationToken)"/>
+    /// <param name="speak">Reads the piece at the index given.</param>
+    protected static async Task<byte[]> SpeakInPiecesAsync(
+        IReadOnlyList<string> pieces, int parallel,
+        Func<int, CancellationToken, Task<byte[]>> speak, CancellationToken cancellationToken)
+    {
+        if (pieces.Count == 1) return await speak(0, cancellationToken);
+
+        using var rest = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var turns = new SemaphoreSlim(Math.Min(parallel, pieces.Count));
+        var requests = Enumerable.Range(0, pieces.Count).Select(async i =>
+        {
+            await turns.WaitAsync(rest.Token);
+            try { return await speak(i, rest.Token); }
+            finally { turns.Release(); }
+        }).ToList();
+
+        var pending = new List<Task<byte[]>>(requests);
+        while (pending.Count > 0)
+        {
+            var done = await Task.WhenAny(pending);
+            pending.Remove(done);
+            if (done.IsCompletedSuccessfully) continue;
+
+            rest.Cancel();
+            try { await Task.WhenAll(pending); }
+            catch { /* cancelled behind the failure; that one is the answer */ }
+            await done;   // throws its failure
+        }
+
+        return Concatenate(requests.Select(request => request.Result).ToList());
     }
 
     /// <summary>

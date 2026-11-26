@@ -1074,6 +1074,68 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
+                                    <!-- 朗讀服務 (#436): the service that reads aloud, and under it whether the
+                                         translation service's own voice goes first. One card, as the glossary's:
+                                         the switch only means something beside the picker it overrides, and its
+                                         line refers to the picker above it. -->
+                                    <Border x:Name="SpeechServiceRow"
+                                            Margin="0,8,0,0" Padding="14,10" CornerRadius="8" BorderThickness="1"
+                                            Background="{DynamicResource AppSurfaceBg}" BorderBrush="{DynamicResource AppSubtleBorder}"
+                                            SnapsToDevicePixels="True"
+                                            AutomationProperties.AutomationId="SpeechServiceRow">
+                                        <StackPanel>
+                                            <DockPanel MinHeight="40">
+                                                <ComboBox DockPanel.Dock="Right"
+                                                          x:Name="SpeechProviderPicker"
+                                                          Style="{StaticResource ModernComboBox}"
+                                                          Width="200" Height="30" Margin="14,0,0,0"
+                                                          VerticalAlignment="Center"
+                                                          DisplayMemberPath="Display" SelectedValuePath="Provider"
+                                                          AutomationProperties.Name="{DynamicResource S.Settings.SpeechProvider}"
+                                                          AutomationProperties.AutomationId="SpeechProviderPicker"
+                                                          SelectionChanged="SpeechProviderPicker_SelectionChanged"/>
+                                                <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="&#xE767;"
+                                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                               FontSize="22"
+                                                               Foreground="{DynamicResource AppTextSecondary}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                                <TextBlock Text="{DynamicResource S.Settings.SpeechProvider}"
+                                                           Style="{StaticResource ChoiceTileTitle}" FontSize="15"
+                                                           VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                            <Border BorderBrush="{DynamicResource AppSubtleBorder}"
+                                                    BorderThickness="0,1,0,0"
+                                                    Margin="46,10,0,0"
+                                                    Padding="0,10,0,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{DynamicResource S.Settings.SpeechFollowsProvider}"
+                                                                   Style="{StaticResource OptionTitle}"/>
+                                                        <TextBlock Text="{DynamicResource S.Settings.SpeechFollowsProviderHint}"
+                                                                   Style="{StaticResource FieldHint}" FontSize="12"
+                                                                   Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <CheckBox Grid.Column="1"
+                                                              x:Name="SpeechFollowsSwitch"
+                                                              Style="{StaticResource ToggleSwitch}"
+                                                              Margin="14,0,0,0"
+                                                              VerticalAlignment="Center"
+                                                              AutomationProperties.Name="{DynamicResource S.Settings.SpeechFollowsProvider}"
+                                                              AutomationProperties.HelpText="{DynamicResource S.Settings.SpeechFollowsProviderHint}"
+                                                              AutomationProperties.AutomationId="SpeechFollowsSwitch"
+                                                              Checked="SpeechFollowsSwitch_Toggled"
+                                                              Unchecked="SpeechFollowsSwitch_Toggled"/>
+                                                </Grid>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </Grid>
                         </Border>
