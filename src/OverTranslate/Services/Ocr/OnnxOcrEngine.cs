@@ -57,6 +57,14 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     // (60/100) that the previous English engine relied on to drop non-text regions.
     private const double MinRecognitionConfidence = 0.6;
 
+    /// <summary>
+    /// Keeps readings under both recognition floors — the library's TextScore and
+    /// <see cref="MinRecognitionConfidence"/> — so OcrHarness can say what a floor threw away
+    /// rather than count it as never read. A measurement seam like
+    /// <see cref="DetectorThresholdOverride"/>; nothing in the application sets it.
+    /// </summary>
+    internal static bool KeepEveryReading { get; set; }
+
     // Automatic mode classifies each block independently, but the overlay should not render two
     // font scales in one frame or jump between them when a borderline OCR reading changes. A
     // shared midpoint keeps the effective glyph height independent from the chosen layout path.
@@ -400,7 +408,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         try
         {
             using var skBitmap = ConvertToSkBitmap(bitmap);
-            // As the full read does, so the cheap look and the read agree on pixel art.
+            // Smoothed as the full read is, so the hard block steps do not decide what the cheap look
+            // finds; at the captured scale, since this look is asked for at a size of its own.
             using var smoothed = PixelArtSmoothing.ForDetection(skBitmap);
             using var frame = CreateDetectorFrame(smoothed ?? skBitmap, maxDetectSize);
 
@@ -572,11 +581,6 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         // Boxed, because the type is internal to the library and cannot be named here.
         private readonly object _detectorInput;
         private readonly SKBitmap _detectorBitmap;
-        // What recognition crops from: the detector's own input, except on pixel art, where the
-        // detector saw a smoothed redraw and this is the same frame as captured.
-        private readonly SKBitmap _recognitionBitmap;
-        private readonly DetectorFrame _sharpFrame;
-        private readonly object? _sharpInput;
         private readonly RapidOcrOptions _options;
         private IReadOnlyList<RapidOcrNet.TextBox> _detectorSpaceBoxes;
         // False when the caller acquired the runtime itself and releases it in its own finally.
@@ -603,22 +607,16 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             _engine = runtime.Engine;
             _language = normalizedLanguage;
             _skBitmap = ConvertToSkBitmap(bitmap);
-            // The detector looks at pixel art redrawn smooth, and recognition still reads the
-            // pixels as they are; see PixelArtSmoothing. Both frames have the same geometry, since
-            // the redraw keeps the size, so every box means the same place in either.
-            using var smoothed = verticalText ? null : PixelArtSmoothing.ForDetection(_skBitmap);
-            _frame = CreateDetectorFrame(smoothed ?? _skBitmap, maxDetectSize);
+            // Pixel art is read from a smooth redraw at a fixed number of pixels per block, detected
+            // and recognised alike; see PixelArtSmoothing.ReadingBlock.
+            using var pixelArt = verticalText ? null : PixelArtSmoothing.ForReading(_skBitmap);
+            _frame = pixelArt is null
+                ? CreateDetectorFrame(_skBitmap, maxDetectSize)
+                : CreatePixelArtFrame(pixelArt);
             _options = _frame.Options;
 
             _detectorInput = PrepareDetectorInputMethod.Invoke(null, new object[] { _frame.Bitmap, _options })!;
             _detectorBitmap = (SKBitmap)DetectorInputBitmapField.GetValue(_detectorInput)!;
-            _recognitionBitmap = _detectorBitmap;
-            if (smoothed is not null)
-            {
-                _sharpFrame = CreateDetectorFrame(_skBitmap, maxDetectSize);
-                _sharpInput = PrepareDetectorInputMethod.Invoke(null, new object[] { _sharpFrame.Bitmap, _options })!;
-                _recognitionBitmap = (SKBitmap)DetectorInputBitmapField.GetValue(_sharpInput)!;
-            }
             var scale = (ScaleParam)DetectorInputScaleField.GetValue(_detectorInput)!;
 
             var detector = (TextDetector)TextDetectorField.GetValue(_engine)!;
@@ -850,7 +848,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 }
             }
             var partImages = (SKBitmap[])GetPartImagesMethod.Invoke(
-                null, new object[] { _recognitionBitmap, cropBoxes })!;
+                null, new object[] { _detectorBitmap, cropBoxes })!;
             try
             {
                 // No classifier pass: DoAngle is false on every options set the app builds, and the
@@ -932,7 +930,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
                     // The library's own floor, applied here for the same reason it applies it: what
                     // reaches ConvertBlocks on the shipped path has already been through it.
-                    if (scores is not { Length: > 0 } || scores.Average() < _options.TextScore)
+                    if (scores is not { Length: > 0 } || (!KeepEveryReading && scores.Average() < _options.TextScore))
                         continue;
 
                     // The small kana the reading with room saw. Not on a line HorizontalLineEnds put a
@@ -992,8 +990,6 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         public void Dispose()
         {
             ((IDisposable)_detectorInput).Dispose();
-            (_sharpInput as IDisposable)?.Dispose();
-            _sharpFrame.Dispose();
             _frame.Dispose();
             _skBitmap.Dispose();
             if (_releasesRuntime)
@@ -1644,7 +1640,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
                 continue;
 
             var confidence = block.CharScores is { Length: > 0 } scores ? scores.Average() : 1f;
-            if (confidence < MinRecognitionConfidence)
+            if (!KeepEveryReading && confidence < MinRecognitionConfidence)
                 continue;
 
             // Kept blocks carry their score into the log as well as the rejected ones. Reading the
@@ -2267,7 +2263,8 @@ internal sealed class OnnxOcrEngine : IOcrEngine
         /// <summary>Rewrites detector-space points into the caller's coordinates, in place.</summary>
         internal void MapToSource(SKPointI[] points)
         {
-            if (RatioX >= 1.0 && RatioY >= 1.0)
+            // Above 1 as well as below: pixel art is detected enlarged — see CreatePixelArtFrame.
+            if (RatioX == 1.0 && RatioY == 1.0)
                 return;
 
             for (var i = 0; i < points.Length; i++)
@@ -2297,6 +2294,30 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             return new System.Windows.Rect(
                 xs.Min(), ys.Min(), xs.Max() - xs.Min(), ys.Max() - ys.Min());
         }
+    }
+
+    /// <summary>
+    /// The detector's input for pixel art: the redraw at a fixed number of pixels per block, on
+    /// the screenshot flow's size, whatever size the caller asked for.
+    /// </summary>
+    /// <remarks>
+    /// The caller's size is a guess at the scale the text is drawn at, made from the region's
+    /// shape — a fraction of the longest side, or the region as it is when it is small. On pixel
+    /// art that question is answered by the grid, and answering it again would undo the answer:
+    /// a 2x window under <see cref="Realtime.RealtimeDetectorSize.DownscaleMinSide"/> is read at
+    /// its own size, which would shrink the redraw straight back to 2 pixels a block. So every
+    /// size reads the same redraw, and a realtime fallback size, asked after a pass that found
+    /// nothing, gets the same answer again. The ratios are the redraw's scale and then any
+    /// downscale to that size, so boxes map back to the caller's bitmap as on any other picture.
+    /// </remarks>
+    internal static DetectorFrame CreatePixelArtFrame(PixelArtSmoothing.Reading pixelArt)
+    {
+        var frame = CreateDetectorFrame(pixelArt.Bitmap, maxDetectSize: null);
+        return frame with
+        {
+            RatioX = frame.RatioX * pixelArt.ScaleX,
+            RatioY = frame.RatioY * pixelArt.ScaleY,
+        };
     }
 
     /// <summary>

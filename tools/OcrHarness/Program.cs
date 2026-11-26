@@ -124,6 +124,9 @@ if (args.Length > 0 && args[0] == "--detector-geometry")
 if (args.Length > 0 && args[0] == "--edge-punct")
     return EdgePunctuationProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--pixel-ja")
+    return await PixelJaProbe.Run(args[1..]);
+
 if (args.Length > 0 && args[0] == "--small-kana")
     return SmallKanaProbe.Run(args.Skip(1).ToArray());
 

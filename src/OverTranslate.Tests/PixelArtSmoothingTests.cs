@@ -116,6 +116,96 @@ public class PixelArtSmoothingTests
         Assert.Null(PixelArtSmoothing.Find(bitmap));
     }
 
+    // The Japanese pixel-art fix: a game is read at the same number of pixels per block whatever
+    // window it was shown in, so a menu at 2x and the same menu at 6x hand over the same picture.
+    // At 2 and 3 a block the detector joined stacked menu lines and read differently per window size.
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(5)]
+    [InlineData(6)]
+    public void TheReadingIsTheSamePictureWhateverTheWindowSize(int block)
+    {
+        using var at4 = Upscaled(NativePicture(60, 40, seed: 13), 4);
+        using var atBlock = Upscaled(NativePicture(60, 40, seed: 13), block);
+
+        using var reference = PixelArtSmoothing.ForReading(at4);
+        using var reading = PixelArtSmoothing.ForReading(atBlock);
+
+        Assert.NotNull(reference);
+        Assert.NotNull(reading);
+        Assert.Equal(60 * PixelArtSmoothing.ReadingBlock, reading.Bitmap.Width);
+        Assert.Equal(40 * PixelArtSmoothing.ReadingBlock, reading.Bitmap.Height);
+        Assert.Equal((double)PixelArtSmoothing.ReadingBlock / block, reading.ScaleX);
+        Assert.Equal((double)PixelArtSmoothing.ReadingBlock / block, reading.ScaleY);
+
+        var worst = 0;
+        for (var y = 4; y < reading.Bitmap.Height - 4; y++)
+        for (var x = 4; x < reading.Bitmap.Width - 4; x++)
+        {
+            var a = reading.Bitmap.GetPixel(x, y);
+            var b = reference.Bitmap.GetPixel(x, y);
+            worst = Math.Max(worst, Math.Max(Math.Abs(a.Red - b.Red),
+                Math.Max(Math.Abs(a.Green - b.Green), Math.Abs(a.Blue - b.Blue))));
+        }
+        Assert.InRange(worst, 0, 16);
+    }
+
+    // Detection and recognition both work on the redraw, and the caller is told where the text is
+    // in its own bitmap: a box found on the redraw has to come back on the blocks it covers in the
+    // capture — enlarged (2x, 3x), reduced (6x) and, past the screenshot size, reduced again.
+    [Theory]
+    [InlineData(2, 0, 0, 160, 144)]
+    [InlineData(3, 1, 2, 160, 144)]
+    [InlineData(6, 4, 1, 160, 144)]
+    [InlineData(2, 1, 1, 640, 480)]
+    public void BoxesOnTheReadingMapBackOntoTheCapture(int block, int cutX, int cutY, int nativeWidth, int nativeHeight)
+    {
+        var native = new SKBitmap(nativeWidth, nativeHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+        native.Erase(new SKColor(20, 20, 60));
+        // A bright run of blocks, and enough scattered single blocks around it for the grid to be
+        // found on both axes.
+        var random = new Random(17);
+        for (var i = 0; i < 400; i++)
+            native.SetPixel(random.Next(nativeWidth), random.Next(nativeHeight), new SKColor(200, 80, 40));
+        for (var y = 40; y < 52; y++)
+        for (var x = 30; x < 90; x++)
+            native.SetPixel(x, y, SKColors.White);
+        using var full = Upscaled(native, block);
+        using var capture = Crop(full, cutX, cutY, full.Width - cutX, full.Height - cutY);
+
+        using var reading = PixelArtSmoothing.ForReading(capture);
+        Assert.NotNull(reading);
+        using var frame = OnnxOcrEngine.CreatePixelArtFrame(reading);
+
+        // Where the white run is in the picture the detector gets.
+        int left = int.MaxValue, top = int.MaxValue, right = 0, bottom = 0;
+        for (var y = 0; y < frame.Bitmap.Height; y++)
+        for (var x = 0; x < frame.Bitmap.Width; x++)
+        {
+            var c = frame.Bitmap.GetPixel(x, y);
+            if (c.Red < 240 || c.Green < 240 || c.Blue < 240) continue;
+            left = Math.Min(left, x); top = Math.Min(top, y);
+            right = Math.Max(right, x + 1); bottom = Math.Max(bottom, y + 1);
+        }
+
+        var bounds = frame.ToSourceBounds(
+            [new SKPointI(left, top), new SKPointI(right, top), new SKPointI(right, bottom), new SKPointI(left, bottom)]);
+
+        // The run's blocks in the capture, give or take the block the smooth edge spends.
+        Assert.InRange(bounds.Left, 30 * block - cutX - block, 30 * block - cutX + block);
+        Assert.InRange(bounds.Top, 40 * block - cutY - block, 40 * block - cutY + block);
+        Assert.InRange(bounds.Right, 90 * block - cutX - block, 90 * block - cutX + block);
+        Assert.InRange(bounds.Bottom, 52 * block - cutY - block, 52 * block - cutY + block);
+    }
+
+    [Fact]
+    public void ThereIsNoReadingOfAPictureThatIsNotPixelArt()
+    {
+        using var native = NativePicture(640, 360, seed: 5);
+        Assert.Null(PixelArtSmoothing.ForReading(native));
+    }
+
     // Random blocks of a few colours, like a game screen at its own resolution.
     private static SKBitmap NativePicture(int width, int height, int seed)
     {
