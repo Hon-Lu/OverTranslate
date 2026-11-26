@@ -141,15 +141,15 @@ public partial class App
     /// The one update check allowed to put a window on the screen.
     /// </summary>
     /// <remarks>
-    /// Every later check — see <see cref="UpdateNotifier.StartPolling"/> — only lights up the nav
-    /// rail. This used to be the only check there was, which meant the dialog was the sole way an
+    /// Every later check — see <see cref="UpdateNotifier.StartPolling"/> — only lights up the title
+    /// bar's update button. This used to be the only check there was, which meant the dialog was the sole way an
     /// update could ever be announced, which in turn meant it had to reappear on every single launch
     /// until the user gave in. It no longer has to carry that alone: 跳過此版本 turns it off for a
-    /// release without taking the rail's entry with it.
+    /// release without taking the title bar's entry with it.
     /// </remarks>
     private static async Task PromptForUpdateAsync()
     {
-        var info = await UpdateNotifier.CheckAsync();
+        var info = (await UpdateNotifier.CheckAsync()).Update;
         if (info is null || UpdateNotifier.IsSkipped(info)) return;
         Current.Dispatcher.Invoke(() => UpdateWindow.ShowOrActivate(info));
     }
