@@ -1087,17 +1087,8 @@
                                                           AutomationProperties.Name="{DynamicResource S.Settings.SpeechProvider}"
                                                           AutomationProperties.AutomationId="SpeechProviderPicker"
                                                           SelectionChanged="SpeechProviderPicker_SelectionChanged"/>
-                                                <!-- The app's own feature tile, as 快捷鍵's 截圖翻譯 and 取詞翻譯
-                                                     (HotkeyRowIcon), at the glossary mark's size beside it. -->
                                                 <Grid DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,14,0" VerticalAlignment="Center">
-                                                    <Border Width="28" Height="28" CornerRadius="6.5" BorderThickness="1"
-                                                            Background="{DynamicResource AppAccentSubtle}"
-                                                            BorderBrush="{DynamicResource AppAccentSubtleHover}"/>
-                                                    <Viewbox Width="28" Height="28">
-                                                        <Path Data="{StaticResource SpeechMarkGeometry}"
-                                                              Fill="{DynamicResource AppAccent}"
-                                                              Stretch="None" Width="24" Height="24"/>
-                                                    </Viewbox>
+                                                    <Image Source="{StaticResource SpeechMarkImage}" Width="28" Height="28"/>
                                                 </Grid>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{DynamicResource S.Settings.SpeechProvider}"
