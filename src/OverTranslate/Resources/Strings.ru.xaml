@@ -293,9 +293,9 @@
     <sys:String x:Key="S.Main.CopyFailedBody">Не удалось скопировать снимок: {0}</sys:String>
     <sys:String x:Key="S.Main.CopyTextFailedBody">Буфер обмена сейчас недоступен. Повторите попытку чуть позже.</sys:String>
     <sys:String x:Key="S.Main.SpeakFailedTitle">Не удалось прочитать вслух</sys:String>
-    <sys:String x:Key="S.Tts.Unreachable">無法連線至 {0} 朗讀服務，可在設定中更換服務。</sys:String>
-    <sys:String x:Key="S.Tts.Unsupported">{0} 朗讀服務不支援{1}，可在設定中更換服務。</sys:String>
-    <sys:String x:Key="S.Tts.Unavailable">{0} 朗讀服務暫時無法使用，請稍後再試或在設定中更換服務。</sys:String>
+    <sys:String x:Key="S.Tts.Unreachable">Не удалось подключиться к службе чтения вслух {0}. Службу можно сменить в настройках.</sys:String>
+    <sys:String x:Key="S.Tts.Unsupported">Служба чтения вслух {0} не поддерживает язык «{1}». Службу можно сменить в настройках.</sys:String>
+    <sys:String x:Key="S.Tts.Unavailable">Служба чтения вслух {0} временно недоступна. Повторите попытку позже или смените службу в настройках.</sys:String>
 
     <!-- ── Realtime translation ── -->
     <sys:String x:Key="S.Realtime.Title">Перевод в реальном времени</sys:String>
@@ -595,7 +595,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">Если перевод не запущен, первое нажатие выбирает области, второе запускает перевод; во время перевода — пауза и продолжение.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Сравнение с оригиналом</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Работает только во время перевода в реальном времени. Переключает перевод поверх оригинала и показ в области сравнения.</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">Запуск, пауза и сравнение с оригиналом</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Всплывающий перевод</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">Если выделен текст, он сразу подставляется и переводится при открытии окна.</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">Перевод с заменой</sys:String>
@@ -677,11 +677,11 @@
     <sys:String x:Key="S.Settings.ProviderGroupFree">Обычный перевод</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">ИИ-перевод</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupAids">Инструменты перевода</sys:String>
-    <sys:String x:Key="S.Settings.SpeechProvider">朗讀服務</sys:String>
-    <sys:String x:Key="S.Settings.SpeechFollowsProvider">跟隨翻譯服務</sys:String>
-    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">優先使用目前翻譯服務提供的朗讀功能，若不支援朗讀，則使用上方選擇的朗讀服務。</sys:String>
-    <sys:String x:Key="S.Settings.SpeechInUse">目前使用：{0}（跟隨翻譯服務）</sys:String>
-    <sys:String x:Key="S.Settings.SpeechInUsePlain">目前使用：{0}</sys:String>
+    <sys:String x:Key="S.Settings.SpeechProvider">Служба чтения вслух</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProvider">Следовать службе перевода</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">Сначала используется чтение вслух текущей службы перевода, а если его нет — служба, выбранная выше.</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUse">Используется: {0} (по службе перевода)</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUsePlain">Используется: {0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">Требует настройки</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">Настроено</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">По умолчанию</sys:String>

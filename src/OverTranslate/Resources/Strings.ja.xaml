@@ -300,9 +300,9 @@
     <sys:String x:Key="S.Main.CopyFailedBody">スクリーンショットをコピーできませんでした：{0}</sys:String>
     <sys:String x:Key="S.Main.CopyTextFailedBody">クリップボードを使用できません。しばらくしてからお試しください。</sys:String>
     <sys:String x:Key="S.Main.SpeakFailedTitle">読み上げに失敗しました</sys:String>
-    <sys:String x:Key="S.Tts.Unreachable">無法連線至 {0} 朗讀服務，可在設定中更換服務。</sys:String>
-    <sys:String x:Key="S.Tts.Unsupported">{0} 朗讀服務不支援{1}，可在設定中更換服務。</sys:String>
-    <sys:String x:Key="S.Tts.Unavailable">{0} 朗讀服務暫時無法使用，請稍後再試或在設定中更換服務。</sys:String>
+    <sys:String x:Key="S.Tts.Unreachable">{0} の読み上げサービスに接続できません。設定で別のサービスに変更できます。</sys:String>
+    <sys:String x:Key="S.Tts.Unsupported">{0} の読み上げサービスは{1}に対応していません。設定で別のサービスに変更できます。</sys:String>
+    <sys:String x:Key="S.Tts.Unavailable">{0} の読み上げサービスは一時的に利用できません。しばらくしてから再試行するか、設定でサービスを変更してください。</sys:String>
 
     <!-- ── Realtime translation ── -->
     <sys:String x:Key="S.Realtime.Title">リアルタイム翻訳</sys:String>
@@ -604,7 +604,7 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">停止中にショートカットを押すとブロック選択を開始し、選択中にもう一度押すと翻訳を開始します。翻訳中は一時停止／再開できます。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文対照</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">リアルタイム翻訳中のみ有効です。訳文で原文を覆うか、対照エリアに表示するかを切り替えます。</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／一時停止と原文対照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">テキストを選択していると、ウィンドウを開いたときに自動で読み込んで翻訳します。</sys:String>
     <sys:String x:Key="S.Settings.QuickTranslateHotkey">置換翻訳</sys:String>
@@ -686,11 +686,11 @@
     <sys:String x:Key="S.Settings.ProviderGroupFree">一般翻訳</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupKeyed">AI 翻訳</sys:String>
     <sys:String x:Key="S.Settings.ProviderGroupAids">翻訳支援</sys:String>
-    <sys:String x:Key="S.Settings.SpeechProvider">朗讀服務</sys:String>
-    <sys:String x:Key="S.Settings.SpeechFollowsProvider">跟隨翻譯服務</sys:String>
-    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">優先使用目前翻譯服務提供的朗讀功能，若不支援朗讀，則使用上方選擇的朗讀服務。</sys:String>
-    <sys:String x:Key="S.Settings.SpeechInUse">目前使用：{0}（跟隨翻譯服務）</sys:String>
-    <sys:String x:Key="S.Settings.SpeechInUsePlain">目前使用：{0}</sys:String>
+    <sys:String x:Key="S.Settings.SpeechProvider">読み上げサービス</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProvider">翻訳サービスと連動</sys:String>
+    <sys:String x:Key="S.Settings.SpeechFollowsProviderHint">現在の翻訳サービスの読み上げ機能を優先して使います。対応していない場合は、上で選んだ読み上げサービスを使います。</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUse">使用中：{0}（翻訳サービスと連動）</sys:String>
+    <sys:String x:Key="S.Settings.SpeechInUsePlain">使用中：{0}</sys:String>
     <sys:String x:Key="S.Settings.ServiceNeedsSetup">要設定</sys:String>
     <sys:String x:Key="S.Settings.ServiceReady">設定済み</sys:String>
     <sys:String x:Key="S.Settings.ServiceDefault">既定値を使用</sys:String>
