@@ -117,7 +117,7 @@
                     <Button x:Name="UpdateCardBtn"
                             Style="{StaticResource WindowCaptionButton}"
                             FontSize="13"
-                            Content="&#xE823;"
+                            Content="&#xE895;"
                             Foreground="{DynamicResource AppTextSecondary}"
                             ToolTip="{DynamicResource S.Shell.UpdateCard}"
                             AutomationProperties.Name="{DynamicResource S.Shell.UpdateCard}"
