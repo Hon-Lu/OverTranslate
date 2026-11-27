@@ -61,20 +61,57 @@
             <Setter Property="TextElement.Foreground" Value="{DynamicResource AppTextPrimary}"/>
         </Style>
 
-        <!-- 還原 and 更新 on a changed framing's row: two glyph buttons, always shown rather than on
-             hover, so the two choices are read with the row; the word is their tooltip. 還原 plain,
-             更新 filled and last. 28 DIP square, the bar's own icon size. -->
-        <Style x:Key="FramingRowIcon" TargetType="Button" BasedOn="{StaticResource ToolbarIconButton}">
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Margin" Value="4,0,0,0"/>
+        <!-- 還原 and 更新 on a changed framing's row: two glyphs in one neutral capsule, always shown
+             rather than on hover, so the two choices are read with the row; the word is their
+             tooltip. A capsule rather than two loose buttons: it reads as one control that belongs to
+             the row, and its outline and the raised tray colour keep it quieter than a filled accent
+             button. The two halves are split by a 1 DIP rule. -->
+        <Style x:Key="FramingCapsule" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="7"/>
+            <Setter Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
-        <Style x:Key="FramingRowPrimaryIcon" TargetType="Button" BasedOn="{StaticResource ToolbarAccentButton}">
-            <Setter Property="Width" Value="28"/>
-            <Setter Property="Padding" Value="0"/>
+
+        <!-- One half of the capsule, 30 × 28. Its corners are the capsule's inner ones on its own
+             side (set as the Tag in code), so the hover fill does not show past the outline. The
+             glyph shrinks a little while pressed. -->
+        <Style x:Key="FramingCapsuleButton" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="28"/>
             <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Margin" Value="4,0,0,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ContentPresenter x:Name="Glyph"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RenderTransformOrigin="0.5,0.5"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupPressedBg}"/>
+                                <Setter TargetName="Glyph" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 

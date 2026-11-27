@@ -335,21 +335,25 @@ internal partial class RealtimeFramingPanel : Window
             case RealtimeFramingStore.RowState.Modified:
             {
                 string id = row.Preset.Id;
-                var restore = IconButton("\uE7A7", "S.Realtime.FramingRestore", primary: false);
+                var restore = CapsuleButton("\uE7A7", "S.Realtime.FramingRestore", primary: false,
+                    corners: new CornerRadius(6, 0, 0, 6));
                 restore.Click += (_, _) => RestoreRequested?.Invoke(this, id);
 
-                var update = IconButton("\uE74E", "S.Realtime.FramingUpdate", primary: true);
+                var update = CapsuleButton("\uE74E", "S.Realtime.FramingUpdate", primary: true,
+                    corners: new CornerRadius(0, 6, 6, 0));
                 update.Click += (_, _) => UpdateRequested?.Invoke(this, id);
 
-                var buttons = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(4, 0, 0, 0),
-                };
+                var rule = new Border { Width = 1 };
+                rule.SetResourceReference(Border.BackgroundProperty, "AppButtonBorder");
+
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal };
                 buttons.Children.Add(restore);
+                buttons.Children.Add(rule);
                 buttons.Children.Add(update);
-                return buttons;
+
+                var capsule = new Border { Child = buttons };
+                capsule.SetResourceReference(StyleProperty, "FramingCapsule");
+                return capsule;
             }
 
             default:
@@ -358,15 +362,16 @@ internal partial class RealtimeFramingPanel : Window
     }
 
     /// <summary>
-    /// 還原 or 更新 on a changed framing's row: a glyph, with the word as its tooltip and its name.
+    /// 還原 or 更新 on a changed framing's row: one half of the capsule, a glyph with the word as its
+    /// tooltip and its name.
     /// </summary>
     /// <remarks>
     /// Undo and Save, which Segoe MDL2 Assets has at the same code points as Segoe Fluent Icons, so
     /// Windows 10 draws them too. Save rather than Sync: what 更新 does is write the blocks into the
-    /// preset, and Sync reads as fetching something. 更新 is filled with the accent, the row's main
-    /// action; 還原 is plain.
+    /// preset, and Sync reads as fetching something. 更新's glyph takes the accent, the row's main
+    /// action; 還原's the text colour.
     /// </remarks>
-    private Button IconButton(string glyph, string labelKey, bool primary)
+    private static Button CapsuleButton(string glyph, string labelKey, bool primary, CornerRadius corners)
     {
         var label = LocalizationService.Get(labelKey);
         var icon = new TextBlock
@@ -378,10 +383,10 @@ internal partial class RealtimeFramingPanel : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        var button = new Button { Content = icon, ToolTip = label };
-        button.SetResourceReference(StyleProperty, primary ? "FramingRowPrimaryIcon" : "FramingRowIcon");
-        icon.SetBinding(TextBlock.ForegroundProperty, new System.Windows.Data.Binding(nameof(Foreground))
-            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(Button), 1) });
+        icon.SetResourceReference(TextBlock.ForegroundProperty, primary ? "AppAccent" : "AppTextPrimary");
+
+        var button = new Button { Content = icon, ToolTip = label, Tag = corners };
+        button.SetResourceReference(StyleProperty, "FramingCapsuleButton");
         AutomationProperties.SetName(button, label);
         AutomationProperties.SetAutomationId(button, primary ? "FramingUpdate" : "FramingRestore");
         return button;
