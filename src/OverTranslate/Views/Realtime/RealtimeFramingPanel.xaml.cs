@@ -13,7 +13,7 @@ using Orientation = System.Windows.Controls.Orientation;
 namespace OverTranslate.Views.Realtime;
 
 /// <summary>
-/// 翻譯區域預設, opened from the framing bar and from the running capsule: every framing kept for
+/// 翻譯區域預設, opened from the framing bar — only while framing: every framing kept for
 /// the monitor or application being read, what each one is now, and 儲存目前框選 at the bottom.
 /// </summary>
 /// <remarks>
@@ -534,8 +534,11 @@ internal partial class RealtimeFramingPanel : Window
         int chromeTop = _opensUp
             ? Math.Max(_screen.Top, _bar.Top - gap - chromeHeight)
             : Math.Min(_bar.Bottom + gap, Math.Max(_screen.Top, _screen.Bottom - chromeHeight));
+        // Right edge to the bar's right edge, as 模式 and 顯示外觀 open: that is the edge the bar keeps
+        // when its message grows or shrinks (it is pinned there), so a list hung from it stays put
+        // while the left edge moves. Clamped back onto the screen, as theirs are.
         int chromeLeft = Math.Clamp(
-            _bar.Left, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
+            _bar.Right - chromeWidth, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
 
         // Cast away from the bar.
         Shadow.Direction = _opensUp ? 90 : 270;
