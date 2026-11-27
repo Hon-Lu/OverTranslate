@@ -150,6 +150,8 @@ internal partial class RealtimeFramingPanel : Window
     {
         RowsHost.Children.Clear();
         bool any = list.Rows.Count > 0;
+        TargetText.Text = RealtimeFramingDisplay.Caption(target);
+        TargetText.ToolTip = TargetText.Text;
 
         // 不套用 heads the list only when there is something not to apply: with nothing kept for this
         // monitor or application the target opens empty anyway, and a lone ticked 不套用 over an

@@ -140,7 +140,7 @@
                 <StackPanel>
                     <!-- The heading and the way out: the list is put away by picking a row, by this ✕,
                          or by pressing the bar's button again. -->
-                    <DockPanel Height="34" Margin="10,0,0,0">
+                    <DockPanel MinHeight="34" Margin="10,0,0,0">
                         <Button x:Name="CloseBtn"
                                 DockPanel.Dock="Right"
                                 Style="{StaticResource ToolbarIconButton}"
@@ -153,13 +153,24 @@
                                        FontSize="9.5"
                                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
-                        <TextBlock Text="{DynamicResource S.Realtime.Framings}"
-                                   VerticalAlignment="Center"
-                                   FontFamily="{DynamicResource AppFont}"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AppTextPrimary}"
-                                   TextTrimming="CharacterEllipsis"/>
+                        <!-- The title, and under it whose presets these are — the same words the
+                             page's card heads its list with. A preset without a name of the user's
+                             is 預設 N, which says nothing about the target by itself. -->
+                        <StackPanel VerticalAlignment="Center" Margin="0,7,0,5">
+                            <TextBlock Text="{DynamicResource S.Realtime.Framings}"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="TargetText"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="11.5"
+                                       Margin="0,1,0,0"
+                                       Foreground="{DynamicResource AppTextSecondary}"
+                                       TextTrimming="CharacterEllipsis"
+                                       AutomationProperties.AutomationId="FramingListTarget"/>
+                        </StackPanel>
                     </DockPanel>
 
                     <!-- Filled in code (see RealtimeFramingPanel), one row per framing kept for this
