@@ -43,13 +43,13 @@ public partial class RealtimeControlWindow
         // Running.
         Labels.Add(SourceLangBtn, () => LocalizationService.Get("S.Realtime.ChangeSourceLanguage"));
         Labels.Add(TargetLangBtn, () => LocalizationService.Get("S.Realtime.ChangeTargetLanguage"));
+        Labels.Add(CaptureBtn, () => LocalizationService.Get("S.Shell.CaptureTranslate"));
         Labels.Add(HideBtn,
             () => LocalizationService.Get(
                 _translationHidden ? "S.Realtime.ShowTranslation" : "S.Realtime.HideTranslation"),
             () => null,
             () => HotkeyBindings.KeysFor(SettingsService.Instance.Current, HotkeyAction.RealtimeHide));
         Labels.Add(CompareRunBtn, CompareName, CompareDescription(CompareRunBtn), CompareKeys);
-        Labels.Add(CaptureBtn, () => LocalizationService.Get("S.Shell.CaptureTranslate"));
 
         // No description: the button's ToolTip only repeats the name with the key in brackets, and
         // the key has its own line of caps now (#398).

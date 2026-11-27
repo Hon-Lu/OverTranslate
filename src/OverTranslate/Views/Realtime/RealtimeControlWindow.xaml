@@ -423,6 +423,14 @@
                                 </Button>
                             </StackPanel>
 
+                            <!-- The order, left to right: 截圖翻譯; 隱藏譯文 and 原文對照; 暫停; 顯示外觀 and 模式;
+                                 編輯; then the collapse toggle and ✕ after the rule. 截圖翻譯 is leftmost because
+                                 it is a different feature and the least pressed of them, and the left end is
+                                 the one that moves as the text beside the pair (已暫停, 已隱藏譯文) comes and
+                                 goes — the right edge is the one pinned (see OnWindowPosChanging). The two
+                                 switches about how the translation is seen sit together, 暫停 after them, the
+                                 two panels together, and 編輯 nearest the pinned edge. -->
+
                             <!-- 截圖翻譯, from inside the session. The blocks were framed once and loosely,
                                  around where text usually appears; whatever falls outside them, or comes out
                                  wrong at the size they were drawn at, has no second chance here, because the
@@ -432,19 +440,26 @@
                                  capture is up and puts it back exactly as it was; see
                                  Services.Realtime.RealtimeCaptureInterlude.
 
-                                 Leftmost of the four, because the right edge is the one pinned as the bar
-                                 changes width (see OnWindowPosChanging): a button added on this side leaves
-                                 暫停, 編輯 and ✕ exactly where the hand already knows they are.
-
                                  The mark is the one 截圖翻譯 carries in the nav rail, so this reads as that
                                  feature rather than as a third session control. Drawn rather than typed for
                                  the same reason as the two buttons in the edit tray: MDL2 has no framing
                                  corners, and a Path has no font fallback to lose. -->
-                            <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
-                                 who wants to compare usually finds out while watching, not while framing,
-                                 and the switch moves the translation without stopping anything. Left of
-                                 截圖翻譯, for the reason that one is leftmost: the right edge is pinned, so
-                                 a button added here leaves the others where the hand knows them. -->
+                            <Button x:Name="CaptureBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    Margin="0,0,4,0"
+                                    ToolTip="{DynamicResource S.Shell.CaptureTranslate}"
+                                    AutomationProperties.Name="{DynamicResource S.Shell.CaptureTranslate}"
+                                    Click="CaptureBtn_Click">
+                                <Path Width="13" Height="13"
+                                      Stretch="Uniform"
+                                      Data="{StaticResource CaptureMarkGeometry}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"/>
+                            </Button>
+
                             <!-- 隱藏譯文: the words and their backgrounds off the screen while the session
                                  reads on, so showing them again is immediate — the press 暫停 used to
                                  be pressed for, which stops the reading and starts it again from
@@ -470,6 +485,9 @@
                                       StrokeLineJoin="Round"/>
                             </Button>
 
+                            <!-- 對照顯示 again, the same state as the button on the edit bar: the reader
+                                 who wants to compare usually finds out while watching, not while framing,
+                                 and the switch moves the translation without stopping anything. -->
                             <Button x:Name="CompareRunBtn"
                                     Style="{StaticResource ToolbarIconButton}"
                                     Margin="0,0,4,0"
@@ -478,22 +496,6 @@
                                       Data="{StaticResource RealtimeCompareGlyph}"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                       StrokeThickness="1.05"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"/>
-                            </Button>
-
-                            <Button x:Name="CaptureBtn"
-                                    Style="{StaticResource ToolbarIconButton}"
-                                    Margin="0,0,4,0"
-                                    ToolTip="{DynamicResource S.Shell.CaptureTranslate}"
-                                    AutomationProperties.Name="{DynamicResource S.Shell.CaptureTranslate}"
-                                    Click="CaptureBtn_Click">
-                                <Path Width="13" Height="13"
-                                      Stretch="Uniform"
-                                      Data="{StaticResource CaptureMarkGeometry}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.2"
                                       StrokeStartLineCap="Round"
                                       StrokeEndLineCap="Round"
                                       StrokeLineJoin="Round"/>
