@@ -296,6 +296,9 @@ public partial class RealtimeControlWindow : Window
     /// <summary>Raised with the id of a changed framing whose 還原 was pressed in 翻譯區域預設.</summary>
     public event EventHandler<string>? FramingRestoreRequested;
 
+    /// <summary>Raised when 不套用 was pressed in 翻譯區域預設.</summary>
+    public event EventHandler? FramingSkipRequested;
+
     /// <summary>
     /// Raised when the 顯示外觀 panel has written a change to the settings file (#355), for the
     /// session to draw its overlays with.
@@ -1113,6 +1116,11 @@ public partial class RealtimeControlWindow : Window
         {
             CloseFramings();
             FramingRestoreRequested?.Invoke(this, id);
+        };
+        panel.SkipRequested += (_, _) =>
+        {
+            CloseFramings();
+            FramingSkipRequested?.Invoke(this, EventArgs.Empty);
         };
         panel.Closed += (_, _) =>
         {

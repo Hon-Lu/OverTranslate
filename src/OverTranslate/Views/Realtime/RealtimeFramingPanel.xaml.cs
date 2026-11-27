@@ -96,6 +96,9 @@ internal partial class RealtimeFramingPanel : Window
     /// <summary>Raised with the id of the changed framing whose 還原 was pressed.</summary>
     public event EventHandler<string>? RestoreRequested;
 
+    /// <summary>Raised when 不套用 is pressed.</summary>
+    public event EventHandler? SkipRequested;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -144,9 +147,13 @@ internal partial class RealtimeFramingPanel : Window
     private void Build(RealtimeFramingStore.FramingList list, RealtimeFramingStore.Target target)
     {
         RowsHost.Children.Clear();
-        foreach (var row in list.Rows) RowsHost.Children.Add(Row(row, target));
-
         bool any = list.Rows.Count > 0;
+
+        // 不套用 heads the list only when there is something not to apply: with nothing kept for this
+        // monitor or application the target opens empty anyway, and a lone ticked 不套用 over an
+        // empty list would read as a choice the user had made.
+        if (any) RowsHost.Children.Add(SkipRow(list.Skipped));
+        foreach (var row in list.Rows) RowsHost.Children.Add(Row(row, target));
         RowsScroll.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         SaveRule.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         SaveHost.Content = SaveRow(list);
@@ -240,24 +247,87 @@ internal partial class RealtimeFramingPanel : Window
         return element;
     }
 
+    /// <summary>
+    /// 不套用, at the top of the list: the target opens empty from the next session on. Ticked when
+    /// it is the choice, as a framing's row is; pressing it otherwise makes it the choice.
+    /// </summary>
+    private FrameworkElement SkipRow(bool chosen)
+    {
+        // An empty frame where a framing's thumbnail is: no blocks.
+        var empty = new Border
+        {
+            Width = 46,
+            Height = ThumbnailHeight,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(3),
+            SnapsToDevicePixels = true,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0),
+        };
+        empty.SetResourceReference(Border.BorderBrushProperty, "AppTextSecondary");
+
+        var label = new TextBlock
+        {
+            Text = LocalizationService.Get("S.Realtime.FramingNone"),
+            FontWeight = FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.Children.Add(empty);
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(label);
+
+        FrameworkElement element;
+        if (chosen)
+        {
+            var check = Tick();
+            Grid.SetColumn(check, 2);
+            grid.Children.Add(check);
+
+            var border = new Border { Child = grid };
+            border.SetResourceReference(StyleProperty, "FramingStaticRow");
+            element = border;
+        }
+        else
+        {
+            var button = new Button { Content = grid };
+            button.SetResourceReference(StyleProperty, "FramingMenuRow");
+            button.Click += (_, _) => SkipRequested?.Invoke(this, EventArgs.Empty);
+            element = button;
+        }
+
+        AutomationProperties.SetAutomationId(element, "FramingNone");
+        AutomationProperties.SetName(element, label.Text);
+        return element;
+    }
+
+    /// <summary>The tick on the row this target opens on.</summary>
+    private static TextBlock Tick()
+    {
+        var check = new TextBlock
+        {
+            Text = "",
+            FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 2, 0),
+        };
+        check.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+        return check;
+    }
+
     /// <summary>What sits at a row's right: the tick on the framing on the screen, 還原 and 更新 on a changed one.</summary>
     private FrameworkElement? Trailing(RealtimeFramingStore.FramingRow row)
     {
         switch (row.State)
         {
             case RealtimeFramingStore.RowState.Current:
-            {
-                var check = new TextBlock
-                {
-                    Text = "",
-                    FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-                    FontSize = 12,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(8, 0, 2, 0),
-                };
-                check.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
-                return check;
-            }
+                return Tick();
 
             case RealtimeFramingStore.RowState.Modified:
             {

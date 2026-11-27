@@ -262,6 +262,29 @@ public class RealtimeSettings
     public List<RealtimeFramingPreset> FramingPresets { get; set; } = [];
 
     /// <summary>
+    /// The targets the user chose 不套用 for in the framing bar's list — each a
+    /// <see cref="RealtimeFramingPreset.TargetKey"/> — which open empty whatever is kept for them.
+    /// </summary>
+    /// <remarks>
+    /// Beside the presets rather than written as all of a target's presets unselected, which already
+    /// means "never picked, open on the newest". Ended for a target by picking or saving one of its
+    /// presets; a key whose presets have all been deleted does no harm, as there is nothing to apply.
+    /// Most recent first, and no more than <see cref="MaxFramingSkipped"/>.
+    /// </remarks>
+    public List<string> FramingSkippedTargets { get; set; } = [];
+
+    /// <summary>The most targets <see cref="FramingSkippedTargets"/> remembers.</summary>
+    public const int MaxFramingSkipped = 50;
+
+    /// <summary>
+    /// <see cref="FramingSkippedTargets"/> as the file can hold them: no blank or repeated key, the
+    /// most recent <see cref="MaxFramingSkipped"/>.
+    /// </summary>
+    public static List<string> CleanFramingSkipped(IEnumerable<string?>? keys) =>
+        [.. (keys ?? []).Where(key => !string.IsNullOrWhiteSpace(key)).Select(key => key!)
+            .Distinct(StringComparer.Ordinal).Take(MaxFramingSkipped)];
+
+    /// <summary>
     /// The user's own modes, in the order they were made. The presets are not here: they are built
     /// in — see <see cref="RealtimePresets"/>.
     /// </summary>
@@ -339,15 +362,19 @@ public class RealtimeSettings
     /// go on editing what it passed, tidied as a file's list is (see <see cref="CleanFramingPresets"/>).
     /// </summary>
     /// <returns>Whether anything changed.</returns>
-    internal bool SetFramingPresets(IEnumerable<RealtimeFramingPreset> presets)
+    /// <param name="skipped">The targets chosen 不套用 for, or null to leave them as they are.</param>
+    internal bool SetFramingPresets(IEnumerable<RealtimeFramingPreset> presets, IEnumerable<string>? skipped = null)
     {
         var stored = CleanFramingPresets(presets.Select(preset => preset?.Clone()));
+        var keys = skipped is null ? FramingSkippedTargets : CleanFramingSkipped(skipped);
 
         if (System.Text.Json.JsonSerializer.Serialize(stored) ==
-            System.Text.Json.JsonSerializer.Serialize(FramingPresets))
+            System.Text.Json.JsonSerializer.Serialize(FramingPresets) &&
+            keys.SequenceEqual(FramingSkippedTargets ?? []))
             return false;
 
         FramingPresets = stored;
+        FramingSkippedTargets = keys;
         return true;
     }
 

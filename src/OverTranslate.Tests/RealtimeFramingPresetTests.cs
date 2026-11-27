@@ -1159,6 +1159,95 @@ public class RealtimeFramingPresetTests
         Assert.Equal(saved.TargetKey, other.TargetKey);
     }
 
+    // ── 不套用 ──────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Skipped_ATargetOpensEmpty_AndSaysNothing()
+    {
+        var presets = new[]
+        {
+            Make("a", selected: true),
+            Make("small", screen: new Rectangle(0, 0, 1280, 720)),
+        };
+        var target = ScreenTarget();
+        var skipped = RealtimeFramingStore.SkipInto([], target);
+
+        Assert.Null(RealtimeFramingStore.Match(presets, target, skipped));
+        Assert.Equal(RealtimeFramingStore.Miss.None, RealtimeFramingStore.Explain(presets, target, out var nearest, skipped));
+        Assert.Null(nearest);
+
+        // A screen at a size nothing fits would otherwise say why; not when the user chose 不套用.
+        var other = target with { Screen = new Rectangle(0, 0, 2560, 1440) };
+        Assert.Equal(RealtimeFramingStore.Miss.ScreenSize, RealtimeFramingStore.Explain(presets, other, out _));
+        Assert.Equal(RealtimeFramingStore.Miss.None,
+            RealtimeFramingStore.Explain(presets, other, out _, RealtimeFramingStore.SkipInto([], other)));
+    }
+
+    [Fact]
+    public void Skipped_IsOneTargetsOnly()
+    {
+        var presets = new[]
+        {
+            Make("screen"),
+            Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game"),
+        };
+        var skipped = RealtimeFramingStore.SkipInto([], ScreenTarget());
+
+        Assert.Null(RealtimeFramingStore.Match(presets, ScreenTarget(), skipped));
+        Assert.Equal("game", RealtimeFramingStore.Match(presets, WindowTarget(), skipped)!.Id);
+        Assert.Equal("screen2", RealtimeFramingStore.Match(
+            [.. presets, Make("screen2", device: Display2)], ScreenTarget() with { DeviceName = Display2 }, skipped)!.Id);
+    }
+
+    [Fact]
+    public void Skipped_TheListTicksNoneAndNoPreset()
+    {
+        var presets = new[] { Make("a", blocks: new Rectangle(10, 10, 100, 20)) };
+        var target = ScreenTarget();
+
+        var list = RealtimeFramingStore.ListFor(
+            presets, target, [Block(10, 10, 100, 20)], "a", RealtimeFramingStore.SkipInto([], target));
+
+        Assert.True(list.Skipped);
+        Assert.Equal(RealtimeFramingStore.RowState.Ready, list.Rows[0].State);
+        Assert.Equal(RealtimeFramingStore.SaveState.Same, list.Save);
+
+        Assert.False(RealtimeFramingStore.ListFor(presets, target, [Block(10, 10, 100, 20)], "a").Skipped);
+    }
+
+    [Fact]
+    public void Skipped_EndsWhenAPresetOfTheTargetIsPickedOrSaved_AndRoundTrips()
+    {
+        var target = ScreenTarget();
+        var game = WindowTarget();
+        var skipped = RealtimeFramingStore.SkipInto(RealtimeFramingStore.SkipInto([], game), target);
+        Assert.Equal([target.Key, game.Key], skipped);
+
+        var (_, saved) = RealtimeFramingStore.SaveInto([], target, [Block(10, 10, 100, 20)], DateTime.UtcNow);
+        var left = RealtimeFramingStore.Unskip(skipped, target.Key, saved!.TargetKey);
+        Assert.Equal([game.Key], left);
+        Assert.Equal(target.Key, saved.TargetKey);
+
+        var reloaded = SettingsService.Parse(SettingsService.Serialize(new AppSettings
+        {
+            Realtime = new RealtimeSettings { FramingSkippedTargets = skipped },
+        }));
+        Assert.Equal(skipped, reloaded.Realtime.FramingSkippedTargets);
+    }
+
+    [Fact]
+    public void Unskipped_ATargetNeverPickedFrom_StillOpensOnItsNewest()
+    {
+        // 不套用 is its own state: every preset unselected is "never picked", which opens on the newest.
+        var presets = new[]
+        {
+            Make("new", savedAt: new DateTime(2026, 2, 1)),
+            Make("old"),
+        };
+
+        Assert.Equal("new", RealtimeFramingStore.Match(presets, ScreenTarget(), [])!.Id);
+    }
+
     private sealed class TempExe : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

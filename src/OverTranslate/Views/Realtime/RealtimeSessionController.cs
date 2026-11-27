@@ -547,6 +547,7 @@ internal sealed class RealtimeSessionController
         // …and a changed framing's 更新 and 還原.
         control.FramingUpdateRequested += (_, id) => UpdateFraming(id);
         control.FramingRestoreRequested += (_, id) => ApplyFraming(id, restore: true);
+        control.FramingSkipRequested += (_, _) => SkipFraming();
         control.SetCompareDisplay(_compareDisplay);
         control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
@@ -813,7 +814,8 @@ internal sealed class RealtimeSessionController
         var target = SessionTarget;
         var list = IsActive
             ? RealtimeFramingStore.ListFor(
-                SettingsService.Instance.Current.Realtime.FramingPresets, target, _blocks, _appliedFramingId)
+                SettingsService.Instance.Current.Realtime.FramingPresets, target, _blocks, _appliedFramingId,
+                SettingsService.Instance.Current.Realtime.FramingSkippedTargets)
             : new RealtimeFramingStore.FramingList([], RealtimeFramingStore.SaveState.NoBlocks, null);
         return (list, target);
     }
@@ -875,10 +877,18 @@ internal sealed class RealtimeSessionController
         }
 
         // This framing is the one already on the screen: nothing to rebuild, and while translating
-        // nothing worth taking the session down for.
+        // nothing worth taking the session down for. Under 不套用 the row is not the ticked one, so
+        // pressing it is picking it again: that is still written down, and said.
         if (_blocks.SequenceEqual(blocks))
         {
             _appliedFramingId = preset.Id;
+            if (RealtimeFramingStore.IsSkipped(target))
+            {
+                RealtimeFramingStore.Select(id, target);
+                control.ShowMessage(LocalizationService.Format(
+                    "S.Realtime.FramingApplied", RealtimeFramingDisplay.MessageName(preset)));
+                control.RefreshFramings();
+            }
             return;
         }
 
@@ -914,7 +924,7 @@ internal sealed class RealtimeSessionController
             }
 
             _appliedFramingId = preset.Id;
-            RealtimeFramingStore.Select(id);
+            RealtimeFramingStore.Select(id, target);
             var key = restore ? "S.Realtime.FramingRestored"
                 : discarding ? "S.Realtime.FramingAppliedDiscarded"
                 : "S.Realtime.FramingApplied";
@@ -925,6 +935,32 @@ internal sealed class RealtimeSessionController
         catch (Exception ex)
         {
             Log.Error(ex, "Could not switch the realtime framing");
+        }
+    }
+
+    /// <summary>
+    /// The list's 不套用: this screen or window opens empty from the next session on, until one of its
+    /// framings is picked or saved.
+    /// </summary>
+    /// <remarks>
+    /// About the next session only. The blocks on the screen now stay as they are — taking them away
+    /// would end a sitting that is translating, over a choice about the next one — and so does the
+    /// rest of this run's memory of them (see InitialBlocks).
+    /// </remarks>
+    public void SkipFraming()
+    {
+        if (_control is not { } control) return;
+        try
+        {
+            var target = SessionTarget;
+            RealtimeFramingStore.Skip(target);
+            control.ShowMessage(LocalizationService.Get("S.Realtime.FramingSkipChosen"));
+            control.RefreshFramings();
+            Log.Info("Realtime framing: no preset for {Target} from the next session on", target.Key);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not store the realtime framing choice");
         }
     }
 

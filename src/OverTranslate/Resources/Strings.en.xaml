@@ -340,6 +340,8 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.FramingUpdate">Update</sys:String>
     <sys:String x:Key="S.Realtime.FramingUpdated">Updated “{0}”</sys:String>
     <sys:String x:Key="S.Realtime.FramingRestored">Reverted to “{0}”</sys:String>
+    <sys:String x:Key="S.Realtime.FramingNone">None</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSkipChosen">Next session starts with no saved layout</sys:String>
     <sys:String x:Key="S.Realtime.FramingAppliedDiscarded">Using “{0}”; unsaved changes discarded</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlocksShort">{0} blocks</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenSizeDiffers">Differs from this screen ({0}×{1})</sys:String>

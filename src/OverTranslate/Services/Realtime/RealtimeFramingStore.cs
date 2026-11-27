@@ -65,6 +65,14 @@ internal static class RealtimeFramingStore
         /// cannot be measured, is not a target a framing can be placed on.
         /// </summary>
         public bool HasWindow => !IsWindow || (WindowBounds.Width > 0 && WindowBounds.Height > 0);
+
+        /// <summary>
+        /// What a preset of this target has for <see cref="RealtimeFramingPreset.TargetKey"/>, and
+        /// what 不套用 is remembered under.
+        /// </summary>
+        public string Key => IsWindow
+            ? RealtimeFramingPreset.KeyOfWindow(WindowProcess, WindowPath, WindowBounds.Width, WindowBounds.Height)
+            : RealtimeFramingPreset.KeyOfScreen(DeviceName, Screen.Width, Screen.Height);
     }
 
     private static RealtimeSettings Realtime => SettingsService.Instance.Current.Realtime;
@@ -161,8 +169,19 @@ internal static class RealtimeFramingStore
         })];
     }
 
-    /// <summary>The preset kept for <paramref name="target"/>, or null when nothing is kept for it.</summary>
-    public static RealtimeFramingPreset? Match(Target target) => Match(Realtime.FramingPresets, target);
+    /// <summary>
+    /// The preset kept for <paramref name="target"/>, or null when nothing is kept for it — or the
+    /// user chose 不套用 for it.
+    /// </summary>
+    public static RealtimeFramingPreset? Match(Target target) =>
+        Match(Realtime.FramingPresets, target, Realtime.FramingSkippedTargets);
+
+    /// <summary>Whether the user chose 不套用 for <paramref name="target"/>.</summary>
+    public static bool IsSkipped(Target target) => IsSkipped(Realtime.FramingSkippedTargets, target);
+
+    /// <summary><see cref="IsSkipped(Target)"/> over a list rather than the settings file.</summary>
+    public static bool IsSkipped(IReadOnlyCollection<string>? skipped, Target target) =>
+        skipped is not null && skipped.Contains(target.Key);
 
     /// <summary>
     /// Every preset kept for <paramref name="target"/>, newest first — what the framing bar's
@@ -179,11 +198,15 @@ internal static class RealtimeFramingStore
     /// <summary>
     /// Which of the presets kept for <paramref name="target"/> a session opens on: the selected one
     /// where the user picked one, otherwise the newest — and for a window, the ones saved under its
-    /// current title first.
+    /// current title first. Null when <paramref name="skipped"/> holds the target: the user chose
+    /// 不套用 for it, and it opens empty.
     /// </summary>
     public static RealtimeFramingPreset? Match(
-        IReadOnlyList<RealtimeFramingPreset> presets, Target target)
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target,
+        IReadOnlyCollection<string>? skipped = null)
     {
+        if (IsSkipped(skipped, target)) return null;
+
         var candidates = presets.Where(preset => IsFor(preset, target)).ToList();
         if (candidates.Count == 0) return null;
 
@@ -271,13 +294,18 @@ internal static class RealtimeFramingStore
     /// can be named. Null when nothing is kept.
     /// </param>
     public static Miss Explain(Target target, out RealtimeFramingPreset? nearest) =>
-        Explain(Realtime.FramingPresets, target, out nearest);
+        Explain(Realtime.FramingPresets, target, out nearest, Realtime.FramingSkippedTargets);
 
     /// <summary><see cref="Explain(Target, out RealtimeFramingPreset?)"/> over a list.</summary>
+    /// <remarks>
+    /// A target the user chose 不套用 for has nothing to explain: opening empty is what was asked.
+    /// </remarks>
     public static Miss Explain(
-        IReadOnlyList<RealtimeFramingPreset> presets, Target target, out RealtimeFramingPreset? nearest)
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target, out RealtimeFramingPreset? nearest,
+        IReadOnlyCollection<string>? skipped = null)
     {
         nearest = null;
+        if (IsSkipped(skipped, target)) return Miss.None;
 
         // The preset this target opens on fits its size but not the screen: that is the reason.
         if (Match(presets, target) is { } matched)
@@ -359,12 +387,14 @@ internal static class RealtimeFramingStore
     /// saved twice, or the list is full, in which case nothing is saved and nothing is taken away.
     /// </summary>
     /// <returns>The preset as stored, or null when the list is full.</returns>
+    /// <remarks>A save is a choice of framing for the target, so it ends 不套用 for it.</remarks>
     public static RealtimeFramingPreset? Save(Target target, IReadOnlyList<RealtimeBlockPlacement> blocks)
     {
         var (presets, saved) = SaveInto(Realtime.FramingPresets, target, blocks, DateTime.UtcNow);
         if (saved is null) return null;
 
-        SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
+        SettingsService.Instance.UpdateRealtimeFramingPresets(
+            presets, Unskip(Realtime.FramingSkippedTargets, target.Key, saved.TargetKey));
         return saved;
     }
 
@@ -504,9 +534,12 @@ internal static class RealtimeFramingStore
     /// <summary>One row: the preset, what it is now, and — when it cannot be placed — why.</summary>
     internal sealed record FramingRow(RealtimeFramingPreset Preset, RowState State, Miss Why);
 
-    /// <summary>The whole list the bar opens: its rows, and its 儲存目前框選 row.</summary>
+    /// <summary>
+    /// The whole list the bar opens: its rows, and its 儲存目前框選 row. <paramref name="Skipped"/>
+    /// is whether the 不套用 row at the top is the ticked one.
+    /// </summary>
     internal sealed record FramingList(
-        IReadOnlyList<FramingRow> Rows, SaveState Save, RealtimeFramingPreset? SameAs);
+        IReadOnlyList<FramingRow> Rows, SaveState Save, RealtimeFramingPreset? SameAs, bool Skipped = false);
 
     /// <summary>
     /// The bar's 翻譯區域預設 for <paramref name="target"/>, with <paramref name="blocks"/> on the
@@ -522,11 +555,18 @@ internal static class RealtimeFramingStore
     /// own, whoever put them there, and <see cref="RowState.Modified"/> when it was the one applied
     /// and they have changed since. The save row says <see cref="SaveState.Same"/> for the same
     /// match: a second preset with the same blocks is never kept.</para>
+    ///
+    /// <para>Where the user chose 不套用 for this target (<paramref name="skipped"/>), that row is
+    /// the ticked one and no preset row is: the tick says what the target opens on, and one list has
+    /// one. A preset whose blocks are on the screen is then an ordinary row, which pressing selects
+    /// again.</para>
     /// </remarks>
     public static FramingList ListFor(
         IReadOnlyList<RealtimeFramingPreset> presets, Target target,
-        IReadOnlyList<RealtimeBlockPlacement> blocks, string? appliedId)
+        IReadOnlyList<RealtimeBlockPlacement> blocks, string? appliedId,
+        IReadOnlyCollection<string>? skipped = null)
     {
+        bool skip = IsSkipped(skipped, target);
         var stored = Stored(blocks, target);
         var usable = new List<FramingRow>();
         var unusable = new List<FramingRow>();
@@ -544,7 +584,7 @@ internal static class RealtimeFramingStore
             bool same = stored.Count > 0 && SameBlocks(preset, stored);
             if (same) sameAs ??= preset;
 
-            var state = same ? RowState.Current
+            var state = same ? (skip ? RowState.Ready : RowState.Current)
                 : preset.Id == appliedId ? RowState.Modified
                 : RowState.Ready;
             usable.Add(new FramingRow(preset, state, Miss.None));
@@ -555,7 +595,7 @@ internal static class RealtimeFramingStore
             : presets.Count >= RealtimeSettings.MaxFramingPresets ? SaveState.Full
             : SaveState.Ready;
 
-        return new FramingList([.. usable, .. unusable], save, sameAs);
+        return new FramingList([.. usable, .. unusable], save, sameAs, skip);
     }
 
     /// <summary>
@@ -590,19 +630,50 @@ internal static class RealtimeFramingStore
     /// Picks <paramref name="id"/> as its target's preset, unmarking whatever else that target had
     /// selected.
     /// </summary>
+    /// <param name="target">
+    /// The target it was picked for, when the caller has one: 不套用 is ended for it as well as for
+    /// the preset's own key, which differ when the preset's executable has moved since.
+    /// </param>
     /// <returns>False when no preset goes by that id any more.</returns>
-    public static bool Select(string id)
+    public static bool Select(string id, Target? target = null)
     {
         var chosen = Realtime.FramingPresets.FirstOrDefault(preset => preset.Id == id);
         if (chosen is null) return false;
 
+        var skipped = Unskip(Realtime.FramingSkippedTargets, chosen.TargetKey, target?.Key);
+
         // Nothing to write when it is already the only one selected for its target.
-        if (chosen.Selected && Realtime.FramingPresets.Count(preset =>
+        if (skipped.Count == Realtime.FramingSkippedTargets.Count &&
+            chosen.Selected && Realtime.FramingPresets.Count(preset =>
                 preset.TargetKey == chosen.TargetKey && preset.Selected) == 1) return true;
 
-        SettingsService.Instance.UpdateRealtimeFramingPresets(SelectInto(Realtime.FramingPresets, id));
+        SettingsService.Instance.UpdateRealtimeFramingPresets(SelectInto(Realtime.FramingPresets, id), skipped);
         return true;
     }
+
+    /// <summary>
+    /// The list's 不套用: <paramref name="target"/> opens empty from the next session on, whatever
+    /// is kept for it, until a preset of it is picked or saved.
+    /// </summary>
+    /// <remarks>
+    /// Remembered beside the presets rather than as every preset unselected, because unselected is
+    /// already a state with its own meaning — the target has never had one picked, and opens on the
+    /// newest.
+    /// </remarks>
+    public static void Skip(Target target)
+    {
+        if (IsSkipped(target)) return;
+        SettingsService.Instance.UpdateRealtimeFramingPresets(
+            Realtime.FramingPresets, SkipInto(Realtime.FramingSkippedTargets, target));
+    }
+
+    /// <summary><see cref="Skip"/> as a list in and a list out, for a test that has no settings file.</summary>
+    public static List<string> SkipInto(IReadOnlyCollection<string> skipped, Target target) =>
+        [target.Key, .. skipped.Where(key => key != target.Key)];
+
+    /// <summary>The skipped targets without <paramref name="keys"/>.</summary>
+    public static List<string> Unskip(IReadOnlyCollection<string> skipped, params string?[] keys) =>
+        [.. skipped.Where(key => !keys.Contains(key))];
 
     /// <summary>The list with <paramref name="id"/> selected and its target's other presets unselected.</summary>
     public static List<RealtimeFramingPreset> SelectInto(IReadOnlyList<RealtimeFramingPreset> current, string id)

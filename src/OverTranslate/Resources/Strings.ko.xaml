@@ -344,6 +344,8 @@
     <sys:String x:Key="S.Realtime.FramingUpdate">업데이트</sys:String>
     <sys:String x:Key="S.Realtime.FramingUpdated">「{0}」을 업데이트했습니다</sys:String>
     <sys:String x:Key="S.Realtime.FramingRestored">「{0}」으로 되돌렸습니다</sys:String>
+    <sys:String x:Key="S.Realtime.FramingNone">적용 안 함</sys:String>
+    <sys:String x:Key="S.Realtime.FramingSkipChosen">다음 시작 시 저장한 영역을 적용하지 않습니다</sys:String>
     <sys:String x:Key="S.Realtime.FramingAppliedDiscarded">「{0}」을 적용했습니다. 저장하지 않은 변경은 버렸습니다</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlocksShort">블록 {0}개</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenSizeDiffers">현재 화면 크기와 다름 ({0}×{1})</sys:String>
