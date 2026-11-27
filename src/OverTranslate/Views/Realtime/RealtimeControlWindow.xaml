@@ -218,9 +218,9 @@
                              menu without leaving the session — and, at the bottom of the same list,
                              儲存目前框選 to keep the blocks framed now. One button for both because they
                              are the same list seen from its two ends. Next to 模式 because both are
-                             about the framing rather than about starting it. Two blocks and a chevron,
-                             drawn: the shape says "a choice of layouts", and a font glyph for that is
-                             one more thing Windows 10 may not have. -->
+                             about the framing rather than about starting it. Drawn (FramingsButtonGlyph):
+                             a framing as the list's picture shows one, with another showing behind it
+                             for several kept; not four corner marks, because 截圖翻譯 is right beside it. -->
                         <Button x:Name="FramingsEditBtn"
                                 Style="{StaticResource ToolbarIconButton}"
                                 Margin="0,0,6,0"
@@ -235,7 +235,7 @@
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round"
                                   StrokeLineJoin="Round"
-                                  Data="M2,2.5 H9.5 V6 H2 Z M2,8 H9.5 V11.5 H2 Z M12,4.5 L14,6.5 L12,8.5"/>
+                                  Data="{StaticResource FramingsButtonGlyph}"/>
                         </Button>
 
                         <!-- The two buttons the user chooses between while framing, in a tray of their
@@ -529,7 +529,7 @@
                                       StrokeStartLineCap="Round"
                                       StrokeEndLineCap="Round"
                                       StrokeLineJoin="Round"
-                                      Data="M2,2.5 H9.5 V6 H2 Z M2,8 H9.5 V11.5 H2 Z M12,4.5 L14,6.5 L12,8.5"/>
+                                      Data="{StaticResource FramingsButtonGlyph}"/>
                             </Button>
 
                             <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
