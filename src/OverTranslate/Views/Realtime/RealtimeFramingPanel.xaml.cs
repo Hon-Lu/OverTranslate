@@ -335,11 +335,11 @@ internal partial class RealtimeFramingPanel : Window
             case RealtimeFramingStore.RowState.Modified:
             {
                 string id = row.Preset.Id;
-                var restore = CapsuleButton("\uE7A7", "S.Realtime.FramingRestore", primary: false,
+                var restore = CapsuleButton("FramingRestoreGlyph", "S.Realtime.FramingRestore", primary: false,
                     corners: new CornerRadius(6, 0, 0, 6));
                 restore.Click += (_, _) => RestoreRequested?.Invoke(this, id);
 
-                var update = CapsuleButton("\uE74E", "S.Realtime.FramingUpdate", primary: true,
+                var update = CapsuleButton("FramingUpdateGlyph", "S.Realtime.FramingUpdate", primary: true,
                     corners: new CornerRadius(0, 6, 6, 0));
                 update.Click += (_, _) => UpdateRequested?.Invoke(this, id);
 
@@ -366,24 +366,35 @@ internal partial class RealtimeFramingPanel : Window
     /// tooltip and its name.
     /// </summary>
     /// <remarks>
-    /// Undo and Save, which Segoe MDL2 Assets has at the same code points as Segoe Fluent Icons, so
-    /// Windows 10 draws them too. Save rather than Sync: what 更新 does is write the blocks into the
-    /// preset, and Sync reads as fetching something. 更新's glyph takes the accent, the row's main
-    /// action; 還原's the text colour.
+    /// <para>Drawn rather than taken from the icon font (see FramingRestoreGlyph), the same on
+    /// Windows 10 and 11. Save rather than Sync: what 更新 does is write the blocks into the preset,
+    /// and Sync reads as fetching something. 更新's mark takes the accent, the row's main action;
+    /// 還原's the text colour.</para>
+    ///
+    /// <para>The 16 grid is drawn whole and scaled to 14 DIP by a Viewbox, stroke and all: the line
+    /// comes out about 1.2 wide, the weight of the bar's own drawn marks beside it, and the two
+    /// marks keep their places on the grid instead of each being stretched to its own bounds.</para>
     /// </remarks>
-    private static Button CapsuleButton(string glyph, string labelKey, bool primary, CornerRadius corners)
+    private static Button CapsuleButton(string geometryKey, string labelKey, bool primary, CornerRadius corners)
     {
         var label = LocalizationService.Get(labelKey);
-        var icon = new TextBlock
+        var path = new System.Windows.Shapes.Path
         {
-            Text = glyph,
-            FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-            FontSize = 14,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
+            StrokeThickness = 1.4,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
         };
+        path.SetResourceReference(System.Windows.Shapes.Path.DataProperty, geometryKey);
+        path.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, primary ? "AppAccent" : "AppTextPrimary");
 
-        icon.SetResourceReference(TextBlock.ForegroundProperty, primary ? "AppAccent" : "AppTextPrimary");
+        var icon = new Viewbox
+        {
+            Width = 14,
+            Height = 14,
+            Child = new Grid { Width = 16, Height = 16, Children = { path } },
+            SnapsToDevicePixels = true,
+        };
 
         var button = new Button { Content = icon, ToolTip = label, Tag = corners };
         button.SetResourceReference(StyleProperty, "FramingCapsuleButton");

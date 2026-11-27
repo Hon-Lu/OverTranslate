@@ -379,6 +379,12 @@
          and the settings row for its shortcut. -->
     <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
 
+    <!-- 翻譯區域預設's 還原 and 更新, on a changed row: drawn on a 16 grid and stroked 1.4 wide with
+         round ends and joins, so the two read as one pair beside the bar's own drawn marks, which
+         the font's Undo and Save did not. 還原 an arrow turning back; 更新 a floppy disk, as Save. -->
+    <Geometry x:Key="FramingRestoreGlyph">M5.5,3.5 L2.5,6.5 L5.5,9.5 M2.8,6.5 H10 A3.5,3.5 0 0 1 10,13.5 H7</Geometry>
+    <Geometry x:Key="FramingUpdateGlyph">M2.5,3.5 A1,1 0 0 1 3.5,2.5 H10.8 L13.5,5.2 V12.5 A1,1 0 0 1 12.5,13.5 H3.5 A1,1 0 0 1 2.5,12.5 Z M5,2.5 V5.5 H10 V2.5 M5,13.5 V9.5 H11 V13.5</Geometry>
+
     <!-- 截圖翻譯: framing corners around a crosshair — the gesture the feature actually asks for
          (drag a region), not a camera, which would promise a photo rather than a translation. -->
     <Geometry x:Key="CaptureMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M8,5.4 V10.6 M5.4,8 H10.6</Geometry>
