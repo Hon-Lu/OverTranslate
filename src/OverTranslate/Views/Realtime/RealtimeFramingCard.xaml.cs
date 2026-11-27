@@ -108,7 +108,6 @@ public partial class RealtimeFramingCard : UserControl
 
         ListHost.Children.Clear();
         foreach (var index in shown) ListHost.Children.Add(Row(presets[index]));
-        ShowMore(hidden, CollapsibleRows.Folds(presets.Count));
 
         // The last row drops its rule so it does not double the list's own border — but keeps the
         // accent edge a selected row carries.
@@ -116,6 +115,13 @@ public partial class RealtimeFramingCard : UserControl
         {
             var last = (Border)ListHost.Children[^1];
             last.BorderThickness = new Thickness(last.BorderThickness.Left, 0, 0, 0);
+        }
+
+        // 顯示其餘 N 組 / 收起 as the list's last row, after the rule fix above: it brings its own.
+        if (CollapsibleRows.HasMoreRow(presets.Count, hidden, _expanded))
+        {
+            ListHost.Children.Add(CollapsibleRows.MoreRow(hidden, _expanded, "S.Realtime.ShowMoreFramings",
+                "FramingPresetMore", () => { _expanded = !_expanded; Render(); }));
         }
 
         // Nothing kept: the list's frame would read as an empty box to fill in, and there is nothing
@@ -356,26 +362,4 @@ public partial class RealtimeFramingCard : UserControl
     private void ListBorder_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ListBorder.Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 
-    /// <summary>
-    /// The line under the list: 顯示其餘 N 組 while rows are folded away, 收起 once unfolded, and
-    /// nothing for a list too short to fold or one whose only folded rows are kept in view anyway.
-    /// </summary>
-    private void ShowMore(int hidden, bool folds)
-    {
-        bool shown = folds && (_expanded || hidden > 0);
-        MoreButton.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
-        if (!shown) return;
-
-        MoreText.Text = _expanded
-            ? LocalizationService.Get("S.Realtime.ShowFewer")
-            : LocalizationService.Format("S.Realtime.ShowMoreFramings", hidden);
-        MoreGlyph.Text = _expanded ? "\uE70E" : "\uE70D";
-        AutomationProperties.SetName(MoreButton, MoreText.Text);
-    }
-
-    private void MoreButton_Click(object sender, RoutedEventArgs e)
-    {
-        _expanded = !_expanded;
-        Render();
-    }
 }

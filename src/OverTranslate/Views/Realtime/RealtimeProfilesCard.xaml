@@ -139,18 +139,6 @@
                 <StackPanel x:Name="CustomHost" SizeChanged="ListHost_SizeChanged"
                             AutomationProperties.AutomationId="ProfileCustomList"/>
             </Border>
-
-            <!-- 顯示其餘 N 個 / 收起, as on the 翻譯區域預設 card. -->
-            <Button x:Name="MoreButton" Style="{StaticResource FlatButton}"
-                    Height="32" Margin="0,0,0,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                    AutomationProperties.AutomationId="ProfileCustomMore"
-                    Click="MoreButton_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="MoreText" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="MoreGlyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"
-                               VerticalAlignment="Center" Margin="8,1,0,0"/>
-                </StackPanel>
-            </Button>
             <!-- The add, as the app's other buttons are (FlatButton, as 開啟記錄資料夾), under the
                  custom list at its left. At the cap it greys and its text says why, rather than
                  going away. -->

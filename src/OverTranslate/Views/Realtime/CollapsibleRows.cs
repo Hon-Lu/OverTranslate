@@ -1,3 +1,10 @@
+using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Controls;
+using OverTranslate.Services;
+using Button = System.Windows.Controls.Button;
+using Orientation = System.Windows.Controls.Orientation;
+
 namespace OverTranslate.Views.Realtime;
 
 /// <summary>
@@ -38,4 +45,40 @@ internal static class CollapsibleRows
 
     /// <summary>Whether the list is long enough to have the 顯示其餘／收起 line at all.</summary>
     public static bool Folds(int count) => count > Folded;
+
+    /// <summary>
+    /// Whether the 顯示其餘／收起 row is there: the list folds, and either rows are folded away or
+    /// it is unfolded — not when the only rows past the first are ones kept in view anyway.
+    /// </summary>
+    public static bool HasMoreRow(int count, int hidden, bool expanded) =>
+        Folds(count) && (expanded || hidden > 0);
+
+    /// <summary>
+    /// The 顯示其餘 N 個／組 or 收起 row a folded list ends with, inside its frame (CardListMoreRow).
+    /// </summary>
+    /// <param name="moreKey">The string that names what is folded away, with {0} for how many.</param>
+    public static Button MoreRow(int hidden, bool expanded, string moreKey, string automationId, Action toggle)
+    {
+        var text = expanded
+            ? LocalizationService.Get("S.Realtime.ShowFewer")
+            : LocalizationService.Format(moreKey, hidden);
+
+        var line = new StackPanel { Orientation = Orientation.Horizontal };
+        line.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+        line.Children.Add(new TextBlock
+        {
+            Text = expanded ? "\uE70E" : "\uE70D",
+            FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 10,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(6, 1, 0, 0),
+        });
+
+        var row = new Button { Content = line };
+        row.SetResourceReference(FrameworkElement.StyleProperty, "CardListMoreRow");
+        AutomationProperties.SetName(row, text);
+        AutomationProperties.SetAutomationId(row, automationId);
+        row.Click += (_, _) => toggle();
+        return row;
+    }
 }

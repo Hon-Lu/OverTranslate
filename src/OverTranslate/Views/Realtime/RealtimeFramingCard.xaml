@@ -151,19 +151,6 @@
                 <StackPanel x:Name="ListHost" AutomationProperties.AutomationId="FramingPresetList"/>
             </Border>
 
-            <!-- 顯示其餘 N 組 / 收起 under a list longer than CollapsibleRows.Folded: the card grows to
-                 hold every row rather than scrolling inside the page. -->
-            <Button x:Name="MoreButton" Style="{StaticResource FlatButton}"
-                    Height="32" Margin="0,6,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                    AutomationProperties.AutomationId="FramingPresetMore"
-                    Click="MoreButton_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="MoreText" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="MoreGlyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"
-                               VerticalAlignment="Center" Margin="8,1,0,0"/>
-                </StackPanel>
-            </Button>
-
             <!-- Said in place of the list when nothing has been kept: the card must not read as an
                  empty box the user is supposed to fill in from here. -->
             <TextBlock x:Name="EmptyText" Text="{DynamicResource S.Realtime.FramingsEmpty}"

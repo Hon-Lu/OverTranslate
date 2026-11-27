@@ -67,6 +67,14 @@ public class CollapsibleRowsTests
         Assert.Equal(0, hidden);
     }
 
+    [Theory]
+    [InlineData(3, 0, false, false)]
+    [InlineData(7, 4, false, true)]
+    [InlineData(7, 0, true, true)]
+    [InlineData(4, 0, false, false)]
+    public void TheMoreRow_IsThereWhenRowsAreFoldedAwayOrTheListIsUnfolded(int count, int hidden, bool expanded, bool expected) =>
+        Assert.Equal(expected, CollapsibleRows.HasMoreRow(count, hidden, expanded));
+
     [Fact]
     public void TheCountFollowsTheList_AsRowsAreAddedAndRemoved()
     {

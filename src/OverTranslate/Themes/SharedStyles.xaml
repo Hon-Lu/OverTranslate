@@ -379,6 +379,40 @@
          and the settings row for its shortcut. -->
     <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
 
+    <!-- 顯示其餘 N 個 / 收起 as the last row of a folded list on the 即時翻譯 page (see
+         CollapsibleRows): inside the list's frame, under the same rule the rows are split by,
+         centred, in small accent text with a chevron. The whole row is the control and lightens
+         under the pointer as the rows above it do; it is a row of the list, not a button beside it,
+         so the list's one button (＋ 新增自訂模式) stays the only button. -->
+    <Style x:Key="CardListMoreRow" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" Background="Transparent" Padding="14,9"
+                            BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,1,0,0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- 翻譯區域預設's 還原 and 更新, on a changed row: drawn on a 16 grid and stroked 1.4 wide with
          round ends and joins, so the two read as one pair beside the bar's own drawn marks, which
          the font's Undo and Save did not. 還原 an arrow turning back; 更新 a floppy disk, as Save. -->

@@ -128,8 +128,14 @@ public partial class RealtimeProfilesCard : UserControl
             .Select(item => item.index);
         var (shown, hidden) = CollapsibleRows.Shown(customs.Count, keep, _expanded);
         Fill(CustomHost, shown.Select(index => customs[index]));
+        // 顯示其餘 N 個 / 收起 as the list's last row; ＋ 新增自訂模式 stays the list's one button,
+        // under it.
+        if (CollapsibleRows.HasMoreRow(customs.Count, hidden, _expanded))
+        {
+            CustomHost.Children.Add(CollapsibleRows.MoreRow(hidden, _expanded, "S.Realtime.ShowMoreProfiles",
+                "ProfileCustomMore", () => { _expanded = !_expanded; RenderList(); }));
+        }
         CustomList.Visibility = CustomHost.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        ShowMore(hidden, CollapsibleRows.Folds(customs.Count));
 
         // After layout, so a new row has a place to be scrolled to.
         if (added is not null)
@@ -264,26 +270,4 @@ public partial class RealtimeProfilesCard : UserControl
     private void ListHost_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ((FrameworkElement)sender).Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 
-    /// <summary>
-    /// The line under the custom list: 顯示其餘 N 個 while rows are folded away, 收起 once unfolded,
-    /// and nothing for a list too short to fold or one whose only folded row is kept in view anyway.
-    /// </summary>
-    private void ShowMore(int hidden, bool folds)
-    {
-        bool shown = folds && (_expanded || hidden > 0);
-        MoreButton.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
-        if (!shown) return;
-
-        MoreText.Text = _expanded
-            ? LocalizationService.Get("S.Realtime.ShowFewer")
-            : LocalizationService.Format("S.Realtime.ShowMoreProfiles", hidden);
-        MoreGlyph.Text = _expanded ? "\uE70E" : "\uE70D";
-        System.Windows.Automation.AutomationProperties.SetName(MoreButton, MoreText.Text);
-    }
-
-    private void MoreButton_Click(object sender, RoutedEventArgs e)
-    {
-        _expanded = !_expanded;
-        RenderList();
-    }
 }
