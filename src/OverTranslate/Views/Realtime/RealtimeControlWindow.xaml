@@ -511,27 +511,6 @@
                                     AutomationProperties.Name="{DynamicResource S.Realtime.ProfileMenu}"
                                     Click="ProfilesBtn_Click"/>
 
-                            <!-- 翻譯區域預設 while translating: the same list the framing bar shows, and
-                                 picking one restarts the blocks on it. Between 模式 and 編輯 because it
-                                 is the other thing about the blocks themselves — where they are,
-                                 where 模式 is how they are read. -->
-                            <Button x:Name="FramingsRunBtn"
-                                    Style="{StaticResource ToolbarIconButton}"
-                                    Margin="0,0,4,0"
-                                    ToolTip="{DynamicResource S.Realtime.Framings}"
-                                    AutomationProperties.AutomationId="RealtimeFramingsRunBtn"
-                                    AutomationProperties.Name="{DynamicResource S.Realtime.Framings}"
-                                    Click="FramingsBtn_Click">
-                                <Path Width="16" Height="16"
-                                      Stretch="None"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.2"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"
-                                      Data="{StaticResource FramingsButtonGlyph}"/>
-                            </Button>
-
                             <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
                                  be read at a glance and one word set in a flat button among icons was the
                                  only thing on it drawing the eye. The pencil is the same one Windows uses

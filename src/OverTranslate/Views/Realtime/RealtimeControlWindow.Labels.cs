@@ -35,9 +35,6 @@ public partial class RealtimeControlWindow
         Labels.Add(FramingsEditBtn,
             () => LocalizationService.Get("S.Realtime.Framings"),
             () => LocalizationService.Get("S.Realtime.FramingSwitchHint"));
-        Labels.Add(FramingsRunBtn,
-            () => LocalizationService.Get("S.Realtime.Framings"),
-            () => LocalizationService.Get("S.Realtime.FramingSwitchHint"));
         Labels.Add(CrosshairBtn, () => LocalizationService.Get(
             _crosshairEnabled ? "S.Realtime.CrosshairOff" : "S.Realtime.CrosshairOn"));
         Labels.Add(StartBtn, () => LocalizationService.Get("S.Realtime.StartTranslating"));
