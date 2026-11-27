@@ -25,7 +25,7 @@ namespace OverTranslate.Tests;
 public class SourceLanguageContractTests
 {
     /// <summary>Every source language the router accepts for this path, automatic included.</summary>
-    private static readonly string[] SourceLanguages = ["AUTO", "EN", "JA", "ZH"];
+    private static readonly string[] SourceLanguages = ["AUTO", "EN", "JA", "ZH", "FR", "DE", "ES", "IT", "PT"];
 
     /// <summary>
     /// A capture holding one of everything that has previously been read differently per language.

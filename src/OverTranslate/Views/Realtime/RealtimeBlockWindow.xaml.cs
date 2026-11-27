@@ -2449,7 +2449,7 @@ public partial class RealtimeBlockWindow : Window
     }
 
     private static bool IsLatinToCjk(string sourceLanguage, string targetLanguage) =>
-        sourceLanguage.Equals("EN", StringComparison.OrdinalIgnoreCase) &&
+        Services.Ocr.OcrLanguageRouter.IsLatinScript(sourceLanguage) &&
         (targetLanguage.StartsWith("ZH", StringComparison.OrdinalIgnoreCase) ||
          targetLanguage.Equals("JA", StringComparison.OrdinalIgnoreCase) ||
          targetLanguage.Equals("KO", StringComparison.OrdinalIgnoreCase));

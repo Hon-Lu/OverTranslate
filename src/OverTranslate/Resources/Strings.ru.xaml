@@ -110,7 +110,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">Не указано имя модели. Введите модель в настройках службы перевода.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Неизвестная ошибка</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">Подробности ошибки отсутствуют</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">Распознавание текста сейчас поддерживает только AUTO, EN, ZH, ZH-HANT, JA, KO, RU и UK; «{0}» пока не поддерживается.</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">Распознавание текста сейчас поддерживает только AUTO, EN, ZH, ZH-HANT, JA, KO, DE, ES, FR, IT, PT, RU и UK; «{0}» пока не поддерживается.</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">Истекло время ожидания завершения другого распознавания перед сменой модели OCR.</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">Не удалось преобразовать изображение в формат, понятный ONNX OCR.</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">Файл модели OCR не найден: {0}</sys:String>

@@ -739,9 +739,17 @@ internal static class OcrTextBlockGrouper
         return needsSpace ? $"{left} {right}" : $"{left}{right}";
     }
 
-    // Cyrillic beside ASCII, not "every letter": Hangul and kana are letters as well, and Korean and
-    // Japanese fragments are joined without a space on purpose.
-    private static bool IsSpacedWordCharacter(char c) => char.IsAsciiLetterOrDigit(c) || IsCyrillic(c);
+    // Accented Latin and Cyrillic beside ASCII, not "every letter": Hangul and kana are letters as
+    // well, and Korean and Japanese fragments are joined without a space on purpose. Accented Latin
+    // only reaches here under the languages that keep it (OcrLanguageRouter.KeepsLatinDiacritics);
+    // every other one has had it folded to the plain letter already.
+    private static bool IsSpacedWordCharacter(char c) =>
+        char.IsAsciiLetterOrDigit(c) || IsCyrillic(c) || IsAccentedLatinLetter(c);
+
+    // Latin-1 Supplement to Latin Extended-B, and Latin Extended Additional; letters only, so × and ÷
+    // in the middle of the first block are not words.
+    private static bool IsAccentedLatinLetter(char c) =>
+        c is >= 'À' and <= 'ɏ' or >= 'Ḁ' and <= 'ỿ' && char.IsLetter(c);
 
     private static bool IsCyrillic(char c) => c is >= '\u0400' and <= '\u052F';
 
