@@ -296,6 +296,9 @@ public partial class RealtimeControlWindow : Window
     /// <summary>Raised with the id of a changed framing whose 還原 was pressed in 翻譯區域預設.</summary>
     public event EventHandler<string>? FramingRestoreRequested;
 
+    /// <summary>Raised when 不套用 was pressed in 翻譯區域預設.</summary>
+    public event EventHandler? FramingSkipRequested;
+
     /// <summary>
     /// Raised when the 顯示外觀 panel has written a change to the settings file (#355), for the
     /// session to draw its overlays with.
@@ -1046,10 +1049,6 @@ public partial class RealtimeControlWindow : Window
 
     // ── 翻譯區域預設 ────────────────────────────────────────────────────────────────────────────
 
-    // The 翻譯區域預設 button on the bar showing now: the running capsule's, or the framing bar's.
-    private System.Windows.Controls.Button FramingsButton =>
-        _mode == RealtimeControlMode.Edit ? FramingsEditBtn : FramingsRunBtn;
-
     private void FramingsBtn_Click(object sender, RoutedEventArgs e)
     {
         // Pressing it again is how the list is put away, as 模式's is: it stays open otherwise.
@@ -1076,6 +1075,10 @@ public partial class RealtimeControlWindow : Window
     /// </remarks>
     public void OpenFramings()
     {
+        // The list is framing's alone: switching while translating restarted the session under the
+        // user, and its button is on the framing bar only.
+        if (_mode != RealtimeControlMode.Edit) return;
+
         CloseMenu("framing list opening");
         CloseAppearance();
         CloseProfiles();
@@ -1114,15 +1117,20 @@ public partial class RealtimeControlWindow : Window
             CloseFramings();
             FramingRestoreRequested?.Invoke(this, id);
         };
+        panel.SkipRequested += (_, _) =>
+        {
+            CloseFramings();
+            FramingSkipRequested?.Invoke(this, EventArgs.Empty);
+        };
         panel.Closed += (_, _) =>
         {
             if (!ReferenceEquals(_framings, panel)) return;
             _framings = null;
-            SetHeldDown(FramingsButton, false);
+            SetHeldDown(FramingsEditBtn, false);
         };
 
         _framings = panel;
-        SetHeldDown(FramingsButton, true);
+        SetHeldDown(FramingsEditBtn, true);
         try
         {
             panel.Show();
@@ -1172,7 +1180,6 @@ public partial class RealtimeControlWindow : Window
         if (panel is null) return;
         _framings = null;
         SetHeldDown(FramingsEditBtn, false);
-        SetHeldDown(FramingsRunBtn, false);
         panel.Dismiss();
     }
 

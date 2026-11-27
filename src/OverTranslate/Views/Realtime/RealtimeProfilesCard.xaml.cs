@@ -70,21 +70,31 @@ public partial class RealtimeProfilesCard : UserControl
 
     private static readonly FontFamily IconFont = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
-    // How many custom rows show before the list scrolls, and how much of the next one shows under
-    // them: a row cut through the middle says there is more to scroll to, where four whole rows
-    // and the list's border would read as all there is.
-    private const int VisibleCustomRows = 4;
-    private const double NextRowPeek = 0.5;
-
     // The custom modes listed last time, so a mode that is new since — made in the overlay, or
-    // forked from a preset — can be scrolled to. Null before the first render: nothing is new then.
+    // forked from a preset — can be shown and scrolled to. Null before the first render: nothing is
+    // new then.
     private HashSet<string>? _listedCustomIds;
+
+    // The mode made most recently on this visit to the page: listed first, folded or not — the list
+    // has no selected row of its own, and a mode just made that landed among the folded rows would
+    // look as if it had not been made. The folded list stays three rows; see CollapsibleRows.
+    private string? _addedCustomId;
+
+    // Whether the user unfolded the custom list. Not kept: leaving the page and coming back folds it.
+    private bool _expanded;
 
     public RealtimeProfilesCard()
     {
         InitializeComponent();
         LocalizationService.LanguageChanged += OnChanged;
         SettingsService.Instance.RealtimeProfilesChanged += OnChanged;
+        Unloaded += (_, _) =>
+        {
+            if (!_expanded && _addedCustomId is null) return;
+            _expanded = false;
+            _addedCustomId = null;
+            RenderList();
+        };
         Reload();
     }
 
@@ -107,22 +117,32 @@ public partial class RealtimeProfilesCard : UserControl
         var choices = RealtimeProfileEditing.Choices(Realtime.Profiles);
         Fill(PresetHost, choices.Where(choice => choice.IsPreset));
         var customs = choices.Where(choice => !choice.IsPreset).ToList();
-        Fill(CustomHost, customs);
-        CustomList.Visibility = CustomHost.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         var ids = customs.Select(choice => choice.Id).ToHashSet();
         var added = _listedCustomIds is null ? null : customs.LastOrDefault(choice => !_listedCustomIds.Contains(choice.Id))?.Id;
         _listedCustomIds = ids;
-        // After layout, so the rows have their heights: the cap is measured from them, and a new
-        // row can only be scrolled to once it has a place.
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+        if (added is not null) _addedCustomId = added;
+
+        int pinned = customs.FindIndex(choice => choice.Id == _addedCustomId);
+        var (shown, hidden) = CollapsibleRows.Shown(customs.Count, pinned >= 0 ? pinned : null, _expanded);
+        Fill(CustomHost, shown.Select(index => customs[index]));
+        // 顯示其餘 N 個 / 收起 as the list's last row; ＋ 新增自訂模式 stays the list's one button,
+        // under it.
+        if (CollapsibleRows.HasMoreRow(customs.Count, hidden, _expanded))
         {
-            FitCustomScroll();
-            if (added is not null)
+            CustomHost.Children.Add(CollapsibleRows.MoreRow(hidden, _expanded, "S.Realtime.ShowMoreProfiles",
+                "ProfileCustomMore", () => { _expanded = !_expanded; RenderList(); }));
+        }
+        CustomList.Visibility = CustomHost.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // After layout, so a new row has a place to be scrolled to.
+        if (added is not null)
+        {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
                 CustomHost.Children.OfType<Button>()
                     .FirstOrDefault(row => System.Windows.Automation.AutomationProperties.GetAutomationId(row) == "ProfileRow_" + added)
-                    ?.BringIntoView();
-        });
+                    ?.BringIntoView());
+        }
 
         int count = Realtime.Profiles.Count;
         int max = RealtimeSettings.MaxCustomProfiles;
@@ -245,59 +265,7 @@ public partial class RealtimeProfilesCard : UserControl
     private void AddButton_Click(object sender, RoutedEventArgs e) => Shell()?.OpenNewRealtimeProfile();
 
     // Round each list to the inside of its border, so a hovered row does not square off the corners.
-    // The custom list's clip is on its scroller, the part that stays put, not on the rows that move.
     private void ListHost_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ((FrameworkElement)sender).Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 
-    private void CustomScroll_SizeChanged(object sender, SizeChangedEventArgs e) => ListHost_SizeChanged(sender, e);
-
-    // A row's height changes with the width (a long template line wraps) and with the language.
-    private void CustomHost_SizeChanged(object sender, SizeChangedEventArgs e) => FitCustomScroll();
-
-    /// <summary>
-    /// Caps the custom list at <see cref="VisibleCustomRows"/> rows and part of the next, measured
-    /// from the rows as laid out, or lets it take its full height when there are no more than that.
-    /// </summary>
-    /// <remarks>
-    /// Measured rather than a fixed number of DIP: a row is one line of name and one of template in
-    /// most languages, but the line wraps in a narrow window or a long Russian template, and a
-    /// fixed cap would then show three and a bit rows in one place and four and a bit in another.
-    /// About 250 DIP, so the list and the add under it still fit the page at the smallest window.
-    /// </remarks>
-    private void FitCustomScroll()
-    {
-        var rows = CustomHost.Children.OfType<FrameworkElement>().ToList();
-        if (rows.Count <= VisibleCustomRows || rows.Any(row => row.ActualHeight <= 0))
-        {
-            CustomScroll.MaxHeight = double.PositiveInfinity;
-            return;
-        }
-        CustomScroll.MaxHeight = Math.Ceiling(rows.Take(VisibleCustomRows).Sum(row => row.ActualHeight)
-                                              + rows[VisibleCustomRows].ActualHeight * NextRowPeek);
-    }
-
-    /// <summary>
-    /// Hands the wheel to the page once the custom list can go no further that way, or when it
-    /// does not scroll at all.
-    /// </summary>
-    /// <remarks>
-    /// A ScrollViewer marks every wheel it gets as handled, scrolled or not, so without this the
-    /// page stopped dead whenever the pointer crossed the list: at its end, or for good when the
-    /// list was short enough not to scroll.
-    /// </remarks>
-    private void CustomScroll_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-    {
-        var scroll = (ScrollViewer)sender;
-        bool up = e.Delta > 0;
-        bool canScroll = up ? scroll.VerticalOffset > 0 : scroll.VerticalOffset < scroll.ScrollableHeight;
-        if (canScroll) return;
-
-        e.Handled = true;
-        var forward = new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
-        {
-            RoutedEvent = MouseWheelEvent,
-            Source = scroll,
-        };
-        CustomList.RaiseEvent(forward);
-    }
 }

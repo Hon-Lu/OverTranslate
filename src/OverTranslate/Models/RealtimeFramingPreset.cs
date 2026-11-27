@@ -78,6 +78,17 @@ public sealed class RealtimeFramingPreset
     public string WindowProcess { get; set; } = "";
 
     /// <summary>
+    /// The full path of the captured window's executable, or "" when it could not be read.
+    /// </summary>
+    /// <remarks>
+    /// What tells apart two applications of one process name and window size — every RPG Maker game
+    /// is Game.exe at 816×624 — so that one game's framing is not put on another's. Compared only
+    /// while the path still exists on disk: a game moved or reinstalled elsewhere falls back to the
+    /// name, rather than losing every framing kept for it — see <c>RealtimeFramingStore</c>.
+    /// </remarks>
+    public string WindowPath { get; set; } = "";
+
+    /// <summary>
     /// What the captured window called itself when the framing was saved.
     /// </summary>
     /// <remarks>
@@ -171,10 +182,19 @@ public sealed class RealtimeFramingPreset
             var screen = Screen ?? new RealtimeFramingRect();
             var window = WindowSize ?? new RealtimeFramingRect();
             return IsForWindow
-                ? string.Join('\u001f', "window", WindowProcess ?? "", window.Width, window.Height)
-                : string.Join('\u001f', "screen", ScreenDeviceName ?? "", screen.Width, screen.Height);
+                ? KeyOfWindow(WindowProcess, WindowPath, window.Width, window.Height)
+                : KeyOfScreen(ScreenDeviceName, screen.Width, screen.Height);
         }
     }
+
+    /// <summary><see cref="TargetKey"/> of a window target, for a caller holding no preset.</summary>
+    /// <remarks>The path is part of it when known, without case: Windows' paths are not cased.</remarks>
+    public static string KeyOfWindow(string? process, string? path, int width, int height) =>
+        string.Join('\u001f', "window", process ?? "", width, height, (path ?? "").Trim().ToUpperInvariant());
+
+    /// <summary><see cref="TargetKey"/> of a screen target, for a caller holding no preset.</summary>
+    public static string KeyOfScreen(string? device, int width, int height) =>
+        string.Join('\u001f', "screen", device ?? "", width, height);
 
     /// <summary>A copy to edit without touching this one.</summary>
     public RealtimeFramingPreset Clone() => new()
@@ -187,6 +207,7 @@ public sealed class RealtimeFramingPreset
         ScreenDeviceName = ScreenDeviceName,
         Screen = (Screen ?? new RealtimeFramingRect()).Clone(),
         WindowProcess = WindowProcess,
+        WindowPath = WindowPath,
         WindowTitle = WindowTitle,
         WindowSize = (WindowSize ?? new RealtimeFramingRect()).Clone(),
         Blocks = [.. Blocks.Select(block => block.Clone())],
@@ -233,6 +254,7 @@ public sealed class RealtimeFramingPreset
             preset.ScreenDeviceName ??= "";
             preset.WindowProcess = (preset.WindowProcess ?? "").Trim();
             preset.WindowTitle = (preset.WindowTitle ?? "").Trim();
+            preset.WindowPath = (preset.WindowPath ?? "").Trim();
             // A hand-edited "Screen": null reads as a preset with no screen, which is dropped below;
             // without this the check itself would throw on the way to reading every other setting.
             preset.Screen ??= new RealtimeFramingRect();

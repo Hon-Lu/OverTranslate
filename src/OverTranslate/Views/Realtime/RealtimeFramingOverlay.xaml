@@ -1,0 +1,115 @@
+<UserControl x:Class="OverTranslate.Views.Realtime.RealtimeFramingOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed"
+             Focusable="True">
+
+    <!-- The two questions a row of the 即時翻譯 page's 翻譯區域預設 card asks over the window: ✎
+         編輯翻譯區域預設 and 🗑 刪除翻譯區域預設. Both in the app's dialog card (DialogCard), as
+         模式's delete is asked. The scrim cancels either. -->
+    <Grid x:Name="Scrim"
+          Background="#8C000000"
+          MouseLeftButtonDown="Scrim_MouseLeftButtonDown">
+
+        <!-- 編輯: the name, and what the preset is. The blocks are not edited here — they are
+             edited where they are drawn, and the hint says where. -->
+        <Border x:Name="EditCard" Style="{StaticResource DialogCard}" Visibility="Collapsed"
+                MouseLeftButtonDown="Card_MouseLeftButtonDown">
+            <StackPanel Margin="24,20,24,20">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <TextBlock Text="&#xE70F;" Style="{StaticResource DialogTitleGlyph}"
+                               Foreground="{DynamicResource AppAccent}"/>
+                    <TextBlock Text="{DynamicResource S.Realtime.FramingEditTitle}" Style="{StaticResource DialogTitle}"/>
+                </StackPanel>
+
+                <TextBlock Text="{DynamicResource S.Realtime.FramingEditName}"
+                           FontFamily="{DynamicResource AppFont}"
+                           FontSize="12"
+                           Foreground="{DynamicResource AppTextSecondary}"
+                           Margin="0,0,0,6"/>
+                <TextBox x:Name="NameBox"
+                         Style="{StaticResource ModernTextBox}"
+                         MaxLength="60"
+                         AutomationProperties.Name="{DynamicResource S.Realtime.FramingEditName}"
+                         AutomationProperties.AutomationId="FramingEditName"
+                         KeyDown="NameBox_KeyDown"/>
+
+                <!-- What the preset is: its picture, then whose it is, at what size, how many blocks. -->
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ContentControl x:Name="Thumbnail" Focusable="False" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock x:Name="DetailText"
+                               Grid.Column="1"
+                               FontFamily="{DynamicResource AppFont}"
+                               FontSize="12"
+                               LineHeight="16"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource AppTextSecondary}"/>
+                </Grid>
+
+                <!-- Where the blocks are changed. -->
+                <Border Margin="0,14,0,0" Padding="11,9,12,9" CornerRadius="6"
+                        Background="{DynamicResource AppSurfaceBg}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE946;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource AppAccent}"
+                                   VerticalAlignment="Top"
+                                   Margin="0,2,9,0"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{DynamicResource S.Realtime.FramingEditHint}"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="12"
+                                   LineHeight="18"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource AppTextSecondary}"/>
+                    </Grid>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                    <Button Style="{StaticResource FlatButton}" Height="34" Padding="18,0"
+                            Content="{DynamicResource S.Common.Cancel}"
+                            AutomationProperties.AutomationId="FramingEditCancel"
+                            Click="Cancel_Click"/>
+                    <Button Style="{StaticResource AccentButton}" Height="34" Margin="10,0,0,0" Padding="18,0"
+                            Content="{DynamicResource S.Common.Save}"
+                            AutomationProperties.AutomationId="FramingEditSave"
+                            Click="Save_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- 刪除: asked, as a mode's delete is. -->
+        <Border x:Name="DeleteCard" Style="{StaticResource DialogCard}" Visibility="Collapsed"
+                MouseLeftButtonDown="Card_MouseLeftButtonDown">
+            <StackPanel Margin="24,20,24,20">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock Text="&#xE7BA;" Style="{StaticResource DialogTitleGlyph}"/>
+                    <TextBlock Text="{DynamicResource S.Realtime.FramingDeleteTitle}" Style="{StaticResource DialogTitle}"/>
+                </StackPanel>
+                <TextBlock x:Name="DeleteMessage" Style="{StaticResource DialogMessage}" Margin="0,0,0,18"
+                           AutomationProperties.AutomationId="FramingDeleteMessage"/>
+                <!-- 取消 first and focused, so a key already held down does not land on 刪除. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="DeleteCancelButton" Style="{StaticResource FlatButton}" Height="34" Padding="18,0"
+                            Content="{DynamicResource S.Common.Cancel}"
+                            AutomationProperties.AutomationId="FramingDeleteCancel"
+                            Click="Cancel_Click"/>
+                    <Button Style="{StaticResource DangerButton}" Margin="10,0,0,0" Padding="18,0"
+                            Content="{DynamicResource S.Realtime.FramingDelete}"
+                            AutomationProperties.AutomationId="FramingDeleteConfirm"
+                            Click="Delete_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

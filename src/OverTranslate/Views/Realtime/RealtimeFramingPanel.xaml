@@ -61,23 +61,57 @@
             <Setter Property="TextElement.Foreground" Value="{DynamicResource AppTextPrimary}"/>
         </Style>
 
-        <!-- 還原 and 更新 on a changed framing's row: small text buttons, always shown rather than on
-             hover, so the two choices are read with the row. 還原 outlined, 更新 filled and last. -->
-        <Style x:Key="FramingRowButton" TargetType="Button" BasedOn="{StaticResource ToolbarFlatButton}">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="8,0"/>
-            <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Focusable" Value="False"/>
+        <!-- 還原 and 更新 on a changed framing's row: two glyphs in one neutral capsule, always shown
+             rather than on hover, so the two choices are read with the row; the word is their
+             tooltip. A capsule rather than two loose buttons: it reads as one control that belongs to
+             the row, and its outline and the raised tray colour keep it quieter than a filled accent
+             button. The two halves are split by a 1 DIP rule. -->
+        <Style x:Key="FramingCapsule" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppButtonBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="7"/>
+            <Setter Property="Background" Value="{DynamicResource ToolbarGroupBg}"/>
             <Setter Property="Margin" Value="6,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
-        <Style x:Key="FramingRowPrimaryButton" TargetType="Button" BasedOn="{StaticResource ToolbarAccentButton}">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="8,0"/>
-            <Setter Property="FontSize" Value="11.5"/>
+
+        <!-- One half of the capsule, 30 × 28. Its corners are the capsule's inner ones on its own
+             side (set as the Tag in code), so the hover fill does not show past the outline. The
+             glyph shrinks a little while pressed. -->
+        <Style x:Key="FramingCapsuleButton" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="28"/>
             <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Margin" Value="6,0,0,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ContentPresenter x:Name="Glyph"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RenderTransformOrigin="0.5,0.5"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupPressedBg}"/>
+                                <Setter TargetName="Glyph" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -106,7 +140,7 @@
                 <StackPanel>
                     <!-- The heading and the way out: the list is put away by picking a row, by this ✕,
                          or by pressing the bar's button again. -->
-                    <DockPanel Height="34" Margin="10,0,0,0">
+                    <DockPanel MinHeight="34" Margin="10,0,0,0">
                         <Button x:Name="CloseBtn"
                                 DockPanel.Dock="Right"
                                 Style="{StaticResource ToolbarIconButton}"
@@ -119,13 +153,24 @@
                                        FontSize="9.5"
                                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
-                        <TextBlock Text="{DynamicResource S.Realtime.Framings}"
-                                   VerticalAlignment="Center"
-                                   FontFamily="{DynamicResource AppFont}"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AppTextPrimary}"
-                                   TextTrimming="CharacterEllipsis"/>
+                        <!-- The title, and under it whose presets these are — the same words the
+                             page's card heads its list with. A preset without a name of the user's
+                             is 預設 N, which says nothing about the target by itself. -->
+                        <StackPanel VerticalAlignment="Center" Margin="0,7,0,5">
+                            <TextBlock Text="{DynamicResource S.Realtime.Framings}"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="TargetText"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="11.5"
+                                       Margin="0,1,0,0"
+                                       Foreground="{DynamicResource AppTextSecondary}"
+                                       TextTrimming="CharacterEllipsis"
+                                       AutomationProperties.AutomationId="FramingListTarget"/>
+                        </StackPanel>
                     </DockPanel>
 
                     <!-- Filled in code (see RealtimeFramingPanel), one row per framing kept for this

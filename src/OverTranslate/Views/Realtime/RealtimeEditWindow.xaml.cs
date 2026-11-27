@@ -503,6 +503,8 @@ public partial class RealtimeEditWindow : Window
     {
         CloseMenu(animate: false);
         _blocks.Clear();
+        // The canvas is rebuilt by each block added; with none to add (不套用) it is rebuilt here.
+        RebuildCanvas();
 
         foreach (var block in blocks.Take(_maxBlocks))
         {

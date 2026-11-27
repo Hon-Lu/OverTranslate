@@ -394,26 +394,16 @@
         <!-- Delete, asked over the card the way the prompt editor asks. -->
         <Grid x:Name="ConfirmLayer" Visibility="Collapsed" Background="#8C000000"
               MouseLeftButtonDown="ConfirmScrim_MouseLeftButtonDown">
-            <Border Width="400" UseLayoutRounding="True" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    CornerRadius="12" Background="{DynamicResource AppCardBg}"
-                    BorderBrush="{DynamicResource AppBorder}" BorderThickness="1"
-                    MouseLeftButtonDown="Card_MouseLeftButtonDown">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
-                </Border.Effect>
+            <Border Style="{StaticResource DialogCard}" MouseLeftButtonDown="Card_MouseLeftButtonDown">
                 <StackPanel Margin="24,20,24,20">
                     <!-- One card for the two answers a mode asks to be confirmed — 刪除 and 還原為範本 —
                          set up by ShowConfirm. -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock x:Name="ConfirmGlyph" Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18"
-                                   Foreground="{DynamicResource AppError}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock x:Name="ConfirmGlyph" Text="&#xE7BA;" Style="{StaticResource DialogTitleGlyph}"/>
                         <TextBlock x:Name="ConfirmTitle" Text="{DynamicResource S.Realtime.ProfileDeleteTitle}"
-                                   FontFamily="{DynamicResource AppFont}" FontSize="16" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AppTextPrimary}" VerticalAlignment="Center"/>
+                                   Style="{StaticResource DialogTitle}"/>
                     </StackPanel>
-                    <TextBlock x:Name="ConfirmMessage" FontFamily="{DynamicResource AppFont}"
-                               FontSize="{StaticResource AppFontSize}" Foreground="{DynamicResource AppTextSecondary}"
-                               LineHeight="20" TextWrapping="Wrap" Margin="0,0,0,18"/>
+                    <TextBlock x:Name="ConfirmMessage" Style="{StaticResource DialogMessage}" Margin="0,0,0,18"/>
                     <!-- 取消 first and focused, so a key already held down does not land on 刪除. -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button x:Name="ConfirmCancelBtn" Style="{StaticResource FlatButton}" Height="34" Padding="18,0"

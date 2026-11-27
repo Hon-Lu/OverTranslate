@@ -1,78 +1,86 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
 using Button = System.Windows.Controls.Button;
-using FontFamily = System.Windows.Media.FontFamily;
 using Point = System.Windows.Point;
-using TextBox = System.Windows.Controls.TextBox;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace OverTranslate.Views.Realtime;
 
 /// <summary>
-/// The 翻譯區域預設 card on the 即時翻譯 page: every framing the user has kept, one row each,
-/// with the one this target opens on selected, and each renamed in place or forgotten from its own
-/// row.
+/// The 翻譯區域預設 card on the 即時翻譯 page: the presets of the screen or window chosen in 步驟 1／2,
+/// with the one 開始 would put on it marked 選用中, and every other target's folded into one row.
 /// </summary>
 /// <remarks>
-/// <para>Only the list lives here; the act of keeping a framing is on the floating bar, where the
-/// blocks are — see <see cref="RealtimeSessionController.SaveFraming"/>. The card is where they are
-/// looked at afterwards, which is also where a name can be given to one and where one of a target's
-/// several is picked: doing so marks it in the file and tells the page, which turns its capture
-/// source to that screen or window so the next 選取翻譯區塊 opens on it.</para>
+/// <para>Only the list lives here. Keeping a framing, and choosing which of a target's several it
+/// opens on, are on the floating bar, where the blocks are — see
+/// <see cref="RealtimeSessionController.SaveFraming"/>. The rows are not controls: a row that picked
+/// itself on a click also turned the page's capture source, and the two lists then disagreed about
+/// what "selected" meant. Here a preset is only renamed (✎)
+/// or deleted (🗑, asked first). Both open over the window from <see cref="RealtimeFramingOverlay"/>.</para>
 ///
-/// <para>A row is a hit target of its own for the same errand, with the square at its left as the
-/// visible control and a tab stop. The name and 不再保留 keep their own clicks: one is for typing
-/// and the other for deleting, and a row that treated those as "pick me" would fight the pointer.</para>
+/// <para>The upper half follows 步驟 1／2 (<see cref="SetTarget"/>): named by the target, so 選用中
+/// says whom it is chosen for, and swapped with a short fade when the choice changes while the lower
+/// half stays where it is. Past three presets it folds as the 模式 card's custom list does, with the
+/// one in use first. See <see cref="RealtimeFramingStore.GroupFor"/> for the split.</para>
+///
+/// <para>Renaming and deleting stay open while translating: they only touch the file, and a session
+/// already running keeps the blocks it opened with.</para>
 /// </remarks>
 public partial class RealtimeFramingCard : UserControl
 {
-    // How tall a row's thumbnail is drawn, in DIP.
-    private const double ThumbnailHeight = 24;
+    // How tall a row's picture is drawn, in DIP.
+    private const double ThumbnailHeight = 30;
 
-    // True while a rename is being written, so the settings event that follows does not commit the
-    // same name again through the box it is re-rendering.
-    private bool _committing;
+    private static readonly Duration TurnDuration = new(TimeSpan.FromMilliseconds(180));
+    private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(150));
 
-    // True while a session runs: picking a framing turns the capture source, which a running session
-    // cannot follow, so the rows cannot be picked. Renaming and deleting stay open.
-    private bool _selectionLocked;
+    // The screen or window 步驟 1／2 has chosen; null while 視窗擷取 has no window.
+    private RealtimeFramingStore.Target? _target;
+
+    // Whether 其他螢幕或視窗 is open. Not kept: leaving the page and coming back closes it.
+    private bool _othersOpen;
+
+    // Whether the chosen target's own list is unfolded. Not kept either, and folded again when
+    // 步驟 1／2 turns to another target.
+    private bool _currentExpanded;
 
     public RealtimeFramingCard()
     {
         InitializeComponent();
         LocalizationService.LanguageChanged += OnChanged;
         SettingsService.Instance.RealtimeFramingChanged += OnChanged;
+        Unloaded += (_, _) =>
+        {
+            if (!_othersOpen && !_currentExpanded) return;
+            _othersOpen = false;
+            _currentExpanded = false;
+            Render();
+        };
         Render();
     }
-
-    /// <summary>
-    /// Raised with a framing the user picked, after it is marked in the settings file: the page turns
-    /// its capture source to that preset's target and says whether it could.
-    /// </summary>
-    public event EventHandler<RealtimeFramingPreset>? Selected;
 
     /// <summary>Re-reads the kept framings and lists them, after the page itself was reloaded.</summary>
     public void Reload() => Render();
 
     /// <summary>
-    /// Locks picking a framing while a session runs, as the page locks its languages, service and
-    /// screen; renaming and deleting stay open. Picking used to go through and move the tick while
-    /// nothing on the screen changed.
+    /// The screen or window 步驟 1／2 has chosen now — null while 視窗擷取 has none, or it has
+    /// gone. The upper half is redrawn for it, fading in when it is another target than before.
     /// </summary>
-    public void SetSelectionLocked(bool locked)
+    internal void SetTarget(RealtimeFramingStore.Target? target)
     {
-        if (_selectionLocked == locked) return;
-        _selectionLocked = locked;
+        if (Nullable.Equals(_target, target)) return;
 
-        // A rename in progress keeps its box: redrawing the rows would throw the typing away.
-        if (ListHost.IsKeyboardFocusWithin) return;
+        bool another = _target?.Key != target?.Key || _target?.WindowTitle != target?.WindowTitle;
+        _target = target;
+        if (another) _currentExpanded = false;
         Render();
+        if (another) FadeInCurrent();
     }
 
     /// <summary>Lets go of the static events, when the window holding the page goes.</summary>
@@ -86,275 +94,239 @@ public partial class RealtimeFramingCard : UserControl
 
     private static RealtimeSettings Realtime => SettingsService.Instance.Current.Realtime;
 
+    private RealtimeFramingStore.CardGroups Groups() =>
+        RealtimeFramingStore.GroupFor(Realtime.FramingPresets, _target, Realtime.FramingSkippedTargets);
+
     private void Render()
     {
         var presets = Realtime.FramingPresets;
+        var groups = Groups();
 
-        ListHost.Children.Clear();
-        foreach (var preset in presets) ListHost.Children.Add(Row(preset));
+        // The upper half: the chosen target's presets, or the one sentence when it has none. With no
+        // target and nothing kept anywhere, only the sentence.
+        bool hasTarget = _target is not null;
+        CurrentPanel.Visibility = hasTarget || presets.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CurrentCaption.Visibility = hasTarget ? Visibility.Visible : Visibility.Collapsed;
+        CurrentCaption.Text = _target is { } target ? RealtimeFramingDisplay.Caption(target) : "";
 
-        // The last row drops its rule so it does not double the list's own border — but keeps the
-        // accent edge a selected row carries.
-        if (ListHost.Children.Count > 0)
+        // Past three, folded: the one in use is already first (GroupFor), so it is always in view.
+        var (shown, hidden) = CollapsibleRows.Shown(groups.Current.Count, null, _currentExpanded);
+        Fill(ListHost, shown.Select(index => groups.Current[index])
+            .Select(preset => Row(preset, preset.Id == groups.OpensOn?.Id, other: false)));
+        if (CollapsibleRows.HasMoreRow(groups.Current.Count, hidden, _currentExpanded))
         {
-            var last = (Border)ListHost.Children[^1];
-            last.BorderThickness = new Thickness(last.BorderThickness.Left, 0, 0, 0);
+            ListHost.Children.Add(CollapsibleRows.MoreRow(hidden, _currentExpanded, "S.Realtime.ShowMoreFramings",
+                "FramingPresetMore", () => { _currentExpanded = !_currentExpanded; Render(); }));
         }
+        ListBorder.Visibility = groups.Current.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        EmptyBox.Visibility = groups.Current.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
 
-        // Nothing kept: the list's frame would read as an empty box to fill in, and there is nothing
-        // on this page to fill it with — the sentence says where the button is instead.
-        ListBorder.Visibility = presets.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyText.Visibility = presets.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+        // The hint explains a list; with nothing kept at all, the sentence in its place says it all.
+        HintText.Visibility = presets.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // The lower half: one row for every other target's presets, open or not.
+        OthersPanel.Visibility = groups.Others.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        OthersPanel.Margin = new Thickness(0, CurrentPanel.Visibility == Visibility.Visible ? 10 : 0, 0, 0);
+        OthersCount.Text = LocalizationService.Format("S.Realtime.FramingOthersCount", groups.Others.Count);
+        AutomationProperties.SetName(OthersToggle,
+            $"{LocalizationService.Get("S.Realtime.FramingOthers")} {OthersCount.Text}");
+        AutomationProperties.SetItemStatus(OthersToggle, _othersOpen ? "expanded" : "collapsed");
+
+        bool open = _othersOpen && groups.Others.Count > 0;
+        Fill(OthersHost, open ? groups.Others.Select(preset => Row(preset, inUse: false, other: true)) : []);
+        OthersListBorder.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        Turn(open, animate: false);
+    }
+
+    /// <summary>Puts <paramref name="rows"/> in <paramref name="host"/>, the last without its rule.</summary>
+    /// <remarks>Before the 顯示其餘 row is added, which brings its own rule.</remarks>
+    private static void Fill(StackPanel host, IEnumerable<Border> rows)
+    {
+        host.Children.Clear();
+        foreach (var row in rows) host.Children.Add(row);
+
+        // The last row drops its rule so it does not double the list's own border.
+        if (host.Children.Count > 0)
+            ((Border)host.Children[^1]).BorderThickness = new Thickness(0);
     }
 
     /// <summary>
-    /// One kept framing: the pick square, its name over how many blocks and which application, and
-    /// 不再保留 at the right.
+    /// One kept framing: its picture, its name (and 選用中) over its size and blocks — with the
+    /// target's name first under 其他螢幕或視窗 — then ✎ and 🗑.
     /// </summary>
-    private Border Row(RealtimeFramingPreset preset)
+    private Border Row(RealtimeFramingPreset preset, bool inUse, bool other)
     {
-        var name = new TextBox
+        var name = RealtimeFramingDisplay.Name(preset);
+
+        var thumbnail = new Border
         {
-            Text = RealtimeFramingDisplay.Name(preset),
-            ToolTip = LocalizationService.Get("S.Realtime.FramingRename"),
+            Child = RealtimeFramingThumbnail.Create(preset, ThumbnailHeight),
+            Margin = new Thickness(0, 0, 12, 0),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
         };
-        name.SetResourceReference(StyleProperty, "FramingNameBox");
-        AutomationProperties.SetName(name, LocalizationService.Get("S.Realtime.FramingName"));
-        var nameCell = NameCell(name);
+
+        // The name gives way, the badge does not: a star column in a left-aligned grid sizes to the
+        // name until the row runs out, then cuts the name and keeps 選用中 whole beside it.
+        var title = new TextBlock
+        {
+            Text = name,
+            FontWeight = FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+        };
+        OverTranslate.Controls.TrimmedToolTip.SetIsEnabled(title, true);
+        title.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+        title.SetResourceReference(TextBlock.FontSizeProperty, "AppFontSize");
+        title.SetResourceReference(TextBlock.ForegroundProperty, "AppTextPrimary");
+
+        var nameLine = new Grid { HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
+        nameLine.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        nameLine.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        nameLine.Children.Add(title);
+        if (inUse)
+        {
+            var badgeText = new TextBlock
+            {
+                Text = LocalizationService.Get("S.Realtime.FramingInUse"),
+                FontSize = 11.5,
+            };
+            badgeText.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+            var badge = new Border { Child = badgeText };
+            badge.SetResourceReference(StyleProperty, "FramingInUseBadge");
+            AutomationProperties.SetAutomationId(badge, "FramingInUse");
+            Grid.SetColumn(badge, 1);
+            nameLine.Children.Add(badge);
+        }
 
         var detail = new TextBlock
         {
-            Text = RealtimeFramingDisplay.Detail(preset),
+            Text = other ? RealtimeFramingDisplay.OtherDetail(preset) : RealtimeFramingDisplay.SizeAndBlocks(preset),
             FontSize = 12,
             LineHeight = 16,
-            TextWrapping = TextWrapping.Wrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
             Margin = new Thickness(0, 2, 0, 0),
         };
         detail.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
-
-        string id = preset.Id;
-        name.GotKeyboardFocus += (_, _) => name.SelectAll();
-        name.LostKeyboardFocus += (_, _) => Commit(name, id);
-        name.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                Commit(name, id);
-                Keyboard.ClearFocus();
-                e.Handled = true;
-            }
-            else if (e.Key == Key.Escape)
-            {
-                // Back to what is stored: a half-typed name is not a change.
-                name.Text = ShownName(id, preset);
-                Keyboard.ClearFocus();
-                e.Handled = true;
-            }
-        };
-
-        var select = new Button
-        {
-            Content = RealtimeFramingThumbnail.Create(preset, ThumbnailHeight),
-            ToolTip = LocalizationService.Format("S.Realtime.FramingUse", RealtimeFramingDisplay.Name(preset)),
-            IsEnabled = !_selectionLocked,
-        };
-        select.SetResourceReference(StyleProperty, "FramingSelectButton");
-        AutomationProperties.SetName(select, select.ToolTip as string ?? "");
-        select.Click += (_, _) => Choose(preset);
-
-        var forget = new Button
-        {
-            Content = new TextBlock
-            {
-                Text = "\uE74D",
-                FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-                FontSize = 12,
-            },
-            ToolTip = LocalizationService.Get("S.Realtime.FramingForget"),
-        };
-        forget.SetResourceReference(StyleProperty, "FramingForgetButton");
-        AutomationProperties.SetName(forget, LocalizationService.Get("S.Realtime.FramingForget"));
-        forget.Click += (_, _) => RealtimeFramingStore.Forget(id);
+        detail.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
+        OverTranslate.Controls.TrimmedToolTip.SetIsEnabled(detail, true);
 
         var text = new StackPanel { VerticalAlignment = System.Windows.VerticalAlignment.Center };
-        text.Children.Add(nameCell);
+        text.Children.Add(nameLine);
         text.Children.Add(detail);
+
+        string id = preset.Id;
+        var edit = IconButton("FramingEditGlyph", "S.Realtime.FramingEdit", "FramingEdit_" + id);
+        edit.Click += (_, _) => (Window.GetWindow(this) as Shell.ShellWindow)?.OpenRealtimeFramingEdit(id);
+        var delete = IconButton("FramingDeleteGlyph", "S.Realtime.FramingDelete", "FramingDelete_" + id);
+        delete.Margin = new Thickness(2, 0, 0, 0);
+        delete.Click += (_, _) => (Window.GetWindow(this) as Shell.ShellWindow)?.OpenRealtimeFramingDelete(id);
 
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(select);
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.Children.Add(thumbnail);
         Grid.SetColumn(text, 1);
         grid.Children.Add(text);
-        Grid.SetColumn(forget, 2);
-        grid.Children.Add(forget);
+        edit.Margin = new Thickness(10, 0, 0, 0);
+        Grid.SetColumn(edit, 2);
+        grid.Children.Add(edit);
+        Grid.SetColumn(delete, 3);
+        grid.Children.Add(delete);
 
         var row = new Border { Child = grid };
-        row.SetResourceReference(StyleProperty, preset.Selected ? "FramingRowSelected" : "FramingRow");
-        // Clicking the row does what its square does, except on the things that have their own job:
-        // the name, which is being typed into, 不再保留, and the square itself.
-        row.MouseLeftButtonUp += (_, e) =>
-        {
-            var source = e.OriginalSource as DependencyObject;
-            if (IsWithin(source, nameCell) || IsWithin(source, select) || IsWithin(source, forget)) return;
-
-            Choose(preset);
-        };
+        row.SetResourceReference(StyleProperty, "FramingRow");
+        AutomationProperties.SetName(row, inUse ? $"{name} {LocalizationService.Get("S.Realtime.FramingInUse")}" : name);
+        AutomationProperties.SetAutomationId(row, "FramingRow_" + id);
         return row;
     }
 
-    /// <summary>
-    /// The name, edited in place: one line cut with … while it is only being read, the whole name
-    /// in the box once it is clicked into, and an underline with a pencil while the pointer is on it
-    /// — the box has no frame, so without those nothing says it can be typed into.
-    /// </summary>
-    /// <remarks>
-    /// A text box cannot cut its own text with …, so a text block that can lies over it while it is
-    /// not being edited, and the box's own text is drawn transparent underneath; the block takes no
-    /// presses, so a click lands in the box. The cell sizes to the name and gives way to the row's
-    /// width (a star column in a left-aligned grid), so the pencil sits right after the name rather
-    /// than at the far side of the row.
-    /// </remarks>
-    private static FrameworkElement NameCell(TextBox box)
+    /// <summary>✎ or 🗑: a mark drawn on a 16 grid, named and tipped with what it does.</summary>
+    private static Button IconButton(string geometryKey, string labelKey, string automationId)
     {
-        box.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+        var label = LocalizationService.Get(labelKey);
 
-        var shown = new TextBlock
+        var path = new System.Windows.Shapes.Path
         {
-            Text = box.Text,
-            FontWeight = FontWeights.SemiBold,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            IsHitTestVisible = false,
-            VerticalAlignment = System.Windows.VerticalAlignment.Center,
-            // The box's own padding and border, so the two lines of text sit on each other.
-            Margin = new Thickness(0, 1, 0, 3),
+            StrokeThickness = 1.3,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
         };
-        shown.SetResourceReference(TextBlock.FontFamilyProperty, "AppFont");
-        shown.SetResourceReference(TextBlock.FontSizeProperty, "AppFontSize");
-        shown.SetResourceReference(TextBlock.ForegroundProperty, "AppTextPrimary");
+        path.SetResourceReference(System.Windows.Shapes.Path.DataProperty, geometryKey);
 
-        var pencil = new TextBlock
+        var button = new Button
         {
-            Text = "",
-            FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-            FontSize = 11,
-            Margin = new Thickness(6, 0, 0, 0),
-            VerticalAlignment = System.Windows.VerticalAlignment.Center,
-            IsHitTestVisible = false,
-            Visibility = Visibility.Hidden,
+            Content = new Grid { Width = 16, Height = 16, Children = { path }, SnapsToDevicePixels = true },
+            ToolTip = label,
         };
-        pencil.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondary");
-
-        var field = new Grid();
-        field.Children.Add(box);
-        field.Children.Add(shown);
-
-        var cell = new Grid { HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
-        cell.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        cell.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        cell.Children.Add(field);
-        Grid.SetColumn(pencil, 1);
-        cell.Children.Add(pencil);
-
-        void Update()
-        {
-            bool editing = box.IsKeyboardFocusWithin;
-            shown.Visibility = editing ? Visibility.Collapsed : Visibility.Visible;
-            if (editing) box.ClearValue(ForegroundProperty);
-            else box.Foreground = System.Windows.Media.Brushes.Transparent;
-            pencil.Visibility = !editing && box.IsMouseOver ? Visibility.Visible : Visibility.Hidden;
-        }
-
-        box.TextChanged += (_, _) => { if (!box.IsKeyboardFocusWithin) shown.Text = box.Text; };
-        box.IsKeyboardFocusWithinChanged += (_, _) => { shown.Text = box.Text; Update(); };
-        box.MouseEnter += (_, _) => Update();
-        box.MouseLeave += (_, _) => Update();
-        Update();
-        return cell;
+        // The mark takes the button's colour, which the style turns up under the pointer.
+        path.SetBinding(System.Windows.Shapes.Shape.StrokeProperty,
+            new System.Windows.Data.Binding(nameof(Button.Foreground)) { Source = button });
+        button.SetResourceReference(StyleProperty, "FramingRowIconButton");
+        AutomationProperties.SetName(button, label);
+        AutomationProperties.SetAutomationId(button, automationId);
+        return button;
     }
 
-    /// <summary>
-    /// Marks <paramref name="preset"/> as its target's and tells the page, which turns its capture
-    /// source to it. Written before the page is told so the list already shows the pick. Nothing
-    /// while a session runs — see <see cref="SetSelectionLocked"/>.
-    /// </summary>
-    private void Choose(RealtimeFramingPreset preset)
-    {
-        if (_selectionLocked) return;
+    // ── 其他螢幕或視窗 ──────────────────────────────────────────────────────────────────────
 
-        RealtimeFramingStore.Select(preset.Id);
-        Selected?.Invoke(this, preset);
+    private void OthersToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _othersOpen = !_othersOpen;
+        // Turned first: the redraw sets the chevron straight to its angle unless it is turning.
+        Turn(_othersOpen, animate: true);
+        Render();
     }
 
-    /// <summary>
-    /// Writes what the box now says, or puts the target's own name back when the box only repeats it
-    /// — see <see cref="RealtimeFramingDisplay.StoredName"/>.
-    /// </summary>
-    private void Commit(TextBox box, string id)
+    /// <summary>Turns the chevron down or up, over a moment unless animations are off.</summary>
+    private void Turn(bool open, bool animate)
     {
-        if (_committing) return;
-
-        if (RealtimeFramingStore.ForId(id) is not { } preset) return;
-
-        var stored = RealtimeFramingDisplay.StoredName(preset, box.Text);
-        if (string.Equals(stored, preset.Name, StringComparison.Ordinal))
+        double angle = open ? 180 : 0;
+        if (!animate || !SystemParameters.ClientAreaAnimation)
         {
-            // Nothing was renamed: the box may still be showing a different spelling of the same
-            // automatic name, so put back exactly what the list would draw.
-            box.Text = RealtimeFramingDisplay.Name(preset);
+            if (OthersChevronTurn.HasAnimatedProperties && !animate) return;
+            OthersChevronTurn.BeginAnimation(RotateTransform.AngleProperty, null);
+            OthersChevronTurn.Angle = angle;
             return;
         }
 
-        _committing = true;
-        try
+        var turn = new DoubleAnimation
         {
-            RealtimeFramingStore.Rename(id, stored);
-        }
-        finally
+            To = angle,
+            Duration = TurnDuration,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut },
+        };
+        turn.Completed += (_, _) =>
         {
-            _committing = false;
-        }
+            OthersChevronTurn.BeginAnimation(RotateTransform.AngleProperty, null);
+            OthersChevronTurn.Angle = angle;
+        };
+        OthersChevronTurn.BeginAnimation(RotateTransform.AngleProperty, turn);
     }
 
-    private static string ShownName(string id, RealtimeFramingPreset fallback) =>
-        RealtimeFramingStore.ForId(id) is { } preset
-            ? RealtimeFramingDisplay.Name(preset)
-            : RealtimeFramingDisplay.Name(fallback);
-
-    /// <summary>Whether <paramref name="source"/> is <paramref name="container"/> or inside it.</summary>
-    private static bool IsWithin(DependencyObject? source, DependencyObject container)
+    /// <summary>The upper half arriving for another target: a short fade in, or straight in.</summary>
+    private void FadeInCurrent()
     {
-        for (var node = source; node is not null; node = VisualTreeHelper.GetParent(node))
-            if (ReferenceEquals(node, container)) return true;
+        if (!SystemParameters.ClientAreaAnimation || !IsLoaded) return;
 
-        return false;
+        var fade = new DoubleAnimation { From = 0, To = 1, Duration = FadeDuration };
+        fade.Completed += (_, _) =>
+        {
+            CurrentPanel.BeginAnimation(OpacityProperty, null);
+            CurrentPanel.Opacity = 1;
+        };
+        CurrentPanel.BeginAnimation(OpacityProperty, fade);
     }
 
-    // Round the list to the inside of its border, so a hovered row does not square off the corners.
+    // ── Clipping ────────────────────────────────────────────────────────────────────────────
+
+    // Round the list to the inside of its border, so nothing inside it squares off the corners.
     private void ListBorder_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ListBorder.Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 
-    /// <summary>
-    /// Hands the wheel to the page once the list can go no further that way, or when it does not
-    /// scroll at all.
-    /// </summary>
-    /// <remarks>
-    /// A ScrollViewer marks every wheel it gets as handled, scrolled or not, so without this the
-    /// page stopped dead whenever the pointer crossed the list.
-    /// </remarks>
-    private void ListScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        var scroll = (ScrollViewer)sender;
-        bool up = e.Delta > 0;
-        bool canScroll = up ? scroll.VerticalOffset > 0 : scroll.VerticalOffset < scroll.ScrollableHeight;
-        if (canScroll) return;
-
-        e.Handled = true;
-        ListBorder.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
-        {
-            RoutedEvent = MouseWheelEvent,
-            Source = ListBorder,
-        });
-    }
+    // Round the list under 其他螢幕或視窗 the same way.
+    private void OthersListBorder_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        OthersListBorder.Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 }

@@ -13,7 +13,7 @@ using Orientation = System.Windows.Controls.Orientation;
 namespace OverTranslate.Views.Realtime;
 
 /// <summary>
-/// 翻譯區域預設, opened from the framing bar and from the running capsule: every framing kept for
+/// 翻譯區域預設, opened from the framing bar — only while framing: every framing kept for
 /// the monitor or application being read, what each one is now, and 儲存目前框選 at the bottom.
 /// </summary>
 /// <remarks>
@@ -40,7 +40,9 @@ internal partial class RealtimeFramingPanel : Window
     private const double Gap = 6;
 
     // The panel's width: a thumbnail, one line of a name, and on a changed row its two buttons.
-    private const double PanelWidth = 300;
+    // 340 rather than 300: a changed row's name shows 18 characters of Chinese and 25 of Russian
+    // beside the two icons, against 15 and 19 at 300.
+    private const double PanelWidth = 340;
 
     // How tall a row's thumbnail is drawn, in DIP.
     private const double ThumbnailHeight = 26;
@@ -96,6 +98,9 @@ internal partial class RealtimeFramingPanel : Window
     /// <summary>Raised with the id of the changed framing whose 還原 was pressed.</summary>
     public event EventHandler<string>? RestoreRequested;
 
+    /// <summary>Raised when 不套用 is pressed.</summary>
+    public event EventHandler? SkipRequested;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -144,9 +149,16 @@ internal partial class RealtimeFramingPanel : Window
     private void Build(RealtimeFramingStore.FramingList list, RealtimeFramingStore.Target target)
     {
         RowsHost.Children.Clear();
+        bool any = list.Rows.Count > 0;
+        TargetText.Text = RealtimeFramingDisplay.Caption(target);
+        TargetText.ToolTip = TargetText.Text;
+
+        // 不套用 heads the list only when there is something not to apply: with nothing kept for this
+        // monitor or application the target opens empty anyway, and a lone ticked 不套用 over an
+        // empty list would read as a choice the user had made.
+        if (any) RowsHost.Children.Add(SkipRow(list.Skipped, list.Save != RealtimeFramingStore.SaveState.NoBlocks));
         foreach (var row in list.Rows) RowsHost.Children.Add(Row(row, target));
 
-        bool any = list.Rows.Count > 0;
         RowsScroll.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         SaveRule.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         SaveHost.Content = SaveRow(list);
@@ -240,50 +252,161 @@ internal partial class RealtimeFramingPanel : Window
         return element;
     }
 
+    /// <summary>
+    /// 不套用, at the top of the list: a framing with no blocks, which pressing clears the screen to and
+    /// the target opens on from then on. Ticked when it is the choice, as a framing's row is, and
+    /// still pressable while blocks have been drawn over it since.
+    /// </summary>
+    private FrameworkElement SkipRow(bool chosen, bool blocksOnScreen)
+    {
+        // An empty frame where a framing's thumbnail is: no blocks.
+        var empty = new Border
+        {
+            Width = 46,
+            Height = ThumbnailHeight,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(3),
+            SnapsToDevicePixels = true,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0),
+        };
+        empty.SetResourceReference(Border.BorderBrushProperty, "AppTextSecondary");
+
+        var label = new TextBlock
+        {
+            Text = LocalizationService.Get("S.Realtime.FramingNone"),
+            FontWeight = FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.Children.Add(empty);
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(label);
+
+        if (chosen)
+        {
+            var check = Tick();
+            Grid.SetColumn(check, 2);
+            grid.Children.Add(check);
+        }
+
+        FrameworkElement element;
+        if (chosen && !blocksOnScreen)
+        {
+            var border = new Border { Child = grid };
+            border.SetResourceReference(StyleProperty, "FramingStaticRow");
+            element = border;
+        }
+        else
+        {
+            var button = new Button { Content = grid };
+            button.SetResourceReference(StyleProperty, "FramingMenuRow");
+            button.Click += (_, _) => SkipRequested?.Invoke(this, EventArgs.Empty);
+            element = button;
+        }
+
+        AutomationProperties.SetAutomationId(element, "FramingNone");
+        AutomationProperties.SetName(element, label.Text);
+        return element;
+    }
+
+    /// <summary>The tick on the row this target opens on.</summary>
+    private static TextBlock Tick()
+    {
+        var check = new TextBlock
+        {
+            Text = "",
+            FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 2, 0),
+        };
+        check.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+        return check;
+    }
+
     /// <summary>What sits at a row's right: the tick on the framing on the screen, 還原 and 更新 on a changed one.</summary>
     private FrameworkElement? Trailing(RealtimeFramingStore.FramingRow row)
     {
         switch (row.State)
         {
             case RealtimeFramingStore.RowState.Current:
-            {
-                var check = new TextBlock
-                {
-                    Text = "",
-                    FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-                    FontSize = 12,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(8, 0, 2, 0),
-                };
-                check.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
-                return check;
-            }
+                return Tick();
 
             case RealtimeFramingStore.RowState.Modified:
             {
                 string id = row.Preset.Id;
-                var restore = new Button { Content = LocalizationService.Get("S.Realtime.FramingRestore") };
-                restore.SetResourceReference(StyleProperty, "FramingRowButton");
+                var restore = CapsuleButton("FramingRestoreGlyph", "S.Realtime.FramingRestore", primary: false,
+                    corners: new CornerRadius(6, 0, 0, 6));
                 restore.Click += (_, _) => RestoreRequested?.Invoke(this, id);
 
-                var update = new Button { Content = LocalizationService.Get("S.Realtime.FramingUpdate") };
-                update.SetResourceReference(StyleProperty, "FramingRowPrimaryButton");
+                var update = CapsuleButton("FramingUpdateGlyph", "S.Realtime.FramingUpdate", primary: true,
+                    corners: new CornerRadius(0, 6, 6, 0));
                 update.Click += (_, _) => UpdateRequested?.Invoke(this, id);
 
-                var buttons = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(4, 0, 0, 0),
-                };
+                var rule = new Border { Width = 1 };
+                rule.SetResourceReference(Border.BackgroundProperty, "AppButtonBorder");
+
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal };
                 buttons.Children.Add(restore);
+                buttons.Children.Add(rule);
                 buttons.Children.Add(update);
-                return buttons;
+
+                var capsule = new Border { Child = buttons };
+                capsule.SetResourceReference(StyleProperty, "FramingCapsule");
+                return capsule;
             }
 
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// 還原 or 更新 on a changed framing's row: one half of the capsule, a glyph with the word as its
+    /// tooltip and its name.
+    /// </summary>
+    /// <remarks>
+    /// <para>Drawn rather than taken from the icon font (see FramingRestoreGlyph), the same on
+    /// Windows 10 and 11. Save rather than Sync: what 更新 does is write the blocks into the preset,
+    /// and Sync reads as fetching something. 更新's mark takes the accent, the row's main action;
+    /// 還原's the text colour.</para>
+    ///
+    /// <para>The 16 grid is drawn whole and scaled to 14 DIP by a Viewbox, stroke and all: the line
+    /// comes out about 1.2 wide, the weight of the bar's own drawn marks beside it, and the two
+    /// marks keep their places on the grid instead of each being stretched to its own bounds.</para>
+    /// </remarks>
+    private static Button CapsuleButton(string geometryKey, string labelKey, bool primary, CornerRadius corners)
+    {
+        var label = LocalizationService.Get(labelKey);
+        var path = new System.Windows.Shapes.Path
+        {
+            StrokeThickness = 1.4,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+        };
+        path.SetResourceReference(System.Windows.Shapes.Path.DataProperty, geometryKey);
+        path.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, primary ? "AppAccent" : "AppTextPrimary");
+
+        var icon = new Viewbox
+        {
+            Width = 14,
+            Height = 14,
+            Child = new Grid { Width = 16, Height = 16, Children = { path } },
+            SnapsToDevicePixels = true,
+        };
+
+        var button = new Button { Content = icon, ToolTip = label, Tag = corners };
+        button.SetResourceReference(StyleProperty, "FramingCapsuleButton");
+        AutomationProperties.SetName(button, label);
+        AutomationProperties.SetAutomationId(button, primary ? "FramingUpdate" : "FramingRestore");
+        return button;
     }
 
     /// <summary>
@@ -411,8 +534,11 @@ internal partial class RealtimeFramingPanel : Window
         int chromeTop = _opensUp
             ? Math.Max(_screen.Top, _bar.Top - gap - chromeHeight)
             : Math.Min(_bar.Bottom + gap, Math.Max(_screen.Top, _screen.Bottom - chromeHeight));
+        // Right edge to the bar's right edge, as 模式 and 顯示外觀 open: that is the edge the bar keeps
+        // when its message grows or shrinks (it is pinned there), so a list hung from it stays put
+        // while the left edge moves. Clamped back onto the screen, as theirs are.
         int chromeLeft = Math.Clamp(
-            _bar.Left, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
+            _bar.Right - chromeWidth, _screen.Left, Math.Max(_screen.Left, _screen.Right - chromeWidth));
 
         // Cast away from the bar.
         Shadow.Direction = _opensUp ? 90 : 270;
