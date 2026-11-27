@@ -187,6 +187,18 @@ public partial class SettingsPage : UserControl
                 RealtimeCompareHotkeyClearBtn,
                 s => s.RealtimeCompareHotkeyEnabled,
                 (s, on) => s.RealtimeCompareHotkeyEnabled = on),
+            new HotkeyField(
+                HotkeyAction.RealtimeHide,
+                "S.Settings.RealtimeHideHotkey",
+                RealtimeHideHotkeyBox,
+                RealtimeHideElevatedNote,
+                s => s.RealtimeHideHotkeyDisplay,
+                s => HotkeyBindings.TriggerFor(s, HotkeyAction.RealtimeHide),
+                ApplyRealtimeHideTrigger,
+                AdvertisedInShell: false,
+                RealtimeHideHotkeyClearBtn,
+                s => s.RealtimeHideHotkeyEnabled,
+                (s, on) => s.RealtimeHideHotkeyEnabled = on),
         ];
 
         _hotkeyGamepadRecordTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(45) };
@@ -1470,6 +1482,22 @@ public partial class SettingsPage : UserControl
         else if (trigger.Kind == ShortcutInputKind.Gamepad)
         {
             s.RealtimeCompareHotkeyGamepadButton = trigger.GamepadButton;
+        }
+    }
+
+    private static void ApplyRealtimeHideTrigger(AppSettings s, ShortcutTrigger trigger, string display)
+    {
+        s.RealtimeHideHotkeyInputKind = trigger.Kind;
+        s.RealtimeHideHotkeyDisplay = display;
+        if (trigger.Kind == ShortcutInputKind.Keyboard)
+        {
+            s.RealtimeHideHotkeyModifiers = trigger.Modifiers;
+            s.RealtimeHideHotkeyVirtualKey = trigger.VirtualKey;
+            s.RealtimeHideHotkeyGamepadButton = GamepadShortcutButton.None;
+        }
+        else if (trigger.Kind == ShortcutInputKind.Gamepad)
+        {
+            s.RealtimeHideHotkeyGamepadButton = trigger.GamepadButton;
         }
     }
 

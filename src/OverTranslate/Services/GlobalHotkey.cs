@@ -37,6 +37,9 @@ public class GlobalHotkey : IDisposable
     /// <summary>The 原文對照 shortcut, held only while a realtime session is up (#398).</summary>
     public const int RealtimeCompareId = 9007;
 
+    /// <summary>The 隱藏譯文 shortcut, held only while a realtime session is up.</summary>
+    public const int RealtimeHideId = 9008;
+
     public GlobalHotkey(int id) => _id = id;
 
     /// <summary>

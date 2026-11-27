@@ -19,6 +19,10 @@
              screen. A longer message is cut with … and shown whole in its tooltip. -->
         <sys:Double x:Key="MessageMaxWidth">420</sys:Double>
 
+        <!-- 隱藏譯文: an eye with a stroke through it, on the 16-unit grid the bar's other drawn marks
+             use and at their 1.2 stroke. -->
+        <Geometry x:Key="RealtimeHideGlyph">M1.6,8 C3.4,4.9 5.5,3.5 8,3.5 C10.5,3.5 12.6,4.9 14.4,8 C12.6,11.1 10.5,12.5 8,12.5 C5.5,12.5 3.4,11.1 1.6,8 Z M5.9,8 A2.1,2.1 0 1 0 10.1,8 A2.1,2.1 0 1 0 5.9,8 Z M2.6,2.6 L13.4,13.4</Geometry>
+
         <!-- 原文對照: an A over 文, each followed by two lines of text — the original and its
              translation, kept side by side. Drawn on a 24-unit grid and baked down to the 18×18 box
              it is shown in, so the stroke is set directly: 1.05 here is 1.4 at 24. 18 rather than
@@ -441,6 +445,31 @@
                                  and the switch moves the translation without stopping anything. Left of
                                  截圖翻譯, for the reason that one is leftmost: the right edge is pinned, so
                                  a button added here leaves the others where the hand knows them. -->
+                            <!-- 隱藏譯文: the words and their backgrounds off the screen while the session
+                                 reads on, so showing them again is immediate — the press 暫停 used to
+                                 be pressed for, which stops the reading and starts it again from
+                                 nothing (see Services.Realtime.RealtimeTranslationHiding). Beside 原文對照,
+                                 the other switch about how the translation is seen. The glyph stays the
+                                 same and the state is the button held down, 原文對照's way of showing a
+                                 switch that is on — see SetTranslationHidden. Drawn rather than taken
+                                 from the icon font for the reason the 截圖翻譯 mark is: a Path looks the
+                                 same on Windows 10, where the font falls back to MDL2. -->
+                            <Button x:Name="HideBtn"
+                                    Style="{StaticResource ToolbarIconButton}"
+                                    Margin="0,0,4,0"
+                                    AutomationProperties.AutomationId="RealtimeHideBtn"
+                                    AutomationProperties.Name="{DynamicResource S.Realtime.HideTranslation}"
+                                    Click="HideBtn_Click">
+                                <Path Width="16" Height="16"
+                                      Stretch="None"
+                                      Data="{StaticResource RealtimeHideGlyph}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"/>
+                            </Button>
+
                             <Button x:Name="CompareRunBtn"
                                     Style="{StaticResource ToolbarIconButton}"
                                     Margin="0,0,4,0"

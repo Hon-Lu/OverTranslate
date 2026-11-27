@@ -164,8 +164,9 @@ public class HotkeyBindingsTests
 
         var resolved = HotkeyBindings.Resolve(settings);
         Assert.All(
-            // 原文對照 starts unset, so it holds nothing to clash with.
-            resolved.Where(b => b.Action is not (HotkeyAction.Capture or HotkeyAction.RealtimeCompare)),
+            // 原文對照 and 隱藏譯文 start unset, so they hold nothing to clash with.
+            resolved.Where(b => b.Action is not
+                (HotkeyAction.Capture or HotkeyAction.RealtimeCompare or HotkeyAction.RealtimeHide)),
             binding => Assert.True(binding.IsActive));
     }
 
@@ -329,6 +330,58 @@ public class HotkeyBindingsTests
         var compare = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.RealtimeCompare);
 
         Assert.Equal(HotkeyAction.RealtimePause, compare.ShadowedBy);
+    }
+
+    [Fact]
+    public void TheHideShortcutStartsUnset()
+    {
+        var hide = HotkeyBindings.Resolve(new AppSettings())
+            .Single(b => b.Action == HotkeyAction.RealtimeHide);
+
+        Assert.False(hide.Enabled);
+        Assert.Equal("", HotkeyBindings.DisplayFor(new AppSettings(), HotkeyAction.RealtimeHide));
+        Assert.Empty(HotkeyBindings.KeysFor(new AppSettings(), HotkeyAction.RealtimeHide));
+    }
+
+    [Fact]
+    public void TheHideShortcutGivesWayToEveryOtherShortcutIncludingCompare()
+    {
+        var settings = new AppSettings
+        {
+            RealtimeCompareHotkeyEnabled = true,
+            RealtimeCompareHotkeyModifiers = CtrlAlt,
+            RealtimeCompareHotkeyVirtualKey = 0x48,
+            RealtimeCompareHotkeyDisplay = "Ctrl+Alt+H",
+            RealtimeHideHotkeyEnabled = true,
+            RealtimeHideHotkeyModifiers = CtrlAlt,
+            RealtimeHideHotkeyVirtualKey = 0x48,
+            RealtimeHideHotkeyDisplay = "Ctrl+Alt+H",
+        };
+
+        var resolved = HotkeyBindings.Resolve(settings);
+        var hide = resolved.Single(b => b.Action == HotkeyAction.RealtimeHide);
+        var compare = resolved.Single(b => b.Action == HotkeyAction.RealtimeCompare);
+
+        Assert.Equal(HotkeyAction.RealtimeCompare, hide.ShadowedBy);
+        Assert.True(compare.IsActive);
+    }
+
+    [Fact]
+    public void ASetHideShortcutIsLiveAndDrawnKeyByKey()
+    {
+        var settings = new AppSettings
+        {
+            RealtimeHideHotkeyEnabled = true,
+            RealtimeHideHotkeyModifiers = CtrlAlt,
+            RealtimeHideHotkeyVirtualKey = 0x48,
+            RealtimeHideHotkeyDisplay = "Ctrl+Alt+H",
+        };
+
+        var hide = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.RealtimeHide);
+
+        Assert.True(hide.IsActive);
+        Assert.Equal(ShortcutTrigger.Keyboard(CtrlAlt, 0x48), hide.Trigger);
+        Assert.Equal(["Ctrl", "Alt", "H"], HotkeyBindings.KeysFor(settings, HotkeyAction.RealtimeHide));
     }
 
     [Fact]

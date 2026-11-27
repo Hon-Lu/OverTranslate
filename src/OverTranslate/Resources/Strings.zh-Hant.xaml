@@ -447,6 +447,10 @@
     <sys:String x:Key="S.Realtime.CompareDisplay">原文對照</sys:String>
     <sys:String x:Key="S.Realtime.ShortcutUnset">未設定快捷鍵</sys:String>
     <sys:String x:Key="S.Realtime.CompareHotkeyTaken">原文對照快捷鍵 {0} 已被其他程式占用</sys:String>
+    <sys:String x:Key="S.Realtime.HideTranslation">隱藏譯文</sys:String>
+    <sys:String x:Key="S.Realtime.ShowTranslation">顯示譯文</sys:String>
+    <sys:String x:Key="S.Realtime.TranslationHidden">已隱藏譯文</sys:String>
+    <sys:String x:Key="S.Realtime.HideHotkeyTaken">隱藏譯文快捷鍵 {0} 已被其他程式占用</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">已開啟</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">已關閉</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOnHint">原文對照：關閉時將翻譯後譯文直接覆蓋原文畫面</sys:String>
@@ -643,6 +647,8 @@
     <sys:String x:Key="S.Settings.RealtimePauseHotkeyNote">未啟動時按下快捷鍵開始框選，框選時再按一次開始翻譯；翻譯中可暫停或繼續。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文對照</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">僅在即時翻譯期間有效，切換譯文覆蓋原文或顯示於對照區域。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHideHotkey">隱藏／顯示譯文</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">僅在即時翻譯期間有效，暫時隱藏譯文以檢視原畫面，翻譯照常進行。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／暫停與原文對照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">取詞翻譯</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">若有選取文字，開啟視窗時會自動帶入並翻譯。</sys:String>

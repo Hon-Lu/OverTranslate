@@ -11,6 +11,7 @@ public enum HotkeyAction
     QuickLookup,
     QuickTranslate,
     RealtimeCompare,
+    RealtimeHide,
 }
 
 /// <summary>
@@ -149,6 +150,11 @@ public static class HotkeyBindings
             settings.RealtimeCompareHotkeyModifiers,
             settings.RealtimeCompareHotkeyVirtualKey,
             settings.RealtimeCompareHotkeyGamepadButton),
+        HotkeyAction.RealtimeHide => BuildTrigger(
+            settings.RealtimeHideHotkeyInputKind,
+            settings.RealtimeHideHotkeyModifiers,
+            settings.RealtimeHideHotkeyVirtualKey,
+            settings.RealtimeHideHotkeyGamepadButton),
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, null),
     };
 
@@ -161,6 +167,7 @@ public static class HotkeyBindings
         HotkeyAction.QuickLookup => settings.QuickLookupHotkeyDisplay,
         HotkeyAction.QuickTranslate => settings.QuickTranslateHotkeyDisplay,
         HotkeyAction.RealtimeCompare => settings.RealtimeCompareHotkeyDisplay,
+        HotkeyAction.RealtimeHide => settings.RealtimeHideHotkeyDisplay,
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, null),
     };
 
@@ -296,6 +303,10 @@ public static class HotkeyBindings
             (HotkeyAction.RealtimeCompare,
                 TriggerFor(settings, HotkeyAction.RealtimeCompare),
                 settings.RealtimeCompareHotkeyEnabled),
+            // After 原文對照 for the same reason: newer still, and held only for a session.
+            (HotkeyAction.RealtimeHide,
+                TriggerFor(settings, HotkeyAction.RealtimeHide),
+                settings.RealtimeHideHotkeyEnabled),
         };
 
         var claimed = new Dictionary<ShortcutTrigger, HotkeyAction>();

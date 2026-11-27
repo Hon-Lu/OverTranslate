@@ -30,8 +30,11 @@ public partial class MainWindow : Window
     private GlobalHotkey? _quickTranslateHotkey;
     private GlobalHotkey? _realtimeCompareHotkey;
     // Whether the 原文對照 key has been asked for in the session that is up, so a session gets one
-    // attempt and one message if another program holds the combination — see SyncRealtimeCompareHotkey.
+    // attempt and one message if another program holds the combination — see SyncSessionHotkey.
     private bool _realtimeCompareHotkeyTried;
+    // 隱藏譯文's key, held on the same terms as 原文對照's.
+    private GlobalHotkey? _realtimeHideHotkey;
+    private bool _realtimeHideHotkeyTried;
     private GlobalAuxiliaryHotkeys? _auxiliaryHotkeys;
     private OverlayWindow? _overlayWindow;
     private ScreenCaptureWindow? _captureWindow;
@@ -129,7 +132,7 @@ public partial class MainWindow : Window
     private void OnRealtimeStateChanged(object? sender, EventArgs e) =>
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            SyncRealtimeCompareHotkey();
+            SyncSessionHotkeys();
             if (!RealtimeSessionController.Instance.IsActive) return;
 
             QuickLookup.QuickLookupWindow.Dismiss();
@@ -200,9 +203,11 @@ public partial class MainWindow : Window
         _quickTranslateHotkey = new GlobalHotkey(GlobalHotkey.QuickTranslateId);
         _quickTranslateHotkey.HotkeyPressed += OnQuickTranslateHotkeyPressed;
 
-        // Created here like the rest but not registered with them: see SyncRealtimeCompareHotkey.
+        // Created here like the rest but not registered with them: see SyncSessionHotkey.
         _realtimeCompareHotkey = new GlobalHotkey(GlobalHotkey.RealtimeCompareId);
         _realtimeCompareHotkey.HotkeyPressed += OnRealtimeCompareHotkeyPressed;
+        _realtimeHideHotkey = new GlobalHotkey(GlobalHotkey.RealtimeHideId);
+        _realtimeHideHotkey.HotkeyPressed += OnRealtimeHideHotkeyPressed;
 
         var hooks = new Dictionary<HotkeyAction, GlobalHotkey>
         {
@@ -255,15 +260,15 @@ public partial class MainWindow : Window
         _auxiliaryHotkeys.ShortcutPressed += OnAuxiliaryHotkeyPressed;
         _auxiliaryHotkeys.Register(resolved);
 
-        SyncRealtimeCompareHotkey();
+        SyncSessionHotkeys();
     }
 
     /// <summary>
-    /// Holds the 原文對照 combination while a realtime session is up, and only then (#398).
+    /// Holds the 原文對照 and 隱藏譯文 combinations while a realtime session is up, and only then (#398).
     /// </summary>
     /// <remarks>
     /// <para>The other shortcuts are registered from startup because each one starts something.
-    /// This one only acts on a session, so outside one it would do nothing — while still taking the
+    /// These only act on a session, so outside one they would do nothing — while still taking the
     /// combination from every other application, which is what registering a hotkey does. Held for
     /// the session, the cost is paid only by someone who is using the feature it belongs to.</para>
     ///
@@ -272,13 +277,23 @@ public partial class MainWindow : Window
     /// place the user is looking when the key does nothing. The mouse and controller buttons need
     /// none of this: they are observed, never held, and the press is ignored with no session.</para>
     /// </remarks>
-    private void SyncRealtimeCompareHotkey()
+    private void SyncSessionHotkeys()
     {
-        if (_realtimeCompareHotkey is not { } hotkey) return;
+        SyncSessionHotkey(
+            _realtimeCompareHotkey, HotkeyAction.RealtimeCompare, ref _realtimeCompareHotkeyTried,
+            "S.Realtime.CompareHotkeyTaken");
+        SyncSessionHotkey(
+            _realtimeHideHotkey, HotkeyAction.RealtimeHide, ref _realtimeHideHotkeyTried,
+            "S.Realtime.HideHotkeyTaken");
+    }
+
+    private void SyncSessionHotkey(GlobalHotkey? hotkey, HotkeyAction action, ref bool tried, string takenKey)
+    {
+        if (hotkey is null) return;
 
         var controller = RealtimeSessionController.Instance;
         var settings = SettingsService.Instance.Current;
-        var binding = HotkeyBindings.Resolve(settings).Single(b => b.Action == HotkeyAction.RealtimeCompare);
+        var binding = HotkeyBindings.Resolve(settings).Single(b => b.Action == action);
         var wanted = controller.IsActive &&
                      binding.IsActive &&
                      binding.InputKind == OverTranslate.Models.ShortcutInputKind.Keyboard &&
@@ -287,28 +302,31 @@ public partial class MainWindow : Window
         if (!wanted)
         {
             hotkey.Unregister();
-            if (!controller.IsActive) _realtimeCompareHotkeyTried = false;
+            if (!controller.IsActive) tried = false;
             return;
         }
 
         if (hotkey.IsRegistered) return;
 
+        var display = HotkeyBindings.DisplayFor(settings, action);
         hotkey.Register(new WindowInteropHelper(this).Handle, binding.Modifiers, binding.VirtualKey);
         if (hotkey.IsRegistered)
         {
-            Log.Info("Realtime compare hotkey registered for the session");
+            Log.Info("Session hotkey {Action} registered for the session", action);
             return;
         }
 
-        Log.Warn("Realtime compare hotkey {Display} is held by another program", settings.RealtimeCompareHotkeyDisplay);
-        if (_realtimeCompareHotkeyTried) return;
-        _realtimeCompareHotkeyTried = true;
-        controller.ShowShortcutProblem(LocalizationService.Format(
-            "S.Realtime.CompareHotkeyTaken", settings.RealtimeCompareHotkeyDisplay));
+        Log.Warn("Session hotkey {Action} {Display} is held by another program", action, display);
+        if (tried) return;
+        tried = true;
+        controller.ShowShortcutProblem(LocalizationService.Format(takenKey, display));
     }
 
     private void OnRealtimeCompareHotkeyPressed(object? sender, EventArgs e) =>
         Dispatcher.Invoke(() => RealtimeSessionController.Instance.ToggleCompareFromShortcut());
+
+    private void OnRealtimeHideHotkeyPressed(object? sender, EventArgs e) =>
+        Dispatcher.Invoke(() => RealtimeSessionController.Instance.ToggleTranslationHiddenFromShortcut());
 
     /// <param name="copiedSince">
     /// Set when the shortcut was Ctrl+C+C, whose first Ctrl+C already copied the selection — see
@@ -335,6 +353,9 @@ public partial class MainWindow : Window
                 break;
             case HotkeyAction.RealtimeCompare:
                 OnRealtimeCompareHotkeyPressed(this, EventArgs.Empty);
+                break;
+            case HotkeyAction.RealtimeHide:
+                OnRealtimeHideHotkeyPressed(this, EventArgs.Empty);
                 break;
         }
     }
@@ -387,6 +408,7 @@ public partial class MainWindow : Window
         _quickLookupHotkey?.Unregister();
         _quickTranslateHotkey?.Unregister();
         _realtimeCompareHotkey?.Unregister();
+        _realtimeHideHotkey?.Unregister();
         _auxiliaryHotkeys?.Dispose();
         _auxiliaryHotkeys = null;
         RegisterHotkey();
@@ -2071,6 +2093,7 @@ public partial class MainWindow : Window
         _quickLookupHotkey?.Dispose();
         _quickTranslateHotkey?.Dispose();
         _realtimeCompareHotkey?.Dispose();
+        _realtimeHideHotkey?.Dispose();
         _auxiliaryHotkeys?.Dispose();
         _auxiliaryHotkeys = null;
         if (_notifyIcon != null)
