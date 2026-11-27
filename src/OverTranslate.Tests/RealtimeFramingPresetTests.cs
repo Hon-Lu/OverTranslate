@@ -1083,6 +1083,96 @@ public class RealtimeFramingPresetTests
         Assert.Equal("對話框", RealtimeFramingDisplay.MessageName(Make("b", name: "對話框")));
     }
 
+    // ── One process name, two executables ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void TwoGamesOfOneProcessNameAndSize_AreTwoTargets()
+    {
+        // Every RPG Maker game is Game.exe at the same window size: one game's framing must not be
+        // put on another's, whether by its title or — the title not matching — by being selected.
+        using var a = new TempExe();
+        using var b = new TempExe();
+        var presets = new[]
+        {
+            Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game A", selected: true, path: a.Path),
+        };
+        var other = WindowTarget("Game", "Game B", path: b.Path);
+
+        Assert.Null(RealtimeFramingStore.Match(presets, other));
+        Assert.Null(RealtimeFramingStore.Match(presets, other with { WindowTitle = "Game A" }));
+        Assert.Equal(RealtimeFramingStore.Miss.None, RealtimeFramingStore.Explain(presets, other, out _));
+        Assert.Empty(RealtimeFramingStore.ListFor(presets, other, [], null).Rows);
+
+        var self = WindowTarget("Game", "Game A", path: a.Path);
+        Assert.False(RealtimeFramingStore.SameTarget(self, other));
+        Assert.True(RealtimeFramingStore.SameTarget(self, self with { WindowPath = a.Path.ToUpperInvariant() }));
+    }
+
+    [Fact]
+    public void TheSameExecutable_Retitled_IsStillItsTarget()
+    {
+        using var a = new TempExe();
+        var presets = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game A", path: a.Path) };
+
+        var target = WindowTarget("Game", "Game A — Chapter 2", path: a.Path.ToLowerInvariant());
+        Assert.Equal("a", RealtimeFramingStore.Match(presets, target)!.Id);
+    }
+
+    [Fact]
+    public void APresetWithNoPath_OrOneWhoseExecutableIsGone_FallsBackToTheName()
+    {
+        // No path read at save, or the game moved to another folder since: matched as before, by
+        // process name and size, rather than every framing of a moved game being lost.
+        using var now = new TempExe();
+        var gone = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ot-gone-" + Guid.NewGuid().ToString("N"), "Game.exe");
+        var target = WindowTarget("Game", "Game", path: now.Path);
+
+        var noPath = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game") };
+        Assert.Equal("a", RealtimeFramingStore.Match(noPath, target)!.Id);
+
+        var moved = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", path: gone) };
+        Assert.Equal("a", RealtimeFramingStore.Match(moved, target)!.Id);
+        Assert.Single(RealtimeFramingStore.ListFor(moved, target, [], null).Rows);
+
+        // A side that could not read its path is matched by the name too.
+        var kept = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", path: now.Path) };
+        Assert.Equal("a", RealtimeFramingStore.Match(kept, target with { WindowPath = "" })!.Id);
+    }
+
+    [Fact]
+    public void AWindowSave_KeepsTheExecutablesPath_AndTheTargetKeyTellsTwoGamesApart()
+    {
+        var (presets, saved) = RealtimeFramingStore.SaveInto(
+            [], WindowTarget("Game", "Game", path: @"C:\Games\A\Game.exe"), [Block(110, 210, 100, 20)], DateTime.UtcNow);
+
+        Assert.Equal(@"C:\Games\A\Game.exe", saved!.WindowPath);
+        var reloaded = SettingsService.Parse(SettingsService.Serialize(new AppSettings
+        {
+            Realtime = new RealtimeSettings { FramingPresets = presets },
+        }));
+        Assert.Equal(@"C:\Games\A\Game.exe", Assert.Single(reloaded.Realtime.FramingPresets).WindowPath);
+
+        var other = saved.Clone();
+        other.WindowPath = @"C:\Games\B\Game.exe";
+        Assert.NotEqual(saved.TargetKey, other.TargetKey);
+        other.WindowPath = @"c:\games\a\GAME.EXE";
+        Assert.Equal(saved.TargetKey, other.TargetKey);
+    }
+
+    private sealed class TempExe : IDisposable
+    {
+        public string Path { get; } = System.IO.Path.Combine(
+            System.IO.Directory.CreateTempSubdirectory("ot-exe-").FullName, "Game.exe");
+
+        public TempExe() => System.IO.File.WriteAllBytes(Path, []);
+
+        public void Dispose()
+        {
+            try { System.IO.Directory.Delete(System.IO.Path.GetDirectoryName(Path)!, true); }
+            catch (Exception) { }
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────────────────────
 
     private static RealtimeBlockPlacement Block(int x, int y, int width, int height) =>
@@ -1092,9 +1182,9 @@ public class RealtimeFramingPresetTests
         new(RealtimeCaptureMode.Screen, Screen1080, Display1);
 
     private static RealtimeFramingStore.Target WindowTarget(
-        string process = "game", string title = "Game", Rectangle? bounds = null) =>
+        string process = "game", string title = "Game", Rectangle? bounds = null, string path = "") =>
         new(RealtimeCaptureMode.Window, Screen1080, Display1, process, title,
-            bounds ?? WindowAt);
+            bounds ?? WindowAt, path);
 
     private static RealtimeFramingPreset Make(
         string id,
@@ -1108,6 +1198,7 @@ public class RealtimeFramingPresetTests
         int ordinal = 0,
         bool selected = false,
         Size? windowSize = null,
+        string path = "",
         params Rectangle[] blocks) => new()
     {
         Id = id,
@@ -1118,6 +1209,7 @@ public class RealtimeFramingPresetTests
         ScreenDeviceName = device,
         Screen = RealtimeFramingRect.From(screen ?? Screen1080),
         WindowProcess = process,
+        WindowPath = path,
         WindowTitle = title,
         WindowSize = mode == RealtimeCaptureMode.Window
             ? RealtimeFramingRect.From(new Rectangle(0, 0, windowSize?.Width ?? 1280, windowSize?.Height ?? 720))

@@ -692,13 +692,19 @@ internal sealed class RealtimeSessionController
             : System.Drawing.Rectangle.Empty;
         if (window && bounds.Width <= 0 && _target.IsWindow) bounds = _target.WindowBounds;
 
+        // The executable tells apart two games of one process name; a handle that has gone keeps the
+        // one read at start, as the rectangle does.
+        var path = window ? CaptureWindowList.ExecutablePathOf(request.SourceWindow) : "";
+        if (window && path.Length == 0 && _target.IsWindow) path = _target.WindowPath;
+
         return new RealtimeFramingStore.Target(
             request.CaptureMode,
             request.ScreenBounds,
             _screenDeviceName,
             Process(named?.ProcessName ?? ""),
             Title(named?.Title ?? ""),
-            bounds);
+            bounds,
+            path);
     }
 
     /// <summary>

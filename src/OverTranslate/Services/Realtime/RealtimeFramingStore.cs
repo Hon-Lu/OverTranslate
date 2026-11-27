@@ -41,13 +41,18 @@ internal static class RealtimeFramingStore
     /// the same rectangle <see cref="WindowBoundsOf"/> returns and the frame a region is cut from.
     /// Empty in 螢幕擷取, and when the window has gone.
     /// </param>
+    /// <param name="WindowPath">
+    /// The full path of the window's executable, empty in 螢幕擷取 and when it cannot be read — see
+    /// <see cref="RealtimeFramingPreset.WindowPath"/>.
+    /// </param>
     public readonly record struct Target(
         RealtimeCaptureMode Mode,
         Rectangle Screen,
         string DeviceName,
         string WindowProcess = "",
         string WindowTitle = "",
-        Rectangle WindowBounds = default)
+        Rectangle WindowBounds = default,
+        string WindowPath = "")
     {
         /// <summary>Whether this target is a window rather than a whole screen.</summary>
         public bool IsWindow => Mode == RealtimeCaptureMode.Window;
@@ -85,13 +90,48 @@ internal static class RealtimeFramingStore
     /// The position of a window and the screen it is on are not compared: a window preset's blocks
     /// are relative, so the same application at the same size is the same target wherever the window
     /// has been moved to. The title is not compared either, because a window retitles itself between
-    /// sittings while staying the same window.
+    /// sittings while staying the same window. The executable is: two games of one process name are
+    /// two targets — see <see cref="SameProgram"/>.
     /// </remarks>
     public static bool SameTarget(Target a, Target b) =>
         a.Mode == b.Mode &&
         (a.IsWindow
-            ? a.WindowProcess == b.WindowProcess && a.WindowSize == b.WindowSize
+            ? SameProgram(a.WindowProcess, a.WindowPath, b) && a.WindowSize == b.WindowSize
             : a.DeviceName == b.DeviceName && a.Screen == b.Screen);
+
+    /// <summary>
+    /// Whether an application kept as <paramref name="process"/> at <paramref name="path"/> is the
+    /// one <paramref name="target"/>'s window belongs to.
+    /// </summary>
+    /// <remarks>
+    /// <para>The process name alone is not enough: every RPG Maker game is Game.exe, and the MV and
+    /// MZ ones open at the same 816×624, so one game's framing would be put on another's. Where both
+    /// sides know the executable's full path, the paths have to be the same file, compared without
+    /// case as Windows does.</para>
+    ///
+    /// <para>The path is let go of where it cannot answer: a side that could not read it, or a kept
+    /// path that is no longer on disk — the game moved to another folder or reinstalled. Those fall
+    /// back to the name, so moving a game does not throw away every framing kept for it; the price is
+    /// the old rule's, for that game only, until its framings are saved again.</para>
+    /// </remarks>
+    public static bool SameProgram(string? process, string? path, Target target)
+    {
+        if ((process ?? "") != (target.WindowProcess ?? "")) return false;
+
+        var kept = (path ?? "").Trim();
+        var now = (target.WindowPath ?? "").Trim();
+        if (kept.Length == 0 || now.Length == 0) return true;
+        if (string.Equals(kept, now, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return !PathExists(kept);
+    }
+
+    /// <summary>Whether a kept executable is still on disk.</summary>
+    private static bool PathExists(string path)
+    {
+        try { return System.IO.File.Exists(path); }
+        catch (Exception) { return false; }
+    }
 
     /// <summary>
     /// The blocks remembered from <paramref name="from"/>, moved to where <paramref name="to"/>'s
@@ -257,7 +297,7 @@ internal static class RealtimeFramingStore
             if (!target.HasWindow) return Miss.None;
 
             var near = presets.Where(preset =>
-                preset.IsForWindow && preset.WindowProcess == target.WindowProcess).ToList();
+                preset.IsForWindow && SameProgram(preset.WindowProcess, preset.WindowPath, target)).ToList();
             if (near.Count == 0) return Miss.None;
 
             nearest = near.FirstOrDefault(preset => preset.Selected) ?? near[0];
@@ -369,6 +409,7 @@ internal static class RealtimeFramingStore
         saved.ScreenDeviceName = target.DeviceName ?? "";
         saved.Screen = RealtimeFramingRect.From(target.Screen);
         saved.WindowProcess = target.IsWindow ? target.WindowProcess ?? "" : "";
+        saved.WindowPath = target.IsWindow ? target.WindowPath ?? "" : "";
         saved.WindowTitle = target.IsWindow ? target.WindowTitle ?? "" : "";
         saved.WindowSize = target.IsWindow
             ? RealtimeFramingRect.From(target.WindowBounds.Size)
@@ -376,8 +417,10 @@ internal static class RealtimeFramingStore
         saved.Blocks = stored;
 
         // One selected preset per target, and this is it: a saved framing is the one the user wants
-        // the next session on this target to open on.
-        foreach (var other in presets.Where(preset => preset.TargetKey == saved.TargetKey))
+        // the next session on this target to open on. A preset kept under a path that is gone is
+        // still this target's (see SameProgram), so it is unmarked too.
+        foreach (var other in presets.Where(preset =>
+                     preset.TargetKey == saved.TargetKey || IsFor(preset, target)))
             other.Selected = other.Id == saved.Id;
 
         return (presets, saved);
@@ -417,6 +460,7 @@ internal static class RealtimeFramingStore
         updated.ScreenDeviceName = target.DeviceName ?? "";
         updated.Screen = RealtimeFramingRect.From(target.Screen);
         updated.WindowProcess = target.IsWindow ? target.WindowProcess ?? "" : "";
+        updated.WindowPath = target.IsWindow ? target.WindowPath ?? "" : "";
         updated.WindowTitle = target.IsWindow ? target.WindowTitle ?? "" : "";
         updated.WindowSize = target.IsWindow
             ? RealtimeFramingRect.From(target.WindowBounds.Size)
@@ -538,7 +582,7 @@ internal static class RealtimeFramingStore
         if (preset.CaptureMode != target.Mode) return false;
 
         return target.IsWindow
-            ? target.HasWindow && preset.WindowProcess == target.WindowProcess
+            ? target.HasWindow && SameProgram(preset.WindowProcess, preset.WindowPath, target)
             : preset.ScreenDeviceName == target.DeviceName;
     }
 
@@ -620,7 +664,7 @@ internal static class RealtimeFramingStore
         if (!target.HasWindow) return false;
 
         var size = preset.WindowSize ?? new RealtimeFramingRect();
-        return preset.WindowProcess == target.WindowProcess &&
+        return SameProgram(preset.WindowProcess, preset.WindowPath, target) &&
                size.Width == target.WindowBounds.Width &&
                size.Height == target.WindowBounds.Height;
     }
