@@ -256,6 +256,9 @@ public partial class ShellWindow : Window
     /// <summary>Opens the first step of a new custom 即時翻譯 mode, over the whole window.</summary>
     public void OpenNewRealtimeProfile() => RealtimeProfiles.OpenNew();
 
+    /// <summary>Opens 編輯翻譯區域預設 on one kept framing, from the 即時翻譯 page's card.</summary>
+    public void OpenRealtimeFramingEdit(string presetId) => RealtimeFramingEdit.Open(presetId);
+
     public void RefreshHotkeyHints()
     {
         var settings = SettingsService.Instance.Current;

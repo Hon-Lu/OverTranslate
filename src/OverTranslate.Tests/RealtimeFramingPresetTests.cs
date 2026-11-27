@@ -1248,17 +1248,113 @@ public class RealtimeFramingPresetTests
         Assert.Equal("new", RealtimeFramingStore.Match(presets, ScreenTarget(), [])!.Id);
     }
 
+    // ── The page's card ─────────────────────────────────────────────────────────────────────────
+
     [Fact]
-    public void Skipped_TheCardMarksNoPresetOfThatTarget_AndOthersAsBefore()
+    public void TheCard_PutsTheChosenTargetsPresetsOnTop_TheOneItOpensOnFirst_AndTheRestUnderOthers()
     {
+        var game1 = Make("game1", mode: RealtimeCaptureMode.Window, process: "game", title: "Game");
         var screen = Make("screen", selected: true);
-        var game = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", selected: true);
+        var game2 = Make("game2", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", selected: true);
+        var resized = Make("resized", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
+            windowSize: new Size(1600, 900));
+        var browser = Make("browser", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video");
+
+        var groups = RealtimeFramingStore.GroupFor(
+            [game1, screen, game2, resized, browser], WindowTarget("game", "Game"), []);
+
+        // The one it opens on first, the rest of the application's in order — another size included,
+        // as the bar lists it.
+        Assert.Equal(["game2", "game1", "resized"], groups.Current.Select(preset => preset.Id));
+        Assert.Equal("game2", groups.OpensOn!.Id);
+        Assert.Equal(["screen", "browser"], groups.Others.Select(preset => preset.Id));
+    }
+
+    [Fact]
+    public void TheCard_MarksWhatASessionWouldOpenOn_TheNewestWhenNothingWasPicked()
+    {
+        var older = Make("older");
+        var newer = Make("newer", savedAt: new DateTime(2026, 2, 1));
+
+        var groups = RealtimeFramingStore.GroupFor([newer, older], ScreenTarget(), []);
+
+        Assert.Equal("newer", groups.OpensOn!.Id);
+        Assert.Equal(["newer", "older"], groups.Current.Select(preset => preset.Id));
+    }
+
+    [Fact]
+    public void TheCard_WithNoneChosen_MarksNothing_AndKeepsTheOrder()
+    {
+        var first = Make("first");
+        var picked = Make("picked", selected: true);
         var skipped = RealtimeFramingStore.SkipInto([], ScreenTarget());
 
-        Assert.False(RealtimeFramingStore.OpensOn(screen, skipped));
-        Assert.True(RealtimeFramingStore.OpensOn(game, skipped));
-        Assert.True(RealtimeFramingStore.OpensOn(screen, []));
-        Assert.False(RealtimeFramingStore.OpensOn(Make("other"), []));
+        var groups = RealtimeFramingStore.GroupFor([first, picked], ScreenTarget(), skipped);
+
+        Assert.Null(groups.OpensOn);
+        Assert.Equal(["first", "picked"], groups.Current.Select(preset => preset.Id));
+    }
+
+    [Fact]
+    public void TheCard_WithNoTarget_HasEveryPresetUnderOthers()
+    {
+        var groups = RealtimeFramingStore.GroupFor([Make("a"), Make("b")], null, []);
+
+        Assert.Empty(groups.Current);
+        Assert.Null(groups.OpensOn);
+        Assert.Equal(["a", "b"], groups.Others.Select(preset => preset.Id));
+
+        // A window that has gone is no target either.
+        var gone = RealtimeFramingStore.GroupFor(
+            [Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game")],
+            WindowTarget(bounds: Rectangle.Empty), []);
+        Assert.Empty(gone.Current);
+        Assert.Single(gone.Others);
+    }
+
+    [Fact]
+    public void Deleting_TheSelectedPreset_TheTargetOpensOnTheNext_AndUndoPutsBackOrderAndMark()
+    {
+        var a = Make("a", savedAt: new DateTime(2026, 3, 1));
+        var b = Make("b", selected: true, savedAt: new DateTime(2026, 2, 1));
+        var c = Make("c");
+        var game = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", selected: true);
+        var before = new[] { a, b, c, game };
+
+        var (after, removed) = RealtimeFramingStore.ForgetInto(before, "b");
+        Assert.Equal(["a", "c", "game"], after.Select(preset => preset.Id));
+        Assert.Equal(1, removed!.Index);
+        Assert.Equal("a", RealtimeFramingStore.GroupFor(after, ScreenTarget(), []).OpensOn!.Id);
+
+        var restored = RealtimeFramingStore.RestoreInto(after, removed);
+        Assert.Equal(["a", "b", "c", "game"], restored.Select(preset => preset.Id));
+        Assert.Equal("b", RealtimeFramingStore.GroupFor(restored, ScreenTarget(), []).OpensOn!.Id);
+        Assert.True(restored.Single(preset => preset.Id == "game").Selected);
+    }
+
+    [Fact]
+    public void Undo_AfterAnotherWasPickedMeanwhile_TheRestoredOneIsTheTargetsAgain()
+    {
+        var (after, removed) = RealtimeFramingStore.ForgetInto(
+            [Make("a", selected: true), Make("b")], "a");
+        after = RealtimeFramingStore.SelectInto(after, "b");
+
+        var restored = RealtimeFramingStore.RestoreInto(after, removed!);
+
+        Assert.Equal(["a", "b"], restored.Select(preset => preset.Id));
+        Assert.Equal(["a"], restored.Where(preset => preset.Selected).Select(preset => preset.Id));
+    }
+
+    [Fact]
+    public void Undo_WhenTheListShrankMeanwhile_PutsItAtTheEnd_AndTwiceChangesNothing()
+    {
+        var (after, removed) = RealtimeFramingStore.ForgetInto([Make("a"), Make("b"), Make("c")], "c");
+        after = RealtimeFramingStore.ForgetInto(after, "b").Presets;
+
+        var restored = RealtimeFramingStore.RestoreInto(after, removed!);
+        Assert.Equal(["a", "c"], restored.Select(preset => preset.Id));
+        Assert.Equal(["a", "c"], RealtimeFramingStore.RestoreInto(restored, removed!).Select(preset => preset.Id));
+        Assert.Null(RealtimeFramingStore.ForgetInto(restored, "missing").Removed);
     }
 
     private sealed class TempExe : IDisposable

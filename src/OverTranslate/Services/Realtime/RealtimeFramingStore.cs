@@ -667,17 +667,6 @@ internal static class RealtimeFramingStore
             Realtime.FramingPresets, SkipInto(Realtime.FramingSkippedTargets, target));
     }
 
-    /// <summary>
-    /// Whether the page's card marks <paramref name="preset"/> as the one its target opens on: it is
-    /// selected, and the user has not chosen 不套用 for that target since.
-    /// </summary>
-    /// <remarks>
-    /// The card lists every target's presets together, so 不套用 is shown there by its absence — no
-    /// row of that target marked — rather than by a row of its own in each target's group.
-    /// </remarks>
-    public static bool OpensOn(RealtimeFramingPreset preset, IReadOnlyCollection<string>? skipped) =>
-        preset.Selected && (skipped is null || !skipped.Contains(preset.TargetKey));
-
     /// <summary><see cref="Skip"/> as a list in and a list out, for a test that has no settings file.</summary>
     public static List<string> SkipInto(IReadOnlyCollection<string> skipped, Target target) =>
         [target.Key, .. skipped.Where(key => key != target.Key)];
@@ -712,15 +701,119 @@ internal static class RealtimeFramingStore
         return true;
     }
 
-    /// <summary>Drops the preset <paramref name="id"/> — that framing is no longer kept.</summary>
-    /// <returns>False when no preset went by that id.</returns>
-    public static bool Forget(string id)
+    /// <summary>A preset taken out of the list, and the place it had there — what 復原 puts back.</summary>
+    internal sealed record Forgotten(RealtimeFramingPreset Preset, int Index);
+
+    /// <summary>
+    /// Drops the preset <paramref name="id"/> as the card's 刪除 does: undoably, so the preset and its
+    /// place are handed back for <see cref="Restore"/>.
+    /// </summary>
+    /// <returns>What was taken out, or null when no preset went by that id.</returns>
+    public static Forgotten? ForgetUndoably(string id)
     {
-        var presets = Realtime.FramingPresets.Where(preset => preset.Id != id).ToList();
+        var (presets, removed) = ForgetInto(Realtime.FramingPresets, id);
+        if (removed is null) return null;
+
+        SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
+        return removed;
+    }
+
+    /// <summary>Puts back a preset <see cref="ForgetUndoably"/> took out — the card's 復原.</summary>
+    /// <returns>False when it is somehow back already, or the list is full again.</returns>
+    public static bool Restore(Forgotten removed)
+    {
+        var presets = RestoreInto(Realtime.FramingPresets, removed);
         if (presets.Count == Realtime.FramingPresets.Count) return false;
 
         SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
         return true;
+    }
+
+    /// <summary><see cref="ForgetUndoably"/> as a list in and a list out, for a test that has no settings file.</summary>
+    /// <remarks>
+    /// Nothing else is touched: the target's other presets keep their marks, so 復原 has only the one
+    /// preset to put back, and a target that loses its selected preset opens on whichever
+    /// <see cref="Match(IReadOnlyList{RealtimeFramingPreset}, Target, IReadOnlyCollection{string}?)"/>
+    /// picks of the rest — the newest, or the one under the window's own title.
+    /// </remarks>
+    public static (List<RealtimeFramingPreset> Presets, Forgotten? Removed) ForgetInto(
+        IReadOnlyList<RealtimeFramingPreset> current, string id)
+    {
+        var presets = current.Select(preset => preset.Clone()).ToList();
+        int index = presets.FindIndex(preset => preset.Id == id);
+        if (index < 0) return (presets, null);
+
+        var removed = presets[index];
+        presets.RemoveAt(index);
+        return (presets, new Forgotten(removed, index));
+    }
+
+    /// <summary><see cref="Restore"/> as a list in and a list out, for a test that has no settings file.</summary>
+    /// <remarks>
+    /// Back in its old place, or at the end when the list has grown shorter since. Where it was its
+    /// target's selected preset it is again, and any other preset of the target marked since is
+    /// unmarked: 復原 is the deletion not having happened. Refused — the list handed back as it came —
+    /// when the id is back already or the list has filled up meanwhile.
+    /// </remarks>
+    public static List<RealtimeFramingPreset> RestoreInto(
+        IReadOnlyList<RealtimeFramingPreset> current, Forgotten removed)
+    {
+        var presets = current.Select(preset => preset.Clone()).ToList();
+        if (presets.Any(preset => preset.Id == removed.Preset.Id) ||
+            presets.Count >= RealtimeSettings.MaxFramingPresets)
+            return presets;
+
+        var back = removed.Preset.Clone();
+        presets.Insert(Math.Min(removed.Index, presets.Count), back);
+
+        if (back.Selected)
+        {
+            foreach (var other in presets.Where(preset =>
+                         preset.Id != back.Id && preset.TargetKey == back.TargetKey))
+                other.Selected = false;
+        }
+
+        return presets;
+    }
+
+    /// <summary>
+    /// The page's 翻譯區域預設 card, split for the screen or window chosen in 步驟 1／2: that target's
+    /// presets on top with the one it opens on first, and every other preset under 其他螢幕或視窗.
+    /// </summary>
+    /// <param name="Current">This target's presets, at any size: the one it opens on, then the rest in order.</param>
+    /// <param name="OpensOn">The one a session on this target would open on; null for 不套用 or none.</param>
+    /// <param name="Others">Every preset not of this target, in the list's order.</param>
+    internal sealed record CardGroups(
+        IReadOnlyList<RealtimeFramingPreset> Current,
+        RealtimeFramingPreset? OpensOn,
+        IReadOnlyList<RealtimeFramingPreset> Others);
+
+    /// <summary>
+    /// Splits <paramref name="presets"/> for the card — see <see cref="CardGroups"/>. With no target
+    /// (視窗擷取 and no window picked, or the window gone) every preset is another target's.
+    /// </summary>
+    /// <remarks>
+    /// <para>A target's presets are the ones the bar lists for it (<see cref="IsRelated"/>): a monitor's
+    /// at any resolution, an application's at any window size. Which one is marked 選用中 is the one
+    /// a session would open on (<see cref="Match(IReadOnlyList{RealtimeFramingPreset}, Target, IReadOnlyCollection{string}?)"/>),
+    /// not merely the one flagged selected: the mark answers "what will 開始 put on the screen".</para>
+    ///
+    /// <para>It is moved to the top and the rest keep the list's order, so changing 步驟 1／2 swaps
+    /// the upper half and leaves the lower one where it was.</para>
+    /// </remarks>
+    public static CardGroups GroupFor(
+        IReadOnlyList<RealtimeFramingPreset> presets, Target? target,
+        IReadOnlyCollection<string>? skipped)
+    {
+        if (target is not { } chosen) return new CardGroups([], null, [.. presets]);
+
+        var mine = presets.Where(preset => IsRelated(preset, chosen)).ToList();
+        var opensOn = Match(presets, chosen, skipped);
+        IReadOnlyList<RealtimeFramingPreset> current = opensOn is null
+            ? mine
+            : [opensOn, .. mine.Where(preset => preset.Id != opensOn.Id)];
+
+        return new CardGroups(current, opensOn, [.. presets.Where(preset => !IsRelated(preset, chosen))]);
     }
 
     /// <summary>The preset <paramref name="id"/> names, or null when it has been forgotten since.</summary>
