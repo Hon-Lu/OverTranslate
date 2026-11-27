@@ -1248,6 +1248,19 @@ public class RealtimeFramingPresetTests
         Assert.Equal("new", RealtimeFramingStore.Match(presets, ScreenTarget(), [])!.Id);
     }
 
+    [Fact]
+    public void Skipped_TheCardMarksNoPresetOfThatTarget_AndOthersAsBefore()
+    {
+        var screen = Make("screen", selected: true);
+        var game = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", selected: true);
+        var skipped = RealtimeFramingStore.SkipInto([], ScreenTarget());
+
+        Assert.False(RealtimeFramingStore.OpensOn(screen, skipped));
+        Assert.True(RealtimeFramingStore.OpensOn(game, skipped));
+        Assert.True(RealtimeFramingStore.OpensOn(screen, []));
+        Assert.False(RealtimeFramingStore.OpensOn(Make("other"), []));
+    }
+
     private sealed class TempExe : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

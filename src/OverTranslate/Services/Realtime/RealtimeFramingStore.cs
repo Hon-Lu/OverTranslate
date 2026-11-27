@@ -667,6 +667,17 @@ internal static class RealtimeFramingStore
             Realtime.FramingPresets, SkipInto(Realtime.FramingSkippedTargets, target));
     }
 
+    /// <summary>
+    /// Whether the page's card marks <paramref name="preset"/> as the one its target opens on: it is
+    /// selected, and the user has not chosen 不套用 for that target since.
+    /// </summary>
+    /// <remarks>
+    /// The card lists every target's presets together, so 不套用 is shown there by its absence — no
+    /// row of that target marked — rather than by a row of its own in each target's group.
+    /// </remarks>
+    public static bool OpensOn(RealtimeFramingPreset preset, IReadOnlyCollection<string>? skipped) =>
+        preset.Selected && (skipped is null || !skipped.Contains(preset.TargetKey));
+
     /// <summary><see cref="Skip"/> as a list in and a list out, for a test that has no settings file.</summary>
     public static List<string> SkipInto(IReadOnlyCollection<string> skipped, Target target) =>
         [target.Key, .. skipped.Where(key => key != target.Key)];

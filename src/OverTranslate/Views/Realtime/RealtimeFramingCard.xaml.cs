@@ -193,7 +193,9 @@ public partial class RealtimeFramingCard : UserControl
         grid.Children.Add(forget);
 
         var row = new Border { Child = grid };
-        row.SetResourceReference(StyleProperty, preset.Selected ? "FramingRowSelected" : "FramingRow");
+        // A target the user chose 不套用 for has no row marked: it opens on none of them.
+        row.SetResourceReference(StyleProperty,
+            RealtimeFramingStore.OpensOn(preset, Realtime.FramingSkippedTargets) ? "FramingRowSelected" : "FramingRow");
         // Clicking the row does what its square does, except on the things that have their own job:
         // the name, which is being typed into, 不再保留, and the square itself.
         row.MouseLeftButtonUp += (_, e) =>
