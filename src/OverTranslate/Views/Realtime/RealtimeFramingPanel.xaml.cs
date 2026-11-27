@@ -40,7 +40,9 @@ internal partial class RealtimeFramingPanel : Window
     private const double Gap = 6;
 
     // The panel's width: a thumbnail, one line of a name, and on a changed row its two buttons.
-    private const double PanelWidth = 300;
+    // 340 rather than 300: a changed row's name shows 18 characters of Chinese and 25 of Russian
+    // beside the two icons, against 15 and 19 at 300.
+    private const double PanelWidth = 340;
 
     // How tall a row's thumbnail is drawn, in DIP.
     private const double ThumbnailHeight = 26;
@@ -154,6 +156,7 @@ internal partial class RealtimeFramingPanel : Window
         // empty list would read as a choice the user had made.
         if (any) RowsHost.Children.Add(SkipRow(list.Skipped));
         foreach (var row in list.Rows) RowsHost.Children.Add(Row(row, target));
+
         RowsScroll.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         SaveRule.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         SaveHost.Content = SaveRow(list);
@@ -332,12 +335,10 @@ internal partial class RealtimeFramingPanel : Window
             case RealtimeFramingStore.RowState.Modified:
             {
                 string id = row.Preset.Id;
-                var restore = new Button { Content = LocalizationService.Get("S.Realtime.FramingRestore") };
-                restore.SetResourceReference(StyleProperty, "FramingRowButton");
+                var restore = IconButton("\uE7A7", "S.Realtime.FramingRestore", primary: false);
                 restore.Click += (_, _) => RestoreRequested?.Invoke(this, id);
 
-                var update = new Button { Content = LocalizationService.Get("S.Realtime.FramingUpdate") };
-                update.SetResourceReference(StyleProperty, "FramingRowPrimaryButton");
+                var update = IconButton("\uE74E", "S.Realtime.FramingUpdate", primary: true);
                 update.Click += (_, _) => UpdateRequested?.Invoke(this, id);
 
                 var buttons = new StackPanel
@@ -354,6 +355,36 @@ internal partial class RealtimeFramingPanel : Window
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// 還原 or 更新 on a changed framing's row: a glyph, with the word as its tooltip and its name.
+    /// </summary>
+    /// <remarks>
+    /// Undo and Save, which Segoe MDL2 Assets has at the same code points as Segoe Fluent Icons, so
+    /// Windows 10 draws them too. Save rather than Sync: what 更新 does is write the blocks into the
+    /// preset, and Sync reads as fetching something. 更新 is filled with the accent, the row's main
+    /// action; 還原 is plain.
+    /// </remarks>
+    private Button IconButton(string glyph, string labelKey, bool primary)
+    {
+        var label = LocalizationService.Get(labelKey);
+        var icon = new TextBlock
+        {
+            Text = glyph,
+            FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 14,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var button = new Button { Content = icon, ToolTip = label };
+        button.SetResourceReference(StyleProperty, primary ? "FramingRowPrimaryIcon" : "FramingRowIcon");
+        icon.SetBinding(TextBlock.ForegroundProperty, new System.Windows.Data.Binding(nameof(Foreground))
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(Button), 1) });
+        AutomationProperties.SetName(button, label);
+        AutomationProperties.SetAutomationId(button, primary ? "FramingUpdate" : "FramingRestore");
+        return button;
     }
 
     /// <summary>
