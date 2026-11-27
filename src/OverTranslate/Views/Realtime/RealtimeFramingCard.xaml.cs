@@ -43,11 +43,20 @@ public partial class RealtimeFramingCard : UserControl
     // cannot follow, so the rows cannot be picked. Renaming and deleting stay open.
     private bool _selectionLocked;
 
+    // Whether the user unfolded the list. Not kept: leaving the page and coming back folds it again.
+    private bool _expanded;
+
     public RealtimeFramingCard()
     {
         InitializeComponent();
         LocalizationService.LanguageChanged += OnChanged;
         SettingsService.Instance.RealtimeFramingChanged += OnChanged;
+        Unloaded += (_, _) =>
+        {
+            if (!_expanded) return;
+            _expanded = false;
+            Render();
+        };
         Render();
     }
 
@@ -89,9 +98,17 @@ public partial class RealtimeFramingCard : UserControl
     private void Render()
     {
         var presets = Realtime.FramingPresets;
+        var skipped = Realtime.FramingSkippedTargets;
+
+        // Folded past a few rows, with every preset a target opens on still in view.
+        var keep = presets.Select((preset, index) => (preset, index))
+            .Where(item => RealtimeFramingStore.OpensOn(item.preset, skipped))
+            .Select(item => item.index);
+        var (shown, hidden) = CollapsibleRows.Shown(presets.Count, keep, _expanded);
 
         ListHost.Children.Clear();
-        foreach (var preset in presets) ListHost.Children.Add(Row(preset));
+        foreach (var index in shown) ListHost.Children.Add(Row(presets[index]));
+        ShowMore(hidden, CollapsibleRows.Folds(presets.Count));
 
         // The last row drops its rule so it does not double the list's own border — but keeps the
         // accent edge a selected row carries.
@@ -340,25 +357,25 @@ public partial class RealtimeFramingCard : UserControl
         ListBorder.Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 
     /// <summary>
-    /// Hands the wheel to the page once the list can go no further that way, or when it does not
-    /// scroll at all.
+    /// The line under the list: 顯示其餘 N 組 while rows are folded away, 收起 once unfolded, and
+    /// nothing for a list too short to fold or one whose only folded rows are kept in view anyway.
     /// </summary>
-    /// <remarks>
-    /// A ScrollViewer marks every wheel it gets as handled, scrolled or not, so without this the
-    /// page stopped dead whenever the pointer crossed the list.
-    /// </remarks>
-    private void ListScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    private void ShowMore(int hidden, bool folds)
     {
-        var scroll = (ScrollViewer)sender;
-        bool up = e.Delta > 0;
-        bool canScroll = up ? scroll.VerticalOffset > 0 : scroll.VerticalOffset < scroll.ScrollableHeight;
-        if (canScroll) return;
+        bool shown = folds && (_expanded || hidden > 0);
+        MoreButton.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        if (!shown) return;
 
-        e.Handled = true;
-        ListBorder.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
-        {
-            RoutedEvent = MouseWheelEvent,
-            Source = ListBorder,
-        });
+        MoreText.Text = _expanded
+            ? LocalizationService.Get("S.Realtime.ShowFewer")
+            : LocalizationService.Format("S.Realtime.ShowMoreFramings", hidden);
+        MoreGlyph.Text = _expanded ? "\uE70E" : "\uE70D";
+        AutomationProperties.SetName(MoreButton, MoreText.Text);
+    }
+
+    private void MoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        _expanded = !_expanded;
+        Render();
     }
 }

@@ -313,6 +313,9 @@
     <sys:String x:Key="S.Realtime.Framings">Сохранённые области перевода</sys:String>
     <sys:String x:Key="S.Realtime.FramingsHint">Выбранная область применяется при запуске перевода. Для каждого экрана и окна можно сохранить несколько.</sys:String>
     <sys:String x:Key="S.Realtime.FramingsEmpty">Сохранённых областей пока нет. Сохранить их можно при выделении — в «Сохранённые области перевода» на плавающей панели.</sys:String>
+    <sys:String x:Key="S.Realtime.ShowMoreFramings">Показать ещё {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ShowMoreProfiles">Показать ещё {0}</sys:String>
+    <sys:String x:Key="S.Realtime.ShowFewer">Свернуть</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">Экран · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">Сохранённое окно</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">Сохранено блоков перевода: {0}</sys:String>

@@ -316,6 +316,9 @@
     <sys:String x:Key="S.Realtime.Framings">翻译区域预设</sys:String>
     <sys:String x:Key="S.Realtime.FramingsHint">开始翻译时自动套用选取的预设。每个屏幕或窗口可各存多组。</sys:String>
     <sys:String x:Key="S.Realtime.FramingsEmpty">尚未保存任何区域。框选时从浮动窗口栏的“翻译区域预设”保存即可。</sys:String>
+    <sys:String x:Key="S.Realtime.ShowMoreFramings">显示其余 {0} 组</sys:String>
+    <sys:String x:Key="S.Realtime.ShowMoreProfiles">显示其余 {0} 个</sys:String>
+    <sys:String x:Key="S.Realtime.ShowFewer">收起</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">屏幕 · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">已保存的窗口</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">已保存 {0} 个翻译区块</sys:String>

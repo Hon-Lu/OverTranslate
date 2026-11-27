@@ -130,20 +130,27 @@
                 <TextBlock x:Name="CustomCount" Style="{StaticResource ProfileGroupCaption}" FontWeight="Normal"
                            Typography.NumeralAlignment="Tabular" Margin="8,0,0,0"/>
             </StackPanel>
-            <!-- Only the custom modes scroll, and only past a few rows (MaxHeight set from the rows
-                 themselves, see FitCustomScroll): ten of them made the card longer than the page
-                 around it. The presets, the count and the add stay outside, always in view. -->
+            <!-- Only the custom modes fold, and only past a few rows (see CollapsibleRows): ten of
+                 them made the card longer than the page around it, and a list that scrolled inside
+                 the page took the wheel from it. The presets, the count and the add stay outside,
+                 always in view. -->
             <Border x:Name="CustomList" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10"
                     Margin="0,0,0,6">
-                <ScrollViewer x:Name="CustomScroll"
-                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                              Focusable="False"
-                              AutomationProperties.AutomationId="ProfileCustomScroll"
-                              SizeChanged="CustomScroll_SizeChanged"
-                              PreviewMouseWheel="CustomScroll_PreviewMouseWheel">
-                    <StackPanel x:Name="CustomHost" SizeChanged="CustomHost_SizeChanged"/>
-                </ScrollViewer>
+                <StackPanel x:Name="CustomHost" SizeChanged="ListHost_SizeChanged"
+                            AutomationProperties.AutomationId="ProfileCustomList"/>
             </Border>
+
+            <!-- 顯示其餘 N 個 / 收起, as on the 翻譯區域預設 card. -->
+            <Button x:Name="MoreButton" Style="{StaticResource FlatButton}"
+                    Height="32" Margin="0,0,0,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    AutomationProperties.AutomationId="ProfileCustomMore"
+                    Click="MoreButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="MoreText" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="MoreGlyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"
+                               VerticalAlignment="Center" Margin="8,1,0,0"/>
+                </StackPanel>
+            </Button>
             <!-- The add, as the app's other buttons are (FlatButton, as 開啟記錄資料夾), under the
                  custom list at its left. At the cap it greys and its text says why, rather than
                  going away. -->

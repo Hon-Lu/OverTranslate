@@ -144,19 +144,25 @@
 
             <!-- The list: one row per framing kept, several per screen or window. Filled in code
                  (see RealtimeFramingCard), because each row is a selection square, a name, a detail
-                 line and a forget button. It scrolls inside the card past a screenful of rows: the
-                 page around it keeps the controls the user came for in view, and the wheel is handed
-                 on to the page once this list can go no further. -->
+                 line and a forget button. Past a few rows it folds (see CollapsibleRows) rather than
+                 scrolling: a list that scrolled inside the page took the wheel from it. -->
             <Border x:Name="ListBorder" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="10"
                     SizeChanged="ListBorder_SizeChanged">
-                <ScrollViewer x:Name="ListScroll" MaxHeight="360"
-                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                              Focusable="False"
-                              AutomationProperties.AutomationId="FramingPresetScroll"
-                              PreviewMouseWheel="ListScroll_PreviewMouseWheel">
-                    <StackPanel x:Name="ListHost"/>
-                </ScrollViewer>
+                <StackPanel x:Name="ListHost" AutomationProperties.AutomationId="FramingPresetList"/>
             </Border>
+
+            <!-- 顯示其餘 N 組 / 收起 under a list longer than CollapsibleRows.Folded: the card grows to
+                 hold every row rather than scrolling inside the page. -->
+            <Button x:Name="MoreButton" Style="{StaticResource FlatButton}"
+                    Height="32" Margin="0,6,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    AutomationProperties.AutomationId="FramingPresetMore"
+                    Click="MoreButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="MoreText" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="MoreGlyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"
+                               VerticalAlignment="Center" Margin="8,1,0,0"/>
+                </StackPanel>
+            </Button>
 
             <!-- Said in place of the list when nothing has been kept: the card must not read as an
                  empty box the user is supposed to fill in from here. -->

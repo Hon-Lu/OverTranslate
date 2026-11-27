@@ -320,6 +320,9 @@
     <sys:String x:Key="S.Realtime.Framings">保存した翻訳範囲</sys:String>
     <sys:String x:Key="S.Realtime.FramingsHint">翻訳を始めると、選んだ範囲が自動で適用されます。画面やウィンドウごとに複数保存できます。</sys:String>
     <sys:String x:Key="S.Realtime.FramingsEmpty">保存した範囲はまだありません。範囲を選ぶときに、フローティングバーの「保存した翻訳範囲」から保存できます。</sys:String>
+    <sys:String x:Key="S.Realtime.ShowMoreFramings">残り {0} 件を表示</sys:String>
+    <sys:String x:Key="S.Realtime.ShowMoreProfiles">残り {0} 件を表示</sys:String>
+    <sys:String x:Key="S.Realtime.ShowFewer">折りたたむ</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">画面 · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">保存したウィンドウ</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">翻訳ブロックを {0} 個保存</sys:String>
